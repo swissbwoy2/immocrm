@@ -1,72 +1,67 @@
 ## Objectif
-Refondre l’étape d’upload des documents pour qu’elle ressemble réellement à votre référence : de vraies zones d’upload visuelles, avec aperçu, état validé, et un traitement spécial recto/verso pour la pièce d’identité et le permis de séjour.
 
-## Ce qui sera changé
-1. Remplacer la liste actuelle de lignes + bouton « Charger » dans `MandatFormStep6.tsx` par une structure type Macoloc :
-   - titre principal + sous-texte
-   - sous-sections de documents
-   - grandes zones d’upload encadrées
-   - aperçu du fichier après upload
-   - état visuel validé
-   - actions claires: Photo, Fichier, supprimer
+Reproduire le bloc **"Budget locatif indicatif"** de Macoloc dans le formulaire `/nouveau-mandat`, étape **Situation financière** (Step 3). Dès que le client saisit son **revenu mensuel net (CHF)**, un encadré vert/doré apparaît dynamiquement avec :
 
-2. Créer un composant d’upload plus riche pour les formulaires publics, réutilisable, qui gère :
-   - zone vide avec bordure pointillée
-   - glisser-déposer / clic
-   - bouton fichier
-   - bouton photo
-   - aperçu image/PDF
-   - état chargé / validé / suppression
+1. Le **loyer maximum recommandé** (revenu / 3, règle suisse standard)
+2. Le **nombre de pièces conseillé** (estimation indicative basée sur le budget)
+3. Une **note d'information** rappelant qu'un garant, co-locataire ou revenus complémentaires peuvent augmenter ce budget
 
-3. Traiter séparément les documents d’identité selon le besoin réel :
-   - `piece_identite`: bloc avec deux cases obligatoires `Recto` + `Verso`
-   - `permis_sejour`: bloc avec deux cases obligatoires `Recto` + `Verso`
-   - affichage conditionnel selon `type_permis` choisi à l’étape 1
-   - si profil suisse/autre sans permis de séjour: on affiche la pièce d’identité
-   - si permis B/C/F/N: on affiche le permis de séjour
+---
 
-4. Conserver votre logique métier existante autant que possible :
-   - pas de changement backend obligatoire
-   - on garde `documents_uploades` côté mandat
-   - au moment de sauvegarder, les deux faces seront regroupées proprement pour rester compatibles avec le reste de l’app
+## Logique de calcul (règle 1/3 suisse)
 
-## Structure visée
-```text
-Documents à fournir
-Sous-texte explicatif
-
-Documents administratifs
-- Extrait des poursuites → 1 grande zone d’upload
-- 3 fiches de salaire → 1 grande zone multi-fichiers ou 3 zones harmonisées
-
-Identité
-- Carte d’identité (recto) / Permis de séjour (recto)
-- Carte d’identité (verso) / Permis de séjour (verso)
-Chaque case:
-  aperçu
-  bouton Photo
-  bouton Fichier
-  bouton supprimer
-  état validé
+```ts
+const budgetMax = Math.floor(revenus_mensuels / 3);
+// Estimation pièces conseillé : ~600 CHF / pièce en moyenne suisse
+const piecesConseille = Math.max(1, Math.round((budgetMax / 600) * 2) / 2); // arrondi 0.5
 ```
 
-## Fichiers concernés
-- `src/components/mandat/MandatFormStep6.tsx`
-- `src/components/scanner/DocumentUploadField.tsx`
-- `src/components/scanner/UniversalDocumentScanner.tsx`
-- `src/hooks/useNativeCamera.ts` (si ajustement UX nécessaire)
-- éventuellement un nouveau composant dédié du type `PremiumDocumentUploadCard.tsx`
+Le bloc ne s'affiche que si `revenus_mensuels >= 1000` (évite affichage parasite pendant la saisie).
 
-## Détails techniques
-- Le composant actuel `DocumentUploadField` sait déjà gérer le recto/verso, mais son UI est trop minimale. Je vais le faire évoluer vers une présentation par cartes, avec aperçu et actions séparées.
-- Pour l’identité/permis, je ne vais pas me contenter d’un seul fichier fusionné visible en bloc: l’interface montrera bien les deux faces séparément, comme sur votre screenshot.
-- Pour rester compatible avec le reste de l’application, la persistance restera mappée vers les types de documents existants (`piece_identite`, `permis_sejour`, `fiche_salaire`, `extrait_poursuites`).
-- Je vérifierai aussi les écrans qui relisent ces documents (`client/Documents`, calculs de complétude, chance indicator) afin d’éviter de casser les stats existantes.
+---
 
-## Résultat attendu
-Après implémentation, l’étape documents ne sera plus une simple liste avec bouton « Charger ». Elle ressemblera à votre référence :
-- zones d’upload visuelles
-- preview immédiate
-- workflow photo/fichier
-- recto/verso explicite pour identité et permis de séjour
-- rendu premium avec vos couleurs Logisorama, mais structuré comme Macoloc.
+## Modifications
+
+### 1. `src/components/mandat/MandatFormStep3.tsx`
+
+- Insérer un nouveau composant interne `BudgetIndicatifCard` juste **après** le champ "Revenu mensuel net (CHF)" (après la ligne 69)
+- Le bloc occupe `md:col-span-2` (pleine largeur de la grille)
+- Style aligné avec la charte Logisorama (palette dorée `hsl(38_45%_48%)`) plutôt que vert Macoloc, pour rester cohérent avec le reste du formulaire
+- Affichage conditionnel : visible uniquement si `data.revenus_mensuels >= 1000`
+
+### Structure visuelle du bloc
+
+```
+┌─────────────────────────────────────────────┐
+│ 📈  Budget locatif indicatif                │
+│                                             │
+│  1'667  CHF / mois                          │
+│                                             │
+│  🏠  Nombre de pièces conseillé : 2.5 pièces│
+│                                             │
+│  ┌───────────────────────────────────────┐  │
+│  │ 👥 Vous avez un garant, un co-loca... │  │
+│  │    augmenter votre budget.            │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+```
+
+- Bordure dorée `border-[hsl(38_45%_48%/0.4)]`
+- Fond légèrement teinté `bg-[hsl(38_45%_48%/0.07)]`
+- Montant en gros (`text-3xl font-bold`) couleur dorée
+- Icône `TrendingUp` (lucide) pour le titre
+- Icône `Home` pour les pièces
+- Icône `Users` pour la note d'information
+- Note dans un sous-bloc avec fond plus sombre
+
+### Format du montant
+
+Utiliser le séparateur de milliers suisse (apostrophe) : `1'667` via `toLocaleString('fr-CH')`.
+
+---
+
+## Fichier édité
+
+- `src/components/mandat/MandatFormStep3.tsx` (insertion du composant `BudgetIndicatifCard` + appel conditionnel)
+
+Aucun autre fichier impacté. Aucune modification backend ni de schéma de données.

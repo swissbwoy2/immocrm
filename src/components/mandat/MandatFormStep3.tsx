@@ -4,7 +4,7 @@ import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
 import { PremiumRadioGroup } from '@/components/forms-premium/PremiumRadioGroup';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconWallet, IconHome, IconCalendar } from '@/components/forms-premium/icons/LuxuryIcons';
-import { Briefcase, Building2, AlertTriangle, Scale, CreditCard } from 'lucide-react';
+import { Briefcase, Building2, AlertTriangle, Scale, CreditCard, TrendingUp, Home, Users } from 'lucide-react';
 import CommercialFieldsStep3 from './CommercialFieldsStep3';
 
 interface Props {
