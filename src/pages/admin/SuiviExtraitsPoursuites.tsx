@@ -82,22 +82,26 @@ export default function SuiviExtraitsPoursuites() {
       const { data, error } = await (supabase as any)
         .from('clients')
         .select(`
-          id, prenom, nom, email,
+          id, user_id,
           extrait_poursuites_date_emission,
           extrait_poursuites_extraction_method,
           extrait_poursuites_ai_confidence,
           extrait_poursuites_document_id,
           extrait_poursuites_last_reminder_at,
+          profile:profiles!clients_user_id_fkey ( prenom, nom, email ),
           source_document:documents!clients_extrait_poursuites_document_id_fkey ( nom, url )
         `)
         .eq('statut', 'actif')
         .limit(15000);
-      if (error) throw error;
+      if (error) {
+        console.error('[SuiviExtraitsPoursuites] query error:', error);
+        throw error;
+      }
       const mapped: Row[] = (data ?? []).map((c: any) => ({
         id: c.id,
-        prenom: c.prenom,
-        nom: c.nom,
-        email: c.email,
+        prenom: c.profile?.prenom ?? null,
+        nom: c.profile?.nom ?? null,
+        email: c.profile?.email ?? null,
         date_emission: c.extrait_poursuites_date_emission,
         method: c.extrait_poursuites_extraction_method,
         confidence: c.extrait_poursuites_ai_confidence,
