@@ -194,13 +194,8 @@ export default function FormulaireConstruireRenover() {
       <PremiumProgressBlock currentStep={step - 1} totalSteps={STEPS.length} stepTitle={STEPS[step - 1]?.title ?? ''} />
       <PremiumStepIndicator steps={STEPS} currentStep={step - 1} />
 
-      <div className="container mx-auto px-4 max-w-3xl pb-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold font-serif text-[hsl(40_20%_88%)] mb-2">
-            Mon projet construction / rénovation
-          </h1>
-          <p className="text-[hsl(40_20%_45%)] text-sm">Étape {step} sur 4</p>
-        </div>
+      <div className="container mx-auto px-4 max-w-3xl pb-8 pt-4">
+        {/* Titre/sous-titre vivent dans chaque step */}
 
         <PremiumFormCard>
           <form onSubmit={handleSubmit(onSubmit)}>
