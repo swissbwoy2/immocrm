@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ShieldCheck, Search, Sparkles, FileText, RefreshCw, Send, AlertTriangle, CheckCircle2, Clock, HelpCircle, User, Filter, Zap, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -70,8 +71,14 @@ function ConfidenceBar({ value }: { value: number | null }) {
 
 const STATUS_RANK: Record<Status, number> = { expired: 0, warning: 1, missing: 2, valid: 3 };
 
-export default function SuiviExtraitsPoursuites() {
+interface SuiviExtraitsProps {
+  scope?: 'admin' | 'agent';
+}
+
+export default function SuiviExtraitsPoursuites({ scope = 'admin' }: SuiviExtraitsProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [agentClientIds, setAgentClientIds] = useState<Set<string> | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -82,10 +89,36 @@ export default function SuiviExtraitsPoursuites() {
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const pollRef = useRef<number | null>(null);
 
+  // En mode agent : récupère les IDs des clients assignés (via clients.agent_id ET client_agents)
+  useEffect(() => {
+    if (scope !== 'agent' || !user) return;
+    (async () => {
+      try {
+        const { data: agentRow } = await (supabase as any)
+          .from('agents')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!agentRow?.id) { setAgentClientIds(new Set()); return; }
+        const ids = new Set<string>();
+        const { data: direct } = await (supabase as any)
+          .from('clients').select('id').eq('agent_id', agentRow.id).limit(15000);
+        (direct ?? []).forEach((c: any) => ids.add(c.id));
+        const { data: junction } = await (supabase as any)
+          .from('client_agents').select('client_id').eq('agent_id', agentRow.id).limit(15000);
+        (junction ?? []).forEach((c: any) => ids.add(c.client_id));
+        setAgentClientIds(ids);
+      } catch (e) {
+        console.error('[SuiviExtraits] agent ids load error:', e);
+        setAgentClientIds(new Set());
+      }
+    })();
+  }, [scope, user]);
+
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from('clients')
         .select(`
           id, user_id,
@@ -99,6 +132,15 @@ export default function SuiviExtraitsPoursuites() {
         `)
         .eq('statut', 'actif')
         .limit(15000);
+
+      if (scope === 'agent') {
+        if (!agentClientIds) { setLoading(false); return; }
+        const ids = Array.from(agentClientIds);
+        if (ids.length === 0) { setRows([]); setLoading(false); return; }
+        query = query.in('id', ids);
+      }
+
+      const { data, error } = await query;
       if (error) {
         console.error('[SuiviExtraitsPoursuites] query error:', error);
         throw error;
