@@ -106,12 +106,11 @@ export function ExtractPoursuitesUploadDialog({ open, onOpenChange, clientId, on
   const confirmDate = async (dateStr: string, method: 'ai' | 'manual') => {
     setSaving(true);
     try {
-      const updates: Record<string, unknown> = {
+      const { error } = await (supabase.from('clients') as any).update({
         extrait_poursuites_date_emission: dateStr,
         extrait_poursuites_extraction_method: method,
-        extrait_poursuites_last_reminder_at: null, // reset cooldown
-      };
-      const { error } = await supabase.from('clients').update(updates).eq('id', clientId);
+        extrait_poursuites_last_reminder_at: null,
+      }).eq('id', clientId);
       if (error) throw error;
       toast.success('Date enregistrée ✅');
       onSuccess?.();
