@@ -16,3 +16,4 @@ export { ForWhoSection } from './ForWhoSection';
 export { FAQSection } from './FAQSection';
 export { CloserSection } from './CloserSection';
 export { StickyMobileCTA } from './StickyMobileCTA';
+export { AppShowcaseSection } from './AppShowcaseSection';

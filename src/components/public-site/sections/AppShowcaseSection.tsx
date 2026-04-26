@@ -160,8 +160,7 @@ export function AppShowcaseSection() {
                       src={VIDEO_SRC}
                       muted
                       playsInline
-                      // @ts-expect-error iOS attr
-                      webkit-playsinline="true"
+                      {...({ 'webkit-playsinline': 'true' } as Record<string, string>)}
                       preload="metadata"
                       poster="/app-icon.png"
                       className="absolute inset-0 h-full w-full object-cover"

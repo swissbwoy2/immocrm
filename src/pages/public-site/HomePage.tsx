@@ -26,6 +26,7 @@ const PartnersSection = lazy(() => import('@/components/public-site/sections/Par
 const TechSection = lazy(() => import('@/components/public-site/sections/TechSection').then(m => ({ default: m.TechSection })));
 const FAQSection = lazy(() => import('@/components/public-site/sections/FAQSection').then(m => ({ default: m.FAQSection })));
 const CloserSection = lazy(() => import('@/components/public-site/sections/CloserSection').then(m => ({ default: m.CloserSection })));
+const AppShowcaseSection = lazy(() => import('@/components/public-site/sections/AppShowcaseSection').then(m => ({ default: m.AppShowcaseSection })));
 
 export default function HomePage() {
   const { user, userRole, loading } = useAuth();
@@ -62,6 +63,10 @@ export default function HomePage() {
       <HeroSection />
 
       {/* Lazy sections */}
+      <Suspense fallback={null}>
+        <AppShowcaseSection />
+      </Suspense>
+
       <Suspense fallback={null}>
         <PricingSection />
       </Suspense>
