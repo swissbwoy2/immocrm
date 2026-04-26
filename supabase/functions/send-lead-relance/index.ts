@@ -437,7 +437,7 @@ serve(async (req) => {
             html,
           });
         } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
+          const errorMessage = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
           const canFallback = !!agencyFallbackConfig && activeEmailConfig.id !== agencyFallbackConfig.id;
 
           if (!canFallback || !isSmtpAuthError(errorMessage)) {
@@ -468,7 +468,7 @@ serve(async (req) => {
         sentCount++;
       } catch (err) {
         errorCount++;
-        errors.push(`${lead.email}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        errors.push(`${lead.email}: ${err instanceof Error ? (err instanceof Error ? err.message : String(err)) : 'Unknown error'}`);
         console.error(`Failed to send to ${lead.email}:`, err);
       }
 
@@ -489,7 +489,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('Error in send-lead-relance:', error);
 
     if (smtpClient) {

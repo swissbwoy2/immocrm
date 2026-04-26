@@ -639,7 +639,7 @@ async function syncUserEmails(
     return { success: true, count: fetchedEmails.length };
     
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error(`IMAP sync error for user ${config.user_id}:`, errorMessage);
     return { success: false, count: 0, error: errorMessage };
   }
@@ -706,7 +706,7 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('Cron sync error:', error);
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),

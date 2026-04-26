@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
 
           console.log(`Lead ${leadgenId} processed successfully`);
         } catch (err: any) {
-          console.error(`Error processing lead ${leadgenId}:`, err.message);
+          console.error(`Error processing lead ${leadgenId}:`, (err instanceof Error ? err.message : String(err)));
           await supabase.from("meta_lead_logs").insert({
             leadgen_id: leadgenId?.toString(),
             page_id: pageId?.toString(),
@@ -348,7 +348,7 @@ Deno.serve(async (req) => {
             ad_id: adId?.toString(),
             event_type: "lead_processing_error",
             status: "error",
-            error_message: err.message,
+            error_message: (err instanceof Error ? err.message : String(err)),
             payload: change.value,
           });
         }

@@ -673,7 +673,7 @@ Immo-Rama s'engage a fournir un service de qualite professionnelle et a defendre
 
   } catch (error: unknown) {
     console.error('Error generating seller dossier PDF:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

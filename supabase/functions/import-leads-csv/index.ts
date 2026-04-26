@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
           duplicates++;
         } else {
           errors++;
-          console.error('Insert error:', error.message);
+          console.error('Insert error:', (error instanceof Error ? error.message : String(error)));
         }
       } else {
         inserted++;

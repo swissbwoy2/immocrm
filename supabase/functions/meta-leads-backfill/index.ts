@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
             formCounters.imported++;
             counters.imported++;
           } catch (err: any) {
-            console.error(`Error processing lead ${leadgenId}:`, err.message);
+            console.error(`Error processing lead ${leadgenId}:`, (err instanceof Error ? err.message : String(err)));
             formCounters.errors++;
             counters.errors++;
           }
@@ -366,17 +366,17 @@ Deno.serve(async (req) => {
     });
 
   } catch (err: any) {
-    console.error("Backfill fatal error:", err.message);
+    console.error("Backfill fatal error:", (err instanceof Error ? err.message : String(err)));
 
     await supabase.from("meta_lead_logs").insert({
       event_type: "backfill_failed",
       status: "error",
       page_id: pageId,
-      error_message: err.message,
-      payload: { admin_user_id: adminUserId, session_id: sessionId, error_message: err.message, ...counters },
+      error_message: (err instanceof Error ? err.message : String(err)),
+      payload: { admin_user_id: adminUserId, session_id: sessionId, error_message: (err instanceof Error ? err.message : String(err)), ...counters },
     });
 
-    return new Response(JSON.stringify({ error: err.message, ...counters }), {
+    return new Response(JSON.stringify({ error: (err instanceof Error ? err.message : String(err)), ...counters }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

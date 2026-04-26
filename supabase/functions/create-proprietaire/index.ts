@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Unexpected error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Erreur inconnue';
     return new Response(
       JSON.stringify({ error: 'Erreur inattendue: ' + errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

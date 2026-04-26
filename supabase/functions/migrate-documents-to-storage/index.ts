@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
 
       } catch (error) {
         errorCount++;
-        const errorMsg = error instanceof Error ? error.message : 'Erreur inconnue';
+        const errorMsg = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Erreur inconnue';
         console.error(`❌ Erreur pour ${doc.nom}:`, errorMsg);
         errors.push({
           documentId: doc.id,
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Erreur inconnue' 
+        error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Erreur inconnue' 
       }),
       { 
         status: 500, 

@@ -307,7 +307,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error in send-etat-lieux-reminders:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
