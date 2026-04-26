@@ -165,19 +165,69 @@ export default function MonContrat() {
     }
   };
 
-  // Calculate mandate dates
+  // Mandate management state
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'cancel' | 'cancel_with_refund' | null>(null);
+
+  const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
+    if (!client) return;
+    setActionLoading(action);
+    try {
+      const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
+        body: { action, client_id: client.id, ...extra },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? 'Erreur');
+      toast({ title: 'Action effectuée', description: 'Votre mandat a été mis à jour.' });
+      await loadData();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err?.message ?? 'Action impossible', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const openCancelDialog = (withRefund: boolean) => {
+    setPendingAction(withRefund ? 'cancel_with_refund' : 'cancel');
+    setReasonDialogOpen(true);
+  };
+
+  const handleCancelSubmit = async (reason: CancellationReason) => {
+    if (!client || !pendingAction) return;
+    setActionLoading(pendingAction);
+    try {
+      const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
+        body: { action: pendingAction, client_id: client.id, cancellation_reason: reason },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? 'Erreur');
+      toast({ title: 'Mandat annulé', description: data?.refund_eligible ? 'Votre demande de remboursement a été enregistrée.' : 'Votre mandat a été annulé.' });
+      setReasonDialogOpen(false);
+      await loadData();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err?.message ?? 'Action impossible', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Calculate mandate dates (uses real signature date when available + pause days)
   const getMandatDates = () => {
-    const startDate = client?.date_ajout || client?.created_at;
-    if (!startDate) return { start: null, end: null, daysRemaining: 0 };
+    const startDate = client?.mandat_date_signature || client?.date_ajout || client?.created_at;
+    if (!startDate) return { start: null, end: null, daysRemaining: 0, daysSinceSignature: 0 };
 
     const start = new Date(startDate);
+    const pauseDays = client?.mandate_pause_days ?? 0;
     const end = new Date(start);
-    end.setDate(end.getDate() + 90);
+    end.setDate(end.getDate() + MANDAT_DURATION_DAYS + pauseDays);
 
     const now = new Date();
-    const daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    const rawDaysSince = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceSignature = Math.max(0, rawDaysSince - pauseDays);
+    const daysRemaining = Math.max(0, MANDAT_DURATION_DAYS - daysSinceSignature);
 
-    return { start, end, daysRemaining };
+    return { start, end, daysRemaining, daysSinceSignature };
   };
 
   const { start: mandatStart, end: mandatEnd, daysRemaining } = getMandatDates();
