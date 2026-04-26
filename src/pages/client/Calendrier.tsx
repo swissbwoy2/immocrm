@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
-import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
+import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
@@ -297,11 +297,12 @@ export default function ClientCalendrier() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in">
-          <PremiumCalendarView
+          <EventManagerCalendar
             events={events}
             visites={visites}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            availableTypes={['visite', 'visite_proposee', 'signature', 'etat_lieux', 'rdv_telephonique', 'rendez_vous']}
           />
         </div>
 

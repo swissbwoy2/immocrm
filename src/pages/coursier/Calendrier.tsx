@@ -1,22 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
 import { CalendarCheck, Clock, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { AddressLink } from '@/components/AddressLink';
 import { format, isSameDay } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
+import { CalendarEvent } from '@/components/calendar/types';
 
 export default function CoursierCalendrier() {
   const { user } = useAuth();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   useEffect(() => {
     if (user) loadData();
@@ -49,23 +48,16 @@ export default function CoursierCalendrier() {
     }
   };
 
-  const missionDates = missions.map(m => new Date(m.date_visite));
-
-  const missionsForDate = missions.filter(m =>
-    isSameDay(new Date(m.date_visite), selectedDate)
+  // Convert missions to "visites" with deleguee flag for the calendar
+  const visitesForCalendar = useMemo(
+    () => missions.map((m) => ({ ...m, est_deleguee: true, source: 'deleguee' })),
+    [missions],
   );
 
-  const modifiers = {
-    hasMission: (date: Date) => missionDates.some(d => isSameDay(d, date)),
-  };
-
-  const modifiersStyles = {
-    hasMission: {
-      backgroundColor: 'hsl(var(--primary) / 0.15)',
-      borderRadius: '50%',
-      fontWeight: 700,
-    },
-  };
+  const missionsForDate = useMemo(
+    () => (selectedDate ? missions.filter(m => isSameDay(new Date(m.date_visite), selectedDate)) : []),
+    [missions, selectedDate],
+  );
 
   if (loading) {
     return (
@@ -87,31 +79,21 @@ export default function CoursierCalendrier() {
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Calendrier */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardContent className="p-4">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(d) => d && setSelectedDate(d)}
-                  locale={fr}
-                  modifiers={modifiers}
-                  modifiersStyles={modifiersStyles}
-                  className={cn("p-3 pointer-events-auto w-full")}
-                />
-                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--primary) / 0.3)' }} />
-                  Jour avec mission(s)
-                </div>
-              </CardContent>
-            </Card>
+          {/* New EventManager calendar */}
+          <div className="lg:col-span-2 min-w-0">
+            <EventManagerCalendar
+              events={[] as CalendarEvent[]}
+              visites={visitesForCalendar}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              availableTypes={['visite_deleguee']}
+            />
           </div>
 
           {/* Missions du jour sélectionné */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {format(selectedDate, "EEEE dd MMMM yyyy", { locale: fr })}
+              {selectedDate ? format(selectedDate, "dd/MM/yyyy") : 'Aucun jour'}
               {missionsForDate.length > 0 && (
                 <Badge variant="secondary" className="ml-2">{missionsForDate.length}</Badge>
               )}

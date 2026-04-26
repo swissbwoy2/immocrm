@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Calendar, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PremiumPageHeader } from '@/components/premium';
-import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
+import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumProprietaireDayEvents } from '@/components/calendar/PremiumProprietaireDayEvents';
 import { AddCalendarEventDialog } from '@/components/proprietaire/AddCalendarEventDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -351,11 +351,12 @@ export default function Calendrier() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
         <div className="lg:col-span-2">
-          <PremiumCalendarView
+          <EventManagerCalendar
             events={allEvents}
             visites={[]}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            availableTypes={['rappel', 'tache', 'reunion', 'rendez_vous', 'autre']}
           />
         </div>
 

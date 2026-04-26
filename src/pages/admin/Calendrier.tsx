@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
-import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
+import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
@@ -584,11 +584,16 @@ export default function AdminCalendrier() {
 
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
-          <PremiumCalendarView
+          <EventManagerCalendar
             events={filteredEvents}
             visites={filteredVisites}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            onEventClick={(item, type) => {
+              if (type === 'visite') {
+                handleVisiteGroupClick(item.groupedClients || [item]);
+              }
+            }}
           />
         </div>
 
