@@ -252,6 +252,7 @@ const App = () => (
               <Route path="/mandat-v3" element={<MandatV3 />} />
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
+              <Route path="/mandat/renouvellement" element={<MandatRenouvellement />} />
               <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
               <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
               <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
