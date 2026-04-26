@@ -29,7 +29,13 @@ export function AppShowcaseSection() {
   const [isMobile, setIsMobile] = useState(false);
   const [autoplayMode, setAutoplayMode] = useState(false);
   const [videoMissing, setVideoMissing] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   const navigate = useNavigate();
+
+  // refs internes pour scrub frame-aligned
+  const targetTimeRef = useRef(0);
+  const currentTimeRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 1024);
@@ -51,7 +57,6 @@ export function AppShowcaseSection() {
       v.loop = true;
       v.playsInline = true;
       v.play().then(() => setAutoplayMode(true)).catch(() => {
-        // Si autoplay bloqué, on déclenchera au premier touch
         const start = () => {
           v.play().then(() => setAutoplayMode(true)).catch(() => {});
         };
@@ -61,40 +66,80 @@ export function AppShowcaseSection() {
       return;
     }
 
-    // Desktop scrub : forcer chargement complet
+    // Desktop scrub : forcer chargement complet et attendre readiness
     v.preload = 'auto';
+    v.pause();
     v.load();
 
-    // Fallback si la vidéo n'est pas seekable après 2.5s
+    const onReady = () => {
+      if (v.readyState >= 3) setVideoReady(true);
+    };
+    v.addEventListener('loadeddata', onReady);
+    v.addEventListener('canplaythrough', onReady);
+    onReady();
+
+    // Fallback si la vidéo n'est pas seekable après 3s
     const timeout = window.setTimeout(() => {
       if (v.readyState < 2) {
         v.loop = true;
         v.muted = true;
         v.play().then(() => setAutoplayMode(true)).catch(() => {});
       }
-    }, 2500);
+    }, 3000);
 
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(timeout);
+      v.removeEventListener('loadeddata', onReady);
+      v.removeEventListener('canplaythrough', onReady);
+    };
   }, [useScrub]);
 
   const { scrollYProgress } = useScroll({
     target: trackRef,
     offset: ['start start', 'end end'],
   });
-  // Spring léger pour fluidité sans lag perceptible
-  const smooth = useSpring(scrollYProgress, { stiffness: 200, damping: 25, mass: 0.3 });
+  // Spring très douce pour glisser sans à-coups (trackpad/molette ProMotion)
+  const smooth = useSpring(scrollYProgress, {
+    stiffness: 90,
+    damping: 28,
+    mass: 0.35,
+    restDelta: 0.0005,
+  });
+
+  // Boucle rAF : interpole vers la cible, écrit currentTime UNE FOIS par frame
+  useEffect(() => {
+    if (!useScrub || autoplayMode) return;
+    const v = videoRef.current;
+    if (!v) return;
+
+    const FRAME_STEP = 1 / 30; // un pas de frame à 30 fps
+
+    const tick = () => {
+      const target = targetTimeRef.current;
+      // lerp doux vers la cible
+      currentTimeRef.current += (target - currentTimeRef.current) * 0.18;
+      const next = currentTimeRef.current;
+      if (videoReady && Math.abs(v.currentTime - next) >= FRAME_STEP) {
+        try {
+          v.currentTime = next;
+        } catch {
+          /* noop */
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [useScrub, autoplayMode, videoReady]);
 
   useMotionValueEvent(smooth, 'change', (p) => {
     if (!useScrub || autoplayMode) return;
     const v = videoRef.current;
     if (!v) return;
     const dur = isFinite(v.duration) && v.duration > 0 ? v.duration : SCRUB_DURATION;
-    const target = Math.min(SCRUB_DURATION, dur) * Math.max(0, Math.min(1, p));
-    try {
-      v.currentTime = target;
-    } catch {
-      /* noop */
-    }
+    targetTimeRef.current = Math.min(SCRUB_DURATION, dur) * Math.max(0, Math.min(1, p));
   });
 
   return (
