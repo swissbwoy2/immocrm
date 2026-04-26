@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, Search, Sparkles, FileText, RefreshCw, Send, AlertTriangle, CheckCircle2, Clock, HelpCircle, User, Filter } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ShieldCheck, Search, Sparkles, FileText, RefreshCw, Send, AlertTriangle, CheckCircle2, Clock, HelpCircle, User, Filter, Zap, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { PremiumPageHeader, PremiumKPICard, PremiumTable, PremiumTableHeader, PremiumTableRow, PremiumTableSkeleton, PremiumEmptyState, TableBody, TableCell, TableHead, TableRow } from '@/components/premium';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -27,6 +28,7 @@ interface Row {
   doc_nom: string | null;
   doc_url: string | null;
   last_reminder_at: string | null;
+  has_extract: boolean; // 🆕 le client a-t-il au moins 1 extrait uploadé ?
 }
 
 function computeStatus(dateEmission: string | null): { status: Status; ageDays: number | null } {
@@ -76,6 +78,10 @@ export default function SuiviExtraitsPoursuites() {
   const [filter, setFilter] = useState<'all' | Status>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const pollRef = useRef<number | null>(null);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -97,6 +103,15 @@ export default function SuiviExtraitsPoursuites() {
         console.error('[SuiviExtraitsPoursuites] query error:', error);
         throw error;
       }
+
+      // Récupérer la liste des clients ayant au moins 1 extrait uploadé
+      const { data: extractDocs } = await (supabase as any)
+        .from('documents')
+        .select('client_id')
+        .eq('type_document', 'extrait_poursuites')
+        .limit(15000);
+      const clientsWithExtract = new Set<string>((extractDocs ?? []).map((d: any) => d.client_id).filter(Boolean));
+
       const mapped: Row[] = (data ?? []).map((c: any) => ({
         id: c.id,
         prenom: c.profile?.prenom ?? null,
@@ -109,6 +124,7 @@ export default function SuiviExtraitsPoursuites() {
         doc_nom: c.source_document?.nom ?? null,
         doc_url: c.source_document?.url ?? null,
         last_reminder_at: c.extrait_poursuites_last_reminder_at,
+        has_extract: clientsWithExtract.has(c.id),
       }));
       setRows(mapped);
     } catch (err: any) {
@@ -120,6 +136,7 @@ export default function SuiviExtraitsPoursuites() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => () => { if (pollRef.current) window.clearInterval(pollRef.current); }, []);
 
   const enriched = useMemo(() => rows.map((r) => ({ ...r, ...computeStatus(r.date_emission) })), [rows]);
 
@@ -128,6 +145,7 @@ export default function SuiviExtraitsPoursuites() {
     missing: enriched.filter((r) => r.status === 'missing').length,
     warning: enriched.filter((r) => r.status === 'warning').length,
     expired: enriched.filter((r) => r.status === 'expired').length,
+    scannable: enriched.filter((r) => r.has_extract && !r.date_emission && !['manual', 'agent'].includes(r.method ?? '')).length,
   }), [enriched]);
 
   const filtered = useMemo(() => {
@@ -196,6 +214,45 @@ export default function SuiviExtraitsPoursuites() {
     }
   };
 
+  const runBatchScan = async (mode: 'missing' | 'all') => {
+    const targetCount = mode === 'missing' ? kpis.scannable : enriched.filter(r => r.has_extract && !['manual', 'agent'].includes(r.method ?? '')).length;
+    if (targetCount === 0) {
+      toast({ title: 'Aucun client à scanner', description: 'Aucun client éligible pour ce mode.' });
+      return;
+    }
+    setBatchRunning(true);
+    setBatchProgress({ done: 0, total: targetCount });
+
+    // Polling : recharge toutes les 4s pour montrer la progression en temps réel
+    const startMissing = enriched.filter(r => r.has_extract && !r.date_emission).length;
+    pollRef.current = window.setInterval(async () => {
+      await load();
+      // Approxime la progression : combien de "scannables" ont disparu depuis le départ
+      const currentMissing = rows.filter(r => r.has_extract && !r.date_emission).length;
+      const done = Math.max(0, startMissing - currentMissing);
+      setBatchProgress({ done: Math.min(done, targetCount), total: targetCount });
+    }, 4000) as unknown as number;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-poursuites-batch', {
+        body: { mode, limit: 50 },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? 'Échec du scan global');
+      toast({
+        title: '✅ Scan IA terminé',
+        description: `${data.success}/${data.total} dates détectées${data.failed ? ` · ${data.failed} échec(s)` : ''}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Erreur scan global', description: err.message ?? 'Le scan a échoué', variant: 'destructive' });
+    } finally {
+      if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+      setBatchRunning(false);
+      setBatchProgress(null);
+      await load();
+    }
+  };
+
   return (
     <div className="relative p-4 md:p-8 space-y-6">
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
@@ -211,12 +268,87 @@ export default function SuiviExtraitsPoursuites() {
         />
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <PremiumKPICard title="Clients actifs" value={kpis.total} icon={User} variant="default" />
           <PremiumKPICard title="Manquants" value={kpis.missing} icon={HelpCircle} variant="warning" />
           <PremiumKPICard title="> 2 mois" value={kpis.warning} icon={Clock} variant="warning" />
           <PremiumKPICard title="Expirés" value={kpis.expired} icon={AlertTriangle} variant="danger" />
+          <PremiumKPICard title="Scannables IA" value={kpis.scannable} icon={Sparkles} variant="default" />
         </div>
+
+        {/* Barre d'action scan global */}
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-background to-violet-500/5">
+          <CardContent className="p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm">Scan IA en masse</div>
+                <div className="text-xs text-muted-foreground">
+                  {batchRunning && batchProgress
+                    ? `Analyse en cours… ${batchProgress.done}/${batchProgress.total} clients`
+                    : `${kpis.scannable} client(s) ont un extrait uploadé sans date détectée`}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {batchRunning && batchProgress && (
+                <div className="w-40 hidden md:block">
+                  <Progress value={batchProgress.total ? (batchProgress.done / batchProgress.total) * 100 : 0} className="h-2" />
+                </div>
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    disabled={batchRunning || kpis.scannable === 0}
+                    className="gap-2"
+                    size="sm"
+                  >
+                    {batchRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {batchRunning ? 'Analyse en cours…' : `Scanner les ${kpis.scannable} manquants`}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Lancer le scan IA en masse ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      L'IA va analyser <strong>{kpis.scannable} extrait(s) PDF</strong> pour en détecter la date d'émission.
+                      <br /><br />
+                      Durée estimée : <strong>~{Math.ceil(kpis.scannable * 4 / 60)} minute(s)</strong>.
+                      Les saisies manuelles ne seront jamais écrasées.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => runBatchScan('missing')}>Lancer le scan</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={batchRunning} size="sm" className="gap-2">
+                    <RefreshCw className="w-4 h-4" /> Re-scanner tout
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Re-scanner tous les extraits ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette opération va relancer l'IA sur <strong>tous les clients ayant un extrait uploadé</strong>,
+                      y compris ceux dont la date est déjà détectée par l'IA. Les saisies manuelles restent protégées.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => runBatchScan('all')}>Tout re-scanner</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filtres + recherche */}
         <Card className="border-border/50">
