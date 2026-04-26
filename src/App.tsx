@@ -16,6 +16,7 @@ import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 const HomePage = lazy(() => import("./pages/public-site/HomePage"));
+const DemoPage = lazy(() => import("./pages/Demo"));
 
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
@@ -250,6 +251,7 @@ const App = () => (
               <Route path="/" element={<HomePage />} />
               
               <Route path="/login" element={<Login />} />
+              <Route path="/demo" element={<DemoPage />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
               <Route path="/mandat-v3" element={<MandatV3 />} />
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
