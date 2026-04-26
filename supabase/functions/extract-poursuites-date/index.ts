@@ -33,10 +33,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json().catch(() => ({}));
-    const { document_id, client_id } = body;
+    const { client_id } = body;
 
-    if (!document_id || !client_id) {
-      return jsonResponse({ ok: false, error: "document_id et client_id requis" }, 400);
+    if (!client_id) {
+      return jsonResponse({ ok: false, error: "client_id requis" }, 400);
     }
 
     // Vérifier accès au client
@@ -48,7 +48,7 @@ serve(async (req) => {
 
     if (!client) return jsonResponse({ ok: false, error: "Client introuvable" }, 404);
 
-    // Autorisation : owner du client OU admin/agent assigné
+    // Autorisation
     const isOwner = client.user_id === userData.user.id;
     let isStaff = false;
     if (!isOwner) {
@@ -62,35 +62,131 @@ serve(async (req) => {
       return jsonResponse({ ok: false, error: "Accès refusé" }, 403);
     }
 
-    // Récupérer le document
-    const { data: doc } = await supabase
+    // 🆕 Auto-scan : récupérer TOUS les extraits du client, du plus récent au plus ancien
+    const { data: docs } = await supabase
       .from("documents")
-      .select("id, url, nom, type_document")
-      .eq("id", document_id)
-      .maybeSingle();
+      .select("id, url, nom, date_upload")
+      .eq("client_id", client_id)
+      .eq("type_document", "extrait_poursuites")
+      .order("date_upload", { ascending: false });
 
-    if (!doc) return jsonResponse({ ok: false, error: "Document introuvable" }, 404);
+    if (!docs?.length) {
+      return jsonResponse({
+        ok: false,
+        error: "Aucun extrait de poursuites trouvé pour ce client. Uploadez d'abord un extrait.",
+      }, 404);
+    }
 
-    // Construire signed URL pour le PDF
+    const scanResults: Array<{
+      document_id: string;
+      nom: string;
+      date_emission?: string;
+      confidence?: number;
+      error?: string;
+    }> = [];
+
+    let bestResult: {
+      document_id: string;
+      date_emission: string;
+      confidence: number;
+      office_canton?: string;
+      nom_personne?: string;
+    } | null = null;
+
+    // Itérer du plus récent au plus ancien, prendre le 1er valide (≥ 0.5 confiance)
+    // Stop dès qu'on a un résultat fiable, fallback sur les anciens sinon.
+    for (const doc of docs) {
+      const ai = await extractFromPdf(supabase, doc, lovableKey);
+      scanResults.push({
+        document_id: doc.id,
+        nom: doc.nom,
+        date_emission: ai?.date_emission,
+        confidence: ai?.confidence,
+        error: ai?.error,
+      });
+
+      if (ai?.date_emission && ai?.confidence !== undefined && ai.confidence >= 0.5) {
+        bestResult = {
+          document_id: doc.id,
+          date_emission: ai.date_emission,
+          confidence: ai.confidence,
+          office_canton: ai.office_canton,
+          nom_personne: ai.nom_personne,
+        };
+        break; // 1er résultat fiable trouvé (= le plus récent par tri date_upload)
+      }
+    }
+
+    if (!bestResult) {
+      return jsonResponse({
+        ok: false,
+        error: "Aucune date détectable dans les extraits. Saisissez-la manuellement.",
+        scanned: scanResults,
+      }, 422);
+    }
+
+    // Sauvegarde dans clients
+    const { error: updateErr } = await supabase
+      .from("clients")
+      .update({
+        extrait_poursuites_date_emission: bestResult.date_emission,
+        extrait_poursuites_extraction_method: "ai_auto_scan",
+        extrait_poursuites_document_id: bestResult.document_id,
+        extrait_poursuites_ai_confidence: bestResult.confidence,
+      })
+      .eq("id", client_id);
+
+    if (updateErr) {
+      console.error("Update client failed:", updateErr);
+      return jsonResponse({ ok: false, error: "Sauvegarde échouée" }, 500);
+    }
+
+    return jsonResponse({
+      ok: true,
+      date_emission: bestResult.date_emission,
+      confidence: bestResult.confidence,
+      document_id: bestResult.document_id,
+      office_canton: bestResult.office_canton ?? null,
+      nom_personne: bestResult.nom_personne ?? null,
+      total_scanned: scanResults.length,
+      total_extracts: docs.length,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("extract-poursuites-date error:", msg);
+    return jsonResponse({ ok: false, error: msg }, 500);
+  }
+});
+
+async function extractFromPdf(
+  supabase: ReturnType<typeof createClient>,
+  doc: { id: string; url: string | null; nom: string },
+  lovableKey: string,
+): Promise<{
+  date_emission?: string;
+  confidence?: number;
+  office_canton?: string;
+  nom_personne?: string;
+  error?: string;
+} | null> {
+  try {
+    if (!doc.url) return { error: "URL manquante" };
+
+    // Construire signed URL si besoin
     let signedUrl = doc.url;
-    if (doc.url && !doc.url.startsWith("http")) {
+    if (!doc.url.startsWith("http")) {
       const { data: signed } = await supabase.storage
         .from("client-documents")
         .createSignedUrl(doc.url, 300);
       if (signed?.signedUrl) signedUrl = signed.signedUrl;
     }
+    if (!signedUrl) return { error: "URL indisponible" };
 
-    if (!signedUrl) {
-      return jsonResponse({ ok: false, error: "URL du document indisponible" }, 400);
-    }
-
-    // Télécharger et convertir en base64
+    // Télécharger
     const fileResp = await fetch(signedUrl);
-    if (!fileResp.ok) {
-      return jsonResponse({ ok: false, error: "Téléchargement du PDF échoué" }, 500);
-    }
+    if (!fileResp.ok) return { error: `Téléchargement échoué (${fileResp.status})` };
+
     const arrayBuf = await fileResp.arrayBuffer();
-    // Encodage base64 par chunks pour éviter "Maximum call stack size exceeded" sur gros fichiers
     const bytes = new Uint8Array(arrayBuf);
     const CHUNK = 0x8000;
     let binary = "";
@@ -98,10 +194,12 @@ serve(async (req) => {
       binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
     }
     const base64 = btoa(binary);
-    const mime = doc.type || "application/pdf";
+    // Devine le MIME via extension
+    const isPdf = /\.pdf$/i.test(doc.nom);
+    const mime = isPdf ? "application/pdf" : "image/jpeg";
     const dataUrl = `data:${mime};base64,${base64}`;
 
-    // Appel Lovable AI Gateway (Gemini Flash, multimodal + tool calling)
+    // Appel Lovable AI Gateway
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -135,17 +233,10 @@ serve(async (req) => {
               parameters: {
                 type: "object",
                 properties: {
-                  date_emission: {
-                    type: "string",
-                    description: "Date d'émission du document au format YYYY-MM-DD",
-                  },
-                  office_canton: { type: "string", description: "Canton ou ville de l'office (ex: Vaud, Lausanne)" },
+                  date_emission: { type: "string", description: "Date d'émission au format YYYY-MM-DD" },
+                  office_canton: { type: "string", description: "Canton ou ville de l'office" },
                   nom_personne: { type: "string", description: "Nom et prénom de la personne concernée" },
-                  confidence: {
-                    type: "number",
-                    description: "Score de confiance entre 0 et 1 sur la fiabilité de l'extraction",
-                  },
-                  notes: { type: "string", description: "Notes optionnelles si quelque chose semble inhabituel" },
+                  confidence: { type: "number", description: "Score de confiance entre 0 et 1" },
                 },
                 required: ["date_emission", "confidence"],
                 additionalProperties: false,
@@ -157,73 +248,33 @@ serve(async (req) => {
       }),
     });
 
-    if (aiResp.status === 429) {
-      return jsonResponse({ ok: false, error: "Limite IA atteinte, réessayez dans 1 minute" }, 429);
-    }
-    if (aiResp.status === 402) {
-      return jsonResponse({ ok: false, error: "Crédits IA épuisés. Ajoutez des crédits dans Lovable Cloud." }, 402);
-    }
+    if (aiResp.status === 429) return { error: "Rate limit IA" };
+    if (aiResp.status === 402) return { error: "Crédits IA épuisés" };
     if (!aiResp.ok) {
-      const errTxt = await aiResp.text();
-      console.error("AI error:", aiResp.status, errTxt.slice(0, 500));
-      return jsonResponse({ ok: false, error: `Erreur IA (${aiResp.status})` }, 500);
+      const t = await aiResp.text();
+      console.error("AI error:", aiResp.status, t.slice(0, 300));
+      return { error: `AI error ${aiResp.status}` };
     }
 
     const aiResult = await aiResp.json();
     const toolCall = aiResult?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) {
-      return jsonResponse({ ok: false, error: "Aucune donnée extraite par l'IA" }, 422);
+    if (!toolCall?.function?.arguments) return { error: "Aucun tool_call" };
+
+    const parsed = JSON.parse(toolCall.function.arguments);
+    if (!parsed.date_emission || !/^\d{4}-\d{2}-\d{2}$/.test(parsed.date_emission)) {
+      return { error: "Date invalide" };
     }
 
-    let parsed: any;
-    try {
-      parsed = JSON.parse(toolCall.function.arguments);
-    } catch {
-      return jsonResponse({ ok: false, error: "Réponse IA invalide" }, 500);
-    }
-
-    const dateEmission = parsed.date_emission;
-    const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
-
-    // Validation date
-    if (!dateEmission || !/^\d{4}-\d{2}-\d{2}$/.test(dateEmission)) {
-      return jsonResponse({
-        ok: false,
-        error: "Date non détectable, veuillez la saisir manuellement",
-        ai_response: parsed,
-      }, 422);
-    }
-
-    // Sauvegarde dans clients
-    const { error: updateErr } = await supabase
-      .from("clients")
-      .update({
-        extrait_poursuites_date_emission: dateEmission,
-        extrait_poursuites_extraction_method: "ai",
-        extrait_poursuites_document_id: document_id,
-        extrait_poursuites_ai_confidence: confidence,
-      })
-      .eq("id", client_id);
-
-    if (updateErr) {
-      console.error("Update client failed:", updateErr);
-      return jsonResponse({ ok: false, error: "Sauvegarde échouée" }, 500);
-    }
-
-    return jsonResponse({
-      ok: true,
-      date_emission: dateEmission,
-      confidence,
-      office_canton: parsed.office_canton ?? null,
-      nom_personne: parsed.nom_personne ?? null,
-      notes: parsed.notes ?? null,
-    });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("extract-poursuites-date error:", msg);
-    return jsonResponse({ ok: false, error: msg }, 500);
+    return {
+      date_emission: parsed.date_emission,
+      confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
+      office_canton: parsed.office_canton,
+      nom_personne: parsed.nom_personne,
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
   }
-});
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

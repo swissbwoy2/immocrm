@@ -1,107 +1,67 @@
-## 🎯 Objectif
+# Plan : Extraction IA automatique des extraits de poursuites
 
-1. **Reproduire la logique des extraits de poursuites** pour les **fiches de salaire** : du **25 du mois** jusqu'à action du client, envoyer un rappel **TOUS LES JOURS** (pas de cooldown — quotidien jusqu'à upload de la fiche du mois en cours).
-2. **Tester** : extraction IA des extraits de poursuites + envoi des rappels (poursuites & fiches de salaire).
+## 1. Correction de l'erreur TypeScript (bloquant le build)
 
----
+**Fichier**: `supabase/functions/extract-poursuites-date/index.ts` (ligne 101)
 
-## 📊 Contexte technique trouvé
+Le SELECT ne récupère pas la colonne `type` du document, donc `doc.type` casse le typage.
+→ Remplacer la ligne référençant `doc.type` par `"application/pdf"` directement (tous les extraits sont des PDF, et l'API Gemini attend un MIME standard).
 
-- Fiches de salaire = lignes dans `documents` avec `type_document = 'fiche_salaire'` (216 fiches en base, dernière 2026-04-24)
-- Colonnes utiles : `client_id`, `date_upload`, `created_at`
-- Aucun système de relance fiche de salaire existant aujourd'hui
-- Mémoire `client-document-monthly-verification-system` confirme la fenêtre 25 → 5 du mois suivant
-
----
-
-## 🔧 1. Nouvelle Edge Function `send-payslip-update-reminders`
-
-**Logique** :
-- Pour chaque client actif (`statut in ('actif','en_recherche','en_attente')`)
-- **Fenêtre d'activation** : entre le 25 du mois M et le 5 du mois M+1
-- Récupérer la fiche la plus récente : `documents` where `type_document='fiche_salaire'` and `client_id=...` order by `date_upload desc limit 1`
-- Si la fiche la plus récente est **antérieure au 1er du mois M** (= aucune fiche pour le mois courant) → envoyer rappel
-- **Pas de cooldown** : envoi quotidien tant que pas d'upload
-
-**Niveaux de sévérité progressifs** :
-| Période | Niveau | Destinataires |
-|---|---|---|
-| 25-30/31 du mois | 🟡 Rappel doux | Client + Agent |
-| 1-3 du mois suivant | 🟠 Rappel insistant | Client + Agent |
-| 4-5 du mois suivant | 🔴 URGENT — dossier bientôt incomplet | Client + Agent + Admins |
-
-Notifications + email avec CTA → `/client/documents`.
-
----
-
-## 🗄️ 2. Migration SQL
-
-- Ajouter `payslip_last_reminder_at TIMESTAMPTZ` sur `clients` (monitoring/debug)
-- Index sur `documents(client_id, type_document, date_upload DESC)` si absent
-
----
-
-## ⏰ 3. Cron quotidien
-
-Programmer via `pg_cron` une exécution **quotidienne à 9h Europe/Zurich** (8h UTC) de `send-payslip-update-reminders`. Utiliser l'outil `insert` (pas migration) car le SQL contient l'URL/clé du projet.
-
-Idéalement aussi : ajouter ou vérifier le cron quotidien pour `send-document-update-reminders` (poursuites) si absent.
-
----
-
-## ⚙️ 4. Déclaration dans `supabase/config.toml`
-
-```toml
-[functions.send-payslip-update-reminders]
-verify_jwt = false
+```ts
+const mime = "application/pdf";
 ```
 
----
+## 2. Refonte de la logique d'extraction : auto-scan par type
 
-## 🧪 5. TESTS — Phase A : Extraction IA poursuites
+**Constat actuel** : la fonction `extract-poursuites-date` exige `document_id` en input → l'utilisateur doit sélectionner manuellement un document.
 
-- Déployer `extract-poursuites-date`
-- Chercher un `document_id` réel d'extrait de poursuites en base
-- L'invoquer via `supabase--curl_edge_functions`
-- Vérifier que la date extraite est correcte
-- Vérifier que `clients.extrait_poursuites_date_emission`, `extraction_method='ai'`, `ai_confidence` sont mis à jour
-- Inspecter les logs via `supabase--edge_function_logs`
+**Nouveau comportement** : la fonction prend uniquement `client_id` et :
+1. Récupère **tous les documents** du client où `type_document = 'extrait_poursuites'`, triés par `date_upload DESC`.
+2. Itère du plus récent au plus ancien.
+3. Pour chaque PDF, appelle Gemini 2.5 Flash pour extraire la date d'émission.
+4. Garde la **date la plus récente trouvée** (parmi tous les extraits valides).
+5. Sauvegarde dans `clients.extrait_poursuites_date_emission` avec `extraction_method = 'ai_auto_scan'` et le `document_id` du PDF qui a fourni la date la plus récente.
 
----
+**Avantage** : zéro action utilisateur. Dès qu'un extrait est uploadé (peu importe par qui), un trigger ou un appel automatique met à jour la date.
 
-## 🧪 6. TESTS — Phase B : Rappels poursuites
+## 3. Déclenchement automatique
 
-- Invoquer `send-document-update-reminders` manuellement
-- Vérifier compteurs `{missing, warning, expired, skipped}`
-- Vérifier notifications créées (client/agent/admin selon niveau)
-- Vérifier logs (pas d'erreur Resend)
+Deux points d'entrée :
 
----
+**A. À l'upload d'un nouveau document `extrait_poursuites`** :
+- Modifier le hook d'upload côté frontend (composant qui gère l'ajout de documents) pour appeler `extract-poursuites-date` automatiquement après un upload réussi avec `type_document === 'extrait_poursuites'`.
+- Toast de feedback : "Date d'émission détectée automatiquement : 12/03/2026 (confiance 95%)".
 
-## 🧪 7. TESTS — Phase C : Rappels fiches de salaire
+**B. Cron quotidien** :
+- Étendre le cron `poursuites-reminders-daily` (déjà actif à 10h Zurich) pour scanner d'abord les clients dont `extrait_poursuites_date_emission IS NULL` mais qui ont au moins 1 document `extrait_poursuites` en base → lancer l'extraction IA automatiquement avant d'envoyer les rappels.
 
-- Déployer la nouvelle fonction
-- L'invoquer manuellement via `curl_edge_functions`
-- Vérifier qu'un client ayant uploadé une fiche aujourd'hui n'est **PAS** notifié
-- Vérifier qu'un client sans fiche du mois courant **EST** notifié
-- Vérifier les notifications + emails
+## 4. Simplification UI
 
----
+- Retirer le bouton "Sélectionner un document" du composant `ExtractPoursuitesUploadDialog.tsx`.
+- Ne garder que :
+  - Bouton "Lancer l'analyse IA des extraits" (si des extraits existent déjà en base sans date détectée).
+  - Bouton "Saisir la date manuellement" (fallback).
+- Afficher la liste des extraits déjà analysés avec leur date détectée et leur badge de fraîcheur (vert/jaune/rouge).
 
-## 🗂️ Récap fichiers
+## 5. Tests post-déploiement
 
-**Créer** :
-- `supabase/functions/send-payslip-update-reminders/index.ts`
-- Migration SQL (1 colonne + 1 index)
+1. Déployer `extract-poursuites-date` corrigée.
+2. Lancer un appel `curl` sur le client courant (`f1b90290-c2c4-4b18-9b9a-feb180ab43da`) pour vérifier l'auto-scan.
+3. Vérifier les logs : nombre d'extraits scannés, date retenue, confiance IA.
+4. Vérifier en base : `clients.extrait_poursuites_date_emission` mis à jour.
+5. Lancer un backfill manuel sur les ~66 extraits existants pour initialiser les dates des clients concernés.
 
-**Modifier** :
-- `supabase/config.toml`
+## Fichiers impactés
 
-**Insert SQL** (data, pas migration) :
-- Cron `pg_cron` pour appel quotidien
+- `supabase/functions/extract-poursuites-date/index.ts` — refonte (auto-scan + fix TS)
+- `src/components/ExtractPoursuitesUploadDialog.tsx` — simplification UI
+- Composant d'upload de documents (à identifier précisément lors de l'implémentation) — déclenchement auto post-upload
+- `supabase/functions/send-document-update-reminders/index.ts` — étape pré-rappel : scan IA des clients sans date
 
----
+## Question
 
-## ❓ À confirmer
+L'extraction IA prend ~3-5 secondes par PDF. Sur un client avec 5 extraits historiques, le scan complet prend ~20s. **Préférences** :
+- **A** : Scanner uniquement le **dernier extrait** uploadé (rapide, 1 appel IA, suffit dans 99% des cas car on veut la date la plus récente).
+- **B** : Scanner **tous les extraits** du client et garder la date max (lent mais robuste si un extrait récent est mal nommé/désordonné).
 
-**Heure d'exécution** : je propose **9h Europe/Zurich** (matin, le client voit la notif en début de journée). OK ou tu préfères un autre créneau (12h, 18h) ?
+Je recommande **A** (le plus récent par `date_upload`), avec fallback sur les précédents uniquement si l'IA échoue. OK ?
