@@ -321,17 +321,27 @@ export function AppShowcaseSection() {
               </div>
 
               {/* CTA */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <Button
-                  size="lg"
-                  onClick={() => navigate('/nouveau-mandat')}
-                  className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 hover:opacity-95 transition-all"
-                >
-                  Créer mon compte maintenant
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <Button
+                    size="lg"
+                    onClick={() => navigate('/nouveau-mandat')}
+                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 hover:opacity-95 transition-all"
+                  >
+                    Créer mon compte maintenant
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => navigate('/demo')}
+                    className="group h-14 px-6 text-base font-semibold border-[hsl(38_45%_48%/0.5)] bg-[hsl(30_15%_8%/0.4)] text-[hsl(40_35%_98%)] hover:bg-[hsl(38_45%_48%/0.15)] hover:border-[hsl(38_55%_65%)] backdrop-blur transition-all"
+                  >
+                    🎬 Essayer la démo
+                  </Button>
+                </div>
                 <p className="text-xs text-[hsl(40_25%_60%)]">
-                  ✓ Sans engagement &nbsp;·&nbsp; ✓ Activation immédiate
+                  ✓ Sans engagement &nbsp;·&nbsp; ✓ Activation immédiate &nbsp;·&nbsp; ✓ Démo en lecture seule, sans inscription
                 </p>
               </div>
             </div>
