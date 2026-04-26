@@ -222,27 +222,7 @@ export default function MandatV3() {
       </Suspense>
 
       <div className="relative z-10 max-w-3xl mx-auto px-3 sm:px-4 py-8 sm:py-12">
-        {/* Header */}
-        <motion.div
-          className="text-center mb-8 sm:mb-10"
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <img
-            src={logoImmorama}
-            alt="Immo-Rama"
-            className="h-12 w-auto mx-auto mb-5"
-            style={{ filter: 'brightness(0) invert(1)' }}
-          />
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[hsl(40_20%_88%)]">
-            Mandat de recherche
-          </h1>
-          <p className="text-xs text-[hsl(40_20%_45%)] mt-2 tracking-wider uppercase">
-            ImmoRésidence Sàrl — Logisorama
-          </p>
-          <div className="mt-4 w-20 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.7)] to-transparent mx-auto" />
-        </motion.div>
+        {/* Header décoratif retiré — logo et compteur sont gérés par PremiumGuaranteeBanner + ProgressBlock */}
 
         {/* Hero garantie 90 jours + Bloc progression + Stepper Lucide */}
         {!isSubmitted && (
