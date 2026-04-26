@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
-import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle } from 'lucide-react';
+import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle, RefreshCw, Ban, Pause, Play, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { CancellationReasonForm, type CancellationReason } from '@/components/mandat/CancellationReasonForm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+const MANDAT_DURATION_DAYS = 90;
+const REFUND_ELIGIBILITY_DAY = 82;
 
 interface ClientData {
   id: string;
@@ -25,6 +30,14 @@ interface ClientData {
   pieces: number | null;
   region_recherche: string | null;
   created_at: string | null;
+  statut: string | null;
+  cancellation_reason: string | null;
+  refund_eligible: boolean | null;
+  refund_status: string | null;
+  refund_requested_at: string | null;
+  mandate_paused_at: string | null;
+  mandate_pause_days: number | null;
+  mandate_official_end_date: string | null;
 }
 
 interface ProfileData {
@@ -152,25 +165,80 @@ export default function MonContrat() {
     }
   };
 
-  // Calculate mandate dates
-  const getMandatDates = () => {
-    const startDate = client?.date_ajout || client?.created_at;
-    if (!startDate) return { start: null, end: null, daysRemaining: 0 };
+  // Mandate management state
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'cancel' | 'cancel_with_refund' | null>(null);
 
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 90);
-
-    const now = new Date();
-    const daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-
-    return { start, end, daysRemaining };
+  const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
+    if (!client) return;
+    setActionLoading(action);
+    try {
+      const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
+        body: { action, client_id: client.id, ...extra },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? 'Erreur');
+      toast({ title: 'Action effectuée', description: 'Votre mandat a été mis à jour.' });
+      await loadData();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err?.message ?? 'Action impossible', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const { start: mandatStart, end: mandatEnd, daysRemaining } = getMandatDates();
+  const openCancelDialog = (withRefund: boolean) => {
+    setPendingAction(withRefund ? 'cancel_with_refund' : 'cancel');
+    setReasonDialogOpen(true);
+  };
+
+  const handleCancelSubmit = async (reason: CancellationReason) => {
+    if (!client || !pendingAction) return;
+    setActionLoading(pendingAction);
+    try {
+      const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
+        body: { action: pendingAction, client_id: client.id, cancellation_reason: reason },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? 'Erreur');
+      toast({ title: 'Mandat annulé', description: data?.refund_eligible ? 'Votre demande de remboursement a été enregistrée.' : 'Votre mandat a été annulé.' });
+      setReasonDialogOpen(false);
+      await loadData();
+    } catch (err: any) {
+      toast({ title: 'Erreur', description: err?.message ?? 'Action impossible', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Calculate mandate dates (uses real signature date when available + pause days)
+  const getMandatDates = () => {
+    const startDate = client?.mandat_date_signature || client?.date_ajout || client?.created_at;
+    if (!startDate) return { start: null, end: null, daysRemaining: 0, daysSinceSignature: 0 };
+
+    const start = new Date(startDate);
+    const pauseDays = client?.mandate_pause_days ?? 0;
+    const end = new Date(start);
+    end.setDate(end.getDate() + MANDAT_DURATION_DAYS + pauseDays);
+
+    const now = new Date();
+    const rawDaysSince = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceSignature = Math.max(0, rawDaysSince - pauseDays);
+    const daysRemaining = Math.max(0, MANDAT_DURATION_DAYS - daysSinceSignature);
+
+    return { start, end, daysRemaining, daysSinceSignature };
+  };
+
+  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature } = getMandatDates();
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
   const hasPdf = !!client?.id;
+  const isPaused = !!client?.mandate_paused_at;
+  const isInactif = client?.statut === 'inactif';
+  const refundEligibleNow = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY;
+  const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
+  const showRefundRequested = client?.refund_status === 'pending';
 
   if (loading) {
     return (
@@ -343,7 +411,162 @@ export default function MonContrat() {
           </CardContent>
         </Card>
 
-        {/* Contract Details */}
+        {/* === Mandate Management Card === */}
+        {!isInactif && (
+          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl overflow-hidden">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <CardTitle className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Settings className="w-5 h-5 text-primary" />
+                  </div>
+                  Gestion de mon mandat
+                </CardTitle>
+                <Badge
+                  className={refundEligibleNow
+                    ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
+                    : 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30'}
+                >
+                  {refundEligibleNow
+                    ? '🟢 Éligible au remboursement'
+                    : `🔴 Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Paused banner */}
+              {isPaused && (
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+                  <div className="flex items-start gap-3">
+                    <Pause className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-blue-700 dark:text-blue-400">Mandat en pause</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Depuis le {client?.mandate_paused_at ? format(new Date(client.mandate_paused_at), 'd MMMM yyyy', { locale: fr }) : ''}.
+                        Aucune relance ne vous est envoyée.
+                      </p>
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleMandateAction('resume')}
+                      disabled={actionLoading === 'resume'}
+                    >
+                      <Play className="w-4 h-4 mr-1" /> Reprendre
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Refund pending banner */}
+              {showRefundRequested && (
+                <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-sm">
+                  <div className="flex items-start gap-3">
+                    <DollarSign className="w-5 h-5 text-green-600 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-green-700 dark:text-green-400">Remboursement en attente</p>
+                      <p className="text-muted-foreground mt-1">
+                        Demande enregistrée le {client?.refund_requested_at ? format(new Date(client.refund_requested_at), 'd MMMM yyyy', { locale: fr }) : ''}.
+                        Traitement sous 30 jours après la fin officielle du mandat.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reminder window banner */}
+              {inReminderWindow && (
+                <div className={`p-4 rounded-xl border ${
+                  refundEligibleNow
+                    ? 'bg-green-500/10 border-green-500/30'
+                    : 'bg-orange-500/10 border-orange-500/30'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className={`w-5 h-5 mt-0.5 ${refundEligibleNow ? 'text-green-600' : 'text-orange-600'}`} />
+                    <div>
+                      <p className="font-semibold">Votre mandat se termine dans {daysRemaining} jour{daysRemaining > 1 ? 's' : ''}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Sans action de votre part, il sera renouvelé automatiquement le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              {!isPaused && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  {/* Renouveler — only visible in reminder window */}
+                  {inReminderWindow && (
+                    <Button
+                      onClick={() => handleMandateAction('renew')}
+                      disabled={actionLoading === 'renew'}
+                      className="w-full"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" /> Renouveler
+                    </Button>
+                  )}
+
+                  {/* Annuler simple — masqué après J82 */}
+                  {!refundEligibleNow && (
+                    <Button
+                      variant="outline"
+                      onClick={() => openCancelDialog(false)}
+                      disabled={actionLoading !== null}
+                      className="w-full"
+                    >
+                      <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat
+                    </Button>
+                  )}
+
+                  {/* Annuler + Remboursement — visible toujours, désactivé avant J82 */}
+                  <Button
+                    variant={refundEligibleNow ? 'default' : 'outline'}
+                    onClick={() => openCancelDialog(true)}
+                    disabled={!refundEligibleNow || actionLoading !== null}
+                    className="w-full"
+                    title={!refundEligibleNow ? `Disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour` : undefined}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Annuler + Remboursement
+                  </Button>
+
+                  {/* Pause */}
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleMandateAction('pause')}
+                    disabled={actionLoading !== null}
+                    className="w-full sm:col-span-2"
+                  >
+                    <Pause className="w-4 h-4 mr-2" /> Mettre en pause
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Cancel reason dialog */}
+        <Dialog open={reasonDialogOpen} onOpenChange={setReasonDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {pendingAction === 'cancel_with_refund' ? 'Annuler + Demander mon remboursement' : 'Annuler mon mandat'}
+              </DialogTitle>
+              <DialogDescription>
+                Aidez-nous à comprendre votre choix. Cette information est confidentielle.
+              </DialogDescription>
+            </DialogHeader>
+            <CancellationReasonForm
+              withRefund={pendingAction === 'cancel_with_refund'}
+              daysSinceSignature={daysSinceSignature ?? 0}
+              loading={actionLoading !== null}
+              onSubmit={handleCancelSubmit}
+              onCancel={() => setReasonDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Search Criteria */}
           <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">

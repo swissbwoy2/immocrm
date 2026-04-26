@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const MANDAT_DURATION_DAYS = 90;
 const REMINDER_WINDOW_DAYS = 30; // À partir de J+60 (= 30 jours restants)
+const REFUND_ELIGIBILITY_DAY = 82;
 const APP_BASE_URL = "https://immocrm.lovable.app";
 
 function daysBetween(from: Date, to: Date): number {
@@ -18,11 +19,15 @@ function buildEmailHtml(opts: {
   prenom: string;
   nom: string;
   daysRemaining: number;
+  daysSinceSignature: number;
   endDate: Date;
   renewUrl: string;
   cancelUrl: string;
+  refundUrl: string;
+  pauseUrl: string;
 }): string {
-  const { prenom, nom, daysRemaining, endDate, renewUrl, cancelUrl } = opts;
+  const { prenom, nom, daysRemaining, daysSinceSignature, endDate, renewUrl, cancelUrl, refundUrl, pauseUrl } = opts;
+  const refundEligible = daysSinceSignature >= REFUND_ELIGIBILITY_DAY;
   const endDateStr = endDate.toLocaleDateString("fr-CH", {
     day: "2-digit", month: "long", year: "numeric",
   });
@@ -48,20 +53,45 @@ function buildEmailHtml(opts: {
           </p>
         </div>
         <p style="font-size:15px;color:#374151;margin:0 0 16px;font-weight:600;">Que souhaitez-vous faire ?</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 24px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
           <tr>
-            <td style="padding:0 6px 12px 0;width:50%;">
+            <td style="padding:0 0 10px 0;">
               <a href="${renewUrl}" style="display:block;background:#1e40af;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
                 ✓ Renouveler maintenant
               </a>
             </td>
-            <td style="padding:0 0 12px 6px;width:50%;">
+          </tr>
+          ${refundEligible ? `<tr>
+            <td style="padding:0 0 10px 0;">
+              <a href="${refundUrl}" style="display:block;background:#16a34a;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                💰 Annuler + Demander mon remboursement
+              </a>
+            </td>
+          </tr>` : ""}
+          <tr>
+            <td style="padding:0 0 10px 0;">
               <a href="${cancelUrl}" style="display:block;background:#f3f4f6;color:#374151;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #d1d5db;">
-                ✗ Annuler ma recherche
+                ✗ Annuler ma recherche${!refundEligible ? " (sans remboursement)" : ""}
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 10px 0;">
+              <a href="${pauseUrl}" style="display:block;background:#eff6ff;color:#1e40af;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #bfdbfe;">
+                ⏸️ Mettre en pause
               </a>
             </td>
           </tr>
         </table>
+        ${!refundEligible ? `<div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:12px;border-radius:6px;margin:0 0 16px;">
+          <p style="margin:0;font-size:13px;color:#1e3a8a;">
+            ℹ️ Le remboursement deviendra disponible à partir du <strong>${REFUND_ELIGIBILITY_DAY}ème jour</strong> de votre mandat (jour actuel : ${daysSinceSignature}).
+          </p>
+        </div>` : `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:12px;border-radius:6px;margin:0 0 16px;">
+          <p style="margin:0;font-size:13px;color:#166534;">
+            ✅ Vous êtes <strong>éligible au remboursement</strong> (sauf si vous avez trouvé par vos propres moyens).
+          </p>
+        </div>`}
         <p style="font-size:13px;color:#6b7280;line-height:1.5;margin:0 0 8px;">
           Vous pouvez aussi gérer votre mandat depuis votre espace client.
         </p>
@@ -91,11 +121,12 @@ serve(async (req) => {
     const today = new Date();
     const todayDateStr = today.toISOString().split("T")[0];
 
-    // 1. Récupérer tous les clients actifs avec un mandat signé
+    // 1. Récupérer tous les clients actifs avec un mandat signé (skip ceux en pause)
     const { data: clients, error: clientsErr } = await supabase
       .from("clients")
-      .select("id, user_id, agent_id, mandat_date_signature, mandat_renewal_count")
+      .select("id, user_id, agent_id, mandat_date_signature, mandat_renewal_count, mandate_pause_days, mandate_paused_at, mandate_official_end_date")
       .eq("statut", "actif")
+      .is("mandate_paused_at", null)
       .not("mandat_date_signature", "is", null);
 
     if (clientsErr) throw clientsErr;
@@ -112,17 +143,23 @@ serve(async (req) => {
     for (const client of clients) {
       try {
         const signatureDate = new Date(client.mandat_date_signature);
-        const daysElapsed = daysBetween(signatureDate, today);
-        const daysRemaining = MANDAT_DURATION_DAYS - daysElapsed;
+        const rawDaysElapsed = daysBetween(signatureDate, today);
+        const pauseDays = client.mandate_pause_days ?? 0;
+        const daysSinceSignature = Math.max(0, rawDaysElapsed - pauseDays);
+        const daysRemaining = MANDAT_DURATION_DAYS - daysSinceSignature;
 
         // === A. Renouvellement automatique si échéance dépassée ===
         if (daysRemaining < 0) {
           const newSignatureDate = new Date();
+          const newOfficialEnd = new Date(newSignatureDate);
+          newOfficialEnd.setDate(newOfficialEnd.getDate() + MANDAT_DURATION_DAYS);
           await supabase
             .from("clients")
             .update({
               mandat_date_signature: newSignatureDate.toISOString(),
               mandat_renewal_count: (client.mandat_renewal_count ?? 0) + 1,
+              mandate_pause_days: 0,
+              mandate_official_end_date: newOfficialEnd.toISOString().split("T")[0],
             })
             .eq("id", client.id);
 
@@ -205,8 +242,10 @@ serve(async (req) => {
 
         const renewUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=renew`;
         const cancelUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=cancel`;
+        const refundUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=cancel_with_refund`;
+        const pauseUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=pause`;
         const endDate = new Date(signatureDate);
-        endDate.setDate(endDate.getDate() + MANDAT_DURATION_DAYS);
+        endDate.setDate(endDate.getDate() + MANDAT_DURATION_DAYS + pauseDays);
 
         // === F. Notification in-app ===
         if (client.user_id) {
@@ -242,9 +281,12 @@ serve(async (req) => {
             prenom: profile.prenom ?? "",
             nom: profile.nom ?? "",
             daysRemaining,
+            daysSinceSignature,
             endDate,
             renewUrl,
             cancelUrl,
+            refundUrl,
+            pauseUrl,
           });
           await fetch("https://api.resend.com/emails", {
             method: "POST",
