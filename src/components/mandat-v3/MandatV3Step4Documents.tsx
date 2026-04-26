@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, File, Trash2, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { File, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatV3FormData, MandateDocumentData } from './types';
 import { toast } from 'sonner';
+import DocumentUploadField from '@/components/scanner/DocumentUploadField';
 
 interface Props {
   data: MandatV3FormData;
