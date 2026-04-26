@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { motion, useReducedMotion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform, useSpring, useMotionValueEvent } from 'framer-motion';
 
 interface DiagonalSplitRevealProps {
   imageSrc: string;
@@ -9,14 +9,16 @@ interface DiagonalSplitRevealProps {
   children?: React.ReactNode;
 }
 
+const SCRUB_DURATION = 7; // secondes de vidéo balayées
+
 /**
  * Hero "Split Reveal" :
- * - Affiche l'image + titre au chargement
- * - Au scroll, l'image se coupe en diagonale 18° et s'écarte COMPLÈTEMENT
- * - Révèle la vidéo MP4 en boucle muette derrière, avec léger zoom cinéma
+ * - Image + titre au chargement, vidéo figée sur frame 0 derrière
+ * - Au scroll, l'image se split en diagonale 18° ET la vidéo avance frame par frame
+ * - Plage de scrub : 0 → 7s. À la fin, la vidéo reste figée sur la dernière frame.
  *
  * Desktop/Tablette : scroll-bind progressif (220vh / 180vh de piste)
- * Mobile : one-shot déclenché au premier scroll utilisateur (≥40px)
+ * Mobile : one-shot déclenché au premier scroll (≥40px), scrub manuel rAF
  */
 export function DiagonalSplitReveal({
   imageSrc,
@@ -26,6 +28,9 @@ export function DiagonalSplitReveal({
   children,
 }: DiagonalSplitRevealProps) {
   const expansionRef = useRef<HTMLDivElement>(null);
+  const desktopVideoRef = useRef<HTMLVideoElement>(null);
+  const mobileVideoRef = useRef<HTMLVideoElement>(null);
+  const reducedVideoRef = useRef<HTMLVideoElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
   // --- Détection breakpoint ---
@@ -81,25 +86,96 @@ export function DiagonalSplitReveal({
   // Zoom cinéma : démarre zoomé → respire vers 1 → finit légèrement zoomé
   const videoScale = useTransform(smoothProgress, [0, 0.5, 1], [1.12, 1.0, 1.05]);
 
+  // --- Desktop/Tablette : scrub vidéo lié au scroll (0 → 7s) ---
+  useMotionValueEvent(smoothProgress, 'change', (p) => {
+    const v = desktopVideoRef.current;
+    if (!v || !v.duration || isNaN(v.duration)) return;
+    const max = Math.min(SCRUB_DURATION, v.duration);
+    const target = Math.max(0, Math.min(p, 1)) * max;
+    // Petit seuil pour limiter les writes redondants
+    if (Math.abs(v.currentTime - target) > 0.02) {
+      try {
+        v.currentTime = target;
+      } catch {
+        /* noop : currentTime peut throw avant que la vidéo soit seekable */
+      }
+    }
+  });
+
+  // --- Mobile : scrub one-shot 0 → 7s sur 1.6s via rAF, déclenché au scroll ---
+  useEffect(() => {
+    if (!isMobile || !hasScrolled) return;
+    const v = mobileVideoRef.current;
+    if (!v) return;
+
+    const ANIM_DURATION = 1600; // ms (aligné sur le split d'image)
+    const start = performance.now();
+    let rafId = 0;
+
+    const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const t = Math.min(elapsed / ANIM_DURATION, 1);
+      const eased = easeInOut(t);
+      const max = Math.min(SCRUB_DURATION, v.duration || SCRUB_DURATION);
+      try {
+        v.currentTime = eased * max;
+      } catch {
+        /* noop */
+      }
+      if (t < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        v.pause();
+      }
+    };
+
+    // S'assurer qu'on part de 0 et que la vidéo est en pause
+    try {
+      v.pause();
+      v.currentTime = 0;
+    } catch {
+      /* noop */
+    }
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [isMobile, hasScrolled]);
+
+  // Handler commun pour préparer la vidéo une fois les métadonnées chargées
+  const handleLoadedMetadata = (
+    ref: React.RefObject<HTMLVideoElement>,
+    initialTime: number,
+  ) => () => {
+    const v = ref.current;
+    if (!v) return;
+    try {
+      v.pause();
+      v.currentTime = initialTime;
+    } catch {
+      /* noop */
+    }
+  };
+
   // Clip-path pour coupe diagonale ~18°
   // tan(18°) ≈ 0.3249 → décalage ≈ 16.2% en haut/bas
   const TOP_CLIP = 'polygon(0% 0%, 100% 0%, 100% 33.8%, 0% 66.2%)';
   const BOTTOM_CLIP = 'polygon(0% 66.2%, 100% 33.8%, 100% 100%, 0% 100%)';
 
   // ============================================
-  // MODE REDUCED MOTION : vidéo directe, pas d'animation
+  // MODE REDUCED MOTION : vidéo figée sur la frame finale (7s)
   // ============================================
   if (prefersReducedMotion) {
     return (
       <div>
         <section className="relative h-screen w-full overflow-hidden bg-[hsl(30_15%_8%)]">
           <video
+            ref={reducedVideoRef}
             src={videoSrc}
-            autoPlay
             muted
-            loop
             playsInline
             preload="auto"
+            onLoadedMetadata={handleLoadedMetadata(reducedVideoRef, SCRUB_DURATION)}
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.35)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
@@ -122,20 +198,20 @@ export function DiagonalSplitReveal({
   }
 
   // ============================================
-  // MODE MOBILE : one-shot déclenché au scroll utilisateur
+  // MODE MOBILE : split d'image + scrub vidéo one-shot au premier scroll
   // ============================================
   if (isMobile) {
     return (
       <div>
         <section className="relative h-screen w-full overflow-hidden bg-[hsl(30_15%_8%)]">
-          {/* Vidéo en fond */}
+          {/* Vidéo en fond — figée sur frame 0, scrubée 0→7s au scroll */}
           <video
+            ref={mobileVideoRef}
             src={videoSrc}
-            autoPlay
             muted
-            loop
             playsInline
             preload="auto"
+            onLoadedMetadata={handleLoadedMetadata(mobileVideoRef, 0)}
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.35)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
@@ -181,7 +257,7 @@ export function DiagonalSplitReveal({
             />
           </motion.div>
 
-          {/* Scroll hint — visible tant que pas scrollé */}
+          {/* Scroll hint */}
           <motion.div
             initial={{ opacity: 1 }}
             animate={{ opacity: hasScrolled ? 0 : 1 }}
@@ -204,7 +280,7 @@ export function DiagonalSplitReveal({
   }
 
   // ============================================
-  // MODE DESKTOP / TABLETTE : scroll-bind avec révélation totale
+  // MODE DESKTOP / TABLETTE : scrub vidéo lié au scroll
   // ============================================
   const trackHeight = isTablet ? '180vh' : '220vh';
 
@@ -220,24 +296,24 @@ export function DiagonalSplitReveal({
             background: 'hsl(30 15% 8%)',
           }}
         >
-          {/* Vidéo en fond — révélée derrière l'image avec zoom cinéma */}
+          {/* Vidéo en fond — scrubée 0→7s par le scroll, avec zoom cinéma */}
           <motion.div
             style={{ scale: videoScale, willChange: 'transform' }}
             className="absolute inset-0"
           >
             <video
+              ref={desktopVideoRef}
               src={videoSrc}
-              autoPlay
               muted
-              loop
               playsInline
               preload="auto"
+              onLoadedMetadata={handleLoadedMetadata(desktopVideoRef, 0)}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.3)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
           </motion.div>
 
-          {/* Moitié haute de l'image (clip + translate hors écran) */}
+          {/* Moitié haute de l'image */}
           <motion.div
             style={{
               x: topX,
@@ -257,7 +333,7 @@ export function DiagonalSplitReveal({
             />
           </motion.div>
 
-          {/* Moitié basse de l'image (clip + translate hors écran) */}
+          {/* Moitié basse de l'image */}
           <motion.div
             style={{
               x: bottomX,
@@ -312,7 +388,6 @@ export function DiagonalSplitReveal({
         </div>
       </div>
 
-      {/* Children apparaissent une fois la piste de scroll dépassée */}
       {children}
     </div>
   );
