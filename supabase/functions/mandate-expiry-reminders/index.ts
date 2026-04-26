@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const MANDAT_DURATION_DAYS = 90;
 const REMINDER_WINDOW_DAYS = 30; // À partir de J+60 (= 30 jours restants)
+const REFUND_ELIGIBILITY_DAY = 82;
 const APP_BASE_URL = "https://immocrm.lovable.app";
 
 function daysBetween(from: Date, to: Date): number {
@@ -18,11 +19,15 @@ function buildEmailHtml(opts: {
   prenom: string;
   nom: string;
   daysRemaining: number;
+  daysSinceSignature: number;
   endDate: Date;
   renewUrl: string;
   cancelUrl: string;
+  refundUrl: string;
+  pauseUrl: string;
 }): string {
-  const { prenom, nom, daysRemaining, endDate, renewUrl, cancelUrl } = opts;
+  const { prenom, nom, daysRemaining, daysSinceSignature, endDate, renewUrl, cancelUrl, refundUrl, pauseUrl } = opts;
+  const refundEligible = daysSinceSignature >= REFUND_ELIGIBILITY_DAY;
   const endDateStr = endDate.toLocaleDateString("fr-CH", {
     day: "2-digit", month: "long", year: "numeric",
   });
