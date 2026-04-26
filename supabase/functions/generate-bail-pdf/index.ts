@@ -620,7 +620,7 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Error generating bail PDF:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Failed to generate PDF';
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
 
   } catch (err: any) {
     console.error("staff-send-mandate-for-signature error:", err);
-    return new Response(JSON.stringify({ success: false, error: err.message || "Erreur interne" }),
+    return new Response(JSON.stringify({ success: false, error: (err instanceof Error ? err.message : String(err)) || "Erreur interne" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

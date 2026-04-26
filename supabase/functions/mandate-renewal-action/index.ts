@@ -266,7 +266,7 @@ serve(async (req) => {
       client_id: client.id,
     });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error("mandate-renewal-action error:", msg);
     return jsonResponse({ ok: false, error: msg }, 500);
   }

@@ -230,7 +230,7 @@ Ne produis PAS de JSON, uniquement du texte lisible.`
           console.error(JSON.stringify({ event: "renovation_error", function: "renovation-compare-quotes", project_id: projectId, error: `AI synthesis error ${response.status}`, context: { quote_ids: quoteIds, response_body: errBody.substring(0, 300) } }));
         }
       } catch (e) {
-        const eMsg = e instanceof Error ? e.message : String(e);
+        const eMsg = e instanceof Error ? (e instanceof Error ? e.message : String(e)) : String(e);
         console.error(JSON.stringify({ event: "renovation_error", function: "renovation-compare-quotes", project_id: projectId, error: `AI synthesis exception: ${eMsg}`, context: { quote_ids: quoteIds } }));
       }
     }
@@ -246,7 +246,7 @@ Ne produis PAS de JSON, uniquement du texte lisible.`
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
+    const errMsg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
     console.error(JSON.stringify({ event: "renovation_error", function: "renovation-compare-quotes", error: errMsg }));
     return new Response(JSON.stringify({ error: errMsg }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

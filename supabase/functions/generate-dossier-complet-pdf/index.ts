@@ -561,7 +561,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: unknown) {
     console.error('Error generating dossier PDF:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

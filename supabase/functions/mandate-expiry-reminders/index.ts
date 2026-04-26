@@ -313,7 +313,7 @@ serve(async (req) => {
 
         remindersSent++;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
         errors.push(`Client ${client.id}: ${msg}`);
         console.error(`Error processing client ${client.id}:`, err);
       }
@@ -330,7 +330,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : String(error);
     console.error("mandate-expiry-reminders fatal:", msg);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,

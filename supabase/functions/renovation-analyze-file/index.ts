@@ -198,7 +198,7 @@ Réponds uniquement en JSON valide.`
       });
 
     } catch (analysisError) {
-      const errMsg = analysisError instanceof Error ? analysisError.message : String(analysisError);
+      const errMsg = analysisError instanceof Error ? (analysisError instanceof Error ? analysisError.message : String(analysisError)) : String(analysisError);
       await supabase
         .from('renovation_analysis_jobs')
         .update({
@@ -214,7 +214,7 @@ Réponds uniquement en JSON valide.`
       });
     }
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
+    const errMsg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
     console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", error: errMsg }));
     return new Response(JSON.stringify({ error: errMsg }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -543,7 +543,7 @@ Les conditions du marche peuvent evoluer rapidement. Il est recommande de reactu
 
   } catch (error: unknown) {
     console.error('Error generating market analysis PDF:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

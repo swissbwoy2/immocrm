@@ -102,7 +102,7 @@ serve(async (req) => {
           }
         } catch (e) {
           await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
-          errors.push(`${doc.nom}: ${e.message}`);
+          errors.push(`${doc.nom}: ${(e instanceof Error ? e.message : String(e))}`);
         }
       }
 
@@ -121,7 +121,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: (error instanceof Error ? error.message : String(error)) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

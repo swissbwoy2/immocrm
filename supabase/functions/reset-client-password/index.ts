@@ -84,7 +84,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Erreur:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Une erreur est survenue' }),
+      JSON.stringify({ error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Une erreur est survenue' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

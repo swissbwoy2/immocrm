@@ -519,7 +519,7 @@ serve(async (req) => {
         result.failed++;
         result.errors.push({
           email: clientData.user.email,
-          reason: error instanceof Error ? error.message : 'Erreur inconnue'
+          reason: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Erreur inconnue'
         });
       }
     }
@@ -537,7 +537,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in import-clients-csv function:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

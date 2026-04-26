@@ -566,7 +566,7 @@ serve(async (req) => {
           invoiceCreated = true;
           console.log('AbaNinja invoice created for light invitation:', invoiceJson.invoice_id);
         } catch (e: any) {
-          invoiceError = e.message || String(e);
+          invoiceError = (e instanceof Error ? e.message : String(e)) || String(e);
           console.error('Failed to create AbaNinja invoice for light invitation:', invoiceError);
         }
       }
@@ -592,7 +592,7 @@ serve(async (req) => {
     console.error('Error in invite-client function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Une erreur est survenue lors de l\'envoi de l\'invitation' 
+        error: (error instanceof Error ? error.message : String(error)) || 'Une erreur est survenue lors de l\'envoi de l\'invitation' 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

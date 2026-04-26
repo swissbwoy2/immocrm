@@ -730,7 +730,7 @@ serve(async (req) => {
     throw new Error(`Action non reconnue: ${action}`);
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('[IMAP] Function error:', error);
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),

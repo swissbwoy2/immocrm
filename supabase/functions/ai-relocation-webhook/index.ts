@@ -41,7 +41,7 @@ async function ingestResults(adminClient: SupabaseClient, params: IngestParams):
         application_channel: row.application_channel, extraction_timestamp: row.extraction_timestamp,
         result_status: 'nouveau',
       }).select('id').single();
-      if (error) { out.failed++; out.errors.push(`Insert failed for "${row.title}": ${error.message}`); continue; }
+      if (error) { out.failed++; out.errors.push(`Insert failed for "${row.title}": ${(error instanceof Error ? error.message : String(error))}`); continue; }
       out.inserted++; out.ids.push(inserted.id);
       if (criteria && inserted.id) {
         try { await adminClient.rpc('calculate_match_score', { p_property_result_id: inserted.id, p_criteria: criteria }); }
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
             .select('id')
             .single();
 
-          if (error) return errorResponse(error.message, 500);
+          if (error) return errorResponse((error instanceof Error ? error.message : String(error)), 500);
           result = { run_id: newRun.id, action: 'created' };
         }
 

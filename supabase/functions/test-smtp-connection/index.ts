@@ -88,7 +88,7 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('SMTP connection test failed:', errorMessage);
     
     // Try to close client if it exists

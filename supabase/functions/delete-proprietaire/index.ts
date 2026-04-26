@@ -155,7 +155,7 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     console.error('Error in delete-proprietaire:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

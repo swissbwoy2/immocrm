@@ -253,7 +253,7 @@ serve(async (req) => {
     console.error('Error in invite-proprietaire function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Une erreur est survenue lors de l\'envoi de l\'invitation' 
+        error: (error instanceof Error ? error.message : String(error)) || 'Une erreur est survenue lors de l\'envoi de l\'invitation' 
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

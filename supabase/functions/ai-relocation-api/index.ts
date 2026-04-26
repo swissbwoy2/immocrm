@@ -109,7 +109,7 @@ async function ingestResults(adminClient: SupabaseClient, params: IngestParams):
         application_channel: row.application_channel, extraction_timestamp: row.extraction_timestamp,
         result_status: 'nouveau',
       }).select('id').single();
-      if (error) { out.failed++; out.errors.push(`Insert failed for "${row.title}": ${error.message}`); continue; }
+      if (error) { out.failed++; out.errors.push(`Insert failed for "${row.title}": ${(error instanceof Error ? error.message : String(error))}`); continue; }
       out.inserted++; out.ids.push(inserted.id);
       if (criteria && inserted.id) {
         try { await adminClient.rpc('calculate_match_score', { p_property_result_id: inserted.id, p_criteria: criteria }); }
@@ -390,7 +390,7 @@ async function handleMissionsCreate(
     .select()
     .single();
 
-  if (error) return errorResponse(error.message, 500);
+  if (error) return errorResponse((error instanceof Error ? error.message : String(error)), 500);
 
   // Set next_run_at based on frequency for scheduling
   if (mappedFrequency === 'quotidien') {
@@ -420,7 +420,7 @@ type ErrorType = 'timeout' | 'network' | 'source_invalid' | 'scraper_error'
   | 'ai_extraction_error' | 'empty_result' | 'rate_limited' | 'unknown';
 
 function classifyError(err: unknown, httpStatus?: number): { type: ErrorType; message: string; retryable: boolean } {
-  const msg = err instanceof Error ? err.message : String(err);
+  const msg = err instanceof Error ? (err instanceof Error ? err.message : String(err)) : String(err);
   if (err instanceof DOMException && err.name === 'AbortError') return { type: 'timeout', message: 'Request timed out', retryable: true };
   if (err instanceof TypeError && msg.includes('fetch')) return { type: 'network', message: msg, retryable: true };
   if (httpStatus === 429) return { type: 'rate_limited', message: 'Rate limited (429)', retryable: true };
@@ -953,7 +953,7 @@ async function handleMissionsRun(
     .select()
     .single();
 
-  if (error) return errorResponse(error.message, 500);
+  if (error) return errorResponse((error instanceof Error ? error.message : String(error)), 500);
 
   // Update mission last_run_at
   await adminClient
@@ -1219,7 +1219,7 @@ async function handleVisitsRequest(
     .select()
     .single();
 
-  if (error) return errorResponse(error.message, 500);
+  if (error) return errorResponse((error instanceof Error ? error.message : String(error)), 500);
 
   if (needsApproval && visitReq) {
     try {
