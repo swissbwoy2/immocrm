@@ -1,152 +1,154 @@
+# Refonte "Tarifs transparents" — Design 21st.dev × Logisorama
+
 ## 🎯 Objectif
 
-Remplacer **uniquement la couche visuelle** des 5 calendriers (`PremiumCalendarView` + `PremiumXxxDayEvents`) par un nouveau composant inspiré du design 21st.dev EventManager, **sans casser** :
-- Le workflow candidatures (`bail_conclu → attente_bail` + facture finale AbaNinja)
-- Les visites (planifiée / proposée / déléguée / feedback avec médias)
-- La sync Google Calendar + invitations ICS
-- Les filtres par client, les notifications, les RLS, les rôles
+Remplacer le design actuel (3 cartes statiques avec icône Lucide) par le composant premium de **21st.dev/bigbogiballer/pricing-section** : cartes animées avec images décoratives flottantes, hover effect spring, layout aéré, sensation luxe.
 
-## ⚠️ Décision architecturale clé
+Conservation **100%** du contenu FR : Activation / Succès / Garantie + variante Achat.
 
-Je **n'utilise PAS** `npx shadcn add https://21st.dev/r/vaib215/event-manager` directement, parce que :
-1. Le composant est en anglais avec un modèle de données générique (`Event { startTime, endTime, color, category }`) qui ne match PAS notre `CalendarEvent` (event_date, event_type, agent_id, client_id, priority, all_day…) ni nos `visites`.
-2. Il gère son **propre state interne** (`useState<Event[]>(initialEvents)`) → incompatible avec notre architecture où le state vient de Supabase via `loadData()`.
-3. Le code du PDF a des bugs syntaxiques (`> 0 & 0`, JSX cassé).
+---
 
-**À la place** : je crée un **nouveau composant `EventManagerCalendar`** dans `src/components/calendar/` qui :
-- **Reprend le design exact** de 21st.dev (header avec navigation, vues Mois/Semaine/Jour/Liste, filtres, dropdowns couleurs/tags/catégories, drag & drop, dialog de détail)
-- **Branche directement** sur notre modèle existant `CalendarEvent` + `visites` (pas de conversion lossy)
-- **Garde** tous les hooks de callback existants (`onCreate`, `onEdit`, `onDelete`, `onVisiteClick`, etc.)
+## 📦 Périmètre
 
-## 📁 Fichiers créés
+### ✅ À refondre
+1. **`src/components/public-site/sections/PricingSection.tsx`** — utilisé par HomePage (logisorama.ch) — supporte Location ET Achat via `useSearchType()`.
+2. **`src/components/landing/premium/PricingSection.tsx`** — utilisé par l'ancienne `Landing.tsx` — Location uniquement.
 
-### 1. `src/components/calendar/EventManagerCalendar.tsx` (nouveau, ~600 lignes)
-Composant principal avec props :
-```ts
-interface EventManagerCalendarProps {
-  events: CalendarEvent[];
-  visites?: any[];               // Optionnel selon le rôle
-  onDateSelect: (date: Date) => void;
-  onEventClick?: (event: CalendarEvent) => void;
-  onVisiteClick?: (visite: any) => void;
-  onCreateClick?: () => void;
-  onDrop?: (item: CalendarEvent, newDate: Date) => void;  // Drag & drop
-  defaultView?: 'month' | 'week' | 'day' | 'list';
-  role: 'admin' | 'agent' | 'client' | 'coursier' | 'proprietaire';
-  categories?: string[];         // Filtres par event_type
-  showFilters?: boolean;
-}
+### ⛔ Hors périmètre (confirmé)
+- `src/pages/RelouerMonAppartement.tsx` → modèle Standard/Premium différent, on n'y touche pas.
+
+---
+
+## 🎨 Design — Inspiration 21st.dev adaptée
+
+### Structure d'une carte
+```
+┌─────────────────────────────────┐
+│  Activation        [🔑 image]   │  ← header avec image flottante
+│  300 CHF                        │  ← prix gros, gradient gold
+│  Acompte unique                 │
+│                                 │
+│  Acompte unique à l'inscription │  ← description
+│  Déduit de la commission finale │
+│                                 │
+│  ✦ Sans engagement              │  ← features (Sparkles ou Diamond)
+│  ✦ Remboursable                 │
+│  ✦ Paiement sécurisé            │
+│                                 │
+│  ┌─────────────────────────┐   │
+│  │  Activer ma recherche   │   │  ← CTA pleine largeur
+│  └─────────────────────────┘   │
+└─────────────────────────────────┘
 ```
 
-Caractéristiques visuelles (calque 21st.dev) :
-- **Header** : titre du mois/semaine + chevrons gauche/droite + bouton "Aujourd'hui" + Select de vue (Mois/Semaine/Jour/Liste) + bouton "+ Nouvel événement"
-- **Barre filtres** : Recherche (Input avec icône loupe) + DropdownMenu Couleurs (checkboxes) + DropdownMenu Catégories (checkboxes : Visite/Signature/EDL/RDV tél/Rappel/Tâche/Réunion/Autre) + DropdownMenu Tags + bouton "Effacer filtres" (visible si actifs) + Badges actifs supprimables
-- **Vue Mois** : grille 7 colonnes, jour courant surligné en `bg-primary`, événements sous forme de pastilles colorées (max 3 par jour + "+N de plus"), drop zones
-- **Vue Semaine** : grille 8 colonnes (heures + 7 jours), créneaux horaires avec lignes, événements positionnés selon `event_date`
-- **Vue Jour** : timeline verticale avec heures, événements détaillés
-- **Vue Liste** : groupée par date, cartes complètes avec titre, heure, badges couleur/catégorie/tags
-- **Drag & drop** : les events peuvent être déplacés entre jours/heures → callback `onDrop`
-- **Dialog détail** : modal avec edit inline (titre, description, dates, couleur, catégorie, tags) + boutons Modifier/Supprimer
+### Animations
+- **Hover carte** : `scale: 1.03`, `y: -5`, shadow gold (`0px 15px 30px -5px hsl(38 45% 48% / 0.15)`), ressort `spring stiffness: 300, damping: 20`.
+- **Hover image** : `scale: 1.1`, `rotate: -5deg`, même ressort.
+- **Carte "Succès" (highlight)** : utilise `Sparkles` au lieu de `Diamond`, gradient gold sur le prix, bordure dorée pulse (réutilise `luxury-border-pulse` existant).
 
-### 2. `src/components/calendar/event-manager/` (sous-composants)
-- `MonthView.tsx`, `WeekView.tsx`, `DayView.tsx`, `ListView.tsx`
-- `EventCard.tsx` (carte événement réutilisable)
-- `EventFilters.tsx` (barre de filtres)
-- `useEventColors.ts` (mapping `event_type` → couleur depuis `eventTypeColors` existant)
+### Couleurs (alignées sur la charte logisorama)
+- Bordure normale : `border-border/50`
+- Bordure highlight : `border-[hsl(38_45%_48%/0.5)]`
+- Background carte : `bg-card/50 backdrop-blur-sm`
+- Background highlight : `bg-gradient-to-b from-[hsl(38_45%_48%/0.08)]`
+- Prix highlight : classe `luxury-gradient-text` existante
+- CTA : conserve `luxury-shimmer-btn luxury-cta-glow` existant
 
-### 3. Adapters par rôle
-Chaque page calendrier conserve sa logique métier et utilise `EventManagerCalendar` à la place de `PremiumCalendarView` :
-- `src/pages/admin/Calendrier.tsx` → remplace `<PremiumCalendarView ... />` par `<EventManagerCalendar role="admin" categories={[...]} ... />`
-- `src/pages/agent/Calendrier.tsx` → idem `role="agent"` (garde le workflow candidatures intact)
-- `src/pages/client/Calendrier.tsx` → idem `role="client"` (categories restreintes : visite, rdv, signature)
-- `src/pages/coursier/Calendrier.tsx` → idem `role="coursier"` (categories : visite_deleguee, mission)
-- `src/pages/proprietaire/Calendrier.tsx` → idem `role="proprietaire"`
+---
 
-## 🇫🇷 Localisation française complète
+## 🖼️ Images thématiques (génération AI)
 
-Tous les labels (zéro anglais) :
-| 21st.dev (EN) | Notre version (FR) |
-|---|---|
-| Month / Week / Day / List | Mois / Semaine / Jour / Liste |
-| Search events | Rechercher un événement |
-| Filter | Filtrer |
-| Colors | Couleurs |
-| Categories | Catégories |
-| Tags | Étiquettes |
-| Clear filters | Effacer les filtres |
-| New event | Nouvel événement |
-| Today | Aujourd'hui |
-| Create / Save / Delete | Créer / Enregistrer / Supprimer |
-| No events | Aucun événement |
+3 images PNG générées via **Lovable AI Gateway** (`google/gemini-2.5-flash-image`), style "Thiings" — illustrations 3D isométriques sur fond transparent, douces, premium.
 
-Catégories métier (au lieu de Meeting/Task/Reminder/Personal) :
-- `visite` → "Visite"
-- `visite_deleguee` → "Visite déléguée" 🔥
-- `signature` → "Signature bail"
-- `etat_lieux` → "État des lieux"
-- `rdv_telephonique` → "RDV téléphonique"
-- `rappel` → "Rappel"
-- `tache` → "Tâche"
-- `reunion` → "Réunion"
-- `autre` → "Autre"
+| Carte | Image | Prompt |
+|-------|-------|--------|
+| **Activation** | `activation-key.png` | Clé dorée ancienne 3D isométrique, style Thiings, rendu doux pâte à modeler, fond transparent, lumière soft, palette or/beige luxe |
+| **Succès** | `success-contract.png` | Document/contrat signé 3D isométrique avec sceau de cire dorée, style Thiings, fond transparent, palette or/ivoire |
+| **Garantie** | `guarantee-shield.png` | Bouclier dorée 3D isométrique avec coche, style Thiings, fond transparent, élégant minimaliste, palette or/blanc cassé |
 
-Couleurs : réutilise `eventTypeCalendarColors` déjà défini dans `src/components/calendar/types.ts` (pas de duplication).
+**Stockage** : `src/assets/pricing/` puis import ES module (`import activationKey from '@/assets/pricing/activation-key.png'`).
 
-Dates en français via `date-fns/locale` `fr` (déjà importé partout).
+**Variante Achat** : on réutilise les 3 mêmes images (clé/contrat/bouclier) — les concepts restent valides pour l'achat immobilier.
 
-## 🔒 Préservation logique métier
+---
 
-**Aucun fichier suivant n'est touché** :
-- `EventForm.tsx` (formulaire création/édition) — réutilisé tel quel dans le dialog
-- `PremiumAgentDayEvents.tsx`, `PremiumClientDayEvents.tsx`, etc. — toujours utilisés en sidebar/popup pour le détail métier
-- `useGoogleCalendarSync`, `useNotifications`, `AddToCalendarButton`
-- Toute la logique `handleUpdateCandidatureStatus`, `handleCreateEvent`, ICS, AbaNinja
-- Les RLS, edge functions, `send-calendar-invite`
+## 📝 Contenu (inchangé)
 
-`PremiumCalendarView.tsx` reste en place (deprecated mais pas supprimé) au cas où on veut rollback rapide.
+### Variante LOCATION (default)
+| Carte | Valeur | Description | Features |
+|-------|--------|-------------|----------|
+| Activation | **300 CHF** | Acompte unique à l'inscription. Déduit de la commission finale. | Sans engagement · Remboursable si échec · Paiement sécurisé |
+| Succès ⭐ | **1 mois de loyer** | Commission uniquement si nous trouvons votre logement. | Zéro risque · Payable au bail signé · Visites incluses |
+| Garantie | **90 jours** | Si nous ne trouvons rien en 90 jours, vous êtes remboursé intégralement. | Engagement écrit · Remboursement intégral · Sans condition |
 
-## 🎨 Cohérence design avec l'app
+### Variante ACHAT
+| Carte | Valeur | Description | Features |
+|-------|--------|-------------|----------|
+| Activation | **2'500 CHF** | Acompte d'engagement, déduit de la commission finale d'achat. | Sans engagement · Remboursable · Mandat exclusif |
+| Succès ⭐ | **1% du prix d'achat** | Commission uniquement à l'acte authentique. Acompte déduit. | Acompte déduit · Payable à l'acte · Off-market inclus |
+| Garantie | **6 mois** | Pas de bien trouvé en 6 mois ? Acompte intégralement remboursé. | Engagement écrit · Remboursement intégral · Sans condition |
 
-- Utilise les composants shadcn existants : `Button`, `Card`, `Input`, `Select`, `Dialog`, `Badge`, `DropdownMenu` (tous déjà installés)
-- Respecte les tokens du design system (`bg-primary`, `bg-card`, `text-muted-foreground`, etc.) — **PAS de couleurs hardcodées** type `bg-blue-500` en dur
-- Mode sombre supporté (déjà actif dans l'app)
-- Touch targets ≥44px (respect de la mémoire mobile-optimization)
-- Responsive : vue Mois → grille adaptative ; vues Semaine/Jour → scroll horizontal sur mobile ; vue Liste = vue par défaut sur mobile
+---
 
-## 📦 Dépendances
+## 🛠️ Plan d'exécution
 
-**Aucune nouvelle dépendance npm** — tout est déjà disponible :
-- `lucide-react` ✅
-- `@radix-ui/*` (via shadcn) ✅
-- `date-fns` + `date-fns/locale` ✅
-- `framer-motion` (déjà installé pour animations légères) ✅
+### Étape 1 — Génération des 3 images
+Edge function temporaire OU script direct via `LOVABLE_API_KEY` → modèle `google/gemini-2.5-flash-image` → enregistrement dans `src/assets/pricing/`.
 
-## ✅ Plan d'implémentation (ordre d'exécution)
+### Étape 2 — Création du composant réutilisable
+Nouveau fichier **`src/components/shared/PremiumPricingCard.tsx`** :
+- Props : `title`, `value`, `valueDescription`, `description`, `features[]`, `imageSrc`, `imageAlt`, `highlight?`, `iconType?: 'sparkles' | 'diamond'`
+- Animations Framer Motion (cardVariants + imageVariants du composant 21st.dev)
+- Style aligné charte gold logisorama
+- Réutilisé par les 2 sections
 
-1. Créer `src/components/calendar/event-manager/` avec les sous-composants (MonthView, WeekView, DayView, ListView, EventCard, EventFilters)
-2. Créer `EventManagerCalendar.tsx` (composant principal qui orchestre les 4 vues)
-3. Brancher dans `agent/Calendrier.tsx` (le plus complexe → si OK, les autres suivent)
-4. Brancher dans `admin/Calendrier.tsx`
-5. Brancher dans `client/Calendrier.tsx`
-6. Brancher dans `coursier/Calendrier.tsx`
-7. Brancher dans `proprietaire/Calendrier.tsx`
-8. Test visuel rapide en preview
+### Étape 3 — Refonte `src/components/public-site/sections/PricingSection.tsx`
+- Garde `useSearchType()` pour la variante Achat
+- Garde `ScrollReveal`, `GoldDivider`, `staggerContainer`, `MagneticButton`
+- Remplace les 3 `<TiltCard>` par 3 `<PremiumPricingCard>`
+- Conserve le CTA "Activer ma recherche maintenant"
+- Conserve `id="tarifs"` pour les ancres
 
-## 🧪 Vérification post-implémentation
+### Étape 4 — Refonte `src/components/landing/premium/PricingSection.tsx`
+- Version simplifiée (Location uniquement, pas de `useSearchType`)
+- Réutilise le même `<PremiumPricingCard>`
+- Garde le CTA actuel
 
-- [ ] Les 5 calendriers s'affichent avec le nouveau design
-- [ ] Vues Mois/Semaine/Jour/Liste fonctionnent
-- [ ] Drag & drop déplace bien les events (et persiste en DB pour agent/admin)
-- [ ] Filtres recherche / couleurs / catégories opérationnels
-- [ ] Création d'événement → toujours envoie ICS + sync Google
-- [ ] Workflow candidature `bail_conclu → attente_bail` génère toujours la facture
-- [ ] Visites déléguées coursier toujours affichées correctement
-- [ ] Aucune régression console (sauf le warning ResizeObserver bénin déjà présent)
+### Étape 5 — QA
+- Vérifier responsive mobile (cartes en colonne, image taille raisonnable)
+- Vérifier dark mode contraste
+- Vérifier que `/` (HomePage) et l'ancienne `/landing` affichent bien la nouvelle version
+- Tester switch Location/Achat sur HomePage
+- `cursor-pointer` sur cartes et CTA
+- Touch target ≥ 44px sur mobile
+- `prefers-reduced-motion` respecté (Framer Motion le gère nativement)
 
-## 🚫 Hors périmètre (ne sera PAS fait)
+---
 
-- ❌ Modifier la base de données ou les RLS
-- ❌ Toucher aux edge functions (`send-calendar-invite`, etc.)
-- ❌ Changer la logique candidatures / factures
-- ❌ Supprimer `PremiumCalendarView` (deprecated only)
-- ❌ Refonte UX du formulaire `EventForm` (réutilisé tel quel)
+## ✅ Garanties
+
+- **Aucune logique métier modifiée** (routing `/nouveau-mandat`, `useSearchType`, ancres `#tarifs`)
+- **Charte gold conservée** (HSL `38 45% 48%`, classes `luxury-*` existantes)
+- **i18n FR intégral** (zéro texte EN du composant original)
+- **Accessibilité** : contraste 4.5:1, alt text sur images, focus visible
+- **Performance** : images optimisées (PNG compressé, ~50-80kb chacune), lazy loading natif via `loading="lazy"`
+- **Page Relouer intacte** (modèle Standard/Premium préservé)
+
+---
+
+## 📂 Fichiers impactés
+
+### Créés
+- `src/assets/pricing/activation-key.png`
+- `src/assets/pricing/success-contract.png`
+- `src/assets/pricing/guarantee-shield.png`
+- `src/components/shared/PremiumPricingCard.tsx`
+
+### Modifiés
+- `src/components/public-site/sections/PricingSection.tsx`
+- `src/components/landing/premium/PricingSection.tsx`
+
+### Inchangés
+- `src/pages/RelouerMonAppartement.tsx` ✋
+- `src/pages/Landing.tsx` (juste l'import lazy)
+- `src/pages/public-site/HomePage.tsx`
