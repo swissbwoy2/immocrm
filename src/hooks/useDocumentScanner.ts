@@ -1,14 +1,10 @@
 import { useCallback, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { PDFDocument } from 'pdf-lib';
 
 /**
- * Hook centralisé pour le scan de documents.
- * - Sur mobile natif : utilise @capacitor/camera (haute résolution, source caméra arrière)
- * - Sur web : utilise getUserMedia via WebDocumentScanner (composant React)
- *
- * Toujours retourne un File (image ou PDF fusionné multi-pages).
+ * Hook centralisé pour le scan de documents (100% web).
+ * Le scan passe par WebDocumentScanner (getUserMedia ou input capture selon le navigateur).
+ * Toujours retourne un File (image JPEG ou PDF fusionné multi-pages).
  */
 
 export type CapturedPage = {
@@ -20,31 +16,18 @@ export type CapturedPage = {
   height: number;
 };
 
-export function isNativeScanner(): boolean {
-  return Capacitor.isNativePlatform();
-}
-
 /**
- * Capture une page via la caméra native (Capacitor).
+ * Conservé pour compatibilité ; en web pur, on n'utilise jamais le scanner natif Capacitor.
  */
-export async function captureNativePage(): Promise<CapturedPage> {
-  const photo = await Camera.getPhoto({
-    quality: 92,
-    allowEditing: true, // recadrage natif
-    resultType: CameraResultType.DataUrl,
-    source: CameraSource.Camera,
-    correctOrientation: true,
-    saveToGallery: false,
-    width: 2480, // ~A4 @ 300dpi
-    height: 3508,
-  });
-
-  const dataUrl = photo.dataUrl ?? '';
-  const dims = await getImageDimensions(dataUrl);
-  return { dataUrl, ...dims };
+export function isNativeScanner(): boolean {
+  return false;
 }
 
-function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+export async function captureNativePage(): Promise<CapturedPage> {
+  throw new Error('Native scanner unavailable in web app');
+}
+
+export function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
@@ -55,7 +38,6 @@ function getImageDimensions(dataUrl: string): Promise<{ width: number; height: n
 
 /**
  * Améliore une image scannée (contraste, luminosité) via canvas.
- * Optionnel pour le mode web.
  */
 export async function enhanceScan(dataUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -66,7 +48,6 @@ export async function enhanceScan(dataUrl: string): Promise<string> {
       canvas.height = img.naturalHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error('Canvas 2D context indisponible'));
-      // Filtre léger: contraste + luminosité légèrement augmentés
       ctx.filter = 'contrast(1.15) brightness(1.05) saturate(0.95)';
       ctx.drawImage(img, 0, 0);
       resolve(canvas.toDataURL('image/jpeg', 0.92));
@@ -85,6 +66,21 @@ function dataUrlToUint8Array(dataUrl: string): Uint8Array {
 }
 
 /**
+ * Convertit un File image en CapturedPage (dataUrl + dimensions).
+ * Utilisé quand l'utilisateur passe par <input type="file" capture="environment">.
+ */
+export async function fileToCapturedPage(file: File): Promise<CapturedPage> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const dims = await getImageDimensions(dataUrl);
+  return { dataUrl, ...dims };
+}
+
+/**
  * Fusionne plusieurs pages capturées (images JPEG dataURL) en un seul PDF.
  */
 export async function pagesToPdf(pages: CapturedPage[], fileName: string): Promise<File> {
@@ -92,13 +88,14 @@ export async function pagesToPdf(pages: CapturedPage[], fileName: string): Promi
 
   for (const page of pages) {
     const bytes = dataUrlToUint8Array(page.dataUrl);
-    const img = await pdfDoc.embedJpg(bytes);
+    // Détecte JPG vs PNG via le préfixe data:
+    const isPng = page.dataUrl.startsWith('data:image/png');
+    const img = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
     const pdfPage = pdfDoc.addPage([img.width, img.height]);
     pdfPage.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
   }
 
   const pdfBytes = await pdfDoc.save();
-  // pdfBytes is a Uint8Array; wrap in a fresh ArrayBuffer copy to satisfy BlobPart typing
   const buf = new ArrayBuffer(pdfBytes.byteLength);
   new Uint8Array(buf).set(pdfBytes);
   const safeName = fileName.toLowerCase().endsWith('.pdf') ? fileName : `${fileName}.pdf`;
@@ -112,15 +109,13 @@ export function pageToJpegFile(page: CapturedPage, fileName: string): File {
   const bytes = dataUrlToUint8Array(page.dataUrl);
   const buf = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buf).set(bytes);
-  const safeName = fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg')
-    ? fileName
-    : `${fileName}.jpg`;
+  const safeName =
+    fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg')
+      ? fileName
+      : `${fileName}.jpg`;
   return new File([buf], safeName, { type: 'image/jpeg' });
 }
 
-/**
- * État de progression pour le composant scanner.
- */
 export function useDocumentScanner() {
   const [pages, setPages] = useState<CapturedPage[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -132,16 +127,5 @@ export function useDocumentScanner() {
   );
   const reset = useCallback(() => setPages([]), []);
 
-  const captureNative = useCallback(async () => {
-    setIsCapturing(true);
-    try {
-      const page = await captureNativePage();
-      addPage(page);
-      return page;
-    } finally {
-      setIsCapturing(false);
-    }
-  }, [addPage]);
-
-  return { pages, addPage, removePage, reset, captureNative, isCapturing, setPages };
+  return { pages, addPage, removePage, reset, isCapturing, setIsCapturing, setPages };
 }
