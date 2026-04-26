@@ -33,6 +33,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
+import { ExtraitPoursuitesHeroCard } from '@/components/ExtraitPoursuitesHeroCard';
 import { useClientCandidates, ClientCandidate } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
@@ -448,6 +449,9 @@ export default function Dossier() {
             />
           );
         })()}
+
+        {/* Extrait de poursuites — bandeau hero */}
+        <ExtraitPoursuitesHeroCard showWhenValid className="mb-6" />
 
         {/* Alerte documents manquants */}
         <MissingDocumentsAlert documents={documents} />
