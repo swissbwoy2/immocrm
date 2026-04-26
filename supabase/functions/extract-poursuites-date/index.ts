@@ -159,7 +159,7 @@ serve(async (req) => {
 });
 
 async function extractFromPdf(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   doc: { id: string; url: string | null; nom: string },
   lovableKey: string,
 ): Promise<{
