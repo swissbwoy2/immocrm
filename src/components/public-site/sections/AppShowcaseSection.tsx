@@ -149,7 +149,7 @@ export function AppShowcaseSection() {
       className="relative w-full bg-[hsl(30_15%_6%)]"
       style={{
         // Pas de track étendu sur mobile : section normale qui se scroll naturellement
-        height: useScrub ? '160vh' : 'auto',
+        height: useScrub ? '220vh' : 'auto',
         minHeight: useScrub ? undefined : '100vh',
       }}
       aria-label="Notre application"
