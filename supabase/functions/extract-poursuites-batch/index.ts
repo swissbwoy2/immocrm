@@ -39,12 +39,37 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", userData.user.id);
-    const isStaff = (roles ?? []).some((r: any) => ["admin", "agent"].includes(r.role));
-    if (!isStaff) return jsonResponse({ ok: false, error: "Accès refusé (admin/agent uniquement)" }, 403);
+    const userRoles = (roles ?? []).map((r: any) => r.role);
+    const isAdmin = userRoles.includes("admin");
+    const isAgent = userRoles.includes("agent");
+    if (!isAdmin && !isAgent) return jsonResponse({ ok: false, error: "Accès refusé (admin/agent uniquement)" }, 403);
 
     const body = await req.json().catch(() => ({}));
     const mode: "missing" | "all" = body.mode === "all" ? "all" : "missing";
     const limit = Math.min(typeof body.limit === "number" ? body.limit : 50, 50);
+    // Si l'appelant est agent (ou demande explicite), restreindre à SES clients
+    const agentScope = body.agent_scope === true || (!isAdmin && isAgent);
+
+    // Si agent_scope : récupérer les IDs clients assignés à l'agent
+    let agentClientIdsFilter: Set<string> | null = null;
+    if (agentScope) {
+      const { data: agentRow } = await supabase
+        .from("agents")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .maybeSingle();
+      if (!agentRow?.id) {
+        return jsonResponse({ ok: true, mode, total: 0, success: 0, failed: 0, results: [] });
+      }
+      const ids = new Set<string>();
+      const { data: direct } = await supabase
+        .from("clients").select("id").eq("agent_id", agentRow.id).limit(15000);
+      (direct ?? []).forEach((c: any) => ids.add(c.id));
+      const { data: junction } = await supabase
+        .from("client_agents").select("client_id").eq("agent_id", agentRow.id).limit(15000);
+      (junction ?? []).forEach((c: any) => ids.add(c.client_id));
+      agentClientIdsFilter = ids;
+    }
 
     // 1) Récupérer tous les clients actifs
     const { data: clientsData, error: clientsErr } = await supabase
@@ -76,6 +101,11 @@ serve(async (req) => {
 
     let candidates = (clientsData ?? []).filter((c: any) => clientsWithExtract.has(c.id));
 
+    // Filtre agent : ne garder que les clients assignés
+    if (agentClientIdsFilter) {
+      candidates = candidates.filter((c: any) => agentClientIdsFilter!.has(c.id));
+    }
+
     if (mode === "missing") {
       candidates = candidates.filter((c) => !c.extrait_poursuites_date_emission);
     }
@@ -87,7 +117,7 @@ serve(async (req) => {
 
     candidates = candidates.slice(0, limit);
 
-    console.log(`[batch] Mode=${mode} | Candidats: ${candidates.length}`);
+    console.log(`[batch] Mode=${mode} | agentScope=${agentScope} | Candidats: ${candidates.length}`);
 
     const results: Array<{
       client_id: string;
