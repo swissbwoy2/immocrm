@@ -121,11 +121,12 @@ serve(async (req) => {
     const today = new Date();
     const todayDateStr = today.toISOString().split("T")[0];
 
-    // 1. Récupérer tous les clients actifs avec un mandat signé
+    // 1. Récupérer tous les clients actifs avec un mandat signé (skip ceux en pause)
     const { data: clients, error: clientsErr } = await supabase
       .from("clients")
-      .select("id, user_id, agent_id, mandat_date_signature, mandat_renewal_count")
+      .select("id, user_id, agent_id, mandat_date_signature, mandat_renewal_count, mandate_pause_days, mandate_paused_at, mandate_official_end_date")
       .eq("statut", "actif")
+      .is("mandate_paused_at", null)
       .not("mandat_date_signature", "is", null);
 
     if (clientsErr) throw clientsErr;
@@ -142,17 +143,23 @@ serve(async (req) => {
     for (const client of clients) {
       try {
         const signatureDate = new Date(client.mandat_date_signature);
-        const daysElapsed = daysBetween(signatureDate, today);
-        const daysRemaining = MANDAT_DURATION_DAYS - daysElapsed;
+        const rawDaysElapsed = daysBetween(signatureDate, today);
+        const pauseDays = client.mandate_pause_days ?? 0;
+        const daysSinceSignature = Math.max(0, rawDaysElapsed - pauseDays);
+        const daysRemaining = MANDAT_DURATION_DAYS - daysSinceSignature;
 
         // === A. Renouvellement automatique si échéance dépassée ===
         if (daysRemaining < 0) {
           const newSignatureDate = new Date();
+          const newOfficialEnd = new Date(newSignatureDate);
+          newOfficialEnd.setDate(newOfficialEnd.getDate() + MANDAT_DURATION_DAYS);
           await supabase
             .from("clients")
             .update({
               mandat_date_signature: newSignatureDate.toISOString(),
               mandat_renewal_count: (client.mandat_renewal_count ?? 0) + 1,
+              mandate_pause_days: 0,
+              mandate_official_end_date: newOfficialEnd.toISOString().split("T")[0],
             })
             .eq("id", client.id);
 
@@ -235,8 +242,10 @@ serve(async (req) => {
 
         const renewUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=renew`;
         const cancelUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=cancel`;
+        const refundUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=cancel_with_refund`;
+        const pauseUrl = `${APP_BASE_URL}/mandat/renouvellement?token=${token}&action=pause`;
         const endDate = new Date(signatureDate);
-        endDate.setDate(endDate.getDate() + MANDAT_DURATION_DAYS);
+        endDate.setDate(endDate.getDate() + MANDAT_DURATION_DAYS + pauseDays);
 
         // === F. Notification in-app ===
         if (client.user_id) {
@@ -272,9 +281,12 @@ serve(async (req) => {
             prenom: profile.prenom ?? "",
             nom: profile.nom ?? "",
             daysRemaining,
+            daysSinceSignature,
             endDate,
             renewUrl,
             cancelUrl,
+            refundUrl,
+            pauseUrl,
           });
           await fetch("https://api.resend.com/emails", {
             method: "POST",
