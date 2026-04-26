@@ -1,68 +1,36 @@
-## Objectif
+# Diagnostic
+La page `/admin/suivi-extraits` affiche **0 partout** parce que la requête Supabase échoue silencieusement.
 
-Créer une page admin dédiée au suivi des extraits de poursuites de tous les clients, affichant :
-- La **dernière date d'émission** extraite
-- La **confiance IA** (%)
-- La **méthode d'extraction** (`ai`, `ai_auto_scan`, `manual`, `agent`)
-- Le **document source** (lien cliquable vers le PDF)
-- Le **statut** (✅ valide / 🟡 > 2 mois / 🔴 expiré / ⚪ manquant)
+**Cause racine** : `SuiviExtraitsPoursuites.tsx` (ligne 82-94) sélectionne `prenom, nom, email` directement sur la table `clients`, mais **ces colonnes n'existent pas** sur `clients` — elles vivent dans la table `profiles` (jointe via `clients.user_id = profiles.id`).
 
-## Implémentation
+PostgREST renvoie une erreur 400 (`column "prenom" does not exist`), `data` est `null`, donc `rows = []` et tous les KPI valent 0.
 
-### 1. Nouvelle page : `src/pages/admin/SuiviExtraitsPoursuites.tsx`
+Vérifié en base :
+- 48 clients avec `statut = 'actif'` existent ✅
+- 1 a déjà un `extrait_poursuites_document_id` rempli ✅
+- Colonnes identité présentes uniquement sur `profiles(id, prenom, nom, email)` ✅
 
-Tableau premium (PremiumTable) avec :
-- **Colonnes** : Client (nom + email) · Date d'émission · Âge (mois) · Statut (badge coloré) · Confiance · Méthode (badge) · Document source (icône PDF) · Dernier rappel · Actions
-- **Filtres haut de page** : Tous / Manquant / Valide / Warning (>2 mois) / Expiré (>3 mois)
-- **KPIs en tête** : 4 cartes (Total clients · Manquant · Warning · Expiré)
-- **Recherche** par nom client
-- **Bouton action** par ligne : « Relancer l'IA » (appelle `extract-poursuites-date` avec le `client_id`) + « Renvoyer rappel » (appelle `send-document-update-reminders`)
-- **Tri** par défaut : expirés en premier, puis warning, puis manquant, puis valide
+# Correctif proposé
 
-### 2. Source de données
+Modifier la requête `load()` dans `src/pages/admin/SuiviExtraitsPoursuites.tsx` pour :
 
-Requête Supabase :
-```sql
-SELECT c.id, c.prenom, c.nom, c.email,
-       c.extrait_poursuites_date_emission,
-       c.extrait_poursuites_extraction_method,
-       c.extrait_poursuites_ai_confidence,
-       c.extrait_poursuites_document_id,
-       c.extrait_poursuites_last_reminder_at,
-       d.nom AS doc_nom, d.url AS doc_url
-FROM clients c
-LEFT JOIN documents d ON d.id = c.extrait_poursuites_document_id
-WHERE c.statut = 'actif'
-ORDER BY ...
-```
+1. **Retirer `prenom, nom, email`** du select sur `clients`.
+2. **Ajouter une jointure embed** vers `profiles` :
+   ```ts
+   profile:profiles!clients_user_id_fkey ( prenom, nom, email )
+   ```
+   (avec fallback sur le nom de FK exact si différent — à vérifier via `pg_constraint`).
+3. **Mapper** `c.profile?.prenom`, `c.profile?.nom`, `c.profile?.email` dans la transformation `Row`.
+4. **Ajouter `console.error` + toast plus visible** quand la query échoue, pour ne plus jamais avoir un écran vide silencieux.
+5. **Rendre l'embed `source_document` tolérant** : garder la syntaxe avec nom de FK qui fonctionne, mais ajouter `!left` si nécessaire pour éviter qu'un document supprimé ne casse la requête.
 
-Avec `.limit(15000)` (cf. mémoire `global-query-row-limit-increase`).
+# Test après fix
+- Recharger `/admin/suivi-extraits` → KPI "Clients actifs" doit afficher **48**.
+- "Manquants" devrait afficher **47** (1 seul a un document source pour l'instant).
+- Vérifier qu'un nom/email s'affiche bien dans la colonne "Client".
+- Vérifier le bouton "Document source" sur le client qui a un PDF lié.
 
-### 3. Routing & navigation
+# Fichiers impactés
+- `src/pages/admin/SuiviExtraitsPoursuites.tsx` (uniquement la fonction `load()` + le mapping)
 
-- **Route** : `/admin/suivi-extraits` (lazy import dans `src/App.tsx`, protégée `allowedRoles={['admin']}`)
-- **Sidebar** : ajouter une entrée dans `src/components/AppSidebar.tsx` section admin → groupe « Documents/Conformité » avec icône `ShieldCheck` et chemin `/admin/suivi-extraits`
-
-### 4. UX details
-
-- Méthode `ai_auto_scan` → badge violet « IA Auto » avec icône `Sparkles`
-- Méthode `ai` → badge bleu « IA » 
-- Méthode `manual` → badge gris « Manuel »
-- Méthode `agent` → badge orange « Agent »
-- Confiance affichée en % avec barre de progression colorée (vert ≥80, jaune ≥50, rouge <50)
-- Document source : icône `FileText` cliquable ouvrant le PDF dans un nouvel onglet via `createSignedUrl` (60 min)
-- Format dates : `format(date, 'd MMM yyyy', { locale: fr })`, timezone Europe/Zurich
-
-### 5. Aucune migration requise
-
-Toutes les colonnes existent déjà sur `clients`. Pas de changement DB.
-
-## Fichiers impactés
-
-- ✏️ `src/App.tsx` (ajout lazy import + route)
-- ✏️ `src/components/AppSidebar.tsx` (ajout entrée menu)
-- ➕ `src/pages/admin/SuiviExtraitsPoursuites.tsx` (nouvelle page)
-
-## Question
-
-Je n'ai pas besoin de clarification : la page s'intégrera naturellement à la sidebar admin. Approuve pour lancer l'implémentation.
+Aucune migration SQL nécessaire.
