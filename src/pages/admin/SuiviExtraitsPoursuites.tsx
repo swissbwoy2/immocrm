@@ -214,6 +214,45 @@ export default function SuiviExtraitsPoursuites() {
     }
   };
 
+  const runBatchScan = async (mode: 'missing' | 'all') => {
+    const targetCount = mode === 'missing' ? kpis.scannable : enriched.filter(r => r.has_extract && !['manual', 'agent'].includes(r.method ?? '')).length;
+    if (targetCount === 0) {
+      toast({ title: 'Aucun client à scanner', description: 'Aucun client éligible pour ce mode.' });
+      return;
+    }
+    setBatchRunning(true);
+    setBatchProgress({ done: 0, total: targetCount });
+
+    // Polling : recharge toutes les 4s pour montrer la progression en temps réel
+    const startMissing = enriched.filter(r => r.has_extract && !r.date_emission).length;
+    pollRef.current = window.setInterval(async () => {
+      await load();
+      // Approxime la progression : combien de "scannables" ont disparu depuis le départ
+      const currentMissing = rows.filter(r => r.has_extract && !r.date_emission).length;
+      const done = Math.max(0, startMissing - currentMissing);
+      setBatchProgress({ done: Math.min(done, targetCount), total: targetCount });
+    }, 4000) as unknown as number;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-poursuites-batch', {
+        body: { mode, limit: 50 },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error ?? 'Échec du scan global');
+      toast({
+        title: '✅ Scan IA terminé',
+        description: `${data.success}/${data.total} dates détectées${data.failed ? ` · ${data.failed} échec(s)` : ''}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Erreur scan global', description: err.message ?? 'Le scan a échoué', variant: 'destructive' });
+    } finally {
+      if (pollRef.current) { window.clearInterval(pollRef.current); pollRef.current = null; }
+      setBatchRunning(false);
+      setBatchProgress(null);
+      await load();
+    }
+  };
+
   return (
     <div className="relative p-4 md:p-8 space-y-6">
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
