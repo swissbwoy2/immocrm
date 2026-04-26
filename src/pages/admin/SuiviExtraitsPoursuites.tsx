@@ -177,7 +177,11 @@ export default function SuiviExtraitsPoursuites({ scope = 'admin' }: SuiviExtrai
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (scope === 'agent' && agentClientIds === null) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, agentClientIds]);
   useEffect(() => () => { if (pollRef.current) window.clearInterval(pollRef.current); }, []);
 
   const enriched = useMemo(() => rows.map((r) => ({ ...r, ...computeStatus(r.date_emission) })), [rows]);
