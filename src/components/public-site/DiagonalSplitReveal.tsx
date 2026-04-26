@@ -16,7 +16,7 @@ interface DiagonalSplitRevealProps {
   children?: React.ReactNode;
 }
 
-const SCRUB_DURATION = 7; // secondes de vidéo balayées
+const SCRUB_DURATION = 10; // secondes de vidéo balayées
 
 /**
  * Hero "Split Reveal" — version unifiée desktop / mobile.
