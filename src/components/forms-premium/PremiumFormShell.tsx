@@ -32,48 +32,16 @@ export function PremiumFormShell({ children, currentStep, totalSteps, stepLabels
         <LuxuryFormBackground />
       </Suspense>
 
-      {/* Sticky header */}
+      {/* Sticky header — logo + compteur uniquement (progression gérée par PremiumProgressBlock) */}
       <div className="sticky top-0 z-40 border-b border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_15%_8%/0.9)] backdrop-blur-xl">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
           {currentStep !== undefined && totalSteps !== undefined && (
-            <div className="flex items-center gap-3">
-              {/* Step pills */}
-              <div className="hidden sm:flex items-center gap-1.5">
-                {Array.from({ length: totalSteps }).map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={false}
-                    animate={{
-                      width: i === currentStep ? 28 : 8,
-                      backgroundColor: i < currentStep
-                        ? 'hsl(38 45% 48%)'
-                        : i === currentStep
-                        ? 'hsl(38 55% 65%)'
-                        : 'hsl(38 45% 48% / 0.2)',
-                    }}
-                    transition={{ duration: 0.35, ease: 'easeInOut' }}
-                    className="h-2 rounded-full"
-                  />
-                ))}
-              </div>
-              <span className="text-xs text-[hsl(40_20%_55%)] font-medium">
-                {currentStep + 1}/{totalSteps}
-              </span>
-            </div>
+            <span className="text-xs text-[hsl(40_20%_55%)] font-medium tabular-nums">
+              {currentStep + 1}/{totalSteps}
+            </span>
           )}
         </div>
-
-        {/* Gold progress bar */}
-        {currentStep !== undefined && totalSteps !== undefined && (
-          <motion.div
-            className="h-0.5 bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(28_35%_38%)]"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: (currentStep + 1) / totalSteps }}
-            style={{ originX: 0 }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
-          />
-        )}
       </div>
 
       {/* Content */}
