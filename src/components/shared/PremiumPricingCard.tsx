@@ -54,7 +54,7 @@ export const PremiumPricingCard = React.forwardRef<HTMLDivElement, PremiumPricin
         {highlight && (
           <span className="absolute top-4 right-4 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[hsl(40_35%_98%)] shadow-md">
             <Sparkles className="h-3 w-3" />
-            Recommandé
+            Rémunération
           </span>
         )}
 
