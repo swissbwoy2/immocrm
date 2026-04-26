@@ -21,6 +21,7 @@ const HomePage = lazy(() => import("./pages/public-site/HomePage"));
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const MandatV3 = lazy(() => import("./pages/MandatV3"));
 const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
+const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
 const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
 const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
@@ -251,6 +252,7 @@ const App = () => (
               <Route path="/mandat-v3" element={<MandatV3 />} />
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
+              <Route path="/mandat/renouvellement" element={<MandatRenouvellement />} />
               <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
               <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
               <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />

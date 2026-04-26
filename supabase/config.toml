@@ -203,3 +203,9 @@ verify_jwt = true
 
 [functions.create-public-user]
 verify_jwt = false
+
+[functions.mandate-expiry-reminders]
+verify_jwt = false
+
+[functions.mandate-renewal-action]
+verify_jwt = false

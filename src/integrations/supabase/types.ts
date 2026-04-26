@@ -2704,6 +2704,7 @@ export type Database = {
           loyer_actuel: number | null
           mandat_date_signature: string | null
           mandat_pdf_url: string | null
+          mandat_renewal_count: number
           mandat_signature_data: string | null
           montant_charges_extra: number | null
           motif_changement: string | null
@@ -2770,6 +2771,7 @@ export type Database = {
           loyer_actuel?: number | null
           mandat_date_signature?: string | null
           mandat_pdf_url?: string | null
+          mandat_renewal_count?: number
           mandat_signature_data?: string | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
@@ -2836,6 +2838,7 @@ export type Database = {
           loyer_actuel?: number | null
           mandat_date_signature?: string | null
           mandat_pdf_url?: string | null
+          mandat_renewal_count?: number
           mandat_signature_data?: string | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
@@ -5589,6 +5592,120 @@ export type Database = {
             columns: ["mandate_id"]
             isOneToOne: false
             referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_renewal_actions: {
+        Row: {
+          action: string
+          client_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          new_signature_date: string | null
+          previous_signature_date: string | null
+          triggered_by: string
+        }
+        Insert: {
+          action: string
+          client_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_signature_date?: string | null
+          previous_signature_date?: string | null
+          triggered_by?: string
+        }
+        Update: {
+          action?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          new_signature_date?: string | null
+          previous_signature_date?: string | null
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_renewal_actions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_renewal_reminders_log: {
+        Row: {
+          channel: string
+          client_id: string
+          created_at: string
+          days_remaining: number
+          id: string
+          reminder_date: string
+        }
+        Insert: {
+          channel?: string
+          client_id: string
+          created_at?: string
+          days_remaining: number
+          id?: string
+          reminder_date: string
+        }
+        Update: {
+          channel?: string
+          client_id?: string
+          created_at?: string
+          days_remaining?: number
+          id?: string
+          reminder_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_renewal_reminders_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_renewal_tokens: {
+        Row: {
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used_action: string | null
+          used_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token: string
+          used_action?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used_action?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_renewal_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
