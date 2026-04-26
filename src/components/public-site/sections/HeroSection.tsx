@@ -3,13 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch, Building2, Hammer, KeyRound } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroBg from '@/assets/hero-bg.jpg';
+import heroRevealVideo from '@/assets/hero-reveal-video.mp4';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GrainOverlay } from '@/components/public-site/animations/GrainOverlay';
 import { WordReveal } from '@/components/public-site/animations/WordReveal';
 import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { Meteors } from '@/components/public-site/magic/Meteors';
-import { ScrollExpansionHero } from '@/components/ui/scroll-expansion-hero';
+import { DiagonalSplitReveal } from '@/components/public-site/DiagonalSplitReveal';
 
 const parcours = [
   { to: '/relouer-mon-appartement', icon: KeyRound, label: "Relouer mon appart'" },
@@ -22,12 +23,11 @@ export function HeroSection() {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <ScrollExpansionHero
-      mediaSrc={heroBg}
-      bgImageSrc={heroBg}
-      mediaType="image"
+    <DiagonalSplitReveal
+      imageSrc={heroBg}
+      videoSrc={heroRevealVideo}
       title="Ton futur appartement, Notre Mission !"
-      scrollToExpand="Faites défiler pour découvrir"
+      scrollHint="Faites défiler pour découvrir"
     >
       <section className="relative bg-[hsl(30_15%_10%)] overflow-hidden luxury-grain">
         {/* Decorative elements */}
@@ -359,6 +359,6 @@ export function HeroSection() {
           </div>
         </div>
       </section>
-    </ScrollExpansionHero>
+    </DiagonalSplitReveal>
   );
 }
