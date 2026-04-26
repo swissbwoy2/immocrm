@@ -203,8 +203,9 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-quote", error: err.message }));
-    return new Response(JSON.stringify({ error: err.message }), {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-quote", error: errMsg }));
+    return new Response(JSON.stringify({ error: errMsg }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

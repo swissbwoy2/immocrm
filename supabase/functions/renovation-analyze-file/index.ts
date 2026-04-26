@@ -198,23 +198,25 @@ Réponds uniquement en JSON valide.`
       });
 
     } catch (analysisError) {
+      const errMsg = analysisError instanceof Error ? analysisError.message : String(analysisError);
       await supabase
         .from('renovation_analysis_jobs')
         .update({
           status: 'failed',
-          last_error: analysisError.message,
+          last_error: errMsg,
           locked_at: null,
         })
         .eq('id', jobId);
 
-      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", job_id: jobId, file_id: lockedJob.file_id, error: analysisError.message }));
-      return new Response(JSON.stringify({ status: 'failed', error: analysisError.message }), {
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", job_id: jobId, file_id: lockedJob.file_id, error: errMsg }));
+      return new Response(JSON.stringify({ status: 'failed', error: errMsg }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
   } catch (err) {
-    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", error: err.message }));
-    return new Response(JSON.stringify({ error: err.message }), {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", error: errMsg }));
+    return new Response(JSON.stringify({ error: errMsg }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

@@ -112,8 +112,8 @@ serve(async (req) => {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-score-companies", error: err.message }));
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-score-companies", error: (err instanceof Error ? err.message : String(err)) }));
+    return new Response(JSON.stringify({ error: (err instanceof Error ? err.message : String(err)) }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
