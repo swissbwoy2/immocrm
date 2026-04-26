@@ -78,6 +78,10 @@ export default function SuiviExtraitsPoursuites() {
   const [filter, setFilter] = useState<'all' | Status>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const pollRef = useRef<number | null>(null);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -99,6 +103,15 @@ export default function SuiviExtraitsPoursuites() {
         console.error('[SuiviExtraitsPoursuites] query error:', error);
         throw error;
       }
+
+      // Récupérer la liste des clients ayant au moins 1 extrait uploadé
+      const { data: extractDocs } = await (supabase as any)
+        .from('documents')
+        .select('client_id')
+        .eq('type_document', 'extrait_poursuites')
+        .limit(15000);
+      const clientsWithExtract = new Set<string>((extractDocs ?? []).map((d: any) => d.client_id).filter(Boolean));
+
       const mapped: Row[] = (data ?? []).map((c: any) => ({
         id: c.id,
         prenom: c.profile?.prenom ?? null,
@@ -111,6 +124,7 @@ export default function SuiviExtraitsPoursuites() {
         doc_nom: c.source_document?.nom ?? null,
         doc_url: c.source_document?.url ?? null,
         last_reminder_at: c.extrait_poursuites_last_reminder_at,
+        has_extract: clientsWithExtract.has(c.id),
       }));
       setRows(mapped);
     } catch (err: any) {
@@ -122,6 +136,7 @@ export default function SuiviExtraitsPoursuites() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => () => { if (pollRef.current) window.clearInterval(pollRef.current); }, []);
 
   const enriched = useMemo(() => rows.map((r) => ({ ...r, ...computeStatus(r.date_emission) })), [rows]);
 
