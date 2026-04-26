@@ -1,47 +1,52 @@
-## Problèmes identifiés
+## Objectif
+Rendre le scrubbing de la vidéo (`/public/videos/dashboard-client.mp4`) parfaitement fluide quand l'utilisateur scrolle sur la section "Notre application" sur desktop.
 
-1. **Couleurs hors charte** : la section utilise du jaune vif `hsl(45 100% 50%)` alors que tout le site (Hero, Pricing) utilise un **doré champagne sobre** `hsl(38 45% 48%)` → `hsl(38 55% 65%)` sur fond `hsl(30 15% 8%)`.
-2. **Scroll scrub cassé** : 
-   - Le track de **200vh** crée un effet "tunnel" qui peut donner l'impression que le scroll est bloqué.
-   - Sur mobile, `useScroll` + `currentTime` n'est pas fiable si `preload="metadata"` n'a pas chargé assez de frames → la vidéo reste figée.
-   - Le `useSpring` avec damping=30 ajoute du lag perçu comme "ne suit pas".
-3. **UX mobile** : le mockup iPhone est trop grand, les anneaux orbitaux dépassent, et la hauteur 160vh sur mobile + sticky cause des saccades.
+## Diagnostic
+La vidéo actuelle :
+- 540×1168, H.264, 30 fps, 10 s, 300 frames, ~1.18 MB
+- Encodée en H.264 standard → **keyframes espacées tous les ~250 frames** → chaque `video.currentTime = X` doit décoder depuis le keyframe précédent → lag perceptible et saccadé.
+- `useSpring(stiffness: 200, damping: 25, mass: 0.3)` est encore un peu nerveux et provoque des micro-secousses quand on combine spring + seek lent.
 
-## Corrections
+## Plan d'amélioration
 
-### 1. Charte couleur (AppShowcaseSection.tsx + IPhoneMockup3D.tsx)
-Remplacer **toutes** les occurrences de :
-- `hsl(45 100% 50%)` → `hsl(38 45% 48%)` (doré principal)
-- `hsl(38 85% 55%)` / `hsl(38 80% 45%)` → `hsl(38 55% 65%)` (doré clair)
-- Gradient CTA : `from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)]` (identique au Hero)
-- Texte sur boutons : `text-[hsl(40_35%_98%)]` au lieu de `text-black`
-- Eyeglow / halo / rings : tons `hsl(38 45% 48% / 0.x)`
-- Réutiliser la classe `luxury-shimmer-btn luxury-cta-glow` du Hero pour cohérence
+### 1. Ré-encoder la vidéo avec **toutes les frames en keyframe** (all-intra)
+C'est LA clé pour un scrubbing fluide. Je relance ffmpeg avec :
+- `-g 1 -keyint_min 1` → chaque frame est un keyframe (seek instantané)
+- `-x264-params "keyint=1:scenecut=0"` (sécurité)
+- `-crf 23 -preset slow` → garde une bonne qualité
+- `-movflags +faststart` (déjà présent)
+- Garde 540×1168, 30 fps, 10 s, sans audio
+Taille attendue : ~3–5 MB (acceptable, gain de fluidité énorme).
 
-### 2. Scroll scrub robuste
-- **Réduire le track** : `120vh` desktop, `100vh` mobile (au lieu de 200/160) → la section ne "bloque" plus le scroll perçu.
-- **Précharger la vidéo** : `preload="auto"` + `playsInline muted` + déclencher `v.load()` au mount pour avoir les frames seekables immédiatement.
-- **Supprimer useSpring** sur mobile (ou réduire stiffness à 200, damping 20) → scrub plus réactif.
-- **Fallback intelligent** : si après 2s la vidéo n'a pas `readyState >= 2`, basculer sur `autoplay loop` plutôt que de rester figé.
-- **Désactiver le scrub sur mobile** : sur < 768px, utiliser directement `autoplay loop muted playsInline` (le scrub frame-par-frame est très peu fiable sur Safari iOS et donne une mauvaise UX). Garder le scrub uniquement desktop/tablette large.
+Sortie → `public/videos/dashboard-client.mp4` (overwrite).
 
-### 3. UX mobile
-- Mockup iPhone : `scale-75` sur mobile, anneaux orbitaux masqués (`hidden md:block`).
-- Layout : passer en `flex-col` strict sur mobile avec mockup **au-dessus** du texte (ordre 1), pas en grille inversée.
-- Réduire les `blur-3xl` (coûteux GPU mobile) → `blur-2xl` + opacité réduite.
-- Padding section : `py-16` mobile au lieu de hauteur fixe.
-- Badge "En direct" : repositionner pour ne pas chevaucher le contenu mobile.
+### 2. Adoucir la spring dans `AppShowcaseSection.tsx`
+Remplacer :
+```ts
+useSpring(scrollYProgress, { stiffness: 200, damping: 25, mass: 0.3 })
+```
+par une spring plus douce et plus inertielle :
+```ts
+useSpring(scrollYProgress, { stiffness: 90, damping: 28, mass: 0.35, restDelta: 0.0005 })
+```
+→ mouvement plus glissé, moins réactif aux à-coups du trackpad/molette.
 
-### 4. Bonus
-- Ajouter `will-change: transform` sur le wrapper iPhone pour fluidité.
-- Respecter `prefers-reduced-motion` (déjà partiellement fait, à compléter en désactivant le scrub).
+### 3. Utiliser `requestVideoFrameCallback` + throttle frame-aligned
+Au lieu d'écrire `currentTime` à chaque event motion (qui peut tirer 120 fois/s sur trackpad ProMotion), je :
+- Stocke la cible dans une ref (`targetTimeRef`).
+- Dans une boucle `requestAnimationFrame`, j'interpole vers la cible (lerp 0.15) et j'appelle `video.currentTime = lerped` **une seule fois par frame**, et seulement si la différence dépasse `1/30 s` (un pas de frame).
+→ Évite les doubles seeks par frame, supprime les saccades.
+
+### 4. Allonger légèrement le track scroll
+Passer `height: '160vh'` → `'200vh'` sur desktop pour donner plus d'amplitude au scroll → chaque crans de molette = moins de delta vidéo = perception plus fluide.
+
+### 5. Préchargement garanti avant scrub
+Avant d'autoriser le scrub, attendre `loadeddata` + `canplaythrough` ; tant qu'on n'a pas ça, on n'écrit pas dans `currentTime`. (Évite les freezes au premier scroll.)
 
 ## Fichiers modifiés
-- `src/components/public-site/sections/AppShowcaseSection.tsx` (refonte couleurs + logique scroll mobile/desktop)
-- `src/components/public-site/IPhoneMockup3D.tsx` (vérifier couleurs frame titanium si jaunes utilisées)
+- `public/videos/dashboard-client.mp4` (ré-encodage all-intra via ffmpeg)
+- `src/components/public-site/sections/AppShowcaseSection.tsx` (spring + rAF lerp + track 200vh + gate readiness)
 
-## Résultat attendu
-- Section visuellement intégrée (doré champagne sobre identique au Hero/Pricing).
-- Scroll naturel et fluide sur PC : la vidéo défile en suivant le scroll.
-- Sur mobile/tablette : la vidéo joue en autoplay loop discret, plus de blocage perçu.
-- Mockup iPhone bien dimensionné, pas de débordement.
+## Aucun changement
+- `IPhoneMockup3D.tsx` (mockup intact)
+- Comportement mobile (autoplay loop) inchangé — seul le desktop scrub est concerné
