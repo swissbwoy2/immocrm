@@ -1,111 +1,54 @@
 ## Objectif
 
-Transformer la messagerie interne (entre clients ↔ agents/admin et propriétaires ↔ admin) en **widget flottant global** disponible dans toute l'app connectée, **sans IA** — uniquement des conversations humaines réelles, branchées sur la table `messages` existante.
+Transformer la vidéo de fond du hero d'accueil (`DiagonalSplitReveal`) :
+- Au lieu de jouer en `autoPlay loop`, la vidéo **avance frame par frame en fonction du scroll**.
+- Plage de scrub : **0 → 7 secondes** de la vidéo (et non la durée totale).
+- Une fois la dernière frame atteinte, la vidéo **reste figée** sur la frame finale (pas de loop, pas de bascule autoplay).
+- **Pas d'autoplay sur mobile** : le scrub se déclenche dès que l'utilisateur scrolle.
 
-Le prompt 21st.dev sert uniquement d'inspiration visuelle (bulle flottante en bas à droite, panneau qui s'ouvre avec animation framer-motion, header avec avatar + statut, sélecteur en haut, zone de chat, input en bas). On enlève toute la logique "agents IA / GPT/Claude/Gemini".
+## Fichier modifié
 
----
+`src/components/public-site/DiagonalSplitReveal.tsx`
 
-## Périmètre
+## Changements techniques
 
-### Inclus
-- **Nouveau composant flottant** `FloatingMessenger` monté dans `AppLayout` (donc visible sur toutes les routes connectées : admin, agent, client, propriétaire).
-- **Bulle déclencheuse** en bas à droite avec :
-  - Icône `MessageSquare` (fermée) / `X` (ouverte)
-  - **Badge non-lus** (compteur rouge) basé sur `messages.lu = false` adressés à l'utilisateur
-  - Animation pulse douce quand nouveaux messages
-- **Panneau flottant** (≈ 380×560px desktop, plein écran mobile) avec 2 vues :
-  1. **Liste des conversations** (sélecteur en haut style "agent picker" du prompt, mais avec les vrais interlocuteurs : nom + dernier message + statut online/offline via `profiles.is_online`)
-  2. **Vue conversation active** : header (avatar + nom + statut), scroll des messages, input avec envoi
-- **Realtime** via le canal Supabase déjà utilisé dans les pages Messagerie (postgres_changes sur `messages`)
-- **Réutilisation** des composants existants : `PremiumMessageBubble`, `PremiumChatInput`, `ChatAvatar`, `DateSeparator` → cohérence visuelle garantie
-- **Adaptation par rôle** (via `useAuth`) :
-  - **Client** → ses agents assignés + admin
-  - **Agent** → ses clients + admin
-  - **Admin** → tous les agents + clients récents
-  - **Propriétaire** → admin uniquement
+### 1. Élément `<video>` (desktop, mobile, reduced-motion)
+- Retirer `autoPlay` et `loop`.
+- Ajouter `ref={videoRef}`, garder `muted playsInline preload="auto"`.
+- Précharger la frame initiale : au `onLoadedMetadata`, faire `video.currentTime = 0` et `video.pause()`.
 
-### Exclu
-- **Pas de suppression** des pages `/admin/messagerie`, `/agent/messagerie`, `/client/messagerie`, `/proprietaire/messagerie` — elles restent comme **vue plein écran** (recherche avancée, pièces jointes lourdes). Le widget est un **raccourci**, pas un remplacement.
-- Pas d'IA, pas de bot, pas de réponses automatiques.
-- Pas de pièces jointes dans le widget v1 → bouton "Ouvrir en plein écran" qui redirige vers la page Messagerie du rôle.
-- Pas d'affichage sur le site public (`PublicSiteLayout`) — le widget WhatsApp existant y reste.
+### 2. Desktop / Tablette — scrub lié au `smoothProgress`
+Utiliser `useMotionValueEvent` de framer-motion :
+```ts
+useMotionValueEvent(smoothProgress, 'change', (p) => {
+  const v = videoRef.current;
+  if (!v) return;
+  const targetMax = Math.min(7, v.duration || 7); // cap à 7s
+  v.currentTime = Math.min(p, 1) * targetMax;
+});
+```
+La piste sticky existante (`220vh` desktop / `180vh` tablette) sert déjà de "rail" de scrub — aucun changement de hauteur nécessaire.
 
----
+### 3. Mobile — scrub one-shot au scroll utilisateur
+Actuellement le mobile fait un one-shot animation (split en 1.6s) déclenché à `scrollY > 40`.
+Nouveau comportement :
+- Pas d'autoplay (déjà retiré globalement).
+- Quand `hasScrolled` passe à `true`, lancer une animation manuelle qui fait passer `video.currentTime` de 0 → 7s sur ~1.6s (même durée que le split d'image), via `requestAnimationFrame`.
+- À la fin, `video.pause()` sur la frame 7s.
+- Si l'utilisateur n'a pas encore scrollé, la vidéo reste figée sur la frame 0.
 
-## Architecture technique
+### 4. Reduced motion
+- Retirer aussi `autoPlay loop` ici.
+- Au mount, set `video.currentTime = 7` (frame finale) et `video.pause()` → l'utilisateur voit directement l'image finale immersive.
 
-### Nouveaux fichiers
+## Points d'attention
 
-1. **`src/components/messaging/floating/FloatingMessenger.tsx`** — composant racine
-   - État `isOpen`, vue active (`'list' | 'conversation'`), conversation sélectionnée
-   - Bouton flottant + panneau animé (framer-motion `AnimatePresence`)
-   - `fixed bottom-4 right-4 z-40`, safe-area iOS respecté
-   - Mobile : plein écran slide-up — Desktop : 380×560px scale + fade (variants du prompt)
+- **iOS Safari** : le scrubbing nécessite un MP4 avec keyframes fréquents. Le fichier actuel `hero-reveal-video.mp4` devrait fonctionner ; si saccades visibles, on pourra le ré-encoder (hors scope ici).
+- **Aucune modification** des transitions diagonales (clip-path, translate, opacity du titre) — uniquement la lecture vidéo change.
+- **Aucune nouvelle dépendance** (`useMotionValueEvent` est déjà dans framer-motion installé).
 
-2. **`src/components/messaging/floating/FloatingMessengerBubble.tsx`**
-   - Bouton 56×56px, gradient primary, ombre dorée
-   - Badge non-lus rouge en haut à droite
-   - Pulse si nouveaux messages
+## Hors scope
 
-3. **`src/components/messaging/floating/FloatingConversationList.tsx`**
-   - Liste scrollable : avatar + nom + dernier message + horodatage Europe/Zurich + dot online
-   - Click → ouvre la conversation
-
-4. **`src/components/messaging/floating/FloatingConversationView.tsx`**
-   - Header : retour, avatar, nom, statut, bouton "plein écran" (route Messagerie du rôle)
-   - Messages scrollables (réutilise `PremiumMessageBubble` + `DateSeparator`)
-   - Input compact (réutilise `PremiumChatInput` sans pièces jointes)
-
-5. **`src/hooks/useFloatingMessenger.tsx`** — Context + Provider
-   - État global : `isOpen`, `activeConversationId`, `unreadCount`
-   - Méthodes : `openWith(conversationId)`, `close()`, `toggle()`
-   - Realtime `messages` → incrémente `unreadCount` + déclenche pulse
-
-### Fichiers modifiés
-
-6. **`src/components/AppLayout.tsx`**
-   - Wrap children avec `<FloatingMessengerProvider>`
-   - Monter `<FloatingMessenger />` une seule fois dans le layout
-
-### Logique de données
-
-- **Lecture conversations** : reproduire la logique des pages Messagerie (queries `messages` groupées + jointures `profiles`)
-- **Realtime** : `supabase.channel('floating-messenger').on('postgres_changes', { table: 'messages', filter: 'destinataire_id=eq.{userId}' })`
-- **Marquer comme lu** : à l'ouverture, `UPDATE messages SET lu=true WHERE expediteur_id=X AND destinataire_id=currentUser AND lu=false`
-- **RLS** : aucune nouvelle policy — les policies actuelles couvrent déjà lecture/écriture
-
-### Style brand Logisorama
-
-- Header panneau : gradient primary + bordure dorée `hsl(38_45%_48%/0.3)`
-- Avatars : `ChatAvatar` existant (déjà brandé)
-- Animations : variants framer-motion du prompt (spring damping 25 / stiffness 300) + stagger
-- Icônes : `MessageSquare`, `X`, `Send`, `ChevronLeft`, `Maximize2` uniquement (pas Brain/Sparkles/Zap réservées aux IA)
-- Dark mode : tokens shadcn déjà gérés
-
-### Mobile (`mem://features/mobile-optimization-strategy`)
-
-- Touch targets ≥ 44px
-- Haptic light ouverture/fermeture (`useHapticFeedback`)
-- Safe-area-inset-bottom respecté
-- Plein écran < 768px, flottant ≥ 768px
-
----
-
-## Hors scope (v2 possible)
-
-- Push natives widget fermé (déjà géré via `usePushNotifications`)
-- Pièces jointes dans le widget
-- Recherche dans les conversations
-- Réactions emoji
-- Widget pour annonceurs (`/espace-annonceur/messages` a sa propre logique séparée)
-
----
-
-## Validation post-build
-
-- Tester sur 4 rôles → bons interlocuteurs listés
-- Badge non-lus en realtime (envoyer message depuis autre compte)
-- Ouverture/fermeture mobile (768×894) avec animation fluide bidirectionnelle
-- Bouton "plein écran" → bonne route selon rôle
-- Widget absent du site public (`PublicSiteLayout`)
+- Pas de changement sur `HeroSection.tsx` ni sur les autres landings.
+- Pas de ré-encodage du MP4.
+- Pas de fallback séquence d'images.
