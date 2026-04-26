@@ -1,54 +1,66 @@
-## Objectif
+## Problème identifié
 
-Transformer la vidéo de fond du hero d'accueil (`DiagonalSplitReveal`) :
-- Au lieu de jouer en `autoPlay loop`, la vidéo **avance frame par frame en fonction du scroll**.
-- Plage de scrub : **0 → 7 secondes** de la vidéo (et non la durée totale).
-- Une fois la dernière frame atteinte, la vidéo **reste figée** sur la frame finale (pas de loop, pas de bascule autoplay).
-- **Pas d'autoplay sur mobile** : le scrub se déclenche dès que l'utilisateur scrolle.
+Sur mobile (iOS Safari surtout), la vidéo reste figée sur fond brun car :
 
-## Fichier modifié
+1. **iOS bloque `currentTime = X` tant que la vidéo n'a jamais joué via un geste utilisateur.** Sans amorçage, tous les seeks sont ignorés silencieusement.
+2. Le scrub actuel est un **one-shot rAF de 1.6s** déclenché au premier scroll : il ne suit pas réellement le doigt de l'utilisateur, et si l'amorçage iOS échoue, on ne voit rien.
+3. `preload="auto"` est peu fiable sur réseau cellulaire iOS — les frames ne sont pas bufferisées au moment du seek.
 
-`src/components/public-site/DiagonalSplitReveal.tsx`
+## Solution — `src/components/public-site/DiagonalSplitReveal.tsx`
 
-## Changements techniques
+### 1. Amorçage iOS (déblocage du seek)
+Au tout premier `touchstart` OU `scroll` sur mobile, exécuter une séquence "play() → pause() immédiat" sur `mobileVideoRef`. Cela débloque définitivement `currentTime` pour le reste de la session.
 
-### 1. Élément `<video>` (desktop, mobile, reduced-motion)
-- Retirer `autoPlay` et `loop`.
-- Ajouter `ref={videoRef}`, garder `muted playsInline preload="auto"`.
-- Précharger la frame initiale : au `onLoadedMetadata`, faire `video.currentTime = 0` et `video.pause()`.
-
-### 2. Desktop / Tablette — scrub lié au `smoothProgress`
-Utiliser `useMotionValueEvent` de framer-motion :
 ```ts
-useMotionValueEvent(smoothProgress, 'change', (p) => {
-  const v = videoRef.current;
-  if (!v) return;
-  const targetMax = Math.min(7, v.duration || 7); // cap à 7s
-  v.currentTime = Math.min(p, 1) * targetMax;
-});
+const unlockVideoForIOS = async (v: HTMLVideoElement) => {
+  try {
+    v.muted = true;
+    await v.play();      // satisfait la policy iOS
+    v.pause();           // on reprend le contrôle
+    v.currentTime = 0;
+  } catch { /* noop */ }
+};
 ```
-La piste sticky existante (`220vh` desktop / `180vh` tablette) sert déjà de "rail" de scrub — aucun changement de hauteur nécessaire.
 
-### 3. Mobile — scrub one-shot au scroll utilisateur
-Actuellement le mobile fait un one-shot animation (split en 1.6s) déclenché à `scrollY > 40`.
-Nouveau comportement :
-- Pas d'autoplay (déjà retiré globalement).
-- Quand `hasScrolled` passe à `true`, lancer une animation manuelle qui fait passer `video.currentTime` de 0 → 7s sur ~1.6s (même durée que le split d'image), via `requestAnimationFrame`.
-- À la fin, `video.pause()` sur la frame 7s.
-- Si l'utilisateur n'a pas encore scrollé, la vidéo reste figée sur la frame 0.
+Brancher cet appel dans le listener `onScroll` mobile existant, AVANT de set `hasScrolled(true)`.
 
-### 4. Reduced motion
-- Retirer aussi `autoPlay loop` ici.
-- Au mount, set `video.currentTime = 7` (frame finale) et `video.pause()` → l'utilisateur voit directement l'image finale immersive.
+### 2. Preload optimisé mobile
+Remplacer `preload="auto"` par `preload="metadata"` + ajouter un `poster` (1ère frame extraite) pour éviter le flash brun pendant le chargement. Optionnel : ajouter `playsInline webkit-playsinline x5-playsinline` pour compat Android WebView.
 
-## Points d'attention
+### 3. Scrub mobile lié au scroll réel (pas one-shot)
+Remplacer la logique rAF "one-shot 1.6s" par un vrai binding scroll → currentTime, identique au desktop mais sur une piste plus courte (`140vh` au lieu de `220vh` pour préserver la perf mobile).
 
-- **iOS Safari** : le scrubbing nécessite un MP4 avec keyframes fréquents. Le fichier actuel `hero-reveal-video.mp4` devrait fonctionner ; si saccades visibles, on pourra le ré-encoder (hors scope ici).
-- **Aucune modification** des transitions diagonales (clip-path, translate, opacity du titre) — uniquement la lecture vidéo change.
-- **Aucune nouvelle dépendance** (`useMotionValueEvent` est déjà dans framer-motion installé).
+Architecture proposée pour le bloc mobile :
+- Wrapper `<div ref={expansionRef} style={{ height: '140vh' }}>`
+- Sticky inner `100vh` contenant vidéo + image splittée + titre
+- Réutiliser `useScroll` + `useMotionValueEvent` (déjà importés) pour mapper `smoothProgress` → `mobileVideoRef.current.currentTime` (cap 7s)
+- Le split d'image utilise les mêmes `topX/topY/bottomX/bottomY` (les MotionValues marchent identiquement)
 
-## Hors scope
+→ Avantage : un seul code path scrub pour desktop ET mobile, plus de divergence rAF.
 
-- Pas de changement sur `HeroSection.tsx` ni sur les autres landings.
-- Pas de ré-encodage du MP4.
-- Pas de fallback séquence d'images.
+### 4. Fallback "vidéo pas seekable"
+Si après 800ms post-amorçage `v.readyState < 2` (HAVE_CURRENT_DATA), on bascule automatiquement en mode "autoplay loop muted" pour ne JAMAIS laisser l'utilisateur sur fond brun. Log discret en console pour debug.
+
+```ts
+setTimeout(() => {
+  if (v.readyState < 2) {
+    v.loop = true;
+    v.play().catch(() => {});
+  }
+}, 800);
+```
+
+### 5. Indicateur visuel pendant le buffering
+Si la vidéo charge encore lors du premier scroll, afficher un overlay très subtil (spinner doré 24px en bas à droite) qui disparaît dès `canplay`. Évite la sensation "rien ne se passe".
+
+## Pourquoi ça va marcher
+
+- L'amorçage `play()→pause()` synchrone dans le handler de geste est **la** technique officielle Apple/Google pour débloquer le seek mobile.
+- Passer du one-shot rAF au binding scroll réel donne le même feel premium que sur desktop, sans dépendre d'une animation arbitraire.
+- Le fallback autoplay loop garantit qu'on n'a JAMAIS un fond brun figé, même si la vidéo n'arrive pas à se charger.
+
+## Hors scope (pour cette itération)
+
+- Génération d'un poster JPG depuis la vidéo (à faire manuellement ou dans un second temps avec ffmpeg).
+- Versions WebM/HLS optimisées pour iOS (la MP4 actuelle suffit).
+- Modification du composant `HeroSection` parent : tout reste self-contained dans `DiagonalSplitReveal`.
