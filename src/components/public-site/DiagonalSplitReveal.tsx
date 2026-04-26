@@ -135,7 +135,7 @@ export function DiagonalSplitReveal({
   const scrollHintOpacity = useTransform(smoothProgress, [0, 0.15], [1, 0]);
   const videoScale = useTransform(smoothProgress, [0, 0.5, 1], [1.12, 1.0, 1.05]);
 
-  // --- Scrub vidéo lié au scroll (0 → 7s) ---
+  // --- Scrub vidéo lié au scroll (0 → 10s) ---
   // Skippé si on est en mode fallback autoplay (la vidéo joue toute seule).
   useMotionValueEvent(smoothProgress, 'change', (p) => {
     if (fallbackAutoplay) return;
