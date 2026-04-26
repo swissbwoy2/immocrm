@@ -14,6 +14,8 @@ import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
 import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
 import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
+import { PremiumGuaranteeBanner } from '@/components/forms-premium/PremiumGuaranteeBanner';
+import { PremiumProgressBlock } from '@/components/forms-premium/PremiumProgressBlock';
 import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
 import { PremiumButton } from '@/components/forms-premium/PremiumButton';
 import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
@@ -413,6 +415,8 @@ export default function NouveauMandat() {
 
   return (
     <PremiumFormShell currentStep={currentStep} totalSteps={STEPS.length}>
+      <PremiumGuaranteeBanner />
+      <PremiumProgressBlock currentStep={currentStep} totalSteps={STEPS.length} stepTitle={STEPS[currentStep]?.title ?? ''} />
       <PremiumStepIndicator steps={STEPS} currentStep={currentStep} />
 
       <div className="container mx-auto px-4 max-w-2xl pb-8">
