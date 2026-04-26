@@ -30,15 +30,13 @@ export function DemoModeBanner() {
         <button
           type="button"
           data-demo-allow
-          onClick={async (e) => {
+          onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            try {
-              await signOut();
-            } catch (err) {
-              console.warn('signOut failed', err);
-            }
-            navigate('/nouveau-mandat');
+            // Sign out in background, then hard-redirect to /nouveau-mandat
+            // to avoid the auth listener bouncing us to /login.
+            void signOut().catch((err) => console.warn('signOut failed', err));
+            window.location.assign('/nouveau-mandat');
           }}
           className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider transition hover:bg-white/25"
         >
