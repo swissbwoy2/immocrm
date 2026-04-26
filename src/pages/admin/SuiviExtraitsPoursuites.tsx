@@ -28,6 +28,7 @@ interface Row {
   doc_nom: string | null;
   doc_url: string | null;
   last_reminder_at: string | null;
+  has_extract: boolean; // 🆕 le client a-t-il au moins 1 extrait uploadé ?
 }
 
 function computeStatus(dateEmission: string | null): { status: Status; ageDays: number | null } {
