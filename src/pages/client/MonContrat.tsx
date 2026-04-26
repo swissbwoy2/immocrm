@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
-import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle } from 'lucide-react';
+import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle, RefreshCw, Ban, Pause, Play, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { CancellationReasonForm, type CancellationReason } from '@/components/mandat/CancellationReasonForm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+const MANDAT_DURATION_DAYS = 90;
+const REFUND_ELIGIBILITY_DAY = 82;
 
 interface ClientData {
   id: string;
@@ -25,6 +30,14 @@ interface ClientData {
   pieces: number | null;
   region_recherche: string | null;
   created_at: string | null;
+  statut: string | null;
+  cancellation_reason: string | null;
+  refund_eligible: boolean | null;
+  refund_status: string | null;
+  refund_requested_at: string | null;
+  mandate_paused_at: string | null;
+  mandate_pause_days: number | null;
+  mandate_official_end_date: string | null;
 }
 
 interface ProfileData {
