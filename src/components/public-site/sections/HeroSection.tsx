@@ -359,6 +359,6 @@ export function HeroSection() {
           </div>
         </div>
       </section>
-    </ScrollExpansionHero>
+    </DiagonalSplitReveal>
   );
 }
