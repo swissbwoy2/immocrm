@@ -11,6 +11,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { FloatingMessengerProvider } from '@/hooks/useFloatingMessenger';
 import { FloatingMessenger } from '@/components/messaging/floating/FloatingMessenger';
 import { DemoModeBanner } from '@/components/DemoModeBanner';
+import { DemoWriteGuard } from '@/components/DemoWriteGuard';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -45,6 +46,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex w-full bg-background">
       <OfflineIndicator />
+      <DemoWriteGuard />
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         <DemoModeBanner />

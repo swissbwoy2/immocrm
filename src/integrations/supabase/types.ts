@@ -10326,6 +10326,7 @@ export type Database = {
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
+      assert_not_demo: { Args: never; Returns: boolean }
       calculate_match_score: {
         Args: { p_criteria: Json; p_property_result_id: string }
         Returns: undefined
@@ -10415,6 +10416,7 @@ export type Database = {
         Returns: boolean
       }
       is_demo_account: { Args: { _user_id: string }; Returns: boolean }
+      is_demo_user: { Args: { _user_id: string }; Returns: boolean }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_proprietaire_owner: {
         Args: { _proprietaire_id: string }
