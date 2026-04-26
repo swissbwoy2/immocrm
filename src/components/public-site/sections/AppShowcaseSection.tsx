@@ -7,6 +7,7 @@ import {
   useMotionValueEvent,
   useReducedMotion,
 } from 'framer-motion';
+
 import { ArrowRight, Smartphone, Bell, Lock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IPhoneMockup3D } from '../IPhoneMockup3D';
