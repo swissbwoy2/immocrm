@@ -1,56 +1,58 @@
-## Constats
-Le problème revient parce qu’il existe aujourd’hui plusieurs sources différentes pour le mandat, et elles ne sont plus synchronisées :
+## Objectif
+Relancer automatiquement les clients dont le mandat de 90 jours arrive à échéance, **chaque jour à partir du 59ème jour** (= J-31, soit ~30 jours avant la fin) jusqu'à action du client. Sans action → renouvellement automatique à l'échéance.
 
-1. `src/components/mandat/CGVContent.tsx` affiche un texte résumé dans le parcours mandat classique.
-2. `supabase/functions/generate-mandat-contract/index.ts` génère aussi un PDF avec une section de conditions résumées, pas le mandat complet.
-3. `supabase/functions/send-mandat-pdf/index.ts` et `supabase/functions/generate-full-mandat-pdf/index.ts` contiennent, eux, une version beaucoup plus complète.
-4. `src/pages/client/MonContrat.tsx` télécharge en priorité le PDF déjà stocké dans `mandat_pdf_url`, donc si ce PDF a été généré par l’ancien moteur résumé, le client revoit encore l’ancienne version.
-5. Le module `/mandat-v3` lit encore une autre source (`mandate_contract_texts`), ce qui ajoute une divergence supplémentaire.
+## Logique métier
+- **Date de référence** : `clients.mandat_date_signature` (présente sur tous les clients actifs).
+- **Durée mandat** : 90 jours → `date_fin = mandat_date_signature + 90 jours`.
+- **Fenêtre de relance** : à partir du **jour 60 après signature** (≈ 30 jours restants) **jusqu'à la fin** du mandat.
+- **Fréquence** : 1 email + 1 notification in-app **par jour**, tous les jours, jusqu'à ce que le client clique sur "Renouveler" ou "Annuler".
+- **Cible** : tous les clients `statut = 'actif'` ayant un `mandat_date_signature` non null. Les clients déjà en "critique" (mandat presque fini) reçoivent immédiatement la première relance dès l'activation du système.
+- **Sans action à J+90** : le mandat est **renouvelé automatiquement** pour 90 jours supplémentaires (`mandat_date_signature` réinitialisée à la date du renouvellement).
 
-En clair : le bug ne vient pas d’un seul écran, il vient du fait qu’il y a plusieurs moteurs de contrat concurrents.
+## Changements base de données
+1. Nouvelle table `mandate_renewal_actions` :
+   - `id`, `client_id` (FK), `action` ('renewed' | 'cancelled' | 'auto_renewed'), `created_at`, `triggered_by` ('client' | 'system')
+2. Nouvelle table `mandate_renewal_reminders_log` (anti-doublon journalier) :
+   - `client_id`, `reminder_date` (date), unique `(client_id, reminder_date)`
+3. Colonne sur `clients` : `mandat_renewal_count` (int, default 0) — nombre de renouvellements automatiques.
+4. RLS : lecture par admin/agent assigné + le client lui-même.
 
-## Plan
-### 1. Revenir à une seule source de vérité pour le texte juridique
-- Créer une source partagée pour le mandat complet, utilisée partout.
-- Brancher dessus le mandat classique, le PDF envoyé par email, le PDF complet admin et l’affichage du contrat.
-- Garder le texte juridique complet, pas une version marketing ou condensée.
+## Edge Functions
+1. **`mandate-expiry-reminders`** (planifiée via cron quotidien 09:00 Europe/Zurich) :
+   - Récupère tous les clients `actif` avec `mandat_date_signature`.
+   - Calcule `days_elapsed` et `days_remaining = 90 - days_elapsed`.
+   - Si `days_remaining <= 30 && days_remaining >= 0` :
+     - Vérifie qu'aucun reminder n'a été envoyé aujourd'hui (table log).
+     - Envoie email + crée notification in-app : "Votre mandat se termine dans X jours".
+     - L'email contient 2 CTA : **"Renouveler maintenant"** / **"Annuler ma recherche"** (liens signés vers `/mandat/renouvellement?token=...&action=renew|cancel`).
+   - Si `days_remaining < 0` (échéance dépassée) et aucune action : appelle automatiquement le renouvellement → reset `mandat_date_signature = now()`, incrémente `mandat_renewal_count`, log `auto_renewed`, notifie client + agent.
+2. **`mandate-renewal-action`** (publique, vérifie token) :
+   - Action `renew` : reset `mandat_date_signature`, log `renewed`, notification de confirmation.
+   - Action `cancel` : passe `statut = 'inactif'`, log `cancelled`, notifie agent + admin.
 
-### 2. Supprimer la génération “résumé” du moteur legacy
-- Refactorer `generate-mandat-contract` pour qu’il n’utilise plus ses 6 bullet points résumés.
-- Le faire produire le mandat complet avec la même logique que le générateur complet.
-- Vérifier aussi `send-mandat-pdf` pour éviter toute divergence de wording ou de numérotation.
+## Cron
+- Job pg_cron quotidien à 09:00 Europe/Zurich (08:00 UTC en hiver) appelant `mandate-expiry-reminders`.
 
-### 3. Corriger l’affichage du contrat dans le parcours mandat
-- Remplacer dans `CGVContent.tsx` le résumé actuel par le texte juridique complet.
-- Réutiliser le même contenu pour le mandat classique et, si pertinent, pour `/mandat-v3` afin d’éviter une nouvelle désynchronisation.
+## Frontend
+- **Nouvelle page `/mandat/renouvellement`** : confirme l'action (renouveler/annuler) après clic email, affiche un message de succès branded.
+- **Bandeau dans l'espace client** (`MonContrat.tsx` ou Dashboard client) : si `days_remaining <= 30`, affiche un encart orange/rouge "Votre mandat se termine dans X jours" avec les 2 boutons d'action.
+- **Notification in-app** déjà gérée via la table `notifications` existante.
 
-### 4. Corriger les téléchargements côté client/admin
-- Modifier `src/pages/client/MonContrat.tsx` pour ne plus dépendre aveuglément d’un ancien `mandat_pdf_url` potentiellement résumé.
-- Préférer une régénération avec le moteur complet, ou remplacer automatiquement l’ancien PDF stocké par la version complète.
-- Aligner aussi les actions de régénération dans `src/pages/admin/ClientDetail.tsx` et `src/pages/admin/DemandesActivation.tsx`.
+## Email (template HTML)
+- Sujet dynamique : `⏰ Votre mandat se termine dans {X} jour(s)`
+- Corps : explication, rappel des biens vus, CTA Renouveler (bleu) + CTA Annuler (gris), mention "Sans action de votre part, votre mandat sera renouvelé automatiquement le {date}".
+- Envoi via Resend (déjà configuré comme `smart-followups`).
 
-### 5. Traiter les anciens mandats déjà générés
-- Prévoir une compatibilité pour les contrats déjà stockés avec l’ancien format résumé.
-- Soit en les régénérant à la demande, soit en les considérant obsolètes pour forcer le téléchargement de la version complète.
-- Éviter que les utilisateurs continuent à récupérer des PDF anciens après le correctif.
+## Notification interne admin/agent
+- À J-7, notifier également l'agent assigné : "Mandat de {client} expire dans 7 jours, aucune action".
+- À J0 (renouvellement auto), notifier admin + agent.
 
-### 6. Vérification fonctionnelle
-- Tester 4 cas :
-  - aperçu du contrat avant signature,
-  - email/PDF envoyé après dépôt du mandat,
-  - téléchargement du contrat côté client,
-  - régénération côté admin.
-- Vérifier que tous affichent exactement le mandat complet.
+## Fichiers à créer/modifier
+- **Migration SQL** : tables + colonne + RLS + cron job.
+- **Nouveau** : `supabase/functions/mandate-expiry-reminders/index.ts`
+- **Nouveau** : `supabase/functions/mandate-renewal-action/index.ts`
+- **Nouveau** : `src/pages/MandatRenouvellement.tsx` + route dans `App.tsx`
+- **Modifié** : `src/pages/client/MonContrat.tsx` (ou Dashboard client) → bandeau de relance.
 
-## Détails techniques
-- Fichiers concernés :
-  - `src/components/mandat/CGVContent.tsx`
-  - `src/pages/client/MonContrat.tsx`
-  - `src/pages/admin/ClientDetail.tsx`
-  - `src/pages/admin/DemandesActivation.tsx`
-  - `supabase/functions/generate-mandat-contract/index.ts`
-  - `supabase/functions/send-mandat-pdf/index.ts`
-  - `supabase/functions/generate-full-mandat-pdf/index.ts`
-  - potentiellement `src/components/mandat-v3/MandatV3Step6Legal.tsx`
-- Si nécessaire, j’ajouterai un petit marqueur de version du PDF généré pour distinguer un ancien PDF résumé d’un PDF complet.
-- Objectif final : un seul contenu juridique, un seul rendu contractuel, zéro régression entre aperçu, PDF, admin et espace client.
+## Validation
+Test sur les clients actuellement "en critique" (mandat signé il y a > 60 jours) : ils recevront immédiatement la 1ère relance au prochain run du cron.
