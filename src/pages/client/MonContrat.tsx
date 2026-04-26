@@ -170,7 +170,7 @@ export default function MonContrat() {
   const { start: mandatStart, end: mandatEnd, daysRemaining } = getMandatDates();
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
-  const hasPdf = !!client?.mandat_pdf_url;
+  const hasPdf = !!client?.id;
 
   if (loading) {
     return (
