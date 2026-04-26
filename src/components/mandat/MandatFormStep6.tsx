@@ -21,8 +21,8 @@ function getIdentityKind(typePermis: string | undefined): 'permis_sejour' | 'pie
 }
 
 const ID_LABELS = {
-  piece_identite: { title: "Carte d'identité", short: 'identité' },
-  permis_sejour: { title: 'Permis de séjour', short: 'permis' },
+  piece_identite: { title: "Document d'identité", short: 'identité' },
+  permis_sejour: { title: "Document d'identité", short: 'identité' },
 } as const;
 
 const SALAIRE_KEYS: Array<{ key: 'salaire1' | 'salaire2' | 'salaire3'; label: string }> = [
