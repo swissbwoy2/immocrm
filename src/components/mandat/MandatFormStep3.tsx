@@ -68,6 +68,38 @@ export default function MandatFormStep3({ data, onChange }: Props) {
             </div>
           </div>
 
+          {/* Budget locatif indicatif (règle suisse du tiers) */}
+          {data.revenus_mensuels >= 1000 && (
+            <div className="md:col-span-2 rounded-2xl border border-[hsl(38_45%_48%/0.4)] bg-gradient-to-br from-[hsl(38_45%_48%/0.10)] to-[hsl(38_45%_48%/0.04)] p-5 space-y-4 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2 text-[hsl(38_55%_65%)]">
+                <TrendingUp size={16} strokeWidth={2} />
+                <span className="text-sm font-semibold uppercase tracking-wide">Budget locatif indicatif</span>
+              </div>
+
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-[hsl(38_55%_65%)] tabular-nums">
+                  {Math.floor(data.revenus_mensuels / 3).toLocaleString('fr-CH').replace(/\u202F|\u00A0/g, "'")}
+                </span>
+                <span className="text-sm text-[hsl(40_20%_55%)]">CHF / mois</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-[hsl(40_20%_72%)]">
+                <Home size={14} strokeWidth={1.5} className="text-[hsl(38_55%_65%)]" />
+                <span>Nombre de pièces conseillé :</span>
+                <span className="font-semibold text-[hsl(38_55%_65%)]">
+                  {Math.max(1, Math.round((Math.floor(data.revenus_mensuels / 3) / 600) * 2) / 2)} pièces
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2.5 rounded-xl border border-[hsl(38_45%_48%/0.2)] bg-[hsl(30_15%_8%/0.5)] px-3 py-2.5">
+                <Users size={14} strokeWidth={1.5} className="text-[hsl(38_55%_65%)] mt-0.5 shrink-0" />
+                <p className="text-xs text-[hsl(40_20%_60%)] leading-relaxed">
+                  Vous avez un garant, un co-locataire ou d'autres revenus ? Ces éléments peuvent aussi être pris en compte pour augmenter votre budget.
+                </p>
+              </div>
+            </div>
+          )}
+
           <PremiumInput label="Date d'engagement au poste" type="date" value={data.date_engagement} onChange={(e) => onChange({ date_engagement: e.target.value })} icon={<IconCalendar size={16} />} />
 
           <div className="md:col-span-2">
