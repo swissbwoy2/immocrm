@@ -22,6 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsDemoAccount } from '@/hooks/useIsDemoAccount';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
@@ -82,7 +83,8 @@ export default function ClientDashboardDispatcher() {
 
 function ClientDashboardLocation() {
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user, userRole, signOut } = useAuth();
+  const isDemo = useIsDemoAccount();
   const { counts } = useNotifications();
   const [client, setClient] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
@@ -530,10 +532,18 @@ function ClientDashboardLocation() {
                     <p className="text-sm text-muted-foreground mt-1">
                       Votre compte est en période d'essai. Pour l'activer officiellement et profiter de tous les services, complétez votre dossier.
                     </p>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
+                      data-demo-allow
                       className="mt-3"
-                      onClick={() => navigate('/mandat-v3')}
+                      onClick={() => {
+                        if (isDemo) {
+                          void signOut().catch(() => {});
+                          window.location.assign('/nouveau-mandat');
+                        } else {
+                          navigate('/mandat-v3');
+                        }
+                      }}
                     >
                       <FileCheck className="w-4 h-4 mr-2" />
                       Compléter mon dossier
