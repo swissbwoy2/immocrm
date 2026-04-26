@@ -428,10 +428,6 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function isValidUrl(urlStr: string): boolean {
-  try { new URL(urlStr); return true; } catch { return false; }
-}
-
 // --- Types ---
 interface ScrapeResult {
   markdown: string | null;
