@@ -1,67 +1,140 @@
-## Diagnostic du problème
+## 🎯 Objectif
 
-Le PDF que tu reçois (`Mandat_Haidara_Haidara_Hamidou_Mahamar.pdf`) est **un mandat simplifié obsolète** :
-- ❌ Seulement 6 paragraphes génériques au lieu des **11 articles juridiques officiels** (location)
-- ❌ Pas de CGV/RGPD assemblées
-- ❌ Mentionne "durée de 6 mois" au lieu du contenu légal correct
-- ❌ Format basique, pas le mandat conforme `mandat-legal-provisions-fidelity`
+Renforcer le suivi de l'**extrait de poursuites** avec :
+1. **Double seuil d'alerte** (2 mois = avertissement, 3 mois = expiré)
+2. **Notifications multi-rôles** (client + agent assigné + admins)
+3. **Extraction IA automatique** de la date d'émission depuis le PDF (plus de saisie manuelle)
 
-### Cause racine
+---
 
-Trois fonctions Edge écrivent toutes dans le bucket `mandat-contracts` :
-| Fonction | Contenu | Statut |
-|---|---|---|
-| `generate-mandat-contract` | ❌ Ancien PDF simplifié 6 paragraphes | **Obsolète** (plus appelée mais a généré les anciens fichiers) |
-| `generate-full-mandat-pdf` | ✅ 11 articles + CGV + signature | **Correcte** |
-| `send-mandat-pdf` | ✅ 11 articles location / 5 articles achat | Correcte |
+## 📊 1. Base de données (migration)
 
-Sur la page **Admin > Mandats**, le bouton "Télécharger PDF" suit cette logique (`Mandats.tsx` lignes 234-276) :
-1. **Priorité 1** : Si `client.mandat_pdf_url` existe → télécharge directement depuis le storage
-2. **Priorité 2** (fallback) : Appelle `generate-full-mandat-pdf` pour régénérer
+Ajout sur `clients` :
+- `extrait_poursuites_date_emission` (DATE, nullable)
+- `extrait_poursuites_date_extraction_method` (TEXT : `'ai'` | `'manual'` | `'agent'`)
+- `extrait_poursuites_document_id` (UUID, FK → `documents.id`, nullable) — lien vers le PDF source
+- `extrait_poursuites_last_reminder_at` (TIMESTAMPTZ) — anti-spam 7 jours
+- `extrait_poursuites_ai_confidence` (NUMERIC) — score de confiance IA (0-1)
 
-Comme **24 clients** ont un `mandat_pdf_url` pointant vers les anciens PDFs générés par `generate-mandat-contract`, la priorité 1 sert toujours le mauvais fichier. La bonne fonction n'est jamais appelée.
+**Pas besoin de colonne `date_expiration`** : calculée à la volée (`date_emission + 3 mois`) pour rester flexible.
 
-## Plan de correction
+---
 
-### 1. Modifier la logique de téléchargement dans `src/pages/admin/Mandats.tsx`
+## 🤖 2. Edge Function : `extract-poursuites-date` (NOUVEAU)
 
-**Inverser la priorité** : toujours appeler `generate-full-mandat-pdf` (qui régénère depuis les données BDD à jour avec CGV + 11 articles), et n'utiliser le storage que comme fallback secondaire si la régénération échoue.
+**But** : Lire un PDF d'extrait de poursuites et extraire la date d'émission via Lovable AI (Gemini 2.5 Flash, multimodal).
 
-Avantages :
-- Garantit que l'admin reçoit toujours la version officielle à jour
-- Si les données client changent (signature, candidats, etc.), le PDF reflète l'état actuel
-- La fonction `generate-full-mandat-pdf` upsert automatiquement le nouveau PDF dans le storage (ligne 940-941), donc le `mandat_pdf_url` sera mis à jour avec la bonne version
+**Flow** :
+1. Reçoit `document_id` (PDF dans le bucket `client-documents`)
+2. Crée une signed URL (5 min) du PDF
+3. Appelle Lovable AI Gateway avec `google/gemini-2.5-flash` en mode **vision** + tool calling structuré :
+   ```json
+   {
+     "name": "extract_poursuites_data",
+     "parameters": {
+       "date_emission": "YYYY-MM-DD",
+       "office_canton": "string",
+       "nom_personne": "string",
+       "confidence": "number 0-1"
+     }
+   }
+   ```
+4. Met à jour `clients.extrait_poursuites_date_emission` + `extraction_method = 'ai'` + `ai_confidence`
+5. Retourne la date extraite + confiance pour confirmation utilisateur
 
-### 2. Nettoyer les anciens PDFs obsolètes (optionnel mais recommandé)
+**Sécurité** : verify_jwt activé, vérifie que l'utilisateur a accès au document (RLS via service role + check ownership).
 
-Migration SQL pour invalider les `mandat_pdf_url` actuels afin de forcer une régénération propre :
-```sql
--- Vide les URLs des anciens PDFs pour forcer la régénération à la prochaine demande
-UPDATE clients SET mandat_pdf_url = NULL WHERE mandat_pdf_url IS NOT NULL;
+---
+
+## 🔔 3. Edge Function : `send-document-update-reminders` (REFONTE)
+
+Logique remplacée :
+
+```
+Pour chaque client actif (statut in actif/en_recherche/en_attente) :
+  date_emission = client.extrait_poursuites_date_emission
+  
+  SI date_emission IS NULL :
+    → Notif "URGENT : Renseignez la date de votre extrait" 
+       (cooldown 7j, à client + agent)
+  
+  SINON :
+    age_mois = (now - date_emission) / 30
+    
+    SI age_mois >= 3 :
+      → 🔴 Notif EXPIRÉ "Commandez un nouvel extrait IMMÉDIATEMENT"
+         → client + agent + admins (cooldown 5j)
+    
+    SINON SI age_mois >= 2 :
+      → 🟡 Notif AVERTISSEMENT "Certaines régies n'acceptent que < 2 mois.
+         Anticipez et commandez un nouvel extrait."
+         → client + agent (cooldown 7j)
 ```
 
-Cela force chaque téléchargement futur à passer par `generate-full-mandat-pdf` qui régénère et restocke le bon fichier.
+Email avec lien direct **office des poursuites en ligne** (eSchKG / cantons romands).
 
-### 3. Supprimer définitivement la fonction obsolète
+---
 
-Supprimer `supabase/functions/generate-mandat-contract/` (plus aucun appelant côté code, vérifié avec `rg`) pour éviter toute confusion future.
+## 🖥️ 4. Frontend
 
-### 4. Faire la même correction côté client
+### A. `src/components/DocumentUpdateReminder.tsx` (refonte, côté client)
+Remplace la simple confirmation par un widget intelligent :
+- **Si pas de date** : Bouton **"📤 Uploader mon extrait (IA détecte la date)"** → ouvre dialog d'upload + appel `extract-poursuites-date` → affiche date détectée pour validation
+- **Si date < 2 mois** : Badge vert ✅ "Valide jusqu'au JJ/MM/AAAA"
+- **Si date 2-3 mois** : Badge orange 🟡 "Attention : certaines régies exigent < 2 mois — anticipez"
+- **Si date > 3 mois** : Badge rouge 🔴 "EXPIRÉ — commandez un nouvel extrait" + lien vers eSchKG
+- Bouton **"📅 Saisir manuellement"** en fallback
 
-Vérifier `src/pages/client/MonContrat.tsx` qui télécharge aussi depuis `mandat_pdf_url` — appliquer la même inversion (régénération en priorité).
+### B. `src/components/ExtractPoursuitesUploadDialog.tsx` (NOUVEAU)
+Composant réutilisable :
+1. Drag & drop PDF
+2. Upload vers `client-documents/{client_id}/extrait_poursuites/`
+3. Crée la ligne dans `documents` (type_document = `extrait_poursuites`)
+4. Appelle `extract-poursuites-date` avec spinner "🤖 Lecture IA en cours..."
+5. Affiche la date détectée + confiance → boutons **"✅ Confirmer"** / **"✏️ Corriger"**
 
-## Résultat attendu
+### C. `src/pages/admin/ClientDetail.tsx` & `src/pages/agent/ClientDetail.tsx`
+Dans la section documents du client :
+- Nouvelle carte **"Extrait de poursuites"** avec :
+  - Statut visuel (vert / orange / rouge)
+  - Date d'émission + méthode (🤖 IA / ✍️ Manuel)
+  - Bouton "Uploader pour extraction IA" (agent peut le faire pour le client)
+  - Bouton "Modifier la date manuellement"
 
-Après ces changements, le bouton "Télécharger PDF" depuis Admin > Mandats produira **systématiquement** un mandat conforme avec :
-- ✅ 11 articles juridiques officiels (location) ou 5 articles (achat)
-- ✅ CGV/RGPD assemblées
-- ✅ Signature électronique
-- ✅ Données candidats, documents, etc. à jour
+### D. `src/pages/admin/Dashboard.tsx` (alerte)
+Widget "🔴 Extraits poursuites expirés" listant les clients concernés (clic → ClientDetail).
 
-## Fichiers impactés
+---
 
-- ✏️ `src/pages/admin/Mandats.tsx` — inverser la priorité de téléchargement
-- ✏️ `src/pages/client/MonContrat.tsx` — même correction
-- 🗑️ `supabase/functions/generate-mandat-contract/` — suppression
-- ✏️ `supabase/config.toml` — retirer la config de la fonction supprimée
-- 📦 Migration SQL — nullifier les `mandat_pdf_url` obsolètes
+## 📧 5. Templates email (3 niveaux)
+
+| Seuil | Sujet | Destinataires |
+|---|---|---|
+| 🟡 2 mois | "Anticipez : votre extrait approche les 2 mois" | Client + Agent |
+| 🔴 3 mois | "URGENT : extrait de poursuites expiré" | Client + Agent + Admins |
+| ❓ Inconnu | "Renseignez la date de votre extrait" | Client + Agent |
+
+---
+
+## 🗂️ Récap fichiers
+
+**Créer** :
+- `supabase/functions/extract-poursuites-date/index.ts`
+- `src/components/ExtractPoursuitesUploadDialog.tsx`
+- Migration SQL (5 nouvelles colonnes sur `clients`)
+
+**Modifier** :
+- `supabase/functions/send-document-update-reminders/index.ts` (logique 3 seuils + multi-destinataires)
+- `src/components/DocumentUpdateReminder.tsx` (intégration upload IA)
+- `src/pages/admin/ClientDetail.tsx` (carte extrait poursuites)
+- `src/pages/agent/ClientDetail.tsx` (carte extrait poursuites)
+- `src/pages/admin/Dashboard.tsx` (widget alertes)
+- `supabase/config.toml` (déclarer la nouvelle fonction)
+
+---
+
+## ❓ À confirmer
+
+**Question** : Pour l'extraction IA, j'utilise **Gemini 2.5 Flash** (multimodal, gratuit dans les quotas Lovable AI, lit les PDF directement). OK ou tu préfères Gemini 2.5 Pro (plus précis mais plus lent/coûteux) ?
+
+Par défaut je pars sur **Flash** (suffisant pour lire une date sur un document officiel structuré).
