@@ -263,32 +263,7 @@ export default function MandatV3() {
               <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[hsl(38_45%_48%/0.06)] to-transparent" />
             </div>
 
-            {/* Step header label */}
-            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-[hsl(38_45%_48%/0.1)]">
-              <span className="text-lg">{STEPS.find((s) => s.number === step)?.icon}</span>
-              <div>
-                <p className="text-[10px] text-[hsl(40_20%_40%)] uppercase tracking-widest">
-                  Étape {step} sur {STEPS.length}
-                </p>
-                <p className="text-sm font-semibold text-[hsl(40_20%_75%)]">
-                  {STEPS.find((s) => s.number === step)?.label}
-                </p>
-              </div>
-              <div className="ml-auto">
-                <div className="flex gap-0.5">
-                  {STEPS.map((s) => (
-                    <div
-                      key={s.number}
-                      className={`h-1 rounded-full transition-all duration-300 ${
-                        s.number <= step
-                          ? 'bg-[hsl(38_55%_65%)] w-4'
-                          : 'bg-[hsl(30_10%_20%)] w-2'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+            {/* Step header interne retiré — progression gérée par ProgressBlock + StepIndicator au-dessus */}
 
             {/* Step components — zero changes to their internals */}
             {step === 1 && <MandatV3Step1Identity data={formData} onChange={updateForm} />}
