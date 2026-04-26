@@ -1,4 +1,9 @@
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createClient, SupabaseClient as SupabaseClientGeneric } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+
+// Use a permissive client type so PostgREST query result inference doesn't collapse to SelectQueryError
+// across helper boundaries (Database type isn't available inside edge functions).
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = SupabaseClientGeneric<any, "public", any>;
 
 // === SHARED: Result Ingestion ===
 
