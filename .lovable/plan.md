@@ -1,53 +1,119 @@
+## 🎯 Objectif
 
-# Objectif
-Éliminer toutes les micro-saccades du scrub vidéo Hero pour un rendu **ultra fluide** sur mobile, tablette et desktop, tout en conservant les 10 secondes frame-par-frame.
+Permettre aux visiteurs de la landing page d'essayer **réellement** l'espace client via le compte démo de Marc, **sans casser** la performance ni la sécurité, et **sans pollution** de tes données réelles.
 
-# Diagnostic actuel
-Le composant `DiagonalSplitReveal.tsx` souffre de 3 sources de saccades :
+---
 
-1. **Spring trop "raide"** (`stiffness: 120, damping: 30, mass: 0.4`) → réagit trop vite au scroll, amplifie les ticks de la molette/du pouce.
-2. **`useMotionValueEvent` synchrone** : chaque event de scroll déclenche immédiatement `video.currentTime = X`. Or sur mobile, les seek vidéo coûtent cher → si plusieurs events arrivent en <16ms, on bloque le thread principal.
-3. **Aucun throttle via `requestAnimationFrame`** : le seek se fait hors du cycle de rendu du navigateur, ce qui désynchronise vidéo et transformations CSS.
-4. **Seuil de seek trop bas** (`0.02s`) → trop de seeks consécutifs sur petits scrolls.
+## 1. 📧 Renommage du compte Marc
 
-# Plan d'action — `src/components/public-site/DiagonalSplitReveal.tsx`
+**Email** : `info@immo-rama.ch` → `demo@immo-rama.ch`
 
-### 1. Adoucir le spring pour un lissage premium
-Remplacer le `useSpring` par des paramètres plus "soyeux" :
-- `stiffness: 60` (au lieu de 120) → réaction plus douce
-- `damping: 22` (au lieu de 30) → moins de freinage brutal
-- `mass: 0.6` (au lieu de 0.4) → inertie plus naturelle
-- Résultat : le scroll se "déroule" au lieu de saccader.
+**Migration SQL** (via le tooling de migration) :
+- `UPDATE auth.users SET email = 'demo@immo-rama.ch' WHERE id = '2e50b7d0-9a76-437c-994d-217c52f0e5e5'`
+- Idem pour `auth.identities` (provider_id email)
+- Confirmation immédiate de l'email (`email_confirmed_at`)
+- Mise à jour cohérente dans `profiles` si besoin
 
-### 2. Synchroniser le seek vidéo avec `requestAnimationFrame`
-Au lieu d'appliquer `video.currentTime` immédiatement dans `useMotionValueEvent` :
-- Stocker la cible dans un `useRef` (`targetTimeRef`).
-- Lancer une boucle `requestAnimationFrame` qui interpole la valeur actuelle vers la cible (lerp à ~25% par frame).
-- Appliquer `video.currentTime` **une seule fois par frame** (60fps max).
-- Annuler la boucle au démontage.
+---
 
-Bénéfice : le seek est synchronisé avec le repaint navigateur → zéro tearing, zéro saccade.
+## 2. 🛡️ Mode "Lecture seule stricte" (RECOMMANDÉ)
 
-### 3. Augmenter le seuil de seek
-Passer de `0.02s` à `0.04s` → réduit de moitié le nombre de seeks coûteux sur mobile sans perte visible de précision.
+### 2a. Flag backend
+- Nouvelle colonne `profiles.is_demo_account boolean DEFAULT false`
+- Activée pour le user_id de Marc (`2e50b7d0-...`)
 
-### 4. Utiliser `requestVideoFrameCallback` quand disponible
-Sur Chrome/Safari récents, l'API `video.requestVideoFrameCallback()` permet de synchroniser parfaitement le rendu CSS avec la frame vidéo réellement décodée. Fallback gracieux sur `requestAnimationFrame` pour Firefox.
+### 2b. Helper SQL `is_demo_account(uuid)` (SECURITY DEFINER, plpgsql)
+Suit le pattern existant des security functions (mémoire `RLS recursion`).
 
-### 5. Forcer l'accélération GPU sur la vidéo
-Ajouter `transform: translateZ(0)` et `backface-visibility: hidden` sur le wrapper vidéo pour garantir une compositing layer dédiée (évite les repaints du compositor).
+### 2c. RLS de blocage en écriture
+Sur les tables sensibles, ajout d'une clause `WITH CHECK (NOT public.is_demo_account(auth.uid()))` aux policies INSERT/UPDATE/DELETE :
+- `messages` (envoi de messages)
+- `offres` (acceptation/refus d'offres)
+- `candidatures` / `applications` (postulations)
+- `documents` (uploads)
+- `visites` (réservation/annulation)
+- `clients` (modification du profil)
 
-### 6. Préserver tout le reste
-- `SCRUB_DURATION = 10s` : inchangé
-- `trackHeight` (340/360/380vh) : inchangé
-- Logique d'unlock iOS : inchangée
-- Fallback autoplay : inchangé
-- Clip-path diagonal et transformations image : inchangés
+→ Le compte démo peut **tout voir et naviguer**, mais **rien envoyer/modifier/supprimer**.
 
-# Fichiers modifiés
-- `src/components/public-site/DiagonalSplitReveal.tsx` (uniquement)
+### 2d. UI : bannière démo persistante
+Composant `<DemoModeBanner />` affiché en haut de toutes les pages quand `is_demo_account === true` :
+> 🎬 **Mode démonstration** — Vous explorez un compte fictif en lecture seule. [Activer mon vrai compte →]
 
-# Résultat attendu
-- Scroll perçu comme "buttery smooth" sur iPhone, iPad, desktop.
-- Vidéo qui suit le doigt/la molette sans à-coups.
-- Aucune régression sur la durée (10s) ni sur la révélation diagonale.
+Boutons d'action sensibles désactivés avec tooltip "Action désactivée en mode démo" (détection via un hook `useIsDemoAccount()`).
+
+---
+
+## 3. 🚀 Bouton "Essayer la démo" sur la landing page
+
+### 3a. Emplacement
+Dans `AppShowcaseSection.tsx`, **à côté du mockup iPhone 3D** (colonne de gauche, sous la liste des features) :
+- CTA primaire doré : **"🎬 Essayer la démo en direct"**
+- Sous-texte : *"Connexion automatique au compte de démonstration · Aucune inscription requise"*
+
+### 3b. Edge Function `demo-login`
+Nouvelle Edge Function (verify_jwt = false, publique) :
+- Génère à la volée un **magic link** ou un **token de session courte** pour `demo@immo-rama.ch` via l'Admin API Supabase
+- Retourne le token au frontend
+- **Rate-limit** par IP (ex. 5 démarrages/heure) pour éviter abus
+- Logge chaque démarrage dans `demo_sessions` (analytics)
+
+### 3c. Page `/demo` (frontend)
+- Reçoit le token, fait `supabase.auth.setSession()`
+- Redirige vers `/client/dashboard` (ou la home de l'espace client)
+- La bannière démo s'affiche automatiquement
+
+### 3d. Le mockup iPhone reste tel quel
+La vidéo continue de tourner dans le mockup (déjà optimisée scrub fluide). Pas d'iframe = pas de problème de perf ni iOS Safari.
+
+---
+
+## 4. 🧹 Préparer les données démo de Marc
+
+Vérification rapide que Marc a bien un dataset présentable :
+- Quelques offres en cours (différents statuts)
+- Quelques visites planifiées/passées
+- Quelques messages dans la messagerie avec son agent
+- Documents fictifs (CV, fiches de salaire factices)
+- Profil complet (Dupont Marc, infos non-réelles)
+
+Si dataset incomplet → script seed idempotent pour enrichir.
+
+---
+
+## 5. 📊 Mesure de conversion
+- Event tracking sur le clic "Essayer la démo" (Meta Pixel + Google Ads)
+- Event sur le clic "Activer mon vrai compte" depuis la bannière démo
+- Rapport simple dans `/admin` : nb de démos lancées / nb de conversions
+
+---
+
+## 📁 Fichiers à créer/modifier
+
+**Backend (migrations + edge function) :**
+- Migration : renommage email Marc + colonne `is_demo_account` + helper `is_demo_account()` + RLS policies de blocage
+- Nouvelle edge function : `supabase/functions/demo-login/index.ts`
+- Migration : table `demo_sessions` (analytics)
+
+**Frontend :**
+- `src/components/public-site/sections/AppShowcaseSection.tsx` — ajout du CTA "Essayer la démo"
+- `src/pages/Demo.tsx` — page d'auto-login, ajoutée à `App.tsx`
+- `src/components/DemoModeBanner.tsx` — bannière persistante
+- `src/hooks/useIsDemoAccount.ts` — hook de détection
+- Intégration de `<DemoModeBanner />` dans le layout client
+- Désactivation conditionnelle des boutons d'action sensibles (messagerie, offres, postulations)
+
+**Mémoire :**
+- Sauvegarde de la stratégie compte démo dans `mem://features/demo-account-system`
+
+---
+
+## ❓ Avant que je lance l'implémentation
+
+**Confirme-moi juste 2 points :**
+
+1. **Le bouton "Essayer la démo"** : tu le veux uniquement dans la section "Notre application" (à côté du mockup iPhone), ou aussi en duplicate ailleurs (Hero, fin de page) ?
+
+2. **La bannière démo** : OK pour le wording *"🎬 Mode démonstration — Vous explorez un compte fictif en lecture seule. [Activer mon vrai compte →]"* ou tu veux une autre formulation ?
+
+Une fois validé, j'exécute le plan d'un bloc.
