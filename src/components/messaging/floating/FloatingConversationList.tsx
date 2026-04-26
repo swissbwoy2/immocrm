@@ -128,17 +128,12 @@ export function FloatingConversationList({ onSelect }: Props) {
             otherProfile = ag ? profileById.get(ag.user_id) : null;
           } else if (userRole === 'agent') {
             const cli = clientById.get(conv.client_id);
-            // For client, prefer profile (if user_id) else client own prenom/nom
             otherProfile = cli?.user_id ? profileById.get(cli.user_id) : null;
-            if (!otherProfile && cli) {
-              otherProfile = { prenom: cli.prenom, nom: cli.nom };
-            }
           } else {
             // admin/proprio → show client name as primary
             const cli = conv.client_id ? clientById.get(conv.client_id) : null;
             const ag = conv.agent_id ? agentById.get(conv.agent_id) : null;
             otherProfile = cli?.user_id ? profileById.get(cli.user_id) : null;
-            if (!otherProfile && cli) otherProfile = { prenom: cli.prenom, nom: cli.nom };
             if (!otherProfile && ag) otherProfile = profileById.get(ag.user_id);
           }
           const fullName = otherProfile
