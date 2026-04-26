@@ -8,7 +8,7 @@ import {
   useReducedMotion,
 } from 'framer-motion';
 
-import { ArrowRight, Smartphone, Bell, Lock, Zap } from 'lucide-react';
+import { ArrowRight, Smartphone, Zap, UserCheck, Target, Footprints, Send, FolderCheck, FileSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { IPhoneMockup3D } from '../IPhoneMockup3D';
 
@@ -16,9 +16,12 @@ const SCRUB_DURATION = 10; // seconds
 const VIDEO_SRC = '/videos/dashboard-client.mp4';
 
 const FEATURES = [
-  { label: 'Mandats actifs', value: 100, icon: Smartphone },
-  { label: 'Notifications instantanées', value: 98, icon: Bell },
-  { label: 'Sécurité bancaire', value: 100, icon: Lock },
+  { label: 'Agent immobilier personnel', value: 100, icon: UserCheck },
+  { label: 'Offres ciblées selon vos critères', value: 100, icon: Target },
+  { label: 'Délégations de visite', value: 100, icon: Footprints },
+  { label: 'Postulations instantanées', value: 100, icon: Send },
+  { label: 'Suivi du dossier', value: 100, icon: FolderCheck },
+  { label: 'Analyse de dossier complète', value: 100, icon: FileSearch },
 ];
 
 export function AppShowcaseSection() {
@@ -274,7 +277,7 @@ export function AppShowcaseSection() {
                     'linear-gradient(to bottom, hsl(40 35% 98%), hsl(40 25% 65%))',
                 }}
               >
-                Pilotez toute votre recherche depuis votre poche
+                Optimisez vos recherches depuis votre poche
               </motion.h2>
               <motion.p
                 initial={{ opacity: 0, y: 15 }}
@@ -283,12 +286,12 @@ export function AppShowcaseSection() {
                 transition={{ delay: 0.1 }}
                 className="text-base sm:text-lg text-[hsl(40_25%_70%)] mb-8 leading-relaxed"
               >
-                Mandats, visites, documents et messagerie — tout est synchronisé en temps réel
-                sur iPhone, Android et web.
+                Offres, visites, postulations et messagerie ! Tout est synchronisé en temps réel
+                avec votre agent immobilier personnel sur votre iPhone, Android ou Web !
               </motion.p>
 
               {/* Feature bars */}
-              <div className="space-y-5 bg-[hsl(30_15%_8%/0.5)] p-5 sm:p-6 rounded-2xl border border-[hsl(38_45%_48%/0.2)] backdrop-blur-sm mb-8">
+              <div className="space-y-4 bg-[hsl(30_15%_8%/0.5)] p-5 sm:p-6 rounded-2xl border border-[hsl(38_45%_48%/0.2)] backdrop-blur-sm mb-8">
                 {FEATURES.map((feature, idx) => (
                   <div key={feature.label}>
                     <div className="flex items-center justify-between mb-2 text-sm">
