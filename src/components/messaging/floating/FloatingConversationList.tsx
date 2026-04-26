@@ -68,16 +68,23 @@ export function FloatingConversationList({ onSelect }: Props) {
       }
       // admin / proprietaire → all (RLS will filter)
 
-      const { data: convRows, error: convErr } = await convQuery;
+      const { data: convRowsRaw, error: convErr } = await convQuery;
       if (convErr) {
         console.error('[FloatingConversationList] conv query error', convErr);
         return [];
       }
-      if (!convRows || convRows.length === 0) return [];
+      const convRows = (convRowsRaw || []) as Array<{
+        id: string;
+        agent_id: string | null;
+        client_id: string | null;
+        conversation_type: string | null;
+        last_message_at: string | null;
+      }>;
+      if (convRows.length === 0) return [];
 
       // 2) Resolve other-party identities
-      const clientIds = Array.from(new Set(convRows.map(c => c.client_id).filter(Boolean)));
-      const agentIds = Array.from(new Set(convRows.map(c => c.agent_id).filter(Boolean)));
+      const clientIds = Array.from(new Set(convRows.map(c => c.client_id).filter(Boolean) as string[]));
+      const agentIds = Array.from(new Set(convRows.map(c => c.agent_id).filter(Boolean) as string[]));
 
       const [clientsRes, agentsRes] = await Promise.all([
         clientIds.length
