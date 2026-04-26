@@ -34,19 +34,13 @@ export default function MandatFormStep3({ data, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-center gap-3 mb-6">
-        <LuxuryIconBadge size="lg">
-          <Briefcase size={26} strokeWidth={1.5} className="text-[hsl(38_55%_65%)]" />
-        </LuxuryIconBadge>
-        <div className="text-center">
-          <h2 className="text-xl font-serif font-bold text-[hsl(40_20%_88%)]">
-            {isCommercial ? 'Informations sur le locataire' : 'Situation financière et professionnelle'}
-          </h2>
-          <p className="text-xs text-[hsl(40_20%_45%)] mt-1">
-            {isCommercial ? "Indiquez si vous louez en nom propre ou au nom d'une société" : 'Vos revenus et informations professionnelles'}
-          </p>
-        </div>
-        <div className="w-12 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white">
+          {isCommercial ? 'Informations sur le locataire' : 'Situation financière et professionnelle'}
+        </h2>
+        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">
+          {isCommercial ? "Indiquez si vous louez en nom propre ou au nom d'une société." : 'Vos revenus et informations professionnelles.'}
+        </p>
       </div>
 
       {isCommercial ? (
