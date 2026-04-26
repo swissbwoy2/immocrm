@@ -23,7 +23,7 @@ const SCRUB_DURATION = 10; // secondes de vidéo balayées
  *
  * - Image + titre au chargement, vidéo figée sur frame 0 derrière.
  * - Au scroll, l'image se split en diagonale 18° ET la vidéo avance frame par frame.
- * - Plage de scrub : 0 → 7s. À la fin, la vidéo reste figée sur la dernière frame.
+ * - Plage de scrub : 0 → 10s. À la fin, la vidéo reste figée sur la dernière frame.
  *
  * Mobile : amorçage iOS (play→pause au 1er touch/scroll) pour débloquer le seek,
  * piste de scroll plus courte (140vh), fallback autoplay loop si la vidéo
@@ -135,7 +135,7 @@ export function DiagonalSplitReveal({
   const scrollHintOpacity = useTransform(smoothProgress, [0, 0.15], [1, 0]);
   const videoScale = useTransform(smoothProgress, [0, 0.5, 1], [1.12, 1.0, 1.05]);
 
-  // --- Scrub vidéo lié au scroll (0 → 7s) ---
+  // --- Scrub vidéo lié au scroll (0 → 10s) ---
   // Skippé si on est en mode fallback autoplay (la vidéo joue toute seule).
   useMotionValueEvent(smoothProgress, 'change', (p) => {
     if (fallbackAutoplay) return;
