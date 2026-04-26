@@ -187,7 +187,6 @@ export function ExtraitPoursuitesHeroCard({ showWhenValid = false, className }: 
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         clientId={clientId}
-        currentDate={dateEmission}
         onSuccess={() => { setDialogOpen(false); load(); }}
       />
     </>
