@@ -10,6 +10,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { usePresence } from '@/hooks/usePresence';
 import { FloatingMessengerProvider } from '@/hooks/useFloatingMessenger';
 import { FloatingMessenger } from '@/components/messaging/floating/FloatingMessenger';
+import { DemoModeBanner } from '@/components/DemoModeBanner';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -46,6 +47,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
       <OfflineIndicator />
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
+        <DemoModeBanner />
         {/* Mobile Header - toujours visible */}
         <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0">
           <SidebarTrigger 
