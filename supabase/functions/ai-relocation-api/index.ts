@@ -351,7 +351,7 @@ Deno.serve(async (req) => {
 // === ENDPOINT HANDLERS ===
 
 async function handleMissionsCreate(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   req: Request,
 ) {
@@ -923,7 +923,7 @@ async function runAutonomousSearch(
 // === END SCRAPING ENGINE ===
 
 async function handleMissionsRun(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   missionId: string,
   req: Request,
@@ -1027,7 +1027,7 @@ async function handleMissionsRun(
 }
 
 async function handleResultsBatch(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   req: Request,
 ) {
@@ -1101,7 +1101,7 @@ async function handleResultsBatch(
 }
 
 async function handleOffersPrepare(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   req: Request,
 ) {
@@ -1181,7 +1181,7 @@ async function handleOffersPrepare(
 }
 
 async function handleVisitsRequest(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   req: Request,
 ) {
@@ -1251,7 +1251,7 @@ async function handleVisitsRequest(
 }
 
 async function handleClientCriteria(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   clientId: string,
 ) {
@@ -1271,7 +1271,7 @@ async function handleClientCriteria(
 }
 
 async function handleLog(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   req: Request,
 ) {
@@ -1296,7 +1296,7 @@ async function handleLog(
 // === OFFER SEND HANDLER ===
 
 async function handleOfferSend(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgent: Record<string, unknown>,
   offerId: string,
   callerAuthHeader: string,
@@ -1467,7 +1467,7 @@ async function handleOfferSend(
 // === APPROVAL DECISION HANDLER ===
 
 async function handleApprovalDecision(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   userId: string,
   approvalId: string,
   decision: 'approved' | 'rejected',
@@ -1533,7 +1533,7 @@ async function handleApprovalDecision(
 // === HELPERS ===
 
 async function logActivity(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgentId: string,
   params: {
     action_type: string;
