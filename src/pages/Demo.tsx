@@ -32,8 +32,16 @@ export default function DemoPage() {
           body: payload,
         });
 
-        if (invokeErr || !data?.access_token || !data?.refresh_token) {
-          throw new Error(invokeErr?.message ?? 'Réponse invalide.');
+        if (invokeErr) {
+          // Try to surface server message if present
+          const detail =
+            (invokeErr as any)?.context?.body ??
+            (invokeErr as any)?.message ??
+            'Erreur réseau.';
+          throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        }
+        if (!data?.access_token || !data?.refresh_token) {
+          throw new Error('Réponse invalide du serveur de démo.');
         }
 
         const { error: sessionErr } = await supabase.auth.setSession({
@@ -61,12 +69,20 @@ export default function DemoPage() {
             <AlertTriangle className="h-10 w-10 mx-auto mb-4 text-[hsl(38_55%_65%)]" />
             <h1 className="text-xl font-semibold mb-2">Démo indisponible</h1>
             <p className="text-sm text-[hsl(40_25%_70%)] mb-6">{error}</p>
-            <button
-              onClick={() => navigate('/')}
-              className="text-sm underline text-[hsl(38_55%_65%)]"
-            >
-              Retour à l'accueil
-            </button>
+            <div className="flex flex-col gap-2 items-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 rounded-full bg-[hsl(38_55%_52%)] text-[hsl(30_15%_6%)] text-sm font-semibold hover:bg-[hsl(38_65%_60%)] transition"
+              >
+                Réessayer
+              </button>
+              <button
+                onClick={() => navigate('/')}
+                className="text-sm underline text-[hsl(38_55%_65%)]"
+              >
+                Retour à l'accueil
+              </button>
+            </div>
           </>
         ) : (
           <>
