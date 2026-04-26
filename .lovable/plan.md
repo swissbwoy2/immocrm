@@ -1,123 +1,47 @@
-## 🎯 Objectif
+## Problèmes identifiés
 
-Ajouter une section **"Notre application"** entre `HeroSection` et `PricingSection` sur la page d'accueil (`/`), inspirée du showcase spatial 21st.dev partagé : un **mockup iPhone 15 Pro premium en 3D/CSS** contenant une **vidéo du dashboard client** qui défile en scrub au scroll, avec un **CTA "Créer mon compte maintenant"** vers `/nouveau-mandat`.
+1. **Couleurs hors charte** : la section utilise du jaune vif `hsl(45 100% 50%)` alors que tout le site (Hero, Pricing) utilise un **doré champagne sobre** `hsl(38 45% 48%)` → `hsl(38 55% 65%)` sur fond `hsl(30 15% 8%)`.
+2. **Scroll scrub cassé** : 
+   - Le track de **200vh** crée un effet "tunnel" qui peut donner l'impression que le scroll est bloqué.
+   - Sur mobile, `useScroll` + `currentTime` n'est pas fiable si `preload="metadata"` n'a pas chargé assez de frames → la vidéo reste figée.
+   - Le `useSpring` avec damping=30 ajoute du lag perçu comme "ne suit pas".
+3. **UX mobile** : le mockup iPhone est trop grand, les anneaux orbitaux dépassent, et la hauteur 160vh sur mobile + sticky cause des saccades.
 
----
+## Corrections
 
-## 🎨 Design (inspiré de l'exemple Spatial Showcase)
+### 1. Charte couleur (AppShowcaseSection.tsx + IPhoneMockup3D.tsx)
+Remplacer **toutes** les occurrences de :
+- `hsl(45 100% 50%)` → `hsl(38 45% 48%)` (doré principal)
+- `hsl(38 85% 55%)` / `hsl(38 80% 45%)` → `hsl(38 55% 65%)` (doré clair)
+- Gradient CTA : `from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)]` (identique au Hero)
+- Texte sur boutons : `text-[hsl(40_35%_98%)]` au lieu de `text-black`
+- Eyeglow / halo / rings : tons `hsl(38 45% 48% / 0.x)`
+- Réutiliser la classe `luxury-shimmer-btn luxury-cta-glow` du Hero pour cohérence
 
-**Layout** : iPhone à gauche, contenu textuel à droite (stack vertical sur mobile, iPhone au-dessus).
+### 2. Scroll scrub robuste
+- **Réduire le track** : `120vh` desktop, `100vh` mobile (au lieu de 200/160) → la section ne "bloque" plus le scroll perçu.
+- **Précharger la vidéo** : `preload="auto"` + `playsInline muted` + déclencher `v.load()` au mount pour avoir les frames seekables immédiatement.
+- **Supprimer useSpring** sur mobile (ou réduire stiffness à 200, damping 20) → scrub plus réactif.
+- **Fallback intelligent** : si après 2s la vidéo n'a pas `readyState >= 2`, basculer sur `autoplay loop` plutôt que de rester figé.
+- **Désactiver le scrub sur mobile** : sur < 768px, utiliser directement `autoplay loop muted playsInline` (le scrub frame-par-frame est très peu fiable sur Safari iOS et donne une mauvaise UX). Garder le scrub uniquement desktop/tablette large.
 
-**Esthétique premium reprise du modèle 21st.dev** :
-- Fond avec **radial gradient animé** (or/ambre subtil pour cohérence Logisorama, pas bleu/vert)
-- **Anneaux orbitaux** en rotation lente autour de l'iPhone (`border-dashed`, animation 20s linear infinite)
-- **Glow/halo gradient** derrière l'iPhone avec effet de pulsation douce
-- **Float animation** verticale légère (`y: [-10, 10, -10]` sur 6s) sur le mockup
-- **Texte avec gradient** `from-white to-zinc-400` sur le titre
-- **Stat badge** "● En direct" sous l'iPhone avec point pulsant doré
-- **Feature bars** animées (3 métriques : Mandats actifs, Visites planifiées, Documents validés) avec barres de progression qui se remplissent à l'apparition
+### 3. UX mobile
+- Mockup iPhone : `scale-75` sur mobile, anneaux orbitaux masqués (`hidden md:block`).
+- Layout : passer en `flex-col` strict sur mobile avec mockup **au-dessus** du texte (ordre 1), pas en grille inversée.
+- Réduire les `blur-3xl` (coûteux GPU mobile) → `blur-2xl` + opacité réduite.
+- Padding section : `py-16` mobile au lieu de hauteur fixe.
+- Badge "En direct" : repositionner pour ne pas chevaucher le contenu mobile.
 
-**Cohérence brand Logisorama** : palette or `hsl(45 100% 50%)` / fond sombre `slate-950` au lieu du noir pur, en gardant le vibe "spatial premium".
+### 4. Bonus
+- Ajouter `will-change: transform` sur le wrapper iPhone pour fluidité.
+- Respecter `prefers-reduced-motion` (déjà partiellement fait, à compléter en désactivant le scrub).
 
----
+## Fichiers modifiés
+- `src/components/public-site/sections/AppShowcaseSection.tsx` (refonte couleurs + logique scroll mobile/desktop)
+- `src/components/public-site/IPhoneMockup3D.tsx` (vérifier couleurs frame titanium si jaunes utilisées)
 
-## 📱 iPhone Mockup 3D (CSS pur, pas de lib externe)
-
-Création de `src/components/public-site/IPhoneMockup3D.tsx` :
-
-- **Structure réaliste iPhone 15 Pro** : 
-  - Frame extérieur titanium (`bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-900`) avec rounded-[3rem]
-  - Reflet latéral (`bg-gradient-to-r` overlay) pour effet métal brossé
-  - Dynamic Island au top (capsule noire 100×30px, centrée)
-  - Bouton volume + power en SVG sur les côtés
-  - Bezel intérieur noir + écran avec rounded-[2.5rem]
-- **Inner screen** : `<video>` ou `<children>` configurable via props
-- **Perspective CSS** : `transform: perspective(1000px) rotateY(-8deg) rotateX(2deg)` pour effet 3D subtil (désactivé sur mobile pour perf)
-- **Reflet écran** : pseudo-élément `::before` avec `bg-gradient-to-br from-white/10 to-transparent`
-- Dimensions : `w-[280px] h-[580px]` desktop, `w-[240px] h-[500px]` mobile
-
----
-
-## 🎬 Section AppShowcaseSection
-
-Création de `src/components/public-site/sections/AppShowcaseSection.tsx` :
-
-**Architecture scrub scroll** (réutilise le pattern éprouvé de `DiagonalSplitReveal`) :
-- Wrapper `<section ref={trackRef}>` avec `height: 200vh` (desktop) / `140vh` (mobile)
-- `<div className="sticky top-0 h-screen">` contenant le layout 2 colonnes
-- `useScroll({ target: trackRef, offset: ['start start', 'end end'] })`
-- `useSpring(scrollYProgress, { stiffness: 100, damping: 30 })` pour smoothing
-- `useMotionValueEvent(smoothProgress, 'change', p => video.currentTime = p * Math.min(SCRUB_DURATION, video.duration))`
-- `SCRUB_DURATION = 10` secondes
-- **Amorçage iOS identique à `DiagonalSplitReveal`** : listener `touchstart`/`pointerdown` qui fait `play() → pause() → currentTime = 0` pour débloquer le seek sur Safari mobile
-- **Fallback autoplay loop muted** si `readyState < 2` après 1s
-
-**Vidéo** : `<video ref={videoRef} src="/videos/dashboard-client.mp4" muted playsInline preload="metadata" webkit-playsinline />` placée DANS l'écran de l'iPhone.
-
-**Colonne droite (texte + CTA)** :
-- Eyebrow : "L'APPLICATION" (uppercase, tracking large, doré)
-- Titre H2 : **"Pilotez toute votre recherche depuis votre poche"** (gradient white → zinc-400)
-- Sous-titre : "Mandats, visites, documents, messagerie — tout est synchronisé en temps réel sur iPhone, Android et web."
-- 3 bullet points avec icônes Lucide (Smartphone / Bell / Lock) — bénéfices clés
-- Feature bars animées avec stats (style identique à l'exemple) :
-  - Mandats actifs : 100%
-  - Notifications instantanées : 98%
-  - Sécurité bancaire : 100%
-- **CTA principal** : `<Button onClick={() => navigate('/nouveau-mandat')}>` — variant doré premium, taille XL avec icône `ArrowRight`, texte "Créer mon compte maintenant"
-- **Sous-CTA discret** : "✓ Sans engagement · ✓ Activation immédiate"
-
----
-
-## 🔌 Intégration HomePage
-
-Dans `src/pages/public-site/HomePage.tsx` — insertion **entre `<HeroSection />` et `<Suspense><PricingSection /></Suspense>`** :
-
-```tsx
-<HeroSection />
-
-<Suspense fallback={null}>
-  <AppShowcaseSection />     {/* ← NOUVEAU */}
-</Suspense>
-
-<Suspense fallback={null}>
-  <PricingSection />
-</Suspense>
-```
-
-→ Lazy-load via `lazy(() => import('@/components/public-site/sections/AppShowcaseSection'))` pour ne pas alourdir le bundle initial.
-→ Export ajouté dans `src/components/public-site/sections/index.ts`.
-
----
-
-## 📦 Asset vidéo requis
-
-⚠️ **Tu devras m'uploader le fichier `dashboard-client.mp4`** (capture d'écran vidéo de ton dashboard client en train de défiler). Recommandations :
-- Format : MP4 H.264, ratio **9:19.5** (proportion iPhone) ou crop équivalent
-- Durée : **~10 secondes** (correspond exactement à `SCRUB_DURATION`)
-- Poids cible : <3 MB (compression handbrake/ffmpeg, bitrate ~1.5 Mbps suffit pour un écran iPhone mockup)
-- Résolution : 540×1170 max (inutile au-delà pour la taille d'affichage)
-- Sans audio (sera muted de toute façon)
-
-Une fois uploadé, je le placerai dans `/public/videos/dashboard-client.mp4`.
-
-**En attendant le fichier** : la section affichera un placeholder dégradé doré animé dans l'iPhone pour ne pas bloquer l'intégration.
-
----
-
-## ✅ Fichiers créés / modifiés
-
-| Fichier | Action |
-|---|---|
-| `src/components/public-site/IPhoneMockup3D.tsx` | **Créé** — mockup iPhone 15 Pro CSS pur |
-| `src/components/public-site/sections/AppShowcaseSection.tsx` | **Créé** — section complète avec scrub scroll |
-| `src/components/public-site/sections/index.ts` | **Modifié** — export ajouté |
-| `src/pages/public-site/HomePage.tsx` | **Modifié** — insertion lazy-loaded entre Hero et Pricing |
-| `/public/videos/dashboard-client.mp4` | **À uploader par toi** après approbation |
-
----
-
-## 🚫 Hors scope
-
-- Pas de vraie 3D WebGL/Three.js (CSS 3D suffit, perf mobile préservée, pas de poids supplémentaire)
-- Pas de switcher multi-produits (l'exemple 21st en avait un — non pertinent ici, on a un seul écran à montrer)
-- Pas de modification du Hero ni du Pricing existants
+## Résultat attendu
+- Section visuellement intégrée (doré champagne sobre identique au Hero/Pricing).
+- Scroll naturel et fluide sur PC : la vidéo défile en suivant le scroll.
+- Sur mobile/tablette : la vidéo joue en autoplay loop discret, plus de blocage perçu.
+- Mockup iPhone bien dimensionné, pas de débordement.

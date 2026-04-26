@@ -30,10 +30,10 @@ export function IPhoneMockup3D({ children, className, flat = false }: IPhoneMock
             }
       }
     >
-      {/* Outer glow / shadow */}
+      {/* Outer glow / shadow — doré champagne aligné charte */}
       <div
         aria-hidden
-        className="absolute -inset-6 rounded-[3.5rem] bg-[hsl(45_100%_50%/0.18)] blur-3xl opacity-70 pointer-events-none"
+        className="absolute -inset-6 rounded-[3.5rem] bg-[hsl(38_45%_48%/0.18)] blur-3xl opacity-70 pointer-events-none"
       />
 
       {/* Titanium frame */}
