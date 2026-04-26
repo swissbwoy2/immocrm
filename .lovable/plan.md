@@ -1,67 +1,68 @@
-# Plan : Extraction IA automatique des extraits de poursuites
+## Objectif
 
-## 1. Correction de l'erreur TypeScript (bloquant le build)
+Créer une page admin dédiée au suivi des extraits de poursuites de tous les clients, affichant :
+- La **dernière date d'émission** extraite
+- La **confiance IA** (%)
+- La **méthode d'extraction** (`ai`, `ai_auto_scan`, `manual`, `agent`)
+- Le **document source** (lien cliquable vers le PDF)
+- Le **statut** (✅ valide / 🟡 > 2 mois / 🔴 expiré / ⚪ manquant)
 
-**Fichier**: `supabase/functions/extract-poursuites-date/index.ts` (ligne 101)
+## Implémentation
 
-Le SELECT ne récupère pas la colonne `type` du document, donc `doc.type` casse le typage.
-→ Remplacer la ligne référençant `doc.type` par `"application/pdf"` directement (tous les extraits sont des PDF, et l'API Gemini attend un MIME standard).
+### 1. Nouvelle page : `src/pages/admin/SuiviExtraitsPoursuites.tsx`
 
-```ts
-const mime = "application/pdf";
+Tableau premium (PremiumTable) avec :
+- **Colonnes** : Client (nom + email) · Date d'émission · Âge (mois) · Statut (badge coloré) · Confiance · Méthode (badge) · Document source (icône PDF) · Dernier rappel · Actions
+- **Filtres haut de page** : Tous / Manquant / Valide / Warning (>2 mois) / Expiré (>3 mois)
+- **KPIs en tête** : 4 cartes (Total clients · Manquant · Warning · Expiré)
+- **Recherche** par nom client
+- **Bouton action** par ligne : « Relancer l'IA » (appelle `extract-poursuites-date` avec le `client_id`) + « Renvoyer rappel » (appelle `send-document-update-reminders`)
+- **Tri** par défaut : expirés en premier, puis warning, puis manquant, puis valide
+
+### 2. Source de données
+
+Requête Supabase :
+```sql
+SELECT c.id, c.prenom, c.nom, c.email,
+       c.extrait_poursuites_date_emission,
+       c.extrait_poursuites_extraction_method,
+       c.extrait_poursuites_ai_confidence,
+       c.extrait_poursuites_document_id,
+       c.extrait_poursuites_last_reminder_at,
+       d.nom AS doc_nom, d.url AS doc_url
+FROM clients c
+LEFT JOIN documents d ON d.id = c.extrait_poursuites_document_id
+WHERE c.statut = 'actif'
+ORDER BY ...
 ```
 
-## 2. Refonte de la logique d'extraction : auto-scan par type
+Avec `.limit(15000)` (cf. mémoire `global-query-row-limit-increase`).
 
-**Constat actuel** : la fonction `extract-poursuites-date` exige `document_id` en input → l'utilisateur doit sélectionner manuellement un document.
+### 3. Routing & navigation
 
-**Nouveau comportement** : la fonction prend uniquement `client_id` et :
-1. Récupère **tous les documents** du client où `type_document = 'extrait_poursuites'`, triés par `date_upload DESC`.
-2. Itère du plus récent au plus ancien.
-3. Pour chaque PDF, appelle Gemini 2.5 Flash pour extraire la date d'émission.
-4. Garde la **date la plus récente trouvée** (parmi tous les extraits valides).
-5. Sauvegarde dans `clients.extrait_poursuites_date_emission` avec `extraction_method = 'ai_auto_scan'` et le `document_id` du PDF qui a fourni la date la plus récente.
+- **Route** : `/admin/suivi-extraits` (lazy import dans `src/App.tsx`, protégée `allowedRoles={['admin']}`)
+- **Sidebar** : ajouter une entrée dans `src/components/AppSidebar.tsx` section admin → groupe « Documents/Conformité » avec icône `ShieldCheck` et chemin `/admin/suivi-extraits`
 
-**Avantage** : zéro action utilisateur. Dès qu'un extrait est uploadé (peu importe par qui), un trigger ou un appel automatique met à jour la date.
+### 4. UX details
 
-## 3. Déclenchement automatique
+- Méthode `ai_auto_scan` → badge violet « IA Auto » avec icône `Sparkles`
+- Méthode `ai` → badge bleu « IA » 
+- Méthode `manual` → badge gris « Manuel »
+- Méthode `agent` → badge orange « Agent »
+- Confiance affichée en % avec barre de progression colorée (vert ≥80, jaune ≥50, rouge <50)
+- Document source : icône `FileText` cliquable ouvrant le PDF dans un nouvel onglet via `createSignedUrl` (60 min)
+- Format dates : `format(date, 'd MMM yyyy', { locale: fr })`, timezone Europe/Zurich
 
-Deux points d'entrée :
+### 5. Aucune migration requise
 
-**A. À l'upload d'un nouveau document `extrait_poursuites`** :
-- Modifier le hook d'upload côté frontend (composant qui gère l'ajout de documents) pour appeler `extract-poursuites-date` automatiquement après un upload réussi avec `type_document === 'extrait_poursuites'`.
-- Toast de feedback : "Date d'émission détectée automatiquement : 12/03/2026 (confiance 95%)".
-
-**B. Cron quotidien** :
-- Étendre le cron `poursuites-reminders-daily` (déjà actif à 10h Zurich) pour scanner d'abord les clients dont `extrait_poursuites_date_emission IS NULL` mais qui ont au moins 1 document `extrait_poursuites` en base → lancer l'extraction IA automatiquement avant d'envoyer les rappels.
-
-## 4. Simplification UI
-
-- Retirer le bouton "Sélectionner un document" du composant `ExtractPoursuitesUploadDialog.tsx`.
-- Ne garder que :
-  - Bouton "Lancer l'analyse IA des extraits" (si des extraits existent déjà en base sans date détectée).
-  - Bouton "Saisir la date manuellement" (fallback).
-- Afficher la liste des extraits déjà analysés avec leur date détectée et leur badge de fraîcheur (vert/jaune/rouge).
-
-## 5. Tests post-déploiement
-
-1. Déployer `extract-poursuites-date` corrigée.
-2. Lancer un appel `curl` sur le client courant (`f1b90290-c2c4-4b18-9b9a-feb180ab43da`) pour vérifier l'auto-scan.
-3. Vérifier les logs : nombre d'extraits scannés, date retenue, confiance IA.
-4. Vérifier en base : `clients.extrait_poursuites_date_emission` mis à jour.
-5. Lancer un backfill manuel sur les ~66 extraits existants pour initialiser les dates des clients concernés.
+Toutes les colonnes existent déjà sur `clients`. Pas de changement DB.
 
 ## Fichiers impactés
 
-- `supabase/functions/extract-poursuites-date/index.ts` — refonte (auto-scan + fix TS)
-- `src/components/ExtractPoursuitesUploadDialog.tsx` — simplification UI
-- Composant d'upload de documents (à identifier précisément lors de l'implémentation) — déclenchement auto post-upload
-- `supabase/functions/send-document-update-reminders/index.ts` — étape pré-rappel : scan IA des clients sans date
+- ✏️ `src/App.tsx` (ajout lazy import + route)
+- ✏️ `src/components/AppSidebar.tsx` (ajout entrée menu)
+- ➕ `src/pages/admin/SuiviExtraitsPoursuites.tsx` (nouvelle page)
 
 ## Question
 
-L'extraction IA prend ~3-5 secondes par PDF. Sur un client avec 5 extraits historiques, le scan complet prend ~20s. **Préférences** :
-- **A** : Scanner uniquement le **dernier extrait** uploadé (rapide, 1 appel IA, suffit dans 99% des cas car on veut la date la plus récente).
-- **B** : Scanner **tous les extraits** du client et garder la date max (lent mais robuste si un extrait récent est mal nommé/désordonné).
-
-Je recommande **A** (le plus récent par `date_upload`), avec fallback sur les précédents uniquement si l'IA échoue. OK ?
+Je n'ai pas besoin de clarification : la page s'intégrera naturellement à la sidebar admin. Approuve pour lancer l'implémentation.
