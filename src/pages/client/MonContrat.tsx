@@ -107,10 +107,10 @@ export default function MonContrat() {
   };
 
   const handleDownloadPDF = async () => {
-    if (!client?.mandat_pdf_url) {
+    if (!client?.id) {
       toast({
-        title: 'PDF non disponible',
-        description: 'Le contrat PDF n\'est pas encore disponible',
+        title: 'Contrat non disponible',
+        description: 'Votre contrat n\'est pas encore disponible',
         variant: 'destructive',
       });
       return;
@@ -118,28 +118,33 @@ export default function MonContrat() {
 
     setDownloading(true);
     try {
-      const { data, error } = await supabase.storage
-        .from('mandat-contracts')
-        .download(client.mandat_pdf_url);
+      // Toujours régénérer le mandat COMPLET (texte juridique intégral),
+      // au lieu de télécharger un éventuel ancien PDF "résumé" stocké.
+      const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+        body: { client_id: client.id },
+      });
 
       if (error) throw error;
+      if (!data?.pdf_base64) throw new Error('Aucun PDF retourné');
 
-      const url = URL.createObjectURL(data);
+      const bytes = Uint8Array.from(atob(data.pdf_base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `contrat-mandat-${profile?.nom || 'client'}.pdf`;
+      link.download = data.filename || `Mandat_Complet_${profile?.nom || 'client'}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
 
       toast({
         title: 'Téléchargement réussi',
-        description: 'Votre contrat a été téléchargé',
+        description: 'Votre mandat complet a été téléchargé',
       });
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast({
         title: 'Erreur',
-        description: 'Impossible de télécharger le contrat',
+        description: 'Impossible de générer le contrat complet',
         variant: 'destructive',
       });
     } finally {
