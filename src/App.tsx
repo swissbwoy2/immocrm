@@ -90,6 +90,7 @@ const MandatV3SignOnly = lazy(() => import("./pages/mandat-v3/SignOnly"));
 // Agent pages
 const AgentDashboard = lazy(() => import("./pages/agent/Dashboard"));
 const AgentMesClients = lazy(() => import("./pages/agent/MesClients"));
+const AgentSuiviExtraits = lazy(() => import("./pages/agent/SuiviExtraitsPoursuites"));
 const AgentClientDetail = lazy(() => import("./pages/agent/ClientDetail"));
 const AgentEnvoyerOffre = lazy(() => import("./pages/agent/EnvoyerOffre"));
 const AgentOffresEnvoyees = lazy(() => import("./pages/agent/OffresEnvoyees"));
@@ -323,6 +324,7 @@ const App = () => (
               <Route path="/admin/interets-acheteurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminInteretsAcheteurs /></AppLayout></ProtectedRoute>} />
               <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/mes-clients" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMesClients /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/suivi-extraits" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentSuiviExtraits /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/clients/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentClientDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/clients/:id/mandat-prefill" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><StaffMandatPrefill /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />

@@ -144,6 +144,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Mes clients',
           items: [
             { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
+            { name: 'Suivi extraits', icon: ShieldCheck, path: '/agent/suivi-extraits', notifKey: null },
             { name: 'Propriétaires', icon: Home, path: '/agent/proprietaires', notifKey: null },
             { name: 'Biens en vente', icon: Building2, path: '/agent/biens-vente', notifKey: null },
             { name: 'Rénovation', icon: HardHat, path: '/agent/renovation', notifKey: null },
