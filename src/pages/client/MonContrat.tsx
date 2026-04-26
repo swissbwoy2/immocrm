@@ -230,10 +230,15 @@ export default function MonContrat() {
     return { start, end, daysRemaining, daysSinceSignature };
   };
 
-  const { start: mandatStart, end: mandatEnd, daysRemaining } = getMandatDates();
+  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature } = getMandatDates();
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
   const hasPdf = !!client?.id;
+  const isPaused = !!client?.mandate_paused_at;
+  const isInactif = client?.statut === 'inactif';
+  const refundEligibleNow = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY;
+  const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
+  const showRefundRequested = client?.refund_status === 'pending';
 
   if (loading) {
     return (
