@@ -8,6 +8,8 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PageTransition } from '@/components/PageTransition';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { usePresence } from '@/hooks/usePresence';
+import { FloatingMessengerProvider } from '@/hooks/useFloatingMessenger';
+import { FloatingMessenger } from '@/components/messaging/floating/FloatingMessenger';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -76,6 +78,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
           </PageTransition>
         </main>
       </div>
+      <FloatingMessenger />
     </div>
   );
 }
@@ -83,7 +86,9 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
+      <FloatingMessengerProvider>
+        <AppLayoutContent>{children}</AppLayoutContent>
+      </FloatingMessengerProvider>
     </SidebarProvider>
   );
 }
