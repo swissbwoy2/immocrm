@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { useReducedMotion, useScroll, useTransform, motion } from 'framer-motion';
+import { useReducedMotion, useScroll, useTransform, useSpring, motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ScrollExpansionHeroProps {
   mediaSrc: string;
@@ -18,30 +19,39 @@ export function ScrollExpansionHero({
   scrollToExpand = 'Faites défiler pour découvrir',
   children,
 }: ScrollExpansionHeroProps) {
-  // Ref targets only the 250vh expansion block so scrollYProgress tracks just the expansion
   const expansionRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
 
   const { scrollYProgress } = useScroll({
     target: expansionRef,
     offset: ['start start', 'end end'],
   });
 
-  // Media expansion: 0.6 scale → 1.0 scale over first 50% of scroll
-  const scale = useTransform(scrollYProgress, [0, 0.5], prefersReducedMotion ? [1, 1] : [0.6, 1]);
-  const borderRadius = useTransform(scrollYProgress, [0, 0.5], prefersReducedMotion ? [0, 0] : [24, 0]);
-  const mediaOpacity = useTransform(scrollYProgress, [0, 0.5], prefersReducedMotion ? [1, 1] : [0.5, 1]);
+  // Smooth the scroll progress to make bidirectional scrolling fluid (especially on mobile)
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
 
-  // Title fades out
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.3], prefersReducedMotion ? [1, 1] : [1, 0]);
-  const titleY = useTransform(scrollYProgress, [0, 0.3], prefersReducedMotion ? [0, 0] : [0, -40]);
+  // Mobile starts at a larger initial scale for readability on small screens
+  const initialScale = isMobile ? 0.78 : 0.6;
 
-  // Scroll indicator fades
-  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.15], prefersReducedMotion ? [1, 1] : [1, 0]);
+  // Use full [0, 1] range so the animation reverses immediately on scroll-up
+  const scale = useTransform(smoothProgress, [0, 1], [initialScale, 1]);
+  const borderRadius = useTransform(smoothProgress, [0, 1], [24, 0]);
+  const mediaOpacity = useTransform(smoothProgress, [0, 1], [0.5, 1]);
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  // Title fades over first 60% of scroll
+  const titleOpacity = useTransform(smoothProgress, [0, 0.6], [1, 0]);
+  const titleY = useTransform(smoothProgress, [0, 0.6], [0, -40]);
 
-  if (isMobile || prefersReducedMotion) {
+  // Scroll hint disappears early
+  const scrollHintOpacity = useTransform(smoothProgress, [0, 0.3], [1, 0]);
+
+  // Accessibility fallback: users who prefer reduced motion get a static version
+  if (prefersReducedMotion) {
     return (
       <div>
         <section className="relative overflow-hidden">
@@ -73,9 +83,18 @@ export function ScrollExpansionHero({
 
   return (
     <div>
-      {/* 250vh expansion block — scrollYProgress tracks only this */}
-      <div ref={expansionRef} style={{ height: '250vh', position: 'relative' }}>
-        <div style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
+      {/* Compressed expansion zone — 150vh uses the full scroll for bidirectional animation */}
+      <div ref={expansionRef} style={{ height: '150vh', position: 'relative' }}>
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            height: '100vh',
+            overflow: 'hidden',
+            touchAction: 'pan-y',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
           {/* Background */}
           {bgImageSrc && (
             <div className="absolute inset-0">
@@ -111,7 +130,7 @@ export function ScrollExpansionHero({
             style={{ opacity: titleOpacity, y: titleY }}
             className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6"
           >
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-[hsl(40_25%_92%)] font-serif text-center max-w-4xl drop-shadow-2xl leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold text-[hsl(40_25%_92%)] font-serif text-center max-w-4xl drop-shadow-2xl leading-tight">
               {title}
             </h1>
             <div
@@ -140,7 +159,6 @@ export function ScrollExpansionHero({
         </div>
       </div>
 
-      {/* Children appear naturally once the user scrolls past the 250vh expansion */}
       {children}
     </div>
   );
