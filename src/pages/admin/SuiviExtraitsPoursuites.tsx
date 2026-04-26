@@ -268,12 +268,87 @@ export default function SuiviExtraitsPoursuites() {
         />
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <PremiumKPICard title="Clients actifs" value={kpis.total} icon={User} variant="default" />
           <PremiumKPICard title="Manquants" value={kpis.missing} icon={HelpCircle} variant="warning" />
           <PremiumKPICard title="> 2 mois" value={kpis.warning} icon={Clock} variant="warning" />
           <PremiumKPICard title="Expirés" value={kpis.expired} icon={AlertTriangle} variant="danger" />
+          <PremiumKPICard title="Scannables IA" value={kpis.scannable} icon={Sparkles} variant="default" />
         </div>
+
+        {/* Barre d'action scan global */}
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-background to-violet-500/5">
+          <CardContent className="p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm">Scan IA en masse</div>
+                <div className="text-xs text-muted-foreground">
+                  {batchRunning && batchProgress
+                    ? `Analyse en cours… ${batchProgress.done}/${batchProgress.total} clients`
+                    : `${kpis.scannable} client(s) ont un extrait uploadé sans date détectée`}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {batchRunning && batchProgress && (
+                <div className="w-40 hidden md:block">
+                  <Progress value={batchProgress.total ? (batchProgress.done / batchProgress.total) * 100 : 0} className="h-2" />
+                </div>
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    disabled={batchRunning || kpis.scannable === 0}
+                    className="gap-2"
+                    size="sm"
+                  >
+                    {batchRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {batchRunning ? 'Analyse en cours…' : `Scanner les ${kpis.scannable} manquants`}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Lancer le scan IA en masse ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      L'IA va analyser <strong>{kpis.scannable} extrait(s) PDF</strong> pour en détecter la date d'émission.
+                      <br /><br />
+                      Durée estimée : <strong>~{Math.ceil(kpis.scannable * 4 / 60)} minute(s)</strong>.
+                      Les saisies manuelles ne seront jamais écrasées.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => runBatchScan('missing')}>Lancer le scan</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={batchRunning} size="sm" className="gap-2">
+                    <RefreshCw className="w-4 h-4" /> Re-scanner tout
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Re-scanner tous les extraits ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette opération va relancer l'IA sur <strong>tous les clients ayant un extrait uploadé</strong>,
+                      y compris ceux dont la date est déjà détectée par l'IA. Les saisies manuelles restent protégées.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => runBatchScan('all')}>Tout re-scanner</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filtres + recherche */}
         <Card className="border-border/50">
