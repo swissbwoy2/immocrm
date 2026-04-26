@@ -1,67 +1,66 @@
-## Objectif
+## 🎯 Objectif
 
-Reproduire le bloc **"Budget locatif indicatif"** de Macoloc dans le formulaire `/nouveau-mandat`, étape **Situation financière** (Step 3). Dès que le client saisit son **revenu mensuel net (CHF)**, un encadré vert/doré apparaît dynamiquement avec :
+Refondre l'écran de chargement (`src/components/PageLoader.tsx`) pour qu'il ressemble exactement à celui de **Macoloc** :
 
-1. Le **loyer maximum recommandé** (revenu / 3, règle suisse standard)
-2. Le **nombre de pièces conseillé** (estimation indicative basée sur le budget)
-3. Une **note d'information** rappelant qu'un garant, co-locataire ou revenus complémentaires peuvent augmenter ce budget
+- **Fond noir** plein écran (pas le `bg-background` clair actuel)
+- **Grand logo Immo-rama.ch** affiché tel quel (pas découpé dans un cercle blanc)
+- **Aucun texte** visible ("Logisorama", "by Immo-rama.ch" → supprimés)
+- **Aucun dots de progression** (les 3 points qui rebondissent → supprimés)
+- **Aucun anneau qui pulse** (le `animate-ping` blanc → supprimé)
+- Un **halo lumineux subtil** (radial-gradient) derrière le logo pour le rendu premium Macoloc
+- Une **animation discrète** : très léger fade in + pulsation douce d'opacité du logo (pas de scale qui saute)
 
----
+## 📂 Fichier modifié
 
-## Logique de calcul (règle 1/3 suisse)
+### `src/components/PageLoader.tsx`
 
-```ts
-const budgetMax = Math.floor(revenus_mensuels / 3);
-// Estimation pièces conseillé : ~600 CHF / pièce en moyenne suisse
-const piecesConseille = Math.max(1, Math.round((budgetMax / 600) * 2) / 2); // arrondi 0.5
+**Avant** (actuel — non voulu) :
+- Fond clair `bg-background`
+- Logo dans un cercle `rounded-full bg-card` de 80px
+- Anneau `animate-ping` autour
+- Texte "Logisorama" + "by Immo-rama.ch"
+- 3 dots qui rebondissent
+
+**Après** (souhaité — façon Macoloc) :
+```tsx
+import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+
+export function PageLoader() {
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-black relative overflow-hidden">
+      {/* Halo radial subtil derrière le logo (effet Macoloc) */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(circle at center, rgba(180,140,70,0.18) 0%, rgba(0,0,0,0) 55%)',
+        }}
+      />
+      {/* Logo grand format, sans cercle, sans découpe */}
+      <img
+        src={logoImmoRama}
+        alt="Immo-rama.ch"
+        fetchPriority="high"
+        className="relative z-10 w-[60vw] max-w-[420px] h-auto object-contain animate-pulse"
+        style={{ animationDuration: '2.4s' }}
+      />
+    </div>
+  );
+}
 ```
 
-Le bloc ne s'affiche que si `revenus_mensuels >= 1000` (évite affichage parasite pendant la saisie).
+## ✨ Détails visuels
 
----
+| Élément | Valeur |
+|---|---|
+| Fond | `bg-black` (noir pur, comme Macoloc) |
+| Taille logo | `60vw` (responsive) avec max **420px** desktop |
+| Halo | Radial gradient doré très léger (rgba 180,140,70 / 0.18) |
+| Animation | `animate-pulse` avec `animationDuration: 2.4s` (lent, discret) |
+| Texte | ❌ Aucun |
+| Dots | ❌ Aucun |
+| Cercle blanc | ❌ Supprimé |
 
-## Modifications
+## ✅ Résultat attendu
 
-### 1. `src/components/mandat/MandatFormStep3.tsx`
-
-- Insérer un nouveau composant interne `BudgetIndicatifCard` juste **après** le champ "Revenu mensuel net (CHF)" (après la ligne 69)
-- Le bloc occupe `md:col-span-2` (pleine largeur de la grille)
-- Style aligné avec la charte Logisorama (palette dorée `hsl(38_45%_48%)`) plutôt que vert Macoloc, pour rester cohérent avec le reste du formulaire
-- Affichage conditionnel : visible uniquement si `data.revenus_mensuels >= 1000`
-
-### Structure visuelle du bloc
-
-```
-┌─────────────────────────────────────────────┐
-│ 📈  Budget locatif indicatif                │
-│                                             │
-│  1'667  CHF / mois                          │
-│                                             │
-│  🏠  Nombre de pièces conseillé : 2.5 pièces│
-│                                             │
-│  ┌───────────────────────────────────────┐  │
-│  │ 👥 Vous avez un garant, un co-loca... │  │
-│  │    augmenter votre budget.            │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-```
-
-- Bordure dorée `border-[hsl(38_45%_48%/0.4)]`
-- Fond légèrement teinté `bg-[hsl(38_45%_48%/0.07)]`
-- Montant en gros (`text-3xl font-bold`) couleur dorée
-- Icône `TrendingUp` (lucide) pour le titre
-- Icône `Home` pour les pièces
-- Icône `Users` pour la note d'information
-- Note dans un sous-bloc avec fond plus sombre
-
-### Format du montant
-
-Utiliser le séparateur de milliers suisse (apostrophe) : `1'667` via `toLocaleString('fr-CH')`.
-
----
-
-## Fichier édité
-
-- `src/components/mandat/MandatFormStep3.tsx` (insertion du composant `BudgetIndicatifCard` + appel conditionnel)
-
-Aucun autre fichier impacté. Aucune modification backend ni de schéma de données.
+Écran totalement noir avec uniquement le **grand logo Immo-rama.ch** au centre, légèrement halo doré derrière, qui pulse doucement. Identique au rendu Macoloc.
