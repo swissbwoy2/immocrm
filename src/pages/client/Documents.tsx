@@ -79,6 +79,10 @@ export default function Documents() {
       'salaire2': 'fiche_salaire',
       'salaire3': 'fiche_salaire',
       'identite': 'piece_identite',
+      'piece_identite_recto': 'piece_identite',
+      'piece_identite_verso': 'piece_identite',
+      'permis_sejour_recto': 'permis_sejour',
+      'permis_sejour_verso': 'permis_sejour',
     };
     return typeMapping[formType] || formType;
   };

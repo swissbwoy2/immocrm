@@ -1,84 +1,72 @@
-## Ce qui manque aujourd’hui
-La refonte précédente n’a changé que le chrome externe du formulaire.
-Le rendu n’est pas encore “comme Macoloc” parce que :
-- les composants de pas internes gardent encore leurs anciens en-têtes premium (icône, titre centré, serif, séparateur)
-- certains pas gardent des blocs décoratifs non présents dans la référence (anneaux de progression, cartes luxe, effets beam)
-- `FormulaireVendeurComplet.tsx` garde encore beaucoup de markup de section ancien directement dans la page
-- le shell a été simplifié, mais pas le contenu réel des cartes
+## Objectif
+Refondre l’étape d’upload des documents pour qu’elle ressemble réellement à votre référence : de vraies zones d’upload visuelles, avec aperçu, état validé, et un traitement spécial recto/verso pour la pièce d’identité et le permis de séjour.
 
-## Plan d’implémentation
-1. Reprendre la structure Macoloc comme base unique pour tous les formulaires publics :
-   - header très simple
-   - bannière image + texte
-   - bloc progression compact
-   - stepper horizontal discret
-   - une seule carte de contenu sobre
-   - navigation collée en bas de carte
+## Ce qui sera changé
+1. Remplacer la liste actuelle de lignes + bouton « Charger » dans `MandatFormStep6.tsx` par une structure type Macoloc :
+   - titre principal + sous-texte
+   - sous-sections de documents
+   - grandes zones d’upload encadrées
+   - aperçu du fichier après upload
+   - état visuel validé
+   - actions claires: Photo, Fichier, supprimer
 
-2. Nettoyer les composants premium trop “luxe” qui empêchent le rendu de ressembler à la référence :
-   - alléger `PremiumFormCard`
-   - simplifier `PremiumProgressBlock`
-   - simplifier `PremiumStepIndicator`
-   - ajuster `PremiumGuaranteeBanner` pour qu’elle suive la même densité visuelle que les screenshots
+2. Créer un composant d’upload plus riche pour les formulaires publics, réutilisable, qui gère :
+   - zone vide avec bordure pointillée
+   - glisser-déposer / clic
+   - bouton fichier
+   - bouton photo
+   - aperçu image/PDF
+   - état chargé / validé / suppression
 
-3. Refondre les pas du formulaire locataire (`src/components/mandat/MandatFormStep1.tsx` à `MandatFormStep7.tsx`) pour supprimer :
-   - badges d’icône centrés
-   - titres serif décoratifs
-   - séparateurs décoratifs
-   - blocs de progression internes non demandés
-   et les remplacer par une structure plus proche Macoloc :
-   - titre aligné à gauche
-   - sous-texte court
-   - champs groupés en grille sobre
-   - sections internes fines avec séparateurs simples
+3. Traiter séparément les documents d’identité selon le besoin réel :
+   - `piece_identite`: bloc avec deux cases obligatoires `Recto` + `Verso`
+   - `permis_sejour`: bloc avec deux cases obligatoires `Recto` + `Verso`
+   - affichage conditionnel selon `type_permis` choisi à l’étape 1
+   - si profil suisse/autre sans permis de séjour: on affiche la pièce d’identité
+   - si permis B/C/F/N: on affiche le permis de séjour
 
-4. Harmoniser les champs eux-mêmes pour coller à la direction Macoloc tout en gardant vos couleurs :
-   - labels plus lisibles
-   - bordures plus fines
-   - focus plus net
-   - hauteur et espacements homogènes
-   - moins d’effets glass/beam dans les zones de saisie
+4. Conserver votre logique métier existante autant que possible :
+   - pas de changement backend obligatoire
+   - on garde `documents_uploades` côté mandat
+   - au moment de sauvegarder, les deux faces seront regroupées proprement pour rester compatibles avec le reste de l’app
 
-5. Refondre les formulaires non locataires pour qu’ils utilisent exactement la même logique de composition :
-   - `src/pages/FormulaireVendeurComplet.tsx`
-   - `src/pages/FormulaireRelouer.tsx`
-   - `src/pages/FormulaireConstruireRenover.tsx`
-   - `src/pages/MandatV3.tsx`
-   - `src/pages/NouveauMandat.tsx`
-
-6. Pour `FormulaireVendeurComplet.tsx`, déplacer la logique visuelle encore codée dans `renderStepContent()` vers une présentation plus uniforme afin d’éviter que ce formulaire reste différent des autres.
-
-7. Faire une passe finale d’alignement visuel sur la référence :
-   - largeur de conteneur
-   - marges verticales
-   - taille des titres
-   - densité des champs
-   - aspect des blocs upload / documents
-   - position et style des boutons “Précédent / Continuer”
-
-8. Vérifier route par route dans le preview que les 5 formulaires ont bien changé en profondeur, pas seulement la bannière.
-
-## Fichiers principalement concernés
-- `src/components/forms-premium/PremiumFormCard.tsx`
-- `src/components/forms-premium/PremiumProgressBlock.tsx`
-- `src/components/forms-premium/PremiumStepIndicator.tsx`
-- `src/components/forms-premium/PremiumGuaranteeBanner.tsx`
-- `src/components/forms-premium/PremiumInput.tsx`
-- `src/components/forms-premium/PremiumSelect.tsx`
-- `src/components/mandat/MandatFormStep1.tsx` à `MandatFormStep7.tsx`
-- `src/pages/NouveauMandat.tsx`
-- `src/pages/MandatV3.tsx`
-- `src/pages/FormulaireVendeurComplet.tsx`
-- `src/pages/FormulaireRelouer.tsx`
-- `src/pages/FormulaireConstruireRenover.tsx`
-
-## Détails techniques
-Objectif visuel : garder l’identité Logisorama (palette sombre + accents de marque) mais adopter la hiérarchie Macoloc : sobre, plate, lisible, compacte, structurée.
-
-Concrètement, j’appliquerai cette règle :
+## Structure visée
 ```text
-Macoloc = structure + rythme + hiérarchie
-Logisorama = couleurs + contenus + champs + branding
+Documents à fournir
+Sous-texte explicatif
+
+Documents administratifs
+- Extrait des poursuites → 1 grande zone d’upload
+- 3 fiches de salaire → 1 grande zone multi-fichiers ou 3 zones harmonisées
+
+Identité
+- Carte d’identité (recto) / Permis de séjour (recto)
+- Carte d’identité (verso) / Permis de séjour (verso)
+Chaque case:
+  aperçu
+  bouton Photo
+  bouton Fichier
+  bouton supprimer
+  état validé
 ```
 
-Je ne toucherai pas à la logique métier ni aux validations, seulement à la structure et au rendu des formulaires.
+## Fichiers concernés
+- `src/components/mandat/MandatFormStep6.tsx`
+- `src/components/scanner/DocumentUploadField.tsx`
+- `src/components/scanner/UniversalDocumentScanner.tsx`
+- `src/hooks/useNativeCamera.ts` (si ajustement UX nécessaire)
+- éventuellement un nouveau composant dédié du type `PremiumDocumentUploadCard.tsx`
+
+## Détails techniques
+- Le composant actuel `DocumentUploadField` sait déjà gérer le recto/verso, mais son UI est trop minimale. Je vais le faire évoluer vers une présentation par cartes, avec aperçu et actions séparées.
+- Pour l’identité/permis, je ne vais pas me contenter d’un seul fichier fusionné visible en bloc: l’interface montrera bien les deux faces séparément, comme sur votre screenshot.
+- Pour rester compatible avec le reste de l’application, la persistance restera mappée vers les types de documents existants (`piece_identite`, `permis_sejour`, `fiche_salaire`, `extrait_poursuites`).
+- Je vérifierai aussi les écrans qui relisent ces documents (`client/Documents`, calculs de complétude, chance indicator) afin d’éviter de casser les stats existantes.
+
+## Résultat attendu
+Après implémentation, l’étape documents ne sera plus une simple liste avec bouton « Charger ». Elle ressemblera à votre référence :
+- zones d’upload visuelles
+- preview immédiate
+- workflow photo/fichier
+- recto/verso explicite pour identité et permis de séjour
+- rendu premium avec vos couleurs Logisorama, mais structuré comme Macoloc.

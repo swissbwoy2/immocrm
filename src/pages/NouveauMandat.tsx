@@ -84,8 +84,13 @@ export default function NouveauMandat() {
         }
         return baseValid && !!formData.pieces_recherche;
       }
-      case 5:
-        return formData.documents_uploades.length >= 5;
+      case 5: {
+        const types = new Set(formData.documents_uploades.map((d) => d.type));
+        const isPermis = ['B', 'C', 'F', 'N'].includes(formData.type_permis);
+        const idKind = isPermis ? 'permis_sejour' : 'piece_identite';
+        const required = ['poursuites', 'salaire1', 'salaire2', 'salaire3', `${idKind}_recto`, `${idKind}_verso`];
+        return required.every((k) => types.has(k));
+      }
       case 6:
         return !!(formData.signature_data && formData.cgv_acceptees);
       default:
