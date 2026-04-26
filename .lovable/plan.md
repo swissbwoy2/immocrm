@@ -1,140 +1,107 @@
 ## 🎯 Objectif
 
-Renforcer le suivi de l'**extrait de poursuites** avec :
-1. **Double seuil d'alerte** (2 mois = avertissement, 3 mois = expiré)
-2. **Notifications multi-rôles** (client + agent assigné + admins)
-3. **Extraction IA automatique** de la date d'émission depuis le PDF (plus de saisie manuelle)
+1. **Reproduire la logique des extraits de poursuites** pour les **fiches de salaire** : du **25 du mois** jusqu'à action du client, envoyer un rappel **TOUS LES JOURS** (pas de cooldown — quotidien jusqu'à upload de la fiche du mois en cours).
+2. **Tester** : extraction IA des extraits de poursuites + envoi des rappels (poursuites & fiches de salaire).
 
 ---
 
-## 📊 1. Base de données (migration)
+## 📊 Contexte technique trouvé
 
-Ajout sur `clients` :
-- `extrait_poursuites_date_emission` (DATE, nullable)
-- `extrait_poursuites_date_extraction_method` (TEXT : `'ai'` | `'manual'` | `'agent'`)
-- `extrait_poursuites_document_id` (UUID, FK → `documents.id`, nullable) — lien vers le PDF source
-- `extrait_poursuites_last_reminder_at` (TIMESTAMPTZ) — anti-spam 7 jours
-- `extrait_poursuites_ai_confidence` (NUMERIC) — score de confiance IA (0-1)
-
-**Pas besoin de colonne `date_expiration`** : calculée à la volée (`date_emission + 3 mois`) pour rester flexible.
+- Fiches de salaire = lignes dans `documents` avec `type_document = 'fiche_salaire'` (216 fiches en base, dernière 2026-04-24)
+- Colonnes utiles : `client_id`, `date_upload`, `created_at`
+- Aucun système de relance fiche de salaire existant aujourd'hui
+- Mémoire `client-document-monthly-verification-system` confirme la fenêtre 25 → 5 du mois suivant
 
 ---
 
-## 🤖 2. Edge Function : `extract-poursuites-date` (NOUVEAU)
+## 🔧 1. Nouvelle Edge Function `send-payslip-update-reminders`
 
-**But** : Lire un PDF d'extrait de poursuites et extraire la date d'émission via Lovable AI (Gemini 2.5 Flash, multimodal).
+**Logique** :
+- Pour chaque client actif (`statut in ('actif','en_recherche','en_attente')`)
+- **Fenêtre d'activation** : entre le 25 du mois M et le 5 du mois M+1
+- Récupérer la fiche la plus récente : `documents` where `type_document='fiche_salaire'` and `client_id=...` order by `date_upload desc limit 1`
+- Si la fiche la plus récente est **antérieure au 1er du mois M** (= aucune fiche pour le mois courant) → envoyer rappel
+- **Pas de cooldown** : envoi quotidien tant que pas d'upload
 
-**Flow** :
-1. Reçoit `document_id` (PDF dans le bucket `client-documents`)
-2. Crée une signed URL (5 min) du PDF
-3. Appelle Lovable AI Gateway avec `google/gemini-2.5-flash` en mode **vision** + tool calling structuré :
-   ```json
-   {
-     "name": "extract_poursuites_data",
-     "parameters": {
-       "date_emission": "YYYY-MM-DD",
-       "office_canton": "string",
-       "nom_personne": "string",
-       "confidence": "number 0-1"
-     }
-   }
-   ```
-4. Met à jour `clients.extrait_poursuites_date_emission` + `extraction_method = 'ai'` + `ai_confidence`
-5. Retourne la date extraite + confiance pour confirmation utilisateur
-
-**Sécurité** : verify_jwt activé, vérifie que l'utilisateur a accès au document (RLS via service role + check ownership).
-
----
-
-## 🔔 3. Edge Function : `send-document-update-reminders` (REFONTE)
-
-Logique remplacée :
-
-```
-Pour chaque client actif (statut in actif/en_recherche/en_attente) :
-  date_emission = client.extrait_poursuites_date_emission
-  
-  SI date_emission IS NULL :
-    → Notif "URGENT : Renseignez la date de votre extrait" 
-       (cooldown 7j, à client + agent)
-  
-  SINON :
-    age_mois = (now - date_emission) / 30
-    
-    SI age_mois >= 3 :
-      → 🔴 Notif EXPIRÉ "Commandez un nouvel extrait IMMÉDIATEMENT"
-         → client + agent + admins (cooldown 5j)
-    
-    SINON SI age_mois >= 2 :
-      → 🟡 Notif AVERTISSEMENT "Certaines régies n'acceptent que < 2 mois.
-         Anticipez et commandez un nouvel extrait."
-         → client + agent (cooldown 7j)
-```
-
-Email avec lien direct **office des poursuites en ligne** (eSchKG / cantons romands).
-
----
-
-## 🖥️ 4. Frontend
-
-### A. `src/components/DocumentUpdateReminder.tsx` (refonte, côté client)
-Remplace la simple confirmation par un widget intelligent :
-- **Si pas de date** : Bouton **"📤 Uploader mon extrait (IA détecte la date)"** → ouvre dialog d'upload + appel `extract-poursuites-date` → affiche date détectée pour validation
-- **Si date < 2 mois** : Badge vert ✅ "Valide jusqu'au JJ/MM/AAAA"
-- **Si date 2-3 mois** : Badge orange 🟡 "Attention : certaines régies exigent < 2 mois — anticipez"
-- **Si date > 3 mois** : Badge rouge 🔴 "EXPIRÉ — commandez un nouvel extrait" + lien vers eSchKG
-- Bouton **"📅 Saisir manuellement"** en fallback
-
-### B. `src/components/ExtractPoursuitesUploadDialog.tsx` (NOUVEAU)
-Composant réutilisable :
-1. Drag & drop PDF
-2. Upload vers `client-documents/{client_id}/extrait_poursuites/`
-3. Crée la ligne dans `documents` (type_document = `extrait_poursuites`)
-4. Appelle `extract-poursuites-date` avec spinner "🤖 Lecture IA en cours..."
-5. Affiche la date détectée + confiance → boutons **"✅ Confirmer"** / **"✏️ Corriger"**
-
-### C. `src/pages/admin/ClientDetail.tsx` & `src/pages/agent/ClientDetail.tsx`
-Dans la section documents du client :
-- Nouvelle carte **"Extrait de poursuites"** avec :
-  - Statut visuel (vert / orange / rouge)
-  - Date d'émission + méthode (🤖 IA / ✍️ Manuel)
-  - Bouton "Uploader pour extraction IA" (agent peut le faire pour le client)
-  - Bouton "Modifier la date manuellement"
-
-### D. `src/pages/admin/Dashboard.tsx` (alerte)
-Widget "🔴 Extraits poursuites expirés" listant les clients concernés (clic → ClientDetail).
-
----
-
-## 📧 5. Templates email (3 niveaux)
-
-| Seuil | Sujet | Destinataires |
+**Niveaux de sévérité progressifs** :
+| Période | Niveau | Destinataires |
 |---|---|---|
-| 🟡 2 mois | "Anticipez : votre extrait approche les 2 mois" | Client + Agent |
-| 🔴 3 mois | "URGENT : extrait de poursuites expiré" | Client + Agent + Admins |
-| ❓ Inconnu | "Renseignez la date de votre extrait" | Client + Agent |
+| 25-30/31 du mois | 🟡 Rappel doux | Client + Agent |
+| 1-3 du mois suivant | 🟠 Rappel insistant | Client + Agent |
+| 4-5 du mois suivant | 🔴 URGENT — dossier bientôt incomplet | Client + Agent + Admins |
+
+Notifications + email avec CTA → `/client/documents`.
+
+---
+
+## 🗄️ 2. Migration SQL
+
+- Ajouter `payslip_last_reminder_at TIMESTAMPTZ` sur `clients` (monitoring/debug)
+- Index sur `documents(client_id, type_document, date_upload DESC)` si absent
+
+---
+
+## ⏰ 3. Cron quotidien
+
+Programmer via `pg_cron` une exécution **quotidienne à 9h Europe/Zurich** (8h UTC) de `send-payslip-update-reminders`. Utiliser l'outil `insert` (pas migration) car le SQL contient l'URL/clé du projet.
+
+Idéalement aussi : ajouter ou vérifier le cron quotidien pour `send-document-update-reminders` (poursuites) si absent.
+
+---
+
+## ⚙️ 4. Déclaration dans `supabase/config.toml`
+
+```toml
+[functions.send-payslip-update-reminders]
+verify_jwt = false
+```
+
+---
+
+## 🧪 5. TESTS — Phase A : Extraction IA poursuites
+
+- Déployer `extract-poursuites-date`
+- Chercher un `document_id` réel d'extrait de poursuites en base
+- L'invoquer via `supabase--curl_edge_functions`
+- Vérifier que la date extraite est correcte
+- Vérifier que `clients.extrait_poursuites_date_emission`, `extraction_method='ai'`, `ai_confidence` sont mis à jour
+- Inspecter les logs via `supabase--edge_function_logs`
+
+---
+
+## 🧪 6. TESTS — Phase B : Rappels poursuites
+
+- Invoquer `send-document-update-reminders` manuellement
+- Vérifier compteurs `{missing, warning, expired, skipped}`
+- Vérifier notifications créées (client/agent/admin selon niveau)
+- Vérifier logs (pas d'erreur Resend)
+
+---
+
+## 🧪 7. TESTS — Phase C : Rappels fiches de salaire
+
+- Déployer la nouvelle fonction
+- L'invoquer manuellement via `curl_edge_functions`
+- Vérifier qu'un client ayant uploadé une fiche aujourd'hui n'est **PAS** notifié
+- Vérifier qu'un client sans fiche du mois courant **EST** notifié
+- Vérifier les notifications + emails
 
 ---
 
 ## 🗂️ Récap fichiers
 
 **Créer** :
-- `supabase/functions/extract-poursuites-date/index.ts`
-- `src/components/ExtractPoursuitesUploadDialog.tsx`
-- Migration SQL (5 nouvelles colonnes sur `clients`)
+- `supabase/functions/send-payslip-update-reminders/index.ts`
+- Migration SQL (1 colonne + 1 index)
 
 **Modifier** :
-- `supabase/functions/send-document-update-reminders/index.ts` (logique 3 seuils + multi-destinataires)
-- `src/components/DocumentUpdateReminder.tsx` (intégration upload IA)
-- `src/pages/admin/ClientDetail.tsx` (carte extrait poursuites)
-- `src/pages/agent/ClientDetail.tsx` (carte extrait poursuites)
-- `src/pages/admin/Dashboard.tsx` (widget alertes)
-- `supabase/config.toml` (déclarer la nouvelle fonction)
+- `supabase/config.toml`
+
+**Insert SQL** (data, pas migration) :
+- Cron `pg_cron` pour appel quotidien
 
 ---
 
 ## ❓ À confirmer
 
-**Question** : Pour l'extraction IA, j'utilise **Gemini 2.5 Flash** (multimodal, gratuit dans les quotas Lovable AI, lit les PDF directement). OK ou tu préfères Gemini 2.5 Pro (plus précis mais plus lent/coûteux) ?
-
-Par défaut je pars sur **Flash** (suffisant pour lire une date sur un document officiel structuré).
+**Heure d'exécution** : je propose **9h Europe/Zurich** (matin, le client voit la notif en début de journée). OK ou tu préfères un autre créneau (12h, 18h) ?

@@ -2721,6 +2721,7 @@ export type Database = {
           nombre_occupants: number | null
           note_agent: string | null
           numero_plaques: string | null
+          payslip_last_reminder_at: string | null
           pieces: number | null
           pieces_actuel: number | null
           poursuites: boolean | null
@@ -2801,6 +2802,7 @@ export type Database = {
           nombre_occupants?: number | null
           note_agent?: string | null
           numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
           pieces?: number | null
           pieces_actuel?: number | null
           poursuites?: boolean | null
@@ -2881,6 +2883,7 @@ export type Database = {
           nombre_occupants?: number | null
           note_agent?: string | null
           numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
           pieces?: number | null
           pieces_actuel?: number | null
           poursuites?: boolean | null
