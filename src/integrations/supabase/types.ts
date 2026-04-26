@@ -9921,6 +9921,98 @@ export type Database = {
           },
         ]
       }
+      wishlist_biens: {
+        Row: {
+          adresse: string
+          contact_email: string | null
+          contact_nom: string | null
+          contact_telephone: string | null
+          created_at: string
+          date_dernier_contact: string | null
+          date_offre_envoyee: string | null
+          id: string
+          lien_annonce: string
+          lien_annonce_normalise: string | null
+          nb_pieces: number | null
+          nb_relances: number
+          notes: string | null
+          npa: string | null
+          offre_id: string | null
+          photo_url: string | null
+          prix: number | null
+          source_portail: string | null
+          statut: string
+          surface: number | null
+          tags: string[] | null
+          type_bien: string | null
+          updated_at: string
+          user_id: string
+          ville: string | null
+        }
+        Insert: {
+          adresse: string
+          contact_email?: string | null
+          contact_nom?: string | null
+          contact_telephone?: string | null
+          created_at?: string
+          date_dernier_contact?: string | null
+          date_offre_envoyee?: string | null
+          id?: string
+          lien_annonce: string
+          lien_annonce_normalise?: string | null
+          nb_pieces?: number | null
+          nb_relances?: number
+          notes?: string | null
+          npa?: string | null
+          offre_id?: string | null
+          photo_url?: string | null
+          prix?: number | null
+          source_portail?: string | null
+          statut?: string
+          surface?: number | null
+          tags?: string[] | null
+          type_bien?: string | null
+          updated_at?: string
+          user_id: string
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string
+          contact_email?: string | null
+          contact_nom?: string | null
+          contact_telephone?: string | null
+          created_at?: string
+          date_dernier_contact?: string | null
+          date_offre_envoyee?: string | null
+          id?: string
+          lien_annonce?: string
+          lien_annonce_normalise?: string | null
+          nb_pieces?: number | null
+          nb_relances?: number
+          notes?: string | null
+          npa?: string | null
+          offre_id?: string | null
+          photo_url?: string | null
+          prix?: number | null
+          source_portail?: string | null
+          statut?: string
+          surface?: number | null
+          tags?: string[] | null
+          type_bien?: string | null
+          updated_at?: string
+          user_id?: string
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_biens_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       available_phone_slots: {
