@@ -2362,41 +2362,39 @@ export default function ClientDetail() {
                     </div>
                   )}
 
-                  {/* Download button */}
-                  {client.mandat_pdf_url && (
-                    <Button 
-                      variant="outline"
-                      className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
-                      onClick={async () => {
-                        try {
-                          // Extract file path from URL
-                          const urlParts = client.mandat_pdf_url!.split('/mandat-contracts/');
-                          const filePath = urlParts[urlParts.length - 1];
-                          
-                          const { data, error } = await supabase.storage
-                            .from('mandat-contracts')
-                            .download(filePath);
-                          if (error) throw error;
-                          const url = URL.createObjectURL(data);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = `contrat-mandat-${profile?.nom || 'client'}.pdf`;
-                          link.click();
-                          URL.revokeObjectURL(url);
-                        } catch (error) {
-                          console.error('Error downloading contract:', error);
-                          toast({
-                            title: 'Erreur',
-                            description: 'Impossible de télécharger le contrat',
-                            variant: 'destructive',
-                          });
-                        }
-                      }}
-                    >
-                      <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                      Télécharger le contrat PDF
-                    </Button>
-                  )}
+                  {/* Download full mandate PDF (always regenerated to ensure FULL legal text) */}
+                  <Button 
+                    variant="outline"
+                    className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
+                    onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+                          body: { client_id: client.id },
+                        });
+                        if (error) throw error;
+                        if (!data?.pdf_base64) throw new Error('Aucun PDF retourné');
+                        const bytes = Uint8Array.from(atob(data.pdf_base64), (c) => c.charCodeAt(0));
+                        const blob = new Blob([bytes], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = data.filename || `Mandat_Complet_${profile?.nom || 'client'}.pdf`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      } catch (error) {
+                        console.error('Error downloading full mandate:', error);
+                        toast({
+                          title: 'Erreur',
+                          description: 'Impossible de générer le mandat complet',
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                  >
+                    <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                    Télécharger le mandat complet (PDF)
+                  </Button>
+
 
                   {/* Regenerate button */}
                   {client.demande_mandat_id && (
