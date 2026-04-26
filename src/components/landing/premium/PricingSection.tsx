@@ -1,27 +1,40 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Rocket, ArrowRight, ShieldCheck, Banknote, Trophy } from 'lucide-react';
+import { Rocket, ArrowRight } from 'lucide-react';
+import { PremiumPricingCard } from '@/components/shared/PremiumPricingCard';
+import activationKey from '@/assets/pricing/activation-key.png';
+import successContract from '@/assets/pricing/success-contract.png';
+import guaranteeShield from '@/assets/pricing/guarantee-shield.png';
 
 const columns = [
   {
-    icon: Banknote,
     title: 'Activation',
     value: '300 CHF',
+    valueDescription: 'Acompte unique',
     description: "Acompte unique à l'inscription. Déduit de la commission finale.",
+    features: ['Sans engagement', 'Remboursable si échec', 'Paiement sécurisé'],
+    imageSrc: activationKey,
+    imageAlt: "Clé dorée — symbole de l'activation",
     highlight: false,
   },
   {
-    icon: Trophy,
     title: 'Succès',
     value: '1 mois de loyer',
-    description: "Commission uniquement si nous trouvons votre logement. Zéro risque.",
+    valueDescription: 'Commission au bail signé',
+    description: 'Commission uniquement si nous trouvons votre logement. Zéro risque.',
+    features: ['Zéro risque', 'Payable au bail signé', 'Visites incluses'],
+    imageSrc: successContract,
+    imageAlt: 'Contrat signé avec sceau doré — symbole du succès',
     highlight: true,
   },
   {
-    icon: ShieldCheck,
     title: 'Garantie',
     value: '90 jours',
-    description: "Si nous ne trouvons rien en 90 jours, vous êtes remboursé intégralement.",
+    valueDescription: 'Remboursement intégral',
+    description: 'Si nous ne trouvons rien en 90 jours, vous êtes remboursé intégralement.',
+    features: ['Engagement écrit', 'Remboursement intégral', 'Sans condition'],
+    imageSrc: guaranteeShield,
+    imageAlt: 'Bouclier doré avec coche — symbole de la garantie',
     highlight: false,
   },
 ];
@@ -39,23 +52,9 @@ export function PricingSection() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {columns.map((col, i) => (
-            <div
-              key={i}
-              className={`rounded-2xl p-6 md:p-8 text-center space-y-4 border transition-colors ${
-                col.highlight
-                  ? 'bg-primary/5 border-primary/40 shadow-lg shadow-primary/10'
-                  : 'bg-card/50 backdrop-blur-sm border-border/50'
-              }`}
-            >
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10">
-                <col.icon className="h-7 w-7 text-primary" />
-              </div>
-              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">{col.title}</p>
-              <p className="text-3xl md:text-4xl font-bold text-foreground">{col.value}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">{col.description}</p>
-            </div>
+            <PremiumPricingCard key={i} {...col} />
           ))}
         </div>
 
