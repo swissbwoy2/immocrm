@@ -198,10 +198,10 @@ export default function MandatFormStep6({ data, onChange }: Props) {
       <section className="space-y-4">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-[hsl(40_20%_75%)] border-b border-[hsl(38_45%_48%/0.15)] pb-2">
           <CreditCard className="h-4 w-4 text-[hsl(38_55%_65%)]" />
-          {idTitle}
+          {idTitle} <span className="text-[hsl(40_20%_55%)] font-normal">(Carte d'identité Suisse ou Permis de séjour)</span>
         </h3>
         <p className="text-xs text-[hsl(40_20%_55%)] -mt-2">
-          Recto et verso obligatoires pour votre {idShort}.
+          Recto et verso obligatoires.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
