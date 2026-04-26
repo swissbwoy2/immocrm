@@ -29,13 +29,13 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
  * Tous les documents officiels (cartes, permis, fiches multi-pages) sont concernés.
  */
 export const DOCUMENT_REQUIRES_RECTO_VERSO: Record<DocumentType, boolean> = {
-  piece_identite: true,
-  permis_sejour: true,
-  permis_conduire: true,
-  fiche_salaire: true,
-  extrait_poursuites: true,
-  attestation_employeur: true,
-  bail: true,
+  piece_identite: true,       // ✅ recto + verso obligatoire
+  permis_sejour: true,        // ✅ recto + verso obligatoire
+  permis_conduire: false,     // un seul fichier suffit
+  fiche_salaire: false,
+  extrait_poursuites: false,
+  attestation_employeur: false,
+  bail: false,
   autre: false,
 };
 
