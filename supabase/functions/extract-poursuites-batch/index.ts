@@ -46,29 +46,35 @@ serve(async (req) => {
     const mode: "missing" | "all" = body.mode === "all" ? "all" : "missing";
     const limit = Math.min(typeof body.limit === "number" ? body.limit : 50, 50);
 
-    // Récupérer clients actifs ayant au moins 1 extrait uploadé
+    // 1) Récupérer tous les clients actifs
     const { data: clientsData, error: clientsErr } = await supabase
       .from("clients")
-      .select(`
-        id,
-        extrait_poursuites_date_emission,
-        extrait_poursuites_extraction_method,
-        documents!inner ( id, type_document )
-      `)
+      .select("id, extrait_poursuites_date_emission, extrait_poursuites_extraction_method")
       .eq("statut", "actif")
-      .eq("documents.type_document", "extrait_poursuites");
+      .limit(15000);
 
     if (clientsErr) {
       console.error("clients query error:", clientsErr);
       return jsonResponse({ ok: false, error: clientsErr.message }, 500);
     }
 
-    // Dédoublonner (un client = plusieurs documents = plusieurs lignes)
-    const uniqueMap = new Map<string, any>();
-    for (const c of clientsData ?? []) {
-      if (!uniqueMap.has(c.id)) uniqueMap.set(c.id, c);
+    // 2) Récupérer la liste des client_id ayant au moins 1 extrait uploadé
+    const { data: extractDocs, error: docsErr } = await supabase
+      .from("documents")
+      .select("client_id")
+      .eq("type_document", "extrait_poursuites")
+      .limit(15000);
+
+    if (docsErr) {
+      console.error("documents query error:", docsErr);
+      return jsonResponse({ ok: false, error: docsErr.message }, 500);
     }
-    let candidates = Array.from(uniqueMap.values());
+
+    const clientsWithExtract = new Set<string>(
+      (extractDocs ?? []).map((d: any) => d.client_id).filter(Boolean),
+    );
+
+    let candidates = (clientsData ?? []).filter((c: any) => clientsWithExtract.has(c.id));
 
     if (mode === "missing") {
       candidates = candidates.filter((c) => !c.extrait_poursuites_date_emission);
