@@ -1,80 +1,93 @@
-# Scanner Document — 100% Web App (PWA)
+## 🎯 Objectif
 
-## Contexte
-L'application est une **Web App** accessible depuis n'importe quel navigateur (Safari iOS, Chrome Android, desktop). **Aucune build native iOS/Android n'est utilisée.** Le scan doit donc fonctionner uniquement via les API web standards.
+Transformer la **photo** capturée (caméra système ou getUserMedia) en un **vrai rendu scan** : document automatiquement détecté, redressé en rectangle parfait, et passé en filtre noir & blanc type photocopie — sans rien changer au flux recto/verso ni à l'UX existante.
 
-## Problèmes identifiés sur Safari iOS
+---
 
-1. **`getUserMedia` lancé dans `useEffect`** au montage du composant `WebDocumentScanner` → Safari iOS bloque l'accès caméra s'il n'est pas demandé suite à un **geste utilisateur direct** (clic). C'est la cause principale du blocage actuel.
-2. **Aucun fallback** : si Safari refuse `getUserMedia` (permission, contexte non sécurisé, iframe), l'utilisateur reste coincé sur un écran d'erreur.
-3. **`<input capture="environment">` non utilisé** : c'est pourtant LA méthode la plus fiable sur iOS Safari — elle ouvre directement l'app Appareil photo système du téléphone, sans passer par `getUserMedia`.
-4. **Code Capacitor résiduel** dans `useDocumentScanner.ts` (`@capacitor/camera`) → inutile en contexte web pur, ajoute du poids et peut générer des warnings.
+## 🧩 Stack proposée : `jscanify`
 
-## Stratégie : approche « Safari-first » 100% web
+- **Lib** : [`jscanify`](https://github.com/puffinsoft/jscanify) (MIT, ~50 KB + OpenCV.js ~8 MB chargé en CDN à la demande)
+- **Fonctionne** : 100% navigateur, pas de backend, compatible Safari iOS / Chrome Android / desktop
+- **Capacités** :
+  1. `findPaperContour(img)` → détecte les 4 coins du document
+  2. `extractPaper(img, w, h)` → redresse en perspective (warp)
+  3. `highlightPaper(img)` → encadre le doc en vert (overlay live)
+  4. Filtre custom canvas pour passage en N&B contrasté
 
-### A. Refonte de `WebDocumentScanner.tsx`
-- **Supprimer le `useEffect` qui démarre la caméra au montage**.
-- Afficher d'abord un écran d'accueil avec **2 gros boutons** :
-  - 📷 **"Utiliser l'appareil photo du téléphone"** → déclenche `<input type="file" accept="image/*" capture="environment">` (méthode native iOS/Android, ultra fiable).
-  - 🎥 **"Scanner avec la caméra (mode avancé)"** → tente `getUserMedia` UNIQUEMENT après ce clic (geste utilisateur explicite, requis par Safari).
-- Détecter iOS Safari et **mettre en avant le bouton "Appareil photo"** par défaut (plus fiable).
-- Gestion d'erreurs explicites : `NotAllowedError` → message "Autorisez la caméra dans Réglages Safari", `NotFoundError` → "Aucune caméra détectée", `NotReadableError` → "Caméra utilisée par une autre app".
+---
 
-### B. Nouveau flux recto/verso unifié
-Pour `piece_identite` et `permis_sejour` (les seuls types nécessitant 2 pages) :
-- Étape 1 : "Capturez le **RECTO**" → input capture ou getUserMedia → preview → Valider/Reprendre
-- Étape 2 : "Capturez le **VERSO**" → idem → preview → Valider/Reprendre
-- Étape 3 : Fusion automatique en 1 seul PDF via `pdf-lib` (déjà en place) → upload.
+## 📦 Changements proposés
 
-Pour tous les autres documents : 1 seule capture → PDF mono-page → upload.
+### 1. Nouveau fichier `src/utils/documentScanFilter.ts`
+Charge OpenCV.js + jscanify à la demande (lazy), expose 2 fonctions :
+- `enhanceToScan(dataUrl)` → photo brute → PDF-ready scan (auto-crop + redressement + N&B)
+- `loadJscanify()` → singleton qui charge OpenCV.js depuis CDN une seule fois
 
-### C. Nettoyage `useDocumentScanner.ts`
-- Retirer l'import `@capacitor/camera` et toute la logique Capacitor.
-- Garder uniquement : `enhanceScan` (canvas contraste/luminosité) + `mergePagesToPdf` (pdf-lib).
-- Optionnel : retirer la dépendance `@capacitor/camera` du `package.json` (sera fait à l'implémentation).
-
-### D. Détection d'environnement robuste
-Ajouter un util `src/utils/cameraSupport.ts` :
-```ts
-export const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-export const hasGetUserMedia = !!(navigator.mediaDevices?.getUserMedia);
-export const isSecureContext = window.isSecureContext;
-export const isInIframe = window.self !== window.top;
+```typescript
+// Pseudo
+export async function enhanceToScan(dataUrl: string): Promise<string> {
+  const scanner = await loadJscanify(); // charge opencv.js si absent
+  const img = await loadImage(dataUrl);
+  const canvas = document.createElement('canvas');
+  // 1. Détection des 4 coins
+  const contour = scanner.findPaperContour(img);
+  // 2. Si trouvé → extractPaper (redressement perspective)
+  // 3. Sinon → fallback sur l'image brute
+  const warped = contour
+    ? scanner.extractPaper(img, A4_WIDTH, A4_HEIGHT, contour)
+    : img;
+  // 4. Filtre N&B contrasté (canvas filter)
+  return applyBlackWhiteFilter(warped);
+}
 ```
-Utilisé pour :
-- Masquer le bouton "Mode avancé" si `getUserMedia` indisponible.
-- Avertir l'utilisateur s'il est dans une iframe non sécurisée (preview Lovable) et l'inviter à utiliser le **domaine publié** (logisorama.ch).
 
-### E. UX mobile (viewport 600x834 actuel)
-- Boutons pleine largeur, min-height 56px (touch target iOS).
-- Preview image en `object-contain`, max-height `60vh`.
-- Indicateur d'étape "Page 1/2" pour recto/verso.
-- Boutons « Reprendre » et « Valider » bien séparés en bas (safe area iOS).
+### 2. Modifier `src/hooks/useDocumentScanner.ts`
+Remplacer la fonction `enhanceScan` (qui ne fait que contraste + luminosité basique) par un appel à `enhanceToScan`. Garder la même signature pour ne rien casser ailleurs.
 
-## Fichiers modifiés
+### 3. Modifier `src/components/scanner/WebDocumentScanner.tsx`
+- Après chaque capture (caméra système OU live), passer le `dataUrl` dans `enhanceToScan` avant d'ajouter à `pages`.
+- Afficher un loader "Traitement scan…" pendant le warp (1-2s sur mobile).
+- En cas d'échec de détection des coins → garder la photo brute et notifier discrètement ("Détection auto échouée, image conservée telle quelle").
 
-| Fichier | Action | Détail |
-|---|---|---|
-| `src/utils/cameraSupport.ts` | **Créer** | Détection iOS Safari, getUserMedia, secure context, iframe |
-| `src/components/scanner/WebDocumentScanner.tsx` | **Réécrire** | Écran d'accueil 2 boutons, getUserMedia après clic uniquement, fallback `<input capture>`, gestion erreurs Safari |
-| `src/components/scanner/UniversalDocumentScanner.tsx` | **Modifier** | Supprimer la logique Capacitor, router systématiquement vers WebDocumentScanner, gérer flux recto/verso séquentiel |
-| `src/hooks/useDocumentScanner.ts` | **Nettoyer** | Retirer `@capacitor/camera`, garder `enhanceScan` + `mergePagesToPdf` |
-| `src/components/scanner/DocumentUploadField.tsx` | **Ajuster** | Petit message d'aide iOS Safari sous le bouton "Scanner" |
+### 4. Option UI (mode live uniquement)
+Dans le mode "Scan en direct" (`getUserMedia`), superposer un overlay vert dessiné par `highlightPaper` qui suit les contours du document en temps réel — comme CamScanner. **Optionnel**, à activer dans une 2e itération si la perf est OK.
 
-## Comportement attendu après correctif
+---
 
-| Plateforme | Bouton "Scanner" | Résultat |
-|---|---|---|
-| **Safari iOS** (iPhone) | Ouvre écran avec 2 options. "Appareil photo téléphone" mis en avant → ouvre app Photos native → photo → preview → valider | ✅ Fonctionne 100% |
-| **Chrome Android** | Idem, mais "Mode avancé" mis en avant (getUserMedia stable) | ✅ Fonctionne 100% |
-| **Desktop Chrome/Firefox/Edge** | "Mode avancé" → getUserMedia → flux webcam classique | ✅ Fonctionne |
-| **Preview Lovable (iframe)** | Avertissement "Pour scanner, ouvrez l'app sur logisorama.ch" + fallback `<input capture>` quand même tenté | ✅ Dégradé propre |
+## ⚙️ Détails techniques
 
-## Ce qui ne change pas
-- Configuration `documentTypes.ts` (recto/verso uniquement pour `piece_identite` + `permis_sejour`).
-- Logique de fusion PDF via `pdf-lib`.
-- Intégration dans `MandatV3Step4Documents.tsx`.
-- Le bouton "Téléverser" classique reste inchangé.
+| Aspect | Choix |
+|---|---|
+| Chargement OpenCV.js | CDN `https://docs.opencv.org/4.x/opencv.js` (~8 MB), lazy au 1er scan |
+| Cache | `<script>` ajouté au DOM, singleton via Promise mémorisée |
+| Fallback | Si OpenCV ne charge pas (offline, CSP) → garder le filtre actuel `contrast(1.15) brightness(1.05)` |
+| Format de sortie | JPEG quality 0.92 (inchangé), dimensions A4 ratio (1240×1754 @ 150 DPI) |
+| Compat Safari iOS | ✅ OpenCV.js fonctionne, testé largement |
 
-## Question ouverte
-Une fois ce fix Safari validé, je propose d'enchaîner avec l'extension du `DocumentUploadField` aux autres pages (`client/Documents.tsx`, `CandidateDocumentsSection.tsx`, `agent/ClientDetail.tsx`, `admin/ClientDetail.tsx`). À confirmer après validation du scanner.
+---
+
+## ✅ Résultat attendu
+
+**Avant** : photo de l'ID inclinée sur la table avec fond visible, contraste légèrement boosté.
+
+**Après** : document redressé occupant toute la page, fond noir/blanc supprimé, texte net comme une photocopie → vrai rendu "scan".
+
+---
+
+## 📋 Fichiers touchés
+
+- ✏️ **Créer** : `src/utils/documentScanFilter.ts`
+- ✏️ **Modifier** : `src/hooks/useDocumentScanner.ts` (fonction `enhanceScan`)
+- ✏️ **Modifier** : `src/components/scanner/WebDocumentScanner.tsx` (appel post-capture + loader)
+
+**Aucun changement** sur :
+- `DocumentUploadField.tsx`
+- `UniversalDocumentScanner.tsx`
+- Logique recto/verso
+- Config `documentTypes.ts`
+
+---
+
+## ❓ Question complémentaire
+
+L'overlay vert "live" (suivi des bords en temps réel pendant le streaming caméra) demande un peu plus de travail et peut impacter les perfs sur vieux iPhones. Je propose de le **garder pour une v2** si tu valides d'abord la qualité du rendu sur capture simple. OK ?

@@ -37,24 +37,14 @@ export function getImageDimensions(dataUrl: string): Promise<{ width: number; he
 }
 
 /**
- * Améliore une image scannée (contraste, luminosité) via canvas.
+ * Transforme une photo en vrai rendu "scan" :
+ * détection automatique des bords du document + redressement de perspective
+ * + filtre noir & blanc type photocopie (via OpenCV.js + jscanify, lazy-loadés).
+ * Fallback automatique sur boost contraste si la lib ne charge pas.
  */
 export async function enhanceScan(dataUrl: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Canvas 2D context indisponible'));
-      ctx.filter = 'contrast(1.15) brightness(1.05) saturate(0.95)';
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg', 0.92));
-    };
-    img.onerror = reject;
-    img.src = dataUrl;
-  });
+  const { enhanceToScan } = await import('@/utils/documentScanFilter');
+  return enhanceToScan(dataUrl);
 }
 
 function dataUrlToUint8Array(dataUrl: string): Uint8Array {
