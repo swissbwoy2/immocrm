@@ -119,11 +119,12 @@ export function DiagonalSplitReveal({
     offset: ['start start', 'end end'],
   });
 
-  // Lissage pour éviter les saccades
+  // Lissage premium pour scroll buttery-smooth
   const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 30,
-    mass: 0.4,
+    stiffness: 60,
+    damping: 22,
+    mass: 0.6,
+    restDelta: 0.0005,
   });
 
   // Transformations dérivées du scroll — révélation TOTALE (sortie écran)
@@ -135,22 +136,51 @@ export function DiagonalSplitReveal({
   const scrollHintOpacity = useTransform(smoothProgress, [0, 0.15], [1, 0]);
   const videoScale = useTransform(smoothProgress, [0, 0.5, 1], [1.12, 1.0, 1.05]);
 
-  // --- Scrub vidéo lié au scroll (0 → 10s) ---
-  // Skippé si on est en mode fallback autoplay (la vidéo joue toute seule).
+  // --- Scrub vidéo ultra fluide : rAF + lerp + seek throttlé ---
+  const targetTimeRef = useRef(0);
+  const currentTimeRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+
+  // 1) On ne fait que stocker la cible dans le motion event (pas de seek direct)
   useMotionValueEvent(smoothProgress, 'change', (p) => {
     if (fallbackAutoplay) return;
     const v = videoRef.current;
     if (!v || !v.duration || isNaN(v.duration)) return;
     const max = Math.min(SCRUB_DURATION, v.duration);
-    const target = Math.max(0, Math.min(p, 1)) * max;
-    if (Math.abs(v.currentTime - target) > 0.02) {
-      try {
-        v.currentTime = target;
-      } catch {
-        /* noop */
-      }
-    }
+    targetTimeRef.current = Math.max(0, Math.min(p, 1)) * max;
   });
+
+  // 2) Boucle rAF : interpole vers la cible et seek 1× par frame max
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const SEEK_THRESHOLD = 0.04; // s
+    const LERP = 0.22;
+
+    const tick = () => {
+      const v = videoRef.current;
+      if (v && !fallbackAutoplay) {
+        // lerp doux vers la cible
+        currentTimeRef.current += (targetTimeRef.current - currentTimeRef.current) * LERP;
+        const next = currentTimeRef.current;
+        if (
+          v.readyState >= 2 &&
+          Math.abs(v.currentTime - next) >= SEEK_THRESHOLD
+        ) {
+          try {
+            v.currentTime = next;
+          } catch {
+            /* noop */
+          }
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [fallbackAutoplay, prefersReducedMotion]);
+
 
   // Préparer la vidéo une fois les métadonnées chargées
   const handleLoadedMetadata = (
