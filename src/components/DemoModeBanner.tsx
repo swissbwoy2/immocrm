@@ -25,7 +25,7 @@ export function DemoModeBanner() {
       <div className="container mx-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 py-2 text-sm">
         <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
         <span className="font-medium">
-          Mode démonstration · Vous explorez un compte fictif en lecture seule.
+          🎬 Mode démonstration · Compte fictif en <strong>lecture seule</strong>. Toutes les actions (envoi, upload, modification) sont désactivées.
         </span>
         <button
           type="button"

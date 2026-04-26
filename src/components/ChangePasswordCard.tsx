@@ -3,11 +3,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Lock, Eye, EyeOff, Save } from 'lucide-react';
+import { Lock, Eye, EyeOff, Save, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useIsDemoAccount } from '@/hooks/useIsDemoAccount';
 
 export function ChangePasswordCard() {
+  const isDemo = useIsDemoAccount();
+
+  if (isDemo) {
+    return (
+      <Card className="border-amber-300/40 bg-amber-50/40 dark:bg-amber-950/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+            <Sparkles className="w-5 h-5" />
+            Mode démonstration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-amber-900/80 dark:text-amber-200/80">
+            Le changement de mot de passe est désactivé sur le compte de démonstration.
+            Activez votre vrai compte pour gérer vos informations de connexion.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
