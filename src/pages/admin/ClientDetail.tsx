@@ -2403,67 +2403,26 @@ export default function ClientDetail() {
                       className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-orange-500/10 hover:border-orange-500/30"
                       disabled={regeneratingContract}
                       onClick={async () => {
-                        if (!client.demande_mandat_id) return;
-                        
                         setRegeneratingContract(true);
                         try {
-                          // Fetch demande_mandat data
-                          const { data: demande, error: demandeError } = await supabase
-                            .from('demandes_mandat')
-                            .select('*')
-                            .eq('id', client.demande_mandat_id)
-                            .single();
-                          
-                          if (demandeError) throw demandeError;
-                          
-                          // Call generate-mandat-contract function
-                          const { data: result, error: funcError } = await supabase.functions.invoke('generate-mandat-contract', {
-                            body: {
-                              clientId: client.id,
-                              demandeId: demande.id,
-                              prenom: demande.prenom,
-                              nom: demande.nom,
-                              email: demande.email,
-                              telephone: demande.telephone,
-                              adresse: demande.adresse,
-                              date_naissance: demande.date_naissance,
-                              nationalite: demande.nationalite,
-                              type_permis: demande.type_permis,
-                              etat_civil: demande.etat_civil,
-                              profession: demande.profession,
-                              employeur: demande.employeur,
-                              revenus_mensuels: demande.revenus_mensuels,
-                              type_recherche: demande.type_recherche,
-                              type_bien: demande.type_bien,
-                              pieces_recherche: demande.pieces_recherche,
-                              region_recherche: demande.region_recherche,
-                              budget_max: demande.budget_max,
-                              signature_data: demande.signature_data,
-                              cgv_acceptees_at: demande.cgv_acceptees_at,
-                              candidats: demande.candidats,
-                              gerance_actuelle: demande.gerance_actuelle,
-                              loyer_actuel: demande.loyer_actuel,
-                              depuis_le: demande.depuis_le,
-                              motif_changement: demande.motif_changement,
-                              nombre_occupants: demande.nombre_occupants,
-                              souhaits_particuliers: demande.souhaits_particuliers,
-                            }
+                          // Toujours générer le mandat COMPLET (toutes les dispositions juridiques)
+                          const { error: funcError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+                            body: { client_id: client.id },
                           });
-                          
+
                           if (funcError) throw funcError;
-                          
+
                           toast({
-                            title: 'Contrat régénéré',
-                            description: 'Le PDF a été régénéré avec succès et un email a été envoyé à l\'admin',
+                            title: 'Mandat complet régénéré',
+                            description: 'Le PDF complet a été régénéré avec succès',
                           });
-                          
-                          // Reload client data to get new PDF URL
+
                           loadClientData();
                         } catch (error) {
                           console.error('Error regenerating contract:', error);
                           toast({
                             title: 'Erreur',
-                            description: 'Impossible de régénérer le contrat',
+                            description: 'Impossible de régénérer le mandat complet',
                             variant: 'destructive',
                           });
                         } finally {
