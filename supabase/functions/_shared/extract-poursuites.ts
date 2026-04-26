@@ -132,7 +132,9 @@ export async function extractFromPdf(
 }
 
 /**
- * Scanne tous les extraits d'un client (du + récent au + ancien) et retourne le 1er résultat fiable (≥0.5).
+ * Scanne TOUS les extraits d'un client et retourne celui dont la date d'émission
+ * (extraite par l'IA) est la PLUS RÉCENTE — pas le 1er trouvé.
+ * Un client peut uploader plusieurs extraits dont certains échus : on garde le plus récent valide.
  */
 export async function scanClientExtracts(
   supabase: any,
@@ -148,23 +150,26 @@ export async function scanClientExtracts(
 
   if (!docs?.length) return { best: null, scanned: 0, total: 0 };
 
+  const validResults: BestResult[] = [];
   let scanned = 0;
+
   for (const doc of docs) {
     scanned++;
     const ai = await extractFromPdf(supabase, doc, lovableKey);
-    if (ai?.date_emission && ai?.confidence !== undefined && ai.confidence >= 0.5) {
-      return {
-        best: {
-          document_id: doc.id,
-          date_emission: ai.date_emission,
-          confidence: ai.confidence,
-          office_canton: ai.office_canton,
-          nom_personne: ai.nom_personne,
-        },
-        scanned,
-        total: docs.length,
-      };
+    if (ai?.date_emission && (ai.confidence ?? 0) >= 0.5) {
+      validResults.push({
+        document_id: doc.id,
+        date_emission: ai.date_emission,
+        confidence: ai.confidence ?? 0,
+        office_canton: ai.office_canton,
+        nom_personne: ai.nom_personne,
+      });
     }
   }
-  return { best: null, scanned, total: docs.length };
+
+  if (!validResults.length) return { best: null, scanned, total: docs.length };
+
+  // Garder l'extrait avec la date d'émission la PLUS RÉCENTE
+  validResults.sort((a, b) => b.date_emission.localeCompare(a.date_emission));
+  return { best: validResults[0], scanned, total: docs.length };
 }
