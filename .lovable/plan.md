@@ -1,110 +1,129 @@
-## Objectif
+# Scanner natif universel + recto/verso pour TOUS les documents
 
-Étendre le système de suivi des extraits de poursuites (aujourd'hui uniquement admin) à **l'agent** (vue de ses clients assignés) et **renforcer la visibilité côté client** (Dashboard + Mon Dossier) avec des **emails de rappel automatiques**.
-
----
-
-## 1. Page Agent — `/agent/suivi-extraits`
-
-**Nouveau fichier :** `src/pages/agent/SuiviExtraitsPoursuites.tsx`
-
-Réutilise la même logique que la page admin mais filtrée sur **les clients assignés à l'agent connecté** (via `clients.agent_id` + table `client_agents` pour les co-assignations, conformément à la mémoire `dual-source-assignment-integrity-strategy`).
-
-Fonctionnalités :
-- KPIs : Total assignés / Valides / Avertissement (≥2 mois) / Expirés (≥3 mois) / Manquants / Scannables IA
-- Tableau : nom client, date d'émission, âge, statut coloré, méthode (ai/manual/agent), document source, dernière relance
-- Bouton **"Scanner les manquants"** et **"Re-scanner tout"** (réutilise l'edge function `extract-poursuites-batch` qui sera étendue pour accepter un `agent_id` optionnel)
-- Bouton **"Envoyer un rappel"** par client (déclenche email manuellement)
-
-**Routing :** ajout dans `src/App.tsx` avec `allowedRoles={['agent']}`.
-**Sidebar :** ajout entrée "Suivi extraits" dans la section agent de `src/components/AppSidebar.tsx`.
+## Choix utilisateur
+- **Portée** : TOUS les types de documents (pièce identité, permis, fiche salaire, extrait poursuites, attestation employeur, autres)
+- **Technologie** : Scanner natif Capacitor (haute qualité mobile) + fallback web
+- **Lieux** : TOUS les points d'upload de l'app
 
 ---
 
-## 2. Edge Function `extract-poursuites-batch` — extension
+## 1. Plugin Capacitor scanner
 
-Ajouter un paramètre optionnel `agent_id` au body :
-- Si fourni + appelant a le rôle `agent`, filtrer les clients par `agent_id` ou via jointure `client_agents`
-- Si appelant est `admin`, comportement actuel inchangé
-- Garde-fou RLS : un agent ne peut scanner que SES clients
+Installation `@capacitor-mlkit/document-scanner` (Google ML Kit) :
+- iOS + Android natif → recadrage auto, correction perspective, amélioration contraste
+- Sortie multi-pages → PDF directement
+- Fallback web : composant `WebDocumentScanner` (getUserMedia + canvas)
+
+## 2. Composant central `UniversalDocumentScanner`
+
+**Nouveau fichier :** `src/components/scanner/UniversalDocumentScanner.tsx`
+
+Props :
+```typescript
+{
+  documentType: string;          // piece_identite, fiche_salaire, etc.
+  requireRectoVerso: boolean;    // true par défaut, configurable selon type
+  onComplete: (file: File) => Promise<void>;
+}
+```
+
+Flow :
+1. Détection plateforme via `Capacitor.isNativePlatform()`
+2. **Native** → ML Kit DocumentScanner (multi-pages → PDF)
+3. **Web** → Dialog avec caméra `getUserMedia` + canvas (recadrage manuel + amélioration contraste)
+4. Si `requireRectoVerso` : étapes guidées "Recto" puis "Verso", validation des 2 captures avant fusion PDF via `pdf-lib`
+
+## 3. Hook `useDocumentScanner`
+
+**Nouveau fichier :** `src/hooks/useDocumentScanner.ts`
+
+Centralise :
+- Détection plateforme
+- Appel ML Kit ou WebRTC
+- Optimisation image (canvas : contraste, balance des blancs, redimensionnement A4)
+- Fusion PDF multi-pages
+- Retour `File` final prêt à uploader
+
+## 4. Composant `DocumentUploadField` unifié
+
+**Nouveau fichier :** `src/components/scanner/DocumentUploadField.tsx`
+
+Remplace tous les `<input type="file">` actuels. Affiche 2 boutons :
+- **📷 Scanner** (ouvre `UniversalDocumentScanner`)
+- **📁 Téléverser fichier** (input classique avec validation recto/verso si applicable)
+
+Pour l'upload classique recto/verso : exige 2 fichiers (PDF, JPG, PNG) puis fusion `pdf-lib`.
+
+## 5. Configuration recto/verso par type
+
+**Nouveau fichier :** `src/config/documentTypes.ts`
+
+```typescript
+export const DOCUMENT_REQUIRES_RECTO_VERSO: Record<string, boolean> = {
+  piece_identite: true,
+  permis_sejour: true,
+  permis_conduire: true,
+  fiche_salaire: true,        // recto/verso si 2 pages
+  extrait_poursuites: true,
+  attestation_employeur: true,
+  autre: false,                // optionnel
+};
+```
+
+L'utilisateur peut "skip verso" pour types facultatifs via bouton secondaire.
+
+## 6. Fichiers modifiés (intégration `DocumentUploadField`)
+
+**Côté client :**
+- `src/pages/client/Documents.tsx`
+- `src/pages/client/OffresRecues.tsx` (candidatures)
+- `src/components/CandidateDocumentsSection.tsx`
+- `src/components/DocumentUpdateReminder.tsx`
+- `src/components/ExtraitPoursuitesHeroCard.tsx`
+
+**Côté agent/admin :**
+- `src/pages/agent/ClientDetail.tsx`
+- `src/pages/admin/ClientDetail.tsx`
+- `src/pages/admin/SuiviExtraitsPoursuites.tsx`
+
+**Mandat V3 :**
+- `src/components/mandat-v3/MandatV3Step4Documents.tsx`
+
+**Autres formulaires d'upload détectés :**
+- `src/pages/admin/ImmeubleDetail.tsx` (docs propriété)
+- Tous les `<input type="file" accept=".pdf,...">` à remplacer par `<DocumentUploadField>`
+
+## 7. Capacitor config
+
+**Modifié :** `capacitor.config.ts` → ajout du plugin DocumentScanner
+**Modifié :** `package.json` → `@capacitor-mlkit/document-scanner` (ou `capacitor-document-scanner`)
+
+iOS : permission `NSCameraUsageDescription` déjà présente
+Android : permission `CAMERA` à vérifier dans `AndroidManifest.xml`
+
+## 8. Sur le web (préview Lovable)
+
+Le plugin natif n'étant pas dispo, fallback automatique vers `WebDocumentScanner` :
+- `getUserMedia({ video: { facingMode: 'environment' } })`
+- Capture canvas → amélioration contraste/luminosité (filtre CSS + canvas)
+- Détection bords basique (optionnel via OpenCV.js trop lourd → on laisse l'utilisateur cadrer)
+- Multi-pages → PDF via `pdf-lib`
+
+## 9. Validation backend
+
+Aucun changement DB. Le PDF fusionné est uploadé comme un seul document via les flux existants (`mandate-update-draft`, table `documents`, etc.).
 
 ---
 
-## 3. Mise en avant côté Client
+## Récapitulatif fichiers
 
-### 3a. Dashboard client (`src/pages/client/Dashboard.tsx`)
+**Créés (5) :**
+- `src/components/scanner/UniversalDocumentScanner.tsx`
+- `src/components/scanner/DocumentUploadField.tsx`
+- `src/components/scanner/WebDocumentScanner.tsx`
+- `src/hooks/useDocumentScanner.ts`
+- `src/config/documentTypes.ts`
 
-`DocumentUpdateReminder` est déjà rendu mais discret. Je vais :
-- Le **promouvoir en bandeau hero** en haut du dashboard (juste sous le PremiumDashboardHeader) quand le statut est `expired` ou `warning` ou `missing`
-- Créer un nouveau composant `PremiumExtraitPoursuitesHeroCard` (grand format, gradient, CTA "Mettre à jour maintenant", compteur de jours restants avant expiration)
-- Le composant existant `DocumentUpdateReminder` reste pour l'état `valid` (compact)
+**Modifiés (~10) :** tous les points d'upload listés ci-dessus + `capacitor.config.ts` + `package.json`
 
-### 3b. Mon Dossier client (`src/pages/client/Dossier.tsx`)
-
-Ajouter une **section dédiée premium "Extrait de poursuites"** dans la sidebar du dossier, avec :
-- Date d'émission affichée en grand
-- Badge de statut (valide/à renouveler/expiré)
-- Méthode de détection (IA / manuelle / agent)
-- Lien vers le document source
-- Bouton "Téléverser un nouvel extrait"
-
----
-
-## 4. Emails de rappel automatiques
-
-### 4a. Nouvelle Edge Function planifiée `send-extrait-poursuites-reminders`
-
-Logique :
-- Tous les jours (cron pg_cron à 08:00 Europe/Zurich)
-- Sélectionne les clients **actifs** dont :
-  - `extrait_poursuites_date_emission` est NULL → rappel "manquant" (1 fois / 14 jours)
-  - âge entre 60 et 75 jours → rappel "approche expiration" (1 fois / 14 jours)
-  - âge ≥ 90 jours → rappel "expiré urgent" (1 fois / 7 jours)
-- Anti-spam via `extrait_poursuites_last_reminder_at`
-- Utilise `send-transactional-email` avec un nouveau template `extrait-poursuites-reminder` (3 variantes selon statut, passées via `templateData.variant`)
-- Met à jour `extrait_poursuites_last_reminder_at` après envoi
-
-### 4b. Template React Email
-
-Nouveau fichier : `supabase/functions/_shared/transactional-email-templates/extrait-poursuites-reminder.tsx`
-- Branding Logisorama
-- Subject dynamique selon variante
-- CTA vers `/client/dossier`
-- Enregistré dans `registry.ts`
-
-### 4c. Cron job
-
-SQL (via insert tool) pour planifier `send-extrait-poursuites-reminders` quotidien.
-
----
-
-## 5. Notifications in-app
-
-À chaque envoi d'email de rappel, créer aussi une **notification in-app** dans la table `notifications` du client (cloche en haut du dashboard) avec lien vers Mon Dossier.
-
----
-
-## Fichiers impactés
-
-**Créés :**
-- `src/pages/agent/SuiviExtraitsPoursuites.tsx`
-- `src/components/premium/PremiumExtraitPoursuitesHeroCard.tsx`
-- `supabase/functions/send-extrait-poursuites-reminders/index.ts`
-- `supabase/functions/_shared/transactional-email-templates/extrait-poursuites-reminder.tsx`
-
-**Modifiés :**
-- `src/App.tsx` (route agent)
-- `src/components/AppSidebar.tsx` (entrée agent)
-- `src/pages/client/Dashboard.tsx` (hero card)
-- `src/pages/client/Dossier.tsx` (section dédiée)
-- `supabase/functions/extract-poursuites-batch/index.ts` (filtre agent)
-- `supabase/functions/_shared/transactional-email-templates/registry.ts`
-- `supabase/config.toml` (nouvelle fonction)
-
-**SQL (insert tool) :** cron job quotidien.
-
----
-
-## Question avant exécution
-
-Le cron de rappel doit-il s'exécuter **quotidiennement à 08:00 Europe/Zurich** (recommandé) ou à une autre fréquence ?
+**Aucune migration DB requise.**

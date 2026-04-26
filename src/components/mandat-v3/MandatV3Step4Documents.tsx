@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, File, Trash2, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { File, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatV3FormData, MandateDocumentData } from './types';
 import { toast } from 'sonner';
+import DocumentUploadField from '@/components/scanner/DocumentUploadField';
 
 interface Props {
   data: MandatV3FormData;
@@ -30,53 +31,64 @@ function getEdgeFunctionUrl(name: string): string {
 export default function MandatV3Step4Documents({ data, mandateId, accessToken, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [category, setCategory] = useState('autre');
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || !mandateId || !accessToken) return;
-
+  const uploadFile = async (file: File) => {
+    if (!mandateId || !accessToken) {
+      toast.error("Mandat non initialisé. Sauvegardez l'étape 1 d'abord.");
+      return;
+    }
     setUploading(true);
-    const newDocs: MandateDocumentData[] = [];
-
-    for (const file of Array.from(files)) {
-      const filePath = `${mandateId}/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await supabase.storage.from('mandates-private').upload(filePath, file);
+    try {
+      const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+      const filePath = `${mandateId}/${Date.now()}_${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('mandates-private')
+        .upload(filePath, file);
 
       if (uploadError) {
         toast.error(`Erreur upload: ${file.name}`);
         console.error(uploadError);
-        continue;
+        return;
       }
 
-      try {
-        const response = await fetch(getEdgeFunctionUrl('mandate-update-draft'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mandate_id: mandateId, access_token: accessToken,
-            action: 'register_document',
-            data: { file_name: file.name, file_path: filePath, file_type: file.type, file_size: file.size, document_category: category },
-          }),
-        });
-        const result = await response.json();
-        if (!result.success) {
-          await supabase.storage.from('mandates-private').remove([filePath]);
-          toast.error(`Erreur enregistrement: ${file.name}`);
-          continue;
-        }
-        newDocs.push({ id: result.document_id || crypto.randomUUID(), file_name: file.name, file_path: filePath, file_type: file.type, document_category: category });
-      } catch (err) {
+      const response = await fetch(getEdgeFunctionUrl('mandate-update-draft'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mandate_id: mandateId,
+          access_token: accessToken,
+          action: 'register_document',
+          data: {
+            file_name: file.name,
+            file_path: filePath,
+            file_type: file.type,
+            file_size: file.size,
+            document_category: category,
+          },
+        }),
+      });
+      const result = await response.json();
+      if (!result.success) {
         await supabase.storage.from('mandates-private').remove([filePath]);
         toast.error(`Erreur enregistrement: ${file.name}`);
-        continue;
+        return;
       }
-    }
 
-    onChange({ documents: [...data.documents, ...newDocs] });
-    setUploading(false);
-    if (fileRef.current) fileRef.current.value = '';
-    if (newDocs.length) toast.success(`${newDocs.length} document(s) uploadé(s)`);
+      const newDoc: MandateDocumentData = {
+        id: result.document_id || crypto.randomUUID(),
+        file_name: file.name,
+        file_path: filePath,
+        file_type: file.type,
+        document_category: category,
+      };
+      onChange({ documents: [...data.documents, newDoc] });
+      toast.success(`Document ajouté : ${file.name}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de l\'upload du document.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const removeDoc = (id: string) => {
@@ -87,7 +99,10 @@ export default function MandatV3Step4Documents({ data, mandateId, accessToken, o
     <div className="space-y-5">
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-foreground">Documents</h2>
-        <p className="text-sm text-muted-foreground mt-1">Téléversez les documents nécessaires à votre dossier.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Scannez ou téléversez vos documents. Les pièces officielles (identité, permis, fiches de salaire,
+          extrait des poursuites…) requièrent <strong>recto et verso</strong>.
+        </p>
       </div>
 
       {!mandateId && (
@@ -107,17 +122,13 @@ export default function MandatV3Step4Documents({ data, mandateId, accessToken, o
               </SelectContent>
             </Select>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileRef.current?.click()}
+
+          <DocumentUploadField
+            documentType={category}
             disabled={uploading}
-            className="w-full gap-2 min-h-[48px] border-dashed border-2"
-          >
-            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {uploading ? 'Upload en cours...' : 'Choisir un fichier'}
-          </Button>
-          <input ref={fileRef} type="file" className="hidden" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleUpload} />
+            baseFileName={`${category}_${mandateId.slice(0, 8)}`}
+            onFile={uploadFile}
+          />
         </div>
       )}
 
