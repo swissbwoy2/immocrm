@@ -232,48 +232,44 @@ const Mandats = () => {
     };
     
     try {
-      // Priority 1: Try to download directly from storage if URL exists
+      // Priority 1: TOUJOURS régénérer le mandat OFFICIEL (11 articles + CGV) depuis les données BDD à jour.
+      // Cela évite de servir d'anciens PDFs simplifiés stockés (générés par l'obsolète generate-mandat-contract).
+      console.log('Regenerating full mandat PDF for client:', client.id);
+      const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+        body: { client_id: client.id }
+      });
+
+      if (!error && data?.pdf_base64) {
+        downloadFromBase64(
+          data.pdf_base64,
+          data.filename || `Mandat_${client.profiles?.nom || 'client'}.pdf`
+        );
+        toast.success("Mandat complet généré et téléchargé");
+        return;
+      }
+
+      console.warn('Regeneration failed, trying storage fallback:', error?.message);
+
+      // Priority 2 (fallback): télécharger depuis le storage si la régénération échoue
       if (client.mandat_pdf_url) {
         const storagePath = extractStoragePath(client.mandat_pdf_url);
-        console.log('Attempting direct download from storage:', storagePath);
-        
-        const { data, error } = await supabase.storage
+        const { data: storageData, error: storageError } = await supabase.storage
           .from('mandat-contracts')
           .download(storagePath);
-        
-        if (!error && data) {
-          const url = URL.createObjectURL(data);
+
+        if (!storageError && storageData) {
+          const url = URL.createObjectURL(storageData);
           const link = document.createElement('a');
           link.href = url;
           link.download = `Mandat_${client.profiles?.nom || 'client'}_${client.profiles?.prenom || ''}.pdf`;
           link.click();
           URL.revokeObjectURL(url);
-          
-          toast.success("PDF téléchargé avec succès");
-          setIsDownloadingPdf(null);
+          toast.success("PDF téléchargé (version archivée)");
           return;
         }
-        
-        console.warn('Direct download failed, falling back to generation:', error?.message);
       }
-      
-      // Priority 2: Generate PDF on-the-fly (with page limit for memory optimization)
-      console.log('Generating PDF on-the-fly for client:', client.id);
-      const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
-        body: { client_id: client.id }
-      });
-      
-      if (error) throw error;
-      
-      if (data?.pdf_base64) {
-        downloadFromBase64(
-          data.pdf_base64, 
-          data.filename || `Mandat_${client.profiles?.nom || 'client'}.pdf`
-        );
-        toast.success("PDF généré et téléchargé avec succès");
-      } else {
-        throw new Error('Aucun PDF retourné');
-      }
+
+      throw new Error('Aucun PDF disponible');
     } catch (error) {
       console.error('Error downloading/generating PDF:', error);
       toast.error("Erreur lors du téléchargement du PDF. Veuillez réessayer.");
