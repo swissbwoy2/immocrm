@@ -235,8 +235,7 @@ export function DiagonalSplitReveal({
               src={videoSrc}
               muted
               playsInline
-              // @ts-expect-error - attributs vendor pour compat WebView Android
-              {...{ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' }}
+              {...({ 'webkit-playsinline': 'true', 'x5-playsinline': 'true' } as Record<string, string>)}
               preload={isMobile ? 'metadata' : 'auto'}
               autoPlay={fallbackAutoplay}
               loop={fallbackAutoplay}
