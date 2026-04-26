@@ -177,7 +177,7 @@ export function AppShowcaseSection() {
         <div className={`relative z-10 ${useScrub ? 'h-full' : ''} container mx-auto px-4 sm:px-6 flex items-center`}>
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center w-full">
             {/* Left: iPhone mockup */}
-            <div className="relative flex items-center justify-center order-1 lg:order-1">
+            <div className="relative flex items-center justify-center order-2 lg:order-1">
               {/* Orbital rings — desktop only */}
               <motion.div
                 aria-hidden
@@ -254,7 +254,7 @@ export function AppShowcaseSection() {
             </div>
 
             {/* Right: text + CTA */}
-            <div className="order-2 lg:order-2 max-w-xl mx-auto lg:mx-0 mt-10 lg:mt-0">
+            <div className="order-1 lg:order-2 max-w-xl mx-auto lg:mx-0 mt-0 lg:mt-0">
               <motion.p
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
