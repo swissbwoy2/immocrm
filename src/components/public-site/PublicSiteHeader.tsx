@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Rocket, Menu, LogIn } from 'lucide-react';
+import { Rocket, Menu, LogIn, Sparkles } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 import { PublicSiteMenu } from './PublicSiteMenu';
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
@@ -61,7 +61,7 @@ export function PublicSiteHeader() {
               </div>
 
               {/* Right: CTAs */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Button
                   asChild
                   variant="outline"
@@ -73,9 +73,36 @@ export function PublicSiteHeader() {
                     <span className="hidden sm:inline">Mon espace client</span>
                   </Link>
                 </Button>
+
+                {/* Try Demo — ultra mis en avant, label toujours visible */}
+                <motion.div
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.04 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                  animate={prefersReducedMotion ? {} : {
+                    boxShadow: [
+                      '0 0 0 0 hsl(160 84% 39% / 0.55)',
+                      '0 0 0 10px hsl(160 84% 39% / 0)',
+                    ],
+                  }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
+                  className="rounded-md"
+                >
+                  <Button
+                    asChild
+                    size="sm"
+                    className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 text-white border-0 font-bold shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 transition-shadow px-2.5 sm:px-4"
+                  >
+                    <Link to="/demo">
+                      <Sparkles className="h-4 w-4 mr-1 sm:mr-2 animate-pulse" />
+                      <span className="whitespace-nowrap">Essayer la démo</span>
+                    </Link>
+                  </Button>
+                </motion.div>
+
                 <motion.div
                   whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
                   whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                  className="hidden sm:block"
                 >
                   <Button
                     asChild
