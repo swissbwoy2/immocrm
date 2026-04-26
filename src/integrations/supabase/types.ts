@@ -2698,6 +2698,11 @@ export type Database = {
           employeur: string | null
           etat_avancement: string | null
           etat_civil: string | null
+          extrait_poursuites_ai_confidence: number | null
+          extrait_poursuites_date_emission: string | null
+          extrait_poursuites_document_id: string | null
+          extrait_poursuites_extraction_method: string | null
+          extrait_poursuites_last_reminder_at: string | null
           garanties: string | null
           gerance_actuelle: string | null
           id: string
@@ -2773,6 +2778,11 @@ export type Database = {
           employeur?: string | null
           etat_avancement?: string | null
           etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
           garanties?: string | null
           gerance_actuelle?: string | null
           id?: string
@@ -2848,6 +2858,11 @@ export type Database = {
           employeur?: string | null
           etat_avancement?: string | null
           etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
           garanties?: string | null
           gerance_actuelle?: string | null
           id?: string
@@ -2906,6 +2921,13 @@ export type Database = {
             columns: ["demande_mandat_id"]
             isOneToOne: false
             referencedRelation: "demandes_mandat"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_extrait_poursuites_document_id_fkey"
+            columns: ["extrait_poursuites_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
           {
