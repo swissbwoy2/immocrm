@@ -1,91 +1,101 @@
 ## 🎯 Objectif
 
-Transformer le Hero actuel de la landing page (`/`) en un **Split Reveal cinématique** :
+Corriger 2 bugs du composant `DiagonalSplitReveal` :
+1. **Desktop/Tablette** : la vidéo n'est jamais révélée à 100% — les moitiés ne s'écartent pas assez
+2. **Mobile** : aucune animation visible — `useInView` se déclenche au mount avant que l'utilisateur ne voie quoi que ce soit
 
-- L'**image actuelle** (villa avec piscine) + le **texte "Ton futur appartement, Notre Mission !"** restent visibles au chargement
-- Au **scroll**, l'image se coupe en **diagonale à 18°** : la moitié supérieure-gauche glisse vers le haut-gauche, la moitié inférieure-droite glisse vers le bas-droit
-- La **vidéo MP4** (`vesync_-_smart_home_-_full_1080p.mp4`) jouée en boucle muette est **révélée derrière** l'image
-- Le **bandeau "Un logiciel propulsé par Immo-rama.ch"**, le **header** (logo + boutons "Mon espace client" / "Activer ma recherche") et l'**indicateur de scroll** restent intacts par-dessus
+---
 
-## 📂 Fichiers concernés
+## 🔧 Changements techniques
 
-### 1. `src/assets/hero-reveal-video.mp4` (nouveau)
-Copie depuis `user-uploads://vesync_-_smart_home_-_full_1080p.mp4` via `code--copy`.
+### Fichier modifié
+`src/components/public-site/DiagonalSplitReveal.tsx` (uniquement)
 
-### 2. `src/components/public-site/DiagonalSplitReveal.tsx` (nouveau)
-Nouveau composant autonome avec :
-- **Wrapper externe** `h-[250vh]` (desktop/tablette) ou `h-[100vh]` (mobile) → donne la "piste de scroll"
-- **Container sticky** `sticky top-0 h-screen overflow-hidden` qui reste fixe pendant le scroll
-- **3 couches superposées** (z-index croissant) :
-  1. **Vidéo MP4** (fond) — `<video autoPlay muted loop playsInline>` en `object-cover absolute inset-0`
-  2. **Moitié haute-gauche de l'image** — `clip-path: polygon(0 0, 100% 0, 100% calc(50% - tan(18°)*50%), 0 calc(50% + tan(18°)*50%))` avec `transform: translate(-x, -y)` animé
-  3. **Moitié basse-droite de l'image** — clip-path complémentaire avec `transform: translate(+x, +y)` animé
-  4. **Texte "Ton futur appartement, Notre Mission !"** — placé sur la moitié haute (suit son mouvement) OU restant fixe au centre avec fade-out (à choisir, je propose : **suit la moitié haute** pour cohérence cinématique)
-- **Logique scroll** :
-  - `useScroll({ target: ref, offset: ["start start", "end end"] })`
-  - `useTransform(scrollYProgress, [0, 0.7], [0, 100])` → `%` de séparation
-  - `useTransform(scrollYProgress, [0, 0.5], [1, 0])` → opacité du texte qui fade
-- **Mobile (≤768px)** :
-  - Wrapper `h-screen` (pas de 250vh pour éviter scroll-jank iOS)
-  - Animation déclenchée par `useInView` → one-shot de 1.8s avec easing `[0.65, 0, 0.35, 1]`
-  - Pas de scroll-bind (trop saccadé sur Safari iOS)
+---
 
-### 3. `src/components/public-site/sections/HeroSection.tsx` (modifié)
-- Remplacer le `ScrollExpansionHero` actuel par `<DiagonalSplitReveal>` qui contient :
-  - L'image actuelle du Hero (à identifier dans le composant existant — probablement `villa.jpg` ou similaire)
-  - La vidéo MP4 en arrière-plan
-  - Le texte "Ton futur appartement, Notre Mission !" en overlay
-- **Conserver intacts** :
-  - Le bandeau "Un logiciel propulsé par Immo-rama.ch" (au-dessus du Hero)
-  - Le header avec logo + boutons (au-dessus, position fixe)
-  - L'indicateur "FAITES DÉFILER POUR DÉCOUVRIR" en bas (intégré dans le composant)
+### 🖥️ Correctif Desktop / Tablette — Révélation totale + zoom vidéo
 
-## 🎨 Détails de l'effet diagonale 18°
-
-```
-Angle = 18°
-tan(18°) ≈ 0.3249
-
-Coupe diagonale partant de :
-  - Bord gauche à y = 50% + (largeur × tan(18°))/2 ≈ 50% + 16.2%
-  - Bord droit  à y = 50% - (largeur × tan(18°))/2 ≈ 50% - 16.2%
-
-Clip-path moitié haute :
-  polygon(0 0, 100% 0, 100% 33.8%, 0 66.2%)
-
-Clip-path moitié basse :
-  polygon(0 66.2%, 100% 33.8%, 100% 100%, 0 100%)
-
-Translation finale (à scrollProgress = 0.7) :
-  Moitié haute : translate(-12vw, -25vh)
-  Moitié basse : translate(+12vw, +25vh)
+**Avant** (incomplet) :
+```tsx
+const topX = useTransform(smoothProgress, [0, 0.7], ['0vw', '-14vw']);
+const topY = useTransform(smoothProgress, [0, 0.7], ['0vh', '-30vh']);
+const videoScale = useTransform(smoothProgress, [0, 0.7], [1.08, 1]);
 ```
 
-## 📱 Comportement responsive
+**Après** (révélation totale + zoom cinéma) :
+```tsx
+// Déplacement massif : les 2 moitiés sortent COMPLÈTEMENT de l'écran
+const topX = useTransform(smoothProgress, [0, 0.85], ['0vw', '-65vw']);
+const topY = useTransform(smoothProgress, [0, 0.85], ['0vh', '-110vh']);
+const bottomX = useTransform(smoothProgress, [0, 0.85], ['0vw', '65vw']);
+const bottomY = useTransform(smoothProgress, [0, 0.85], ['0vh', '110vh']);
 
-| Device | Hauteur wrapper | Mode | Durée |
-|---|---|---|---|
-| **Desktop ≥1024px** | `250vh` | Scroll-bind progressif | Suit le scroll |
-| **Tablette 768-1024px** | `200vh` | Scroll-bind progressif | Suit le scroll |
-| **Mobile <768px** | `100vh` | Auto one-shot via `useInView` | 1.8s avec easing |
+// Vidéo : démarre légèrement zoomée, finit zoomée pour effet "respiration cinéma"
+const videoScale = useTransform(smoothProgress, [0, 0.5, 1], [1.12, 1.0, 1.05]);
 
-## 🎬 Performance & qualité
+// Titre disparaît un peu plus tard pour rester lisible plus longtemps
+const titleOpacity = useTransform(smoothProgress, [0, 0.55], [1, 0]);
+```
 
-- Vidéo : `<video preload="metadata" autoplay muted loop playsInline>` → léger sur la première vue, joue dès l'apparition
-- Image : `loading="eager" fetchPriority="high"` (déjà LCP)
-- `will-change: transform, clip-path` sur les 2 moitiés pour activer le compositing GPU
-- Respect de `prefers-reduced-motion` : si activé, on affiche directement la vidéo sans l'image (skip de l'animation)
-- Texte conserve son styling actuel (police serif italique blanche, ombre)
+**Piste de scroll** : passe de `250vh` à `220vh` desktop / `180vh` tablette (animation plus rapide, moins de scroll requis).
 
-## ❓ Une dernière micro-décision
+---
 
-Pendant la séparation, le **texte "Ton futur appartement, Notre Mission !"** doit-il :
+### 📱 Correctif Mobile — Déclenchement au scroll utilisateur
 
-- **(A) Suivre la moitié haute** de l'image (se sépare visuellement avec elle, plus cinématique) ← **recommandé**
-- **(B) Rester fixe au centre** et faire un fade-out à mi-parcours
+**Problème actuel** : `useInView` avec `amount: 0.4` se déclenche dès le mount car la section fait `h-screen` (toujours dans le viewport). L'animation joue avant que l'utilisateur ne soit prêt.
 
-Si tu ne précises pas, je pars sur **(A)** car c'est l'effet Macoloc/Apple le plus impactant.
+**Solution** : remplacer `useInView` par un **listener scroll natif** qui déclenche l'animation **uniquement** après un scroll de l'utilisateur (≥ 40px) :
+
+```tsx
+const [hasScrolled, setHasScrolled] = useState(false);
+
+useEffect(() => {
+  if (!isMobile) return;
+  let triggered = false;
+  const onScroll = () => {
+    if (!triggered && window.scrollY > 40) {
+      triggered = true;
+      setHasScrolled(true);
+      window.removeEventListener('scroll', onScroll);
+    }
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  return () => window.removeEventListener('scroll', onScroll);
+}, [isMobile]);
+```
+
+**Animation mobile mise à jour** (one-shot mais avec amplitude totale) :
+```tsx
+animate={hasScrolled ? { x: '-60vw', y: '-95vh' } : { x: 0, y: 0 }}
+// bottom : { x: '60vw', y: '95vh' }
+transition={{ duration: 1.6, ease: [0.65, 0, 0.35, 1] }}
+```
+
+**Indicateur visuel** : le scroll hint (la petite souris animée en bas) reste visible **tant que l'utilisateur n'a pas scrollé** → invitation claire à l'action. Disparaît avec une transition opacity 0.4s dès que l'animation démarre.
+
+---
+
+### 🎬 Bonus qualité (mineurs)
+
+- **`will-change`** déjà présent ✅ (rien à changer)
+- **`preload="auto"`** sur la vidéo (au lieu de `metadata`) pour qu'elle soit prête à jouer dès la révélation
+- **Fallback `prefersReducedMotion`** : affiche directement la vidéo sans image par-dessus (pas d'animation)
+
+---
+
+## 📋 Fichiers touchés
+
+| Fichier | Action |
+|---|---|
+| `src/components/public-site/DiagonalSplitReveal.tsx` | Modifié (logique animation + mobile trigger) |
+
+**Aucun autre fichier impacté.** `HeroSection.tsx` n'a pas besoin de changement — l'API du composant reste identique.
+
+---
 
 ## ✅ Résultat attendu
 
-À l'arrivée sur la landing : image villa + texte centré (état actuel inchangé). Dès qu'on scrolle, l'image se fend en biais à 18° et s'écarte progressivement, révélant la vidéo MP4 du smart home qui joue en arrière-plan. Sur mobile, l'effet se déclenche automatiquement quand le hero entre dans le viewport.
+- **Desktop/Tablette** : en scrollant, l'image se sépare en 2 le long de la diagonale 18° → les deux moitiés sortent **complètement** de l'écran → la vidéo est révélée à 100% avec un léger effet de zoom cinéma
+- **Mobile** : au premier scroll de l'utilisateur (≥ 40px), animation 1.6s déclenchée → image splitée disparaît hors écran → vidéo révélée plein écran
+- **Scroll hint mobile** : reste visible tant que l'utilisateur n'a pas scrollé, puis fade out
