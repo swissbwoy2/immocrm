@@ -211,7 +211,7 @@ export function DiagonalSplitReveal({
   // ============================================
   // Piste de scroll : plus courte sur mobile/tablette pour préserver la perf
   // et permettre une révélation rapide au pouce.
-  const trackHeight = isMobile ? '140vh' : isTablet ? '180vh' : '220vh';
+  const trackHeight = isMobile ? '340vh' : isTablet ? '360vh' : '380vh';
 
   return (
     <div>

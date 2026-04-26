@@ -1,36 +1,28 @@
 ## Objectif
+Rendre le scroll-scrub de la vidéo Hero (`DiagonalSplitReveal`) moins sensible sur **mobile, tablette ET desktop**, pour que la vidéo de 10s avance plus progressivement.
 
-- **Hero (`DiagonalSplitReveal`)** : conserver intégralement le scroll frame-par-frame sur 10 secondes — **aucune modification**.
-- **Mockup iPhone (`AppShowcaseSection`)** : passer en **autoplay loop simple** sur **tous** les devices (desktop, tablette, mobile), supprimer toute la logique de scrubbing.
+## Cause
+Les pistes de scroll actuelles sont trop courtes : un petit swipe/scroll consomme une grande part des 10 secondes.
+- Mobile : `140vh`
+- Tablette : `180vh`
+- Desktop : `220vh`
 
-## Fichier modifié
+## Changement proposé
+Dans `src/components/public-site/DiagonalSplitReveal.tsx`, augmenter `trackHeight` partout :
 
-`src/components/public-site/sections/AppShowcaseSection.tsx`
+| Device | Avant | Après |
+|---|---|---|
+| Mobile | 140vh | **340vh** (~2.4x plus long) |
+| Tablette | 180vh | **360vh** (2x plus long) |
+| Desktop | 220vh | **380vh** (~1.7x plus long) |
 
-## Changements détaillés
-
-1. **Supprimer la logique de scrub** :
-   - Retirer les imports `useScroll`, `useSpring`, `useMotionValueEvent`.
-   - Retirer les refs `targetTimeRef`, `currentTimeRef`, `rafRef`.
-   - Retirer le `useEffect` rAF (lerp + `video.currentTime`).
-   - Retirer le hook `useScroll` + `useSpring` + `useMotionValueEvent`.
-   - Retirer le state `videoReady` et la constante `SCRUB_DURATION`.
-
-2. **Forcer autoplay partout** :
-   - Remplacer `const useScrub = !isMobile && !prefersReducedMotion` par `const useScrub = false` (ou simplement supprimer la branche scrub).
-   - L'élément `<video>` reste avec `autoPlay loop muted playsInline preload="metadata"`.
-   - Garder le `useEffect` de fallback qui force `v.play()` sur première interaction tactile (utile iOS avec économiseur de batterie).
-
-3. **Section layout** :
-   - Retirer `height: '220vh'` et le wrapper `sticky top-0 h-screen`.
-   - La section devient un bloc standard `py-16 md:py-24` avec `min-h` naturel — exactement comme la branche mobile actuelle.
-
-4. **Conserver tel quel** :
-   - Détection `isMobile` (utile pour `IPhoneMockup3D flat={isMobile}` et `scale-[0.78]`).
-   - Ordre `order-2 lg:order-1` mockup / `order-1 lg:order-2` texte.
-   - Tous les visuels (orbital rings, halo, badge "En direct", feature bars, CTA).
+## Ce qui ne change pas
+- `SCRUB_DURATION = 10s` (durée vidéo balayée inchangée)
+- Logique de spring (`stiffness: 120, damping: 30`)
+- Logique iOS unlock, clip-paths, titre, scroll hint
+- Section "Notre application" (autoplay, inchangée)
 
 ## Résultat attendu
+Sur les 3 formats, il faudra scroller nettement plus longtemps pour parcourir les 10 secondes de vidéo → sensation plus douce et cinématographique, pas d'avance brutale au moindre swipe.
 
-- **Hero** : scroll-scrubbing 10s intact (déjà géré dans `DiagonalSplitReveal`, fichier non touché).
-- **Section "Notre application"** : la vidéo dans l'iPhone tourne en boucle automatique dès l'arrivée à l'écran, sur desktop, tablette et mobile. Plus de scroll bloqué/long, l'utilisateur scrolle naturellement à travers la section.
+**Fichier modifié :** `src/components/public-site/DiagonalSplitReveal.tsx` (1 ligne)
