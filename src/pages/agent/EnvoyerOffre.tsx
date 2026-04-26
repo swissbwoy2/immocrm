@@ -59,6 +59,24 @@ const EnvoyerOffre = () => {
     }
   }, [clientIdFromState, clientIdFromUrl]);
 
+  // Pré-remplissage depuis la Wishlist
+  useEffect(() => {
+    const lien = searchParams.get('lien');
+    const adresse = searchParams.get('adresse');
+    const prix = searchParams.get('prix');
+    const pieces = searchParams.get('pieces');
+    if (lien || adresse || prix || pieces) {
+      setFormData(prev => ({
+        ...prev,
+        lienAnnonce: lien ?? prev.lienAnnonce,
+        localisation: adresse ?? prev.localisation,
+        prix: prix ?? prev.prix,
+        nombrePieces: pieces ?? prev.nombrePieces,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   useEffect(() => {
     loadData();
   }, [user?.id]);
