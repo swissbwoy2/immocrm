@@ -145,6 +145,7 @@ export default function SuiviExtraitsPoursuites() {
     missing: enriched.filter((r) => r.status === 'missing').length,
     warning: enriched.filter((r) => r.status === 'warning').length,
     expired: enriched.filter((r) => r.status === 'expired').length,
+    scannable: enriched.filter((r) => r.has_extract && !r.date_emission && !['manual', 'agent'].includes(r.method ?? '')).length,
   }), [enriched]);
 
   const filtered = useMemo(() => {
