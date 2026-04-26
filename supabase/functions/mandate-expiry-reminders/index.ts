@@ -53,20 +53,45 @@ function buildEmailHtml(opts: {
           </p>
         </div>
         <p style="font-size:15px;color:#374151;margin:0 0 16px;font-weight:600;">Que souhaitez-vous faire ?</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 24px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
           <tr>
-            <td style="padding:0 6px 12px 0;width:50%;">
+            <td style="padding:0 0 10px 0;">
               <a href="${renewUrl}" style="display:block;background:#1e40af;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
                 ✓ Renouveler maintenant
               </a>
             </td>
-            <td style="padding:0 0 12px 6px;width:50%;">
+          </tr>
+          ${refundEligible ? `<tr>
+            <td style="padding:0 0 10px 0;">
+              <a href="${refundUrl}" style="display:block;background:#16a34a;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                💰 Annuler + Demander mon remboursement
+              </a>
+            </td>
+          </tr>` : ""}
+          <tr>
+            <td style="padding:0 0 10px 0;">
               <a href="${cancelUrl}" style="display:block;background:#f3f4f6;color:#374151;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #d1d5db;">
-                ✗ Annuler ma recherche
+                ✗ Annuler ma recherche${!refundEligible ? " (sans remboursement)" : ""}
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 10px 0;">
+              <a href="${pauseUrl}" style="display:block;background:#eff6ff;color:#1e40af;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #bfdbfe;">
+                ⏸️ Mettre en pause
               </a>
             </td>
           </tr>
         </table>
+        ${!refundEligible ? `<div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:12px;border-radius:6px;margin:0 0 16px;">
+          <p style="margin:0;font-size:13px;color:#1e3a8a;">
+            ℹ️ Le remboursement deviendra disponible à partir du <strong>${REFUND_ELIGIBILITY_DAY}ème jour</strong> de votre mandat (jour actuel : ${daysSinceSignature}).
+          </p>
+        </div>` : `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:12px;border-radius:6px;margin:0 0 16px;">
+          <p style="margin:0;font-size:13px;color:#166534;">
+            ✅ Vous êtes <strong>éligible au remboursement</strong> (sauf si vous avez trouvé par vos propres moyens).
+          </p>
+        </div>`}
         <p style="font-size:13px;color:#6b7280;line-height:1.5;margin:0 0 8px;">
           Vous pouvez aussi gérer votre mandat depuis votre espace client.
         </p>
