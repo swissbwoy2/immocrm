@@ -929,6 +929,29 @@ const handler = async (req: Request): Promise<Response> => {
     const pdfBase64 = uint8ArrayToBase64(pdfBytes);
     
     console.log(`Full mandat PDF generated, size: ${pdfBytes.length} bytes`);
+
+    // Persist the FULL PDF to storage so legacy readers also get the complete version
+    if (client_id && !skipIdentityDocs) {
+      try {
+        const safeName = sanitizeText(`${profileData?.nom || 'client'}_${profileData?.prenom || ''}`).replace(/[^a-zA-Z0-9]/g, '_');
+        const timestamp = new Date().toISOString().split('T')[0];
+        const storagePath = `${client_id}/mandat_complet_${safeName}_${timestamp}.pdf`;
+        const { error: uploadError } = await supabaseAdmin.storage
+          .from('mandat-contracts')
+          .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: true });
+        if (uploadError) {
+          console.warn('Could not upload full mandate to storage:', uploadError.message);
+        } else {
+          await supabaseAdmin
+            .from('clients')
+            .update({ mandat_pdf_url: storagePath })
+            .eq('id', client_id);
+          console.log('Full mandate PDF persisted at:', storagePath);
+        }
+      } catch (persistErr) {
+        console.warn('Persist full mandate failed:', persistErr);
+      }
+    }
     
     return new Response(
       JSON.stringify({ 
