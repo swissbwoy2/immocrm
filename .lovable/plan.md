@@ -1,82 +1,214 @@
-## 🎯 Objectif
 
-Remplacer l'affichage automatique des **coordonnées bancaires (IBAN)** par un **choix de mode de paiement** lors de la création du compte / signature du mandat. Le client coche une option :
+# 📌 Wishlist "Biens à suivre" — Admin & Agent
 
-- ✅ **Payer par TWINT** (instantané) → affiche le numéro `079 483 91 99` avec mention obligatoire `Prénom NOM – Acompte mandat`
-- ✅ **Recevoir ma facture QR** (par email) → indique simplement que la facture QR sera envoyée par email
-
-⚠️ **Note comptable** : la facture QR AbaNinja est générée automatiquement dans tous les cas (pour la comptabilité et la conformité). Le choix du client influence uniquement **ce qu'on lui montre** comme instructions de paiement.
+Objectif : ne plus jamais perdre un bien intéressant pour lequel tu as contacté l'annonceur sans réponse. Une wishlist centralisée, ultra lisible, qui se met automatiquement à jour quand tu envoies une offre sur la même annonce.
 
 ---
 
-## 📋 Modifications
+## 1. Base de données — Nouvelle table `wishlist_biens`
 
-### 1. UI — Sélecteur de mode de paiement (formulaire mandat)
+Migration SQL :
 
-**`src/components/mandat/MandatRecapitulatif.tsx`** (étape récap avant signature)
-- Remplacer le bloc statique "Coordonnées bancaires" (l. 318-345) par un composant de choix avec 2 cartes cliquables :
-  - 📱 **TWINT instantané** (recommandé)
-  - 🧾 **Facture QR par email**
-- Persister le choix dans le state du formulaire (`payment_method: 'twint' | 'qr_invoice'`).
-- Si TWINT sélectionné → afficher la box jaune avec `079 483 91 99` + mention `[Prénom] [Nom] – Acompte mandat`.
-- Si Facture QR → afficher message court : "Vous recevrez votre facture QR par email sous quelques minutes. Payable depuis votre app bancaire."
+```sql
+CREATE TABLE public.wishlist_biens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  
+  -- Infos bien
+  adresse TEXT NOT NULL,
+  npa TEXT,
+  ville TEXT,
+  nb_pieces NUMERIC,
+  surface NUMERIC,
+  prix NUMERIC,
+  type_bien TEXT,                   -- Appartement / Maison / Studio / Local
+  
+  -- Lien annonce (clé de dédoublonnage)
+  lien_annonce TEXT NOT NULL,
+  lien_annonce_normalise TEXT GENERATED ALWAYS AS (lower(regexp_replace(lien_annonce, '^https?://(www\.)?', ''))) STORED,
+  source_portail TEXT,              -- Homegate / ImmoScout / Comparis / autre (auto-détecté)
+  photo_url TEXT,
+  
+  -- Contact annonceur
+  contact_nom TEXT,
+  contact_telephone TEXT,
+  contact_email TEXT,
+  
+  -- Suivi
+  statut TEXT NOT NULL DEFAULT 'a_contacter' 
+    CHECK (statut IN ('a_contacter','contacte_sans_reponse','offre_envoyee','indisponible','archive')),
+  date_dernier_contact TIMESTAMPTZ,
+  nb_relances INT DEFAULT 0,
+  notes TEXT,
+  tags TEXT[],
+  
+  -- Lien automatique vers offre envoyée
+  offre_id UUID REFERENCES public.offres(id) ON DELETE SET NULL,
+  date_offre_envoyee TIMESTAMPTZ,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  
+  UNIQUE(user_id, lien_annonce_normalise)
+);
 
-**`src/components/mandat/CGVContent.tsx`** (l. 85-105 et 201-225)
-- Retirer les 2 blocs "Informations bancaires" statiques avec IBAN.
-- Les remplacer par une mention neutre : "Le mode de paiement (TWINT ou facture QR) sera choisi lors de la finalisation du mandat."
+CREATE INDEX idx_wishlist_user_statut ON wishlist_biens(user_id, statut);
+CREATE INDEX idx_wishlist_lien_norm ON wishlist_biens(lien_annonce_normalise);
 
-### 2. Persistance du choix
+-- RLS
+ALTER TABLE wishlist_biens ENABLE ROW LEVEL SECURITY;
 
-**Migration DB** : ajouter une colonne `payment_method` (text, nullable, default `'qr_invoice'`) sur la table `demandes_mandat` (et/ou `clients` selon où le récap est sauvegardé — à confirmer en lecture du schéma juste avant migration).
+CREATE POLICY "Users manage own wishlist"
+  ON wishlist_biens FOR ALL
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
-**Edge function `mandate-submit-signature`** (et/ou `mandate-update-draft`) : accepter et persister `payment_method` envoyé depuis le front.
+CREATE POLICY "Admins see all wishlists"
+  ON wishlist_biens FOR SELECT
+  USING (has_role(auth.uid(), 'admin'));
 
-### 3. Emails de confirmation
+-- Trigger updated_at
+CREATE TRIGGER wishlist_set_updated_at
+  BEFORE UPDATE ON wishlist_biens
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
 
-**`supabase/functions/send-mandat-confirmation/index.ts`** (l. 100-120)
-- Lire `payment_method` du client.
-- Si `twint` → afficher box jaune TWINT avec `079 483 91 99` + mention `Prénom NOM – Acompte mandat`.
-- Si `qr_invoice` → afficher box bleue : "Votre facture QR vient d'être envoyée à votre adresse email. Vous pouvez la régler depuis votre app bancaire."
+### 🔁 Trigger auto-sync avec `offres`
 
-**`supabase/functions/send-mandat-pdf/index.ts`** (l. 380-395 PDF + l. 840-850 HTML email)
-- Même logique conditionnelle pour la section paiement du PDF récapitulatif et du HTML d'accompagnement.
+Quand une offre est insérée avec un `lien_annonce`, on marque automatiquement le bien correspondant dans la wishlist comme `offre_envoyee` :
 
-### 4. PDF du mandat complet
+```sql
+CREATE OR REPLACE FUNCTION sync_wishlist_on_offre()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  norm TEXT;
+BEGIN
+  IF NEW.lien_annonce IS NULL OR NEW.lien_annonce = '' THEN RETURN NEW; END IF;
+  norm := lower(regexp_replace(NEW.lien_annonce, '^https?://(www\.)?', ''));
+  
+  UPDATE wishlist_biens
+     SET statut = 'offre_envoyee',
+         offre_id = NEW.id,
+         date_offre_envoyee = COALESCE(NEW.date_envoi, now())
+   WHERE lien_annonce_normalise = norm
+     AND statut <> 'archive';
+  RETURN NEW;
+END $$;
 
-**`supabase/functions/generate-full-mandat-pdf/index.ts`** (l. 706-735)
-- Remplacer la section `INFORMATIONS BANCAIRES POUR L'ACTIVATION` par une section neutre : `MODALITES DE PAIEMENT DE L'ACOMPTE`.
-- Mentionner les **2 options disponibles** (TWINT `079 483 91 99` OU facture QR par email) sans privilégier l'une, puisque le PDF du mandat est un document légal qui doit refléter les options offertes.
-- Encodage : conserver ASCII strict (pas de `'`, `é`, `à` directs sans les fonctions `cleanText` existantes — cf. mémoire PDF sanitization U+202F/U+00A0).
-
-### 5. Factures officielles (intactes)
-
-❌ **Ne PAS toucher** :
-- `create-abaninja-invoice/index.ts`
-- `create-final-invoice/index.ts`
-- `resend-abaninja-invoice/index.ts`
-- `abaninja-webhook/index.ts`
-
-→ La facture QR AbaNinja reste émise systématiquement (obligation comptable suisse). Seul l'affichage côté client est conditionnel.
+CREATE TRIGGER trg_sync_wishlist_on_offre
+  AFTER INSERT ON offres
+  FOR EACH ROW EXECUTE FUNCTION sync_wishlist_on_offre();
+```
 
 ---
 
-## 🧪 Validation après implémentation
+## 2. Routes & Sidebar
 
-1. Création d'un compte avec choix **TWINT** → email reçu affiche box TWINT, PDF récap aussi.
-2. Création d'un compte avec choix **Facture QR** → email reçu mentionne "facture QR par email", pas de TWINT.
-3. Dans les 2 cas → la facture QR AbaNinja est bien créée en arrière-plan (vérification logs `create-abaninja-invoice`).
-4. PDF du mandat complet → présente les 2 options de paiement de manière neutre.
+- Ajouter `/admin/wishlist` et `/agent/wishlist` dans `src/App.tsx`
+- Ajouter dans `AppSidebar.tsx` (section **Communications**, juste sous "Offres envoyées") :
+  - Icône : `Bookmark` (lucide)
+  - Label : **"À suivre"** avec badge = nb biens en `contacte_sans_reponse`
 
 ---
 
-## 📁 Fichiers modifiés
+## 3. Page Wishlist — Interface ultra pertinente
 
-- `src/components/mandat/MandatRecapitulatif.tsx`
-- `src/components/mandat/CGVContent.tsx`
-- `supabase/functions/send-mandat-confirmation/index.ts`
-- `supabase/functions/send-mandat-pdf/index.ts`
-- `supabase/functions/generate-full-mandat-pdf/index.ts`
-- `supabase/functions/mandate-submit-signature/index.ts` (persistance)
-- Migration SQL : `payment_method` sur `demandes_mandat`
+Fichier : `src/pages/shared/Wishlist.tsx` (mutualisée admin/agent, détecte le rôle).
 
-Confirmes-tu ce plan ?
+### Structure visuelle (Premium components existants)
+
+**Header** — `PremiumPageHeader`
+- Titre : "Biens à suivre"
+- Bouton primaire : **+ Ajouter un bien** (ouvre dialog)
+- KPIs : `À contacter` / `Sans réponse` / `Relancés` / `Offre envoyée`
+
+**Filtres**
+- Recherche texte (adresse, contact, notes)
+- Statut (chips)
+- Tri : date dernier contact / prix / pièces
+
+**Liste de cartes** — Grille responsive (1 col mobile, 2 col tablet, 3 col desktop)
+
+Chaque carte affiche :
+```
+┌─────────────────────────────────────┐
+│ [Photo 16:10 ou placeholder]        │
+│ Badge statut (couleur)              │
+├─────────────────────────────────────┤
+│ 📍 Rue de Genève 42, 1003 Lausanne │
+│ 🏠 3.5 pièces · 75 m² · 2'200 CHF  │
+│ 🏷️ Homegate                         │
+│                                     │
+│ 👤 Régie Dupont                     │
+│ 📞 021 123 45 67  📧 ...            │
+│                                     │
+│ 🔗 Voir l'annonce ↗                 │
+│ 📝 "Contacté le 24/04, sans réponse"│
+│                                     │
+│ [Marquer relancé] [Envoyer offre →] │
+│ [Modifier] [Archiver]               │
+└─────────────────────────────────────┘
+```
+
+**État `offre_envoyee`** : carte avec liseré vert + badge ✅ "Offre envoyée le JJ/MM" + lien direct vers la fiche offre.
+
+### Dialog "Ajouter un bien" — `WishlistAddDialog.tsx`
+
+Champs :
+- **Lien annonce** (obligatoire, validation URL, auto-détection portail via regex)
+- **Adresse complète** (autocomplete Google Places existant → extrait NPA/ville)
+- Nb pièces, surface, prix, type
+- Contact : nom, téléphone, email
+- Notes libres + tags
+
+Bouton **"Coller depuis presse-papier"** : si une URL Homegate/ImmoScout est dans le clipboard, parsing automatique du titre/prix/pièces via fetch côté Edge Function (optionnel V2).
+
+### Dédoublonnage à l'ajout
+
+Avant insert : `SELECT id FROM wishlist_biens WHERE user_id = $1 AND lien_annonce_normalise = $2`. Si trouvé → toast "Ce bien est déjà dans ta liste" + ouvre la fiche existante.
+
+---
+
+## 4. Sync inverse depuis "Envoyer une offre"
+
+Dans `src/pages/admin/EnvoyerOffre.tsx` et `src/pages/agent/EnvoyerOffre.tsx` :
+- Si `formData.lienAnnonce` correspond à un bien wishlist → afficher un encart info bleu : *"Ce bien vient de ta wishlist (statut : sans réponse depuis 5j)"*
+- Le trigger SQL fait le reste automatiquement après insert.
+
+Bouton sur chaque carte wishlist **"Envoyer offre →"** : redirige vers `/admin/envoyer-offre?lien=...&adresse=...&prix=...&pieces=...` (pré-remplissage via query params).
+
+---
+
+## 5. Notifications & relances (léger, non bloquant)
+
+- Badge sidebar = `count(statut IN ('a_contacter','contacte_sans_reponse'))`
+- Optionnel : notif quotidienne si un bien est en `contacte_sans_reponse` depuis > 3 jours sans relance (cron edge function — pas dans ce lot, mentionné pour V2).
+
+---
+
+## 📦 Fichiers impactés
+
+**Créés :**
+- `supabase/migrations/{ts}_create_wishlist_biens.sql`
+- `src/pages/shared/Wishlist.tsx`
+- `src/components/wishlist/WishlistAddDialog.tsx`
+- `src/components/wishlist/WishlistCard.tsx`
+- `src/components/wishlist/WishlistFilters.tsx`
+- `src/hooks/useWishlist.ts`
+
+**Modifiés :**
+- `src/App.tsx` — 2 nouvelles routes
+- `src/components/AppSidebar.tsx` — entrée "À suivre" pour admin & agent + badge
+- `src/pages/admin/EnvoyerOffre.tsx` & `src/pages/agent/EnvoyerOffre.tsx` — encart info wishlist + lecture query params
+
+---
+
+## ✅ Comportement final
+
+1. Tu vois une annonce intéressante → **+ Ajouter** → fiche dans wishlist (statut "À contacter")
+2. Tu appelles l'annonceur → bouton **"Marquer contacté"** → statut "Sans réponse" + date
+3. Pas de retour pendant 3j → badge sidebar te le rappelle
+4. Tu envoies finalement une offre via `/envoyer-offre` avec le même lien → **statut passe automatiquement à "Offre envoyée"** avec lien direct vers la fiche offre
+5. Si l'annonce disparaît du marketplace, tu retrouves toujours toutes les infos (adresse, pièces, contact, notes) dans la wishlist
+
+Confirme et j'implémente.

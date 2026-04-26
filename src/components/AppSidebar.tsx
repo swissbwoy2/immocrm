@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -93,6 +93,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           items: [
             { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
             { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
+            { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
             { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
@@ -163,6 +164,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
             { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
             { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: 'client_interesse' },
+            { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/agent/wishlist', notifKey: null },
           ],
         },
         {
