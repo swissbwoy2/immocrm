@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -72,6 +72,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
             { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
             { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
+            { name: 'Suivi extraits', icon: ShieldCheck, path: '/admin/suivi-extraits', notifKey: null },
             { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
             { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
           ],
