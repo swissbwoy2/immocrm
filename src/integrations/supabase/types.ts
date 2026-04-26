@@ -3536,6 +3536,36 @@ export type Database = {
           },
         ]
       }
+      demo_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       device_tokens: {
         Row: {
           created_at: string | null
@@ -6763,6 +6793,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_demo_account: boolean
           is_online: boolean | null
           last_seen_at: string | null
           nom: string
@@ -6779,6 +6810,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          is_demo_account?: boolean
           is_online?: boolean | null
           last_seen_at?: string | null
           nom: string
@@ -6795,6 +6827,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_demo_account?: boolean
           is_online?: boolean | null
           last_seen_at?: string | null
           nom?: string
@@ -10381,6 +10414,7 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      is_demo_account: { Args: { _user_id: string }; Returns: boolean }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_proprietaire_owner: {
         Args: { _proprietaire_id: string }
