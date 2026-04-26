@@ -282,47 +282,18 @@ export default function DemandesActivation() {
       // Récupérer l'ID du client créé
       const clientId = inviteData?.clientId;
 
-      // Générer le PDF du contrat avec signature si on a l'ID du client
+      // Générer le PDF du mandat COMPLET (toutes les dispositions juridiques) si on a l'ID du client
       if (clientId) {
-        console.log('Generating contract PDF for client:', clientId);
-        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-mandat-contract', {
-          body: {
-            clientId: clientId,
-            demandeId: demande.id,
-            prenom: demande.prenom,
-            nom: demande.nom,
-            email: demande.email,
-            telephone: demande.telephone,
-            adresse: demande.adresse,
-            date_naissance: demande.date_naissance,
-            nationalite: demande.nationalite,
-            type_permis: demande.type_permis,
-            etat_civil: demande.etat_civil,
-            profession: demande.profession,
-            employeur: demande.employeur,
-            revenus_mensuels: demande.revenus_mensuels,
-            type_recherche: demande.type_recherche,
-            type_bien: demande.type_bien,
-            pieces_recherche: demande.pieces_recherche,
-            region_recherche: demande.region_recherche,
-            budget_max: demande.budget_max,
-            signature_data: demande.signature_data,
-            cgv_acceptees_at: demande.cgv_acceptees_at,
-            candidats: demande.candidats,
-            gerance_actuelle: demande.gerance_actuelle,
-            loyer_actuel: demande.loyer_actuel,
-            depuis_le: demande.depuis_le,
-            motif_changement: demande.motif_changement,
-            nombre_occupants: demande.nombre_occupants,
-            souhaits_particuliers: demande.souhaits_particuliers
-          }
+        console.log('Generating FULL mandat PDF for client:', clientId);
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+          body: { client_id: clientId },
         });
 
         if (pdfError) {
-          console.error('Error generating contract PDF:', pdfError);
-          // Don't throw, just log - the account is still created
-        } else if (pdfData?.success) {
-          console.log('Contract PDF generated successfully:', pdfData.pdfUrl);
+          console.error('Error generating full mandate PDF:', pdfError);
+          // Don't throw, the account is still created
+        } else if (pdfData?.pdf_base64) {
+          console.log('Full mandate PDF generated successfully');
         }
       }
 
