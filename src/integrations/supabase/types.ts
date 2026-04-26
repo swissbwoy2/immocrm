@@ -2681,6 +2681,7 @@ export type Database = {
           apport_personnel: number | null
           autres_credits: boolean | null
           budget_max: number | null
+          cancellation_reason: string | null
           charges_extraordinaires: boolean | null
           charges_mensuelles: number | null
           commission_split: number | null
@@ -2706,6 +2707,9 @@ export type Database = {
           mandat_pdf_url: string | null
           mandat_renewal_count: number
           mandat_signature_data: string | null
+          mandate_official_end_date: string | null
+          mandate_pause_days: number
+          mandate_paused_at: string | null
           montant_charges_extra: number | null
           motif_changement: string | null
           nationalite: string | null
@@ -2717,6 +2721,10 @@ export type Database = {
           poursuites: boolean | null
           priorite: string | null
           profession: string | null
+          refund_eligible: boolean
+          refund_processed_at: string | null
+          refund_requested_at: string | null
+          refund_status: string
           region_recherche: string | null
           residence: string | null
           revenus_mensuels: number | null
@@ -2748,6 +2756,7 @@ export type Database = {
           apport_personnel?: number | null
           autres_credits?: boolean | null
           budget_max?: number | null
+          cancellation_reason?: string | null
           charges_extraordinaires?: boolean | null
           charges_mensuelles?: number | null
           commission_split?: number | null
@@ -2773,6 +2782,9 @@ export type Database = {
           mandat_pdf_url?: string | null
           mandat_renewal_count?: number
           mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number
+          mandate_paused_at?: string | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
@@ -2784,6 +2796,10 @@ export type Database = {
           poursuites?: boolean | null
           priorite?: string | null
           profession?: string | null
+          refund_eligible?: boolean
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string
           region_recherche?: string | null
           residence?: string | null
           revenus_mensuels?: number | null
@@ -2815,6 +2831,7 @@ export type Database = {
           apport_personnel?: number | null
           autres_credits?: boolean | null
           budget_max?: number | null
+          cancellation_reason?: string | null
           charges_extraordinaires?: boolean | null
           charges_mensuelles?: number | null
           commission_split?: number | null
@@ -2840,6 +2857,9 @@ export type Database = {
           mandat_pdf_url?: string | null
           mandat_renewal_count?: number
           mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number
+          mandate_paused_at?: string | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
@@ -2851,6 +2871,10 @@ export type Database = {
           poursuites?: boolean | null
           priorite?: string | null
           profession?: string | null
+          refund_eligible?: boolean
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string
           region_recherche?: string | null
           residence?: string | null
           revenus_mensuels?: number | null
@@ -5599,32 +5623,41 @@ export type Database = {
       mandate_renewal_actions: {
         Row: {
           action: string
+          cancellation_reason: string | null
           client_id: string
           created_at: string
+          days_since_signature: number | null
           id: string
           metadata: Json | null
           new_signature_date: string | null
           previous_signature_date: string | null
+          refund_eligible: boolean
           triggered_by: string
         }
         Insert: {
           action: string
+          cancellation_reason?: string | null
           client_id: string
           created_at?: string
+          days_since_signature?: number | null
           id?: string
           metadata?: Json | null
           new_signature_date?: string | null
           previous_signature_date?: string | null
+          refund_eligible?: boolean
           triggered_by?: string
         }
         Update: {
           action?: string
+          cancellation_reason?: string | null
           client_id?: string
           created_at?: string
+          days_since_signature?: number | null
           id?: string
           metadata?: Json | null
           new_signature_date?: string | null
           previous_signature_date?: string | null
+          refund_eligible?: boolean
           triggered_by?: string
         }
         Relationships: [
