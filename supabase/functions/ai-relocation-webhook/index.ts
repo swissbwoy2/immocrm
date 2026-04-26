@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
 // === HELPERS ===
 
 async function logWebhookActivity(
-  adminClient: ReturnType<typeof createClient>,
+  adminClient: SupabaseClient,
   aiAgentId: string | undefined,
   actionType: string,
   metadata: Record<string, unknown>,
