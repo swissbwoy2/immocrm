@@ -281,7 +281,7 @@ export default function SuiviExtraitsPoursuites({ scope = 'admin' }: SuiviExtrai
 
     try {
       const { data, error } = await supabase.functions.invoke('extract-poursuites-batch', {
-        body: { mode, limit: 50 },
+        body: { mode, limit: 50, agent_scope: scope === 'agent' },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error ?? 'Échec du scan global');
@@ -308,8 +308,10 @@ export default function SuiviExtraitsPoursuites({ scope = 'admin' }: SuiviExtrai
 
       <div className="relative z-10 space-y-6">
         <PremiumPageHeader
-          title="Suivi des extraits de poursuites"
-          subtitle="Date d'émission, confiance IA et statut de validité par client actif"
+          title={scope === 'agent' ? 'Suivi des extraits — Mes clients' : 'Suivi des extraits de poursuites'}
+          subtitle={scope === 'agent'
+            ? "Statut de validité de l'extrait de poursuites pour chacun de vos clients assignés"
+            : "Date d'émission, confiance IA et statut de validité par client actif"}
           icon={ShieldCheck}
         />
 
