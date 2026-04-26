@@ -21,6 +21,7 @@ const HomePage = lazy(() => import("./pages/public-site/HomePage"));
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const MandatV3 = lazy(() => import("./pages/MandatV3"));
 const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
+const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
 const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
 const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
