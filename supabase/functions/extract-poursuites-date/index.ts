@@ -90,8 +90,16 @@ serve(async (req) => {
       return jsonResponse({ ok: false, error: "Téléchargement du PDF échoué" }, 500);
     }
     const arrayBuf = await fileResp.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
-    const dataUrl = `data:application/pdf;base64,${base64}`;
+    // Encodage base64 par chunks pour éviter "Maximum call stack size exceeded" sur gros fichiers
+    const bytes = new Uint8Array(arrayBuf);
+    const CHUNK = 0x8000;
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    const base64 = btoa(binary);
+    const mime = doc.type || "application/pdf";
+    const dataUrl = `data:${mime};base64,${base64}`;
 
     // Appel Lovable AI Gateway (Gemini Flash, multimodal + tool calling)
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
