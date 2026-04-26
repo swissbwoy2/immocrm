@@ -29,13 +29,20 @@ export function DemoModeBanner() {
         </span>
         <button
           type="button"
-          onClick={async () => {
-            await signOut();
+          data-demo-allow
+          onClick={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              await signOut();
+            } catch (err) {
+              console.warn('signOut failed', err);
+            }
             navigate('/nouveau-mandat');
           }}
           className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider transition hover:bg-white/25"
         >
-          Activer mon vrai compte <ArrowRight className="h-3 w-3" />
+          <span data-demo-allow>Activer mon vrai compte</span> <ArrowRight className="h-3 w-3" />
         </button>
         <button
           type="button"
