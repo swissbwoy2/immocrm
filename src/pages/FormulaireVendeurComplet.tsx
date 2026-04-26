@@ -542,10 +542,9 @@ export default function FormulaireVendeurComplet() {
             transition={{ duration: 0.3 }}
             className="space-y-5"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <LuxuryIconBadge size="sm"><IconHome size={16} /></LuxuryIconBadge>
-              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Informations principales</h2>
-            </div>
+            <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Informations principales</h2>
+                  </div>
 
             <PremiumSelect
               label="Type de bien"
@@ -631,10 +630,9 @@ export default function FormulaireVendeurComplet() {
       case 2:
         return (
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-            <div className="flex items-center gap-3 mb-2">
-              <LuxuryIconBadge size="sm"><IconDocument size={16} /></LuxuryIconBadge>
-              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Caractéristiques du bien</h2>
-            </div>
+            <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Caractéristiques du bien</h2>
+                  </div>
 
             {typeBien === 'terrain' && (
               <div className="space-y-4">
@@ -712,10 +710,9 @@ export default function FormulaireVendeurComplet() {
       case 3:
         return (
           <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-            <div className="flex items-center gap-3 mb-2">
-              <LuxuryIconBadge size="sm"><IconCamera size={16} /></LuxuryIconBadge>
-              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Photos du bien</h2>
-            </div>
+            <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Photos du bien</h2>
+                  </div>
             <p className="text-sm text-[hsl(40_20%_50%)]">Ajoutez jusqu'à 5 photos pour enrichir votre dossier (optionnel)</p>
 
             {isNative && (
@@ -773,10 +770,9 @@ export default function FormulaireVendeurComplet() {
       case 4:
         return (
           <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-            <div className="flex items-center gap-3 mb-2">
-              <LuxuryIconBadge size="sm"><IconUser size={16} /></LuxuryIconBadge>
-              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Vos coordonnées</h2>
-            </div>
+            <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Vos coordonnées</h2>
+                  </div>
             <PremiumInput label="Nom complet" required {...register('nom')} value={watch('nom') || ''} placeholder="Prénom Nom" error={errors.nom?.message} />
             <div className="grid grid-cols-2 gap-4">
               <PremiumInput label="Email" required type="email" {...register('email')} value={watch('email') || ''} placeholder="votre@email.ch" icon={<IconMail size={16} />} error={errors.email?.message} />
@@ -788,10 +784,9 @@ export default function FormulaireVendeurComplet() {
       case 5:
         return (
           <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-            <div className="flex items-center gap-3 mb-2">
-              <LuxuryIconBadge size="sm"><IconLock size={16} /></LuxuryIconBadge>
-              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Création de votre compte</h2>
-            </div>
+            <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Création de votre compte</h2>
+                  </div>
             <p className="text-sm text-[hsl(40_20%_50%)]">Créez un mot de passe pour accéder à votre espace client et suivre votre dossier de vente.</p>
             <PremiumInput label="Mot de passe" required type="password" {...register('password')} value={watch('password') || ''} placeholder="8 caractères minimum" icon={<IconLock size={16} />} error={errors.password?.message} hint="Minimum 8 caractères" />
             <div className="rounded-xl p-4 bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.2)] flex items-start gap-3">

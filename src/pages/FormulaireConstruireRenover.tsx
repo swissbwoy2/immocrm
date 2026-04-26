@@ -204,9 +204,8 @@ export default function FormulaireConstruireRenover() {
               {/* ——— Step 1 : Projet ——— */}
               {step === 1 && (
                 <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconHammer size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Votre projet</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Votre projet</h2>
                   </div>
 
                   <PremiumSelect
@@ -303,9 +302,8 @@ export default function FormulaireConstruireRenover() {
               {/* ——— Step 2 : Détails ——— */}
               {step === 2 && (
                 <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconDocument size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Détails du projet</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Détails du projet</h2>
                   </div>
 
                   <PremiumInput label="Pièces concernées" optional {...register('pieces_concernees')} value={watch('pieces_concernees') || ''} placeholder="Ex: cuisine, salon, 2 SDB" />
@@ -359,9 +357,8 @@ export default function FormulaireConstruireRenover() {
               {/* ——— Step 3 : Photos / Plans ——— */}
               {step === 3 && (
                 <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconCamera size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Photos & plans</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Photos & plans</h2>
                   </div>
                   <p className="text-sm text-[hsl(40_20%_50%)]">
                     Ajoutez des photos de l'existant ou des plans (jusqu'à 8 fichiers, 10 Mo max).
@@ -417,9 +414,8 @@ export default function FormulaireConstruireRenover() {
               {/* ——— Step 4 : Compte ——— */}
               {step === 4 && (
                 <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconUser size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Vos coordonnées et compte</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Vos coordonnées et compte</h2>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

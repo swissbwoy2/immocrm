@@ -36,16 +36,11 @@ export default function MandatFormStep5({ data, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-center gap-3 mb-6">
-        <LuxuryIconBadge size="lg">
-          <Users size={26} strokeWidth={1.5} className="text-[hsl(38_55%_65%)]" />
-        </LuxuryIconBadge>
-        <div className="text-center">
-          <h2 className="text-xl font-serif font-bold text-[hsl(40_20%_88%)]">Candidats supplémentaires</h2>
-          <p className="text-xs text-[hsl(40_20%_45%)] mt-1">Ajoutez les personnes qui occuperont le logement avec vous</p>
-          <p className="text-[10px] text-[hsl(40_20%_38%)] mt-0.5">(conjoint, enfants, colocataires, garants...)</p>
-        </div>
-        <div className="w-12 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white">Candidats supplémentaires</h2>
+        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">
+          Ajoutez les personnes qui occuperont le logement avec vous (conjoint, enfants, colocataires, garants…).
+        </p>
       </div>
 
       {/* Add button */}

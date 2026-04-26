@@ -12,13 +12,9 @@ interface Props {
 export default function MandatFormStep2({ data, onChange }: Props) {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-center gap-3 mb-6">
-        <LuxuryIconBadge size="lg"><IconHome size={26} /></LuxuryIconBadge>
-        <div className="text-center">
-          <h2 className="text-xl font-serif font-bold text-[hsl(40_20%_88%)]">Situation actuelle</h2>
-          <p className="text-xs text-[hsl(40_20%_45%)] mt-1">Informations sur votre logement actuel</p>
-        </div>
-        <div className="w-12 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white">Situation actuelle</h2>
+        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">Informations sur votre logement actuel.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

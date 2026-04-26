@@ -63,13 +63,9 @@ export default function MandatFormStep6({ data, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col items-center gap-3 mb-6">
-        <LuxuryIconBadge size="lg"><IconDocument size={26} /></LuxuryIconBadge>
-        <div className="text-center">
-          <h2 className="text-xl font-serif font-bold text-[hsl(40_20%_88%)]">Documents requis</h2>
-          <p className="text-xs text-[hsl(40_20%_45%)] mt-1">L'inscription doit être accompagnée des documents suivants</p>
-        </div>
-        <div className="w-12 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white">Documents requis</h2>
+        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">L'inscription doit être accompagnée des documents suivants.</p>
       </div>
 
       {/* Progress ring */}

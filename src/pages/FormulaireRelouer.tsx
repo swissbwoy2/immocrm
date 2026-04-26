@@ -235,9 +235,8 @@ export default function FormulaireRelouer() {
               {/* ——— Step 1 : Votre bien ——— */}
               {step === 1 && (
                 <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconHome size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Votre bien</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Votre bien</h2>
                   </div>
 
                   <PremiumSelect
@@ -304,9 +303,8 @@ export default function FormulaireRelouer() {
               {/* ——— Step 2 : Conditions de location ——— */}
               {step === 2 && (
                 <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconWallet size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Conditions de location</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Conditions de location</h2>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -365,9 +363,8 @@ export default function FormulaireRelouer() {
               {/* ——— Step 3 : Photos ——— */}
               {step === 3 && (
                 <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconCamera size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Photos du bien</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Photos du bien</h2>
                   </div>
                   <p className="text-sm text-[hsl(40_20%_50%)]">
                     Ajoutez jusqu'à 8 photos (10 Mo max chacune). De belles photos accélèrent la relocation.
@@ -423,9 +420,8 @@ export default function FormulaireRelouer() {
               {/* ——— Step 4 : Compte ——— */}
               {step === 4 && (
                 <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <LuxuryIconBadge size="sm"><IconUser size={16} /></LuxuryIconBadge>
-                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Vos coordonnées et compte</h2>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-white">Vos coordonnées et compte</h2>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
