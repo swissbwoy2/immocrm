@@ -78,6 +78,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
           </PageTransition>
         </main>
       </div>
+      <FloatingMessenger />
     </div>
   );
 }
@@ -85,7 +86,9 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
+      <FloatingMessengerProvider>
+        <AppLayoutContent>{children}</AppLayoutContent>
+      </FloatingMessengerProvider>
     </SidebarProvider>
   );
 }
