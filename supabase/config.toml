@@ -210,6 +210,9 @@ verify_jwt = false
 [functions.extract-poursuites-date]
 verify_jwt = true
 
+[functions.extract-poursuites-batch]
+verify_jwt = true
+
 [functions.send-payslip-update-reminders]
 verify_jwt = false
 
