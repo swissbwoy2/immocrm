@@ -1,87 +1,59 @@
-# 🔒 Verrouillage UX complet du mode démo
+# Problème — non, ce n'est pas normal
 
-**Objectif** : En mode démo, le visiteur peut **uniquement naviguer**. Toute action d'écriture est désactivée visuellement (boutons grisés + tooltip explicatif), pas seulement bloquée silencieusement côté backend.
+Les policies RLS RESTRICTIVE créées à la dernière migration (`Demo account cannot write *`) sont déclarées en **`FOR ALL`** au lieu de cibler uniquement les écritures.
 
----
+En PostgreSQL, une policy RESTRICTIVE `FOR ALL` s'applique aussi au **SELECT** → le compte démo ne peut donc plus lire ses propres données : profil client, messages, offres, visites, documents, candidatures, conversations. D'où "Profil non chargé" et listes vides.
 
-## 🎯 Stratégie : Garde universelle côté client
+À côté, on a déjà des policies RESTRICTIVE séparées par commande (`Demo accounts cannot insert/update/delete *`) qui bloquent correctement les écritures → les `FOR ALL` sont **redondantes ET nuisibles**.
 
-Plutôt que d'éditer 40+ fichiers un par un, on combine **3 mécanismes complémentaires** :
+# Correctif (1 migration SQL, aucun changement frontend)
 
-### 1. Hook `useDemoGuard()` — wrapper d'action universel
-Nouveau hook qui retourne :
-- `isDemo: boolean`
-- `guard(actionFn)` : exécute l'action si pas démo, sinon affiche un toast `🎬 Mode démo : action désactivée. Activez votre vrai compte pour utiliser cette fonctionnalité.`
-- `guardedClick(handler)` : même chose pour les `onClick`
+## 1. Supprimer les policies RESTRICTIVE `FOR ALL` cassées
 
-### 2. Composant wrapper `<DemoLock>` autour des zones sensibles
-- Désactive tous les `<button>`, `<input>`, `<textarea>`, `<select>` enfants via `pointer-events-none` + `opacity-60` quand démo actif
-- Affiche un overlay subtil au survol avec tooltip "Lecture seule"
-- Utilisé pour englober : ChangePasswordCard, formulaires de profil, formulaires d'envoi message, formulaires d'upload, etc.
+Tables : `clients`, `messages`, `offres`, `visites`, `documents`, `candidatures`, `conversations`.
 
-### 3. Patches ciblés sur les composants à fort risque
-Modification directe (intercept onClick + désactive disabled) sur :
+```sql
+DROP POLICY IF EXISTS "Demo account cannot write clients" ON public.clients;
+DROP POLICY IF EXISTS "Demo account cannot write messages" ON public.messages;
+DROP POLICY IF EXISTS "Demo account cannot write offres" ON public.offres;
+DROP POLICY IF EXISTS "Demo account cannot write visites" ON public.visites;
+DROP POLICY IF EXISTS "Demo account cannot write documents" ON public.documents;
+DROP POLICY IF EXISTS "Demo account cannot write candidatures" ON public.candidatures;
+DROP POLICY IF EXISTS "Demo account cannot write conversations" ON public.conversations;
+```
 
-| Composant / Page | Action bloquée |
-|---|---|
-| `ChangePasswordCard.tsx` | Changement mot de passe (cacher complètement le card) |
-| `src/pages/client/Parametres.tsx` | Édition nom, prénom, email, téléphone, code activation |
-| `src/pages/client/Documents.tsx` | Upload de documents |
-| `src/pages/client/Messagerie.tsx` | Envoi de message + nouvelle conversation |
-| `src/pages/client/OffresRecues.tsx` | Accepter / Refuser offre |
-| `src/pages/client/Visites.tsx` | Confirmer / Annuler / Proposer créneau |
-| `src/pages/client/MesCandidatures.tsx` | Postuler / Annuler postulation |
-| `src/pages/client/Dossier.tsx` | Compléter / Modifier dossier |
-| `src/pages/client/Calendrier.tsx` | Création événement |
-| `RentalApplicationFormDialog.tsx` | Soumettre candidature |
-| `CapturePhotosDialog.tsx`, `ExtractPoursuitesUploadDialog.tsx`, `MergeDocumentsDialog.tsx` | Tous uploads |
-| `RequestDocumentsDialog.tsx`, `NewConversationDialog.tsx` | Envois |
+## 2. Compléter les policies RESTRICTIVE manquantes
 
-Pour chacun : intercepter le `onClick` du bouton de submit avec `useDemoGuard().guard()` et passer `disabled={isDemo}` + tooltip "Mode démo — action désactivée".
+Pour `clients` (INSERT manquant) et `conversations` (insert/update/delete manquants) :
 
-### 4. Renforcement de la `DemoModeBanner`
-Mettre à jour le wording :
-> 🎬 **Mode démonstration en lecture seule** — Vous explorez un compte fictif. Toutes les actions sont désactivées. [Activer mon vrai compte →]
+```sql
+CREATE POLICY "Demo accounts cannot insert clients"
+  ON public.clients AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK (NOT public.is_demo_account(auth.uid()));
 
-### 5. Bonus sécurité backend (déjà partiellement en place)
-- Vérifier que les RLS RESTRICTIVE sont bien actives pour `messages`, `offres`, `candidatures`, `documents`, `visites`, `clients`, `profiles` (ajouter `profiles` si manquant pour bloquer changement nom/prénom)
-- Ajouter un trigger sur `auth.users` pour empêcher `email`/`password` change si user_id = compte démo (filet de sécurité ultime même si le client appelle `supabase.auth.updateUser` directement)
+CREATE POLICY "Demo accounts cannot insert conversations"
+  ON public.conversations AS RESTRICTIVE FOR INSERT TO authenticated
+  WITH CHECK (NOT public.is_demo_account(auth.uid()));
+CREATE POLICY "Demo accounts cannot update conversations"
+  ON public.conversations AS RESTRICTIVE FOR UPDATE TO authenticated
+  USING (NOT public.is_demo_account(auth.uid()));
+CREATE POLICY "Demo accounts cannot delete conversations"
+  ON public.conversations AS RESTRICTIVE FOR DELETE TO authenticated
+  USING (NOT public.is_demo_account(auth.uid()));
+```
 
----
+## 3. Vérifier `profiles` et `rental_applications`
 
-## 📋 Fichiers à créer / modifier
+Lister les policies RESTRICTIVE sur ces tables. Si une `FOR ALL` y est présente, la remplacer par 3 policies (insert/update/delete) avec `NOT public.is_demo_account(auth.uid())`.
 
-**Nouveaux fichiers**
-- `src/hooks/useDemoGuard.ts`
-- `src/components/DemoLock.tsx`
+## 4. Vérifier après déploiement
 
-**Modifiés (espace client uniquement, ~12 fichiers)**
-- `src/components/DemoModeBanner.tsx` (wording renforcé)
-- `src/components/ChangePasswordCard.tsx` (masqué en démo)
-- `src/pages/client/Parametres.tsx` (formulaires en read-only)
-- `src/pages/client/Documents.tsx` (upload désactivé)
-- `src/pages/client/Messagerie.tsx` (input message désactivé)
-- `src/pages/client/OffresRecues.tsx` (boutons accept/reject)
-- `src/pages/client/Visites.tsx` (boutons d'action)
-- `src/pages/client/MesCandidatures.tsx` (postuler désactivé)
-- `src/pages/client/Dossier.tsx` (édition désactivée)
-- `src/pages/client/Calendrier.tsx` (création désactivée)
-- `src/components/RentalApplicationFormDialog.tsx`
-- Quelques dialogs d'upload (Capture, Extract, Merge, RequestDocs)
+- Recharger `/client` en démo → profil + dashboard doivent charger normalement.
+- Tenter envoi de message → bloqué (UI guard + RLS INSERT).
+- Tenter upload de document → bloqué.
 
-**Migration SQL**
-- Ajout RLS RESTRICTIVE sur `profiles` pour bloquer UPDATE par compte démo
-- Trigger optionnel sur `auth.users` pour bloquer changement email/password
+# Hors scope
 
----
-
-## ✅ Résultat attendu
-
-En naviguant sur `/demo` :
-- ✅ Bannière sticky claire "Lecture seule"
-- ✅ Tous les boutons d'action grisés avec curseur `not-allowed` + tooltip
-- ✅ Tous les inputs en `readonly` ou désactivés
-- ✅ Toute tentative d'action → toast amical "Mode démo, activez votre compte"
-- ✅ Backend impossible à corrompre même si quelqu'un bypass le frontend (RLS RESTRICTIVE)
-- ✅ Mot de passe et email du compte Marc impossible à modifier
-- ❌ Aucune frustration : le visiteur comprend immédiatement qu'il regarde une démo
+- Aucun changement frontend.
+- Triggers `prevent_demo_*_changes` et composant `DemoWriteGuard` inchangés.
+- Flag `is_demo_account` et helpers SQL inchangés.
