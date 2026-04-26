@@ -1,237 +1,146 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, AlertTriangle, FileText, Shield, CreditCard } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Shield, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { ExtractPoursuitesUploadDialog } from '@/components/ExtractPoursuitesUploadDialog';
 
-/**
- * Calculates the target month_year string.
- * If day >= 25, it's next month. If day <= 5, it's current month.
- */
-function getTargetMonthYear(): string {
-  const now = new Date();
-  const day = now.getDate();
-  let year = now.getFullYear();
-  let month = now.getMonth(); // 0-indexed
-
-  if (day >= 25) {
-    month += 1;
-    if (month > 11) {
-      month = 0;
-      year += 1;
-    }
-  }
-
-  return `${year}-${String(month + 1).padStart(2, '0')}`;
-}
-
-function isUpdatePeriod(): boolean {
-  const day = new Date().getDate();
-  return day >= 25 || day <= 5;
-}
-
-interface Confirmation {
-  id?: string;
-  fiches_salaire_ok: boolean;
-  poursuites_ok: boolean;
-  permis_ok: boolean;
-}
+type Status = 'missing' | 'valid' | 'warning' | 'expired';
 
 export function DocumentUpdateReminder() {
   const { user } = useAuth();
   const [clientId, setClientId] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<Confirmation>({
-    fiches_salaire_ok: false,
-    poursuites_ok: false,
-    permis_ok: false,
-  });
+  const [dateEmission, setDateEmission] = useState<string | null>(null);
+  const [extractionMethod, setExtractionMethod] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
-
-  const monthYear = getTargetMonthYear();
-  const showReminder = isUpdatePeriod();
-
-  const allConfirmed = confirmation.fiches_salaire_ok && confirmation.poursuites_ok && confirmation.permis_ok;
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-
-    // Get client id
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('id')
+    const { data } = await (supabase
+      .from('clients') as any)
+      .select('id, extrait_poursuites_date_emission, extrait_poursuites_extraction_method')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (!clientData) {
-      setLoading(false);
-      return;
+    if (data) {
+      setClientId(data.id);
+      setDateEmission(data.extrait_poursuites_date_emission);
+      setExtractionMethod(data.extrait_poursuites_extraction_method);
     }
-    setClientId(clientData.id);
-
-    // Get existing confirmation for this month
-    const { data: confData } = await supabase
-      .from('document_update_confirmations')
-      .select('*')
-      .eq('client_id', clientData.id)
-      .eq('month_year', monthYear)
-      .maybeSingle();
-
-    if (confData) {
-      setConfirmation({
-        id: confData.id,
-        fiches_salaire_ok: confData.fiches_salaire_ok,
-        poursuites_ok: confData.poursuites_ok,
-        permis_ok: confData.permis_ok,
-      });
-    }
-
     setLoading(false);
-  }, [user, monthYear]);
+  }, [user]);
 
   useEffect(() => {
-    if (showReminder) loadData();
-    else setLoading(false);
-  }, [showReminder, loadData]);
+    loadData();
+  }, [loadData]);
 
-  const handleConfirm = async (field: 'fiches_salaire_ok' | 'poursuites_ok' | 'permis_ok') => {
-    if (!clientId || !user) return;
-    setSaving(field);
+  if (loading || !clientId) return null;
 
-    const newValue = !confirmation[field];
-    const updatedConfirmation = { ...confirmation, [field]: newValue };
-    const allOk = updatedConfirmation.fiches_salaire_ok && updatedConfirmation.poursuites_ok && updatedConfirmation.permis_ok;
+  // Calcul statut
+  let status: Status = 'missing';
+  let ageMonths = 0;
+  if (dateEmission) {
+    const days = (Date.now() - new Date(dateEmission).getTime()) / (1000 * 60 * 60 * 24);
+    ageMonths = days / 30;
+    if (ageMonths >= 3) status = 'expired';
+    else if (ageMonths >= 2) status = 'warning';
+    else status = 'valid';
+  }
 
-    try {
-      if (confirmation.id) {
-        // Update existing
-        const { error } = await (supabase
-          .from('document_update_confirmations') as any)
-          .update({
-            [field]: newValue,
-            confirmed_at: allOk ? new Date().toISOString() : null,
-          })
-          .eq('id', confirmation.id);
-
-        if (error) throw error;
-      } else {
-        // Insert new
-        const { data, error } = await (supabase
-          .from('document_update_confirmations') as any)
-          .insert({
-            client_id: clientId,
-            month_year: monthYear,
-            [field]: newValue,
-            confirmed_at: allOk ? new Date().toISOString() : null,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        if (data) updatedConfirmation.id = data.id;
-      }
-
-      setConfirmation(updatedConfirmation as Confirmation);
-
-      if (allOk) {
-        toast.success('Dossier confirmé à jour ! ✅');
-      } else {
-        toast.success(newValue ? 'Confirmé ✅' : 'Confirmation retirée');
-      }
-    } catch (err: any) {
-      console.error('Error saving confirmation:', err);
-      toast.error('Erreur lors de la sauvegarde');
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  if (!showReminder || loading) return null;
-
-  const items = [
-    {
-      key: 'fiches_salaire_ok' as const,
-      icon: CreditCard,
-      label: '3 dernières fiches de salaire',
-      confirmed: confirmation.fiches_salaire_ok,
-      buttonLabel: confirmation.fiches_salaire_ok ? 'Fiches de salaire ✅' : 'Confirmer fiches de salaire',
+  const styles = {
+    missing: {
+      border: 'border-amber-500/30 bg-amber-500/10',
+      iconBg: 'bg-amber-500/20',
+      icon: <AlertTriangle className="w-5 h-5 text-amber-600" />,
+      titleColor: 'text-amber-600 dark:text-amber-400',
+      title: '📋 Renseignez la date de votre extrait',
+      message: "Aidez-nous à garder votre dossier complet : indiquez la date d'émission de votre extrait de poursuites. L'IA peut la détecter automatiquement.",
     },
-    {
-      key: 'poursuites_ok' as const,
-      icon: Shield,
-      label: 'Extrait de poursuites (validité min. 2-3 mois)',
-      confirmed: confirmation.poursuites_ok,
-      buttonLabel: confirmation.poursuites_ok ? 'Poursuites valides ✅' : 'Confirmer poursuites',
+    valid: {
+      border: 'border-green-500/30 bg-green-500/10',
+      iconBg: 'bg-green-500/20',
+      icon: <CheckCircle2 className="w-5 h-5 text-green-600" />,
+      titleColor: 'text-green-600 dark:text-green-400',
+      title: `✅ Extrait valide`,
+      message: dateEmission
+        ? `Émis le ${format(new Date(dateEmission), 'd MMMM yyyy', { locale: fr })} — votre dossier est à jour.`
+        : '',
     },
-    {
-      key: 'permis_ok' as const,
-      icon: FileText,
-      label: 'Permis de séjour (vérifier la validité)',
-      confirmed: confirmation.permis_ok,
-      buttonLabel: confirmation.permis_ok ? 'Permis valide ✅' : 'Confirmer permis',
+    warning: {
+      border: 'border-orange-500/30 bg-orange-500/10',
+      iconBg: 'bg-orange-500/20',
+      icon: <AlertTriangle className="w-5 h-5 text-orange-600" />,
+      titleColor: 'text-orange-600 dark:text-orange-400',
+      title: '🟡 Votre extrait approche les 2 mois',
+      message: dateEmission
+        ? `Émis le ${format(new Date(dateEmission), 'd MMMM yyyy', { locale: fr })}. ⚠️ Certaines régies n'acceptent que les extraits de moins de 2 mois — anticipez en commandant un nouvel extrait.`
+        : '',
     },
-  ];
+    expired: {
+      border: 'border-red-500/30 bg-red-500/10',
+      iconBg: 'bg-red-500/20',
+      icon: <Shield className="w-5 h-5 text-red-600" />,
+      titleColor: 'text-red-600 dark:text-red-400',
+      title: '🔴 URGENT — Extrait expiré',
+      message: dateEmission
+        ? `Émis le ${format(new Date(dateEmission), 'd MMMM yyyy', { locale: fr })} (> 3 mois). Votre dossier n'est plus complet — commandez un nouvel extrait immédiatement.`
+        : '',
+    },
+  }[status];
+
+  const buttonLabel =
+    status === 'valid' ? 'Mettre à jour' :
+    status === 'missing' ? 'Renseigner ma date' :
+    'Uploader un nouvel extrait';
 
   return (
-    <div
-      className={`rounded-xl border p-4 md:p-5 transition-all duration-300 ${
-        allConfirmed
-          ? 'border-green-500/30 bg-green-500/10'
-          : 'border-amber-500/30 bg-amber-500/10'
-      }`}
-    >
-      <div className="flex items-start gap-3 mb-4">
-        <div className={`p-2 rounded-full shrink-0 ${allConfirmed ? 'bg-green-500/20' : 'bg-amber-500/20'}`}>
-          {allConfirmed ? (
-            <CheckCircle2 className="w-5 h-5 text-green-600" />
-          ) : (
-            <AlertTriangle className="w-5 h-5 text-amber-600" />
-          )}
+    <>
+      <div className={`rounded-xl border p-4 md:p-5 transition-all ${styles.border}`}>
+        <div className="flex items-start gap-3 mb-3">
+          <div className={`p-2 rounded-full shrink-0 ${styles.iconBg}`}>{styles.icon}</div>
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold ${styles.titleColor}`}>{styles.title}</p>
+            <p className="text-sm text-muted-foreground mt-1">{styles.message}</p>
+            {extractionMethod === 'ai' && status === 'valid' && (
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Date détectée par IA
+              </p>
+            )}
+          </div>
         </div>
-        <div>
-          <p className={`font-semibold ${allConfirmed ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-            {allConfirmed ? '✅ Dossier à jour pour ce mois' : '📋 Mettez à jour votre dossier'}
-          </p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {allConfirmed
-              ? 'Merci ! Toutes vos confirmations ont été enregistrées.'
-              : 'Vérifiez et confirmez la validité de vos documents pour ce mois.'}
-          </p>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={status === 'valid' ? 'outline' : 'default'}
+            onClick={() => setDialogOpen(true)}
+          >
+            <Sparkles className="w-4 h-4 mr-1" /> {buttonLabel}
+          </Button>
+          {status !== 'valid' && (
+            <Button
+              size="sm"
+              variant="outline"
+              asChild
+            >
+              <a href="https://www.eschkg.ch" target="_blank" rel="noreferrer">
+                Commander un extrait (eSchKG)
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div
-            key={item.key}
-            className={`flex items-center justify-between gap-3 rounded-lg border p-3 transition-all ${
-              item.confirmed
-                ? 'border-green-500/20 bg-green-500/5'
-                : 'border-amber-500/20 bg-background/50'
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <item.icon className={`w-4 h-4 shrink-0 ${item.confirmed ? 'text-green-600' : 'text-amber-600'}`} />
-              <span className="text-sm font-medium truncate">{item.label}</span>
-            </div>
-            <Button
-              size="sm"
-              variant={item.confirmed ? 'outline' : 'default'}
-              className={
-                item.confirmed
-                  ? 'border-green-500/30 text-green-600 hover:bg-green-500/10 shrink-0'
-                  : 'bg-amber-600 hover:bg-amber-700 text-white shrink-0'
-              }
-              onClick={() => handleConfirm(item.key)}
-              disabled={saving === item.key}
-            >
-              {saving === item.key ? '...' : item.buttonLabel}
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
+      <ExtractPoursuitesUploadDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        clientId={clientId}
+        onSuccess={loadData}
+      />
+    </>
   );
 }

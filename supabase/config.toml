@@ -206,3 +206,6 @@ verify_jwt = false
 
 [functions.mandate-renewal-action]
 verify_jwt = false
+
+[functions.extract-poursuites-date]
+verify_jwt = true
