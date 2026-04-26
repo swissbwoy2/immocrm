@@ -1,57 +1,110 @@
-## Problème
+## Objectif
 
-Aujourd'hui, `scanClientExtracts` s'arrête au **1er document** dont l'IA donne une date avec confidence ≥ 0.5, en partant du plus récemment **uploadé**. Mais la date d'**upload** ≠ date d'**émission** :
+Étendre le système de suivi des extraits de poursuites (aujourd'hui uniquement admin) à **l'agent** (vue de ses clients assignés) et **renforcer la visibilité côté client** (Dashboard + Mon Dossier) avec des **emails de rappel automatiques**.
 
-- Un client peut uploader un vieux extrait hier → on le prend et on dit "échu"
-- Alors qu'il a aussi uploadé il y a 2 mois un extrait fraîchement émis → toujours **valide**
+---
 
-Résultat : faux négatifs ("échu" affiché alors qu'un valide existe).
+## 1. Page Agent — `/agent/suivi-extraits`
 
-## Solution
+**Nouveau fichier :** `src/pages/agent/SuiviExtraitsPoursuites.tsx`
 
-Scanner **TOUS** les extraits du client, puis garder celui dont la **`date_emission` extraite par l'IA est la plus récente** (et confidence ≥ 0.5).
+Réutilise la même logique que la page admin mais filtrée sur **les clients assignés à l'agent connecté** (via `clients.agent_id` + table `client_agents` pour les co-assignations, conformément à la mémoire `dual-source-assignment-integrity-strategy`).
 
-### 1. `supabase/functions/_shared/extract-poursuites.ts`
+Fonctionnalités :
+- KPIs : Total assignés / Valides / Avertissement (≥2 mois) / Expirés (≥3 mois) / Manquants / Scannables IA
+- Tableau : nom client, date d'émission, âge, statut coloré, méthode (ai/manual/agent), document source, dernière relance
+- Bouton **"Scanner les manquants"** et **"Re-scanner tout"** (réutilise l'edge function `extract-poursuites-batch` qui sera étendue pour accepter un `agent_id` optionnel)
+- Bouton **"Envoyer un rappel"** par client (déclenche email manuellement)
 
-Refactorer `scanClientExtracts` :
-- Boucler sur tous les documents `extrait_poursuites` du client (pas de short-circuit)
-- Collecter tous les résultats IA valides (`date_emission` + `confidence ≥ 0.5`)
-- Retourner celui avec la `date_emission` **maximale** (la plus récente)
-- Conserver `scanned` / `total` pour les logs
-- Garder un fallback : si aucun ≥ 0.5, retourner `null` comme avant
+**Routing :** ajout dans `src/App.tsx` avec `allowedRoles={['agent']}`.
+**Sidebar :** ajout entrée "Suivi extraits" dans la section agent de `src/components/AppSidebar.tsx`.
 
-```ts
-const validResults = [];
-for (const doc of docs) {
-  const ai = await extractFromPdf(supabase, doc, lovableKey);
-  if (ai?.date_emission && (ai.confidence ?? 0) >= 0.5) {
-    validResults.push({ document_id: doc.id, ...ai });
-  }
-}
-// Garder la date d'émission la plus récente
-const best = validResults.sort((a, b) =>
-  b.date_emission.localeCompare(a.date_emission)
-)[0] ?? null;
-```
+---
 
-### 2. Impact
+## 2. Edge Function `extract-poursuites-batch` — extension
 
-- `extract-poursuites-date` (1 client) : bénéficie automatiquement de la nouvelle logique
-- `extract-poursuites-batch` (masse) : idem, aucune modif nécessaire
-- Le champ `extrait_poursuites_document_id` pointera désormais vers le document **le plus récent en date d'émission**, pas en date d'upload
+Ajouter un paramètre optionnel `agent_id` au body :
+- Si fourni + appelant a le rôle `agent`, filtrer les clients par `agent_id` ou via jointure `client_agents`
+- Si appelant est `admin`, comportement actuel inchangé
+- Garde-fou RLS : un agent ne peut scanner que SES clients
 
-### 3. Coût / performance
+---
 
-- On scanne maintenant **tous** les extraits d'un client au lieu de s'arrêter au 1er
-- En pratique : 1-3 extraits par client en moyenne → impact mineur
-- Le délai de 800ms entre clients dans le batch reste suffisant
+## 3. Mise en avant côté Client
 
-### 4. Re-scan
+### 3a. Dashboard client (`src/pages/client/Dashboard.tsx`)
 
-Après déploiement, l'utilisateur pourra cliquer sur **"Re-scanner tout"** dans `/admin/suivi-extraits` pour mettre à jour les clients qui auraient été marqués "échu" à tort.
+`DocumentUpdateReminder` est déjà rendu mais discret. Je vais :
+- Le **promouvoir en bandeau hero** en haut du dashboard (juste sous le PremiumDashboardHeader) quand le statut est `expired` ou `warning` ou `missing`
+- Créer un nouveau composant `PremiumExtraitPoursuitesHeroCard` (grand format, gradient, CTA "Mettre à jour maintenant", compteur de jours restants avant expiration)
+- Le composant existant `DocumentUpdateReminder` reste pour l'état `valid` (compact)
 
-## Fichiers modifiés
+### 3b. Mon Dossier client (`src/pages/client/Dossier.tsx`)
 
-- `supabase/functions/_shared/extract-poursuites.ts` (logique de sélection du meilleur extrait)
+Ajouter une **section dédiée premium "Extrait de poursuites"** dans la sidebar du dossier, avec :
+- Date d'émission affichée en grand
+- Badge de statut (valide/à renouveler/expiré)
+- Méthode de détection (IA / manuelle / agent)
+- Lien vers le document source
+- Bouton "Téléverser un nouvel extrait"
 
-Aucune modif UI ni DB nécessaire.
+---
+
+## 4. Emails de rappel automatiques
+
+### 4a. Nouvelle Edge Function planifiée `send-extrait-poursuites-reminders`
+
+Logique :
+- Tous les jours (cron pg_cron à 08:00 Europe/Zurich)
+- Sélectionne les clients **actifs** dont :
+  - `extrait_poursuites_date_emission` est NULL → rappel "manquant" (1 fois / 14 jours)
+  - âge entre 60 et 75 jours → rappel "approche expiration" (1 fois / 14 jours)
+  - âge ≥ 90 jours → rappel "expiré urgent" (1 fois / 7 jours)
+- Anti-spam via `extrait_poursuites_last_reminder_at`
+- Utilise `send-transactional-email` avec un nouveau template `extrait-poursuites-reminder` (3 variantes selon statut, passées via `templateData.variant`)
+- Met à jour `extrait_poursuites_last_reminder_at` après envoi
+
+### 4b. Template React Email
+
+Nouveau fichier : `supabase/functions/_shared/transactional-email-templates/extrait-poursuites-reminder.tsx`
+- Branding Logisorama
+- Subject dynamique selon variante
+- CTA vers `/client/dossier`
+- Enregistré dans `registry.ts`
+
+### 4c. Cron job
+
+SQL (via insert tool) pour planifier `send-extrait-poursuites-reminders` quotidien.
+
+---
+
+## 5. Notifications in-app
+
+À chaque envoi d'email de rappel, créer aussi une **notification in-app** dans la table `notifications` du client (cloche en haut du dashboard) avec lien vers Mon Dossier.
+
+---
+
+## Fichiers impactés
+
+**Créés :**
+- `src/pages/agent/SuiviExtraitsPoursuites.tsx`
+- `src/components/premium/PremiumExtraitPoursuitesHeroCard.tsx`
+- `supabase/functions/send-extrait-poursuites-reminders/index.ts`
+- `supabase/functions/_shared/transactional-email-templates/extrait-poursuites-reminder.tsx`
+
+**Modifiés :**
+- `src/App.tsx` (route agent)
+- `src/components/AppSidebar.tsx` (entrée agent)
+- `src/pages/client/Dashboard.tsx` (hero card)
+- `src/pages/client/Dossier.tsx` (section dédiée)
+- `supabase/functions/extract-poursuites-batch/index.ts` (filtre agent)
+- `supabase/functions/_shared/transactional-email-templates/registry.ts`
+- `supabase/config.toml` (nouvelle fonction)
+
+**SQL (insert tool) :** cron job quotidien.
+
+---
+
+## Question avant exécution
+
+Le cron de rappel doit-il s'exécuter **quotidiennement à 08:00 Europe/Zurich** (recommandé) ou à une autre fréquence ?

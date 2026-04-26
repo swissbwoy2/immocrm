@@ -32,6 +32,7 @@ import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
+import { ExtraitPoursuitesHeroCard } from '@/components/ExtraitPoursuitesHeroCard';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { PremiumDossierChecklistCard } from '@/components/premium';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
@@ -543,10 +544,10 @@ function ClientDashboardLocation() {
             </div>
           )}
 
-          {/* Rappel mise à jour mensuelle du dossier */}
+          {/* Extrait de poursuites — bandeau hero (très visible) */}
           {profileActif !== false && (
-            <div className="mb-6 animate-fade-in" style={{ animationDelay: '80ms' }}>
-              <DocumentUpdateReminder />
+            <div className="mb-6 animate-fade-in" style={{ animationDelay: '70ms' }}>
+              <ExtraitPoursuitesHeroCard />
             </div>
           )}
 
