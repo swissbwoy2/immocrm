@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
 import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
+import { PremiumGuaranteeBanner } from '@/components/forms-premium/PremiumGuaranteeBanner';
+import { PremiumProgressBlock } from '@/components/forms-premium/PremiumProgressBlock';
 import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
 import { PremiumButton } from '@/components/forms-premium/PremiumButton';
 import { PremiumInput } from '@/components/forms-premium/PremiumInput';
@@ -810,6 +812,8 @@ export default function FormulaireVendeurComplet() {
   return (
     <PremiumFormShell currentStep={currentStep - 1} totalSteps={STEPS.length}>
       <VendeurFloatingNav />
+      <PremiumGuaranteeBanner />
+      <PremiumProgressBlock currentStep={currentStep - 1} totalSteps={STEPS.length} stepTitle={STEPS[currentStep - 1]?.title ?? ''} />
       <PremiumStepIndicator steps={STEPS} currentStep={currentStep - 1} />
 
       <div className="container mx-auto px-4 max-w-3xl pb-8">

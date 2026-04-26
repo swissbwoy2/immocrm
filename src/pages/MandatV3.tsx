@@ -12,6 +12,9 @@ import MandatV3Step5Financial from '@/components/mandat-v3/MandatV3Step5Financia
 import MandatV3Step6Legal from '@/components/mandat-v3/MandatV3Step6Legal';
 import MandatV3Step7Signature from '@/components/mandat-v3/MandatV3Step7Signature';
 import logoImmorama from '@/assets/logo-immo-rama-new.png';
+import { PremiumGuaranteeBanner } from '@/components/forms-premium/PremiumGuaranteeBanner';
+import { PremiumProgressBlock } from '@/components/forms-premium/PremiumProgressBlock';
+import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
 
 const LuxuryFormBackground = lazy(() =>
   import('@/components/forms-premium/backgrounds/LuxuryFormBackground').then((m) => ({ default: m.LuxuryFormBackground }))
@@ -241,78 +244,24 @@ export default function MandatV3() {
           <div className="mt-4 w-20 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.7)] to-transparent mx-auto" />
         </motion.div>
 
-        {/* Stepper */}
+        {/* Hero garantie 90 jours + Bloc progression + Stepper Lucide */}
         {!isSubmitted && (
           <motion.div
-            className="mb-6 sm:mb-8"
+            className="mb-6 sm:mb-8 -mx-3 sm:-mx-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15, duration: 0.4 }}
           >
-            {/* Mobile: progress bar + step info */}
-            <div className="sm:hidden space-y-3">
-              <div className="flex items-center justify-between text-xs px-1">
-                <span className="font-medium text-[hsl(40_20%_70%)]">
-                  Étape {step}/{STEPS.length}
-                </span>
-                <span className="text-[hsl(40_20%_45%)]">
-                  {STEPS.find((s) => s.number === step)?.icon}{' '}
-                  {STEPS.find((s) => s.number === step)?.label}
-                </span>
-              </div>
-              {/* Progress bar */}
-              <div className="h-1.5 rounded-full bg-[hsl(30_10%_14%)] overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)]"
-                  animate={{ width: `${progressValue}%` }}
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
-                />
-              </div>
-              {/* Dots */}
-              <div className="flex items-center justify-center gap-1.5">
-                {STEPS.map((s) => (
-                  <button
-                    key={s.number}
-                    onClick={() => s.number <= step && setStep(s.number)}
-                    className={`rounded-full transition-all duration-300 ${
-                      s.number === step
-                        ? 'w-6 h-2 bg-[hsl(38_55%_65%)]'
-                        : s.number < step
-                        ? 'w-2 h-2 bg-[hsl(38_45%_48%/0.5)] cursor-pointer'
-                        : 'w-2 h-2 bg-[hsl(30_10%_20%)]'
-                    }`}
-                    aria-label={`Étape ${s.number}: ${s.label}`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Desktop: pill stepper */}
-            <div className="hidden sm:flex items-center justify-center gap-1 flex-wrap">
-              {STEPS.map((s) => (
-                <div key={s.number} className="flex items-center">
-                  <button
-                    onClick={() => s.number <= step && setStep(s.number)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                      s.number === step
-                        ? 'bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)] text-[hsl(30_15%_8%)] shadow-[0_2px_12px_hsl(38_45%_48%/0.3)]'
-                        : s.number < step
-                        ? 'bg-[hsl(38_45%_48%/0.15)] text-[hsl(38_55%_65%)] border border-[hsl(38_45%_48%/0.3)] cursor-pointer hover:bg-[hsl(38_45%_48%/0.25)]'
-                        : 'bg-[hsl(30_10%_14%)] text-[hsl(40_20%_35%)] border border-[hsl(30_10%_20%)]'
-                    }`}
-                  >
-                    {s.number < step
-                      ? <Check className="h-3 w-3" />
-                      : <span className="text-[10px]">{s.icon}</span>
-                    }
-                    <span>{s.label}</span>
-                  </button>
-                  {s.number < 7 && (
-                    <div className={`w-3 h-px mx-0.5 ${s.number < step ? 'bg-[hsl(38_45%_48%/0.4)]' : 'bg-[hsl(30_10%_18%)]'}`} />
-                  )}
-                </div>
-              ))}
-            </div>
+            <PremiumGuaranteeBanner />
+            <PremiumProgressBlock
+              currentStep={step - 1}
+              totalSteps={STEPS.length}
+              stepTitle={STEPS.find((s) => s.number === step)?.label ?? ''}
+            />
+            <PremiumStepIndicator
+              steps={STEPS.map((s) => ({ title: s.label, icon: s.icon }))}
+              currentStep={step - 1}
+            />
           </motion.div>
         )}
 
