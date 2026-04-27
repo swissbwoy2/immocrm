@@ -343,12 +343,26 @@ export default function AgentDashboard() {
               variant={clientsAchat > 0 ? 'success' : 'default'}
               subtitle="clients"
             />
-            <PremiumKPICard 
-              title="Offres envoyées" 
-              value={countUniqueOffres(offres)} 
-              icon={Send}
-              onClick={() => navigate('/agent/offres-envoyees')}
-            />
+            {(() => {
+              const startToday = new Date();
+              startToday.setHours(0, 0, 0, 0);
+              const offresToday = offres.filter(o => {
+                if (!o.date_envoi) return false;
+                return new Date(o.date_envoi) >= startToday;
+              });
+              const uniqueToday = countUniqueOffres(offresToday);
+              const uniqueTotal = countUniqueOffres(offres);
+              return (
+                <PremiumKPICard 
+                  title="Offres envoyées" 
+                  value={uniqueToday} 
+                  icon={Send}
+                  onClick={() => navigate('/agent/offres-envoyees')}
+                  subtitle={`aujourd'hui • ${uniqueTotal} au total`}
+                  variant={uniqueToday > 0 ? 'success' : 'default'}
+                />
+              );
+            })()}
             <PremiumKPICard 
               title="Candidatures" 
               value={candidatures.length} 
