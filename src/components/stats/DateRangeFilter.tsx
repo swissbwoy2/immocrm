@@ -185,8 +185,8 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
 
 export function getDefaultDateRange(): DateRange {
   return {
-    from: subDays(new Date(), 29),
-    to: new Date(),
+    from: startOfDay(subDays(new Date(), 29)),
+    to: endOfDay(new Date()),
     label: "30 derniers jours"
   };
 }
