@@ -52,7 +52,7 @@ const generateYearOptions = () => {
   for (let year = currentYear; year >= 2016; year--) {
     years.push({
       label: `Année ${year}`,
-      getValue: () => ({ from: new Date(year, 0, 1), to: new Date(year, 11, 31) })
+      getValue: () => ({ from: startOfDay(new Date(year, 0, 1)), to: endOfDay(new Date(year, 11, 31)) })
     });
   }
   return years;
