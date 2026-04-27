@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, subDays, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, subMonths, subYears } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, subMonths, subYears } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarDays, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
