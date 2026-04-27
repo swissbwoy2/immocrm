@@ -129,6 +129,7 @@ export function AgentStatsSection({
       previousAffairesConclues,
       commissionsGagnees,
       previousCommissions,
+      commissionsDues,
       tauxConversion,
       candidaturesAcceptees,
       candidaturesEnCours,
