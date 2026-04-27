@@ -106,6 +106,11 @@ export function AgentStatsSection({
     const commissionsGagnees = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
     const previousCommissions = previousPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
+    // Commissions dues (concluded but not yet paid) — based on date_transaction
+    const commissionsDues = currentTransactions
+      .filter(t => t.statut === 'conclue' && !t.commission_payee)
+      .reduce((sum, t) => sum + (t.part_agent || 0), 0);
+
     const tauxConversion = offresUniques > 0 
       ? Math.round((affairesConclues / offresUniques) * 100) 
       : 0;
