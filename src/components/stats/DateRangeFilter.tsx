@@ -71,8 +71,8 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
   const handleCustomApply = () => {
     if (customFrom && customTo) {
       onChange({
-        from: customFrom,
-        to: customTo,
+        from: startOfDay(customFrom),
+        to: endOfDay(customTo),
         label: `${format(customFrom, 'dd/MM/yyyy')} - ${format(customTo, 'dd/MM/yyyy')}`
       });
       setShowCustomCalendar(false);
