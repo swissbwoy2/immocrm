@@ -384,12 +384,13 @@ export function AgentStatsSection({
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
           <StatsCard
-            title="Commissions"
+            title="Commissions encaissées"
             value={`${stats.commissionsGagnees.toLocaleString()} CHF`}
             previousValue={stats.previousCommissions}
             currentValue={stats.commissionsGagnees}
             icon={DollarSign}
             variant="success"
+            description={stats.commissionsDues > 0 ? `+${stats.commissionsDues.toLocaleString()} CHF en attente` : undefined}
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
