@@ -1,56 +1,52 @@
 ## Diagnostic
 
-J'ai trouvé **deux problèmes distincts**.
+La carte **"Commissions" affiche 0 CHF** alors qu'il y a 2 affaires conclues en avril (540 + 384.75 = **924.75 CHF**).
 
-### 1. Bug d'intervalle de dates (cause principale)
+**Cause** : le code (`AgentStatsSection.tsx` lignes 75 & 199) ne compte une commission que si `commission_payee = true`. Vérification base de données :
 
-Le filtre **"Aujourd'hui"** (et "Hier") du dashboard utilise :
+| Date | Montant part agent | commission_payee |
+|---|---|---|
+| 24 avril 2026 | 540.00 CHF | **false** |
+| 21 avril 2026 | 384.75 CHF | **false** |
+| 24 mars 2026 | 715.50 CHF | true |
+| 24 mars 2026 | 864.00 CHF | true |
 
-```ts
-{ from: new Date(), to: new Date() }   // ex: from=13:55:00, to=13:55:00
-```
-
-`from` et `to` ont l'**heure courante**. Le filtre `isWithinInterval` ne matche donc que les offres envoyées exactement à la seconde courante. Vos offres ont été envoyées à 13:09 et 13:24 — donc avant `from=13:55` → résultat **0** affiché.
-
-C'est valable pour : Offres envoyées, Affaires conclues, Nouveaux clients, Commissions, etc. — tous les KPI du `AgentStatsSection`.
-
-### 2. La carte du haut "OFFRES ENVOYÉES = 0" (capture d'écran)
-
-Cette carte appelle `countUniqueOffres(offres)` sur **toutes les offres**, pas seulement celles d'aujourd'hui. Si elle affiche 0, c'est probablement un bug de la fonction `countUniqueOffres` ou un `offres` vide au moment du rendu. À vérifier — mais d'après la base : Carina a bien 739 offres dont 41 aujourd'hui → la page "Offres envoyées" en montre 445 (filtre différent), c'est cohérent.
-
-Note importante : le sous-titre "Aujourd'hui" sur la carte est **trompeur** — elle compte en réalité TOUTES les offres uniques, pas celles du jour.
+Les 2 affaires d'avril ont été conclues mais la commission n'est pas encore marquée comme payée par l'agence → 0 CHF affiché. C'est conforme à la règle métier (`financial-reporting-date-logic`) mais visuellement trompeur.
 
 ## Plan de correction
 
-### Fix 1 — Préréglages de date (`src/components/stats/DateRangeFilter.tsx`)
+### Fix — Carte "Commissions" enrichie (`src/components/stats/AgentStatsSection.tsx`)
 
-Utiliser `startOfDay` et `endOfDay` :
+Afficher **deux valeurs** sur la carte commissions :
+- Valeur principale : commissions **encaissées** (déjà payées) — logique inchangée
+- Sous-titre : commissions **dues** (conclues, en attente de paiement)
+
+Calcul à ajouter :
 
 ```ts
-import { startOfDay, endOfDay } from 'date-fns';
-
-{ label: "Aujourd'hui",  getValue: () => ({ from: startOfDay(new Date()),                to: endOfDay(new Date()) }) },
-{ label: "Hier",         getValue: () => ({ from: startOfDay(subDays(new Date(), 1)),    to: endOfDay(subDays(new Date(), 1)) }) },
-{ label: "7 derniers jours", getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }) },
-{ label: "30 derniers jours", getValue: () => ({ from: startOfDay(subDays(new Date(), 29)), to: endOfDay(new Date()) }) },
+const commissionsDues = currentTransactions
+  .filter(t => t.statut === 'conclue' && !t.commission_payee)
+  .reduce((sum, t) => sum + (t.part_agent || 0), 0);
 ```
 
-Idem pour le picker custom (`from`/`to` doivent être normalisés en début/fin de jour).
-
-### Fix 2 — Carte KPI "Offres envoyées" du haut (`src/pages/agent/Dashboard.tsx` ligne 346-351)
-
-Faire correspondre le sous-titre à la valeur affichée :
-- Soit afficher le **total unique** (cohérent avec `countUniqueOffres(offres)`) avec sous-titre "total"
-- Soit afficher uniquement **les offres uniques d'aujourd'hui** (avec un filtre `date_envoi >= startOfDay(today)`)
-
-Recommandation : afficher **les offres uniques d'aujourd'hui** (cohérent avec le sous-titre actuel), et ajouter une seconde info "X au total" en dessous.
+Affichage dans `StatsCard` :
+```tsx
+<StatsCard
+  title="Commissions encaissées"
+  value={`${stats.commissionsGagnees.toLocaleString()} CHF`}
+  description={commissionsDues > 0 ? `+${commissionsDues.toLocaleString()} CHF en attente` : undefined}
+  ...
+/>
+```
 
 ### Résultat attendu
 
-- Filtre "Aujourd'hui" → affiche les ~41 offres envoyées aujourd'hui (dédupliquées en X offres uniques)
-- Filtre "7 jours", "Ce mois" etc. → bornes de jour correctes
-- Carte KPI haut : valeur et sous-titre cohérents
+Pour la période contenant avril 2026 :
+- **Commissions encaissées** : 0 CHF
+- *Sous-titre* : "+925 CHF en attente"
 
-### Hors-scope (à confirmer plus tard)
+L'agent comprend immédiatement qu'il a 925 CHF à recevoir, et le 0 n'est plus interprété comme un bug.
 
-- Le faux UUID `67f3a2c5-…` que j'avais identifié dans ma précédente analyse était en réalité le `agents.id` légitime de Carina (la table `agents` a un `id` ≠ du `profiles.id`). **Aucune migration de données n'est nécessaire.**
+### Hors-scope
+
+Aucune modification du modèle de données. La règle "commission comptée à la date de paiement" reste intacte (cohérent avec le reporting agence).

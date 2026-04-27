@@ -106,6 +106,11 @@ export function AgentStatsSection({
     const commissionsGagnees = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
     const previousCommissions = previousPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
+    // Commissions dues (concluded but not yet paid) — based on date_transaction
+    const commissionsDues = currentTransactions
+      .filter(t => t.statut === 'conclue' && !t.commission_payee)
+      .reduce((sum, t) => sum + (t.part_agent || 0), 0);
+
     const tauxConversion = offresUniques > 0 
       ? Math.round((affairesConclues / offresUniques) * 100) 
       : 0;
@@ -124,6 +129,7 @@ export function AgentStatsSection({
       previousAffairesConclues,
       commissionsGagnees,
       previousCommissions,
+      commissionsDues,
       tauxConversion,
       candidaturesAcceptees,
       candidaturesEnCours,
@@ -378,12 +384,13 @@ export function AgentStatsSection({
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
           <StatsCard
-            title="Commissions"
+            title="Commissions encaissées"
             value={`${stats.commissionsGagnees.toLocaleString()} CHF`}
             previousValue={stats.previousCommissions}
             currentValue={stats.commissionsGagnees}
             icon={DollarSign}
             variant="success"
+            description={stats.commissionsDues > 0 ? `+${stats.commissionsDues.toLocaleString()} CHF en attente` : undefined}
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
