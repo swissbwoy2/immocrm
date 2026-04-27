@@ -1,59 +1,86 @@
-# Problème — non, ce n'est pas normal
+## Problème
 
-Les policies RLS RESTRICTIVE créées à la dernière migration (`Demo account cannot write *`) sont déclarées en **`FOR ALL`** au lieu de cibler uniquement les écritures.
+Quand un client clique sur "Accepter l'invitation" dans son email, il devrait arriver sur la page **/first-login** pour créer son mot de passe. Au lieu de ça, il est redirigé directement vers **/login**, ce qui le bloque (il n'a pas encore de mot de passe).
 
-En PostgreSQL, une policy RESTRICTIVE `FOR ALL` s'applique aussi au **SELECT** → le compte démo ne peut donc plus lire ses propres données : profil client, messages, offres, visites, documents, candidatures, conversations. D'où "Profil non chargé" et listes vides.
+## Cause identifiée
 
-À côté, on a déjà des policies RESTRICTIVE séparées par commande (`Demo accounts cannot insert/update/delete *`) qui bloquent correctement les écritures → les `FOR ALL` sont **redondantes ET nuisibles**.
+La page `src/pages/FirstLogin.tsx` utilise une logique fragile pour détecter la session :
 
-# Correctif (1 migration SQL, aucun changement frontend)
-
-## 1. Supprimer les policies RESTRICTIVE `FOR ALL` cassées
-
-Tables : `clients`, `messages`, `offres`, `visites`, `documents`, `candidatures`, `conversations`.
-
-```sql
-DROP POLICY IF EXISTS "Demo account cannot write clients" ON public.clients;
-DROP POLICY IF EXISTS "Demo account cannot write messages" ON public.messages;
-DROP POLICY IF EXISTS "Demo account cannot write offres" ON public.offres;
-DROP POLICY IF EXISTS "Demo account cannot write visites" ON public.visites;
-DROP POLICY IF EXISTS "Demo account cannot write documents" ON public.documents;
-DROP POLICY IF EXISTS "Demo account cannot write candidatures" ON public.candidatures;
-DROP POLICY IF EXISTS "Demo account cannot write conversations" ON public.conversations;
+```ts
+await new Promise(r => setTimeout(r, 1000));   // attente fixe de 1s
+const { data: { session } } = await supabase.auth.getSession();
+if (!session) navigate('/login');               // redirige si pas de session
 ```
 
-## 2. Compléter les policies RESTRICTIVE manquantes
+Problèmes :
+1. **Course de timing** : Le lien Supabase pose le token soit dans le hash (`#access_token=...&type=invite`) soit en query (`?code=...`). Le parsing du hash par supabase-js est asynchrone et peut prendre plus d'1 seconde, surtout sur mobile / réseau lent. Si la session n'est pas encore créée au check, on bascule sur /login.
+2. **Token déjà consommé** : Si le user revient sur le lien (rechargement, second clic), le token est consommé une seule fois — l'utilisateur arrive sans session et est jeté vers /login sans message clair.
+3. **Pas de listener** : `FirstLogin` ne s'abonne pas à `onAuthStateChange`, donc même si la session arrive 1.2s plus tard, on a déjà redirigé.
 
-Pour `clients` (INSERT manquant) et `conversations` (insert/update/delete manquants) :
+## Solution
 
-```sql
-CREATE POLICY "Demo accounts cannot insert clients"
-  ON public.clients AS RESTRICTIVE FOR INSERT TO authenticated
-  WITH CHECK (NOT public.is_demo_account(auth.uid()));
+### 1. Rendre `FirstLogin.tsx` robuste
 
-CREATE POLICY "Demo accounts cannot insert conversations"
-  ON public.conversations AS RESTRICTIVE FOR INSERT TO authenticated
-  WITH CHECK (NOT public.is_demo_account(auth.uid()));
-CREATE POLICY "Demo accounts cannot update conversations"
-  ON public.conversations AS RESTRICTIVE FOR UPDATE TO authenticated
-  USING (NOT public.is_demo_account(auth.uid()));
-CREATE POLICY "Demo accounts cannot delete conversations"
-  ON public.conversations AS RESTRICTIVE FOR DELETE TO authenticated
-  USING (NOT public.is_demo_account(auth.uid()));
+Remplacer la logique de check par un vrai listener `onAuthStateChange` + parsing manuel du hash/code en fallback :
+
+- S'abonner à `onAuthStateChange` immédiatement à l'arrivée sur la page
+- Si l'événement `SIGNED_IN` arrive (avec ou sans `type=invite/recovery`), afficher le formulaire de création de mot de passe
+- Lire l'URL : si présence de `?code=` (PKCE), appeler `supabase.auth.exchangeCodeForSession(code)` explicitement
+- Donner jusqu'à 5 secondes pour qu'une session apparaisse avant de rediriger
+- Si vraiment pas de session après timeout : afficher un message clair "Lien expiré ou déjà utilisé" + bouton "Renvoyer un lien" (au lieu de jeter sur /login en silence)
+
+### 2. Vérifier la configuration Supabase Auth (Site URL & Redirect URLs)
+
+Pour que Supabase accepte de rediriger vers `/first-login`, l'URL doit être dans la **liste des Redirect URLs autorisées**. Si elle ne l'est pas, Supabase ignore `redirectTo` et renvoie sur la **Site URL** (probablement `https://logisorama.ch/`), ce qui peut donner l'impression d'atterrir sur /login.
+
+Vérifier dans **Cloud → Auth Settings** :
+- Site URL = `https://logisorama.ch`
+- Redirect URLs autorisées contiennent : 
+  - `https://logisorama.ch/first-login`
+  - `https://immocrm.lovable.app/first-login`
+  - `https://*.lovable.app/first-login`
+
+### 3. Bonus : empêcher l'auto-redirect de `/login` si on vient juste d'arriver via un token
+
+Dans `src/pages/Login.tsx`, l'effet auto-redirect actuel envoie tout user connecté sur `/${userRole}` sans état d'attente. Ce n'est pas la cause directe du bug d'invitation, mais on garde le comportement intact.
+
+## Fichiers modifiés
+
+- `src/pages/FirstLogin.tsx` — listener auth + exchangeCodeForSession + UX d'erreur claire
+- (Optionnel, à confirmer par toi) Réglages Auth dans Cloud → Settings si besoin
+
+## Détails techniques
+
+```ts
+// FirstLogin.tsx (esquisse)
+useEffect(() => {
+  let resolved = false;
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (session) { resolved = true; setReady(true); }
+  });
+
+  (async () => {
+    // PKCE flow: ?code=...
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    if (code) {
+      await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+    }
+    // Implicit flow (#access_token=...) is auto-handled by supabase-js
+
+    // Fallback: si session déjà là
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) { resolved = true; setReady(true); return; }
+
+    // Attendre jusqu'à 5s un SIGNED_IN
+    setTimeout(() => {
+      if (!resolved) setLinkExpired(true); // affiche écran "lien expiré"
+    }, 5000);
+  })();
+
+  return () => subscription.unsubscribe();
+}, []);
 ```
 
-## 3. Vérifier `profiles` et `rental_applications`
-
-Lister les policies RESTRICTIVE sur ces tables. Si une `FOR ALL` y est présente, la remplacer par 3 policies (insert/update/delete) avec `NOT public.is_demo_account(auth.uid())`.
-
-## 4. Vérifier après déploiement
-
-- Recharger `/client` en démo → profil + dashboard doivent charger normalement.
-- Tenter envoi de message → bloqué (UI guard + RLS INSERT).
-- Tenter upload de document → bloqué.
-
-# Hors scope
-
-- Aucun changement frontend.
-- Triggers `prevent_demo_*_changes` et composant `DemoWriteGuard` inchangés.
-- Flag `is_demo_account` et helpers SQL inchangés.
+Si `linkExpired` : afficher une carte "Lien d'invitation expiré ou déjà utilisé" avec un bouton "Demander un nouveau lien" qui appelle `resetPasswordForEmail` ou la fonction `invite-client` côté serveur.
