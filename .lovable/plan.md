@@ -1,86 +1,56 @@
-## Problème
+## Diagnostic
 
-Quand un client clique sur "Accepter l'invitation" dans son email, il devrait arriver sur la page **/first-login** pour créer son mot de passe. Au lieu de ça, il est redirigé directement vers **/login**, ce qui le bloque (il n'a pas encore de mot de passe).
+J'ai trouvé **deux problèmes distincts**.
 
-## Cause identifiée
+### 1. Bug d'intervalle de dates (cause principale)
 
-La page `src/pages/FirstLogin.tsx` utilise une logique fragile pour détecter la session :
-
-```ts
-await new Promise(r => setTimeout(r, 1000));   // attente fixe de 1s
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) navigate('/login');               // redirige si pas de session
-```
-
-Problèmes :
-1. **Course de timing** : Le lien Supabase pose le token soit dans le hash (`#access_token=...&type=invite`) soit en query (`?code=...`). Le parsing du hash par supabase-js est asynchrone et peut prendre plus d'1 seconde, surtout sur mobile / réseau lent. Si la session n'est pas encore créée au check, on bascule sur /login.
-2. **Token déjà consommé** : Si le user revient sur le lien (rechargement, second clic), le token est consommé une seule fois — l'utilisateur arrive sans session et est jeté vers /login sans message clair.
-3. **Pas de listener** : `FirstLogin` ne s'abonne pas à `onAuthStateChange`, donc même si la session arrive 1.2s plus tard, on a déjà redirigé.
-
-## Solution
-
-### 1. Rendre `FirstLogin.tsx` robuste
-
-Remplacer la logique de check par un vrai listener `onAuthStateChange` + parsing manuel du hash/code en fallback :
-
-- S'abonner à `onAuthStateChange` immédiatement à l'arrivée sur la page
-- Si l'événement `SIGNED_IN` arrive (avec ou sans `type=invite/recovery`), afficher le formulaire de création de mot de passe
-- Lire l'URL : si présence de `?code=` (PKCE), appeler `supabase.auth.exchangeCodeForSession(code)` explicitement
-- Donner jusqu'à 5 secondes pour qu'une session apparaisse avant de rediriger
-- Si vraiment pas de session après timeout : afficher un message clair "Lien expiré ou déjà utilisé" + bouton "Renvoyer un lien" (au lieu de jeter sur /login en silence)
-
-### 2. Vérifier la configuration Supabase Auth (Site URL & Redirect URLs)
-
-Pour que Supabase accepte de rediriger vers `/first-login`, l'URL doit être dans la **liste des Redirect URLs autorisées**. Si elle ne l'est pas, Supabase ignore `redirectTo` et renvoie sur la **Site URL** (probablement `https://logisorama.ch/`), ce qui peut donner l'impression d'atterrir sur /login.
-
-Vérifier dans **Cloud → Auth Settings** :
-- Site URL = `https://logisorama.ch`
-- Redirect URLs autorisées contiennent : 
-  - `https://logisorama.ch/first-login`
-  - `https://immocrm.lovable.app/first-login`
-  - `https://*.lovable.app/first-login`
-
-### 3. Bonus : empêcher l'auto-redirect de `/login` si on vient juste d'arriver via un token
-
-Dans `src/pages/Login.tsx`, l'effet auto-redirect actuel envoie tout user connecté sur `/${userRole}` sans état d'attente. Ce n'est pas la cause directe du bug d'invitation, mais on garde le comportement intact.
-
-## Fichiers modifiés
-
-- `src/pages/FirstLogin.tsx` — listener auth + exchangeCodeForSession + UX d'erreur claire
-- (Optionnel, à confirmer par toi) Réglages Auth dans Cloud → Settings si besoin
-
-## Détails techniques
+Le filtre **"Aujourd'hui"** (et "Hier") du dashboard utilise :
 
 ```ts
-// FirstLogin.tsx (esquisse)
-useEffect(() => {
-  let resolved = false;
-
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (session) { resolved = true; setReady(true); }
-  });
-
-  (async () => {
-    // PKCE flow: ?code=...
-    const url = new URL(window.location.href);
-    const code = url.searchParams.get('code');
-    if (code) {
-      await supabase.auth.exchangeCodeForSession(code).catch(() => {});
-    }
-    // Implicit flow (#access_token=...) is auto-handled by supabase-js
-
-    // Fallback: si session déjà là
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) { resolved = true; setReady(true); return; }
-
-    // Attendre jusqu'à 5s un SIGNED_IN
-    setTimeout(() => {
-      if (!resolved) setLinkExpired(true); // affiche écran "lien expiré"
-    }, 5000);
-  })();
-
-  return () => subscription.unsubscribe();
-}, []);
+{ from: new Date(), to: new Date() }   // ex: from=13:55:00, to=13:55:00
 ```
 
-Si `linkExpired` : afficher une carte "Lien d'invitation expiré ou déjà utilisé" avec un bouton "Demander un nouveau lien" qui appelle `resetPasswordForEmail` ou la fonction `invite-client` côté serveur.
+`from` et `to` ont l'**heure courante**. Le filtre `isWithinInterval` ne matche donc que les offres envoyées exactement à la seconde courante. Vos offres ont été envoyées à 13:09 et 13:24 — donc avant `from=13:55` → résultat **0** affiché.
+
+C'est valable pour : Offres envoyées, Affaires conclues, Nouveaux clients, Commissions, etc. — tous les KPI du `AgentStatsSection`.
+
+### 2. La carte du haut "OFFRES ENVOYÉES = 0" (capture d'écran)
+
+Cette carte appelle `countUniqueOffres(offres)` sur **toutes les offres**, pas seulement celles d'aujourd'hui. Si elle affiche 0, c'est probablement un bug de la fonction `countUniqueOffres` ou un `offres` vide au moment du rendu. À vérifier — mais d'après la base : Carina a bien 739 offres dont 41 aujourd'hui → la page "Offres envoyées" en montre 445 (filtre différent), c'est cohérent.
+
+Note importante : le sous-titre "Aujourd'hui" sur la carte est **trompeur** — elle compte en réalité TOUTES les offres uniques, pas celles du jour.
+
+## Plan de correction
+
+### Fix 1 — Préréglages de date (`src/components/stats/DateRangeFilter.tsx`)
+
+Utiliser `startOfDay` et `endOfDay` :
+
+```ts
+import { startOfDay, endOfDay } from 'date-fns';
+
+{ label: "Aujourd'hui",  getValue: () => ({ from: startOfDay(new Date()),                to: endOfDay(new Date()) }) },
+{ label: "Hier",         getValue: () => ({ from: startOfDay(subDays(new Date(), 1)),    to: endOfDay(subDays(new Date(), 1)) }) },
+{ label: "7 derniers jours", getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }) },
+{ label: "30 derniers jours", getValue: () => ({ from: startOfDay(subDays(new Date(), 29)), to: endOfDay(new Date()) }) },
+```
+
+Idem pour le picker custom (`from`/`to` doivent être normalisés en début/fin de jour).
+
+### Fix 2 — Carte KPI "Offres envoyées" du haut (`src/pages/agent/Dashboard.tsx` ligne 346-351)
+
+Faire correspondre le sous-titre à la valeur affichée :
+- Soit afficher le **total unique** (cohérent avec `countUniqueOffres(offres)`) avec sous-titre "total"
+- Soit afficher uniquement **les offres uniques d'aujourd'hui** (avec un filtre `date_envoi >= startOfDay(today)`)
+
+Recommandation : afficher **les offres uniques d'aujourd'hui** (cohérent avec le sous-titre actuel), et ajouter une seconde info "X au total" en dessous.
+
+### Résultat attendu
+
+- Filtre "Aujourd'hui" → affiche les ~41 offres envoyées aujourd'hui (dédupliquées en X offres uniques)
+- Filtre "7 jours", "Ce mois" etc. → bornes de jour correctes
+- Carte KPI haut : valeur et sous-titre cohérents
+
+### Hors-scope (à confirmer plus tard)
+
+- Le faux UUID `67f3a2c5-…` que j'avais identifié dans ma précédente analyse était en réalité le `agents.id` légitime de Carina (la table `agents` a un `id` ≠ du `profiles.id`). **Aucune migration de données n'est nécessaire.**
