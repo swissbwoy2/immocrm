@@ -112,7 +112,6 @@ const AgentDeposerCandidature = lazy(() => import("./pages/agent/DeposerCandidat
 const AgentRemplirPDF = lazy(() => import("./pages/agent/RemplirPDF"));
 const AgentRemplirDemande = lazy(() => import("./pages/agent/RemplirDemande"));
 const AgentContacts = lazy(() => import("./pages/agent/Contacts"));
-const AgentMatchingAI = lazy(() => import("./pages/agent/MatchingAI"));
 const AgentBiensEnVente = lazy(() => import("./pages/agent/BiensEnVente"));
 const AgentBienVenteDetail = lazy(() => import("./pages/agent/BienVenteDetail"));
 const AgentProprietaires = lazy(() => import("./pages/agent/Proprietaires"));

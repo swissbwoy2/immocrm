@@ -153,7 +153,6 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
         {
           label: 'Matching & Visites',
           items: [
-            { name: 'Matching AI', icon: Brain, path: '/agent/matching-ai', notifKey: null },
             { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
             { name: 'Carte', icon: MapPin, path: '/agent/carte', notifKey: null },
             { name: 'Candidatures', icon: FileCheck, path: '/agent/candidatures', notifKey: null },
