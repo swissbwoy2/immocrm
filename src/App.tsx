@@ -112,7 +112,6 @@ const AgentDeposerCandidature = lazy(() => import("./pages/agent/DeposerCandidat
 const AgentRemplirPDF = lazy(() => import("./pages/agent/RemplirPDF"));
 const AgentRemplirDemande = lazy(() => import("./pages/agent/RemplirDemande"));
 const AgentContacts = lazy(() => import("./pages/agent/Contacts"));
-const AgentMatchingAI = lazy(() => import("./pages/agent/MatchingAI"));
 const AgentBiensEnVente = lazy(() => import("./pages/agent/BiensEnVente"));
 const AgentBienVenteDetail = lazy(() => import("./pages/agent/BienVenteDetail"));
 const AgentProprietaires = lazy(() => import("./pages/agent/Proprietaires"));
@@ -348,7 +347,7 @@ const App = () => (
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-demande" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirDemande /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
-              <Route path="/agent/matching-ai" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMatchingAI /></AppLayout></ProtectedRoute>} />
+              
               <Route path="/agent/biens-vente" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBiensEnVente /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/biens-vente/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBienVenteDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/proprietaires" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentProprietaires /></AppLayout></ProtectedRoute>} />

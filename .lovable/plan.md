@@ -1,52 +1,49 @@
-## Diagnostic
+## Suppression complète de la fonctionnalité Matching AI
 
-La carte **"Commissions" affiche 0 CHF** alors qu'il y a 2 affaires conclues en avril (540 + 384.75 = **924.75 CHF**).
+Inventaire des références (vérifié) :
 
-**Cause** : le code (`AgentStatsSection.tsx` lignes 75 & 199) ne compte une commission que si `commission_payee = true`. Vérification base de données :
+| Élément | État |
+|---|---|
+| Edge Function `ai-matching` | À supprimer (déployée) |
+| Page `src/pages/agent/MatchingAI.tsx` | À supprimer |
+| Route `/agent/matching-ai` dans `src/App.tsx` (ligne 115 + 351) | À retirer |
+| Entrée menu "Matching AI" dans `src/components/AppSidebar.tsx` (ligne 156) | À retirer |
+| Table `ai_matches` (23 lignes, dernière activité 2026-01-05) | À supprimer (DROP TABLE) |
+| Mémoire `mem://features/matching-ai-system-v4-link-extraction-and-resource-optimization` | À retirer de l'index |
 
-| Date | Montant part agent | commission_payee |
-|---|---|---|
-| 24 avril 2026 | 540.00 CHF | **false** |
-| 21 avril 2026 | 384.75 CHF | **false** |
-| 24 mars 2026 | 715.50 CHF | true |
-| 24 mars 2026 | 864.00 CHF | true |
+Vérifications faites :
+- Aucun trigger DB n'appelle `ai-matching` (vérifié dans `information_schema.triggers`).
+- Aucune ligne de `ai_matches` n'a été convertie en offre (`converted_to_offre_id` toujours NULL).
+- `types.ts` se régénère automatiquement après le DROP TABLE.
+- Le cron `sync-imap-emails-every-5-minutes` n'invoque PAS `ai-matching` — il est indépendant et reste en place.
 
-Les 2 affaires d'avril ont été conclues mais la commission n'est pas encore marquée comme payée par l'agence → 0 CHF affiché. C'est conforme à la règle métier (`financial-reporting-date-logic`) mais visuellement trompeur.
+### Étapes
 
-## Plan de correction
+**1. Frontend**
+- Supprimer `src/pages/agent/MatchingAI.tsx`.
+- Dans `src/App.tsx` : retirer l'import lazy ligne 115 et la route ligne 351.
+- Dans `src/components/AppSidebar.tsx` : retirer l'entrée "Matching AI" ligne 156.
 
-### Fix — Carte "Commissions" enrichie (`src/components/stats/AgentStatsSection.tsx`)
+**2. Edge Function**
+- Supprimer le dossier `supabase/functions/ai-matching/`.
+- Appeler `supabase--delete_edge_functions(["ai-matching"])` pour la dé-déployer.
 
-Afficher **deux valeurs** sur la carte commissions :
-- Valeur principale : commissions **encaissées** (déjà payées) — logique inchangée
-- Sous-titre : commissions **dues** (conclues, en attente de paiement)
-
-Calcul à ajouter :
-
-```ts
-const commissionsDues = currentTransactions
-  .filter(t => t.statut === 'conclue' && !t.commission_payee)
-  .reduce((sum, t) => sum + (t.part_agent || 0), 0);
+**3. Base de données (migration)**
+```sql
+DROP TABLE IF EXISTS public.ai_matches CASCADE;
 ```
+Le CASCADE supprime les FK (`agent_id`, `client_id`, `email_id`, `converted_to_offre_id`) sans toucher aux tables parentes.
 
-Affichage dans `StatsCard` :
-```tsx
-<StatsCard
-  title="Commissions encaissées"
-  value={`${stats.commissionsGagnees.toLocaleString()} CHF`}
-  description={commissionsDues > 0 ? `+${commissionsDues.toLocaleString()} CHF en attente` : undefined}
-  ...
-/>
-```
+**4. Mémoire**
+- Retirer la ligne `[Matching AI Extraction]` de `mem://index.md`.
+- Supprimer `mem://features/matching-ai-system-v4-link-extraction-and-resource-optimization`.
 
-### Résultat attendu
+### Hors-scope (intact)
 
-Pour la période contenant avril 2026 :
-- **Commissions encaissées** : 0 CHF
-- *Sous-titre* : "+925 CHF en attente"
+- `received_emails` (sync IMAP continue normalement).
+- `ai_agent_*`, `ai_relocation_*`, `renovation_ai_*` (autres systèmes AI sans rapport).
+- Le cron IMAP toutes les 5 min (problème séparé, non traité ici).
 
-L'agent comprend immédiatement qu'il a 925 CHF à recevoir, et le 0 n'est plus interprété comme un bug.
+### Risque
 
-### Hors-scope
-
-Aucune modification du modèle de données. La règle "commission comptée à la date de paiement" reste intacte (cohérent avec le reporting agence).
+Nul — aucune dépendance live, page jamais utilisée par un workflow tiers, table sans conversion en offre.
