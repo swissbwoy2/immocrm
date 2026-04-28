@@ -4232,6 +4232,39 @@ export type Database = {
           },
         ]
       }
+      formation_progress: {
+        Row: {
+          chapitre_id: string
+          checklist_state: Json
+          completed_at: string | null
+          created_at: string
+          id: string
+          quiz_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapitre_id: string
+          checklist_state?: Json
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          quiz_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapitre_id?: string
+          checklist_state?: Json
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          quiz_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string | null

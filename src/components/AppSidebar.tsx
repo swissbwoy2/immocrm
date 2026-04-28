@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -183,6 +183,12 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Remplir PDF', icon: FilePen, path: '/agent/remplir-pdf', notifKey: null },
             { name: 'Remplir demande IA', icon: Brain, path: '/agent/remplir-demande', notifKey: null },
             { name: 'Contacts', icon: Contact, path: '/agent/contacts', notifKey: null },
+          ],
+        },
+        {
+          label: 'Aide & Formation',
+          items: [
+            { name: 'Formation', icon: GraduationCap, path: '/agent/formation', notifKey: null },
           ],
         },
         {

@@ -117,6 +117,8 @@ const AgentBienVenteDetail = lazy(() => import("./pages/agent/BienVenteDetail"))
 const AgentProprietaires = lazy(() => import("./pages/agent/Proprietaires"));
 const AgentProprietaireDetail = lazy(() => import("./pages/agent/ProprietaireDetail"));
 const AgentCarte = lazy(() => import("./pages/agent/Carte"));
+const AgentFormation = lazy(() => import("./pages/agent/Formation"));
+const AgentFormationChapitre = lazy(() => import("./pages/agent/FormationChapitre"));
 
 // Coursier pages
 const CoursierDashboard = lazy(() => import("./pages/coursier/Dashboard"));
@@ -347,6 +349,8 @@ const App = () => (
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-demande" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirDemande /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/formation" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFormation /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/formation/:chapitreId" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFormationChapitre /></AppLayout></ProtectedRoute>} />
               
               <Route path="/agent/biens-vente" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBiensEnVente /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/biens-vente/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBienVenteDetail /></AppLayout></ProtectedRoute>} />
