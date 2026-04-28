@@ -186,6 +186,12 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
+          label: 'Aide & Formation',
+          items: [
+            { name: 'Formation', icon: GraduationCap, path: '/agent/formation', notifKey: null },
+          ],
+        },
+        {
           label: 'Système',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
