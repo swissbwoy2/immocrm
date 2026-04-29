@@ -54,8 +54,8 @@ const ch01: Chapter = {
     },
     {
       type: 'video',
-      title: 'Présentation Logisorama (1 min)',
-      duration: '1:00',
+      title: 'Bienvenue sur Logisorama',
+      src: 'https://ydljsdscdnqrqnjvqela.supabase.co/storage/v1/object/public/formation-videos/01-bienvenue.mp4',
     },
     {
       type: 'cta',
