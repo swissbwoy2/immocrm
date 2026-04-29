@@ -1,102 +1,87 @@
-## Objectif
-
-Donner aux **agents co-assignés** (table `client_agents`) **exactement les mêmes droits à 100%** que l'agent principal (`clients.agent_id`), partout dans l'application — messagerie, conversations, candidats, documents, et toute action liée à un client partagé.
-
 ## Diagnostic
 
-J'ai inspecté toutes les RLS policies pertinentes. Voici ce qui bloque les co-agents aujourd'hui :
+L'erreur de permission d'Victoria vient du flux de la page **`src/pages/agent/EnvoyerOffre.tsx`**, pas de la table `offres` elle-même.
 
-### Tables bloquantes (à corriger)
+**Preuves recueillies :**
+- Victoria a 10 liens valides dans `client_agents` (donc la RLS de `offres` passe).
+- Aujourd'hui, **3 offres ont bien été insérées** par Victoria pour le client `f248d88b…` (RLS OK).
+- Mais Victoria a **0 conversation** avec son `agent_id`, et **0 message** lié à ces 3 offres.
+- Donc : l'`INSERT offres` réussit → l'étape suivante (création/lookup de conversation) échoue → l'erreur est attrapée et affichée à l'utilisateur, laissant 3 offres orphelines en base.
 
-| Table | Policy fautive | Problème |
-|---|---|---|
-| `client_candidates` | "Agents can manage candidates of their clients" (ALL) | Vérifie uniquement `clients.agent_id`. Les co-agents ne peuvent **pas ajouter/modifier/supprimer** de co-candidats. |
-| `documents` | "Agents can manage candidate documents" (ALL) | Vérifie uniquement `clients.agent_id` via la chaîne `client_candidates → clients`. Les co-agents ne peuvent **pas gérer les pièces jointes** des candidats. |
-| `messages` (INSERT) | "Users multi can insert messages..." | Vérifie `conversation_agents`. Si la conversation auto-créée par le trigger `sync_client_agent_on_assignment` n'a inscrit que l'agent principal dans `conversation_agents`, le co-agent **ne peut pas envoyer** de message. |
-| Trigger `sync_client_agent_on_assignment` | — | Crée bien la conversation pour l'agent principal mais **ne crée pas** automatiquement une entrée `conversation_agents` pour les co-agents existants ni quand un co-agent est ajouté plus tard. |
+**Cause racine du blocage côté UI :**
+Ligne 224-229 de `EnvoyerOffre.tsx` :
+```ts
+.from('conversations').select('*')
+  .eq('client_id', clientId)
+  .eq('agent_id', agent.id)   // = victoria.id
+  .single();                  // PGRST116 si aucune ligne
+```
+Victoria étant co-agent, la conversation existante appartient à l'**agent principal** (un autre `agent_id`). Le `.single()` renvoie une erreur PGRST116, le code passe ensuite en INSERT d'une nouvelle conversation. Cet INSERT déclenche une erreur (RLS et/ou PGRST116 mal géré), qui remonte → toast "Impossible d'envoyer l'offre" → **les offres déjà créées restent orphelines**.
 
-### Déjà OK (vérifié)
+**Cause racine sous-jacente (RLS) :**
+La policy INSERT de `offres` (`Agents multi peuvent créer offres`) ne contrôle QUE `client_agents`. Si un agent principal (via `clients.agent_id`) n'a pas de ligne miroir dans `client_agents`, son INSERT échouerait — fragile et incohérent avec le reste du système (cf. mémoire `dual-source-assignment-integrity-strategy`).
 
-- `conversations` INSERT : `can_agent_create_conversation` accepte déjà les co-agents (utilise `client_agents`).
-- `candidatures` : policy "Agents multi peuvent gérer candidatures" couvre déjà co-agents.
-- `offres` : toutes les policies multi-agents existent déjà.
-- `visites` : `get_my_co_agent_client_ids()` couvre les co-agents en SELECT/UPDATE.
-- `clients` : `is_agent_of_client()` vérifie déjà les deux sources.
-- `documents` (côté client_id) : déjà OK pour co-agents.
-- `client_notes` : chaque agent gère ses propres notes (logique normale).
+---
 
-## Plan d'action (migration SQL unique)
+## Plan de correction
 
-### 1. Élargir RLS sur `client_candidates`
+### 1. Corriger le flux conversation dans `EnvoyerOffre.tsx` (agent + admin)
 
-Remplacer la policy ALL existante pour qu'elle accepte aussi les co-agents via `client_agents` :
+Faire en sorte qu'un co-agent **rejoigne** la conversation existante du client (peu importe quel agent l'a créée) au lieu d'en créer une nouvelle isolée.
 
-```sql
-DROP POLICY "Agents can manage candidates of their clients" ON client_candidates;
+**Logique cible :**
+1. Chercher TOUTE conversation `client-agent` pour ce `client_id` (sans filtrer par `agent_id`), via `.maybeSingle()` ou `.limit(1)`.
+2. Si trouvée → s'assurer que Victoria figure dans `conversation_agents` (déjà géré par notre trigger récent, mais re-vérifier en INSERT idempotent).
+3. Si aucune n'existe → créer une nouvelle conversation avec `agent_id = victoria.id`.
+4. Insérer le message dans cette conversation.
 
-CREATE POLICY "Agents (principal + co) can manage candidates"
-ON client_candidates FOR ALL TO authenticated
-USING (
-  EXISTS (SELECT 1 FROM clients c JOIN agents a ON a.id = c.agent_id
-          WHERE c.id = client_candidates.client_id AND a.user_id = auth.uid())
-  OR
-  EXISTS (SELECT 1 FROM client_agents ca JOIN agents a ON a.id = ca.agent_id
-          WHERE ca.client_id = client_candidates.client_id AND a.user_id = auth.uid())
-)
-WITH CHECK (... même condition ...);
+Appliquer la même correction à :
+- `src/pages/agent/EnvoyerOffre.tsx`
+- `src/pages/admin/EnvoyerOffre.tsx`
+- `src/components/ResendOfferDialog.tsx` (même schéma bogué visible lignes 99-127)
+
+### 2. Renforcer les RLS pour la parité totale principal/co-agent
+
+Migration SQL pour aligner toutes les policies sur le pattern documenté `mem://features/co-assignment-rls-logic` (OR principal OR co-agent) :
+
+- **`offres` INSERT/UPDATE/SELECT/DELETE** — ajouter la branche `EXISTS clients c JOIN agents a ON a.id = c.agent_id WHERE c.id = offres.client_id AND a.user_id = auth.uid()` en OR de la branche `client_agents`.
+- **`conversations` INSERT** — étendre `can_agent_create_conversation` pour accepter aussi le cas `clients.agent_id = _agent_id` (parité défensive).
+- **`visites` INSERT/UPDATE** — vérifier et ajouter la branche co-agent si manquante (utilisée juste après l'INSERT offres).
+
+### 3. Backfill / nettoyage
+
+- Supprimer les 3 offres orphelines de Victoria créées aujourd'hui sans message associé (ou les conserver et générer un message rétroactif — à confirmer avec vous).
+- Aucune autre migration de données nécessaire (les liens `client_agents` sont OK).
+
+### 4. Mettre à jour la mémoire
+
+Étendre `mem://features/co-assignment-rls-logic` pour inclure :
+- L'obligation de **ne pas filtrer une conversation existante par `agent_id`** côté UI quand un co-agent envoie une offre/message.
+- Le pattern `OR clients.agent_id` à inclure systématiquement dans les RLS sur tables liées à `client_id`.
+
+---
+
+## Fichiers impactés
+
+```text
+Code:
+  src/pages/agent/EnvoyerOffre.tsx        (lignes 224-271 réécrites)
+  src/pages/admin/EnvoyerOffre.tsx        (même bloc à réécrire)
+  src/components/ResendOfferDialog.tsx    (lignes 99-127 réécrites)
+
+SQL (migration):
+  - Réécriture policies INSERT/UPDATE/SELECT/DELETE sur public.offres
+  - Réécriture fonction can_agent_create_conversation
+  - Vérification + ajout policies co-agent sur public.visites
+  - DELETE des 3 offres orphelines (optionnel, à confirmer)
+
+Mémoire:
+  mem://features/co-assignment-rls-logic  (extension du pattern)
 ```
 
-### 2. Élargir RLS sur `documents` (candidate_id)
+## Question avant exécution
 
-Remplacer "Agents can manage candidate documents" pour inclure les co-agents.
-
-### 3. Garantir l'inscription des co-agents dans `conversation_agents`
-
-Deux corrections au trigger `sync_client_agent_on_assignment` :
-- Quand un co-agent est ajouté dans `client_agents`, créer un trigger AFTER INSERT qui ajoute automatiquement le co-agent à `conversation_agents` pour toutes les conversations existantes du client.
-- Backfill ponctuel : pour tous les couples (co-agent, conversation) déjà existants, insérer les lignes manquantes dans `conversation_agents`.
-
-```sql
--- Nouveau trigger
-CREATE OR REPLACE FUNCTION sync_co_agent_to_conversations()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-BEGIN
-  INSERT INTO conversation_agents (conversation_id, agent_id)
-  SELECT conv.id, NEW.agent_id
-  FROM conversations conv
-  WHERE conv.client_id = NEW.client_id::text
-  ON CONFLICT DO NOTHING;
-  RETURN NEW;
-END; $$;
-
-CREATE TRIGGER trg_sync_co_agent_conversations
-AFTER INSERT ON client_agents
-FOR EACH ROW EXECUTE FUNCTION sync_co_agent_to_conversations();
-
--- Backfill pour l'existant
-INSERT INTO conversation_agents (conversation_id, agent_id)
-SELECT DISTINCT conv.id, ca.agent_id
-FROM conversations conv
-JOIN client_agents ca ON ca.client_id::text = conv.client_id
-ON CONFLICT DO NOTHING;
-```
-
-### 4. Vérification post-migration
-
-- Lancer le linter Supabase pour confirmer qu'aucune nouvelle alerte RLS n'apparaît.
-- Tester rapidement (vérification logique) :
-  - Co-agent peut INSERT dans `client_candidates` ✅
-  - Co-agent peut INSERT dans `messages` pour la conversation du client partagé ✅
-  - Co-agent peut INSERT dans `documents` (candidate_id) ✅
-
-## Détails techniques
-
-- Toutes les nouvelles policies suivent le pattern existant : `EXISTS … clients.agent_id` **OR** `EXISTS … client_agents`.
-- Le trigger `sync_co_agent_to_conversations` est `SECURITY DEFINER` (cohérent avec le pattern projet) et ajoute uniquement dans `conversation_agents` (pas de notification à renvoyer).
-- Aucun changement côté frontend nécessaire — la correction est 100% côté base de données.
-- Aucune table ni colonne supprimée. Aucun risque de perte de données.
-
-## Hors périmètre
-
-- Pas de modification des droits côté `coursiers`, `clients`, `proprietaires`, `apporteurs` — uniquement la parité agent principal ↔ co-agents.
-- Pas de refonte du modèle de permissions ; on étend les policies existantes.
+Que faire des **3 offres orphelines** de Victoria créées aujourd'hui (sans message envoyé au client) ?
+A) Les supprimer (recommandé — le client n'a rien reçu)
+B) Les conserver et créer un message rétroactif dans la conversation existante
+C) Les laisser telles quelles

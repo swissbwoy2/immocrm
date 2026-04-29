@@ -220,17 +220,19 @@ const EnvoyerOffre = () => {
 
         if (offreError) throw offreError;
 
-        // Create conversation if it doesn't exist
+        // Find ANY existing conversation for this client (regardless of which agent created it)
+        // A co-agent must REUSE the existing conversation, not create a duplicate.
         const { data: existingConv } = await supabase
           .from('conversations')
-          .select('*')
+          .select('id')
           .eq('client_id', clientId)
-          .eq('agent_id', agent.id)
-          .single();
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
         let conversationId = existingConv?.id;
 
-        if (!existingConv) {
+        if (!conversationId) {
           const { data: newConv, error: convError } = await supabase
             .from('conversations')
             .insert({
@@ -243,31 +245,23 @@ const EnvoyerOffre = () => {
 
           if (convError) throw convError;
           conversationId = newConv.id;
+        }
 
-          // Add agent to conversation_agents for RLS permissions
+        // Always ensure THIS agent is registered in conversation_agents (idempotent)
+        const { data: existingAgentLink } = await supabase
+          .from('conversation_agents')
+          .select('id')
+          .eq('conversation_id', conversationId)
+          .eq('agent_id', agent.id)
+          .maybeSingle();
+
+        if (!existingAgentLink) {
           await supabase
             .from('conversation_agents')
             .insert({
               conversation_id: conversationId,
               agent_id: agent.id,
             });
-        } else {
-          // Ensure agent is in conversation_agents for existing conversations
-          const { data: existingAgent } = await supabase
-            .from('conversation_agents')
-            .select('id')
-            .eq('conversation_id', conversationId)
-            .eq('agent_id', agent.id)
-            .maybeSingle();
-
-          if (!existingAgent) {
-            await supabase
-              .from('conversation_agents')
-              .insert({
-                conversation_id: conversationId,
-                agent_id: agent.id,
-              });
-          }
         }
 
         // Send message with offer

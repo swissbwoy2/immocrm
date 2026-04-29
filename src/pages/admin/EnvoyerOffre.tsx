@@ -250,17 +250,18 @@ const AdminEnvoyerOffre = () => {
 
       if (offreError) throw offreError;
 
-      // Create conversation if it doesn't exist
+      // Find ANY existing conversation for this client (regardless of which agent created it)
       const { data: existingConv } = await supabase
         .from('conversations')
-        .select('*')
+        .select('id')
         .eq('client_id', formData.clientId)
-        .eq('agent_id', clientAgent)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       let conversationId = existingConv?.id;
 
-      if (!existingConv) {
+      if (!conversationId) {
         const { data: newConv, error: convError } = await supabase
           .from('conversations')
           .insert({
@@ -273,31 +274,23 @@ const AdminEnvoyerOffre = () => {
 
         if (convError) throw convError;
         conversationId = newConv.id;
+      }
 
-        // Add agent to conversation_agents for RLS permissions
+      // Always ensure the acting agent is in conversation_agents (idempotent)
+      const { data: existingAgentLink } = await supabase
+        .from('conversation_agents')
+        .select('id')
+        .eq('conversation_id', conversationId)
+        .eq('agent_id', clientAgent)
+        .maybeSingle();
+
+      if (!existingAgentLink) {
         await supabase
           .from('conversation_agents')
           .insert({
             conversation_id: conversationId,
             agent_id: clientAgent,
           });
-      } else {
-        // Ensure agent is in conversation_agents for existing conversations
-        const { data: existingAgent } = await supabase
-          .from('conversation_agents')
-          .select('id')
-          .eq('conversation_id', conversationId)
-          .eq('agent_id', clientAgent)
-          .maybeSingle();
-
-        if (!existingAgent) {
-          await supabase
-            .from('conversation_agents')
-            .insert({
-              conversation_id: conversationId,
-              agent_id: clientAgent,
-            });
-        }
       }
 
       // Send message with offer
