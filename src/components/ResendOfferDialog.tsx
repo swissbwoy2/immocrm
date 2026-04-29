@@ -102,18 +102,18 @@ export const ResendOfferDialog = ({
 
         if (offerError) throw offerError;
 
-        // Vérifier s'il existe une conversation entre l'agent et le client
+        // Find ANY existing conversation for this client (regardless of which agent created it)
         const { data: existingConv } = await supabase
           .from('conversations')
           .select('id')
-          .eq('agent_id', agentId)
           .eq('client_id', clientId)
           .eq('conversation_type', 'client-agent')
+          .order('created_at', { ascending: true })
+          .limit(1)
           .maybeSingle();
 
         let conversationId = existingConv?.id;
 
-        // Si pas de conversation, en créer une
         if (!conversationId) {
           const { data: newConv, error: convError } = await supabase
             .from('conversations')
@@ -129,31 +129,23 @@ export const ResendOfferDialog = ({
 
           if (convError) throw convError;
           conversationId = newConv.id;
+        }
 
-          // Add agent to conversation_agents for RLS permissions
+        // Always ensure the acting agent is in conversation_agents (idempotent)
+        const { data: existingAgentLink } = await supabase
+          .from('conversation_agents')
+          .select('id')
+          .eq('conversation_id', conversationId)
+          .eq('agent_id', agentId)
+          .maybeSingle();
+
+        if (!existingAgentLink) {
           await supabase
             .from('conversation_agents')
             .insert({
               conversation_id: conversationId,
               agent_id: agentId,
             });
-        } else {
-          // Ensure agent is in conversation_agents for existing conversations
-          const { data: existingAgent } = await supabase
-            .from('conversation_agents')
-            .select('id')
-            .eq('conversation_id', conversationId)
-            .eq('agent_id', agentId)
-            .maybeSingle();
-
-          if (!existingAgent) {
-            await supabase
-              .from('conversation_agents')
-              .insert({
-                conversation_id: conversationId,
-                agent_id: agentId,
-              });
-          }
         }
 
         // Récupérer le nom du client pour la personnalisation
