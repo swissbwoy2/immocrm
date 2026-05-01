@@ -350,15 +350,17 @@ export default function CampagnesSuivi() {
         },
       });
       if (error) throw error;
-      toast.success(`Import terminé : ${data.inserted} nouveau(x) lead(s) ajouté(s)`, {
+      const reattached = data.reattached || 0;
+      toast.success(`Import terminé : ${data.inserted} nouveau(x) + ${reattached} rattaché(s) à Location`, {
         description:
           `📊 Sur ${lines.length - 1} lignes du CSV :\n` +
           `• ✅ ${data.inserted} nouveaux importés\n` +
-          `• 🔁 ${data.duplicates} doublons (déjà en base)\n` +
+          `• 🔗 ${reattached} existants rattachés à Location\n` +
+          `• 🔁 ${data.duplicates} déjà rattachés (vrais doublons)\n` +
           `• 🚫 ${rejectedFormulaire} rejetés (formulaire ≠ Logisorama)\n` +
           `• 🚫 ${rejectedEtape} rejetés (étape ≠ Qualifié)\n` +
           `• ⚠️ ${data.errors || 0} erreurs`,
-        duration: 10000,
+        duration: 12000,
       });
       setImportOpen(false);
       setImportFile(null);
@@ -524,6 +526,32 @@ export default function CampagnesSuivi() {
                   <Upload className="h-4 w-4 mr-1" /> Importer CSV
                 </Button>
               </div>
+
+              {(() => {
+                const totalCampaign = leads.filter((l) => l.campaign_key === selectedCampaign).length;
+                const sentInCampaign = leads.filter(
+                  (l) => l.campaign_key === selectedCampaign && sentLeadIds.has(l.id),
+                ).length;
+                const remaining = totalCampaign - sentInCampaign;
+                return (
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline" className="bg-muted/40">
+                      Total campagne : <strong className="ml-1">{totalCampaign}</strong>
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-300">
+                      Déjà envoyés : <strong className="ml-1">{sentInCampaign}</strong>
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
+                      Restants à envoyer : <strong className="ml-1">{remaining}</strong>
+                    </Badge>
+                    {hideAlreadySent && sentInCampaign > 0 && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
+                        ⓘ {sentInCampaign} masqués par le filtre
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="border rounded-md">
                 <Table>

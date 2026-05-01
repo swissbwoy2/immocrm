@@ -61,9 +61,10 @@ Deno.serve(async (req) => {
 
     let inserted = 0;
     let duplicates = 0;
+    let reattached = 0;
     let errors = 0;
 
-    // Pre-fetch existing emails in meta_leads to dedupe by email
+    // Pre-fetch existing leads (email + campaign_key) to dedupe & re-attach
     const incomingEmails = Array.from(
       new Set(
         leads
@@ -72,17 +73,16 @@ Deno.serve(async (req) => {
       )
     );
 
-    const existingEmails = new Set<string>();
+    const existingByEmail = new Map<string, { id: string; campaign_key: string | null }>();
     if (incomingEmails.length > 0) {
-      // chunk to avoid huge IN()
       for (let i = 0; i < incomingEmails.length; i += 200) {
         const chunk = incomingEmails.slice(i, i + 200);
         const { data: existing } = await supabase
           .from('meta_leads')
-          .select('email')
+          .select('id, email, campaign_key')
           .in('email', chunk);
         (existing || []).forEach((r: any) => {
-          if (r.email) existingEmails.add(r.email.toLowerCase());
+          if (r.email) existingByEmail.set(r.email.toLowerCase(), { id: r.id, campaign_key: r.campaign_key });
         });
       }
     }
@@ -94,8 +94,25 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      if (existingEmails.has(email)) {
-        duplicates++;
+      const existing = existingByEmail.get(email);
+      if (existing) {
+        // Already in DB. If a campaign_key is requested and the row is not yet attached
+        // to this campaign, re-attach it instead of silently skipping it.
+        if (campaign_key && existing.campaign_key !== campaign_key) {
+          const { error: upErr } = await supabase
+            .from('meta_leads')
+            .update({ campaign_key })
+            .eq('id', existing.id);
+          if (upErr) {
+            errors++;
+            console.error('Reattach error:', upErr.message);
+          } else {
+            reattached++;
+            existing.campaign_key = campaign_key;
+          }
+        } else {
+          duplicates++;
+        }
         continue;
       }
 
@@ -137,7 +154,7 @@ Deno.serve(async (req) => {
         }
       } else {
         inserted++;
-        existingEmails.add(email);
+        existingByEmail.set(email, { id: 'new', campaign_key: campaign_key || null });
       }
     }
 
@@ -146,6 +163,7 @@ Deno.serve(async (req) => {
         success: true,
         inserted,
         duplicates,
+        reattached,
         errors,
         total: leads.length,
       }),
