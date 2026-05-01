@@ -446,7 +446,9 @@ Deno.serve(async (req) => {
 
         const unsubToken = crypto.randomUUID();
         const html = renderEmail(camp, lead, unsubToken);
-        const result = await sendViaResend(lead.email, camp.subject, html);
+        const result = await sendViaResend(lead.email, camp.subject, html, {
+          bcc: ['info@immo-rama.ch'],
+        });
 
         await supabaseAdmin.from('lead_email_logs').insert({
           lead_id: lead.id,
