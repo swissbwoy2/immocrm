@@ -180,6 +180,21 @@ export default function CampagnesSuivi() {
         .limit(15000);
       setSentLeadIds(new Set((sentData || []).map((r: any) => r.lead_id)));
     }
+
+    // Global per-lead sent count (all campaigns, all statuses sent)
+    const { data: allSent } = await supabase
+      .from("lead_email_logs")
+      .select("lead_id")
+      .eq("status", "sent")
+      .eq("test_send", false)
+      .not("lead_id", "is", null)
+      .limit(15000);
+    const counts = new Map<string, number>();
+    (allSent || []).forEach((r: any) => {
+      counts.set(r.lead_id, (counts.get(r.lead_id) || 0) + 1);
+    });
+    setSentCountByLead(counts);
+
     setLoadingLeads(false);
   };
 
