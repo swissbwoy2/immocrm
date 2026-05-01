@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
         }
       } else {
         inserted++;
-        existingEmails.add(email);
+        existingByEmail.set(email, { id: 'new', campaign_key: campaign_key || null });
       }
     }
 
@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
         success: true,
         inserted,
         duplicates,
+        reattached,
         errors,
         total: leads.length,
       }),
