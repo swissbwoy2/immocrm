@@ -1,43 +1,43 @@
 
-# Ajouter info@immo-rama.ch en copie cachée (BCC) sur les envois réels
+# Corriger l'expéditeur Resend de `send-followup-campaign`
 
 ## Diagnostic
 
-J'ai inspecté la fonction `send-followup-campaign/index.ts` :
-- **Le BCC vers `info@immo-rama.ch` n'est PAS implémenté** dans l'appel à l'API Resend (ligne 238).
-- L'envoi se fait via : `body: JSON.stringify({ from, to: [to], subject, html })` — sans `bcc`.
-- Conclusion : `info@immo-rama.ch` ne pouvait **jamais** recevoir de copie. Aucun mail n'a été perdu, simplement la fonctionnalité n'existait pas encore côté envoi réel (elle existe pour les "Tests" qui adressent directement le mail à `info@immo-rama.ch`).
+Les 9 emails ont échoué car Resend rejette l'envoi depuis `notify.logisorama.ch` (domaine géré par Lovable Cloud, **non vérifié dans Resend**).
+
+Les fonctions qui fonctionnent (`notify-new-lead`, `send-mandat-pdf`) utilisent **`support@logisorama.ch`** comme fallback — ce domaine est déjà vérifié dans Resend.
 
 ## Correctif
 
-Modifier `supabase/functions/send-followup-campaign/index.ts` :
+Modifier `supabase/functions/send-followup-campaign/index.ts` (lignes 8-21) :
 
-1. Étendre la signature de `sendViaResend()` pour accepter un paramètre optionnel `bcc: string[]`.
-2. Ajouter `bcc` au payload Resend uniquement s'il est fourni.
-3. Dans la boucle d'envoi réel (ligne 435), passer `bcc: ['info@immo-rama.ch']` à chaque appel.
-4. **Ne pas** ajouter de BCC pour les envois "Test" (déjà adressés directement à `info@immo-rama.ch` ligne 331 — sinon doublon).
-
-### Snippet ciblé (envoi réel)
+- Remplacer la logique `normalizeFrom()` qui retombe sur `noreply@notify.logisorama.ch` (échec garanti).
+- Utiliser le même pattern que `notify-new-lead/index.ts` : fallback sur `support@logisorama.ch`.
+- Ignorer explicitement la valeur `notify.logisorama.ch` dans `RESEND_FROM_EMAIL` si elle est définie ainsi.
+- Format final : `Logisorama <support@logisorama.ch>`.
 
 ```ts
-const result = await sendViaResend(
-  lead.email,
-  camp.subject,
-  html,
-  { bcc: ['info@immo-rama.ch'] }
-);
+const RAW_FROM = (Deno.env.get('RESEND_FROM_EMAIL') || '').trim();
+const SENDER_EMAIL =
+  RAW_FROM && RAW_FROM.includes('@') && !RAW_FROM.includes('notify.logisorama.ch')
+    ? RAW_FROM
+    : 'support@logisorama.ch';
+const RESEND_FROM_EMAIL = SENDER_EMAIL.includes('<')
+  ? SENDER_EMAIL
+  : `Logisorama <${SENDER_EMAIL}>`;
 ```
 
 ## Effet
 
-- **Chaque email réel** envoyé à un lead sera désormais reçu en copie cachée par `info@immo-rama.ch` → confirmation d'envoi/réception centralisée.
-- Le destinataire ne voit pas le BCC (confidentialité préservée).
-- Les emails « Test » continuent de fonctionner comme avant (envoyés directement à `info@immo-rama.ch`).
+- Prochains envois utiliseront `Logisorama <support@logisorama.ch>` → autorisé par Resend.
+- Aucun risque de doublon : les 9 leads sont en `failed`, pas en `sent`. Vous pourrez relancer la campagne.
+- Le BCC `info@immo-rama.ch` ajouté précédemment continue de fonctionner.
 
 ## Déploiement
 
-Redéploiement automatique de l'Edge Function via `deploy_edge_functions(["send-followup-campaign"])`.
+Redéploiement automatique via `deploy_edge_functions(["send-followup-campaign"])`.
 
 ## Validation
 
-Lancer un envoi réel sur un lead test (ex: votre propre adresse en lead) — vérifier que le mail arrive **à la fois** sur l'adresse du lead **et** sur `info@immo-rama.ch`.
+1. Cliquer **Test** → vérifier réception sur `info@immo-rama.ch` (sans erreur Resend).
+2. Relancer la campagne sur les 9 leads → vérifier `lead_email_logs.status = 'sent'`.

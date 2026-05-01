@@ -6,19 +6,15 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-function normalizeFrom(raw: string | undefined): string {
-  const fallback = 'Logisorama <noreply@notify.logisorama.ch>';
-  if (!raw) return fallback;
-  const v = raw.trim();
-  // Already in "Name <email>" format
-  if (/^.+<[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+>$/.test(v)) return v;
-  // Bare email
-  if (/^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/.test(v)) return `Logisorama <${v}>`;
-  // Looks like a bare domain → build address from it
-  if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(v)) return `Logisorama <noreply@${v}>`;
-  return fallback;
-}
-const RESEND_FROM_EMAIL = normalizeFrom(Deno.env.get('RESEND_FROM_EMAIL'));
+// Utilise le même expéditeur que notify-new-lead / send-mandat-pdf (vérifié dans Resend)
+const RAW_FROM = (Deno.env.get('RESEND_FROM_EMAIL') || '').trim();
+const SENDER_EMAIL =
+  RAW_FROM && RAW_FROM.includes('@') && !RAW_FROM.includes('notify.logisorama.ch')
+    ? RAW_FROM
+    : 'support@logisorama.ch';
+const RESEND_FROM_EMAIL = SENDER_EMAIL.includes('<')
+  ? SENDER_EMAIL
+  : `Logisorama <${SENDER_EMAIL}>`;
 const TEST_RECIPIENT = 'info@immo-rama.ch';
 const PUBLIC_BASE_URL = 'https://logisorama.ch';
 const MAX_LEADS_PER_INVOCATION = 500;
