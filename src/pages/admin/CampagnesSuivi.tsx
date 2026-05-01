@@ -350,8 +350,15 @@ export default function CampagnesSuivi() {
         },
       });
       if (error) throw error;
-      toast.success(`${data.inserted} leads importés vers Location`, {
-        description: `${data.duplicates} doublons · ${rejectedFormulaire} hors Logisorama · ${rejectedEtape} non Qualifiés · ${data.errors || 0} erreurs`,
+      toast.success(`Import terminé : ${data.inserted} nouveau(x) lead(s) ajouté(s)`, {
+        description:
+          `📊 Sur ${lines.length - 1} lignes du CSV :\n` +
+          `• ✅ ${data.inserted} nouveaux importés\n` +
+          `• 🔁 ${data.duplicates} doublons (déjà en base)\n` +
+          `• 🚫 ${rejectedFormulaire} rejetés (formulaire ≠ Logisorama)\n` +
+          `• 🚫 ${rejectedEtape} rejetés (étape ≠ Qualifié)\n` +
+          `• ⚠️ ${data.errors || 0} erreurs`,
+        duration: 10000,
       });
       setImportOpen(false);
       setImportFile(null);
