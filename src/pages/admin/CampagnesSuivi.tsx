@@ -120,6 +120,13 @@ export default function CampagnesSuivi() {
   const [search, setSearch] = useState("");
   const [hideAlreadySent, setHideAlreadySent] = useState(true);
   const [sentLeadIds, setSentLeadIds] = useState<Set<string>>(new Set());
+  const [sentCountByLead, setSentCountByLead] = useState<Map<string, number>>(new Map());
+
+  // Lead history dialog
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLead, setHistoryLead] = useState<Lead | null>(null);
+  const [historyRows, setHistoryRows] = useState<LogRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Import CSV
   const [importOpen, setImportOpen] = useState(false);
@@ -173,6 +180,21 @@ export default function CampagnesSuivi() {
         .limit(15000);
       setSentLeadIds(new Set((sentData || []).map((r: any) => r.lead_id)));
     }
+
+    // Global per-lead sent count (all campaigns, all statuses sent)
+    const { data: allSent } = await supabase
+      .from("lead_email_logs")
+      .select("lead_id")
+      .eq("status", "sent")
+      .eq("test_send", false)
+      .not("lead_id", "is", null)
+      .limit(15000);
+    const counts = new Map<string, number>();
+    (allSent || []).forEach((r: any) => {
+      counts.set(r.lead_id, (counts.get(r.lead_id) || 0) + 1);
+    });
+    setSentCountByLead(counts);
+
     setLoadingLeads(false);
   };
 
@@ -398,6 +420,33 @@ export default function CampagnesSuivi() {
     loadLeads();
   };
 
+  // ───── Open lead email history
+  const openLeadHistory = async (lead: Lead) => {
+    setHistoryLead(lead);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryRows([]);
+    const { data, error } = await supabase
+      .from("lead_email_logs")
+      .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send")
+      .eq("lead_id", lead.id)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) toast.error("Erreur historique", { description: error.message });
+    setHistoryRows((data || []) as LogRow[]);
+    setHistoryLoading(false);
+  };
+
+  // ───── View campaign HTML from a log row
+  const viewCampaignFromLog = async (campaignKey: string) => {
+    const camp = campaigns.find((c) => c.campaign_key === campaignKey);
+    if (!camp) {
+      toast.error("Campagne introuvable", { description: campaignKey });
+      return;
+    }
+    handlePreview(camp);
+  };
+
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
       <div>
@@ -611,16 +660,33 @@ export default function CampagnesSuivi() {
                               {format(new Date(l.imported_at), "dd/MM/yy", { locale: fr })}
                             </TableCell>
                             <TableCell>
-                              {already ? (
-                                <Badge variant="secondary" className="text-xs">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Envoyé
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs">
-                                  En attente
-                                </Badge>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {already ? (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Envoyé
+                                    {(sentCountByLead.get(l.id) || 0) > 1 && (
+                                      <span className="ml-1 opacity-70">· {sentCountByLead.get(l.id)}</span>
+                                    )}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs">
+                                    En attente
+                                  </Badge>
+                                )}
+                                {(sentCountByLead.get(l.id) || 0) > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => openLeadHistory(l)}
+                                    title="Voir les emails envoyés"
+                                  >
+                                    <Mail className="h-3.5 w-3.5 mr-1" />
+                                    Voir
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -672,20 +738,22 @@ export default function CampagnesSuivi() {
                       <TableHead>Date</TableHead>
                       <TableHead>Destinataire</TableHead>
                       <TableHead>Campagne</TableHead>
+                      <TableHead>Sujet</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead className="hidden md:table-cell">Erreur</TableHead>
+                      <TableHead className="w-24 text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingLogs ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
                     ) : logs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-sm">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-sm">
                           Aucun envoi pour le moment.
                         </TableCell>
                       </TableRow>
@@ -710,6 +778,9 @@ export default function CampagnesSuivi() {
                                 {log.campaign_key}
                               </Badge>
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate">
+                              {log.subject || "—"}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={`text-xs ${badge.className}`}>
                                 {badge.label}
@@ -717,6 +788,17 @@ export default function CampagnesSuivi() {
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-xs truncate">
                               {log.error_message || "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => viewCampaignFromLog(log.campaign_key)}
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                Voir
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -833,6 +915,86 @@ export default function CampagnesSuivi() {
               Importer vers Location
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ───────── LEAD HISTORY DIALOG ───────── */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Emails envoyés
+            </DialogTitle>
+            <DialogDescription>
+              {historyLead && (
+                <>
+                  {historyLead.first_name || historyLead.last_name
+                    ? `${historyLead.first_name || ""} ${historyLead.last_name || ""}`.trim()
+                    : historyLead.email}
+                  {" — "}
+                  <span className="text-xs">{historyLead.email}</span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : historyRows.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              Aucun email envoyé à ce lead.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {historyRows.map((row) => {
+                const badge = STATUS_BADGE[row.status] || STATUS_BADGE.pending;
+                return (
+                  <Card key={row.id} className="overflow-hidden">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {row.campaign_key}
+                          </Badge>
+                          <Badge variant="outline" className={`text-xs ${badge.className}`}>
+                            {badge.label}
+                          </Badge>
+                          {row.test_send && (
+                            <Badge variant="outline" className="text-[10px]">TEST</Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(row.created_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
+                        </span>
+                      </div>
+                      <div className="text-sm font-medium">{row.subject || "(sans sujet)"}</div>
+                      {row.error_message && (
+                        <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                          {row.error_message}
+                        </div>
+                      )}
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setHistoryOpen(false);
+                            viewCampaignFromLog(row.campaign_key);
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          Voir le contenu envoyé
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
