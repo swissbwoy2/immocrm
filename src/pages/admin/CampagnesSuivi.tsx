@@ -527,6 +527,32 @@ export default function CampagnesSuivi() {
                 </Button>
               </div>
 
+              {(() => {
+                const totalCampaign = leads.filter((l) => l.campaign_key === selectedCampaign).length;
+                const sentInCampaign = leads.filter(
+                  (l) => l.campaign_key === selectedCampaign && sentLeadIds.has(l.id),
+                ).length;
+                const remaining = totalCampaign - sentInCampaign;
+                return (
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline" className="bg-muted/40">
+                      Total campagne : <strong className="ml-1">{totalCampaign}</strong>
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-300">
+                      Déjà envoyés : <strong className="ml-1">{sentInCampaign}</strong>
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
+                      Restants à envoyer : <strong className="ml-1">{remaining}</strong>
+                    </Badge>
+                    {hideAlreadySent && sentInCampaign > 0 && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
+                        ⓘ {sentInCampaign} masqués par le filtre
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="border rounded-md">
                 <Table>
                   <TableHeader>
