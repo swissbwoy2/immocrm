@@ -1,45 +1,37 @@
-## Problème identifié
-Le bouton d’import fonctionne, mais deux filtres se cumulent :
+## Problème
 
-1. Beaucoup d’anciens leads Logisorama existent déjà en base sans rattachement à la campagne `Location`.
-2. La page n’affiche que les leads rattachés à cette campagne, et masque en plus les leads déjà envoyés.
-
-Résultat observé avec ton fichier actuel :
-- 93 lignes passent bien le filtre `Formulaire contient Logisorama` + `Étape = Qualifié`
-- l’import les compte en doublons car leurs emails existent déjà en base
-- mais la majorité de ces doublons n’est pas visible ici car ils ont un rattachement de campagne vide
-- sur les 14 déjà rattachés à `Location`, 9 sont déjà envoyés et masqués par la case `Masquer déjà envoyés`
-- il ne reste donc que 5 visibles, ce qui donne l’impression que “ça ne marche pas”
+Aujourd'hui, dans `Campagnes de suivi`, on peut voir qu'un lead a déjà reçu un email (badge "Envoyé"), mais on ne peut pas consulter **quels** emails il a reçus, **quand**, et avec **quel contenu**. La table `lead_email_logs` stocke pourtant tout (sujet, date, statut, campagne, message_id provider).
 
 ## Plan
-1. Corriger les anciennes données
-- rattacher en base les anciens leads CSV Logisorama + Qualifié qui ont encore une campagne vide à la campagne `Location`
-- conserver strictement la logique métier actuelle, sans élargir le filtre
 
-2. Corriger l’import pour les prochains CSV
-- si un email existe déjà mais n’est pas encore rattaché à `Location`, ne plus le laisser bloqué en simple doublon
-- mettre à jour l’enregistrement existant pour lui attribuer la bonne campagne au lieu de l’ignorer
-- garder le filtre strict `Logisorama + Qualifié`
+### 1. Onglet "Leads & envoi" — bouton historique par lead
+- Ajouter une icône cliquable (📧 ou "Voir mails") dans la colonne Statut, visible uniquement pour les leads ayant au moins 1 envoi
+- Au clic : ouvrir un Dialog "Historique des emails — {nom du lead}"
+- Le Dialog liste tous les `lead_email_logs` du lead, triés du plus récent au plus ancien :
+  - Date + heure (format Europe/Zurich)
+  - Campagne (badge)
+  - Sujet
+  - Statut (Envoyé / Échec / Ignoré, badge coloré)
+  - Si erreur : message d'erreur
+  - Bouton "Voir le contenu" → re-render le template HTML de la campagne via la même fonction `preview-email-campaign` déjà utilisée pour l'aperçu
 
-3. Rendre l’écran plus clair
-- ajouter un indicateur visible sur la liste pour montrer :
-  - total des leads de la campagne
-  - combien sont masqués car déjà envoyés
-  - combien restent réellement envoyables
-- ajuster le message d’import pour distinguer :
-  - nouveaux leads créés
-  - leads existants rattachés à `Location`
-  - vrais doublons déjà correctement rattachés
+### 2. Onglet "Logs" — rendre chaque ligne cliquable
+- Ajouter une colonne action "Voir le contenu" à droite
+- Au clic : ouvrir le même Dialog d'aperçu HTML de la campagne (réutiliser `previewOpen` / `previewHtml`)
+- Avantage : l'admin peut depuis n'importe quelle ligne de log voir exactement le mail envoyé
 
-## Résultat attendu
-Après correction :
-- ton fichier ne sera plus “bloqué” par les anciens doublons mal rattachés
-- les leads Logisorama + Qualifié historiques apparaîtront bien dans `Campagnes de suivi > Location`
-- le compteur affiché correspondra enfin à ce que tu vois à l’écran
-- si la case `Masquer déjà envoyés` reste cochée, seuls les leads encore non contactés seront affichés
+### 3. Compteur d'envois par lead
+- Afficher discrètement le nombre d'envois à côté du badge "Envoyé" (ex : "Envoyé · 2") quand un lead a reçu plusieurs mails
+- Calculé depuis le map `sentLeadIds` qu'on enrichit avec un compteur
 
 ## Détails techniques
-- écran concerné : `src/pages/admin/CampagnesSuivi.tsx`
-- fonction backend concernée : `import-leads-csv`
-- données concernées : table des leads importés, colonne de rattachement de campagne
-- une mise à jour de données existantes sera nécessaire en plus du correctif applicatif
+- Fichier modifié : `src/pages/admin/CampagnesSuivi.tsx` uniquement
+- Source de données : table `lead_email_logs` (déjà chargée pour l'onglet Logs, à enrichir avec `lead_id` si pas déjà sélectionné)
+- Aperçu HTML : réutilise l'edge function `preview-email-campaign` déjà appelée par `handlePreview`
+- Aucune migration DB nécessaire — toutes les données existent déjà
+- Aucun nouveau tracking d'ouverture (pas demandé)
+
+## Résultat attendu
+- Tu cliques sur un lead "Envoyé" → tu vois la liste de tous les mails qu'il a reçus
+- Tu cliques sur une ligne dans Logs → tu vois exactement le mail envoyé ce jour-là
+- Le compteur reste cohérent avec ce qu'on a corrigé précédemment
