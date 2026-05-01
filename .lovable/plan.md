@@ -1,23 +1,36 @@
-## Problème
+## Objectif
 
-Le code de l'edge function `send-followup-campaign` contient bien l'injection du `preview_text` en doré entre le `<h1>` et le sous-titre (ligne 130 de `index.ts`), et la donnée existe en base ("Crée ton compte gratuitement et accède à notre réseau de biens.").
+Afficher dans l’email une **accroche dorée longue et complète**, et non plus seulement la phrase courte `preview_text`.
 
-Mais sur le test email reçu (capture 18:33), l'accroche dorée n'apparaît pas. Cela signifie que **la dernière version de l'edge function n'a pas été redéployée** sur Lovable Cloud — l'email de test a été généré avec l'ancienne version (sans le `<p>` doré).
+## Constat
 
-## Solution
+Actuellement, l’email est construit ainsi :
+- `preview_text` = phrase courte dorée
+- le reste du texte que tu vois dans la notification iPhone vient d’autres blocs séparés de l’email (`top bar`, badge premium, slogan, sous-titre)
 
-Forcer le redéploiement de la fonction `send-followup-campaign` pour que le code mis à jour soit actif en production.
+Donc la notification donne l’impression d’un seul texte continu, mais dans l’email ce contenu est réparti sur plusieurs lignes et styles différents.
 
-### Étapes
-1. Redéployer l'edge function `send-followup-campaign` via le tool de déploiement.
-2. Vérifier dans les logs que le déploiement a réussi.
-3. L'utilisateur clique à nouveau sur "Test" depuis `/admin/campagnes-suivi` pour la campagne "Location – Recherche appartement".
-4. L'accroche dorée "Crée ton compte gratuitement et accède à notre réseau de biens." doit apparaître entre le titre "Tu cherches un appartement ?" et le sous-titre.
+## Solution proposée
 
-### Détails techniques
-- Aucune modification de code nécessaire — le code est correct.
-- Le bloc fautif est ligne 130 de `supabase/functions/send-followup-campaign/index.ts` :
-  ```
-  ${campaign.preview_text ? `<p style="...color:#d4a857;...">${escapeHtml(campaign.preview_text)}</p>` : ''}
-  ```
-- Une fois redéployée, la condition s'évaluera correctement pour les 4 campagnes (toutes ont un `preview_text` non null).
+1. **Créer une vraie accroche longue dédiée** pour la campagne `location`.
+   - Cette accroche contiendra le texte complet que tu veux voir en doré dans le corps de l’email.
+2. **Afficher cette accroche longue sous le titre principal** à la place de la petite phrase actuelle.
+3. **Conserver le teaser caché pour la notification** afin que l’aperçu iPhone continue de bien fonctionner.
+4. **Redéployer la fonction** `send-followup-campaign`.
+5. **Tester un envoi** depuis `/admin/campagnes-suivi`.
+
+## Détail technique
+
+Je ferai l’un de ces deux choix à l’implémentation :
+
+### Option la plus propre
+Ajouter un champ dédié du type `hero_teaser` / `golden_teaser` pour les campagnes, afin de séparer :
+- le texte d’aperçu caché (notification)
+- le texte long doré visible dans l’email
+
+### Option plus rapide
+Réutiliser `preview_text` mais en y mettant directement le texte complet, puis ajuster le rendu pour éviter une mauvaise duplication.
+
+## Résultat attendu
+
+Sous le titre **"Tu cherches un appartement ?"**, on verra une **accroche dorée complète**, correspondant à ce que tu veux vraiment mettre en avant, et pas seulement la première phrase.
