@@ -447,6 +447,7 @@ export default function CampagnesSuivi() {
     handlePreview(camp);
   };
 
+  return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Campagnes de suivi</h1>
