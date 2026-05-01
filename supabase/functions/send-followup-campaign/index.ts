@@ -143,6 +143,17 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
         <!--[if !mso]><!-- -->
         <a href="${campaign.cta_url}" style="display:inline-block;background:linear-gradient(135deg,#d4a857 0%,#b8893d 100%);color:#1c1814;text-decoration:none;font-weight:700;font-size:15px;padding:17px 38px;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.4px;box-shadow:0 8px 24px rgba(184,137,61,0.35);">🚀  ${escapeHtml(campaign.cta_label)}</a>
         <!--<![endif]-->
+
+        <!-- Séparateur OU -->
+        <div style="margin:26px auto 18px;display:flex;align-items:center;justify-content:center;max-width:280px;">
+          <div style="flex:1;height:1px;background:rgba(184,137,61,0.3);"></div>
+          <div style="padding:0 14px;color:#8a7f6e;font-size:11px;letter-spacing:3px;font-family:Arial,sans-serif;font-weight:600;">OU</div>
+          <div style="flex:1;height:1px;background:rgba(184,137,61,0.3);"></div>
+        </div>
+
+        <!-- 2e CTA — Appel téléphonique gratuit -->
+        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;line-height:1.3;">📞  Réservez votre appel téléphonique gratuit (15 min)</a>
+        <p style="margin:12px auto 0;max-width:420px;font-size:13px;line-height:1.55;color:#a89b82;font-style:italic;font-family:Georgia,serif;">Un expert Logisorama vous appelle au numéro de votre choix et analyse votre dossier en direct — c'est <strong style="color:#d4a857;font-style:normal;">100&nbsp;% gratuit</strong>.</p>
       </td></tr>
 
       <!-- INTRO -->
