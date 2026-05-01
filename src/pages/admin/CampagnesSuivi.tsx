@@ -747,13 +747,13 @@ export default function CampagnesSuivi() {
                   <TableBody>
                     {loadingLogs ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
                     ) : logs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-sm">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-sm">
                           Aucun envoi pour le moment.
                         </TableCell>
                       </TableRow>
@@ -778,6 +778,9 @@ export default function CampagnesSuivi() {
                                 {log.campaign_key}
                               </Badge>
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[220px] truncate">
+                              {log.subject || "—"}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline" className={`text-xs ${badge.className}`}>
                                 {badge.label}
@@ -785,6 +788,17 @@ export default function CampagnesSuivi() {
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-xs truncate">
                               {log.error_message || "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => viewCampaignFromLog(log.campaign_key)}
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                Voir
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
