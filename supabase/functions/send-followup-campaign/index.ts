@@ -127,6 +127,7 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
 
         <!-- Titre principal -->
         <h1 style="margin:0 0 14px;font-size:30px;line-height:1.2;color:#f4ecd8;font-weight:700;font-family:Georgia,'Times New Roman',serif;">${escapeHtml(campaign.hero_title)}</h1>
+        ${campaign.preview_text ? `<p style="margin:0 auto 14px;max-width:520px;font-size:14px;line-height:1.55;color:#d4a857;font-weight:600;font-family:Arial,sans-serif;letter-spacing:0.2px;">${escapeHtml(campaign.preview_text)}</p>` : ''}
         ${campaign.hero_subtitle ? `<p style="margin:0 auto 30px;max-width:480px;font-size:16px;line-height:1.6;color:#c9bfac;font-family:Arial,sans-serif;">${escapeHtml(campaign.hero_subtitle)}</p>` : '<div style="height:24px;"></div>'}
 
         <!-- CTA principal -->
