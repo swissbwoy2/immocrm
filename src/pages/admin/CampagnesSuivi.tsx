@@ -918,6 +918,86 @@ export default function CampagnesSuivi() {
         </DialogContent>
       </Dialog>
 
+      {/* ───────── LEAD HISTORY DIALOG ───────── */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Emails envoyés
+            </DialogTitle>
+            <DialogDescription>
+              {historyLead && (
+                <>
+                  {historyLead.first_name || historyLead.last_name
+                    ? `${historyLead.first_name || ""} ${historyLead.last_name || ""}`.trim()
+                    : historyLead.email}
+                  {" — "}
+                  <span className="text-xs">{historyLead.email}</span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : historyRows.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              Aucun email envoyé à ce lead.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {historyRows.map((row) => {
+                const badge = STATUS_BADGE[row.status] || STATUS_BADGE.pending;
+                return (
+                  <Card key={row.id} className="overflow-hidden">
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {row.campaign_key}
+                          </Badge>
+                          <Badge variant="outline" className={`text-xs ${badge.className}`}>
+                            {badge.label}
+                          </Badge>
+                          {row.test_send && (
+                            <Badge variant="outline" className="text-[10px]">TEST</Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(row.created_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
+                        </span>
+                      </div>
+                      <div className="text-sm font-medium">{row.subject || "(sans sujet)"}</div>
+                      {row.error_message && (
+                        <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                          {row.error_message}
+                        </div>
+                      )}
+                      <div className="flex justify-end pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setHistoryOpen(false);
+                            viewCampaignFromLog(row.campaign_key);
+                          }}
+                        >
+                          <Eye className="h-3.5 w-3.5 mr-1" />
+                          Voir le contenu envoyé
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* ───────── CONFIRM SEND ───────── */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
