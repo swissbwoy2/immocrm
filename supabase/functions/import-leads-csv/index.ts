@@ -116,11 +116,13 @@ Deno.serve(async (req) => {
         last_name: nom || null,
         full_name: fullName,
         lead_status: leadStatus,
+        campaign_key: campaign_key || null,
         imported_at: new Date().toISOString(),
         raw_meta_payload: {
           original_source: originalSource,
           original_formulaire: formulaire,
           import_filename: formulaire_name || null,
+          campaign_key: campaign_key || null,
         },
       };
 
