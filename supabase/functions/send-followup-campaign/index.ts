@@ -227,15 +227,29 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
 </html>`;
 }
 
-async function sendViaResend(to: string, subject: string, html: string): Promise<{ id?: string; error?: string }> {
+async function sendViaResend(
+  to: string,
+  subject: string,
+  html: string,
+  options?: { bcc?: string[] }
+): Promise<{ id?: string; error?: string }> {
   try {
+    const payload: Record<string, unknown> = {
+      from: RESEND_FROM_EMAIL,
+      to: [to],
+      subject,
+      html,
+    };
+    if (options?.bcc && options.bcc.length > 0) {
+      payload.bcc = options.bcc;
+    }
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from: RESEND_FROM_EMAIL, to: [to], subject, html }),
+      body: JSON.stringify(payload),
     });
     const json = await res.json();
     if (!res.ok) return { error: json?.message || `HTTP ${res.status}` };
@@ -432,7 +446,9 @@ Deno.serve(async (req) => {
 
         const unsubToken = crypto.randomUUID();
         const html = renderEmail(camp, lead, unsubToken);
-        const result = await sendViaResend(lead.email, camp.subject, html);
+        const result = await sendViaResend(lead.email, camp.subject, html, {
+          bcc: ['info@immo-rama.ch'],
+        });
 
         await supabaseAdmin.from('lead_email_logs').insert({
           lead_id: lead.id,
