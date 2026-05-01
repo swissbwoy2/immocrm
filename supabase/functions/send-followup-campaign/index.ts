@@ -178,8 +178,15 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
       </td></tr>
 
       <!-- CTA FINAL -->
-      <tr><td style="padding:32px 40px 40px;text-align:center;">
+      <tr><td style="padding:32px 40px 16px;text-align:center;">
         <a href="${campaign.cta_url}" style="display:inline-block;background:linear-gradient(135deg,#d4a857 0%,#b8893d 100%);color:#1c1814;text-decoration:none;font-weight:700;font-size:15px;padding:17px 42px;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.4px;box-shadow:0 8px 24px rgba(184,137,61,0.35);">${escapeHtml(campaign.cta_label)}</a>
+      </td></tr>
+
+      <!-- CTA FINAL — Appel téléphonique -->
+      <tr><td style="padding:0 40px 36px;text-align:center;">
+        <div style="margin:0 auto 16px;max-width:280px;height:1px;background:rgba(184,137,61,0.25);"></div>
+        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📞  Préférez un appel téléphonique gratuit&nbsp;?</a>
+        <p style="margin:10px auto 0;max-width:380px;font-size:12px;line-height:1.5;color:#8a7f6e;font-family:Arial,sans-serif;">15 min avec un expert · analyse en direct de votre dossier</p>
       </td></tr>
 
       <!-- SIGNATURE -->
