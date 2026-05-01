@@ -1,87 +1,205 @@
-## Diagnostic
+## Objectif
 
-L'erreur de permission d'Victoria vient du flux de la page **`src/pages/agent/EnvoyerOffre.tsx`**, pas de la table `offres` elle-même.
+**Admin → Campagnes de suivi** : importer un CSV de leads Facebook (en les rattachant à une campagne), prévisualiser l'email, envoyer un test à `info@immo-rama.ch`, puis déclencher manuellement l'envoi aux leads sélectionnés. Aucun envoi automatique, jamais.
 
-**Preuves recueillies :**
-- Victoria a 10 liens valides dans `client_agents` (donc la RLS de `offres` passe).
-- Aujourd'hui, **3 offres ont bien été insérées** par Victoria pour le client `f248d88b…` (RLS OK).
-- Mais Victoria a **0 conversation** avec son `agent_id`, et **0 message** lié à ces 3 offres.
-- Donc : l'`INSERT offres` réussit → l'étape suivante (création/lookup de conversation) échoue → l'erreur est attrapée et affichée à l'utilisateur, laissant 3 offres orphelines en base.
+---
 
-**Cause racine du blocage côté UI :**
-Ligne 224-229 de `EnvoyerOffre.tsx` :
-```ts
-.from('conversations').select('*')
-  .eq('client_id', clientId)
-  .eq('agent_id', agent.id)   // = victoria.id
-  .single();                  // PGRST116 si aucune ligne
+## Vérifications faites
+
+- ✅ `RESEND_API_KEY` + `RESEND_FROM_EMAIL` déjà configurés
+- ✅ Routes CTA toutes présentes : `/nouveau-mandat`, `/vendre-mon-bien`, `/construire-renover`
+- ✅ Table `meta_leads` + Edge `import-leads-csv` réutilisables
+
+---
+
+## Ajustements intégrés (vos 7 points)
+
+1. **Nom du module** : "Campagnes de suivi" partout (route, menu, titres, code)
+2. **DA premium Logisorama** : fond sombre `#0a0e1a`, accents dorés `#d4a857`, bleu nuit `#1e3a5f`, logo "Logisorama.ch by Immo-Rama.ch", boutons arrondis premium
+3. **Désinscription visuelle + structure prête** : table `email_unsubscribes` créée dès maintenant + token `unsubscribe_token` par destinataire dans `lead_email_logs`. Le lien dans l'email pointe vers `/unsubscribe/:token` (page à activer plus tard) — affiché visuellement, non bloquant
+4. **CTA confirmés** : routes existantes utilisées directement (pas de fallback nécessaire)
+5. **Rattachement campagne dès l'import** : champ `default_campaign_key` ajouté au dialog d'import + colonne `campaign_key` sur `meta_leads`. Modifiable après import via action bulk dans la table
+6. **Confirmation obligatoire** : AlertDialog systématique avec résumé exact `"Vous êtes sur le point d'envoyer la campagne {Nom} à {X} leads."`
+7. **Zéro envoi automatique** : aucun trigger DB, aucun cron, aucun appel post-import. Bouton manuel uniquement, action admin explicite
+
+---
+
+## Plan d'implémentation
+
+### 1. Migration DB
+
+**`email_followup_campaigns`** (4 lignes seedées)
 ```
-Victoria étant co-agent, la conversation existante appartient à l'**agent principal** (un autre `agent_id`). Le `.single()` renvoie une erreur PGRST116, le code passe ensuite en INSERT d'une nouvelle conversation. Cet INSERT déclenche une erreur (RLS et/ou PGRST116 mal géré), qui remonte → toast "Impossible d'envoyer l'offre" → **les offres déjà créées restent orphelines**.
+id uuid pk
+campaign_key text unique         -- 'location' | 'vente' | 'renovation' | 'achat'
+name text                        -- "Location – Recherche appartement"
+subject, preview_text text
+hero_title, hero_subtitle text
+body_intro text                  -- supporte {{first_name}}
+benefits jsonb                   -- ["Préciser vos critères", ...]
+trust_text text
+cta_label text
+cta_url text                     -- route absolue logisorama.ch + UTM
+signature text
+status text default 'active'     -- draft | active | inactive
+created_at, updated_at
+```
+Seed : Location/Vente/Rénovation actives + Achat en `draft` (à compléter).
+RLS : SELECT/UPDATE admin only.
 
-**Cause racine sous-jacente (RLS) :**
-La policy INSERT de `offres` (`Agents multi peuvent créer offres`) ne contrôle QUE `client_agents`. Si un agent principal (via `clients.agent_id`) n'a pas de ligne miroir dans `client_agents`, son INSERT échouerait — fragile et incohérent avec le reste du système (cf. mémoire `dual-source-assignment-integrity-strategy`).
+**Ajout sur `meta_leads`** :
+```sql
+ALTER TABLE meta_leads ADD COLUMN campaign_key text NULL;
+CREATE INDEX ON meta_leads(campaign_key);
+```
 
----
+**`lead_email_logs`**
+```
+id, lead_id (→ meta_leads ON DELETE CASCADE),
+campaign_id (→ email_followup_campaigns),
+recipient_email, subject,
+status text                      -- pending | sent | failed
+sent_at timestamptz, error_message text,
+provider_message_id text,
+unsubscribe_token text unique,   -- prêt pour activation future
+created_at timestamptz
+```
++ Index unique : `(lead_id, campaign_id) WHERE status = 'sent'` → idempotence.
+RLS : SELECT admin only.
 
-## Plan de correction
+**`email_unsubscribes`** (structure prête, non utilisée en V1)
+```
+id, email text unique, campaign_key text null,
+unsubscribed_at timestamptz default now(),
+source text                      -- 'link' | 'manual' | 'bounce'
+```
+RLS : INSERT public via edge function future, SELECT admin.
 
-### 1. Corriger le flux conversation dans `EnvoyerOffre.tsx` (agent + admin)
+### 2. Edge Function `send-followup-campaign`
 
-Faire en sorte qu'un co-agent **rejoigne** la conversation existante du client (peu importe quel agent l'a créée) au lieu d'en créer une nouvelle isolée.
+3 modes via body :
 
-**Logique cible :**
-1. Chercher TOUTE conversation `client-agent` pour ce `client_id` (sans filtrer par `agent_id`), via `.maybeSingle()` ou `.limit(1)`.
-2. Si trouvée → s'assurer que Victoria figure dans `conversation_agents` (déjà géré par notre trigger récent, mais re-vérifier en INSERT idempotent).
-3. Si aucune n'existe → créer une nouvelle conversation avec `agent_id = victoria.id`.
-4. Insérer le message dans cette conversation.
+| mode | body | action |
+|---|---|---|
+| `preview` | `{ mode, campaignKey }` | renvoie HTML rendu (lead fictif) |
+| `test` | `{ mode, campaignKey }` | envoie 1 email à `info@immo-rama.ch` |
+| `send` | `{ mode, campaignKey, leadIds }` | boucle, dédup, log, envoie |
 
-Appliquer la même correction à :
-- `src/pages/agent/EnvoyerOffre.tsx`
-- `src/pages/admin/EnvoyerOffre.tsx`
-- `src/components/ResendOfferDialog.tsx` (même schéma bogué visible lignes 99-127)
+**Garde-fous** :
+- Vérifie `has_role(auth.uid(), 'admin')` → 403 sinon
+- Max 500 leads / invocation
+- 200ms entre envois
+- Skip si déjà `sent` pour `(lead_id, campaign_id)`
+- Skip si email présent dans `email_unsubscribes` (préparation V2)
+- Génère `unsubscribe_token` unique par envoi
 
-### 2. Renforcer les RLS pour la parité totale principal/co-agent
+### 3. Template HTML email premium
 
-Migration SQL pour aligner toutes les policies sur le pattern documenté `mem://features/co-assignment-rls-logic` (OR principal OR co-agent) :
-
-- **`offres` INSERT/UPDATE/SELECT/DELETE** — ajouter la branche `EXISTS clients c JOIN agents a ON a.id = c.agent_id WHERE c.id = offres.client_id AND a.user_id = auth.uid()` en OR de la branche `client_agents`.
-- **`conversations` INSERT** — étendre `can_agent_create_conversation` pour accepter aussi le cas `clients.agent_id = _agent_id` (parité défensive).
-- **`visites` INSERT/UPDATE** — vérifier et ajouter la branche co-agent si manquante (utilisée juste après l'INSERT offres).
-
-### 3. Backfill / nettoyage
-
-- Supprimer les 3 offres orphelines de Victoria créées aujourd'hui sans message associé (ou les conserver et générer un message rétroactif — à confirmer avec vous).
-- Aucune autre migration de données nécessaire (les liens `client_agents` sont OK).
-
-### 4. Mettre à jour la mémoire
-
-Étendre `mem://features/co-assignment-rls-logic` pour inclure :
-- L'obligation de **ne pas filtrer une conversation existante par `agent_id`** côté UI quand un co-agent envoie une offre/message.
-- Le pattern `OR clients.agent_id` à inclure systématiquement dans les RLS sur tables liées à `client_id`.
-
----
-
-## Fichiers impactés
+`renderEmail(campaign, lead, unsubscribeToken)` calé sur la home Logisorama :
 
 ```text
-Code:
-  src/pages/agent/EnvoyerOffre.tsx        (lignes 224-271 réécrites)
-  src/pages/admin/EnvoyerOffre.tsx        (même bloc à réécrire)
-  src/components/ResendOfferDialog.tsx    (lignes 99-127 réécrites)
+┌─ Header sombre ──────────────────────────────────┐
+│  fond #0a0e1a                                    │
+│  Logisorama.ch (doré #d4a857)  by Immo-Rama.ch  │
+├─ Hero gradient ──────────────────────────────────┤
+│  #1e3a5f → #0a0e1a                               │
+│  Titre 28px doré                                 │
+│  Sous-titre 15px gris clair                      │
+│  [Bouton CTA doré arrondi 12px]                  │
+├─ Bénéfices (cartes claires) ─────────────────────┤
+│  fond #f9f7f1, ✓ doré, texte #1e3a5f             │
+├─ Bloc confiance ─────────────────────────────────┤
+├─ CTA final centré ───────────────────────────────┤
+├─ Footer ─────────────────────────────────────────┤
+│  Immo-Rama Sàrl • CHE-442.303.796                │
+│  "Se désinscrire" → /unsubscribe/{token} (visuel)│
+└──────────────────────────────────────────────────┘
+```
+Tables HTML 600px, inline-styles, MSO conditional pour Outlook, fonts web-safe.
 
-SQL (migration):
-  - Réécriture policies INSERT/UPDATE/SELECT/DELETE sur public.offres
-  - Réécriture fonction can_agent_create_conversation
-  - Vérification + ajout policies co-agent sur public.visites
-  - DELETE des 3 offres orphelines (optionnel, à confirmer)
+### 4. Page admin `/admin/campagnes-suivi`
 
-Mémoire:
-  mem://features/co-assignment-rls-logic  (extension du pattern)
+Route + entrée menu admin (groupe Marketing/Leads).
+
+**3 onglets** :
+
+**Onglet 1 — Campagnes** (par défaut)
+- 4 cartes (Location, Vente, Rénovation actives + Achat draft)
+- Stats 7j depuis `lead_email_logs`
+- Boutons : **Aperçu** (Dialog iframe desktop/mobile 375px) • **Test** (POST `mode:'test'`) • **Envoyer aux leads** (→ onglet 2 pré-filtré)
+
+**Onglet 2 — Leads & envoi**
+- Filtres : campagne, source, période, "non encore envoyés"
+- **Bouton "Importer CSV"** → dialog avec **select obligatoire "Campagne de suivi"** (Location/Vente/Rénovation/Achat/Aucune) → écrit `campaign_key` sur les nouveaux leads
+- Action bulk "Rattacher à une campagne" pour modifier après import
+- Table : checkbox, prénom/nom, email, tél, ville, **badge campagne**, statut email pour la campagne sélectionnée
+- "Tout sélectionner non-envoyés"
+- **Footer sticky** : récap leads sélectionnés
+- **AlertDialog obligatoire** : `"Vous êtes sur le point d'envoyer la campagne Location à 128 leads. Cette action est irréversible."` [Annuler] [Confirmer l'envoi]
+- Toast progress + résumé final (X envoyés / Y échecs / Z déjà envoyés / W désinscrits)
+
+**Onglet 3 — Logs**
+- 200 derniers logs : destinataire, campagne (badge), sujet, statut, date, erreur
+- Filtres campagne / statut / période
+- Export CSV
+
+### 5. Refactor
+
+Extraire le dialog d'import CSV depuis `src/pages/admin/MetaLeads.tsx` vers `src/components/admin/ImportLeadsCsvDialog.tsx` avec prop `defaultCampaignKey?` + select campagne intégré. `MetaLeads.tsx` continue de l'utiliser, la nouvelle page aussi. L'edge `import-leads-csv` accepte un nouveau champ optionnel `campaign_key`.
+
+### 6. Routes CTA (vérifiées)
+
+| Campagne | URL CTA |
+|---|---|
+| Location | `https://logisorama.ch/nouveau-mandat?utm_source=email&utm_medium=followup&utm_campaign=location` |
+| Vente | `https://logisorama.ch/vendre-mon-bien?utm_source=email&utm_medium=followup&utm_campaign=vente` |
+| Rénovation | `https://logisorama.ch/construire-renover?utm_source=email&utm_medium=followup&utm_campaign=renovation` |
+| Achat (draft) | `https://logisorama.ch/?utm_source=email&utm_medium=followup&utm_campaign=achat` (placeholder) |
+
+### 7. Mémoire
+
+Ajouter `mem://features/email-followup-campaigns` :
+- Module = import CSV manuel + rattachement campagne + envoi 100% contrôlé
+- Zéro automatisme, zéro trigger, zéro cron
+- Idempotence via index unique `lead_email_logs(lead_id, campaign_id) WHERE sent`
+- Désinscription : structure prête (`email_unsubscribes` + token), activation V2
+
+---
+
+## Architecture
+
+```text
+Admin → Importer CSV (+ campagne) ──► [import-leads-csv] ──► meta_leads (campaign_key)
+                                                                    │
+Admin → onglet "Leads & envoi" → sélection ────────────────────────┤
+                                                                    ▼
+Admin → "Envoyer" → AlertDialog confirmation ──► [send-followup-campaign]
+                                                       ├─► check lead_email_logs
+                                                       ├─► check email_unsubscribes
+                                                       ├─► render HTML premium
+                                                       ├─► Resend API
+                                                       └─► INSERT lead_email_logs
 ```
 
-## Question avant exécution
+---
 
-Que faire des **3 offres orphelines** de Victoria créées aujourd'hui (sans message envoyé au client) ?
-A) Les supprimer (recommandé — le client n'a rien reçu)
-B) Les conserver et créer un message rétroactif dans la conversation existante
-C) Les laisser telles quelles
+## Hors périmètre V1 (volontairement)
+
+- ❌ Page `/unsubscribe/:token` fonctionnelle (structure prête, activation V2)
+- ❌ Webhook Meta direct
+- ❌ Éditeur visuel de templates (modifiable via SQL)
+- ❌ Envoi planifié / cron
+- ❌ A/B testing
+- ❌ Tracking ouvertures / clics
+
+---
+
+## Résultat attendu
+
+1. **Admin → Campagnes de suivi**
+2. Onglet "Campagnes" → clic "Aperçu" → email rendu desktop/mobile
+3. Clic "Test" → email reçu à `info@immo-rama.ch`
+4. Onglet "Leads & envoi" → import CSV avec campagne "Location" → 128 leads rattachés
+5. Sélection + clic "Envoyer" → AlertDialog `"...Location à 128 leads."` → Confirmer
+6. Onglet "Logs" → suivi détaillé envoyés/échecs
+7. Ajouter une campagne plus tard = 1 INSERT dans `email_followup_campaigns`

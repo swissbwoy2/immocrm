@@ -84,6 +84,7 @@ const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminSalaires = lazy(() => import("./pages/admin/Salaires"));
 const AdminMetaLeads = lazy(() => import("./pages/admin/MetaLeads"));
+const AdminCampagnesSuivi = lazy(() => import("./pages/admin/CampagnesSuivi"));
 const AdminAgentIA = lazy(() => import("./pages/admin/AgentIA"));
 const StaffMandatPrefill = lazy(() => import("./pages/staff/MandatPrefill"));
 const MandatV3SignOnly = lazy(() => import("./pages/mandat-v3/SignOnly"));
@@ -319,6 +320,7 @@ const App = () => (
               <Route path="/admin/salaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminSalaires /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnalytics /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/meta-leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMetaLeads /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/campagnes-suivi" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCampagnesSuivi /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/agent-ia" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAgentIA /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaires /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaireDetail /></AppLayout></ProtectedRoute>} />
