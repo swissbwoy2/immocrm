@@ -120,6 +120,13 @@ export default function CampagnesSuivi() {
   const [search, setSearch] = useState("");
   const [hideAlreadySent, setHideAlreadySent] = useState(true);
   const [sentLeadIds, setSentLeadIds] = useState<Set<string>>(new Set());
+  const [sentCountByLead, setSentCountByLead] = useState<Map<string, number>>(new Map());
+
+  // Lead history dialog
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLead, setHistoryLead] = useState<Lead | null>(null);
+  const [historyRows, setHistoryRows] = useState<LogRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Import CSV
   const [importOpen, setImportOpen] = useState(false);
