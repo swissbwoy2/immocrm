@@ -660,16 +660,33 @@ export default function CampagnesSuivi() {
                               {format(new Date(l.imported_at), "dd/MM/yy", { locale: fr })}
                             </TableCell>
                             <TableCell>
-                              {already ? (
-                                <Badge variant="secondary" className="text-xs">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Envoyé
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs">
-                                  En attente
-                                </Badge>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {already ? (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Envoyé
+                                    {(sentCountByLead.get(l.id) || 0) > 1 && (
+                                      <span className="ml-1 opacity-70">· {sentCountByLead.get(l.id)}</span>
+                                    )}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs">
+                                    En attente
+                                  </Badge>
+                                )}
+                                {(sentCountByLead.get(l.id) || 0) > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => openLeadHistory(l)}
+                                    title="Voir les emails envoyés"
+                                  >
+                                    <Mail className="h-3.5 w-3.5 mr-1" />
+                                    Voir
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
