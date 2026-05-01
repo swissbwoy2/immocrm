@@ -1,92 +1,53 @@
-## Reformulation finale
 
-Ajouter un **2ᵉ bouton CTA** dans l'email, libellé clair et sans ambiguïté :
+# Bloc "Avis Google" dans les emails de campagne de suivi
 
-> **« 📞 Réservez votre appel téléphonique gratuit (15 min) »**  
-> Sous-titre : *« Un expert Logisorama analyse votre dossier en direct par téléphone »*
+## Contexte
 
-Le mot **téléphonique** doit apparaître explicitement pour éviter toute confusion (pas un RDV en agence, pas une visio — un appel).
+Les emails de campagne (`send-followup-campaign`) doivent afficher un bloc de preuve sociale renvoyant vers les vrais avis Google de Logisorama.
 
-## Bonne nouvelle : tout l'agenda existe déjà
+**Contrainte technique** : le widget Elfsight de la page d'accueil utilise du JavaScript externe — **impossible** dans un email (Gmail/Outlook/Apple Mail bloquent tous les scripts). On utilise donc un bloc HTML statique 100% email-safe (tableaux + styles inline) qui pointe vers :
+- Le **vrai lien Google** : `https://g.page/r/CQJCKNAJlouGEAE/review`
+- La **section avis du site** : `https://logisorama.ch/#avis` (où le widget Elfsight complet s'affiche)
 
-Aucune migration, aucune nouvelle edge function. On réutilise :
+## Rendu visuel du bloc
 
-| Élément | Existant |
-|---|---|
-| Table BDD | `lead_phone_appointments` (créneaux 15 min, status, prospect) |
-| UI publique | `DossierAnalyseSection` + `PhoneSlotPicker` (ancre `#analyse-dossier`) |
-| Calendrier admin | `src/pages/admin/Calendrier.tsx` (realtime branché) |
-| Edge functions | `confirm-phone-appointment`, ICS, reminders 24h |
-
-## Modifications
-
-### Fichier unique : `supabase/functions/send-followup-campaign/index.ts`
-
-Dans `renderEmail()`, ajouter sous le CTA principal existant :
-
-```html
-<!-- Séparateur élégant -->
-<div style="margin: 28px 0 20px; text-align:center; color:#8a7560;
-            font-size:12px; letter-spacing:3px;">— OU —</div>
-
-<!-- 2e CTA — appel téléphonique explicite -->
-<a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign={campaignKey}&utm_content=cta_appel_tel#analyse-dossier"
-   style="display:inline-block;padding:16px 28px;
-          background:transparent;border:2px solid #b8893d;
-          color:#d4a857;font-family:Georgia,serif;
-          border-radius:6px;text-decoration:none;font-weight:600;
-          font-size:15px;line-height:1.3;">
-  📞 Réservez votre appel téléphonique gratuit (15 min)
-</a>
-
-<p style="font-size:13px;color:#a89380;margin:10px 0 0;
-          font-style:italic;line-height:1.5;">
-  Un expert Logisorama vous appelle au numéro de votre choix<br/>
-  et analyse votre dossier en direct — c'est <strong>100 % gratuit</strong>.
-</p>
+```text
+┌──────────────────────────────────────────────────┐
+│                                                  │
+│              ★ ★ ★ ★ ★                           │
+│                                                  │
+│         Avis Google vérifiés                     │
+│   Découvrez les retours de nos clients           │
+│                                                  │
+│      [ ⭐ Lire nos avis Google → ]               │
+│                                                  │
+│        Voir tous les témoignages sur le site     │
+│                                                  │
+└──────────────────────────────────────────────────┘
 ```
 
-### Points clés du wording
+## Spécifications techniques
 
-- **« appel téléphonique »** est dit dans le bouton ET répété dans le sous-titre.
-- **« vous appelle »** précise que c'est l'expert qui compose le numéro (pas l'inverse).
-- **« 100 % gratuit »** lève la friction.
-- L'icône 📞 renforce visuellement.
-- Le bouton est **identique pour les 4 campagnes** (Location / Vente / Rénovation / Achat).
+- **Position** : inséré dans `renderEmail()` **juste avant la 2ème CTA téléphonique** (en bas), pour rassurer le lead avant l'invitation à réserver l'appel.
+- **Étoiles** : caractères Unicode `★` couleur or `#d4a857` (pas d'image externe → aucun problème de chargement / proxy Gmail).
+- **HTML email-safe** : `<table>` imbriquées + styles inline uniquement, cohérent avec le reste du template.
+- **Bouton principal** :
+  - Texte : « ⭐ Lire nos avis Google »
+  - URL : `https://g.page/r/CQJCKNAJlouGEAE/review?utm_source=campagne_suivi&utm_medium=email&utm_campaign={key}&utm_content=avis_google_direct`
+  - Style doré plein (cohérent avec le bouton principal de l'email)
+- **Lien secondaire** :
+  - Texte : « Voir tous les témoignages sur le site »
+  - URL : `https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign={key}&utm_content=avis_google_site#avis`
+  - Style discret (texte doré souligné)
+- **Palette** : `#b8893d` / `#d4a857` (identique au reste de l'email).
 
-### Lien deep-link
+## Fichier modifié
 
-```
-https://logisorama.ch/?utm_source=campagne_suivi
-                     &utm_medium=email
-                     &utm_campaign={location|vente|renovation|achat}
-                     &utm_content=cta_appel_tel
-                     #analyse-dossier
-```
+- `supabase/functions/send-followup-campaign/index.ts`
+  - Ajout d'une variable `reviewsBlock` dans `renderEmail()`
+  - Insertion du bloc juste avant le CTA téléphonique final
+- Redéploiement automatique via `deploy_edge_functions(["send-followup-campaign"])`
 
-L'ancre `#analyse-dossier` scrolle automatiquement le visiteur sur le `PhoneSlotPicker` où il choisit son créneau 15 min. Le RDV apparaît instantanément dans `/admin/calendrier` (realtime).
+## Validation
 
-### Aucune modif côté admin ni côté BDD
-
-Tout le pipeline existe déjà :
-1. Prospect clique → atterrit sur `#analyse-dossier`
-2. Réserve un créneau → insertion dans `lead_phone_appointments`
-3. RDV visible live dans le calendrier admin
-4. ICS envoyé, reminder 24h envoyé automatiquement
-
-## Récap
-
-| Fichier | Action |
-|---|---|
-| `supabase/functions/send-followup-campaign/index.ts` | Ajout 2ᵉ CTA "appel téléphonique" + séparateur dans `renderEmail()` |
-| Redéploiement | `send-followup-campaign` |
-
-**1 fichier modifié. 0 migration. 0 nouvelle edge function.**
-
-## Test après déploiement
-
-1. Admin → Campagnes de suivi → bouton **"Test"**
-2. Mail reçu sur `info@immo-rama.ch`
-3. Cliquer sur **« 📞 Réservez votre appel téléphonique gratuit (15 min) »**
-4. Atterrissage sur `logisorama.ch#analyse-dossier`
-5. Sélection créneau → apparaît dans `/admin/calendrier`
+Après déploiement : cliquer sur **« Test »** dans `/admin/campagnes-suivi` pour visualiser le rendu réel du bloc dans la boîte mail.
