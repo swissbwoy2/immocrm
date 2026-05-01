@@ -738,8 +738,10 @@ export default function CampagnesSuivi() {
                       <TableHead>Date</TableHead>
                       <TableHead>Destinataire</TableHead>
                       <TableHead>Campagne</TableHead>
+                      <TableHead>Sujet</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead className="hidden md:table-cell">Erreur</TableHead>
+                      <TableHead className="w-24 text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
