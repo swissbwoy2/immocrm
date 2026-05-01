@@ -256,27 +256,71 @@ export default function CampagnesSuivi() {
     else setSelectedIds(new Set(filteredLeads.map((l) => l.id)));
   };
 
-  // ───── Import CSV
+  // ───── CSV line parser (handles quoted commas)
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === "," && !inQuotes) {
+        result.push(cur.trim()); cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    result.push(cur.trim());
+    return result.map((c) => c.replace(/^"|"$/g, ""));
+  };
+
+  // ───── Import CSV — Filtre strict : Logisorama + Qualifié → Location uniquement
   const handleImport = async () => {
     if (!importFile) return;
     setImporting(true);
     try {
       const text = await importFile.text();
-      const lines = text.split(/\r?\n/).filter((l) => l.trim());
+      // Strip BOM
+      const clean = text.replace(/^\uFEFF/, "");
+      const lines = clean.split(/\r?\n/).filter((l) => l.trim());
       if (lines.length < 2) throw new Error("CSV vide");
-      const headers = lines[0].toLowerCase().split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+      const headers = parseCSVLine(lines[0]).map((h) => h.toLowerCase().trim());
       const nameIdx = headers.findIndex((h) => h.includes("nom") || h.includes("name"));
       const emailIdx = headers.findIndex((h) => h.includes("e-mail") || h.includes("email") || h.includes("adresse e"));
       const sourceIdx = headers.findIndex((h) => h === "source");
       const formulaireIdx = headers.findIndex((h) => h.includes("formulaire"));
+      const etapeIdx = headers.findIndex((h) => h.includes("étape") || h.includes("etape") || h.includes("stage"));
       const phoneIdx = headers.findIndex((h) => h.includes("téléphone") || h.includes("telephone") || h.includes("phone"));
       if (emailIdx === -1) throw new Error("Colonne email introuvable");
+      if (formulaireIdx === -1) throw new Error("Colonne 'Formulaire' introuvable");
+      if (etapeIdx === -1) throw new Error("Colonne 'Étape' introuvable");
 
       const parsed: any[] = [];
+      let rejectedFormulaire = 0;
+      let rejectedEtape = 0;
+      let rejectedEmail = 0;
+
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+        const cols = parseCSVLine(lines[i]);
         const email = cols[emailIdx]?.trim();
-        if (!email || !email.includes("@")) continue;
+        if (!email || !email.includes("@")) { rejectedEmail++; continue; }
+
+        const formulaire = cols[formulaireIdx] || "";
+        const etape = cols[etapeIdx] || "";
+
+        const isLogisorama = formulaire.toLowerCase().includes("logisorama");
+        const normEtape = etape
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        const isQualifie = normEtape === "qualifie";
+
+        if (!isLogisorama) { rejectedFormulaire++; continue; }
+        if (!isQualifie) { rejectedEtape++; continue; }
+
         const fullName = nameIdx >= 0 ? cols[nameIdx] : "";
         const parts = fullName.split(" ");
         parsed.push({
@@ -285,20 +329,29 @@ export default function CampagnesSuivi() {
           nom: parts.slice(1).join(" ") || null,
           telephone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
           source: sourceIdx >= 0 ? cols[sourceIdx] || "CSV Import" : "CSV Import",
-          formulaire: formulaireIdx >= 0 ? cols[formulaireIdx] || null : null,
+          formulaire,
+          etape,
         });
+      }
+
+      if (parsed.length === 0) {
+        toast.error("Aucun lead conforme", {
+          description: `Vérifie que le CSV contient des leads avec Formulaire « Logisorama » ET Étape « Qualifié ». Rejetés : ${rejectedFormulaire} hors Logisorama · ${rejectedEtape} non Qualifiés.`,
+        });
+        setImporting(false);
+        return;
       }
 
       const { data, error } = await supabase.functions.invoke("import-leads-csv", {
         body: {
           leads: parsed,
           formulaire_name: importFile.name,
-          campaign_key: importCampaignKey === "none" ? null : importCampaignKey,
+          campaign_key: "location", // verrouillé
         },
       });
       if (error) throw error;
-      toast.success(`${data.inserted} leads importés`, {
-        description: `${data.duplicates} doublons · ${data.errors} erreurs · Campagne : ${importCampaignKey}`,
+      toast.success(`${data.inserted} leads importés vers Location`, {
+        description: `${data.duplicates} doublons · ${rejectedFormulaire} hors Logisorama · ${rejectedEtape} non Qualifiés · ${data.errors || 0} erreurs`,
       });
       setImportOpen(false);
       setImportFile(null);
