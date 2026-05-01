@@ -182,10 +182,25 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
         <a href="${campaign.cta_url}" style="display:inline-block;background:linear-gradient(135deg,#d4a857 0%,#b8893d 100%);color:#1c1814;text-decoration:none;font-weight:700;font-size:15px;padding:17px 42px;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.4px;box-shadow:0 8px 24px rgba(184,137,61,0.35);">${escapeHtml(campaign.cta_label)}</a>
       </td></tr>
 
+      <!-- AVIS GOOGLE — Preuve sociale -->
+      <tr><td style="padding:8px 40px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:linear-gradient(135deg,rgba(212,168,87,0.08) 0%,rgba(184,137,61,0.04) 100%);border:1px solid rgba(184,137,61,0.25);border-radius:14px;">
+          <tr><td style="padding:24px 24px 22px;text-align:center;">
+            <div style="font-size:22px;letter-spacing:4px;color:#d4a857;line-height:1;margin-bottom:10px;">★ ★ ★ ★ ★</div>
+            <div style="font-family:Georgia,serif;font-size:16px;font-weight:700;color:#f4ecd8;margin-bottom:4px;">Avis Google vérifiés</div>
+            <p style="margin:0 0 16px;font-size:13px;line-height:1.5;color:#a89c87;font-family:Arial,sans-serif;">Découvrez les retours authentiques de nos clients relogés</p>
+            <a href="https://g.page/r/CQJCKNAJlouGEAE/review?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=avis_google_direct" style="display:inline-block;background:linear-gradient(135deg,#d4a857 0%,#b8893d 100%);color:#1c1814;text-decoration:none;font-weight:700;font-size:13px;padding:12px 26px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;box-shadow:0 6px 18px rgba(184,137,61,0.3);">⭐ Lire nos avis Google</a>
+            <div style="margin-top:14px;">
+              <a href="${PUBLIC_BASE_URL}/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=avis_google_site#avis" style="font-size:12px;color:#b8893d;text-decoration:underline;font-family:Arial,sans-serif;">Voir tous les témoignages sur le site →</a>
+            </div>
+          </td></tr>
+        </table>
+      </td></tr>
+
       <!-- CTA FINAL — Appel téléphonique -->
       <tr><td style="padding:0 40px 36px;text-align:center;">
         <div style="margin:0 auto 16px;max-width:280px;height:1px;background:rgba(184,137,61,0.25);"></div>
-        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📞  Préférez un appel téléphonique gratuit&nbsp;?</a>
+        <a href="${PUBLIC_BASE_URL}/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📞  Préférez un appel téléphonique gratuit&nbsp;?</a>
         <p style="margin:10px auto 0;max-width:380px;font-size:12px;line-height:1.5;color:#8a7f6e;font-family:Arial,sans-serif;">15 min avec un expert · analyse en direct de votre dossier</p>
       </td></tr>
 
