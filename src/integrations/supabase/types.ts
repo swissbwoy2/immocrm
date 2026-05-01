@@ -3847,6 +3847,63 @@ export type Database = {
         }
         Relationships: []
       }
+      email_followup_campaigns: {
+        Row: {
+          benefits: Json
+          body_intro: string | null
+          campaign_key: string
+          created_at: string
+          cta_label: string
+          cta_url: string
+          hero_subtitle: string | null
+          hero_title: string
+          id: string
+          name: string
+          preview_text: string | null
+          signature: string | null
+          status: string
+          subject: string
+          trust_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          benefits?: Json
+          body_intro?: string | null
+          campaign_key: string
+          created_at?: string
+          cta_label: string
+          cta_url: string
+          hero_subtitle?: string | null
+          hero_title: string
+          id?: string
+          name: string
+          preview_text?: string | null
+          signature?: string | null
+          status?: string
+          subject: string
+          trust_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          benefits?: Json
+          body_intro?: string | null
+          campaign_key?: string
+          created_at?: string
+          cta_label?: string
+          cta_url?: string
+          hero_subtitle?: string | null
+          hero_title?: string
+          id?: string
+          name?: string
+          preview_text?: string | null
+          signature?: string | null
+          status?: string
+          subject?: string
+          trust_text?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body_template: string
@@ -3883,6 +3940,30 @@ export type Database = {
           updated_at?: string
           user_id?: string
           variables?: Json | null
+        }
+        Relationships: []
+      }
+      email_unsubscribes: {
+        Row: {
+          campaign_key: string | null
+          email: string
+          id: string
+          source: string
+          unsubscribed_at: string
+        }
+        Insert: {
+          campaign_key?: string | null
+          email: string
+          id?: string
+          source?: string
+          unsubscribed_at?: string
+        }
+        Update: {
+          campaign_key?: string | null
+          email?: string
+          id?: string
+          source?: string
+          unsubscribed_at?: string
         }
         Relationships: []
       }
@@ -5032,6 +5113,69 @@ export type Database = {
           },
         ]
       }
+      lead_email_logs: {
+        Row: {
+          campaign_id: string | null
+          campaign_key: string
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          provider_message_id: string | null
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string
+          test_send: boolean
+          unsubscribe_token: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          campaign_key: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          provider_message_id?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          status?: string
+          subject: string
+          test_send?: boolean
+          unsubscribe_token?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          campaign_key?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          provider_message_id?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          test_send?: boolean
+          unsubscribe_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_email_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_followup_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_email_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "meta_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_phone_appointments: {
         Row: {
           confirmed_at: string | null
@@ -6134,6 +6278,7 @@ export type Database = {
           adset_name: string | null
           assigned_to: string | null
           campaign_id: string | null
+          campaign_key: string | null
           campaign_name: string | null
           city: string | null
           created_at: string | null
@@ -6168,6 +6313,7 @@ export type Database = {
           adset_name?: string | null
           assigned_to?: string | null
           campaign_id?: string | null
+          campaign_key?: string | null
           campaign_name?: string | null
           city?: string | null
           created_at?: string | null
@@ -6202,6 +6348,7 @@ export type Database = {
           adset_name?: string | null
           assigned_to?: string | null
           campaign_id?: string | null
+          campaign_key?: string | null
           campaign_name?: string | null
           city?: string | null
           created_at?: string | null
