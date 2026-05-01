@@ -6,7 +6,19 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-const RESEND_FROM_EMAIL = Deno.env.get('RESEND_FROM_EMAIL') || 'Logisorama <noreply@notify.logisorama.ch>';
+function normalizeFrom(raw: string | undefined): string {
+  const fallback = 'Logisorama <noreply@notify.logisorama.ch>';
+  if (!raw) return fallback;
+  const v = raw.trim();
+  // Already in "Name <email>" format
+  if (/^.+<[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+>$/.test(v)) return v;
+  // Bare email
+  if (/^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/.test(v)) return `Logisorama <${v}>`;
+  // Looks like a bare domain → build address from it
+  if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(v)) return `Logisorama <noreply@${v}>`;
+  return fallback;
+}
+const RESEND_FROM_EMAIL = normalizeFrom(Deno.env.get('RESEND_FROM_EMAIL'));
 const TEST_RECIPIENT = 'info@immo-rama.ch';
 const PUBLIC_BASE_URL = 'https://logisorama.ch';
 const MAX_LEADS_PER_INVOCATION = 500;
