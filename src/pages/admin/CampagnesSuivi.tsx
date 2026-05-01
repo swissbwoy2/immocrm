@@ -748,13 +748,24 @@ export default function CampagnesSuivi() {
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Importer un CSV de leads</DialogTitle>
+            <DialogTitle>Importer un CSV de leads Meta</DialogTitle>
             <DialogDescription>
-              Format Facebook Lead Ads ou export équivalent. Les leads seront rattachés à la campagne
-              choisie ci-dessous.
+              Export Facebook Lead Ads. Filtre strict appliqué automatiquement.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm space-y-1">
+              <div className="font-semibold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                Filtre automatique — Campagne Location
+              </div>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Seuls les leads dont le <strong>Formulaire</strong> contient « Logisorama »
+                <strong> ET</strong> dont l'<strong>Étape</strong> est <strong>« Qualifié »</strong> seront importés.
+                Tous les autres (À évaluer, Contacté, Converti, RENOV IA, vendeurs/acheteurs…)
+                sont automatiquement écartés.
+              </p>
+            </div>
             <div>
               <Label className="text-sm">Fichier CSV</Label>
               <Input
@@ -770,21 +781,12 @@ export default function CampagnesSuivi() {
                 </p>
               )}
             </div>
-            <div>
-              <Label className="text-sm">Rattacher à la campagne</Label>
-              <Select value={importCampaignKey} onValueChange={setImportCampaignKey}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((c) => (
-                    <SelectItem key={c.campaign_key} value={c.campaign_key}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="none">Aucune (à rattacher plus tard)</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Cible :</span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                Campagne Location
+              </span>
+              <span className="text-xs text-muted-foreground">(rattachement automatique)</span>
             </div>
           </div>
           <DialogFooter>
@@ -793,7 +795,7 @@ export default function CampagnesSuivi() {
             </Button>
             <Button onClick={handleImport} disabled={!importFile || importing}>
               {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-              Importer
+              Importer vers Location
             </Button>
           </DialogFooter>
         </DialogContent>
