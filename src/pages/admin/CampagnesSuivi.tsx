@@ -420,7 +420,33 @@ export default function CampagnesSuivi() {
     loadLeads();
   };
 
-  return (
+  // ───── Open lead email history
+  const openLeadHistory = async (lead: Lead) => {
+    setHistoryLead(lead);
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    setHistoryRows([]);
+    const { data, error } = await supabase
+      .from("lead_email_logs")
+      .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send")
+      .eq("lead_id", lead.id)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) toast.error("Erreur historique", { description: error.message });
+    setHistoryRows((data || []) as LogRow[]);
+    setHistoryLoading(false);
+  };
+
+  // ───── View campaign HTML from a log row
+  const viewCampaignFromLog = async (campaignKey: string) => {
+    const camp = campaigns.find((c) => c.campaign_key === campaignKey);
+    if (!camp) {
+      toast.error("Campagne introuvable", { description: campaignKey });
+      return;
+    }
+    handlePreview(camp);
+  };
+
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Campagnes de suivi</h1>
