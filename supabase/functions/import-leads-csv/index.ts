@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { leads, formulaire_name } = await req.json();
+    const { leads, formulaire_name, campaign_key } = await req.json();
 
     if (!leads || !Array.isArray(leads) || leads.length === 0) {
       return new Response(JSON.stringify({ error: 'Aucun lead fourni' }), {
