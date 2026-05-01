@@ -1,83 +1,92 @@
-## Contexte
+## Reformulation finale
 
-Le CSV Meta (`leads_7.csv`) contient tous les leads mélangés. Tu veux n'importer **que** les prospects pertinents pour la **campagne Location** :
+Ajouter un **2ᵉ bouton CTA** dans l'email, libellé clair et sans ambiguïté :
 
-1. **Formulaire** contient "logisorama" (insensible à la casse — couvre "Logisorama futur", "LOGISORAMA 2.0", "LOGISORAMA5.0"…)
-2. **ET** Étape = **"Qualifié"** (insensible à la casse / accents)
-3. **ET** rattachement automatique à la campagne **Location** (pas de choix dans le dropdown)
+> **« 📞 Réservez votre appel téléphonique gratuit (15 min) »**  
+> Sous-titre : *« Un expert Logisorama analyse votre dossier en direct par téléphone »*
 
-Tout le reste est rejeté à l'import : "À évaluer", "Contacté", "Converti", formulaires "RENOV IA", "vendeurs vs Acheteurs"…
+Le mot **téléphonique** doit apparaître explicitement pour éviter toute confusion (pas un RDV en agence, pas une visio — un appel).
+
+## Bonne nouvelle : tout l'agenda existe déjà
+
+Aucune migration, aucune nouvelle edge function. On réutilise :
+
+| Élément | Existant |
+|---|---|
+| Table BDD | `lead_phone_appointments` (créneaux 15 min, status, prospect) |
+| UI publique | `DossierAnalyseSection` + `PhoneSlotPicker` (ancre `#analyse-dossier`) |
+| Calendrier admin | `src/pages/admin/Calendrier.tsx` (realtime branché) |
+| Edge functions | `confirm-phone-appointment`, ICS, reminders 24h |
 
 ## Modifications
 
-### 1. Parser CSV (`src/pages/admin/CampagnesSuivi.tsx`)
+### Fichier unique : `supabase/functions/send-followup-campaign/index.ts`
 
-Dans `handleImport`, ajouter la détection de la colonne **Étape** et appliquer le double filtre :
+Dans `renderEmail()`, ajouter sous le CTA principal existant :
 
-```ts
-const etapeIdx = headers.findIndex(
-  (h) => h.includes("étape") || h.includes("etape") || h.includes("stage")
-);
+```html
+<!-- Séparateur élégant -->
+<div style="margin: 28px 0 20px; text-align:center; color:#8a7560;
+            font-size:12px; letter-spacing:3px;">— OU —</div>
 
-let rejectedFormulaire = 0;
-let rejectedEtape = 0;
+<!-- 2e CTA — appel téléphonique explicite -->
+<a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign={campaignKey}&utm_content=cta_appel_tel#analyse-dossier"
+   style="display:inline-block;padding:16px 28px;
+          background:transparent;border:2px solid #b8893d;
+          color:#d4a857;font-family:Georgia,serif;
+          border-radius:6px;text-decoration:none;font-weight:600;
+          font-size:15px;line-height:1.3;">
+  📞 Réservez votre appel téléphonique gratuit (15 min)
+</a>
 
-for (let i = 1; i < lines.length; i++) {
-  const cols = parseCSVLine(lines[i]); // gère virgules dans guillemets
-  const formulaire = formulaireIdx >= 0 ? cols[formulaireIdx] || "" : "";
-  const etape = etapeIdx >= 0 ? cols[etapeIdx] || "" : "";
-
-  const isLogisorama = formulaire.toLowerCase().includes("logisorama");
-  const normEtape = etape.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  const isQualifie = normEtape === "qualifie";
-
-  if (!isLogisorama) { rejectedFormulaire++; continue; }
-  if (!isQualifie)   { rejectedEtape++;       continue; }
-
-  parsed.push({ email, prenom, nom, telephone, source, formulaire, etape });
-}
+<p style="font-size:13px;color:#a89380;margin:10px 0 0;
+          font-style:italic;line-height:1.5;">
+  Un expert Logisorama vous appelle au numéro de votre choix<br/>
+  et analyse votre dossier en direct — c'est <strong>100 % gratuit</strong>.
+</p>
 ```
 
-### 2. Forcer la campagne Location
+### Points clés du wording
 
-- Dans le dialogue d'import, **supprimer le sélecteur de campagne** et le remplacer par un badge fixe :  
-  *"Cible : campagne **Location** (rattachement automatique)"*
-- Forcer `campaign_key: "location"` dans l'appel à `import-leads-csv`.
+- **« appel téléphonique »** est dit dans le bouton ET répété dans le sous-titre.
+- **« vous appelle »** précise que c'est l'expert qui compose le numéro (pas l'inverse).
+- **« 100 % gratuit »** lève la friction.
+- L'icône 📞 renforce visuellement.
+- Le bouton est **identique pour les 4 campagnes** (Location / Vente / Rénovation / Achat).
 
-### 3. Toast de résultat enrichi
-
-Remplacer le toast actuel par un récap clair :
+### Lien deep-link
 
 ```
-✅ {data.inserted} leads importés vers Location
-   {data.duplicates} doublons · {rejectedFormulaire} hors Logisorama · {rejectedEtape} non Qualifiés
+https://logisorama.ch/?utm_source=campagne_suivi
+                     &utm_medium=email
+                     &utm_campaign={location|vente|renovation|achat}
+                     &utm_content=cta_appel_tel
+                     #analyse-dossier
 ```
 
-Si `parsed.length === 0` → bloquer avec :  
-*"Aucun lead conforme. Vérifie que le CSV contient bien des leads Logisorama avec étape Qualifié."*
+L'ancre `#analyse-dossier` scrolle automatiquement le visiteur sur le `PhoneSlotPicker` où il choisit son créneau 15 min. Le RDV apparaît instantanément dans `/admin/calendrier` (realtime).
 
-### 4. Note explicative dans le dialogue d'import
+### Aucune modif côté admin ni côté BDD
 
-Encart bleu visible au-dessus du sélecteur de fichier :
+Tout le pipeline existe déjà :
+1. Prospect clique → atterrit sur `#analyse-dossier`
+2. Réserve un créneau → insertion dans `lead_phone_appointments`
+3. RDV visible live dans le calendrier admin
+4. ICS envoyé, reminder 24h envoyé automatiquement
 
-> **Filtre automatique — Campagne Location**  
-> Seuls les leads dont le **Formulaire** contient "Logisorama" **et** dont l'**Étape** est **"Qualifié"** seront importés. Tous les autres (À évaluer, Contacté, Converti, RENOV IA, vendeurs/acheteurs…) sont automatiquement écartés.
+## Récap
 
-### 5. Robustesse parser CSV
+| Fichier | Action |
+|---|---|
+| `supabase/functions/send-followup-campaign/index.ts` | Ajout 2ᵉ CTA "appel téléphonique" + séparateur dans `renderEmail()` |
+| Redéploiement | `send-followup-campaign` |
 
-Le parser actuel `lines[i].split(",")` casse si une cellule contient une virgule entre guillemets. Ajouter un mini-parser CSV qui respecte les guillemets (utile pour les noms type `"Sousa, Mario"`).
+**1 fichier modifié. 0 migration. 0 nouvelle edge function.**
 
-## Résultat attendu sur ton fichier `leads_7.csv` (155 lignes)
+## Test après déploiement
 
-Sur l'extrait visible (lignes 2-22) seraient importés vers **Location** :  
-Fanny, Sanja Kitanova, Isabel Baquero, Manon Sarrat, Afo Meti, Roro VB, Malherbe Mireille, Zahra, Omaira Maritza Henchoz (≈ 9 leads).
-
-Rejetés : tous les "À évaluer" / "Contacté" / "Converti", + Cindy Savart (RENOV IA), + Claudio Cecchet & paschoud (vendeurs/acheteurs).
-
-## Ce qui ne change pas
-
-- Module 100 % manuel : import → confirmation → envoi.
-- Design email premium inchangé.
-- Déduplication par email + index unique `(lead_id, campaign_id)` toujours actifs.
-- Les autres campagnes (Vente, Rénovation, Achat) restent disponibles à l'envoi, mais l'**import CSV est verrouillé sur Location**.
+1. Admin → Campagnes de suivi → bouton **"Test"**
+2. Mail reçu sur `info@immo-rama.ch`
+3. Cliquer sur **« 📞 Réservez votre appel téléphonique gratuit (15 min) »**
+4. Atterrissage sur `logisorama.ch#analyse-dossier`
+5. Sélection créneau → apparaît dans `/admin/calendrier`
