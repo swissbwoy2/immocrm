@@ -52,6 +52,28 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+const FUNCTIONS_BASE = `${(Deno.env.get('SUPABASE_URL') ?? '').replace(/\/$/, '')}/functions/v1`;
+
+function injectTracking(html: string, logId: string | null): string {
+  if (!logId) return html;
+  // Rewrite links to go through track-email-click
+  let out = html.replace(/<a\s+([^>]*?)href="([^"]+)"([^>]*)>/gi, (m, pre, url, post) => {
+    if (/^(mailto:|tel:|#)/i.test(url)) return m;
+    if (url.includes('/functions/v1/track-email-')) return m;
+    if (url.includes('/unsubscribe/')) return m;
+    const tracked = `${FUNCTIONS_BASE}/track-email-click?id=${logId}&url=${encodeURIComponent(url)}`;
+    return `<a ${pre}href="${tracked}"${post}>`;
+  });
+  // Inject open pixel just before </body>
+  const pixel = `<img src="${FUNCTIONS_BASE}/track-email-open?id=${logId}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;outline:none;" />`;
+  if (/<\/body>/i.test(out)) {
+    out = out.replace(/<\/body>/i, `${pixel}</body>`);
+  } else {
+    out += pixel;
+  }
+  return out;
+}
+
 function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: string): string {
   const firstName = lead.first_name?.trim() || 'cher futur client';
   const intro = (campaign.body_intro || '').replace(/\{\{first_name\}\}/g, escapeHtml(firstName));
@@ -338,22 +360,36 @@ Deno.serve(async (req) => {
     // ───── TEST
     if (mode === 'test') {
       const unsubToken = crypto.randomUUID();
-      const html = renderEmail(camp, fakeLead, unsubToken);
+      const { data: preLog } = await supabaseAdmin
+        .from('lead_email_logs')
+        .insert({
+          lead_id: null,
+          campaign_id: camp.id,
+          campaign_key: camp.campaign_key,
+          recipient_email: TEST_RECIPIENT,
+          subject: `[TEST] ${camp.subject}`,
+          status: 'pending',
+          unsubscribe_token: unsubToken,
+          test_send: true,
+        })
+        .select('id')
+        .single();
+      const logId = preLog?.id || null;
+      const rawHtml = renderEmail(camp, fakeLead, unsubToken);
+      const html = injectTracking(rawHtml, logId);
       const result = await sendViaResend(TEST_RECIPIENT, `[TEST] ${camp.subject}`, html);
 
-      await supabaseAdmin.from('lead_email_logs').insert({
-        lead_id: null,
-        campaign_id: camp.id,
-        campaign_key: camp.campaign_key,
-        recipient_email: TEST_RECIPIENT,
-        subject: `[TEST] ${camp.subject}`,
-        status: result.error ? 'failed' : 'sent',
-        sent_at: result.error ? null : new Date().toISOString(),
-        error_message: result.error || null,
-        provider_message_id: result.id || null,
-        unsubscribe_token: unsubToken,
-        test_send: true,
-      });
+      if (logId) {
+        await supabaseAdmin
+          .from('lead_email_logs')
+          .update({
+            status: result.error ? 'failed' : 'sent',
+            sent_at: result.error ? null : new Date().toISOString(),
+            error_message: result.error || null,
+            provider_message_id: result.id || null,
+          })
+          .eq('id', logId);
+      }
 
       if (result.error) {
         return new Response(JSON.stringify({ error: result.error }), {
@@ -442,24 +478,41 @@ Deno.serve(async (req) => {
         }
 
         const unsubToken = crypto.randomUUID();
-        const html = renderEmail(camp, lead, unsubToken);
+
+        // Pre-insert log row (status pending) to get an id we can embed in tracking links
+        const { data: preLog } = await supabaseAdmin
+          .from('lead_email_logs')
+          .insert({
+            lead_id: lead.id,
+            campaign_id: camp.id,
+            campaign_key: camp.campaign_key,
+            recipient_email: lead.email,
+            subject: camp.subject,
+            status: 'pending',
+            unsubscribe_token: unsubToken,
+            test_send: false,
+          })
+          .select('id')
+          .single();
+
+        const logId = preLog?.id || null;
+        const rawHtml = renderEmail(camp, lead, unsubToken);
+        const html = injectTracking(rawHtml, logId);
         const result = await sendViaResend(lead.email, camp.subject, html, {
           bcc: ['info@immo-rama.ch'],
         });
 
-        await supabaseAdmin.from('lead_email_logs').insert({
-          lead_id: lead.id,
-          campaign_id: camp.id,
-          campaign_key: camp.campaign_key,
-          recipient_email: lead.email,
-          subject: camp.subject,
-          status: result.error ? 'failed' : 'sent',
-          sent_at: result.error ? null : new Date().toISOString(),
-          error_message: result.error || null,
-          provider_message_id: result.id || null,
-          unsubscribe_token: unsubToken,
-          test_send: false,
-        });
+        if (logId) {
+          await supabaseAdmin
+            .from('lead_email_logs')
+            .update({
+              status: result.error ? 'failed' : 'sent',
+              sent_at: result.error ? null : new Date().toISOString(),
+              error_message: result.error || null,
+              provider_message_id: result.id || null,
+            })
+            .eq('id', logId);
+        }
 
         if (result.error) failed++;
         else sent++;

@@ -88,6 +88,27 @@ type LogRow = {
   error_message: string | null;
   created_at: string;
   test_send: boolean;
+  delivered_at?: string | null;
+  opened_at?: string | null;
+  last_opened_at?: string | null;
+  opens_count?: number | null;
+  clicked_at?: string | null;
+  last_clicked_at?: string | null;
+  clicks_count?: number | null;
+  bounced_at?: string | null;
+  complained_at?: string | null;
+  last_click_url?: string | null;
+};
+
+type LeadTracking = {
+  sent: boolean;
+  delivered: boolean;
+  opened: boolean;
+  clicked: boolean;
+  bounced: boolean;
+  opens: number;
+  clicks: number;
+  count: number;
 };
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
@@ -121,6 +142,7 @@ export default function CampagnesSuivi() {
   const [hideAlreadySent, setHideAlreadySent] = useState(true);
   const [sentLeadIds, setSentLeadIds] = useState<Set<string>>(new Set());
   const [sentCountByLead, setSentCountByLead] = useState<Map<string, number>>(new Map());
+  const [trackingByLead, setTrackingByLead] = useState<Map<string, LeadTracking>>(new Map());
 
   // Lead history dialog
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -181,19 +203,32 @@ export default function CampagnesSuivi() {
       setSentLeadIds(new Set((sentData || []).map((r: any) => r.lead_id)));
     }
 
-    // Global per-lead sent count (all campaigns, all statuses sent)
-    const { data: allSent } = await supabase
+    // Global per-lead tracking aggregate (all campaigns)
+    const { data: allLogs } = await supabase
       .from("lead_email_logs")
-      .select("lead_id")
-      .eq("status", "sent")
+      .select("lead_id, status, opened_at, clicked_at, delivered_at, bounced_at, opens_count, clicks_count")
       .eq("test_send", false)
       .not("lead_id", "is", null)
       .limit(15000);
     const counts = new Map<string, number>();
-    (allSent || []).forEach((r: any) => {
-      counts.set(r.lead_id, (counts.get(r.lead_id) || 0) + 1);
+    const tracking = new Map<string, LeadTracking>();
+    (allLogs || []).forEach((r: any) => {
+      if (r.status === "sent") counts.set(r.lead_id, (counts.get(r.lead_id) || 0) + 1);
+      const t: LeadTracking = tracking.get(r.lead_id) || {
+        sent: false, delivered: false, opened: false, clicked: false, bounced: false,
+        opens: 0, clicks: 0, count: 0,
+      };
+      if (r.status === "sent") { t.sent = true; t.count++; }
+      if (r.delivered_at || r.opened_at || r.clicked_at) t.delivered = true;
+      if (r.opened_at) t.opened = true;
+      if (r.clicked_at) t.clicked = true;
+      if (r.bounced_at || r.status === "failed") t.bounced = true;
+      t.opens += r.opens_count || 0;
+      t.clicks += r.clicks_count || 0;
+      tracking.set(r.lead_id, t);
     });
     setSentCountByLead(counts);
+    setTrackingByLead(tracking);
 
     setLoadingLeads(false);
   };
@@ -210,7 +245,7 @@ export default function CampagnesSuivi() {
       setLoadingLogs(true);
       const { data, error } = await supabase
         .from("lead_email_logs")
-        .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send")
+        .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send, delivered_at, opened_at, last_opened_at, opens_count, clicked_at, last_clicked_at, clicks_count, bounced_at, complained_at, last_click_url")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) toast.error("Erreur logs", { description: error.message });
@@ -428,7 +463,7 @@ export default function CampagnesSuivi() {
     setHistoryRows([]);
     const { data, error } = await supabase
       .from("lead_email_logs")
-      .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send")
+      .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send, delivered_at, opened_at, last_opened_at, opens_count, clicked_at, last_clicked_at, clicks_count, bounced_at, complained_at, last_click_url")
       .eq("lead_id", lead.id)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -660,20 +695,39 @@ export default function CampagnesSuivi() {
                               {format(new Date(l.imported_at), "dd/MM/yy", { locale: fr })}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                {already ? (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Envoyé
-                                    {(sentCountByLead.get(l.id) || 0) > 1 && (
-                                      <span className="ml-1 opacity-70">· {sentCountByLead.get(l.id)}</span>
-                                    )}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-xs">
-                                    En attente
-                                  </Badge>
-                                )}
+                              <div className="flex flex-wrap items-center gap-1">
+                                {(() => {
+                                  const t = trackingByLead.get(l.id);
+                                  if (!already && !t?.sent) {
+                                    return <Badge variant="outline" className="text-xs">En attente</Badge>;
+                                  }
+                                  return (
+                                    <>
+                                      <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-300" title="Email envoyé">
+                                        ✉ Envoyé{(sentCountByLead.get(l.id) || 0) > 1 ? ` ·${sentCountByLead.get(l.id)}` : ""}
+                                      </Badge>
+                                      {t?.opened ? (
+                                        <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-800 border-blue-300" title="Email ouvert">
+                                          👁 Ouvert{t.opens > 1 ? ` ·${t.opens}` : ""}
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-[10px] opacity-50" title="Pas encore ouvert">
+                                          👁 —
+                                        </Badge>
+                                      )}
+                                      {t?.clicked && (
+                                        <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-800 border-purple-300" title="Lien cliqué">
+                                          🔗 Cliqué{t.clicks > 1 ? ` ·${t.clicks}` : ""}
+                                        </Badge>
+                                      )}
+                                      {t?.bounced && (
+                                        <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-800 border-red-300" title="Bounce / échec">
+                                          ✗ Bounce
+                                        </Badge>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                                 {(sentCountByLead.get(l.id) || 0) > 0 && (
                                   <Button
                                     size="sm"
@@ -971,6 +1025,24 @@ export default function CampagnesSuivi() {
                         </span>
                       </div>
                       <div className="text-sm font-medium">{row.subject || "(sans sujet)"}</div>
+                      <div className="flex flex-wrap gap-1 text-[11px]">
+                        <Badge variant="outline" className="bg-green-50 border-green-300" title={row.created_at}>
+                          ✉ Envoyé · {format(new Date(row.created_at), "dd/MM HH:mm", { locale: fr })}
+                        </Badge>
+                        {row.opened_at && (
+                          <Badge variant="outline" className="bg-blue-50 border-blue-300" title={row.last_opened_at || row.opened_at}>
+                            👁 Ouvert{(row.opens_count || 0) > 1 ? ` ${row.opens_count}×` : ""} · {format(new Date(row.opened_at), "dd/MM HH:mm", { locale: fr })}
+                          </Badge>
+                        )}
+                        {row.clicked_at && (
+                          <Badge variant="outline" className="bg-purple-50 border-purple-300" title={row.last_click_url || ""}>
+                            🔗 Cliqué{(row.clicks_count || 0) > 1 ? ` ${row.clicks_count}×` : ""} · {format(new Date(row.clicked_at), "dd/MM HH:mm", { locale: fr })}
+                          </Badge>
+                        )}
+                        {row.bounced_at && (
+                          <Badge variant="outline" className="bg-red-50 border-red-300">✗ Bounce</Badge>
+                        )}
+                      </div>
                       {row.error_message && (
                         <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
                           {row.error_message}
