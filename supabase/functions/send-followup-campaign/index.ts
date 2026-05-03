@@ -464,24 +464,41 @@ Deno.serve(async (req) => {
         }
 
         const unsubToken = crypto.randomUUID();
-        const html = renderEmail(camp, lead, unsubToken);
+
+        // Pre-insert log row (status pending) to get an id we can embed in tracking links
+        const { data: preLog } = await supabaseAdmin
+          .from('lead_email_logs')
+          .insert({
+            lead_id: lead.id,
+            campaign_id: camp.id,
+            campaign_key: camp.campaign_key,
+            recipient_email: lead.email,
+            subject: camp.subject,
+            status: 'pending',
+            unsubscribe_token: unsubToken,
+            test_send: false,
+          })
+          .select('id')
+          .single();
+
+        const logId = preLog?.id || null;
+        const rawHtml = renderEmail(camp, lead, unsubToken);
+        const html = injectTracking(rawHtml, logId);
         const result = await sendViaResend(lead.email, camp.subject, html, {
           bcc: ['info@immo-rama.ch'],
         });
 
-        await supabaseAdmin.from('lead_email_logs').insert({
-          lead_id: lead.id,
-          campaign_id: camp.id,
-          campaign_key: camp.campaign_key,
-          recipient_email: lead.email,
-          subject: camp.subject,
-          status: result.error ? 'failed' : 'sent',
-          sent_at: result.error ? null : new Date().toISOString(),
-          error_message: result.error || null,
-          provider_message_id: result.id || null,
-          unsubscribe_token: unsubToken,
-          test_send: false,
-        });
+        if (logId) {
+          await supabaseAdmin
+            .from('lead_email_logs')
+            .update({
+              status: result.error ? 'failed' : 'sent',
+              sent_at: result.error ? null : new Date().toISOString(),
+              error_message: result.error || null,
+              provider_message_id: result.id || null,
+            })
+            .eq('id', logId);
+        }
 
         if (result.error) failed++;
         else sent++;
