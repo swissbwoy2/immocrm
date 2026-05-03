@@ -88,6 +88,27 @@ type LogRow = {
   error_message: string | null;
   created_at: string;
   test_send: boolean;
+  delivered_at?: string | null;
+  opened_at?: string | null;
+  last_opened_at?: string | null;
+  opens_count?: number | null;
+  clicked_at?: string | null;
+  last_clicked_at?: string | null;
+  clicks_count?: number | null;
+  bounced_at?: string | null;
+  complained_at?: string | null;
+  last_click_url?: string | null;
+};
+
+type LeadTracking = {
+  sent: boolean;
+  delivered: boolean;
+  opened: boolean;
+  clicked: boolean;
+  bounced: boolean;
+  opens: number;
+  clicks: number;
+  count: number;
 };
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
