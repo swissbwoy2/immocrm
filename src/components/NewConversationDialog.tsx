@@ -242,10 +242,13 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
                   <Button
                     key={client.id}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-between"
                     onClick={() => handleCreateConversation(client)}
                   >
-                    {client.prenom} {client.nom}
+                    <span>{client.prenom} {client.nom}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {client.existingConversationId ? 'Ouvrir' : 'Créer'}
+                    </span>
                   </Button>
                 ))}
               </div>
