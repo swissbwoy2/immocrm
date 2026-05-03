@@ -1,89 +1,121 @@
-## Objectif
+## Problème
 
-Afficher pour chaque lead non plus seulement "Envoyé", mais le vrai cycle de vie de l'email :
-- **Envoyé** (parti de notre serveur)
-- **Délivré** (accepté par le serveur du destinataire)
-- **Ouvert** (le destinataire a ouvert le mail) + date/heure
-- **Cliqué** (il a cliqué un lien) + date/heure
-- **Bounce / Plainte** (échec ou marqué comme spam)
+Un agent **co-assigné** (lié à un client uniquement via `client_agents`, sans être l'agent principal `clients.agent_id`) ne peut pas :
 
-## Comment ça va marcher
+1. **Uploader / supprimer des documents** dans le dossier du client.
+2. **Voir / utiliser la conversation existante** avec ce client (donc impossible de déposer un dossier de candidature, qui se fait depuis la messagerie).
+3. **Voir une conversation déjà créée** par l'agent principal.
 
-### 1. Tracking d'ouverture (pixel invisible)
-Chaque email envoyé via la campagne contiendra un pixel image 1x1 transparent à la fin du HTML, pointant vers une edge function `track-email-open?log_id=...`. Quand le destinataire ouvre le mail, son client mail charge l'image → on enregistre `opened_at` + `opens_count++`.
+## Causes racines
 
-Limite connue : Gmail/Apple Mail proxy parfois les images (pré-chargement) → l'ouverture peut être enregistrée sans que l'humain ait vraiment vu. C'est le standard Mailchimp/Brevo, on l'accepte.
+### 1. Storage RLS — bucket `client-documents`
 
-### 2. Tracking de clics
-Tous les liens `<a href="...">` dans l'email seront réécrits vers `track-email-click?log_id=...&url=<encoded>` qui logge puis redirige (302) vers l'URL d'origine.
+Les policies INSERT/DELETE existantes sur les fichiers du dossier `user_id/...` ne testent QUE `clients.agent_id = a.user_id` (agent principal). Les co-agents sont bloqués au upload :
 
-### 3. Délivrabilité / bounce / plainte
-On utilise les webhooks Mailgun (déjà configurés via Lovable Email) qui mettent à jour `email_send_log` avec les statuts `delivered`, `bounced`, `complained` via la table `suppressed_emails` existante. On enrichit `lead_email_logs` à partir de `email_send_log` via le `message_id`.
-
-## Changements DB
-
-Migration sur `lead_email_logs` :
-- Ajouter `delivered_at TIMESTAMPTZ`
-- Ajouter `opened_at TIMESTAMPTZ` (première ouverture)
-- Ajouter `last_opened_at TIMESTAMPTZ`
-- Ajouter `opens_count INT DEFAULT 0`
-- Ajouter `clicked_at TIMESTAMPTZ` (premier clic)
-- Ajouter `last_clicked_at TIMESTAMPTZ`
-- Ajouter `clicks_count INT DEFAULT 0`
-- Ajouter `bounced_at TIMESTAMPTZ`
-- Ajouter `complained_at TIMESTAMPTZ`
-- Index sur `lead_id` pour les agrégats rapides
-
-## Edge Functions à créer
-
-1. **`track-email-open`** (GET, public, no JWT) → renvoie un GIF 1x1 + UPDATE log
-2. **`track-email-click`** (GET, public, no JWT) → 302 redirect + UPDATE log
-3. Modifier `send-campaign-email` (ou équivalent) pour :
-   - Réécrire les liens du HTML avant envoi
-   - Injecter le pixel à la fin du `<body>`
-   - Stocker `message_id` retourné par Mailgun
-4. **`email-webhook-handler`** (déjà existant ou à créer) : reçoit les webhooks Mailgun `delivered`, `bounced`, `complained` et met à jour `lead_email_logs` via le `message_id`
-
-## Changements UI (`src/pages/admin/CampagnesSuivi.tsx`)
-
-### Onglet "Leads & envoi"
-Remplacer le badge unique "Envoyé" par une suite d'icônes/pills compactes par lead :
 ```
-✉ Envoyé · ✓ Délivré · 👁 Ouvert (3×) · 🔗 Cliqué
+"Agents peuvent uploader documents pour leurs clients" (INSERT)
+"Agents peuvent supprimer documents de leurs clients" (DELETE)
 ```
-- Gris = pas encore arrivé à cet état
-- Vert = atteint
-- Rouge = bounce/plainte
-- Tooltip au survol : date+heure exacte (Europe/Zurich)
+→ Pas de branche `client_agents`.
 
-### Dialog "Historique" (déjà existant)
-Pour chaque mail envoyé, afficher la timeline complète :
-- 21:34 — Envoyé
-- 21:34 — Délivré
-- 22:07 — Ouvert (1ère fois)
-- 22:08 — Cliqué : "Voir l'annonce"
-- 22:15 — Ouvert à nouveau (2ème fois)
+Seule une policy SELECT pour co-agent existe (« Agents co-assignés peuvent voir documents… »).
 
-### Onglet "Logs"
-Ajouter colonnes : Délivré · Ouvertures · Clics · Statut final.
+### 2. Messagerie agent — filtre `agent_id` figé
 
-### Onglet "Campagnes" (vue d'ensemble)
-Ajouter par campagne :
-- Taux de délivrabilité (delivered/sent)
-- Taux d'ouverture (opened/delivered)
-- Taux de clic (clicked/opened)
+`src/pages/agent/Messagerie.tsx` (lignes ~322-342) charge les conversations avec `.eq('agent_id', agentIdStr)`. Or pour les clients co-assignés, `conversations.agent_id` contient l'agent principal, pas le co-agent. Le co-agent ne voit donc rien (et ne peut pas ouvrir la conversation pour déposer le dossier).
 
-## Limites à clarifier avec toi
+La règle mémoire `co-assignment-rls-logic` impose justement : **ne jamais filtrer par `agent_id` côté UI ; passer par `conversation_agents`**.
 
-- **"Lu" vs "Ouvert"** : techniquement il n'existe pas de signal "lu" en email (contrairement à WhatsApp). Le mieux qu'on puisse faire est "ouvert" (pixel chargé). Ok ?
-- **Les emails déjà envoyés avant cette migration** n'auront pas de pixel ni de liens trackés → leurs stats d'ouverture/clic resteront vides. Seuls les nouveaux envois auront le tracking complet.
+### 3. NewConversationDialog — co-agent privé d'accès
 
-## Ordre d'implémentation
+`src/components/NewConversationDialog.tsx` filtre la liste à « clients sans conversation ». Pour un co-agent dont le client a déjà une conversation principale, il n'a aucun moyen d'y entrer (et ne peut pas en recréer une à cause de la contrainte d'unicité / `can_agent_create_conversation`).
 
-1. Migration DB (nouvelles colonnes)
-2. Edge functions `track-email-open` + `track-email-click`
-3. Modifier la fonction d'envoi pour injecter pixel + réécrire liens + stocker message_id
-4. Brancher webhook Mailgun pour `delivered/bounced/complained`
-5. UI : pills de statut dans la liste + timeline dans le dialog + stats par campagne
+## Plan d'implémentation
 
-Confirme-moi que ce plan te va (notamment sur la limite "lu" → "ouvert") et je l'implémente.
+### A. Migration SQL — Storage policies co-agent
+
+Ajouter deux policies sur `storage.objects` pour le bucket `client-documents`, branche `client_agents` (en plus des policies existantes) :
+
+```sql
+-- INSERT
+CREATE POLICY "Co-agents peuvent uploader documents clients"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'client-documents'
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f-]{36}$'
+  AND EXISTS (
+    SELECT 1 FROM clients c
+    JOIN client_agents ca ON ca.client_id = c.id
+    JOIN agents a ON a.id = ca.agent_id
+    WHERE c.user_id::text = (storage.foldername(name))[1]
+      AND a.user_id = auth.uid()
+  )
+);
+
+-- DELETE (équivalent)
+CREATE POLICY "Co-agents peuvent supprimer documents clients" ...
+```
+
+(Conserve la regex UUID conformément à la règle `storage-rls-uuid-validation`.)
+
+### B. `src/pages/agent/Messagerie.tsx` — charger via `conversation_agents`
+
+Remplacer le bloc de chargement (lignes ~322-345) :
+
+```ts
+// 1. Récupérer les conversation_ids dont je suis agent (principal OU co)
+const { data: convAgents } = await supabase
+  .from('conversation_agents')
+  .select('conversation_id')
+  .eq('agent_id', agentIdStr);
+
+const convIds = convAgents?.map(c => c.conversation_id) ?? [];
+
+// 2. Charger ces conversations (client-agent restreint aux clients assignés)
+const { data: clientConvs } = await supabase
+  .from('conversations')
+  .select('*')
+  .in('id', convIds)
+  .eq('conversation_type', 'client-agent')
+  .in('client_id', assignedClientIds);
+
+const { data: adminConvs } = await supabase
+  .from('conversations')
+  .select('*')
+  .in('id', convIds)
+  .eq('conversation_type', 'admin-agent');
+```
+
+Vérifier que les autres lookups dans le fichier (envoi de message, recherche d'une conversation pour un client donné) **filtrent par `client_id` uniquement** (pas par `agent_id`) — conforme à la règle mémoire. Corriger les occurrences résiduelles.
+
+### C. `src/components/NewConversationDialog.tsx`
+
+- Conserver la création d'une nouvelle conversation pour les clients qui n'en ont pas.
+- Pour les clients qui en ont déjà une, ajouter un bouton **« Ouvrir la conversation »** qui appelle `onConversationCreated(existingId)` au lieu de masquer le client. Ainsi, un co-agent qui n'a pas encore été synchronisé (ancien lien) peut accéder à la conversation existante. (Le trigger `sync_co_agent_to_conversations` insère normalement la ligne `conversation_agents` lors du lien — on garde un appel idempotent en sécurité.)
+
+### D. Backfill — `conversation_agents`
+
+Migration SQL one-shot : pour tous les co-agents existants, garantir une ligne dans `conversation_agents` pour chaque conversation des clients liés.
+
+```sql
+INSERT INTO conversation_agents (conversation_id, agent_id)
+SELECT conv.id, ca.agent_id
+FROM conversations conv
+JOIN client_agents ca ON ca.client_id = conv.client_id::uuid
+ON CONFLICT DO NOTHING;
+```
+
+### E. `src/pages/agent/Candidatures.tsx`
+
+Le chargement passe déjà par `client_agents` (OK). Vérifier que l'écran de **dépôt de dossier** (`SendDossierDialog`) est bien accessible depuis la messagerie pour un co-agent → résolu par les changements B/D (la conversation devient visible, le bouton « Déposer candidature » apparaît, l'INSERT dans `candidatures` est déjà autorisé par la policy `Agents multi peuvent gérer candidatures` qui couvre `client_agents`).
+
+## Vérifications post-déploiement
+
+- Connecter un agent co-assigné, ouvrir un client : upload d'un PDF dans son dossier → succès.
+- Ouvrir la messagerie : la conversation du client co-assigné apparaît.
+- Depuis cette conversation, déposer un dossier de candidature → INSERT OK, statut mis à jour.
+- Suppression d'un document par le co-agent → autorisée.
+
+## Hors scope
+
+Pas de changement aux policies `documents` (table) ni `candidatures` ni `conversations` : elles incluent déjà `client_agents` dans leurs branches. Pas de modification du schéma.
