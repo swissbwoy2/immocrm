@@ -360,22 +360,36 @@ Deno.serve(async (req) => {
     // ───── TEST
     if (mode === 'test') {
       const unsubToken = crypto.randomUUID();
-      const html = renderEmail(camp, fakeLead, unsubToken);
+      const { data: preLog } = await supabaseAdmin
+        .from('lead_email_logs')
+        .insert({
+          lead_id: null,
+          campaign_id: camp.id,
+          campaign_key: camp.campaign_key,
+          recipient_email: TEST_RECIPIENT,
+          subject: `[TEST] ${camp.subject}`,
+          status: 'pending',
+          unsubscribe_token: unsubToken,
+          test_send: true,
+        })
+        .select('id')
+        .single();
+      const logId = preLog?.id || null;
+      const rawHtml = renderEmail(camp, fakeLead, unsubToken);
+      const html = injectTracking(rawHtml, logId);
       const result = await sendViaResend(TEST_RECIPIENT, `[TEST] ${camp.subject}`, html);
 
-      await supabaseAdmin.from('lead_email_logs').insert({
-        lead_id: null,
-        campaign_id: camp.id,
-        campaign_key: camp.campaign_key,
-        recipient_email: TEST_RECIPIENT,
-        subject: `[TEST] ${camp.subject}`,
-        status: result.error ? 'failed' : 'sent',
-        sent_at: result.error ? null : new Date().toISOString(),
-        error_message: result.error || null,
-        provider_message_id: result.id || null,
-        unsubscribe_token: unsubToken,
-        test_send: true,
-      });
+      if (logId) {
+        await supabaseAdmin
+          .from('lead_email_logs')
+          .update({
+            status: result.error ? 'failed' : 'sent',
+            sent_at: result.error ? null : new Date().toISOString(),
+            error_message: result.error || null,
+            provider_message_id: result.id || null,
+          })
+          .eq('id', logId);
+      }
 
       if (result.error) {
         return new Response(JSON.stringify({ error: result.error }), {
