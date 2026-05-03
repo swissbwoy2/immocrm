@@ -326,20 +326,33 @@ const Messagerie = () => {
 
       const assignedClientIds = clientAgentsData?.map(ca => ca.client_id) || [];
 
-      // Charger les conversations client-agent avec clients assignés uniquement
-      const { data: clientConvs } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('agent_id', agentIdStr)
-        .eq('conversation_type', 'client-agent')
-        .in('client_id', assignedClientIds);
+      // Récupérer toutes les conversations dont je suis agent (principal OU co)
+      // via conversation_agents — couvre la co-assignation.
+      const { data: convAgentsLinks } = await supabase
+        .from('conversation_agents')
+        .select('conversation_id')
+        .eq('agent_id', agentIdStr);
+
+      const myConversationIds = Array.from(new Set((convAgentsLinks || []).map(c => c.conversation_id)));
+
+      // Charger les conversations client-agent (restreintes aux clients actuellement assignés)
+      const { data: clientConvs } = myConversationIds.length > 0
+        ? await supabase
+            .from('conversations')
+            .select('*')
+            .in('id', myConversationIds)
+            .eq('conversation_type', 'client-agent')
+            .in('client_id', assignedClientIds.length > 0 ? assignedClientIds : ['00000000-0000-0000-0000-000000000000'])
+        : { data: [] as any[] };
 
       // Charger les conversations admin-agent (pas de filtre client)
-      const { data: adminConvs } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('agent_id', agentIdStr)
-        .eq('conversation_type', 'admin-agent');
+      const { data: adminConvs } = myConversationIds.length > 0
+        ? await supabase
+            .from('conversations')
+            .select('*')
+            .in('id', myConversationIds)
+            .eq('conversation_type', 'admin-agent')
+        : { data: [] as any[] };
 
       // Combiner les deux types de conversations et trier par date
       const convData = [...(clientConvs || []), ...(adminConvs || [])].sort(

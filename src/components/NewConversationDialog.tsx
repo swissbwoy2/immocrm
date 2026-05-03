@@ -12,6 +12,7 @@ interface Client {
   user_id: string;
   prenom: string;
   nom: string;
+  existingConversationId?: string | null;
 }
 
 interface NewConversationDialogProps {
@@ -64,37 +65,30 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
       if (clientsError) throw clientsError;
 
-      // Get existing conversations via conversation_agents
-      const { data: convAgentsData, error: convError } = await supabase
-        .from('conversation_agents')
-        .select('conversation_id')
-        .eq('agent_id', agentId);
-
-      if (convError) throw convError;
-      
-      const conversationIds = convAgentsData?.map(ca => ca.conversation_id) || [];
-      
-      // Get conversations client_ids
+      // Get existing client-agent conversations for these clients
       const { data: conversationsData, error: convDataError } = await supabase
         .from('conversations')
-        .select('client_id')
-        .in('id', conversationIds);
+        .select('id, client_id')
+        .in('client_id', clientIds)
+        .eq('conversation_type', 'client-agent');
 
       if (convDataError) throw convDataError;
 
-      const existingClientIds = new Set(conversationsData?.map(c => c.client_id) || []);
-      
-      // Filter out clients who already have conversations
-      const availableClients = clientsData?.filter(c => !existingClientIds.has(c.id)) || [];
+      const existingConvByClient = new Map<string, string>();
+      (conversationsData || []).forEach(c => {
+        if (c.client_id && !existingConvByClient.has(c.client_id)) {
+          existingConvByClient.set(c.client_id, c.id);
+        }
+      });
 
-      if (availableClients.length === 0) {
+      if (!clientsData || clientsData.length === 0) {
         setClients([]);
         setLoading(false);
         return;
       }
 
       // Get profiles for these clients
-      const userIds = availableClients.map(c => c.user_id);
+      const userIds = clientsData.map(c => c.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, prenom, nom')
@@ -104,13 +98,14 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
       // Map profiles to clients
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      const clientsWithProfiles = availableClients.map(client => {
+      const clientsWithProfiles = clientsData.map(client => {
         const profile = profilesMap.get(client.user_id);
         return {
           id: client.id,
           user_id: client.user_id,
           prenom: profile?.prenom || '',
           nom: profile?.nom || '',
+          existingConversationId: existingConvByClient.get(client.id) || null,
         };
       });
 
@@ -129,6 +124,21 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
   const handleCreateConversation = async (client: Client) => {
     try {
+      // Si une conversation existe déjà pour ce client, on l'ouvre
+      // (utile pour les co-agents dont la conversation a été créée par l'agent principal).
+      if (client.existingConversationId) {
+        // S'assurer (idempotent) que l'agent courant est bien lié à cette conversation
+        await supabase
+          .from('conversation_agents')
+          .insert({ conversation_id: client.existingConversationId, agent_id: agentId })
+          .select()
+          .then(() => undefined, () => undefined); // ignorer les conflits
+
+        setOpen(false);
+        onConversationCreated(client.existingConversationId);
+        return;
+      }
+
       // Get all agents assigned to this client
       const { data: clientAgentsData, error: caError } = await supabase
         .from('client_agents')
@@ -222,8 +232,8 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
               <div className="text-center py-8 text-muted-foreground">Chargement...</div>
             ) : filteredClients.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {clients.length === 0 
-                  ? "Tous vos clients ont déjà une conversation" 
+                {clients.length === 0
+                  ? "Aucun client assigné"
                   : "Aucun client trouvé"}
               </div>
             ) : (
@@ -232,10 +242,13 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
                   <Button
                     key={client.id}
                     variant="outline"
-                    className="w-full justify-start"
+                    className="w-full justify-between"
                     onClick={() => handleCreateConversation(client)}
                   >
-                    {client.prenom} {client.nom}
+                    <span>{client.prenom} {client.nom}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {client.existingConversationId ? 'Ouvrir' : 'Créer'}
+                    </span>
                   </Button>
                 ))}
               </div>
