@@ -463,7 +463,7 @@ export default function CampagnesSuivi() {
     setHistoryRows([]);
     const { data, error } = await supabase
       .from("lead_email_logs")
-      .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send")
+      .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send, delivered_at, opened_at, last_opened_at, opens_count, clicked_at, last_clicked_at, clicks_count, bounced_at, complained_at, last_click_url")
       .eq("lead_id", lead.id)
       .order("created_at", { ascending: false })
       .limit(100);
