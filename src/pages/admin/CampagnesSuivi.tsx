@@ -142,6 +142,7 @@ export default function CampagnesSuivi() {
   const [hideAlreadySent, setHideAlreadySent] = useState(true);
   const [sentLeadIds, setSentLeadIds] = useState<Set<string>>(new Set());
   const [sentCountByLead, setSentCountByLead] = useState<Map<string, number>>(new Map());
+  const [trackingByLead, setTrackingByLead] = useState<Map<string, LeadTracking>>(new Map());
 
   // Lead history dialog
   const [historyOpen, setHistoryOpen] = useState(false);
