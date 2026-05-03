@@ -124,6 +124,21 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
   const handleCreateConversation = async (client: Client) => {
     try {
+      // Si une conversation existe déjà pour ce client, on l'ouvre
+      // (utile pour les co-agents dont la conversation a été créée par l'agent principal).
+      if (client.existingConversationId) {
+        // S'assurer (idempotent) que l'agent courant est bien lié à cette conversation
+        await supabase
+          .from('conversation_agents')
+          .insert({ conversation_id: client.existingConversationId, agent_id: agentId })
+          .select()
+          .then(() => undefined, () => undefined); // ignorer les conflits
+
+        setOpen(false);
+        onConversationCreated(client.existingConversationId);
+        return;
+      }
+
       // Get all agents assigned to this client
       const { data: clientAgentsData, error: caError } = await supabase
         .from('client_agents')
