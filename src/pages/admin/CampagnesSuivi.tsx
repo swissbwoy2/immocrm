@@ -1025,6 +1025,24 @@ export default function CampagnesSuivi() {
                         </span>
                       </div>
                       <div className="text-sm font-medium">{row.subject || "(sans sujet)"}</div>
+                      <div className="flex flex-wrap gap-1 text-[11px]">
+                        <Badge variant="outline" className="bg-green-50 border-green-300" title={row.created_at}>
+                          ✉ Envoyé · {format(new Date(row.created_at), "dd/MM HH:mm", { locale: fr })}
+                        </Badge>
+                        {row.opened_at && (
+                          <Badge variant="outline" className="bg-blue-50 border-blue-300" title={row.last_opened_at || row.opened_at}>
+                            👁 Ouvert{(row.opens_count || 0) > 1 ? ` ${row.opens_count}×` : ""} · {format(new Date(row.opened_at), "dd/MM HH:mm", { locale: fr })}
+                          </Badge>
+                        )}
+                        {row.clicked_at && (
+                          <Badge variant="outline" className="bg-purple-50 border-purple-300" title={row.last_click_url || ""}>
+                            🔗 Cliqué{(row.clicks_count || 0) > 1 ? ` ${row.clicks_count}×` : ""} · {format(new Date(row.clicked_at), "dd/MM HH:mm", { locale: fr })}
+                          </Badge>
+                        )}
+                        {row.bounced_at && (
+                          <Badge variant="outline" className="bg-red-50 border-red-300">✗ Bounce</Badge>
+                        )}
+                      </div>
                       {row.error_message && (
                         <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
                           {row.error_message}
