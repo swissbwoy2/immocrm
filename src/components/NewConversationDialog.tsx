@@ -232,8 +232,8 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
               <div className="text-center py-8 text-muted-foreground">Chargement...</div>
             ) : filteredClients.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                {clients.length === 0 
-                  ? "Tous vos clients ont déjà une conversation" 
+                {clients.length === 0
+                  ? "Aucun client assigné"
                   : "Aucun client trouvé"}
               </div>
             ) : (
