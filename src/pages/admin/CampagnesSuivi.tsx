@@ -203,19 +203,32 @@ export default function CampagnesSuivi() {
       setSentLeadIds(new Set((sentData || []).map((r: any) => r.lead_id)));
     }
 
-    // Global per-lead sent count (all campaigns, all statuses sent)
-    const { data: allSent } = await supabase
+    // Global per-lead tracking aggregate (all campaigns)
+    const { data: allLogs } = await supabase
       .from("lead_email_logs")
-      .select("lead_id")
-      .eq("status", "sent")
+      .select("lead_id, status, opened_at, clicked_at, delivered_at, bounced_at, opens_count, clicks_count")
       .eq("test_send", false)
       .not("lead_id", "is", null)
       .limit(15000);
     const counts = new Map<string, number>();
-    (allSent || []).forEach((r: any) => {
-      counts.set(r.lead_id, (counts.get(r.lead_id) || 0) + 1);
+    const tracking = new Map<string, LeadTracking>();
+    (allLogs || []).forEach((r: any) => {
+      if (r.status === "sent") counts.set(r.lead_id, (counts.get(r.lead_id) || 0) + 1);
+      const t: LeadTracking = tracking.get(r.lead_id) || {
+        sent: false, delivered: false, opened: false, clicked: false, bounced: false,
+        opens: 0, clicks: 0, count: 0,
+      };
+      if (r.status === "sent") { t.sent = true; t.count++; }
+      if (r.delivered_at || r.opened_at || r.clicked_at) t.delivered = true;
+      if (r.opened_at) t.opened = true;
+      if (r.clicked_at) t.clicked = true;
+      if (r.bounced_at || r.status === "failed") t.bounced = true;
+      t.opens += r.opens_count || 0;
+      t.clicks += r.clicks_count || 0;
+      tracking.set(r.lead_id, t);
     });
     setSentCountByLead(counts);
+    setTrackingByLead(tracking);
 
     setLoadingLeads(false);
   };
