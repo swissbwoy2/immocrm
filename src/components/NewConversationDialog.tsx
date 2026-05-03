@@ -65,37 +65,30 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
       if (clientsError) throw clientsError;
 
-      // Get existing conversations via conversation_agents
-      const { data: convAgentsData, error: convError } = await supabase
-        .from('conversation_agents')
-        .select('conversation_id')
-        .eq('agent_id', agentId);
-
-      if (convError) throw convError;
-      
-      const conversationIds = convAgentsData?.map(ca => ca.conversation_id) || [];
-      
-      // Get conversations client_ids
+      // Get existing client-agent conversations for these clients
       const { data: conversationsData, error: convDataError } = await supabase
         .from('conversations')
-        .select('client_id')
-        .in('id', conversationIds);
+        .select('id, client_id')
+        .in('client_id', clientIds)
+        .eq('conversation_type', 'client-agent');
 
       if (convDataError) throw convDataError;
 
-      const existingClientIds = new Set(conversationsData?.map(c => c.client_id) || []);
-      
-      // Filter out clients who already have conversations
-      const availableClients = clientsData?.filter(c => !existingClientIds.has(c.id)) || [];
+      const existingConvByClient = new Map<string, string>();
+      (conversationsData || []).forEach(c => {
+        if (c.client_id && !existingConvByClient.has(c.client_id)) {
+          existingConvByClient.set(c.client_id, c.id);
+        }
+      });
 
-      if (availableClients.length === 0) {
+      if (!clientsData || clientsData.length === 0) {
         setClients([]);
         setLoading(false);
         return;
       }
 
       // Get profiles for these clients
-      const userIds = availableClients.map(c => c.user_id);
+      const userIds = clientsData.map(c => c.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, prenom, nom')
@@ -105,13 +98,14 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
       // Map profiles to clients
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      const clientsWithProfiles = availableClients.map(client => {
+      const clientsWithProfiles = clientsData.map(client => {
         const profile = profilesMap.get(client.user_id);
         return {
           id: client.id,
           user_id: client.user_id,
           prenom: profile?.prenom || '',
           nom: profile?.nom || '',
+          existingConversationId: existingConvByClient.get(client.id) || null,
         };
       });
 
