@@ -245,7 +245,7 @@ export default function CampagnesSuivi() {
       setLoadingLogs(true);
       const { data, error } = await supabase
         .from("lead_email_logs")
-        .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send")
+        .select("id, recipient_email, campaign_key, subject, status, error_message, created_at, test_send, delivered_at, opened_at, last_opened_at, opens_count, clicked_at, last_clicked_at, clicks_count, bounced_at, complained_at, last_click_url")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) toast.error("Erreur logs", { description: error.message });
