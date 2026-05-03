@@ -52,6 +52,28 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
+const FUNCTIONS_BASE = `${(Deno.env.get('SUPABASE_URL') ?? '').replace(/\/$/, '')}/functions/v1`;
+
+function injectTracking(html: string, logId: string | null): string {
+  if (!logId) return html;
+  // Rewrite links to go through track-email-click
+  let out = html.replace(/<a\s+([^>]*?)href="([^"]+)"([^>]*)>/gi, (m, pre, url, post) => {
+    if (/^(mailto:|tel:|#)/i.test(url)) return m;
+    if (url.includes('/functions/v1/track-email-')) return m;
+    if (url.includes('/unsubscribe/')) return m;
+    const tracked = `${FUNCTIONS_BASE}/track-email-click?id=${logId}&url=${encodeURIComponent(url)}`;
+    return `<a ${pre}href="${tracked}"${post}>`;
+  });
+  // Inject open pixel just before </body>
+  const pixel = `<img src="${FUNCTIONS_BASE}/track-email-open?id=${logId}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;outline:none;" />`;
+  if (/<\/body>/i.test(out)) {
+    out = out.replace(/<\/body>/i, `${pixel}</body>`);
+  } else {
+    out += pixel;
+  }
+  return out;
+}
+
 function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: string): string {
   const firstName = lead.first_name?.trim() || 'cher futur client';
   const intro = (campaign.body_intro || '').replace(/\{\{first_name\}\}/g, escapeHtml(firstName));
