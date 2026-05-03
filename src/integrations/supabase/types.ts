@@ -5115,12 +5115,22 @@ export type Database = {
       }
       lead_email_logs: {
         Row: {
+          bounced_at: string | null
           campaign_id: string | null
           campaign_key: string
+          clicked_at: string | null
+          clicks_count: number
+          complained_at: string | null
           created_at: string
+          delivered_at: string | null
           error_message: string | null
           id: string
+          last_click_url: string | null
+          last_clicked_at: string | null
+          last_opened_at: string | null
           lead_id: string | null
+          opened_at: string | null
+          opens_count: number
           provider_message_id: string | null
           recipient_email: string
           sent_at: string | null
@@ -5130,12 +5140,22 @@ export type Database = {
           unsubscribe_token: string | null
         }
         Insert: {
+          bounced_at?: string | null
           campaign_id?: string | null
           campaign_key: string
+          clicked_at?: string | null
+          clicks_count?: number
+          complained_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           error_message?: string | null
           id?: string
+          last_click_url?: string | null
+          last_clicked_at?: string | null
+          last_opened_at?: string | null
           lead_id?: string | null
+          opened_at?: string | null
+          opens_count?: number
           provider_message_id?: string | null
           recipient_email: string
           sent_at?: string | null
@@ -5145,12 +5165,22 @@ export type Database = {
           unsubscribe_token?: string | null
         }
         Update: {
+          bounced_at?: string | null
           campaign_id?: string | null
           campaign_key?: string
+          clicked_at?: string | null
+          clicks_count?: number
+          complained_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           error_message?: string | null
           id?: string
+          last_click_url?: string | null
+          last_clicked_at?: string | null
+          last_opened_at?: string | null
           lead_id?: string | null
+          opened_at?: string | null
+          opens_count?: number
           provider_message_id?: string | null
           recipient_email?: string
           sent_at?: string | null
@@ -10713,6 +10743,11 @@ export type Database = {
         }
       }
       set_user_offline: { Args: never; Returns: undefined }
+      track_email_click: {
+        Args: { _log_id: string; _url: string }
+        Returns: undefined
+      }
+      track_email_open: { Args: { _log_id: string }; Returns: undefined }
       update_user_presence: { Args: never; Returns: undefined }
     }
     Enums: {
