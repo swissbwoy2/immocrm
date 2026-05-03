@@ -695,20 +695,39 @@ export default function CampagnesSuivi() {
                               {format(new Date(l.imported_at), "dd/MM/yy", { locale: fr })}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                {already ? (
-                                  <Badge variant="secondary" className="text-xs">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Envoyé
-                                    {(sentCountByLead.get(l.id) || 0) > 1 && (
-                                      <span className="ml-1 opacity-70">· {sentCountByLead.get(l.id)}</span>
-                                    )}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-xs">
-                                    En attente
-                                  </Badge>
-                                )}
+                              <div className="flex flex-wrap items-center gap-1">
+                                {(() => {
+                                  const t = trackingByLead.get(l.id);
+                                  if (!already && !t?.sent) {
+                                    return <Badge variant="outline" className="text-xs">En attente</Badge>;
+                                  }
+                                  return (
+                                    <>
+                                      <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-300" title="Email envoyé">
+                                        ✉ Envoyé{(sentCountByLead.get(l.id) || 0) > 1 ? ` ·${sentCountByLead.get(l.id)}` : ""}
+                                      </Badge>
+                                      {t?.opened ? (
+                                        <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-800 border-blue-300" title="Email ouvert">
+                                          👁 Ouvert{t.opens > 1 ? ` ·${t.opens}` : ""}
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="outline" className="text-[10px] opacity-50" title="Pas encore ouvert">
+                                          👁 —
+                                        </Badge>
+                                      )}
+                                      {t?.clicked && (
+                                        <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-800 border-purple-300" title="Lien cliqué">
+                                          🔗 Cliqué{t.clicks > 1 ? ` ·${t.clicks}` : ""}
+                                        </Badge>
+                                      )}
+                                      {t?.bounced && (
+                                        <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-800 border-red-300" title="Bounce / échec">
+                                          ✗ Bounce
+                                        </Badge>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                                 {(sentCountByLead.get(l.id) || 0) > 0 && (
                                   <Button
                                     size="sm"
