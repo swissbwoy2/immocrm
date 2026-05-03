@@ -12,6 +12,7 @@ interface Client {
   user_id: string;
   prenom: string;
   nom: string;
+  existingConversationId?: string | null;
 }
 
 interface NewConversationDialogProps {
