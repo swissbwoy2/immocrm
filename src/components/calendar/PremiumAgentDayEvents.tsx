@@ -314,6 +314,16 @@ export function PremiumAgentDayEvents({
                               <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
                                 Visite
                               </Badge>
+                              {isShared && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                  title={`Visite créée par ${sharedByName} (co-agent) — lecture seule`}
+                                >
+                                  <Users className="h-3 w-3 mr-1" />
+                                  Co-agent : {sharedByName}
+                                </Badge>
+                              )}
                               {group.length > 1 && (
                                 <Badge variant="secondary" className="text-xs">
                                   <Users className="h-3 w-3 mr-1" />
