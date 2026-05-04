@@ -22,6 +22,13 @@ const getAppBaseUrl = (req: Request) => {
   return DEFAULT_APP_URL;
 };
 
+// Types acceptés par le CHECK CONSTRAINT sur public.documents.type_document
+const VALID_DOC_TYPES = new Set([
+  'fiche_salaire', 'extrait_poursuites', 'piece_identite', 'attestation_domicile',
+  'rc_menage', 'contrat_travail', 'attestation_employeur', 'copie_bail',
+  'attestation_garantie_loyer', 'dossier_complet', 'autre',
+]);
+
 // Mapping des types du formulaire vers les types de la table documents
 const mapDocumentType = (formType: string): string => {
   const typeMapping: Record<string, string> = {
@@ -30,8 +37,31 @@ const mapDocumentType = (formType: string): string => {
     'salaire2': 'fiche_salaire',
     'salaire3': 'fiche_salaire',
     'identite': 'piece_identite',
+    // Pièces d'identité avec recto/verso (formulaire /nouveau-mandat → MandatFormStep6)
+    'piece_identite_recto': 'piece_identite',
+    'piece_identite_verso': 'piece_identite',
+    // Permis de séjour (B / C / F / N) — rangés sous piece_identite (seul type valide en base)
+    'permis_sejour_recto': 'piece_identite',
+    'permis_sejour_verso': 'piece_identite',
   };
-  return typeMapping[formType] || formType;
+  const mapped = typeMapping[formType] || formType;
+  // Garde-fou : si le type final n'est pas accepté par le CHECK, on bascule sur 'autre'
+  // pour éviter une perte silencieuse du document.
+  return VALID_DOC_TYPES.has(mapped) ? mapped : 'autre';
+};
+
+// Suffixe lisible (recto)/(verso) à insérer dans le nom de fichier affiché
+const decorateNameWithFace = (originalName: string, formType: string): string => {
+  const isRecto = formType.endsWith('_recto');
+  const isVerso = formType.endsWith('_verso');
+  if (!isRecto && !isVerso) return originalName;
+  const suffix = isRecto ? ' (recto)' : ' (verso)';
+  // Insère le suffixe avant l'extension si présente, sinon en fin
+  const m = originalName.match(/^(.*?)(\.[^.]+)?$/);
+  if (!m) return `${originalName}${suffix}`;
+  const base = m[1] ?? originalName;
+  const ext = m[2] ?? '';
+  return `${base}${suffix}${ext}`;
 };
 
 // Détecter le MIME type à partir du nom du fichier
