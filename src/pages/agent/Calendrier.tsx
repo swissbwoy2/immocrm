@@ -210,13 +210,33 @@ export default function AgentCalendrier() {
 
       const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-      const visitesWithProfiles = visitesRes.data?.map(v => ({
-        ...v,
-        client_profile: profilesMap.get(v.clients?.user_id),
-        candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null
-      })) || [];
+      const visitesWithProfiles = visitesRes.data?.map(v => {
+        const sharedAgent = v.agents as any;
+        const isShared = v.agent_id !== agentData.id;
+        return {
+          ...v,
+          client_profile: profilesMap.get(v.clients?.user_id),
+          candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null,
+          is_shared: isShared,
+          shared_by_name: isShared && sharedAgent?.profiles
+            ? `${sharedAgent.profiles.prenom ?? ''} ${(sharedAgent.profiles.nom ?? '').charAt(0)}.`.trim()
+            : null,
+        };
+      }) || [];
 
-      setEvents(eventsRes.data || []);
+      const eventsWithSharedFlag = (eventsRes.data || []).map((e: any) => {
+        const sharedAgent = e.agents;
+        const isShared = e.agent_id !== agentData.id;
+        return {
+          ...e,
+          is_shared: isShared,
+          shared_by_name: isShared && sharedAgent?.profiles
+            ? `${sharedAgent.profiles.prenom ?? ''} ${(sharedAgent.profiles.nom ?? '').charAt(0)}.`.trim()
+            : null,
+        };
+      });
+
+      setEvents(eventsWithSharedFlag);
       setVisites(visitesWithProfiles);
       setClients((clientsRes.data as any) || []);
     } catch (error: any) {
