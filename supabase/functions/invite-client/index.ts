@@ -488,30 +488,33 @@ serve(async (req) => {
         (existingDocs || []).map((d: any) => `${d.nom}_${d.type_document}`)
       );
 
+      let transferredCount = 0;
+      let transferFailures = 0;
       for (const doc of demandeMandat.documents_uploades) {
         const mappedType = mapDocumentType(doc.type);
         const mimeType = getMimeType(doc.name);
-        const docKey = `${doc.name}_${mappedType}`;
+        const displayName = decorateNameWithFace(doc.name, doc.type);
+        const docKey = `${displayName}_${mappedType}`;
 
         if (existingDocKeys.has(docKey)) {
-          console.log('Document already exists, skipping:', doc.name);
+          console.log('Document already exists, skipping:', displayName);
           continue;
         }
-        
-        console.log('Inserting document:', { 
-          name: doc.name, 
-          originalType: doc.type, 
-          mappedType, 
+
+        console.log('Inserting document:', {
+          name: displayName,
+          originalType: doc.type,
+          mappedType,
           mimeType,
           url: doc.url?.substring(0, 50) + '...'
         });
-        
+
         const { error: docError } = await supabaseAdmin
           .from('documents')
           .insert({
             user_id: userId,
             client_id: clientRecordId,
-            nom: doc.name,
+            nom: displayName,
             url: doc.url,
             type: mimeType,
             type_document: mappedType,
@@ -520,11 +523,15 @@ serve(async (req) => {
           });
 
         if (docError) {
-          console.error('Error transferring document:', docError, { doc: doc.name, mappedType, mimeType });
+          transferFailures++;
+          console.error('Error transferring document:', docError, { doc: displayName, originalType: doc.type, mappedType, mimeType });
         } else {
-          console.log('Document transferred successfully:', doc.name);
+          transferredCount++;
+          existingDocKeys.add(docKey);
+          console.log('Document transferred successfully:', displayName);
         }
       }
+      console.log(`Documents transfer summary: ${transferredCount} ok / ${transferFailures} failed / total ${demandeMandat.documents_uploades.length}`);
     }
 
     console.log('Email sent successfully to user:', userId);
