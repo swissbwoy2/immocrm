@@ -286,16 +286,20 @@ export function PremiumAgentDayEvents({
                   const allEffectuees = group.every(v => v.statut === 'effectuee');
                   const isPast = allEffectuees || new Date(firstVisite.date_visite) < new Date();
                   const hasDeleguee = group.some(v => v.est_deleguee);
+                  const isShared = group.every(v => v.is_shared);
+                  const sharedByName = isShared ? (firstVisite.shared_by_name || 'Co-agent') : null;
 
                   return (
                     <div
                       key={`visite-group-${firstVisite.id}-${idx}`}
                       className={cn(
                         'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300',
+                        isShared ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02]' :
                         timeInfo.urgent ? 'border-destructive/50 hover:border-destructive' : 
                         hasDeleguee ? 'border-green-500/50 hover:border-green-500' : 
                         'border-blue-500/30 hover:border-blue-500/60',
-                        isPast && 'opacity-70'
+                        isPast && 'opacity-70',
+                        isShared && 'opacity-90'
                       )}
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
