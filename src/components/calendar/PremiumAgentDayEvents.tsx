@@ -286,16 +286,20 @@ export function PremiumAgentDayEvents({
                   const allEffectuees = group.every(v => v.statut === 'effectuee');
                   const isPast = allEffectuees || new Date(firstVisite.date_visite) < new Date();
                   const hasDeleguee = group.some(v => v.est_deleguee);
+                  const isShared = group.every(v => v.is_shared);
+                  const sharedByName = isShared ? (firstVisite.shared_by_name || 'Co-agent') : null;
 
                   return (
                     <div
                       key={`visite-group-${firstVisite.id}-${idx}`}
                       className={cn(
                         'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300',
+                        isShared ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02]' :
                         timeInfo.urgent ? 'border-destructive/50 hover:border-destructive' : 
                         hasDeleguee ? 'border-green-500/50 hover:border-green-500' : 
                         'border-blue-500/30 hover:border-blue-500/60',
-                        isPast && 'opacity-70'
+                        isPast && 'opacity-70',
+                        isShared && 'opacity-90'
                       )}
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
@@ -310,6 +314,16 @@ export function PremiumAgentDayEvents({
                               <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
                                 Visite
                               </Badge>
+                              {isShared && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                  title={`Visite créée par ${sharedByName} (co-agent) — lecture seule`}
+                                >
+                                  <Users className="h-3 w-3 mr-1" />
+                                  Co-agent : {sharedByName}
+                                </Badge>
+                              )}
                               {group.length > 1 && (
                                 <Badge variant="secondary" className="text-xs">
                                   <Users className="h-3 w-3 mr-1" />
@@ -480,7 +494,7 @@ export function PremiumAgentDayEvents({
                         />
 
                         {/* Action buttons */}
-                        {group.some(v => v.statut === 'planifiee') && !isPast && (
+                        {!isShared && group.some(v => v.statut === 'planifiee') && !isPast && (
                           <div className="pt-3 border-t border-border/50 space-y-2">
                             {group.filter(v => v.statut === 'planifiee').map(visite => (
                               <Button
@@ -513,7 +527,7 @@ export function PremiumAgentDayEvents({
                         )}
                         
                         {/* Delete buttons */}
-                        {onDeleteVisite && (
+                        {!isShared && onDeleteVisite && (
                           <div className="pt-2 border-t border-border/30">
                             {group.map(visite => {
                               const isClesRemises = visite.candidature?.statut === 'cles_remises' || visite.candidature?.cles_remises;
@@ -586,13 +600,17 @@ export function PremiumAgentDayEvents({
                 // Event rendering
                 const data = item.data;
                 const eventDate = new Date(data.event_date);
+                const eventIsShared = !!data.is_shared;
+                const eventSharedByName = eventIsShared ? (data.shared_by_name || 'Co-agent') : null;
 
                 return (
                   <div
                     key={`event-${data.id}-${idx}`}
                     className={cn(
                       'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300 hover:shadow-lg',
-                      eventTypeColors[item.eventType],
+                      eventIsShared
+                        ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02] opacity-90'
+                        : eventTypeColors[item.eventType],
                       'hover:scale-[1.01]'
                     )}
                     style={{ animationDelay: `${idx * 50}ms` }}
@@ -607,6 +625,16 @@ export function PremiumAgentDayEvents({
                             <Badge variant="outline" className="text-xs font-medium">
                               {eventTypeLabels[item.eventType]}
                             </Badge>
+                            {eventIsShared && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                title={`Événement créé par ${eventSharedByName} (co-agent) — lecture seule`}
+                              >
+                                <Users className="h-3 w-3 mr-1" />
+                                Co-agent : {eventSharedByName}
+                              </Badge>
+                            )}
                             {data.priority && (
                               <Badge className={cn('text-xs', priorityColors[data.priority])}>
                                 {data.priority}
@@ -642,7 +670,7 @@ export function PremiumAgentDayEvents({
                         </div>
 
                         <div className="flex items-center gap-1">
-                          {onEdit && (
+                          {!eventIsShared && onEdit && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -655,7 +683,7 @@ export function PremiumAgentDayEvents({
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}
-                          {onDelete && (
+                          {!eventIsShared && onDelete && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -693,7 +721,7 @@ export function PremiumAgentDayEvents({
                       </div>
 
                       {/* Status actions */}
-                      {onStatusChange && data.status !== 'effectue' && (
+                      {!eventIsShared && onStatusChange && data.status !== 'effectue' && (
                         <div className="flex gap-2 pt-3 border-t border-border/50">
                           <Button
                             size="sm"

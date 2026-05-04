@@ -10,6 +10,9 @@ export interface CalendarEvent {
   description?: string;
   all_day?: boolean;
   end_date?: string;
+  // Co-assignment sharing flags (added client-side)
+  is_shared?: boolean;
+  shared_by_name?: string | null;
 }
 
 export const eventTypeLabels: Record<string, string> = {
