@@ -297,11 +297,19 @@ export default function AgentVisites() {
         });
       }
 
-      const visitesWithProfiles = visitesData?.map(v => ({
-        ...v,
-        client_profile: profilesMap.get(v.clients?.user_id),
-        candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null
-      })) || [];
+      const visitesWithProfiles = visitesData?.map(v => {
+        const isShared = v.is_own === false;
+        const sharedAgent: any = v.agents;
+        const prenom = sharedAgent?.profiles?.prenom ?? '';
+        const nom = sharedAgent?.profiles?.nom ?? '';
+        return {
+          ...v,
+          client_profile: profilesMap.get(v.clients?.user_id),
+          candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null,
+          is_shared: isShared,
+          shared_by_name: isShared ? `${prenom} ${nom.charAt(0)}.`.trim() : null,
+        };
+      }) || [];
 
       setVisites(visitesWithProfiles);
     } catch (error) {
