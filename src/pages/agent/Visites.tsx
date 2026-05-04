@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, 
+  Calendar, Clock, User, Users, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, 
   Bell, History, CheckCircle, XCircle, Trash2, Upload, X, Image, Video, 
   Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye, Download
 } from 'lucide-react';
@@ -297,11 +297,19 @@ export default function AgentVisites() {
         });
       }
 
-      const visitesWithProfiles = visitesData?.map(v => ({
-        ...v,
-        client_profile: profilesMap.get(v.clients?.user_id),
-        candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null
-      })) || [];
+      const visitesWithProfiles = visitesData?.map(v => {
+        const isShared = v.is_own === false;
+        const sharedAgent: any = v.agents;
+        const prenom = sharedAgent?.profiles?.prenom ?? '';
+        const nom = sharedAgent?.profiles?.nom ?? '';
+        return {
+          ...v,
+          client_profile: profilesMap.get(v.clients?.user_id),
+          candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null,
+          is_shared: isShared,
+          shared_by_name: isShared ? `${prenom} ${nom.charAt(0)}.`.trim() : null,
+        };
+      }) || [];
 
       setVisites(visitesWithProfiles);
     } catch (error) {
@@ -567,10 +575,11 @@ export default function AgentVisites() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedVisites.size === visites.length) {
+    const ownVisites = visites.filter(v => !v.is_shared);
+    if (selectedVisites.size === ownVisites.length) {
       setSelectedVisites(new Set());
     } else {
-      setSelectedVisites(new Set(visites.map(v => v.id)));
+      setSelectedVisites(new Set(ownVisites.map(v => v.id)));
     }
   };
 
@@ -681,6 +690,7 @@ export default function AgentVisites() {
     const urgency = getVisiteUrgency(visite.date_visite);
     const isVisiteDatePassed = new Date(visite.date_visite) <= now;
     const visiteDate = new Date(visite.date_visite);
+    const isShared = !!visite.is_shared;
     
     return (
       <div 
@@ -694,7 +704,8 @@ export default function AgentVisites() {
           "transition-all duration-500 ease-out",
           "animate-fade-in",
           selectedVisites.has(visite.id) && "ring-2 ring-primary",
-          urgency.urgent && "border-destructive/50"
+          urgency.urgent && !isShared && "border-destructive/50",
+          isShared && "border-dashed border-purple-500/50 bg-purple-500/[0.02] opacity-90"
         )}
         onClick={() => handleOpenDetail(visite)}
         style={{ animationDelay: `${index * 100}ms` }}
@@ -702,7 +713,7 @@ export default function AgentVisites() {
         {/* Status bar */}
         <div className={cn(
           "absolute left-0 top-0 bottom-0 w-1",
-          urgency.urgent ? "bg-destructive" : visite.est_deleguee ? "bg-primary" : "bg-border"
+          isShared ? "bg-purple-500" : urgency.urgent ? "bg-destructive" : visite.est_deleguee ? "bg-primary" : "bg-border"
         )} />
         
         {/* Shine effect */}
@@ -714,7 +725,7 @@ export default function AgentVisites() {
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              {showCheckbox && (
+              {showCheckbox && !isShared && (
                 <Checkbox 
                   checked={selectedVisites.has(visite.id)}
                   onCheckedChange={() => toggleVisiteSelection(visite.id)}
@@ -744,9 +755,10 @@ export default function AgentVisites() {
                   Déléguée
                 </Badge>
               )}
-              {!visite.is_own && visite.agents?.profiles && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10">
-                  Par {visite.agents.profiles.prenom} {visite.agents.profiles.nom}
+              {isShared && visite.shared_by_name && (
+                <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">
+                  <Users className="h-3 w-3 mr-1" />
+                  Co-agent : {visite.shared_by_name}
                 </Badge>
               )}
               <Badge className={cn("font-semibold shadow-lg", urgency.color, urgency.urgent && "animate-pulse")}>
@@ -854,8 +866,16 @@ export default function AgentVisites() {
             </div>
           </div>
 
-          {/* Action buttons */}
-          {isVisiteDatePassed && (
+          {/* Read-only banner for shared visits */}
+          {isShared && (
+            <div className="mt-4 p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-xs flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              <span>Lecture seule — visite gérée par {visite.shared_by_name}</span>
+            </div>
+          )}
+
+          {/* Action buttons (hidden for shared visits) */}
+          {!isShared && isVisiteDatePassed && (
             <Button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -882,7 +902,7 @@ export default function AgentVisites() {
           )}
 
           {/* Courier delegation button */}
-          {!isVisiteDatePassed && !visite.statut_coursier && (
+          {!isShared && !isVisiteDatePassed && !visite.statut_coursier && (
             <Button 
               onClick={async (e) => {
                 e.stopPropagation();
@@ -900,7 +920,7 @@ export default function AgentVisites() {
               🏍️ Déléguer à un coursier (5.-)
             </Button>
           )}
-          {!isVisiteDatePassed && (visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte') && (
+          {!isShared && !isVisiteDatePassed && (visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte') && (
             <div className="w-full mt-2 space-y-1">
               <Badge variant={visite.statut_coursier === 'accepte' ? 'default' : 'secondary'} className="text-xs">
                 {visite.statut_coursier === 'accepte' ? '✅ Coursier accepté' : '⏳ Coursier en attente'}
@@ -1275,7 +1295,7 @@ export default function AgentVisites() {
               </Badge>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {visitesDelegueesPending.map((visite, index) => renderPendingRequestCard(visite, index))}
+              {visitesDelegueesPending.filter((v: any) => !v.is_shared).map((visite, index) => renderPendingRequestCard(visite, index))}
             </div>
           </div>
         )}
@@ -1361,11 +1381,13 @@ export default function AgentVisites() {
                     <div className="p-5">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <Checkbox 
-                            checked={selectedVisites.has(visite.id)}
-                            onCheckedChange={() => toggleVisiteSelection(visite.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                          {!visite.is_shared && (
+                            <Checkbox 
+                              checked={selectedVisites.has(visite.id)}
+                              onCheckedChange={() => toggleVisiteSelection(visite.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
                           <div className="p-2 rounded-lg bg-muted">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
                           </div>
@@ -1640,7 +1662,13 @@ export default function AgentVisites() {
           )}
 
           <DialogFooter className="p-4 bg-muted/30 border-t border-border/50 gap-2">
-            {selectedVisite?.est_deleguee && selectedVisite?.statut === 'planifiee' && (
+            {selectedVisite?.is_shared && (
+              <div className="flex-1 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 shrink-0" />
+                <span>Visite gérée par {selectedVisite.shared_by_name} (co-agent) — lecture seule</span>
+              </div>
+            )}
+            {!selectedVisite?.is_shared && selectedVisite?.est_deleguee && selectedVisite?.statut === 'planifiee' && (
               <>
                 <Button 
                   onClick={() => {
@@ -1665,7 +1693,7 @@ export default function AgentVisites() {
                 </Button>
               </>
             )}
-            {new Date(selectedVisite?.date_visite) <= now && selectedVisite?.statut !== 'effectuee' && (
+            {!selectedVisite?.is_shared && new Date(selectedVisite?.date_visite) <= now && selectedVisite?.statut !== 'effectuee' && (
               <Button 
                 onClick={() => {
                   handleMarquerEffectuee(selectedVisite);
@@ -1698,13 +1726,15 @@ export default function AgentVisites() {
               size="sm"
               variant="outline"
             />
-            <Button 
-              variant="destructive" 
-              size="icon"
-              onClick={() => handleDeleteVisite(selectedVisite?.id, true)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {!selectedVisite?.is_shared && (
+              <Button 
+                variant="destructive" 
+                size="icon"
+                onClick={() => handleDeleteVisite(selectedVisite?.id, true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
