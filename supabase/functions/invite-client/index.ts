@@ -22,6 +22,13 @@ const getAppBaseUrl = (req: Request) => {
   return DEFAULT_APP_URL;
 };
 
+// Types acceptés par le CHECK CONSTRAINT sur public.documents.type_document
+const VALID_DOC_TYPES = new Set([
+  'fiche_salaire', 'extrait_poursuites', 'piece_identite', 'attestation_domicile',
+  'rc_menage', 'contrat_travail', 'attestation_employeur', 'copie_bail',
+  'attestation_garantie_loyer', 'dossier_complet', 'autre',
+]);
+
 // Mapping des types du formulaire vers les types de la table documents
 const mapDocumentType = (formType: string): string => {
   const typeMapping: Record<string, string> = {
@@ -30,8 +37,31 @@ const mapDocumentType = (formType: string): string => {
     'salaire2': 'fiche_salaire',
     'salaire3': 'fiche_salaire',
     'identite': 'piece_identite',
+    // Pièces d'identité avec recto/verso (formulaire /nouveau-mandat → MandatFormStep6)
+    'piece_identite_recto': 'piece_identite',
+    'piece_identite_verso': 'piece_identite',
+    // Permis de séjour (B / C / F / N) — rangés sous piece_identite (seul type valide en base)
+    'permis_sejour_recto': 'piece_identite',
+    'permis_sejour_verso': 'piece_identite',
   };
-  return typeMapping[formType] || formType;
+  const mapped = typeMapping[formType] || formType;
+  // Garde-fou : si le type final n'est pas accepté par le CHECK, on bascule sur 'autre'
+  // pour éviter une perte silencieuse du document.
+  return VALID_DOC_TYPES.has(mapped) ? mapped : 'autre';
+};
+
+// Suffixe lisible (recto)/(verso) à insérer dans le nom de fichier affiché
+const decorateNameWithFace = (originalName: string, formType: string): string => {
+  const isRecto = formType.endsWith('_recto');
+  const isVerso = formType.endsWith('_verso');
+  if (!isRecto && !isVerso) return originalName;
+  const suffix = isRecto ? ' (recto)' : ' (verso)';
+  // Insère le suffixe avant l'extension si présente, sinon en fin
+  const m = originalName.match(/^(.*?)(\.[^.]+)?$/);
+  if (!m) return `${originalName}${suffix}`;
+  const base = m[1] ?? originalName;
+  const ext = m[2] ?? '';
+  return `${base}${suffix}${ext}`;
 };
 
 // Détecter le MIME type à partir du nom du fichier
@@ -458,30 +488,33 @@ serve(async (req) => {
         (existingDocs || []).map((d: any) => `${d.nom}_${d.type_document}`)
       );
 
+      let transferredCount = 0;
+      let transferFailures = 0;
       for (const doc of demandeMandat.documents_uploades) {
         const mappedType = mapDocumentType(doc.type);
         const mimeType = getMimeType(doc.name);
-        const docKey = `${doc.name}_${mappedType}`;
+        const displayName = decorateNameWithFace(doc.name, doc.type);
+        const docKey = `${displayName}_${mappedType}`;
 
         if (existingDocKeys.has(docKey)) {
-          console.log('Document already exists, skipping:', doc.name);
+          console.log('Document already exists, skipping:', displayName);
           continue;
         }
-        
-        console.log('Inserting document:', { 
-          name: doc.name, 
-          originalType: doc.type, 
-          mappedType, 
+
+        console.log('Inserting document:', {
+          name: displayName,
+          originalType: doc.type,
+          mappedType,
           mimeType,
           url: doc.url?.substring(0, 50) + '...'
         });
-        
+
         const { error: docError } = await supabaseAdmin
           .from('documents')
           .insert({
             user_id: userId,
             client_id: clientRecordId,
-            nom: doc.name,
+            nom: displayName,
             url: doc.url,
             type: mimeType,
             type_document: mappedType,
@@ -490,11 +523,15 @@ serve(async (req) => {
           });
 
         if (docError) {
-          console.error('Error transferring document:', docError, { doc: doc.name, mappedType, mimeType });
+          transferFailures++;
+          console.error('Error transferring document:', docError, { doc: displayName, originalType: doc.type, mappedType, mimeType });
         } else {
-          console.log('Document transferred successfully:', doc.name);
+          transferredCount++;
+          existingDocKeys.add(docKey);
+          console.log('Document transferred successfully:', displayName);
         }
       }
+      console.log(`Documents transfer summary: ${transferredCount} ok / ${transferFailures} failed / total ${demandeMandat.documents_uploades.length}`);
     }
 
     console.log('Email sent successfully to user:', userId);
