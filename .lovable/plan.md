@@ -1,107 +1,114 @@
+# Partage du calendrier entre agents co-assignés
+
 ## Objectif
 
-Réduire la consommation Cloud (invocations, stockage DB, egress) en attaquant les 3 sources principales :
-1. **183 MB de logs système** (`cron.job_run_details` + `net._http_response`) qui grossissent indéfiniment
-2. **Cron 5 min trop agressifs** (`sync-imap-emails`, `send-visit-reminders`) → 576 runs/jour
-3. **Tables applicatives sans rétention** (`notifications` 20k lignes / `received_emails` 3.6k lignes / 26 MB)
+Permettre à chaque agent co-assigné sur un même client de **voir dans son propre calendrier** les visites et événements créés par ses collègues sur ce client. Ainsi :
+- Plus de visites fixées **en double** sur la même offre.
+- Plus de **conflits horaires** (deux agents proposant la même plage au même client).
 
----
+Le partage est limité aux **clients réellement co-assignés** (via `client_agents`). Les visites/events des autres clients restent invisibles.
 
-## 1. Cron de purge automatique des tables système
+## Périmètre
 
-Création d'une fonction SQL `public.purge_system_logs()` (SECURITY DEFINER) qui supprime :
-- `cron.job_run_details` → garder **7 jours** (au lieu d'illimité). Économie : ~92 MB → ~10 MB
-- `net._http_response` → garder **3 jours**. Économie : ~91 MB → ~5 MB
+**Pages impactées :**
+- `src/pages/agent/Calendrier.tsx` — calendrier principal
+- `src/pages/agent/Visites.tsx` — liste des visites
+- `src/pages/agent/Carte.tsx` — carte des visites
 
-Planification via `cron.schedule` :
-```text
-purge-system-logs-daily   →   0 3 * * *   (tous les jours à 03h00 Europe/Zurich)
-```
+**Pas impacté :** clients, coursiers, admin, propriétaires (logique inchangée).
 
-Cette purge tourne **directement en SQL** (pas d'edge function appelée) → 0 invocation, 0 egress.
+## Comportement utilisateur
 
----
-
-## 2. Réduction de la fréquence des 2 cron jobs
-
-| Job | Avant | Après | Runs/jour avant → après |
-|---|---|---|---|
-| `sync-imap-emails-every-5-minutes` | `*/5 * * * *` | `*/15 * * * *` | 288 → 96 |
-| `send-visit-reminders-job` | `*/5 * * * *` | `*/15 * * * *` | 288 → 96 |
-
-Gain : **−384 invocations/jour** sur ces 2 jobs (−66%).
-
-Justification :
-- IMAP : un délai max de 15 min pour recevoir un mail entrant reste largement acceptable
-- Rappels visite : la fenêtre de rappel (24h/2h avant) tolère sans souci une granularité de 15 min
-
-Renommage des jobs (`-every-15-minutes`) pour cohérence.
-
----
-
-## 3. Politique de rétention sur tables applicatives
-
-Ajout dans la même fonction `purge_system_logs()` (renommée `purge_old_data()`) :
-
-**`notifications`** :
-- Supprimer les notifications **lues** de plus de **30 jours** (`is_read = true AND read_at < now() - 30d`)
-- Supprimer les notifications **non lues** de plus de **90 jours** (anti-bloat sécurité)
-
-**`received_emails`** :
-- Garder **90 jours** d'historique IMAP (`created_at < now() - 90d`)
-- Si un email est lié à une conversation/lead actif, on garde via une jointure de protection (à confirmer côté usage)
-
-Estimation gain : `notifications` 17 MB → ~5 MB, `received_emails` 26 MB → ~10 MB.
-
----
+1. Quand l'agent A et l'agent B sont co-assignés au client X :
+   - Agent A voit dans son calendrier ses propres visites **+** celles que B a créées pour le client X.
+   - Idem pour B.
+2. Les visites/events « partagées » (créées par un autre agent co-assigné) sont **visuellement distinguées** :
+   - Petit badge « Co-agent : Prénom N. » sur la carte de visite.
+   - Couleur/opacité légèrement différente pour les distinguer des siennes.
+3. **Lecture seule** sur les visites des co-agents :
+   - Pas de bouton modifier/supprimer/feedback sur une visite créée par un autre.
+   - Tooltip explicatif : « Visite créée par {agent}, lecture seule ».
+4. Avant de fixer une nouvelle visite, l'agent voit visuellement le créneau déjà occupé par son co-agent sur le même client → conflit évité.
 
 ## Détails techniques
 
-**Migration SQL** (schéma) — création de la fonction + grants :
-```sql
-CREATE OR REPLACE FUNCTION public.purge_old_data()
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE r jsonb := '{}'::jsonb;
-BEGIN
-  DELETE FROM cron.job_run_details WHERE start_time < now() - interval '7 days';
-  GET DIAGNOSTICS r = ROW_COUNT; -- log par étape...
-  DELETE FROM net._http_response WHERE created  < now() - interval '3 days';
-  DELETE FROM public.notifications
-    WHERE (is_read = true AND read_at < now() - interval '30 days')
-       OR (is_read = false AND created_at < now() - interval '90 days');
-  DELETE FROM public.received_emails WHERE created_at < now() - interval '90 days';
-  RETURN r;
-END $$;
+### 1. Récupération des données (Calendrier.tsx)
+
+La RLS sur `visites` autorise déjà la lecture pour les co-agents (policy `Agents multi peuvent gérer visites`). Aucune migration nécessaire.
+
+**Modifier `loadData()` :**
+
+```ts
+// Après avoir récupéré clientIds via client_agents
+const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+// Visites : élargir le filtre — soit miennes, soit sur un client co-assigné
+const visitesRes = await supabase
+  .from('visites')
+  .select('*, offres(*), clients!visites_client_id_fkey(id, user_id), agents!visites_agent_id_fkey(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
+  .or(`agent_id.eq.${agentData.id},client_id.in.(${clientIds.join(',')})`)
+  .order('date_visite', { ascending: true })
+  .limit(15000);
+
+// Calendar events : idem
+const eventsRes = await supabase
+  .from('calendar_events')
+  .select('*, agents!calendar_events_agent_id_fkey(id, profiles!agents_user_id_fkey(prenom, nom))')
+  .or(`agent_id.eq.${agentData.id},client_id.in.(${clientIds.join(',')})`)
+  .order('event_date', { ascending: true });
 ```
 
-**Insert SQL** (données — via outil insert, pas migration, car contient l'URL projet) :
-- `cron.unschedule('sync-imap-emails-every-5-minutes')` + reschedule en `*/15 * * * *`
-- `cron.unschedule('send-visit-reminders-job')` + reschedule en `*/15 * * * *`
-- `cron.schedule('purge-old-data-daily', '0 3 * * *', $$ SELECT public.purge_old_data(); $$)`
+Garder un fallback si `clientIds` est vide (uniquement filtre sur `agent_id`).
 
-**Vérification post-déploiement** :
-- `SELECT * FROM cron.job` → confirmer les 3 jobs modifiés/créés
-- Lancer manuellement `SELECT public.purge_old_data();` pour purge initiale immédiate (libère ~180 MB d'un coup)
+### 2. Marquage « visite partagée »
 
----
+Ajouter un flag dérivé côté front :
 
-## Impact attendu
+```ts
+const visitesWithProfiles = visitesRes.data?.map(v => ({
+  ...v,
+  is_shared: v.agent_id !== agentData.id,
+  shared_by_name: v.agent_id !== agentData.id 
+    ? `${v.agents?.profiles?.prenom ?? ''} ${v.agents?.profiles?.nom?.[0] ?? ''}.`
+    : null,
+  // ... reste inchangé
+}));
+```
 
-| Métrique | Avant | Après |
-|---|---|---|
-| Invocations cron/jour | ~730 | ~346 (−53%) |
-| Stockage DB | 295 MB | ~100 MB (−66%) |
-| Croissance mensuelle | rapide | stable |
+### 3. RLS calendar_events (à vérifier)
 
-Aucun impact fonctionnel : les délais (15 min IMAP, 24h notifications lues, 90j emails) sont conservateurs et ajustables.
+Vérifier que la policy SELECT de `calendar_events` autorise la lecture pour co-agents. Sinon, ajouter une migration :
 
----
+```sql
+CREATE POLICY "Co-agents can view shared calendar events"
+  ON public.calendar_events FOR SELECT
+  USING (
+    client_id IN (SELECT get_my_co_agent_client_ids())
+  );
+```
 
-## Hors scope (à proposer plus tard si besoin)
+### 4. UI — distinction visuelle
 
-- Désactivation totale d'un cron (à valider avec toi)
-- Archivage des `received_emails` purgés vers Storage avant suppression
-- Compression / partitioning de `notifications`
+Dans `PremiumAgentDayEvents.tsx` et `EventManagerCalendar` :
+- Si `visite.is_shared === true` → ajouter badge `<Badge variant="outline">Co-agent : {shared_by_name}</Badge>`.
+- Désactiver les actions (modifier, feedback, supprimer) avec tooltip.
+- Légère opacité (ex. `opacity-80`) ou bordure pointillée pour les visites partagées.
 
-Confirme et je passe en mode build.
+### 5. Filtre client (existant)
+
+Le filtre par client fonctionne tel quel : si l'agent filtre sur le client X, il verra à la fois ses visites et celles de ses co-agents pour X.
+
+### 6. Pages secondaires
+
+- `Visites.tsx` : appliquer la même logique `.or(...)` + badge « Co-agent ».
+- `Carte.tsx` : appliquer la même logique pour que les marqueurs des co-agents apparaissent (avec couleur différente).
+
+## Hors périmètre (à confirmer)
+
+- Notifications quand un co-agent crée/modifie une visite : **pas inclus** dans ce plan (peut être ajouté ensuite).
+- Synchronisation Google Calendar des visites partagées : **pas inclus** (chaque agent ne sync que ses propres visites).
+- Édition collaborative (les deux agents pouvant modifier la même visite) : **non**, lecture seule pour préserver l'attribution.
+
+## Résultat attendu
+
+Après implémentation, deux agents co-assignés au même client voient le même planning de visites pour ce client, avec des couleurs distinguant qui a créé quoi. Les doublons et chevauchements deviennent visuellement évidents avant validation.
