@@ -12,6 +12,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   confirmee: { label: 'Confirmée', className: 'bg-green-500/10 text-green-600 border-green-500/30' },
   effectuee: { label: 'Effectuée', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
   annulee: { label: 'Annulée', className: 'bg-red-500/10 text-red-600 border-red-500/30' },
+  partagee: { label: 'Co-agent', className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
 };
 
 export default function AgentCarte() {
@@ -19,6 +20,7 @@ export default function AgentCarte() {
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [scope, setScope] = useState<'all' | 'mine' | 'shared'>('all');
 
   useEffect(() => {
     if (user) loadVisites();
@@ -35,15 +37,37 @@ export default function AgentCarte() {
 
       if (!agentData) { setLoading(false); return; }
 
+      // Récupérer les co-clients
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+      const coClientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      const clientFilter = coClientIds.length > 0
+        ? `,client_id.in.(${coClientIds.join(',')})`
+        : '';
+
       const { data } = await supabase
         .from('visites')
-        .select('*')
-        .eq('agent_id', agentData.id)
+        .select('*, agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
+        .or(`agent_id.eq.${agentData.id}${clientFilter}`)
         .gte('date_visite', new Date().toISOString())
         .order('date_visite', { ascending: true })
         .limit(15000);
 
-      setVisites(data || []);
+      const enriched = (data || []).map((v: any) => {
+        const isShared = v.agent_id !== agentData.id;
+        const prenom = v.agents?.profiles?.prenom ?? '';
+        const nom = v.agents?.profiles?.nom ?? '';
+        return {
+          ...v,
+          is_shared: isShared,
+          shared_by_name: isShared ? `${prenom} ${nom.charAt(0)}.`.trim() : null,
+        };
+      });
+
+      setVisites(enriched);
     } catch (error) {
       console.error('Error loading agent visites:', error);
     } finally {
@@ -52,17 +76,28 @@ export default function AgentCarte() {
   };
 
   const now = new Date();
-  const filteredVisites = visites.filter(v => {
-    if (filter === 'today') {
-      const d = new Date(v.date_visite);
-      return d >= startOfDay(now) && d <= endOfDay(now);
-    }
-    if (filter === 'week') {
-      const d = new Date(v.date_visite);
-      return d >= startOfWeek(now, { weekStartsOn: 1 }) && d <= endOfWeek(now, { weekStartsOn: 1 });
-    }
-    return true;
-  });
+  const filteredVisites = visites
+    .filter(v => {
+      if (scope === 'mine') return !v.is_shared;
+      if (scope === 'shared') return v.is_shared;
+      return true;
+    })
+    .filter(v => {
+      if (filter === 'today') {
+        const d = new Date(v.date_visite);
+        return d >= startOfDay(now) && d <= endOfDay(now);
+      }
+      if (filter === 'week') {
+        const d = new Date(v.date_visite);
+        return d >= startOfWeek(now, { weekStartsOn: 1 }) && d <= endOfWeek(now, { weekStartsOn: 1 });
+      }
+      return true;
+    });
+
+  // Marquer les visites partagées avec un statut virtuel pour la couleur violette du marqueur
+  const visitesForMap = filteredVisites.map((v: any) =>
+    v.is_shared ? { ...v, statut: 'partagee' } : v
+  );
 
   return (
     <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
@@ -83,15 +118,26 @@ export default function AgentCarte() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les visites</SelectItem>
+              <SelectItem value="all">Toutes les périodes</SelectItem>
               <SelectItem value="today">Aujourd'hui</SelectItem>
               <SelectItem value="week">Cette semaine</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={scope} onValueChange={(v) => setScope(v as 'all' | 'mine' | 'shared')}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les visites</SelectItem>
+              <SelectItem value="mine">Mes visites</SelectItem>
+              <SelectItem value="shared">Co-agents uniquement</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <VisitesMapView
-          missions={filteredVisites}
+          missions={visitesForMap}
           loading={loading}
           statusField="statut"
           statusConfig={STATUS_CONFIG}
