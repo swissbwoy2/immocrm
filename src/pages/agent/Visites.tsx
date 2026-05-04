@@ -1662,7 +1662,13 @@ export default function AgentVisites() {
           )}
 
           <DialogFooter className="p-4 bg-muted/30 border-t border-border/50 gap-2">
-            {selectedVisite?.est_deleguee && selectedVisite?.statut === 'planifiee' && (
+            {selectedVisite?.is_shared && (
+              <div className="flex-1 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-sm flex items-center gap-2">
+                <Users className="h-4 w-4 shrink-0" />
+                <span>Visite gérée par {selectedVisite.shared_by_name} (co-agent) — lecture seule</span>
+              </div>
+            )}
+            {!selectedVisite?.is_shared && selectedVisite?.est_deleguee && selectedVisite?.statut === 'planifiee' && (
               <>
                 <Button 
                   onClick={() => {
@@ -1687,7 +1693,7 @@ export default function AgentVisites() {
                 </Button>
               </>
             )}
-            {new Date(selectedVisite?.date_visite) <= now && selectedVisite?.statut !== 'effectuee' && (
+            {!selectedVisite?.is_shared && new Date(selectedVisite?.date_visite) <= now && selectedVisite?.statut !== 'effectuee' && (
               <Button 
                 onClick={() => {
                   handleMarquerEffectuee(selectedVisite);
@@ -1720,13 +1726,15 @@ export default function AgentVisites() {
               size="sm"
               variant="outline"
             />
-            <Button 
-              variant="destructive" 
-              size="icon"
-              onClick={() => handleDeleteVisite(selectedVisite?.id, true)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {!selectedVisite?.is_shared && (
+              <Button 
+                variant="destructive" 
+                size="icon"
+                onClick={() => handleDeleteVisite(selectedVisite?.id, true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
