@@ -575,10 +575,11 @@ export default function AgentVisites() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedVisites.size === visites.length) {
+    const ownVisites = visites.filter(v => !v.is_shared);
+    if (selectedVisites.size === ownVisites.length) {
       setSelectedVisites(new Set());
     } else {
-      setSelectedVisites(new Set(visites.map(v => v.id)));
+      setSelectedVisites(new Set(ownVisites.map(v => v.id)));
     }
   };
 
