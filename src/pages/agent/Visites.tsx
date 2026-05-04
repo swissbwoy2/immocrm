@@ -1295,7 +1295,7 @@ export default function AgentVisites() {
               </Badge>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-              {visitesDelegueesPending.map((visite, index) => renderPendingRequestCard(visite, index))}
+              {visitesDelegueesPending.filter((v: any) => !v.is_shared).map((visite, index) => renderPendingRequestCard(visite, index))}
             </div>
           </div>
         )}
