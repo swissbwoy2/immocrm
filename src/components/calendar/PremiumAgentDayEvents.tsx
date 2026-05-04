@@ -600,13 +600,17 @@ export function PremiumAgentDayEvents({
                 // Event rendering
                 const data = item.data;
                 const eventDate = new Date(data.event_date);
+                const eventIsShared = !!data.is_shared;
+                const eventSharedByName = eventIsShared ? (data.shared_by_name || 'Co-agent') : null;
 
                 return (
                   <div
                     key={`event-${data.id}-${idx}`}
                     className={cn(
                       'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300 hover:shadow-lg',
-                      eventTypeColors[item.eventType],
+                      eventIsShared
+                        ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02] opacity-90'
+                        : eventTypeColors[item.eventType],
                       'hover:scale-[1.01]'
                     )}
                     style={{ animationDelay: `${idx * 50}ms` }}
@@ -621,6 +625,16 @@ export function PremiumAgentDayEvents({
                             <Badge variant="outline" className="text-xs font-medium">
                               {eventTypeLabels[item.eventType]}
                             </Badge>
+                            {eventIsShared && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                title={`Événement créé par ${eventSharedByName} (co-agent) — lecture seule`}
+                              >
+                                <Users className="h-3 w-3 mr-1" />
+                                Co-agent : {eventSharedByName}
+                              </Badge>
+                            )}
                             {data.priority && (
                               <Badge className={cn('text-xs', priorityColors[data.priority])}>
                                 {data.priority}
