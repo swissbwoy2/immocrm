@@ -865,8 +865,16 @@ export default function AgentVisites() {
             </div>
           </div>
 
-          {/* Action buttons */}
-          {isVisiteDatePassed && (
+          {/* Read-only banner for shared visits */}
+          {isShared && (
+            <div className="mt-4 p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-xs flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              <span>Lecture seule — visite gérée par {visite.shared_by_name}</span>
+            </div>
+          )}
+
+          {/* Action buttons (hidden for shared visits) */}
+          {!isShared && isVisiteDatePassed && (
             <Button 
               onClick={(e) => {
                 e.stopPropagation();
@@ -893,7 +901,7 @@ export default function AgentVisites() {
           )}
 
           {/* Courier delegation button */}
-          {!isVisiteDatePassed && !visite.statut_coursier && (
+          {!isShared && !isVisiteDatePassed && !visite.statut_coursier && (
             <Button 
               onClick={async (e) => {
                 e.stopPropagation();
@@ -911,7 +919,7 @@ export default function AgentVisites() {
               🏍️ Déléguer à un coursier (5.-)
             </Button>
           )}
-          {!isVisiteDatePassed && (visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte') && (
+          {!isShared && !isVisiteDatePassed && (visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte') && (
             <div className="w-full mt-2 space-y-1">
               <Badge variant={visite.statut_coursier === 'accepte' ? 'default' : 'secondary'} className="text-xs">
                 {visite.statut_coursier === 'accepte' ? '✅ Coursier accepté' : '⏳ Coursier en attente'}
