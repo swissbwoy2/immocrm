@@ -494,7 +494,7 @@ export function PremiumAgentDayEvents({
                         />
 
                         {/* Action buttons */}
-                        {group.some(v => v.statut === 'planifiee') && !isPast && (
+                        {!isShared && group.some(v => v.statut === 'planifiee') && !isPast && (
                           <div className="pt-3 border-t border-border/50 space-y-2">
                             {group.filter(v => v.statut === 'planifiee').map(visite => (
                               <Button
@@ -527,7 +527,7 @@ export function PremiumAgentDayEvents({
                         )}
                         
                         {/* Delete buttons */}
-                        {onDeleteVisite && (
+                        {!isShared && onDeleteVisite && (
                           <div className="pt-2 border-t border-border/30">
                             {group.map(visite => {
                               const isClesRemises = visite.candidature?.statut === 'cles_remises' || visite.candidature?.cles_remises;
