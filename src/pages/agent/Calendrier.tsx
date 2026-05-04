@@ -149,7 +149,7 @@ export default function AgentCalendrier() {
       setAgentId(agentData.id);
 
       // Load data in parallel
-      // Get client IDs via client_agents
+      // Get client IDs via client_agents (co-assignations)
       const { data: clientAgentsData } = await supabase
         .from('client_agents')
         .select('client_id')
@@ -157,17 +157,24 @@ export default function AgentCalendrier() {
 
       const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
 
+      // Build OR filter: my own items OR items on a co-assigned client
+      const clientIdsFilter = clientIds.length > 0 ? `,client_id.in.(${clientIds.join(',')})` : '';
+      const visitesFilter = `agent_id.eq.${agentData.id}${clientIdsFilter}`;
+      const eventsFilter = `agent_id.eq.${agentData.id}${clientIdsFilter}`;
+
       const [eventsRes, visitesRes, clientsRes] = await Promise.all([
         supabase
           .from('calendar_events')
-          .select('*')
-          .eq('agent_id', agentData.id)
-          .order('event_date', { ascending: true }),
+          .select('*, agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
+          .or(eventsFilter)
+          .order('event_date', { ascending: true })
+          .limit(15000),
         supabase
           .from('visites')
-          .select('*, offres(*), clients!visites_client_id_fkey(id, user_id)')
-          .eq('agent_id', agentData.id)
-          .order('date_visite', { ascending: true }),
+          .select('*, offres(*), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
+          .or(visitesFilter)
+          .order('date_visite', { ascending: true })
+          .limit(15000),
         clientIds.length > 0 
           ? supabase
               .from('clients')
