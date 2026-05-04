@@ -689,6 +689,7 @@ export default function AgentVisites() {
     const urgency = getVisiteUrgency(visite.date_visite);
     const isVisiteDatePassed = new Date(visite.date_visite) <= now;
     const visiteDate = new Date(visite.date_visite);
+    const isShared = !!visite.is_shared;
     
     return (
       <div 
@@ -702,7 +703,8 @@ export default function AgentVisites() {
           "transition-all duration-500 ease-out",
           "animate-fade-in",
           selectedVisites.has(visite.id) && "ring-2 ring-primary",
-          urgency.urgent && "border-destructive/50"
+          urgency.urgent && !isShared && "border-destructive/50",
+          isShared && "border-dashed border-purple-500/50 bg-purple-500/[0.02] opacity-90"
         )}
         onClick={() => handleOpenDetail(visite)}
         style={{ animationDelay: `${index * 100}ms` }}
@@ -710,7 +712,7 @@ export default function AgentVisites() {
         {/* Status bar */}
         <div className={cn(
           "absolute left-0 top-0 bottom-0 w-1",
-          urgency.urgent ? "bg-destructive" : visite.est_deleguee ? "bg-primary" : "bg-border"
+          isShared ? "bg-purple-500" : urgency.urgent ? "bg-destructive" : visite.est_deleguee ? "bg-primary" : "bg-border"
         )} />
         
         {/* Shine effect */}
@@ -722,7 +724,7 @@ export default function AgentVisites() {
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              {showCheckbox && (
+              {showCheckbox && !isShared && (
                 <Checkbox 
                   checked={selectedVisites.has(visite.id)}
                   onCheckedChange={() => toggleVisiteSelection(visite.id)}
@@ -752,9 +754,10 @@ export default function AgentVisites() {
                   Déléguée
                 </Badge>
               )}
-              {!visite.is_own && visite.agents?.profiles && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10">
-                  Par {visite.agents.profiles.prenom} {visite.agents.profiles.nom}
+              {isShared && visite.shared_by_name && (
+                <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">
+                  <Users className="h-3 w-3 mr-1" />
+                  Co-agent : {visite.shared_by_name}
                 </Badge>
               )}
               <Badge className={cn("font-semibold shadow-lg", urgency.color, urgency.urgent && "animate-pulse")}>
