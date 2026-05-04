@@ -1381,11 +1381,13 @@ export default function AgentVisites() {
                     <div className="p-5">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <Checkbox 
-                            checked={selectedVisites.has(visite.id)}
-                            onCheckedChange={() => toggleVisiteSelection(visite.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                          {!visite.is_shared && (
+                            <Checkbox 
+                              checked={selectedVisites.has(visite.id)}
+                              onCheckedChange={() => toggleVisiteSelection(visite.id)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
                           <div className="p-2 rounded-lg bg-muted">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
                           </div>
