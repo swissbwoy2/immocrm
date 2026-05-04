@@ -670,7 +670,7 @@ export function PremiumAgentDayEvents({
                         </div>
 
                         <div className="flex items-center gap-1">
-                          {onEdit && (
+                          {!eventIsShared && onEdit && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -683,7 +683,7 @@ export function PremiumAgentDayEvents({
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}
-                          {onDelete && (
+                          {!eventIsShared && onDelete && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -721,7 +721,7 @@ export function PremiumAgentDayEvents({
                       </div>
 
                       {/* Status actions */}
-                      {onStatusChange && data.status !== 'effectue' && (
+                      {!eventIsShared && onStatusChange && data.status !== 'effectue' && (
                         <div className="flex gap-2 pt-3 border-t border-border/50">
                           <Button
                             size="sm"
