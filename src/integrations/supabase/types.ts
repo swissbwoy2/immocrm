@@ -10562,6 +10562,7 @@ export type Database = {
         Returns: string
       }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      purge_old_data: { Args: never; Returns: Json }
       record_signature_checkpoint: {
         Args: {
           p_checkpoint_key: string
