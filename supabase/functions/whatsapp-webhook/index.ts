@@ -118,7 +118,25 @@ Deno.serve(async (req) => {
         // Incoming messages from clients
         for (const msg of value.messages || []) {
           const fromPhone = msg.from; // E.164 sans +
-          const text = msg.text?.body || msg.button?.text || msg.interactive?.button_reply?.title || "[Pièce jointe WhatsApp]";
+          const phoneE164 = `+${fromPhone}`;
+
+          // Detect button replies (template quick reply OR interactive button reply)
+          const buttonText: string | undefined =
+            msg.button?.text ||
+            msg.interactive?.button_reply?.title;
+          const buttonId: string | undefined = msg.interactive?.button_reply?.id;
+
+          // ============= MANDATE LIFECYCLE BUTTONS =============
+          if (buttonText || buttonId) {
+            const handled = await handleMandateButton(supabase, {
+              phoneE164,
+              buttonText: buttonText || "",
+              buttonId: buttonId || "",
+            });
+            if (handled) continue; // skip default messaging flow
+          }
+
+          const text = msg.text?.body || buttonText || "[Pièce jointe WhatsApp]";
 
           // Trouver le profile via téléphone
           const { data: profile } = await supabase
