@@ -630,10 +630,13 @@ async function syncUserEmails(
       }
     }
 
-    await supabaseAdmin
-      .from('imap_configurations')
-      .update({ last_sync_at: new Date().toISOString() })
-      .eq('id', config.id);
+    // OPTIM Cloud: only update last_sync_at when new emails were actually fetched
+    if (fetchedEmails.length > 0) {
+      await supabaseAdmin
+        .from('imap_configurations')
+        .update({ last_sync_at: new Date().toISOString() })
+        .eq('id', config.id);
+    }
 
     console.log(`[SYNC] User ${config.user_id}: ${fetchedEmails.length} emails synced`);
     return { success: true, count: fetchedEmails.length };
