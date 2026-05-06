@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
+import { WhatsAppNotificationsCard } from '@/components/settings/WhatsAppNotificationsCard';
 
 export default function ClientParametres() {
   const { user } = useAuth();
@@ -339,6 +340,9 @@ export default function ClientParametres() {
 
           {/* Google Agenda */}
           <GoogleCalendarConnect />
+
+          {/* WhatsApp */}
+          <WhatsAppNotificationsCard />
 
           {/* Changer le mot de passe */}
           <ChangePasswordCard />

@@ -220,6 +220,22 @@ const EnvoyerOffre = () => {
 
         if (offreError) throw offreError;
 
+        // 📱 Notification WhatsApp non bloquante (Lot 1)
+        try {
+          const prenom = client?.profiles?.prenom || '';
+          supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              event_type: 'new_offer',
+              template_key: 'new_offer_available',
+              client_id: clientId,
+              preference_key: 'offer_alerts_enabled',
+              variables: [prenom, `https://logisorama.ch/client/offres-recues?offreId=${offre.id}`],
+            },
+          }).catch((e) => console.warn('WA send failed (non-blocking)', e));
+        } catch (e) {
+          console.warn('WA invoke skipped', e);
+        }
+
         // Find ANY existing conversation for this client (regardless of which agent created it)
         // A co-agent must REUSE the existing conversation, not create a duplicate.
         const { data: existingConv } = await supabase

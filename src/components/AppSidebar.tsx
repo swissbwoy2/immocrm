@@ -99,6 +99,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
+            { name: 'WhatsApp', icon: MessageSquare, path: '/admin/whatsapp-notifications', notifKey: null },
           ],
         },
         {

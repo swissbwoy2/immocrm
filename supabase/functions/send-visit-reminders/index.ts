@@ -317,7 +317,33 @@ serve(async (req) => {
       });
 
       console.log(`Sent ${reminderType} reminder to ${recipientId} (${recipientRole}) for visit ${visite.id}`);
+
+      // 📱 WhatsApp 24h before — only for client recipient, day_before reminder (Lot 1)
+      if (recipientRole === 'client' && reminderType === 'day_before' && visite.client_id) {
+        try {
+          const { data: clientRow } = await supabase
+            .from('clients').select('user_id').eq('id', visite.client_id).maybeSingle();
+          const { data: prof } = clientRow?.user_id
+            ? await supabase.from('profiles').select('prenom').eq('id', clientRow.user_id).maybeSingle()
+            : { data: null };
+          const heure = new Date(visite.date_visite).toLocaleTimeString('fr-CH', {
+            hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich',
+          });
+          await supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              event_type: 'visit_reminder_24h',
+              template_key: 'visit_reminder_24h',
+              client_id: visite.client_id,
+              preference_key: 'visit_reminders_enabled',
+              variables: [prof?.prenom || '', heure, visite.adresse || ''],
+            },
+          });
+        } catch (e) {
+          console.warn('WA visit_reminder_24h failed (non-blocking)', e);
+        }
+      }
     }
+
 
     // Batch insert reminder records
     if (reminderRecords.length > 0) {

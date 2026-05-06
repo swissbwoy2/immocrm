@@ -67,6 +67,7 @@ const AdminMigrateDocuments = lazy(() => import("./pages/admin/MigrateDocuments"
 const AdminSuiviExtraits = lazy(() => import("./pages/admin/SuiviExtraitsPoursuites"));
 const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
 const AdminParametres = lazy(() => import("./pages/admin/Parametres"));
+const AdminWhatsAppNotifications = lazy(() => import("./pages/admin/WhatsAppNotifications"));
 const AdminEnvoyerEmail = lazy(() => import("./pages/admin/EnvoyerEmail"));
 const AdminEnvoyerOffre = lazy(() => import("./pages/admin/EnvoyerOffre"));
 const AdminHistoriqueEmails = lazy(() => import("./pages/admin/HistoriqueEmails"));
@@ -303,6 +304,7 @@ const App = () => (
               <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminParametres /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/whatsapp-notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminWhatsAppNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-email" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerEmail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-offre" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerOffre /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/historique-emails" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminHistoriqueEmails /></AppLayout></ProtectedRoute>} />
