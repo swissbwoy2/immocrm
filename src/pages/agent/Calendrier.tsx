@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { AddressLink } from '@/components/AddressLink';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter } from 'lucide-react';
@@ -1033,7 +1034,7 @@ export default function AgentCalendrier() {
           {selectedVisite && (
             <div className="space-y-4">
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold">{selectedVisite.adresse}</h4>
+                <AddressLink address={selectedVisite.adresse} className="font-semibold" iconClassName="h-4 w-4" />
                 {selectedVisite.offres && (
                   <p className="text-sm text-muted-foreground mt-1">
                     {selectedVisite.offres.pieces} pièces • {selectedVisite.offres.surface}m² • {selectedVisite.offres.prix} CHF/mois
@@ -1161,20 +1162,19 @@ export default function AgentCalendrier() {
             <div className="space-y-6">
               {/* En-tête avec adresse et date/heure */}
               <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-lg">{selectedVisite.adresse}</h4>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {format(new Date(selectedVisite.date_visite), 'EEEE d MMMM yyyy', { locale: fr })}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {format(new Date(selectedVisite.date_visite), 'HH:mm')}
-                      </div>
-                    </div>
+                <AddressLink
+                  address={selectedVisite.adresse}
+                  className="font-semibold text-lg"
+                  iconClassName="h-5 w-5 text-primary"
+                />
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground pl-7">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {format(new Date(selectedVisite.date_visite), 'EEEE d MMMM yyyy', { locale: fr })}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(new Date(selectedVisite.date_visite), 'HH:mm')}
                   </div>
                 </div>
               </div>
