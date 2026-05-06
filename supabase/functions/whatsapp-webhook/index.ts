@@ -3,6 +3,7 @@
 // POST: status updates + incoming messages + mandate lifecycle button replies
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendWhatsAppText, sendWhatsAppButtons } from "../_shared/whatsapp-send-text.ts";
+import { forwardClientReplyToStaff } from "../_shared/whatsapp-forward-to-staff.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
