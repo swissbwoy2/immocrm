@@ -644,10 +644,11 @@ export default function AdminCalendrier() {
             <div className="space-y-6">
               {/* Header with address */}
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold text-lg flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  {selectedVisiteGroup[0].adresse}
-                </h4>
+                <AddressLink
+                  address={selectedVisiteGroup[0].adresse}
+                  className="font-semibold text-lg"
+                  iconClassName="h-5 w-5 text-primary"
+                />
                 <p className="text-sm text-muted-foreground mt-2">
                   {format(new Date(selectedVisiteGroup[0].date_visite), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
                 </p>
