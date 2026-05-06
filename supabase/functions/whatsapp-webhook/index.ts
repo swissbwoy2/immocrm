@@ -627,6 +627,16 @@ Deno.serve(async (req) => {
               p_link: "/agent/messagerie",
               p_data: { conversation_id: conversationId },
             }).then(() => {}).catch(() => {});
+
+            // Forward WhatsApp à l'agent + admin (fenêtre 24h ouverte par le client)
+            await forwardClientReplyToStaff({
+              supabase,
+              clientId: client.id,
+              agentId: client.agent_id,
+              summary: `📱 [WA] ${text.slice(0, 250)}\n→ logisorama.ch/agent/messagerie`,
+              notifTitle: "📱 Message WhatsApp client",
+              notifLink: "/agent/messagerie",
+            }).catch((e) => console.error("forward failed", e));
           }
         }
       }
