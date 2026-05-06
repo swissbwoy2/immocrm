@@ -10357,6 +10357,7 @@ export type Database = {
           read_at: string | null
           recipient_phone: string
           sent_at: string | null
+          sent_date: string | null
           status: string
           template_key: string | null
         }
@@ -10374,6 +10375,7 @@ export type Database = {
           read_at?: string | null
           recipient_phone: string
           sent_at?: string | null
+          sent_date?: string | null
           status?: string
           template_key?: string | null
         }
@@ -10391,6 +10393,7 @@ export type Database = {
           read_at?: string | null
           recipient_phone?: string
           sent_at?: string | null
+          sent_date?: string | null
           status?: string
           template_key?: string | null
         }
@@ -10404,6 +10407,47 @@ export type Database = {
           },
           {
             foreignKeyName: "whatsapp_notification_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_pending_actions: {
+        Row: {
+          action_type: string
+          client_id: string | null
+          consumed_at: string | null
+          context_json: Json
+          created_at: string
+          expires_at: string
+          id: string
+          recipient_phone: string
+        }
+        Insert: {
+          action_type: string
+          client_id?: string | null
+          consumed_at?: string | null
+          context_json?: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          recipient_phone: string
+        }
+        Update: {
+          action_type?: string
+          client_id?: string | null
+          consumed_at?: string | null
+          context_json?: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          recipient_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_pending_actions_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
