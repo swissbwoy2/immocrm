@@ -36,9 +36,27 @@ Deno.serve(async (req) => {
     return new Response("method not allowed", { status: 405, headers: corsHeaders });
   }
 
+  // Read raw body first (needed for HMAC verification)
+  const rawBody = await req.text();
+
+  // ---------- HMAC X-Hub-Signature-256 verification ----------
+  const appSecret = Deno.env.get("WHATSAPP_APP_SECRET");
+  if (appSecret) {
+    const sigHeader = req.headers.get("x-hub-signature-256");
+    const ok = await verifyMetaSignature(rawBody, sigHeader, appSecret);
+    if (!ok) {
+      return new Response(JSON.stringify({ error: "invalid_signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  } else {
+    console.warn("whatsapp-webhook: HMAC verification disabled (WHATSAPP_APP_SECRET not set)");
+  }
+
   let body: any;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return new Response("bad json", { status: 400, headers: corsHeaders });
   }
