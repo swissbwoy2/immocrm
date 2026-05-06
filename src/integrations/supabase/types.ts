@@ -6459,6 +6459,59 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          agent_messages_enabled: boolean
+          candidature_updates_enabled: boolean
+          client_id: string
+          created_at: string
+          document_alerts_enabled: boolean
+          email_enabled: boolean
+          id: string
+          offer_alerts_enabled: boolean
+          push_enabled: boolean
+          updated_at: string
+          visit_reminders_enabled: boolean
+          whatsapp_enabled: boolean
+        }
+        Insert: {
+          agent_messages_enabled?: boolean
+          candidature_updates_enabled?: boolean
+          client_id: string
+          created_at?: string
+          document_alerts_enabled?: boolean
+          email_enabled?: boolean
+          id?: string
+          offer_alerts_enabled?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+          visit_reminders_enabled?: boolean
+          whatsapp_enabled?: boolean
+        }
+        Update: {
+          agent_messages_enabled?: boolean
+          candidature_updates_enabled?: boolean
+          client_id?: string
+          created_at?: string
+          document_alerts_enabled?: boolean
+          email_enabled?: boolean
+          id?: string
+          offer_alerts_enabled?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+          visit_reminders_enabled?: boolean
+          whatsapp_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -6911,6 +6964,10 @@ export type Database = {
           prenom: string
           telephone: string | null
           updated_at: string | null
+          whatsapp_opt_in: boolean
+          whatsapp_opt_in_date: string | null
+          whatsapp_opt_in_source: string | null
+          whatsapp_phone: string | null
         }
         Insert: {
           actif?: boolean | null
@@ -6928,6 +6985,10 @@ export type Database = {
           prenom: string
           telephone?: string | null
           updated_at?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_in_date?: string | null
+          whatsapp_opt_in_source?: string | null
+          whatsapp_phone?: string | null
         }
         Update: {
           actif?: boolean | null
@@ -6945,6 +7006,10 @@ export type Database = {
           prenom?: string
           telephone?: string | null
           updated_at?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_in_date?: string | null
+          whatsapp_opt_in_source?: string | null
+          whatsapp_phone?: string | null
         }
         Relationships: []
       }
@@ -10234,6 +10299,114 @@ export type Database = {
             columns: ["annonce_id"]
             isOneToOne: false
             referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_message_templates: {
+        Row: {
+          body_preview: string | null
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          language: string
+          template_key: string
+          template_name_meta: string
+          updated_at: string
+          variables_schema: Json
+        }
+        Insert: {
+          body_preview?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language?: string
+          template_key: string
+          template_name_meta: string
+          updated_at?: string
+          variables_schema?: Json
+        }
+        Update: {
+          body_preview?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          language?: string
+          template_key?: string
+          template_name_meta?: string
+          updated_at?: string
+          variables_schema?: Json
+        }
+        Relationships: []
+      }
+      whatsapp_notification_logs: {
+        Row: {
+          agent_id: string | null
+          client_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          event_type: string
+          failed_at: string | null
+          id: string
+          meta_message_id: string | null
+          payload_json: Json | null
+          read_at: string | null
+          recipient_phone: string
+          sent_at: string | null
+          status: string
+          template_key: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type: string
+          failed_at?: string | null
+          id?: string
+          meta_message_id?: string | null
+          payload_json?: Json | null
+          read_at?: string | null
+          recipient_phone: string
+          sent_at?: string | null
+          status?: string
+          template_key?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          failed_at?: string | null
+          id?: string
+          meta_message_id?: string | null
+          payload_json?: Json | null
+          read_at?: string | null
+          recipient_phone?: string
+          sent_at?: string | null
+          status?: string
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notification_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notification_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
