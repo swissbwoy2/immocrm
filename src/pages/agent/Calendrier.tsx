@@ -1033,7 +1033,7 @@ export default function AgentCalendrier() {
           {selectedVisite && (
             <div className="space-y-4">
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold">{selectedVisite.adresse}</h4>
+                <AddressLink address={selectedVisite.adresse} className="font-semibold" iconClassName="h-4 w-4" />
                 {selectedVisite.offres && (
                   <p className="text-sm text-muted-foreground mt-1">
                     {selectedVisite.offres.pieces} pièces • {selectedVisite.offres.surface}m² • {selectedVisite.offres.prix} CHF/mois
