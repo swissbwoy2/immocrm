@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { AddressLink } from '@/components/AddressLink';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter } from 'lucide-react';
