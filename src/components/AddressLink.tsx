@@ -54,7 +54,7 @@ export function AddressLink({
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            onClick={openGoogleMapsDirections}
+            onClick={openDirections}
             className={cn(
               "inline-flex items-start gap-2 text-left",
               "hover:text-primary transition-colors duration-200",
