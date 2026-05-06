@@ -24,11 +24,26 @@ export function AddressLink({
   showExternalIcon = false,
   truncate = false,
 }: AddressLinkProps) {
-  const openGoogleMapsDirections = (e: React.MouseEvent) => {
+  const isIOS = () => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod/i.test(ua)) return true;
+    // iPadOS 13+ reports as Macintosh
+    if (/Macintosh/i.test(ua) && (navigator as any).maxTouchPoints > 1) return true;
+    return false;
+  };
+
+  const openDirections = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const encodedAddress = encodeURIComponent(address);
+    const encoded = encodeURIComponent(address);
+    if (isIOS()) {
+      // Apple Plans (fallback to Google Maps if scheme fails)
+      const fallback = `https://maps.apple.com/?daddr=${encoded}`;
+      window.location.href = fallback;
+      return;
+    }
     window.open(
-      `https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`,
+      `https://www.google.com/maps/dir/?api=1&destination=${encoded}`,
       '_blank',
       'noopener,noreferrer'
     );
