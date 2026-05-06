@@ -638,10 +638,13 @@ serve(async (req) => {
           }
         }
 
-        await supabaseClient
-          .from('imap_configurations')
-          .update({ last_sync_at: new Date().toISOString() })
-          .eq('user_id', user.id);
+        // OPTIM Cloud: only update last_sync_at when new emails were inserted
+        if (emailsToInsert.length > 0) {
+          await supabaseClient
+            .from('imap_configurations')
+            .update({ last_sync_at: new Date().toISOString() })
+            .eq('user_id', user.id);
+        }
 
         const { data: emails } = await supabaseClient
           .from('received_emails')
