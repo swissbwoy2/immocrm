@@ -1,103 +1,121 @@
-# Module WhatsApp Notifications — Lot 1 (Cœur)
 
-## Objectif
-Mettre en place le socle WhatsApp Cloud API pour Logisorama : consentement client, envoi sécurisé via Edge Function, webhook de statut, logs complets, et 3 déclencheurs critiques (nouvelle offre, rappel visite 24h, message agent important). Les lots suivants (documents, candidatures, UIs admin/agent avancées) viendront après validation de cette base.
+# Plan : Template #2 — `logisorama_mandate_expiring_30d`
 
-## Périmètre Lot 1
+## Contexte
 
-### 1. Base de données (migration)
-Nouvelles tables :
-- `whatsapp_message_templates` — catalogue des templates Meta (clé interne, nom Meta, langue `fr`, variables attendues, actif).
-- `whatsapp_notification_logs` — un log par envoi : client, agent, type d'évènement, template, téléphone, payload, statut (`queued|sent|delivered|read|failed`), `meta_message_id`, horodatages, message d'erreur.
-- `notification_preferences` — préférences par client : `whatsapp_enabled`, `offer_alerts_enabled`, `visit_reminders_enabled`, `agent_messages_enabled`, etc. (les types non utilisés au Lot 1 sont créés dès maintenant pour éviter une 2e migration).
+Infrastructure WhatsApp existante :
+- `send-whatsapp-notification` (envoi via Meta Cloud API)
+- `whatsapp-webhook` (réception messages + boutons)
+- Tables : `whatsapp_message_templates`, `whatsapp_notification_logs`
+- Fonction métier : `mandate-renewal-action` (gère renew/cancel/cancel_with_refund)
 
-Ajouts sur `profiles` (client) :
-- `whatsapp_phone` (text, format E.164)
-- `whatsapp_opt_in` (boolean, défaut false)
-- `whatsapp_opt_in_date` (timestamptz)
-- `whatsapp_opt_in_source` (text — `client_settings`, `agent_assist`, `import`)
+## Étape 1 — Meta Business Manager (toi, manuel)
 
-RLS :
-- Client : lit/modifie ses propres préférences et ses logs.
-- Agent : lit préférences + logs des clients qui lui sont assignés (via `clients.agent_id` OU `client_agents`, en suivant la règle Dual Assignment Integrity déjà en mémoire).
-- Admin : accès complet.
-- Insertion de logs : réservée au service role (Edge Function uniquement).
+Créer le template tel que défini dans le message précédent :
+- Nom : `logisorama_mandate_expiring_30d` / Catégorie `Utilitaire` / Langue `French`
+- Body avec `{{1}}` (prénom) + `{{2}}` (date d'échéance)
+- Pied : `Logisorama By Immo-rama.ch`
+- 3 Quick Replies : `Renouveler 90 jours` / `Annuler & remboursement` / `J'ai trouvé seul`
+- Soumettre à examen
 
-Seed initial des templates (lignes insert) avec les clés : `new_offer_available`, `visit_reminder_24h`, `agent_message_alert` (les autres clés seront seedées au Lot 2).
+## Étape 2 — Migration DB
 
-### 2. Secrets backend
-À demander via `add_secret` après approbation du plan :
-- `WHATSAPP_ACCESS_TOKEN`
-- `WHATSAPP_PHONE_NUMBER_ID`
-- `WHATSAPP_BUSINESS_ACCOUNT_ID`
-- `WHATSAPP_VERIFY_TOKEN` (pour la vérification du webhook)
+1. **Enregistrer le template** dans `whatsapp_message_templates` (template_key = `mandate_expiring_30d`)
+2. **Étendre `mandate_renewal_actions.action`** avec une nouvelle valeur `cancelled_no_refund_after_dialog` (pour traçabilité du flow A)
+3. **Index unique anti-doublon** sur `whatsapp_notification_logs(client_id, template_key, date(sent_at))` filtré sur `status='sent'` pour idempotency cron
+4. **Activer extensions** `pg_cron` + `pg_net` si pas déjà actives
 
-`LOGISORAMA_APP_URL` sera codé en dur sur `https://logisorama.ch` (déjà règle Core en mémoire).
+## Étape 3 — Edge Function `wa-send-mandate-expiring` (cron J-30)
 
-### 3. Edge Functions
+Appelée chaque jour à 08:00 UTC (= 09:00/10:00 Europe/Zurich) :
 
-**`send-whatsapp-notification`** (POST, JWT requis sauf appel service)
-- Input : `{ event_type, client_id, variables }`.
-- Étapes : récupérer profil + préférences, vérifier `whatsapp_opt_in` ET la préférence du type d'évènement, charger le template actif, normaliser le numéro en E.164, construire le payload Cloud API (`messages` avec `type: "template"` + `components`), POST vers `https://graph.facebook.com/v21.0/{phone_number_id}/messages`, insérer une ligne dans `whatsapp_notification_logs` avec le `meta_message_id` retourné.
-- Échec : log `status='failed'` + message d'erreur, retour 200 (ne jamais bloquer l'action métier).
-- Validation Zod sur l'input.
+1. SELECT clients avec :
+   - `statut = 'actif'`
+   - `mandate_official_end_date = CURRENT_DATE + 30`
+   - `mandate_paused_at IS NULL`
+   - Pas déjà notifié aujourd'hui (check log)
+2. Pour chacun, calculer `daysSinceSignature` (avec gel pause)
+3. Invoke `send-whatsapp-notification` :
+   - `template_key: "mandate_expiring_30d"`
+   - `event_type: "mandate_expiring_30d"`
+   - `variables: [client.prenom, formatDateFR(mandate_official_end_date)]`
+   - `preference_key: null` (notif contractuelle, pas opt-out)
+4. Stocker dans `payload_json` les flags `refund_eligible_at_send` et `days_since_signature` (pour le webhook)
 
-**`whatsapp-webhook`** (GET + POST, `verify_jwt = false` dans `supabase/config.toml`)
-- GET : challenge Meta (`hub.mode`, `hub.verify_token`, `hub.challenge`).
-- POST : parser `entry[].changes[].value.statuses[]` → update `whatsapp_notification_logs` (delivered_at, read_at, failed_at) via `meta_message_id`. Parser `messages[]` entrants → créer un message dans `conversations`/`messages` (table existante) attribué à l'agent du client + notification interne à l'agent.
+**Cron SQL** (via `supabase--insert`, contient l'anon key projet) :
+```sql
+SELECT cron.schedule('wa-mandate-expiring-30d', '0 8 * * *',
+  $$ SELECT net.http_post(url:='.../wa-send-mandate-expiring', headers:='...', body:='{}'::jsonb); $$);
+```
 
-### 4. Déclencheurs Lot 1 (3)
-Branchements dans le code applicatif (pas de triggers SQL, on garde le contrôle TypeScript) :
+## Étape 4 — Webhook handler (3 Quick Replies)
 
-| Évènement | Source | Template |
-|---|---|---|
-| Nouvelle offre envoyée au client | `useOffres` / création d'`offre` côté agent | `new_offer_available` |
-| Rappel visite 24h | Étendre le cron existant `send-visit-reminders` (déjà cadencé 30 min) pour appeler aussi `send-whatsapp-notification` en plus de l'email | `visit_reminder_24h` |
-| Message agent "important" | Toggle "Notifier aussi par WhatsApp" dans l'UI messagerie agent → flag passé à `send-whatsapp-notification` | `agent_message_alert` |
+Étendre `whatsapp-webhook/index.ts` pour intercepter les `button.text` :
 
-Chaque appel est en `try/catch` non bloquant.
+| Bouton reçu | Action immédiate |
+|---|---|
+| `Renouveler 90 jours` | Invoke `mandate-renewal-action` avec `action: "renew"` (pas de token, ajouter mode webhook trust via service role + client_id résolu par téléphone) → renvoi message confirmation WhatsApp libre (fenêtre 24h ouverte par le clic) |
+| `J'ai trouvé seul` | Invoke `mandate-renewal-action` avec `action: "cancel"` + `cancellation_reason: "found_alone"` → message félicitations + suppression mandat |
+| `Annuler & remboursement` | **Logique conditionnelle** ⬇️ |
 
-### 5. Interface Client — `Mes notifications`
-Nouvelle section dans `/client/parametres` (réutilise les composants premium existants : `Card`, `Switch`, `Input`) :
-- Champ téléphone WhatsApp (validation E.164 + format CH).
-- Switch global "Notifications WhatsApp".
-- Switches par catégorie (offres, visites, messages agent — les autres grisés "Bientôt").
-- Texte de réassurance + lien CGU.
-- Sauvegarde → update `profiles` + upsert `notification_preferences`.
+### Dialogue "Annuler & remboursement" (Option A choisie)
 
-### 6. Interface Admin — `/admin/whatsapp-notifications`
-Page minimale Lot 1 :
-- 4 KPI premium : envoyés (24h), livrés, lus, échoués.
-- Table des derniers logs (client, type, statut badge, date, erreur).
-- Filtre par statut + type d'évènement.
-- Bouton "Envoyer un test" (formulaire : numéro + template).
+Lookup `clients.mandat_date_signature` + `mandate_pause_days` → calcul `daysSinceSignature` :
 
-Lien dans le menu admin sous "Configuration".
+**Cas 1 — Éligible** (`daysSinceSignature >= 82`) :
+→ Invoke `mandate-renewal-action` avec `cancel_with_refund` + raison `searching_alone` (par défaut)
+→ Réponse : « 💰 Demande de remboursement enregistrée. Traitement sous 30 jours après le {{end_date}}. »
 
-### 7. Interface Agent (minimal Lot 1)
-Sur la fiche client existante, badge `Statut WhatsApp` (Activé / Numéro manquant / Refusé). Le toggle "Notifier par WhatsApp" est ajouté dans la zone de saisie de la messagerie agent-client.
+**Cas 2 — Non éligible** (`< 82 jours`) :
+→ Réponse texte libre + 2 nouveaux Quick Replies via message interactive :
+> « ⚠️ Le remboursement est disponible uniquement après 90 jours de recherche active (vous êtes au jour {{X}}). Souhaitez-vous quand même annuler sans remboursement ? »
+- Bouton `Oui, annuler` → action `cancel` + raison `searching_alone` + log action `cancelled_no_refund_after_dialog`
+- Bouton `Non, garder` → message « ✅ Très bien, votre mandat reste actif jusqu'au {{end_date}}. »
 
-### 8. Sécurité & conformité
-- Aucun envoi sans `whatsapp_opt_in = true` ET préférence catégorie active.
-- Tokens uniquement côté Edge Function.
-- Aucune donnée sensible dans le corps WhatsApp : tous les liens pointent vers l'espace authentifié Logisorama.
-- Logs systématiques (audit).
-- Webhook signé : vérification `WHATSAPP_VERIFY_TOKEN` (GET) + on log la signature `x-hub-signature-256` (validation HMAC en option Lot 2).
+**Stockage du contexte conversationnel** : nouvelle table légère `whatsapp_pending_actions` (phone, action_type, context_json, expires_at = +1h) pour gérer le 2e clic du dialogue.
 
-## Hors périmètre (Lot 2 à venir)
-Documents manquants/expirés, candidature submitted/status_update, lease_received, keys_handover, rappel visite 2h, vérification numéro par OTP, fallback email automatique sur échec WhatsApp, validation HMAC stricte du webhook, statistiques avancées.
+### Helper réutilisable
+
+Créer `supabase/functions/_shared/whatsapp-resolve-client.ts` : résout `client_id` depuis `recipient_phone` (normalisation E.164, lookup `clients.telephone`).
+
+### Helper d'envoi de message libre
+
+Créer `supabase/functions/_shared/whatsapp-send-text.ts` : envoie message texte ou interactive-buttons en dehors de tout template (utilisable car fenêtre 24h ouverte par le clic du bouton).
+
+## Étape 5 — Tests manuels
+
+1. Créer manuellement un client de test avec `mandate_official_end_date = CURRENT_DATE + 30`
+2. Trigger manuel `wa-send-mandate-expiring` (curl)
+3. Vérifier réception WhatsApp + 3 boutons
+4. Tester chaque bouton :
+   - Renouveler → vérifier `mandat_date_signature` mis à jour
+   - J'ai trouvé seul → vérifier `statut = inactif` + `cancellation_reason = found_alone`
+   - Annuler & remboursement (avec daysSinceSignature=85) → vérifier `refund_status = pending`
+   - Annuler & remboursement (avec daysSinceSignature=10) → vérifier dialogue de fallback + 2 nouveaux boutons
 
 ## Détails techniques
-- Cloud API version : `v21.0`.
-- Langue templates : `fr` (Meta n'expose pas `fr_CH` officiellement).
-- Tous les timestamps Edge Function en `Europe/Zurich` (règle Core).
-- RLS : `has_role()` en `LANGUAGE plpgsql + SECURITY DEFINER` (règle Core anti-récursion).
-- Aucune modification des UX existantes hors les 3 ajouts ciblés (page paramètres client, fiche client agent, page admin nouvelle).
 
-## Étapes de livraison après approbation
-1. Migration DB + seed des 3 templates + RLS.
-2. Demande des 4 secrets WhatsApp.
-3. Edge Functions `send-whatsapp-notification` et `whatsapp-webhook` + `config.toml`.
-4. UI client (paramètres), UI admin (page logs/test), UI agent (badge + toggle messagerie).
-5. Branchement des 3 déclencheurs.
-6. Test end-to-end via le bouton "Envoyer un test" admin.
+### Ordre d'exécution (à mon tour)
+
+1. Migration DB (table `whatsapp_pending_actions` + index unique + insertion template registry + extensions)
+2. Helpers `_shared/whatsapp-*.ts`
+3. Edge function `wa-send-mandate-expiring`
+4. Patch `whatsapp-webhook` (handlers 3 boutons + dialogue fallback)
+5. Patch `mandate-renewal-action` pour accepter mode `triggered_by: "whatsapp_webhook"` sans token (avec validation phone↔client)
+6. Insertion cron job (via `supabase--insert`)
+7. Déploiement edge functions
+
+### Sécurité
+
+- Webhook valide la signature Meta (déjà en place)
+- Lookup phone→client_id en service role uniquement
+- Idempotency cron via index unique sur log
+- Dialogue fallback expire après 1h (table `whatsapp_pending_actions`)
+
+## Hors périmètre (templates suivants)
+
+- Templates #3 à #7 (acceptation dossier, signature, EDL, clés, avis Google) — feront l'objet de plans séparés après approbation Meta du #2.
+
+## Ce que tu fais en parallèle
+
+Pendant que j'implémente le code, tu peux **soumettre le template à Meta** dès maintenant. Approbation 24-48h. Le code sera prêt et déployé avant l'approbation, donc dès qu'il passe `Actif` → ça tourne.
