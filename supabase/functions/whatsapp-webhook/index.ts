@@ -8,6 +8,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hub-signature-256",
 };
 
+async function verifyMetaSignature(rawBody: string, header: string | null, secret: string): Promise<boolean> {
+  if (!header || !header.startsWith("sha256=")) return false;
+  const sigHex = header.slice(7).toLowerCase();
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const macBuf = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+    const expected = Array.from(new Uint8Array(macBuf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    if (expected.length !== sigHex.length) return false;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) {
+      diff |= expected.charCodeAt(i) ^ sigHex.charCodeAt(i);
+    }
+    return diff === 0;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -36,9 +62,27 @@ Deno.serve(async (req) => {
     return new Response("method not allowed", { status: 405, headers: corsHeaders });
   }
 
+  // Read raw body first (needed for HMAC verification)
+  const rawBody = await req.text();
+
+  // ---------- HMAC X-Hub-Signature-256 verification ----------
+  const appSecret = Deno.env.get("WHATSAPP_APP_SECRET");
+  if (appSecret) {
+    const sigHeader = req.headers.get("x-hub-signature-256");
+    const ok = await verifyMetaSignature(rawBody, sigHeader, appSecret);
+    if (!ok) {
+      return new Response(JSON.stringify({ error: "invalid_signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  } else {
+    console.warn("whatsapp-webhook: HMAC verification disabled (WHATSAPP_APP_SECRET not set)");
+  }
+
   let body: any;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return new Response("bad json", { status: 400, headers: corsHeaders });
   }
