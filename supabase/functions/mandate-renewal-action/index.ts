@@ -120,6 +120,31 @@ serve(async (req) => {
         return jsonResponse({ ok: false, error: "Accès refusé" }, 403);
       }
       clientId = clientIdDirect;
+    } else if (webhookTrust) {
+      // Webhook trust: validate phone matches client's profile before proceeding
+      const { data: trustedClient } = await supabase
+        .from("clients")
+        .select("id, user_id")
+        .eq("id", webhookTrust.client_id)
+        .maybeSingle();
+      if (!trustedClient) return jsonResponse({ ok: false, error: "Client introuvable" }, 404);
+
+      const { data: trustedProfile } = await supabase
+        .from("profiles")
+        .select("whatsapp_phone, telephone")
+        .eq("id", trustedClient.user_id)
+        .maybeSingle();
+
+      const normalizedTrustPhone = webhookTrust.phone.replace(/[^\d]/g, "");
+      const profilePhones = [trustedProfile?.whatsapp_phone, trustedProfile?.telephone]
+        .filter(Boolean)
+        .map((p) => p!.replace(/[^\d]/g, ""));
+
+      const phoneMatches = profilePhones.some((p) => p.endsWith(normalizedTrustPhone) || normalizedTrustPhone.endsWith(p));
+      if (!phoneMatches) {
+        return jsonResponse({ ok: false, error: "Numéro non vérifié" }, 403);
+      }
+      clientId = webhookTrust.client_id;
     } else {
       return jsonResponse({ ok: false, error: "Token ou client_id manquant" }, 400);
     }
