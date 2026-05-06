@@ -341,6 +341,9 @@ export default function ClientParametres() {
           {/* Google Agenda */}
           <GoogleCalendarConnect />
 
+          {/* WhatsApp */}
+          <WhatsAppNotificationsCard />
+
           {/* Changer le mot de passe */}
           <ChangePasswordCard />
 
