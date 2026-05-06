@@ -33,7 +33,9 @@ serve(async (req) => {
     let token: string | null = null;
     let action: string | null = null;
     let cancellationReason: string | null = null;
-    let clientIdDirect: string | null = null; // pour pause/resume depuis l'espace client (avec auth header)
+    let clientIdDirect: string | null = null;
+    // Trust mode for whatsapp-webhook calls (server-to-server with phone validation already done)
+    let webhookTrust: { client_id: string; phone: string } | null = null;
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -46,6 +48,14 @@ serve(async (req) => {
       action = body.action ?? null;
       cancellationReason = body.cancellation_reason ?? null;
       clientIdDirect = body.client_id ?? null;
+      if (body.triggered_by === "whatsapp_webhook" && body.client_id && body.phone) {
+        // Verify caller is service role
+        const authHeader = req.headers.get("Authorization") ?? "";
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+        if (authHeader === `Bearer ${serviceKey}`) {
+          webhookTrust = { client_id: body.client_id, phone: body.phone };
+        }
+      }
     }
 
     if (!action || !VALID_ACTIONS.includes(action as Action)) {
