@@ -545,14 +545,16 @@ Deno.serve(async (req) => {
             msg.interactive?.button_reply?.title;
           const buttonId: string | undefined = msg.interactive?.button_reply?.id;
 
-          // ============= MANDATE LIFECYCLE BUTTONS =============
+          // ============= MANDATE + LIFECYCLE BUTTONS =============
           if (buttonText || buttonId) {
-            const handled = await handleMandateButton(supabase, {
-              phoneE164,
-              buttonText: buttonText || "",
-              buttonId: buttonId || "",
+            const handledMandate = await handleMandateButton(supabase, {
+              phoneE164, buttonText: buttonText || "", buttonId: buttonId || "",
             });
-            if (handled) continue; // skip default messaging flow
+            if (handledMandate) continue;
+            const handledLifecycle = await handleLifecycleButton(supabase, {
+              phoneE164, buttonText: buttonText || "", buttonId: buttonId || "",
+            });
+            if (handledLifecycle) continue;
           }
 
           const text = msg.text?.body || buttonText || "[Pièce jointe WhatsApp]";
