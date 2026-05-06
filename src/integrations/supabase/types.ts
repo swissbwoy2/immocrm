@@ -1904,6 +1904,8 @@ export type Database = {
           avis_google_envoye: boolean | null
           bail_recu: boolean | null
           bail_recu_at: string | null
+          cles_recues_confirme: boolean | null
+          cles_recues_confirme_at: string | null
           cles_remises: boolean | null
           cles_remises_at: string | null
           client_accepte_conclure: boolean | null
@@ -1938,6 +1940,8 @@ export type Database = {
           avis_google_envoye?: boolean | null
           bail_recu?: boolean | null
           bail_recu_at?: string | null
+          cles_recues_confirme?: boolean | null
+          cles_recues_confirme_at?: string | null
           cles_remises?: boolean | null
           cles_remises_at?: string | null
           client_accepte_conclure?: boolean | null
@@ -1972,6 +1976,8 @@ export type Database = {
           avis_google_envoye?: boolean | null
           bail_recu?: boolean | null
           bail_recu_at?: string | null
+          cles_recues_confirme?: boolean | null
+          cles_recues_confirme_at?: string | null
           cles_remises?: boolean | null
           cles_remises_at?: string | null
           client_accepte_conclure?: boolean | null
@@ -10105,6 +10111,8 @@ export type Database = {
           notes: string | null
           offre_id: string | null
           paye_coursier: boolean | null
+          post_visit_question_sent: boolean | null
+          post_visit_question_sent_at: string | null
           recommandation_agent: string | null
           remuneration_coursier: number | null
           source: string | null
@@ -10128,6 +10136,8 @@ export type Database = {
           notes?: string | null
           offre_id?: string | null
           paye_coursier?: boolean | null
+          post_visit_question_sent?: boolean | null
+          post_visit_question_sent_at?: string | null
           recommandation_agent?: string | null
           remuneration_coursier?: number | null
           source?: string | null
@@ -10151,6 +10161,8 @@ export type Database = {
           notes?: string | null
           offre_id?: string | null
           paye_coursier?: boolean | null
+          post_visit_question_sent?: boolean | null
+          post_visit_question_sent_at?: string | null
           recommandation_agent?: string | null
           remuneration_coursier?: number | null
           source?: string | null
