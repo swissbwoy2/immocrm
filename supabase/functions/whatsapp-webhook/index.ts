@@ -181,6 +181,252 @@ async function handleMandateButton(
   return false;
 }
 
+// =============================================================
+// Lifecycle button handler (visit, post-visit, application, keys, review)
+// =============================================================
+async function handleLifecycleButton(
+  supabase: ReturnType<typeof createClient>,
+  args: { phoneE164: string; buttonText: string; buttonId: string },
+): Promise<boolean> {
+  const { phoneE164, buttonText, buttonId } = args;
+  const txt = (buttonText || "").toLowerCase().trim();
+  const id = (buttonId || "").trim();
+
+  // Pattern detection
+  const isVisitYes = id === "visit_propose_yes" || /^oui.*(visite|particip)/i.test(txt) || txt === "oui, je participe" || txt === "je participe";
+  const isVisitNo = id === "visit_propose_no" || /^non.*(visite|merci)/i.test(txt) || txt === "non merci";
+  const isPostulate = id === "post_visit_postuler" || /postul|d[eé]poser.*candidature/i.test(txt);
+  const isRefuseAfterVisit = id === "post_visit_refuser" || (txt.startsWith("non") && txt.includes("merci"));
+  const isAppValidate = id === "application_validate" || /^je valide|^oui.*signer/i.test(txt);
+  const isAppRefuse = id === "application_refuse" || /^je refuse/i.test(txt);
+  const isKeysReceived = id === "keys_received" || /re[çc]u.*cl[eé]/i.test(txt);
+  const isKeysNotYet = id === "keys_not_yet" || /pas encore/i.test(txt);
+  const isReviewLater = id === "review_later" || /plus tard/i.test(txt);
+
+  if (!isVisitYes && !isVisitNo && !isPostulate && !isRefuseAfterVisit
+      && !isAppValidate && !isAppRefuse && !isKeysReceived && !isKeysNotYet && !isReviewLater) {
+    return false;
+  }
+
+  // Resolve client
+  const stripped = phoneE164.replace("+", "");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, prenom, nom, telephone")
+    .or(`whatsapp_phone.eq.${phoneE164},telephone.eq.${phoneE164},whatsapp_phone.eq.${stripped},telephone.eq.${stripped}`)
+    .maybeSingle();
+  if (!profile) return false;
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, agent_id")
+    .eq("user_id", profile.id)
+    .maybeSingle();
+  if (!client) return false;
+
+  const clientName = `${profile.prenom || ""} ${profile.nom || ""}`.trim() || "Client";
+
+  // === VISIT YES/NO (response to template #3) ===
+  if (isVisitYes || isVisitNo) {
+    // Find latest proposed visit for this client
+    const { data: visite } = await supabase
+      .from("visites")
+      .select("id, adresse, date_visite")
+      .eq("client_id", client.id)
+      .eq("statut", "proposee")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const newStatut = isVisitYes ? "planifiee" : "annulee";
+    const reponse = isVisitYes ? "✅ Accepte" : "❌ Refuse";
+
+    if (visite) {
+      await supabase.from("visites").update({ statut: newStatut }).eq("id", visite.id);
+    }
+
+    await sendWhatsAppText(phoneE164, isVisitYes
+      ? "✅ Parfait ! Votre visite est confirmée. Vous recevrez un rappel 24h avant."
+      : "Bien noté, visite annulée. Votre agent vous proposera d'autres biens prochainement.");
+
+    // Forward to agent + admin via template #4
+    await forwardClientReplyToStaff({
+      supabase,
+      clientId: client.id,
+      agentId: client.agent_id,
+      summary: `${reponse} — visite ${visite?.adresse || ""}`,
+      templateKey: "alerte_agent_reponse_visite",
+      variables: [
+        clientName,
+        visite?.adresse || "—",
+        visite?.date_visite ? new Date(visite.date_visite).toLocaleString("fr-CH", { timeZone: "Europe/Zurich" }) : "—",
+        reponse,
+        profile.telephone || phoneE164,
+      ],
+      notifTitle: "📅 Réponse client à proposition de visite",
+      notifLink: "/agent/visites",
+    });
+    return true;
+  }
+
+  // === POST-VISITE: POSTULER / REFUSER ===
+  if (isPostulate || isRefuseAfterVisit) {
+    // Find latest visite effectuee for this client (last 7 days)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const { data: visite } = await supabase
+      .from("visites")
+      .select("id, offre_id, adresse")
+      .eq("client_id", client.id)
+      .eq("statut", "effectuee")
+      .gte("date_visite", sevenDaysAgo)
+      .order("date_visite", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (isPostulate) {
+      await sendWhatsAppText(phoneE164, "✅ Parfait ! Votre demande est transmise à votre agent qui finalisera le dossier.");
+      // Get agent name for client confirmation template
+      let agentName = "votre agent";
+      if (client.agent_id) {
+        const { data: ag } = await supabase.from("agents").select("user_id").eq("id", client.agent_id).maybeSingle();
+        if (ag?.user_id) {
+          const { data: ap } = await supabase.from("profiles").select("prenom").eq("id", ag.user_id).maybeSingle();
+          if (ap?.prenom) agentName = ap.prenom;
+        }
+      }
+
+      // Send confirmation #7 to client
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify({
+          event_type: "candidature_demandee_client",
+          template_key: "candidature_demandee_client",
+          client_id: client.id,
+          variables: [profile.prenom || "Client", visite?.adresse || "—", agentName],
+        }),
+      }).catch(() => {});
+
+      // Forward to agent + admin via template #9
+      await forwardClientReplyToStaff({
+        supabase,
+        clientId: client.id,
+        agentId: client.agent_id,
+        summary: `🎯 ${clientName} veut postuler pour ${visite?.adresse || "ce bien"}`,
+        templateKey: "alerte_agent_candidature",
+        variables: [clientName, visite?.adresse || "—", "https://logisorama.ch/agent/deposer-candidature"],
+        notifTitle: "🎯 Nouvelle demande de candidature client",
+        notifLink: "/agent/deposer-candidature",
+      });
+    } else {
+      // Send #8 refus
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify({
+          event_type: "candidature_refus_client",
+          template_key: "candidature_refus_client",
+          client_id: client.id,
+          variables: [profile.prenom || "Client", visite?.adresse || "—"],
+        }),
+      }).catch(() => {});
+
+      await forwardClientReplyToStaff({
+        supabase,
+        clientId: client.id,
+        agentId: client.agent_id,
+        summary: `❌ ${clientName} ne souhaite pas postuler pour ${visite?.adresse || "ce bien"}`,
+        notifTitle: "Client ne postule pas après visite",
+        notifLink: "/agent/visites",
+      });
+    }
+    return true;
+  }
+
+  // === APPLICATION VALIDATE / REFUSE ===
+  if (isAppValidate || isAppRefuse) {
+    const { data: candidature } = await supabase
+      .from("candidatures")
+      .select("id, offre_id")
+      .eq("client_id", client.id)
+      .eq("agent_valide_regie", true)
+      .order("agent_valide_regie_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (candidature) {
+      if (isAppValidate) {
+        await supabase
+          .from("candidatures")
+          .update({ client_accepte_conclure: true, client_accepte_conclure_at: new Date().toISOString(), statut: "bail_conclu" })
+          .eq("id", candidature.id);
+        await sendWhatsAppText(phoneE164, "🎉 Parfait ! Votre agent va organiser la signature du bail. Vous recevrez la date par WhatsApp.");
+      } else {
+        await supabase.from("candidatures").update({ statut: "refusee" }).eq("id", candidature.id);
+        await sendWhatsAppText(phoneE164, "Refus enregistré. Votre agent vous contactera pour la suite.");
+      }
+    }
+
+    await forwardClientReplyToStaff({
+      supabase,
+      clientId: client.id,
+      agentId: client.agent_id,
+      summary: isAppValidate
+        ? `✅ ${clientName} valide le dossier accepté par la régie`
+        : `❌ ${clientName} refuse le dossier accepté`,
+      notifTitle: isAppValidate ? "✅ Client valide la signature" : "❌ Client refuse le dossier",
+      notifLink: "/agent/candidatures",
+    });
+    return true;
+  }
+
+  // === KEYS RECEIVED / NOT YET ===
+  if (isKeysReceived || isKeysNotYet) {
+    const { data: candidature } = await supabase
+      .from("candidatures")
+      .select("id")
+      .eq("client_id", client.id)
+      .eq("cles_remises", true)
+      .order("cles_remises_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (isKeysReceived && candidature) {
+      await supabase
+        .from("candidatures")
+        .update({ cles_recues_confirme: true, cles_recues_confirme_at: new Date().toISOString() })
+        .eq("id", candidature.id);
+      await sendWhatsAppText(phoneE164, "🎊 Bienvenue dans votre nouveau chez-vous ! Toute l'équipe Logisorama vous souhaite une excellente installation.");
+    } else if (isKeysNotYet) {
+      await sendWhatsAppText(phoneE164, "⚠️ Bien noté. Votre agent va vous contacter en priorité pour résoudre la situation.");
+    }
+
+    await forwardClientReplyToStaff({
+      supabase,
+      clientId: client.id,
+      agentId: client.agent_id,
+      summary: isKeysReceived
+        ? `✅ ${clientName} confirme avoir reçu les clés`
+        : `⚠️ URGENT — ${clientName} n'a PAS encore reçu les clés`,
+      notifTitle: isKeysReceived ? "✅ Clés confirmées par client" : "⚠️ URGENT — Clés non reçues",
+      notifLink: "/agent/candidatures",
+    });
+    return true;
+  }
+
+  // === REVIEW LATER ===
+  if (isReviewLater) {
+    await sendWhatsAppText(phoneE164, "Pas de souci ! On vous renverra le lien dans une semaine. Merci 🙏");
+    return true;
+  }
+
+  return false;
+}
+
 async function verifyMetaSignature(rawBody: string, header: string | null, secret: string): Promise<boolean> {
   if (!header || !header.startsWith("sha256=")) return false;
   const sigHex = header.slice(7).toLowerCase();
