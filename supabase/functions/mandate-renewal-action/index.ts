@@ -33,7 +33,9 @@ serve(async (req) => {
     let token: string | null = null;
     let action: string | null = null;
     let cancellationReason: string | null = null;
-    let clientIdDirect: string | null = null; // pour pause/resume depuis l'espace client (avec auth header)
+    let clientIdDirect: string | null = null;
+    // Trust mode for whatsapp-webhook calls (server-to-server with phone validation already done)
+    let webhookTrust: { client_id: string; phone: string } | null = null;
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -46,6 +48,14 @@ serve(async (req) => {
       action = body.action ?? null;
       cancellationReason = body.cancellation_reason ?? null;
       clientIdDirect = body.client_id ?? null;
+      if (body.triggered_by === "whatsapp_webhook" && body.client_id && body.phone) {
+        // Verify caller is service role
+        const authHeader = req.headers.get("Authorization") ?? "";
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+        if (authHeader === `Bearer ${serviceKey}`) {
+          webhookTrust = { client_id: body.client_id, phone: body.phone };
+        }
+      }
     }
 
     if (!action || !VALID_ACTIONS.includes(action as Action)) {
@@ -110,6 +120,31 @@ serve(async (req) => {
         return jsonResponse({ ok: false, error: "Accès refusé" }, 403);
       }
       clientId = clientIdDirect;
+    } else if (webhookTrust) {
+      // Webhook trust: validate phone matches client's profile before proceeding
+      const { data: trustedClient } = await supabase
+        .from("clients")
+        .select("id, user_id")
+        .eq("id", webhookTrust.client_id)
+        .maybeSingle();
+      if (!trustedClient) return jsonResponse({ ok: false, error: "Client introuvable" }, 404);
+
+      const { data: trustedProfile } = await supabase
+        .from("profiles")
+        .select("whatsapp_phone, telephone")
+        .eq("id", trustedClient.user_id)
+        .maybeSingle();
+
+      const normalizedTrustPhone = webhookTrust.phone.replace(/[^\d]/g, "");
+      const profilePhones = [trustedProfile?.whatsapp_phone, trustedProfile?.telephone]
+        .filter(Boolean)
+        .map((p) => p!.replace(/[^\d]/g, ""));
+
+      const phoneMatches = profilePhones.some((p) => p.endsWith(normalizedTrustPhone) || normalizedTrustPhone.endsWith(p));
+      if (!phoneMatches) {
+        return jsonResponse({ ok: false, error: "Numéro non vérifié" }, 403);
+      }
+      clientId = webhookTrust.client_id;
     } else {
       return jsonResponse({ ok: false, error: "Token ou client_id manquant" }, 400);
     }
