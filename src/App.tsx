@@ -67,6 +67,7 @@ const AdminMigrateDocuments = lazy(() => import("./pages/admin/MigrateDocuments"
 const AdminSuiviExtraits = lazy(() => import("./pages/admin/SuiviExtraitsPoursuites"));
 const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
 const AdminParametres = lazy(() => import("./pages/admin/Parametres"));
+const AdminWhatsAppNotifications = lazy(() => import("./pages/admin/WhatsAppNotifications"));
 const AdminEnvoyerEmail = lazy(() => import("./pages/admin/EnvoyerEmail"));
 const AdminEnvoyerOffre = lazy(() => import("./pages/admin/EnvoyerOffre"));
 const AdminHistoriqueEmails = lazy(() => import("./pages/admin/HistoriqueEmails"));
