@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-const PRESENCE_INTERVAL = 60000; // 60 seconds
+const PRESENCE_INTERVAL = 180000; // 3 minutes (reduced from 60s to lower Cloud usage)
 
 export function usePresence() {
   const { user } = useAuth();
