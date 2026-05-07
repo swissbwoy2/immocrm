@@ -18,7 +18,9 @@ interface ForwardArgs {
 const ADMIN_PHONE_RAW = Deno.env.get("WHATSAPP_ADMIN_PHONE") || "";
 
 export async function forwardClientReplyToStaff(args: ForwardArgs): Promise<void> {
-  const { supabase, clientId, agentId, summary, templateKey, variables, notifTitle, notifLink } = args;
+  const { supabase, clientId, agentId, summary, templateKey, variables, notifTitle, notifLink, excludePhone } = args;
+
+  const excludeNorm = excludePhone ? normalizePhoneE164(excludePhone) : null;
 
   // Resolve agent phone + user_id
   let agentPhone: string | null = null;
