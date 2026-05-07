@@ -84,6 +84,8 @@ export function PremiumFeedbackCard({
   const [posting, setPosting] = useState(false);
   const [existingCandidatureId, setExistingCandidatureId] = useState<string | null>(null);
   const [mediaPreview, setMediaPreview] = useState<MediaItem | null>(null);
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(visite.client_confirme_visite_at ?? null);
+  const [confirming, setConfirming] = useState(false);
 
   const feedbackText = visite.feedback_agent || visite.feedback_coursier || null;
   const visitorLabel = visite.coursier_id ? 'notre coursier mandaté' : 'votre agent';
