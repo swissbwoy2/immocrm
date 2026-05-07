@@ -96,6 +96,12 @@ Deno.serve(async (req) => {
       }
       const refundEligibleAtSend = daysSinceSignature >= 82;
 
+      // Counts: offres + visites effectuees
+      const { count: nbOffres } = await supabase
+        .from("offres").select("id", { count: "exact", head: true }).eq("client_id", client.id);
+      const { count: nbVisites } = await supabase
+        .from("visites").select("id", { count: "exact", head: true }).eq("client_id", client.id).eq("statut", "effectuee");
+
       // Invoke the generic sender
       const { data: invoke, error: invokeErr } = await supabase.functions.invoke(
         "send-whatsapp-notification",
@@ -104,8 +110,13 @@ Deno.serve(async (req) => {
             event_type: "mandate_expiring_30d",
             template_key: "mandate_expiring_30d",
             client_id: client.id,
-            variables: [prenom, formatDateFR(client.mandate_official_end_date)],
-            preference_key: null, // contractual reminder, no opt-out
+            variables: [
+              prenom,
+              formatDateFR(client.mandate_official_end_date),
+              String(nbOffres ?? 0),
+              String(nbVisites ?? 0),
+            ],
+            preference_key: null,
           },
         },
       );
