@@ -1,72 +1,54 @@
-## Plan de validation end-to-end des 16 templates WhatsApp v3
+## Diagnostic
 
-Tous les templates sont actifs côté Meta ✅. Les 16 Edge Functions et le webhook sont déployés. Il reste à **valider le bon fonctionnement réel** avant d'activer les flows automatiques en production.
+J'ai inspecté les deux comptes liés à "Christ Ramazani" :
 
-### 1. Vérification des noms de templates (préalable critique)
+**1. `christ.ramazani@immo-rama.ch` (id `68237b53…09646b`)** — le compte agent
+- Auth : **anonymisé et banni** (`email = anonymise+…@deleted.local`, `banned_until = 2126-04-13`) → c'est pour ça que la connexion renvoie `403: User is banned` (visible dans les logs auth à 20:19:18).
+- `profiles` : intact (Christ Ramazani, christ.ramazani@immo-rama.ch).
+- `agents` : présent, `statut = actif`.
+- `user_roles` : **VIDE** (le rôle agent a été supprimé lors de la "suppression").
 
-Comparer les noms exacts côté Meta vs ceux utilisés dans le code :
+**2. `christ.ramazani@gmail.com` (id `7a4a7a24…fbb9`)** — un compte client séparé
+- `user_roles.role = client`.
+- Compte distinct, pas le même user_id.
 
-| Code (template_name) | Meta | Statut |
-|---|---|---|
-| `logisorama_welcome_activation` | ✅ |  |
-| `logisorama_new_offer` | ✅ |  |
-| `logisorama_proposition_visite_client` | ✅ |  |
-| `logisorama_visit_reminder_24h` | ✅ |  |
-| `logisorama_post_visite_question` | ✅ |  |
-| `logisorama_candidature_demandee_client` | ✅ |  |
-| `logisorama_candidature_refus_client` | ✅ |  |
-| `logisorama_application_accepted` | ✅ |  |
-| `logisorama_signature_scheduled` | ✅ |  |
-| `logisorama_etat_des_lieux_scheduled` | ✅ |  |
-| `logisorama_keys_handover` | ✅ |  |
-| `logisorama_google_review_request` | ✅ |  |
-| `logisorama_mandate_expiring_30d` | ✅ |  |
-| `logisorama_agent_message` | ✅ |  |
-| `logisorama_alerte_agent_reponse_visite` | ✅ |  |
-| `logisorama_alerte_agent_candidature` | ✅ |  |
+Donc il n'y a pas de double rôle sur le même compte : le compte agent a juste été cassé (anonymisé + ban + rôle supprimé) lors d'une action côté Admin.
 
-→ Action : grep dans les 16 functions pour s'assurer que `template_name` correspond exactement (zéro tolérance).
+## Plan de réparation (compte agent uniquement)
 
-### 2. Smoke tests par lot (curl_edge_functions)
+### Étape 1 — Restaurer l'auth user `68237b53…09646b`
+Migration SQL ciblée sur `auth.users` :
+- `email` → `christ.ramazani@immo-rama.ch`
+- `banned_until` → `NULL`
+- `email_confirmed_at` → `now()` si NULL
+- `encrypted_password` → re-hash de `Agent123!` via `crypt('Agent123!', gen_salt('bf'))`
+- `raw_user_meta_data` / `raw_app_meta_data` : nettoyés des marqueurs d'anonymisation si présents
 
-Sur un client test (Christ) avec `+41` réel :
+### Étape 2 — Re-créer le rôle agent
+`INSERT INTO public.user_roles (user_id, role) VALUES ('68237b53-8d73-4ce5-b97c-8c1cac09646b', 'agent')` (avec `ON CONFLICT DO NOTHING`).
 
-- **Lot A — flux entrée** : `wa-send-welcome`, `wa-send-new-offer`, `wa-send-proposition-visite`
-- **Lot B — visite** : `send-visit-reminders` (T-24h), `wa-send-post-visite`
-- **Lot C — candidature** : `wa-send-candidature-demandee`, `wa-send-candidature-refus`, `wa-send-application-accepted`
-- **Lot D — signature/clés** : `wa-send-signature-scheduled`, `wa-send-edl-scheduled`, `wa-send-keys-handover`, `wa-send-google-review`
-- **Lot E — agent/mandat** : `wa-send-mandate-expiring`, `wa-send-agent-message`, `wa-notify-agent-visit-response`, `wa-notify-agent-candidature`
+### Étape 3 — Garantir l'unicité du rôle
+- Vérifier qu'il n'existe AUCUNE ligne `clients.user_id = 68237b53…` (déjà confirmé : aucune).
+- Vérifier que `agents.statut = 'actif'` (déjà OK).
 
-Pour chaque appel : vérifier (a) 200 OK, (b) message reçu sur le téléphone, (c) variables bien interpolées (pas de `{{1}}` brut), (d) pas d'erreur "131008/132000" Meta.
+### Étape 4 — Ne PAS toucher au compte `christ.ramazani@gmail.com`
+C'est un compte client distinct (autre user_id, autre email). Je le laisse tel quel sauf demande contraire.
 
-### 3. Test des Quick Reply payloads (webhook)
+### Étape 5 — Vérification post-fix
+Re-query `auth.users` + `user_roles` + `agents` pour confirmer :
+- email restauré, `banned_until = NULL`
+- 1 seul rôle = `agent`
+- Agent actif
+Puis tu testes la connexion sur `/login` avec `christ.ramazani@immo-rama.ch` / `Agent123!`.
 
-Cliquer chaque bouton depuis WhatsApp et vérifier dans `whatsapp-webhook` logs que `handleNewQRButtons` route correctement :
+## Question avant exécution
 
-- `visit_propose_delegate`, `visit_remind_confirm`, `visit_remind_cancel`
-- `post_visit_apply_yes`, `post_visit_apply_no`, `post_visit_apply_maybe`
-- `candidature_question`, `application_thanks`
-- `edl_reschedule`, `referral_start`
-- `agent_message_callback`, `agent_call_client_now`, `agent_dispatch_courier`, `agent_candidature_taken`
-- `mandate_renew`
+Le compte `christ.ramazani@gmail.com` (rôle **client**) — je le laisse intact, ou tu veux aussi le supprimer ?
 
-### 4. Activation des CRON et triggers DB
-
-- `wa-send-post-visite` : confirmer cron J+1 actif (pg_cron)
-- `wa-send-google-review` : confirmer cron J+7 actif
-- `send-visit-reminders` : confirmer cron T-24h actif
-- `wa-send-mandate-expiring` : confirmer cron J-30 actif
-- Triggers DB pour `wa-notify-agent-*` : vérifier qu'ils sont câblés sur les bons events
-
-### 5. Nettoyage
-
-Supprimer/archiver l'ancien template `nouvelle_offre` (remplacé par `logisorama_new_offer`) — garder `hello_world` (utilisé par Meta pour test).
-
----
-
-**Tu valides ce plan ?** Je peux ensuite :
-- (a) commencer par le **point 1** (audit des `template_name` dans le code), puis
-- (b) lancer les smoke tests Lot A→E avec ton numéro,
-- (c) finir par vérification cron + triggers.
-
-Dis "GO" ou indique un sous-ensemble (ex: "uniquement points 1+2").
+```text
+Compte ciblé        : christ.ramazani@immo-rama.ch
+Action              : RESTAURER (unban + email + password + rôle agent)
+Mot de passe        : Agent123!
+Rôles finaux        : ['agent']
+Compte gmail        : intact (sauf si tu demandes suppression)
+```
