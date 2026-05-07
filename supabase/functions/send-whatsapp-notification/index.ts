@@ -184,6 +184,24 @@ Deno.serve(async (req) => {
 
     const cleanVars = variables.map(sanitizeVar);
 
+    const components: any[] = [];
+    if (cleanVars.length > 0) {
+      components.push({
+        type: "body",
+        parameters: cleanVars.map((v) => ({ type: "text", text: v })),
+      });
+    }
+    if (Array.isArray(url_button_params) && url_button_params.length > 0) {
+      url_button_params.forEach((param, idx) => {
+        components.push({
+          type: "button",
+          sub_type: "url",
+          index: String(idx),
+          parameters: [{ type: "text", text: sanitizeVar(param) }],
+        });
+      });
+    }
+
     const payload = {
       messaging_product: "whatsapp",
       to: recipientPhone.replace("+", ""),
@@ -191,14 +209,7 @@ Deno.serve(async (req) => {
       template: {
         name: tpl.template_name_meta,
         language: { code: tpl.language || "fr" },
-        components: cleanVars.length > 0
-          ? [
-              {
-                type: "body",
-                parameters: cleanVars.map((v) => ({ type: "text", text: v })),
-              },
-            ]
-          : [],
+        components,
       },
     };
 
