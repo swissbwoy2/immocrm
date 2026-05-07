@@ -4,6 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendWhatsAppText, sendWhatsAppButtons } from "../_shared/whatsapp-send-text.ts";
 import { forwardClientReplyToStaff } from "../_shared/whatsapp-forward-to-staff.ts";
+import { resolveClientProfileByPhone } from "../_shared/resolve-profile-by-phone.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -209,14 +210,12 @@ async function handleLifecycleButton(
     return false;
   }
 
-  // Resolve client
-  const stripped = phoneE164.replace("+", "");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, prenom, nom, telephone")
-    .or(`whatsapp_phone.eq.${phoneE164},telephone.eq.${phoneE164},whatsapp_phone.eq.${stripped},telephone.eq.${stripped}`)
-    .maybeSingle();
-  if (!profile) return false;
+  // Resolve client (handles ambiguous duplicate phones)
+  const profile = await resolveClientProfileByPhone(supabase, phoneE164);
+  if (!profile) {
+    console.warn("[handleLifecycleButton] no profile for phone", phoneE164);
+    return false;
+  }
 
   const { data: client } = await supabase
     .from("clients")
@@ -473,12 +472,7 @@ async function handleNewQRButtons(
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const stripped = phoneE164.replace("+", "");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, prenom, nom, telephone")
-    .or(`whatsapp_phone.eq.${phoneE164},telephone.eq.${phoneE164},whatsapp_phone.eq.${stripped},telephone.eq.${stripped}`)
-    .maybeSingle();
+  const profile = await resolveClientProfileByPhone(supabase, phoneE164);
   if (!profile) {
     console.log("[handleNewQRButtons] unknown phone", phoneE164);
     return false;

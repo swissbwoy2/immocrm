@@ -18,6 +18,9 @@ interface ReqBody {
   recipient_phone_override?: string | null;
   // Variables pour body components, ordre = ordre {{1}}, {{2}}, ...
   variables: string[];
+  // Optional dynamic URL button suffix(es) for templates with URL buttons
+  // Each entry = the dynamic part appended to the button's static URL prefix.
+  url_button_params?: string[];
   // Catégorie de préférence à vérifier
   preference_key?:
     | "offer_alerts_enabled"
@@ -60,7 +63,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key } = body;
+  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params } = body;
 
   if (!event_type || !template_key || !Array.isArray(variables)) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -164,6 +167,41 @@ Deno.serve(async (req) => {
       throw new Error("WhatsApp credentials missing");
     }
 
+    // Sanitize: Meta refuse \n, \t, U+202F, U+00A0, et plus de 4 espaces consécutifs
+    const sanitizeVar = (raw: any): string => {
+      let s = String(raw ?? "");
+      // Replace all whitespace control chars + non-breaking spaces with regular space
+      s = s.replace(/[\r\n\t\v\f]+/g, " ");
+      s = s.replace(/[\u00A0\u202F\u2007\u2009\u200A\u200B]/g, " ");
+      // Collapse 5+ spaces to single space (Meta hard limit = 4)
+      s = s.replace(/ {2,}/g, " ");
+      s = s.trim();
+      if (!s) s = "—";
+      // Hard cap to avoid Meta length errors
+      if (s.length > 900) s = s.slice(0, 897) + "...";
+      return s;
+    };
+
+    const cleanVars = variables.map(sanitizeVar);
+
+    const components: any[] = [];
+    if (cleanVars.length > 0) {
+      components.push({
+        type: "body",
+        parameters: cleanVars.map((v) => ({ type: "text", text: v })),
+      });
+    }
+    if (Array.isArray(url_button_params) && url_button_params.length > 0) {
+      url_button_params.forEach((param, idx) => {
+        components.push({
+          type: "button",
+          sub_type: "url",
+          index: String(idx),
+          parameters: [{ type: "text", text: sanitizeVar(param) }],
+        });
+      });
+    }
+
     const payload = {
       messaging_product: "whatsapp",
       to: recipientPhone.replace("+", ""),
@@ -171,14 +209,7 @@ Deno.serve(async (req) => {
       template: {
         name: tpl.template_name_meta,
         language: { code: tpl.language || "fr" },
-        components: variables.length > 0
-          ? [
-              {
-                type: "body",
-                parameters: variables.map((v) => ({ type: "text", text: String(v ?? "") })),
-              },
-            ]
-          : [],
+        components,
       },
     };
 
