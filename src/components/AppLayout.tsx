@@ -51,6 +51,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         <DemoModeBanner />
+        <OpenInBrowserBanner />
         {/* Mobile Header - toujours visible */}
         <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0">
           <SidebarTrigger 
