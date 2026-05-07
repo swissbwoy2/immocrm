@@ -227,6 +227,7 @@ export default function VisitesDeleguees() {
                 key={visite.id}
                 visite={visite}
                 index={index}
+                onUpdate={loadVisites}
               />
             ))
           ) : (
@@ -246,6 +247,26 @@ export default function VisitesDeleguees() {
             />
           )}
         </PremiumVisiteDelegueSection>
+
+        {/* Suivi des candidatures issues des visites déléguées */}
+        {candidatures.length > 0 && (
+          <PremiumVisiteDelegueSection
+            title="Suivi de mes candidatures"
+            description="De la candidature à la remise des clés"
+            icon={FileSignature}
+            count={candidatures.length}
+            variant="confirmed"
+            delay={500}
+          >
+            {candidatures.map((cand, index) => (
+              <PremiumCandidatureTimeline
+                key={cand.id}
+                candidature={cand}
+                index={index}
+              />
+            ))}
+          </PremiumVisiteDelegueSection>
+        )}
       </div>
     </div>
   );
