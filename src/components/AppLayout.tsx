@@ -12,6 +12,7 @@ import { FloatingMessengerProvider } from '@/hooks/useFloatingMessenger';
 import { FloatingMessenger } from '@/components/messaging/floating/FloatingMessenger';
 import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { DemoWriteGuard } from '@/components/DemoWriteGuard';
+import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
 
 interface AppLayoutProps {
   children: ReactNode;
