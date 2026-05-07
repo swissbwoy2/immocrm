@@ -10101,6 +10101,7 @@ export type Database = {
         Row: {
           adresse: string
           agent_id: string | null
+          client_confirme_visite_at: string | null
           client_decision: string | null
           client_id: string | null
           coursier_id: string | null
@@ -10130,6 +10131,7 @@ export type Database = {
         Insert: {
           adresse: string
           agent_id?: string | null
+          client_confirme_visite_at?: string | null
           client_decision?: string | null
           client_id?: string | null
           coursier_id?: string | null
@@ -10159,6 +10161,7 @@ export type Database = {
         Update: {
           adresse?: string
           agent_id?: string | null
+          client_confirme_visite_at?: string | null
           client_decision?: string | null
           client_id?: string | null
           coursier_id?: string | null
