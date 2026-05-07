@@ -3,6 +3,10 @@
 > Pour chaque template, va sur Meta Business Manager → WhatsApp Manager → Templates → **Créer template** (ou éditer si existe).
 > Catégorie · Langue · Header · Body · Footer · Boutons. Tous en `fr`.
 
+> ⚠️ **Mention "message automatique" intégrée en fin de Body** des templates clients T1–T14 (le champ Footer Meta est limité à 60 caractères) :
+> `--- Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch`
+> Resoumission Meta requise après modification d'un template existant.
+
 ---
 
 ## T1 · `welcome_activation` · MARKETING
@@ -21,6 +25,8 @@ Votre agent dédié : {{2}}
 📨 Les mises à jour de candidature
 
 Bonne recherche ! 🍀
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** : 1 URL — `🔗 Mon espace` → `https://logisorama.ch/client`
@@ -45,6 +51,8 @@ Bonjour {{1}} ! Une offre vient de matcher votre recherche 🎯
 🔗 Annonce : {{9}}
 
 Intéressé(e) ? Répondez ici, on organise la visite 👇
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** :
@@ -70,6 +78,8 @@ Bonjour {{1}},
 🔗 Annonce : {{8}}
 
 Confirmez votre présence, ou déléguez la visite à notre équipe (un coursier s'y rend pour vous et vous envoie photos + vidéo + compte-rendu) 🎥
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (3 QR)** :
@@ -98,6 +108,8 @@ Petit rappel pour votre visite de DEMAIN à {{2}} 🗓️
 📲 Agent dédié : {{9}}
 
 Confirmez votre venue, ou demandez à déléguer si empêchement.
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (3 QR)** :
@@ -122,6 +134,8 @@ Comment s'est passée votre visite de :
 🔗 Annonce : {{6}}
 
 Souhaitez-vous postuler ? L'agent {{7}} prépare le dossier en 24h 📁
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (3 QR)** :
@@ -148,6 +162,8 @@ Votre demande de candidature est lancée 🚀
 🔗 Annonce : {{7}}
 
 Votre agent {{8}} prépare et transmet le dossier sous 24h ⏱️
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** :
@@ -173,6 +189,8 @@ n'a pas été retenu par la régie {{6}}.
 Motif : {{7}}
 
 Pas de panique ! On continue à chercher activement 💪
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (2 URL)** :
@@ -198,6 +216,8 @@ La régie {{2}} ACCEPTE votre dossier !
 🔗 Annonce : {{8}}
 
 Prochaine étape : signature du bail. Confirmez-vous votre engagement ?
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** :
@@ -225,6 +245,8 @@ Pour le bien :
 💰 {{9}} CHF/mois
 
 🗺️ Itinéraire : {{10}}
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (2 URL)** :
@@ -251,6 +273,8 @@ Votre état des lieux est fixé :
 🔗 Annonce : {{9}}
 
 À prévoir : pièce d'identité + relevé compteurs si déjà accessibles.
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** :
@@ -275,6 +299,8 @@ Vous avez désormais les clés de :
 Toute l'équipe Logisorama vous souhaite une excellente installation 🏡
 
 PS : connaissez-vous quelqu'un qui cherche aussi ? Parrainez-le et gagnez 100 CHF 🎁
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** :
@@ -299,6 +325,8 @@ Votre expérience avec {{3}} et l'équipe Logisorama vous a-t-elle convaincu ?
 ⭐ Note moyenne actuelle : {{4}} ({{5}} avis)
 
 Merci d'avance ! 🙏 — {{6}}
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (2 URL)** :
@@ -326,6 +354,8 @@ Votre mandat Logisorama arrive à échéance le {{2}}.
 ✅ J'ai trouvé seul
 
 Que souhaitez-vous ?
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons (3 QR)** :
@@ -347,6 +377,8 @@ Bonjour {{1}},
 « {{3}} »
 
 📎 Concerne : {{4}}
+---
+_Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch_
 ```
 - **Footer** : `Logisorama by Immo-rama.ch`
 - **Boutons** :
