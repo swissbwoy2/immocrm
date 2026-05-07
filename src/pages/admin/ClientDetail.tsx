@@ -1290,7 +1290,13 @@ export default function ClientDetail() {
                         className="bg-green-500 text-white hover:bg-green-600"
                         onClick={async () => {
                           const { error } = await supabase.from('clients').update({ statut: 'actif', date_changement_statut: null }).eq('id', client.id);
-                          if (!error) { toast({ title: 'Recherche réactivée' }); loadClientData(); }
+                          if (!error) {
+                            // 📱 WhatsApp welcome on reactivation (fire-and-forget)
+                            supabase.functions.invoke('wa-send-welcome', { body: { client_id: client.id } })
+                              .catch((e) => console.error('wa-send-welcome failed:', e));
+                            toast({ title: 'Recherche réactivée' });
+                            loadClientData();
+                          }
                         }}
                       >
                         Réactiver

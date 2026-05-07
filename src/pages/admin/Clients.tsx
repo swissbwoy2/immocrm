@@ -574,6 +574,13 @@ const Clients = () => {
         .update({ statut, date_changement_statut: new Date().toISOString() } as any)
         .in('id', ids);
       if (error) throw error;
+      // 📱 WhatsApp welcome on activation (fire-and-forget)
+      if (statut === 'actif') {
+        ids.forEach((cid) => {
+          supabase.functions.invoke('wa-send-welcome', { body: { client_id: cid } })
+            .catch((e) => console.error('wa-send-welcome failed:', e));
+        });
+      }
       toast({
         title: 'Statut mis à jour',
         description: `${ids.length} client(s) → ${BULK_STATUT_LABELS[statut]}`,
