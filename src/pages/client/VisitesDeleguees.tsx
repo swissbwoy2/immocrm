@@ -70,6 +70,20 @@ export default function VisitesDeleguees() {
         .order('created_at', { ascending: false });
 
       setVisites(visitesData || []);
+
+      // Load candidatures linked to delegated-visit offers
+      const offreIds = (visitesData || []).map(v => v.offre_id).filter(Boolean);
+      if (offreIds.length > 0) {
+        const { data: candData } = await supabase
+          .from('candidatures')
+          .select('id, statut, created_at, offre_id, avis_google_clicked_at, offres(adresse)')
+          .eq('client_id', clientData.id)
+          .in('offre_id', offreIds)
+          .order('created_at', { ascending: false });
+        setCandidatures(candData || []);
+      } else {
+        setCandidatures([]);
+      }
     } catch (error) {
       console.error('Error loading visites:', error);
     } finally {
