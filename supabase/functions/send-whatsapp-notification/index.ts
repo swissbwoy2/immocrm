@@ -164,6 +164,23 @@ Deno.serve(async (req) => {
       throw new Error("WhatsApp credentials missing");
     }
 
+    // Sanitize: Meta refuse \n, \t, U+202F, U+00A0, et plus de 4 espaces consécutifs
+    const sanitizeVar = (raw: any): string => {
+      let s = String(raw ?? "");
+      // Replace all whitespace control chars + non-breaking spaces with regular space
+      s = s.replace(/[\r\n\t\v\f]+/g, " ");
+      s = s.replace(/[\u00A0\u202F\u2007\u2009\u200A\u200B]/g, " ");
+      // Collapse 5+ spaces to single space (Meta hard limit = 4)
+      s = s.replace(/ {2,}/g, " ");
+      s = s.trim();
+      if (!s) s = "—";
+      // Hard cap to avoid Meta length errors
+      if (s.length > 900) s = s.slice(0, 897) + "...";
+      return s;
+    };
+
+    const cleanVars = variables.map(sanitizeVar);
+
     const payload = {
       messaging_product: "whatsapp",
       to: recipientPhone.replace("+", ""),
@@ -171,11 +188,11 @@ Deno.serve(async (req) => {
       template: {
         name: tpl.template_name_meta,
         language: { code: tpl.language || "fr" },
-        components: variables.length > 0
+        components: cleanVars.length > 0
           ? [
               {
                 type: "body",
-                parameters: variables.map((v) => ({ type: "text", text: String(v ?? "") })),
+                parameters: cleanVars.map((v) => ({ type: "text", text: v })),
               },
             ]
           : [],
