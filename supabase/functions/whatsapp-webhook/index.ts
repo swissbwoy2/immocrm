@@ -257,10 +257,13 @@ async function handleLifecycleButton(
     }
 
     if (visite) {
-      const { error: updErr } = await supabase.from("visites").update({ statut: newStatut }).eq("id", visite.id);
-      if (updErr && isVisitDelegate) {
-        // Fallback if a_deleguer not in enum
-        await supabase.from("visites").update({ statut: "proposee" }).eq("id", visite.id);
+      if (isVisitDelegate) {
+        await supabase
+          .from("visites")
+          .update({ est_deleguee: true, statut: "deleguee", statut_coursier: "a_assigner" })
+          .eq("id", visite.id);
+      } else {
+        await supabase.from("visites").update({ statut: newStatut }).eq("id", visite.id);
       }
     }
 

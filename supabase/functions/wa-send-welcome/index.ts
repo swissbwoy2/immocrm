@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
       event_type: "welcome_activation",
       template_key: "welcome_activation",
       client_id,
+      header_params: [prenom],
       variables: [prenom, agentName],
     }),
   });

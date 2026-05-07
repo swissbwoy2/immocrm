@@ -21,6 +21,8 @@ interface ReqBody {
   // Optional dynamic URL button suffix(es) for templates with URL buttons
   // Each entry = the dynamic part appended to the button's static URL prefix.
   url_button_params?: string[];
+  // Optional header text variables (matches {{1}}, {{2}}, ... in template header)
+  header_params?: string[];
   // Catégorie de préférence à vérifier
   preference_key?:
     | "offer_alerts_enabled"
@@ -63,7 +65,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params } = body;
+  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params, header_params } = body;
 
   if (!event_type || !template_key || !Array.isArray(variables)) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -185,6 +187,12 @@ Deno.serve(async (req) => {
     const cleanVars = variables.map(sanitizeVar);
 
     const components: any[] = [];
+    if (Array.isArray(header_params) && header_params.length > 0) {
+      components.push({
+        type: "header",
+        parameters: header_params.map((v) => ({ type: "text", text: sanitizeVar(v) })),
+      });
+    }
     if (cleanVars.length > 0) {
       components.push({
         type: "body",
