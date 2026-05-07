@@ -529,7 +529,7 @@ async function handleNewQRButtons(
       p_title: title,
       p_message: message.slice(0, 250),
       p_link: link,
-      p_data: {},
+      p_metadata: {},
     }).then(() => {}).catch(() => {});
   };
   const callForward = async (summary: string, notifTitle: string, notifLink: string) => {
@@ -1000,7 +1000,7 @@ Deno.serve(async (req) => {
               p_title: "📱 Réponse WhatsApp client",
               p_message: text.slice(0, 200),
               p_link: "/agent/messagerie",
-              p_data: { conversation_id: conversationId },
+              p_metadata: { conversation_id: conversationId },
             }).then(() => {}).catch(() => {});
 
             // Forward WhatsApp à l'agent + admin (fenêtre 24h ouverte par le client)
