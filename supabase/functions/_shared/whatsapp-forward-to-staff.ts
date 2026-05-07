@@ -10,6 +10,9 @@ interface ForwardArgs {
   variables?: string[];
   notifTitle?: string;
   notifLink?: string;
+  // If set, skip WhatsApp send to this phone (e.g. when agent phone == client phone in tests)
+  // In-app + email notifications are still created.
+  excludePhone?: string | null;
 }
 
 const ADMIN_PHONE_RAW = Deno.env.get("WHATSAPP_ADMIN_PHONE") || "";
