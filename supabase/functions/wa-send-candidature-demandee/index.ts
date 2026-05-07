@@ -1,8 +1,8 @@
-// T8 — wa-send-application-accepted (8 vars) — fr enrichi
+// T6 — wa-send-candidature-demandee (8 vars) on INSERT candidatures
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-  fmtPieces, fmtPrixCHF, fmtDateCourtFR, lienAnnonceOuFallback,
-  loadOffreDetails, callSendWhatsApp,
+  fmtPieces, fmtPrixCHF, lienAnnonceOuFallback,
+  loadOffreDetails, loadAgentName, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";
 
 const corsHeaders = {
@@ -26,31 +26,32 @@ Deno.serve(async (req) => {
   }
 
   const { data: c } = await supabase
-    .from("candidatures")
-    .select("id, client_id, offre_id, date_signature_choisie")
-    .eq("id", candidature_id)
-    .maybeSingle();
+    .from("candidatures").select("id, client_id, offre_id").eq("id", candidature_id).maybeSingle();
   if (!c?.client_id) return new Response(JSON.stringify({ skipped: "no_client" }), { status: 200, headers: corsHeaders });
 
   const offre = await loadOffreDetails(supabase, c.offre_id);
-  const { data: client } = await supabase.from("clients").select("user_id, gerance_actuelle").eq("id", c.client_id).maybeSingle();
+  const { data: client } = await supabase.from("clients").select("user_id, agent_id").eq("id", c.client_id).maybeSingle();
   const { data: profile } = await supabase.from("profiles").select("prenom").eq("id", client?.user_id).maybeSingle();
-  const regieNom = (offre as any)?.regie_nom || client?.gerance_actuelle || "Régie";
+  const agentName = await loadAgentName(supabase, client?.agent_id);
+
+  // Régie : tente offres.gerance_actuelle/regie via clients fallback
+  const { data: clientFull } = await supabase.from("clients").select("gerance_actuelle").eq("id", c.client_id).maybeSingle();
+  const regieNom = (offre as any)?.regie_nom || clientFull?.gerance_actuelle || "Régie";
 
   const result = await callSendWhatsApp({
-    event_type: "application_accepted",
-    template_key: "application_accepted",
+    event_type: "candidature_demandee_client",
+    template_key: "candidature_demandee_client",
     client_id: c.client_id,
     preference_key: "candidature_updates_enabled",
     variables: [
       profile?.prenom || "Client",
-      regieNom,
       fmtPieces(offre?.pieces),
       String(offre?.surface ?? "—"),
       offre?.adresse || "—",
       fmtPrixCHF(offre?.prix),
-      c.date_signature_choisie ? fmtDateCourtFR(c.date_signature_choisie) : "À confirmer",
+      regieNom,
       lienAnnonceOuFallback(offre?.lien_annonce),
+      agentName,
     ],
   });
 
