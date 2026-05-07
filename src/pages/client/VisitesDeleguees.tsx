@@ -10,8 +10,10 @@ import {
   PremiumEmptyState,
   PremiumVisiteDelegueSection,
   PremiumVisiteDelegueCard,
-  PremiumFeedbackCard
+  PremiumFeedbackCard,
+  PremiumCandidatureTimeline
 } from '@/components/premium';
+import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare, FileSignature } from 'lucide-react';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 export default function VisitesDeleguees() {
