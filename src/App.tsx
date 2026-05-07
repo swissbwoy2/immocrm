@@ -368,6 +368,7 @@ const App = () => (
 
               {/* Client Routes */}
               <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/dashboard" element={<Navigate to="/client" replace />} />
               <Route path="/client/dossier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDossier /></AppLayout></ProtectedRoute>} />
               <Route path="/client/mon-contrat" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMonContrat /></AppLayout></ProtectedRoute>} />
               <Route path="/client/offres-recues" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientOffresRecues /></AppLayout></ProtectedRoute>} />
