@@ -306,7 +306,8 @@ async function handleLifecycleButton(
       ],
       notifTitle,
       notifLink: "/agent/visites",
-    });
+          excludePhone: phoneE164,
+      });
     return true;
   }
 
@@ -360,6 +361,7 @@ async function handleLifecycleButton(
         variables: [clientName, visite?.adresse || "—", "https://logisorama.ch/agent/deposer-candidature"],
         notifTitle: "🎯 Nouvelle demande de candidature client",
         notifLink: "/agent/deposer-candidature",
+              excludePhone: phoneE164,
       });
     } else {
       // Send #8 refus
@@ -383,6 +385,7 @@ async function handleLifecycleButton(
         summary: `❌ ${clientName} ne souhaite pas postuler pour ${visite?.adresse || "ce bien"}`,
         notifTitle: "Client ne postule pas après visite",
         notifLink: "/agent/visites",
+              excludePhone: phoneE164,
       });
     }
     return true;
@@ -421,7 +424,8 @@ async function handleLifecycleButton(
         : `❌ ${clientName} refuse le dossier accepté`,
       notifTitle: isAppValidate ? "✅ Client valide la signature" : "❌ Client refuse le dossier",
       notifLink: "/agent/candidatures",
-    });
+          excludePhone: phoneE164,
+      });
     return true;
   }
 
@@ -455,7 +459,8 @@ async function handleLifecycleButton(
         : `⚠️ URGENT — ${clientName} n'a PAS encore reçu les clés`,
       notifTitle: isKeysReceived ? "✅ Clés confirmées par client" : "⚠️ URGENT — Clés non reçues",
       notifLink: "/agent/candidatures",
-    });
+          excludePhone: phoneE164,
+      });
     return true;
   }
 
@@ -541,7 +546,8 @@ async function handleNewQRButtons(
       summary,
       notifTitle,
       notifLink,
-    }).catch((e) => console.error("forward failed", e));
+          excludePhone: phoneE164,
+      }).catch((e) => console.error("forward failed", e));
   };
 
   // Lookup latest visite with offre context
@@ -1011,7 +1017,8 @@ Deno.serve(async (req) => {
               summary: `📱 [WA] ${text.slice(0, 250)}\n→ logisorama.ch/agent/messagerie`,
               notifTitle: "📱 Message WhatsApp client",
               notifLink: "/agent/messagerie",
-            }).catch((e) => console.error("forward failed", e));
+                          excludePhone: phoneE164,
+      }).catch((e) => console.error("forward failed", e));
           }
         }
       }
