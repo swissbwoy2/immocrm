@@ -317,7 +317,7 @@ async function handleLifecycleButton(
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
     const { data: visite } = await supabase
       .from("visites")
-      .select("id, offre_id, adresse")
+      .select("id, offre_id, adresse, date_visite")
       .eq("client_id", client.id)
       .eq("statut", "effectuee")
       .gte("date_visite", sevenDaysAgo)
