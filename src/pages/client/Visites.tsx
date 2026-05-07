@@ -141,6 +141,12 @@ export default function Visites() {
         throw visiteError;
       }
 
+      // Mark client confirmation timestamp (unified across delegated/physical visits)
+      await supabase
+        .from('visites')
+        .update({ client_confirme_visite_at: new Date().toISOString() })
+        .eq('id', visite.id);
+
       if (visite.offre_id) {
         const { error: offreError } = await supabase
           .from('offres')

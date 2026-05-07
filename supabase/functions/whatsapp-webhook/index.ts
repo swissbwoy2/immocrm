@@ -329,6 +329,12 @@ async function handleLifecycleButton(
       .maybeSingle();
 
     if (isPostulate) {
+      // Mark visit as confirmed by client (implicit confirmation via WA Postuler)
+      if (visite?.id) {
+        await supabase.from("visites")
+          .update({ client_confirme_visite_at: new Date().toISOString() })
+          .eq("id", visite.id);
+      }
       await sendWhatsAppText(phoneE164, "✅ Parfait ! Votre demande est transmise à votre agent qui finalisera le dossier.");
       // Get agent name for client confirmation template
       let agentName = "votre agent";

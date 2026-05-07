@@ -1,0 +1,1 @@
+ALTER TABLE public.visites ADD COLUMN IF NOT EXISTS client_confirme_visite_at timestamptz;

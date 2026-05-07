@@ -28,6 +28,7 @@ interface PremiumFeedbackCardProps {
     medias_coursier?: any;
     coursier_id?: string | null;
     client_decision?: string | null;
+    client_confirme_visite_at?: string | null;
     offres?: {
       pieces?: number;
       surface?: number;
@@ -83,6 +84,8 @@ export function PremiumFeedbackCard({
   const [posting, setPosting] = useState(false);
   const [existingCandidatureId, setExistingCandidatureId] = useState<string | null>(null);
   const [mediaPreview, setMediaPreview] = useState<MediaItem | null>(null);
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(visite.client_confirme_visite_at ?? null);
+  const [confirming, setConfirming] = useState(false);
 
   const feedbackText = visite.feedback_agent || visite.feedback_coursier || null;
   const visitorLabel = visite.coursier_id ? 'notre coursier mandaté' : 'votre agent';
@@ -159,6 +162,25 @@ export function PremiumFeedbackCard({
       toast.error(e?.message || 'Erreur');
     } finally {
       setPosting(false);
+    }
+  };
+
+  const handleConfirmVisite = async () => {
+    setConfirming(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const { error } = await supabase
+        .from('visites')
+        .update({ client_confirme_visite_at: nowIso })
+        .eq('id', visite.id);
+      if (error) throw error;
+      setConfirmedAt(nowIso);
+      toast.success('Merci, compte rendu confirmé');
+      onUpdate?.();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur');
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -277,8 +299,31 @@ export function PremiumFeedbackCard({
           </div>
         )}
 
-        {/* Actions */}
-        {visite.offre_id && visite.client_id && !existingCandidatureId && visite.client_decision !== 'refuse' && (
+        {/* Étape 1 — Confirmation lecture du compte rendu */}
+        {visite.offre_id && visite.client_id && !existingCandidatureId && visite.client_decision !== 'refuse' && !confirmedAt && (
+          <div className="rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/80 to-yellow-50/40 dark:from-amber-950/40 dark:to-yellow-900/20 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-semibold text-foreground">Avez-vous bien consulté le compte rendu de la visite ?</p>
+                <p className="text-muted-foreground mt-0.5">Confirmez avant de décider de postuler.</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={handleConfirmVisite}
+                disabled={confirming}
+                className="flex-1 bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-700 hover:to-orange-600 text-white"
+              >
+                {confirming ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                Oui, j'ai pris connaissance
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Étape 2 — Actions Postuler / Pas intéressé (après confirmation) */}
+        {visite.offre_id && visite.client_id && !existingCandidatureId && visite.client_decision !== 'refuse' && confirmedAt && (
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <Button
               onClick={handlePostuler}
