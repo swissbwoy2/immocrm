@@ -427,6 +427,341 @@ async function handleLifecycleButton(
   return false;
 }
 
+// =============================================================
+// NEW QR Buttons handler (T2-T16 + agent-side payloads)
+// Covers: new_offer_visit_request, visit_propose_delegate,
+// visit_remind_confirm/delegate/cancel, post_visit_apply_yes/maybe/no,
+// candidature_question, application_thanks, edl_reschedule, referral_start,
+// agent_message_callback, agent_call_client_now, agent_dispatch_courier,
+// agent_candidature_taken
+// =============================================================
+async function handleNewQRButtons(
+  supabase: ReturnType<typeof createClient>,
+  args: { phoneE164: string; buttonText: string; buttonId: string },
+): Promise<boolean> {
+  const { phoneE164, buttonId } = args;
+  const id = (buttonId || "").trim();
+  const KNOWN = new Set([
+    "new_offer_visit_request",
+    "visit_propose_delegate",
+    "visit_remind_confirm", "visit_remind_delegate", "visit_remind_cancel",
+    "post_visit_apply_yes", "post_visit_apply_maybe", "post_visit_apply_no",
+    "candidature_question", "application_thanks", "edl_reschedule", "referral_start",
+    "agent_message_callback", "agent_call_client_now", "agent_dispatch_courier",
+    "agent_candidature_taken",
+  ]);
+  if (!KNOWN.has(id)) return false;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const stripped = phoneE164.replace("+", "");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, prenom, nom, telephone")
+    .or(`whatsapp_phone.eq.${phoneE164},telephone.eq.${phoneE164},whatsapp_phone.eq.${stripped},telephone.eq.${stripped}`)
+    .maybeSingle();
+  if (!profile) {
+    console.log("[handleNewQRButtons] unknown phone", phoneE164);
+    return false;
+  }
+
+  // Try resolve client (most payloads). Agent-side payloads tolerate missing client.
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, agent_id")
+    .eq("user_id", profile.id)
+    .maybeSingle();
+
+  // Try resolve agent (agent-side payloads)
+  let agentRow: { id: string; user_id: string } | null = null;
+  {
+    const { data: ag } = await supabase
+      .from("agents")
+      .select("id, user_id")
+      .eq("user_id", profile.id)
+      .maybeSingle();
+    if (ag) agentRow = ag as any;
+  }
+
+  const clientName = `${profile.prenom || ""} ${profile.nom || ""}`.trim() || "Client";
+  const ack = (txt: string) => sendWhatsAppText(phoneE164, txt);
+  const notifyAgent = async (agentUserId: string, title: string, message: string, link = "/agent/visites") => {
+    await supabase.rpc("create_notification", {
+      p_user_id: agentUserId,
+      p_type: "whatsapp_action",
+      p_title: title,
+      p_message: message.slice(0, 250),
+      p_link: link,
+      p_data: {},
+    }).then(() => {}).catch(() => {});
+  };
+  const callForward = async (summary: string, notifTitle: string, notifLink: string) => {
+    if (!client) return;
+    await forwardClientReplyToStaff({
+      supabase,
+      clientId: client.id,
+      agentId: client.agent_id,
+      summary,
+      notifTitle,
+      notifLink,
+    }).catch((e) => console.error("forward failed", e));
+  };
+
+  // Lookup latest visite with offre context
+  const latestVisite = async (statuts: string[]) => {
+    if (!client) return null;
+    const { data } = await supabase
+      .from("visites")
+      .select("id, offre_id, adresse, date_visite, statut")
+      .eq("client_id", client.id)
+      .in("statut", statuts)
+      .order("date_visite", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data;
+  };
+
+  switch (id) {
+    // ---- T2 new_offer ----
+    case "new_offer_visit_request": {
+      await ack("✅ Bien noté ! Votre agent va vous proposer un créneau de visite très vite.");
+      await callForward(
+        `🙋 ${clientName} demande une visite (depuis nouvelle offre)`,
+        "🙋 Demande de visite client",
+        "/agent/offres",
+      );
+      return true;
+    }
+
+    // ---- T3 visit_propose_delegate ----
+    case "visit_propose_delegate": {
+      const v = await latestVisite(["proposee"]);
+      if (v) {
+        await supabase
+          .from("visites")
+          .update({ est_deleguee: true, statut: "deleguee", statut_coursier: "a_assigner" })
+          .eq("id", v.id);
+      }
+      await ack("🎥 Parfait ! Un coursier va se rendre à la visite à votre place et vous enverra photos + vidéo + compte-rendu. On vous tient au courant !");
+      await callForward(
+        `🎥 ${clientName} délègue la visite ${v?.adresse || ""} → coursier à assigner`,
+        "🎥 Visite déléguée — coursier à assigner",
+        "/agent/visites",
+      );
+      return true;
+    }
+
+    // ---- T4 visit_remind_confirm ----
+    case "visit_remind_confirm": {
+      const v = await latestVisite(["planifiee", "confirmee"]);
+      if (v) {
+        await supabase.from("visites").update({ statut: "confirmee" }).eq("id", v.id);
+      }
+      await ack("✅ Présence confirmée. À demain ! 🤝");
+      return true;
+    }
+
+    // ---- T4 visit_remind_delegate ----
+    case "visit_remind_delegate": {
+      const v = await latestVisite(["planifiee", "confirmee", "proposee"]);
+      if (v) {
+        await supabase
+          .from("visites")
+          .update({ est_deleguee: true, statut: "deleguee", statut_coursier: "a_assigner" })
+          .eq("id", v.id);
+      }
+      await ack("🎥 Coursier en cours d'assignation. Vous recevrez photos + vidéo + compte-rendu juste après la visite.");
+      await callForward(
+        `🎥 URGENT ${clientName} délègue visite J-1 (${v?.adresse || ""})`,
+        "🎥 URGENT — Visite déléguée J-1",
+        "/agent/visites",
+      );
+      return true;
+    }
+
+    // ---- T4 visit_remind_cancel ----
+    case "visit_remind_cancel": {
+      const v = await latestVisite(["planifiee", "confirmee", "proposee"]);
+      if (v) {
+        await supabase.from("visites").update({ statut: "annulee" }).eq("id", v.id);
+      }
+      await ack("Bien noté, visite annulée. Votre agent prendra contact pour la suite.");
+      await callForward(
+        `❌ ${clientName} annule visite J-1 (${v?.adresse || ""})`,
+        "❌ Annulation visite J-1",
+        "/agent/visites",
+      );
+      return true;
+    }
+
+    // ---- T5 post_visit_apply_yes (= post_visit_postuler) ----
+    case "post_visit_apply_yes": {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      let visite: any = null;
+      if (client) {
+        const { data } = await supabase
+          .from("visites")
+          .select("id, offre_id, adresse")
+          .eq("client_id", client.id)
+          .eq("statut", "effectuee")
+          .gte("date_visite", sevenDaysAgo)
+          .order("date_visite", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        visite = data;
+      }
+      await ack("🚀 Top ! Dossier en préparation, on transmet à la régie sous 24h.");
+      await callForward(
+        `🎯 ${clientName} veut postuler — ${visite?.adresse || "bien visité"}`,
+        "🎯 Demande candidature post-visite",
+        "/agent/deposer-candidature",
+      );
+      return true;
+    }
+
+    // ---- T5 post_visit_apply_maybe ----
+    case "post_visit_apply_maybe": {
+      const followup = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+      if (client) {
+        await supabase
+          .from("clients")
+          .update({ note_agent: `[WA J+1 follow-up requested at ${followup}]` })
+          .eq("id", client.id);
+      }
+      await ack("🤔 Pas de souci, on vous relance demain pour votre décision.");
+      await callForward(
+        `🤔 ${clientName} hésite après visite — relance J+1 demandée`,
+        "🤔 Client hésite — relance J+1",
+        "/agent/visites",
+      );
+      return true;
+    }
+
+    // ---- T5 post_visit_apply_no ----
+    case "post_visit_apply_no": {
+      const v = await latestVisite(["effectuee"]);
+      if (v) {
+        await supabase.from("visites").update({ feedback_agent: "refus_client" }).eq("id", v.id);
+      }
+      await ack("Bien noté, on continue à chercher pour vous 💪");
+      await callForward(
+        `❌ ${clientName} ne postule pas — ${v?.adresse || ""}`,
+        "❌ Pas de candidature post-visite",
+        "/agent/visites",
+      );
+      return true;
+    }
+
+    // ---- T6 candidature_question ----
+    case "candidature_question": {
+      await ack("📞 Bien sûr ! Posez votre question ici, votre agent vous répondra rapidement.");
+      await callForward(
+        `❓ ${clientName} a une question sur sa candidature`,
+        "❓ Question candidature",
+        "/agent/messagerie",
+      );
+      return true;
+    }
+
+    // ---- T8 application_thanks ----
+    case "application_thanks": {
+      await ack("🙏 Merci pour votre confiance ! On organise la signature et vous envoie la date dès que possible.");
+      await callForward(
+        `🙏 ${clientName} valide acceptation régie — go signature`,
+        "🙏 Client valide signature",
+        "/agent/candidatures",
+      );
+      return true;
+    }
+
+    // ---- T10 edl_reschedule ----
+    case "edl_reschedule": {
+      await ack("🔄 Bien reçu ! Votre agent vous propose de nouveaux créneaux très vite.");
+      await callForward(
+        `🔄 ${clientName} demande à reprogrammer l'EDL`,
+        "🔄 EDL à reprogrammer",
+        "/agent/candidatures",
+      );
+      return true;
+    }
+
+    // ---- T11 referral_start ----
+    case "referral_start": {
+      const link = "https://logisorama.ch/client/parrainage";
+      await ack(`🎁 Génial ! Voici votre lien de parrainage personnel : ${link}\n\nChaque ami qui signe = 100 CHF pour vous 💸`);
+      return true;
+    }
+
+    // ---- T14 agent_message_callback ----
+    case "agent_message_callback": {
+      await ack("📞 Bien noté, votre agent vous appelle dès que possible !");
+      await callForward(
+        `📞 ${clientName} demande à être rappelé`,
+        "📞 Rappel client demandé",
+        "/agent/messagerie",
+      );
+      return true;
+    }
+
+    // ---- T15 agent-side: agent_call_client_now ----
+    case "agent_call_client_now": {
+      if (agentRow) {
+        await notifyAgent(
+          agentRow.user_id,
+          "📞 Intent appel client logué",
+          "Pensez à logger l'appel dans le CRM après contact.",
+          "/agent/visites",
+        );
+      }
+      // Pas de réponse au "client" car c'est l'agent qui clique
+      return true;
+    }
+
+    // ---- T15 agent-side: agent_dispatch_courier ----
+    case "agent_dispatch_courier": {
+      if (agentRow) {
+        await notifyAgent(
+          agentRow.user_id,
+          "🎥 Ouvrir flow visites déléguées",
+          "Assignez un coursier à la visite concernée.",
+          "/agent/visites",
+        );
+      }
+      return true;
+    }
+
+    // ---- T16 agent-side: agent_candidature_taken ----
+    case "agent_candidature_taken": {
+      // Mark latest pending candidature as in_preparation by this agent
+      if (agentRow) {
+        const { data: cand } = await supabase
+          .from("candidatures")
+          .select("id, client_id")
+          .eq("statut", "a_envoyer")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cand) {
+          await supabase
+            .from("candidatures")
+            .update({ statut: "en_preparation" })
+            .eq("id", cand.id);
+        }
+        await notifyAgent(
+          agentRow.user_id,
+          "✅ Candidature prise en charge",
+          "Statut → en_preparation. Préparez & envoyez sous 24h.",
+          "/agent/candidatures",
+        );
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function verifyMetaSignature(rawBody: string, header: string | null, secret: string): Promise<boolean> {
   if (!header || !header.startsWith("sha256=")) return false;
   const sigHex = header.slice(7).toLowerCase();
