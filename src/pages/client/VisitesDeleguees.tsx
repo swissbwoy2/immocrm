@@ -21,6 +21,7 @@ export default function VisitesDeleguees() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [visites, setVisites] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedVisiteId, setExpandedVisiteId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
