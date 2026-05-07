@@ -890,6 +890,10 @@ Deno.serve(async (req) => {
               phoneE164, buttonText: buttonText || "", buttonId: buttonId || "",
             });
             if (handledLifecycle) continue;
+            const handledNew = await handleNewQRButtons(supabase, {
+              phoneE164, buttonText: buttonText || "", buttonId: buttonId || "",
+            });
+            if (handledNew) continue;
           }
 
           const text = msg.text?.body || buttonText || "[Pièce jointe WhatsApp]";
