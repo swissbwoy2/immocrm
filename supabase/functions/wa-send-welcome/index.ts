@@ -45,6 +45,21 @@ Deno.serve(async (req) => {
     await supabase.from("profiles").update(updates).eq("id", client.user_id);
   }
 
+  // Resolve agent name
+  let agentName = "votre agent";
+  const { data: clientFull } = await supabase
+    .from("clients").select("agent_id").eq("id", client_id).maybeSingle();
+  if (clientFull?.agent_id) {
+    const { data: ag } = await supabase
+      .from("agents").select("user_id").eq("id", clientFull.agent_id).maybeSingle();
+    if (ag?.user_id) {
+      const { data: ap } = await supabase
+        .from("profiles").select("prenom, nom").eq("id", ag.user_id).maybeSingle();
+      const full = `${ap?.prenom || ""} ${ap?.nom || ""}`.trim();
+      if (full) agentName = full;
+    }
+  }
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -55,7 +70,7 @@ Deno.serve(async (req) => {
       event_type: "welcome_activation",
       template_key: "welcome_activation",
       client_id,
-      variables: [prenom],
+      variables: [prenom, agentName],
     }),
   });
   const json = await res.json().catch(() => ({}));
