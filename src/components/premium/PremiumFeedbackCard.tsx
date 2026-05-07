@@ -184,6 +184,7 @@ export function PremiumFeedbackCard({
     }
   };
 
+  return (
     <div
       className={cn(
         'group relative overflow-hidden rounded-xl',
