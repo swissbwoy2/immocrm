@@ -1,0 +1,1 @@
+UPDATE public.whatsapp_message_templates SET language = 'fr' WHERE template_key IN ('application_accepted','etat_des_lieux_scheduled','google_review_request','keys_handover','signature_scheduled','welcome_activation');
