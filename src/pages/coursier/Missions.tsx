@@ -30,6 +30,7 @@ export default function CoursierMissions() {
   const [feedbackMedias, setFeedbackMedias] = useState<any[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
 
   useEffect(() => {
     if (user) loadData();
@@ -116,7 +117,10 @@ export default function CoursierMissions() {
         .from('visites')
         .update({
           statut_coursier: 'termine',
+          statut: 'effectuee',
           feedback_coursier: feedback,
+          medias_coursier: feedbackMedias,
+          recommandation_agent: recommandation,
         })
         .eq('id', selectedMission.id);
 
@@ -125,6 +129,7 @@ export default function CoursierMissions() {
       setCompleteOpen(false);
       setFeedback('');
       setFeedbackMedias([]);
+      setRecommandation('neutre');
       loadData();
     } catch (error) {
       toast.error('Erreur lors de la complétion');
@@ -714,6 +719,28 @@ export default function CoursierMissions() {
                     onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
                   />
                 </label>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Votre recommandation au client *</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'recommande', label: '👍 Recommandé', cls: 'border-emerald-500 bg-emerald-500/10 text-emerald-700' },
+                  { value: 'neutre', label: '😐 Neutre', cls: 'border-slate-500 bg-slate-500/10 text-slate-700' },
+                  { value: 'deconseille', label: '👎 Déconseillé', cls: 'border-red-500 bg-red-500/10 text-red-700' },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRecommandation(opt.value as any)}
+                    className={`p-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      recommandation === opt.value ? opt.cls : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/30'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
             </div>
 

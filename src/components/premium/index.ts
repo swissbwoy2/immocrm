@@ -23,6 +23,7 @@ export { PremiumDocumentCard, PremiumDocumentEmptyState } from './PremiumDocumen
 export { PremiumVisiteDelegueSection } from './PremiumVisiteDelegueSection';
 export { PremiumVisiteDelegueCard } from './PremiumVisiteDelegueCard';
 export { PremiumFeedbackCard } from './PremiumFeedbackCard';
+export { PremiumCandidatureTimeline } from './PremiumCandidatureTimeline';
 export { PremiumCandidatureKPIs } from './PremiumCandidatureKPIs';
 export { PremiumCandidatureCard } from './PremiumCandidatureCard';
 export { PremiumWorkflowTimeline } from './PremiumWorkflowTimeline';

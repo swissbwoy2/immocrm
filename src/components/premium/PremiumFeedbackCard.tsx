@@ -1,20 +1,33 @@
-import { Calendar, MapPin, Home, Square, ThumbsUp, ThumbsDown, Minus, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Calendar, MapPin, Home, Square, ThumbsUp, ThumbsDown, Minus, MessageSquare, ArrowRight, CheckCircle2, Send, X, Play, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 type Recommandation = 'recommande' | 'neutre' | 'deconseille';
+
+interface MediaItem { url: string; type?: string; name?: string }
 
 interface PremiumFeedbackCardProps {
   visite: {
     id: string;
     adresse: string;
     updated_at: string;
+    offre_id?: string | null;
+    client_id?: string | null;
     recommandation_agent?: string | null;
     feedback_agent?: string | null;
+    feedback_coursier?: string | null;
+    medias?: any;
+    medias_coursier?: any;
+    coursier_id?: string | null;
+    client_decision?: string | null;
     offres?: {
       pieces?: number;
       surface?: number;
@@ -23,6 +36,7 @@ interface PremiumFeedbackCardProps {
   };
   index?: number;
   className?: string;
+  onUpdate?: () => void;
 }
 
 const recommandationConfig: Record<Recommandation, {
@@ -34,7 +48,7 @@ const recommandationConfig: Record<Recommandation, {
 }> = {
   recommande: {
     icon: ThumbsUp,
-    label: 'Recommandé par votre agent',
+    label: 'Recommandé',
     color: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-gradient-to-r from-emerald-50 to-green-50/50 dark:from-emerald-950/50 dark:to-green-900/30',
     borderColor: 'border-emerald-200/60 dark:border-emerald-800/40'
@@ -58,12 +72,95 @@ const recommandationConfig: Record<Recommandation, {
 export function PremiumFeedbackCard({
   visite,
   index = 0,
-  className
+  className,
+  onUpdate,
 }: PremiumFeedbackCardProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const recommandation = visite.recommandation_agent as Recommandation | null;
   const config = recommandation ? recommandationConfig[recommandation] : null;
   const Icon = config?.icon;
+  const [posting, setPosting] = useState(false);
+  const [existingCandidatureId, setExistingCandidatureId] = useState<string | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<MediaItem | null>(null);
+
+  const feedbackText = visite.feedback_agent || visite.feedback_coursier || null;
+  const visitorLabel = visite.coursier_id ? 'notre coursier mandaté' : 'votre agent';
+  const allMedias: MediaItem[] = [
+    ...(Array.isArray(visite.medias) ? visite.medias : []),
+    ...(Array.isArray(visite.medias_coursier) ? visite.medias_coursier : []),
+  ];
+
+  // Check if candidature already exists for this offer/client
+  useEffect(() => {
+    if (!visite.offre_id || !visite.client_id) return;
+    supabase
+      .from('candidatures')
+      .select('id')
+      .eq('offre_id', visite.offre_id)
+      .eq('client_id', visite.client_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setExistingCandidatureId(data.id);
+      });
+  }, [visite.offre_id, visite.client_id]);
+
+  const handlePostuler = async () => {
+    if (!visite.offre_id || !visite.client_id) {
+      toast.error("Offre introuvable");
+      return;
+    }
+    if (existingCandidatureId) {
+      navigate(`/client/mes-candidatures?candidatureId=${existingCandidatureId}`);
+      return;
+    }
+    setPosting(true);
+    try {
+      const { data, error } = await supabase
+        .from('candidatures')
+        .insert({
+          offre_id: visite.offre_id,
+          client_id: visite.client_id,
+          statut: 'en_attente',
+          message_client: 'Candidature déposée suite à la visite déléguée',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      await supabase
+        .from('visites')
+        .update({ client_decision: 'postule' })
+        .eq('id', visite.id);
+
+      toast.success('Candidature déposée — votre agent va la traiter sous 24h');
+      setExistingCandidatureId(data.id);
+      onUpdate?.();
+      navigate(`/client/mes-candidatures?candidatureId=${data.id}`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || 'Erreur lors du dépôt de candidature');
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const handleNotInterested = async () => {
+    setPosting(true);
+    try {
+      const { error } = await supabase
+        .from('visites')
+        .update({ client_decision: 'refuse' })
+        .eq('id', visite.id);
+      if (error) throw error;
+      toast.success('Décision enregistrée');
+      onUpdate?.();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur');
+    } finally {
+      setPosting(false);
+    }
+  };
 
   return (
     <div
@@ -76,47 +173,33 @@ export function PremiumFeedbackCard({
         'p-5 md:p-6',
         'transition-all duration-300',
         'hover:shadow-lg hover:shadow-emerald-500/10',
-        'hover:-translate-y-0.5',
         'animate-fade-in',
         className
       )}
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      {/* Shine effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-700" />
-      </div>
-
-      {/* Gradient accent */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/10 rounded-full blur-3xl opacity-50" />
 
-      {/* Content */}
       <div className="relative space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2 mb-2">
               <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <h3 className="font-semibold text-foreground">
-                {visite.adresse}
-              </h3>
+              <h3 className="font-semibold text-foreground">{visite.adresse}</h3>
             </div>
-            
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Calendar className="w-3.5 h-3.5" />
-              <span>
-                Visitée le {format(new Date(visite.updated_at), 'd MMMM yyyy', { locale: fr })}
-              </span>
+              <span>Visitée le {format(new Date(visite.updated_at), 'd MMMM yyyy', { locale: fr })} · par {visitorLabel}</span>
             </div>
           </div>
-
           <Badge className="shrink-0 bg-gradient-to-r from-emerald-600 to-green-500 text-white border-0">
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Effectuée
           </Badge>
         </div>
 
-        {/* Property specs */}
+        {/* Specs */}
         {visite.offres && (
           <div className="flex items-center gap-2 flex-wrap pb-4 border-b border-border/50">
             {visite.offres.pieces && (
@@ -141,70 +224,117 @@ export function PremiumFeedbackCard({
 
         {/* Recommandation */}
         {config && Icon && (
-          <div className={cn(
-            'p-4 rounded-xl border',
-            config.bgColor,
-            config.borderColor
-          )}>
+          <div className={cn('p-4 rounded-xl border', config.bgColor, config.borderColor)}>
             <div className="flex items-center gap-3">
-              <div className={cn(
-                'p-2 rounded-lg',
-                'bg-white/60 dark:bg-black/20',
-                'shadow-sm'
-              )}>
+              <div className="p-2 rounded-lg bg-white/60 dark:bg-black/20 shadow-sm">
                 <Icon className={cn('w-5 h-5', config.color)} />
               </div>
-              <span className={cn('font-semibold', config.color)}>
-                {config.label}
-              </span>
+              <span className={cn('font-semibold', config.color)}>{config.label} par {visitorLabel}</span>
             </div>
           </div>
         )}
 
-        {/* Feedback */}
-        {visite.feedback_agent && (
+        {/* Feedback texte */}
+        {feedbackText && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <MessageSquare className="w-4 h-4 text-primary" />
-              <span>Feedback de votre agent</span>
+              <span>Compte rendu de visite</span>
             </div>
-            <div className={cn(
-              'p-4 rounded-xl',
-              'bg-gradient-to-br from-muted/50 to-muted/30',
-              'border border-border/30',
-              'relative overflow-hidden'
-            )}>
-              {/* Quote decoration */}
-              <div className="absolute top-2 left-3 text-4xl text-primary/10 font-serif leading-none">
-                "
-              </div>
-              <p className="text-sm text-foreground/90 whitespace-pre-line pl-6">
-                {visite.feedback_agent}
-              </p>
+            <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/30 relative overflow-hidden">
+              <div className="absolute top-2 left-3 text-4xl text-primary/10 font-serif leading-none">"</div>
+              <p className="text-sm text-foreground/90 whitespace-pre-line pl-6">{feedbackText}</p>
             </div>
           </div>
         )}
 
-        {/* Action button */}
-        {visite.offres && (
-          <Button 
-            variant="outline" 
-            className={cn(
-              'w-full group/btn relative overflow-hidden',
-              'bg-gradient-to-r from-transparent to-transparent',
-              'hover:from-primary/5 hover:to-primary/10',
-              'border-primary/30 hover:border-primary/50',
-              'transition-all duration-300'
-            )}
-            onClick={() => navigate('/client/offres-recues')}
+        {/* Médias (photos + vidéos) */}
+        {allMedias.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-muted-foreground">
+              Photos & vidéos ({allMedias.length})
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {allMedias.map((m, i) => (
+                <button
+                  key={i}
+                  onClick={() => setMediaPreview(m)}
+                  className="relative aspect-square rounded-lg overflow-hidden border border-border/50 group/media hover:border-primary transition-all"
+                >
+                  {m.type?.startsWith('video') ? (
+                    <>
+                      <video src={m.url} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Play className="w-6 h-6 text-white drop-shadow-lg" />
+                      </div>
+                    </>
+                  ) : (
+                    <img src={m.url} alt={m.name || ''} loading="lazy" className="w-full h-full object-cover group-hover/media:scale-105 transition-transform" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        {visite.offre_id && visite.client_id && !existingCandidatureId && visite.client_decision !== 'refuse' && (
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <Button
+              onClick={handlePostuler}
+              disabled={posting}
+              className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            >
+              {posting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              Déposer ma candidature
+            </Button>
+            <Button
+              onClick={handleNotInterested}
+              disabled={posting}
+              variant="ghost"
+              className="text-muted-foreground"
+            >
+              Pas intéressé
+            </Button>
+          </div>
+        )}
+
+        {existingCandidatureId && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate(`/client/mes-candidatures?candidatureId=${existingCandidatureId}`)}
           >
-            <span className="relative z-10 flex items-center gap-2">
-              Voir l'offre complète
-              <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+            <span className="flex items-center gap-2">
+              Voir ma candidature
+              <ArrowRight className="w-4 h-4" />
             </span>
           </Button>
         )}
+
+        {visite.client_decision === 'refuse' && !existingCandidatureId && (
+          <div className="text-sm text-center text-muted-foreground italic py-2">
+            Vous n'êtes pas intéressé par ce bien
+          </div>
+        )}
       </div>
+
+      {/* Lightbox preview */}
+      {mediaPreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setMediaPreview(null)}
+        >
+          <button className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20" aria-label="Fermer">
+            <X className="w-6 h-6" />
+          </button>
+          {mediaPreview.type?.startsWith('video') ? (
+            <video src={mediaPreview.url} controls autoPlay className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
+          ) : (
+            <img src={mediaPreview.url} alt="" className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

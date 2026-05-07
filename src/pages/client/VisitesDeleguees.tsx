@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -10,8 +10,10 @@ import {
   PremiumEmptyState,
   PremiumVisiteDelegueSection,
   PremiumVisiteDelegueCard,
-  PremiumFeedbackCard
+  PremiumFeedbackCard,
+  PremiumCandidatureTimeline
 } from '@/components/premium';
+import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare, FileSignature } from 'lucide-react';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 export default function VisitesDeleguees() {
@@ -19,6 +21,7 @@ export default function VisitesDeleguees() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [visites, setVisites] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedVisiteId, setExpandedVisiteId] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -67,6 +70,20 @@ export default function VisitesDeleguees() {
         .order('created_at', { ascending: false });
 
       setVisites(visitesData || []);
+
+      // Load candidatures linked to delegated-visit offers
+      const offreIds = (visitesData || []).map(v => v.offre_id).filter(Boolean);
+      if (offreIds.length > 0) {
+        const { data: candData } = await supabase
+          .from('candidatures')
+          .select('id, statut, created_at, offre_id, avis_google_clicked_at, offres(adresse)')
+          .eq('client_id', clientData.id)
+          .in('offre_id', offreIds)
+          .order('created_at', { ascending: false });
+        setCandidatures(candData || []);
+      } else {
+        setCandidatures([]);
+      }
     } catch (error) {
       console.error('Error loading visites:', error);
     } finally {
@@ -210,6 +227,7 @@ export default function VisitesDeleguees() {
                 key={visite.id}
                 visite={visite}
                 index={index}
+                onUpdate={loadVisites}
               />
             ))
           ) : (
@@ -229,6 +247,26 @@ export default function VisitesDeleguees() {
             />
           )}
         </PremiumVisiteDelegueSection>
+
+        {/* Suivi des candidatures issues des visites déléguées */}
+        {candidatures.length > 0 && (
+          <PremiumVisiteDelegueSection
+            title="Suivi de mes candidatures"
+            description="De la candidature à la remise des clés"
+            icon={FileSignature}
+            count={candidatures.length}
+            variant="confirmed"
+            delay={500}
+          >
+            {candidatures.map((cand, index) => (
+              <PremiumCandidatureTimeline
+                key={cand.id}
+                candidature={cand}
+                index={index}
+              />
+            ))}
+          </PremiumVisiteDelegueSection>
+        )}
       </div>
     </div>
   );
