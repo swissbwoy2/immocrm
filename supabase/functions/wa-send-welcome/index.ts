@@ -30,11 +30,20 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("prenom")
+    .select("prenom, whatsapp_phone, telephone, whatsapp_opt_in")
     .eq("id", client.user_id)
     .maybeSingle();
 
   const prenom = profile?.prenom || "Client";
+
+  // Auto-enable opt-in on activation (client has signed the mandate consenting to communications)
+  // and ensure whatsapp_phone is populated (fallback to telephone)
+  const updates: Record<string, unknown> = {};
+  if (profile?.whatsapp_opt_in !== true) updates.whatsapp_opt_in = true;
+  if (!profile?.whatsapp_phone && profile?.telephone) updates.whatsapp_phone = profile.telephone;
+  if (Object.keys(updates).length > 0) {
+    await supabase.from("profiles").update(updates).eq("id", client.user_id);
+  }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
