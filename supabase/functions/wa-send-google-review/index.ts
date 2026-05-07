@@ -1,5 +1,6 @@
-// Cron J+3 after cles_remises: send google_review_request template
+// T12 — Cron J+7 after cles_remises: google_review_request (6 vars)
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { loadOffreDetails, callSendWhatsApp, loadAgentName } from "../_shared/wa-helpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,51 +15,41 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // candidatures whose cles_remises_at = today - 3 days, not yet sent
-  const targetDate = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
-
+  // J+7 window
+  const target = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
   const { data: candidatures } = await supabase
     .from("candidatures")
-    .select("id, client_id, cles_remises_at")
+    .select("id, client_id, offre_id, cles_remises_at")
     .eq("cles_remises", true)
     .eq("avis_google_envoye", false)
-    .gte("cles_remises_at", `${targetDate}T00:00:00Z`)
-    .lte("cles_remises_at", `${targetDate}T23:59:59Z`)
+    .gte("cles_remises_at", `${target}T00:00:00Z`)
+    .lte("cles_remises_at", `${target}T23:59:59Z`)
     .limit(50);
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   let sent = 0;
-
   for (const c of candidatures || []) {
     if (!c.client_id) continue;
-
+    const offre = await loadOffreDetails(supabase, c.offre_id);
     const { data: client } = await supabase.from("clients").select("user_id, agent_id").eq("id", c.client_id).maybeSingle();
     const { data: profile } = await supabase.from("profiles").select("prenom").eq("id", client?.user_id).maybeSingle();
-    let agentName = "votre agent";
-    if (client?.agent_id) {
-      const { data: agent } = await supabase.from("agents").select("user_id").eq("id", client.agent_id).maybeSingle();
-      if (agent?.user_id) {
-        const { data: ap } = await supabase.from("profiles").select("prenom").eq("id", agent.user_id).maybeSingle();
-        if (ap?.prenom) agentName = ap.prenom;
-      }
-    }
+    const agentName = await loadAgentName(supabase, client?.agent_id);
 
-    await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-      body: JSON.stringify({
-        event_type: "google_review_request",
-        template_key: "google_review_request",
-        client_id: c.client_id,
-        variables: [profile?.prenom || "Client", agentName],
-      }),
+    await callSendWhatsApp({
+      event_type: "google_review_request",
+      template_key: "google_review_request",
+      client_id: c.client_id,
+      preference_key: "agent_messages_enabled",
+      variables: [
+        profile?.prenom || "Client",
+        offre?.adresse || "votre nouveau logement",
+        agentName,
+        "5/5 ⭐",
+        "120",
+        agentName,
+      ],
     });
 
-    await supabase
-      .from("candidatures")
-      .update({ avis_google_envoye: true })
-      .eq("id", c.id);
+    await supabase.from("candidatures").update({ avis_google_envoye: true }).eq("id", c.id);
     sent++;
   }
 

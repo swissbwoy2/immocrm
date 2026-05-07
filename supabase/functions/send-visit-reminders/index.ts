@@ -318,7 +318,8 @@ serve(async (req) => {
 
       console.log(`Sent ${reminderType} reminder to ${recipientId} (${recipientRole}) for visit ${visite.id}`);
 
-      // 📱 WhatsApp 24h before — only for client recipient, day_before reminder (Lot 1)
+      // 📱 WhatsApp 24h before — only for client recipient, day_before reminder
+      // T4: 9 vars [prenom, heure, pieces, surface, adresse, prix, etage, lien_annonce, agent_name]
       if (recipientRole === 'client' && reminderType === 'day_before' && visite.client_id) {
         try {
           const { data: clientRow } = await supabase
@@ -326,22 +327,61 @@ serve(async (req) => {
           const { data: prof } = clientRow?.user_id
             ? await supabase.from('profiles').select('prenom').eq('id', clientRow.user_id).maybeSingle()
             : { data: null };
+
+          // Load offre details for full context
+          let offre: any = null;
+          if ((visite as any).offre_id) {
+            const { data: o } = await supabase
+              .from('offres')
+              .select('pieces, surface, adresse, prix, etage, lien_annonce')
+              .eq('id', (visite as any).offre_id)
+              .maybeSingle();
+            offre = o;
+          }
+
+          // Agent name
+          let agentName = 'votre agent';
+          if (visite.agent_id) {
+            const agentUserId2 = agentMap.get(visite.agent_id);
+            if (agentUserId2) {
+              const { data: ap } = await supabase
+                .from('profiles').select('prenom, nom').eq('id', agentUserId2).maybeSingle();
+              const full = `${ap?.prenom || ''} ${ap?.nom || ''}`.trim();
+              if (full) agentName = full;
+            }
+          }
+
           const heure = new Date(visite.date_visite).toLocaleTimeString('fr-CH', {
             hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich',
           });
+          const fmtPrix = (n: any) => n == null ? '—' : Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+          const lien = offre?.lien_annonce && String(offre.lien_annonce).trim() !== ''
+            ? offre.lien_annonce : 'Sur demande';
+
           await supabase.functions.invoke('send-whatsapp-notification', {
             body: {
               event_type: 'visit_reminder_24h',
               template_key: 'visit_reminder_24h',
               client_id: visite.client_id,
               preference_key: 'visit_reminders_enabled',
-              variables: [prof?.prenom || '', heure, visite.adresse || ''],
+              variables: [
+                prof?.prenom || 'Client',
+                heure,
+                String(offre?.pieces ?? '—'),
+                String(offre?.surface ?? '—'),
+                offre?.adresse || visite.adresse || '—',
+                fmtPrix(offre?.prix),
+                offre?.etage || '—',
+                lien,
+                agentName,
+              ],
             },
           });
         } catch (e) {
           console.warn('WA visit_reminder_24h failed (non-blocking)', e);
         }
       }
+
     }
 
 

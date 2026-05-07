@@ -1,5 +1,9 @@
-// Cron-driven: send post_visite_question 2h after visite effectuee
+// T5 — Cron post_visite_question (7 vars) H+3 after visite effectuee
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  fmtPieces, fmtPrixCHF, lienAnnonceOuFallback,
+  loadOffreDetails, loadAgentName, callSendWhatsApp,
+} from "../_shared/wa-helpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,38 +18,42 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Visites effectuees, date_visite >= 2h ago, no question sent yet
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
   const { data: visites } = await supabase
     .from("visites")
-    .select("id, client_id, adresse, date_visite")
+    .select("id, client_id, agent_id, offre_id, adresse, date_visite")
     .eq("statut", "effectuee")
     .eq("post_visit_question_sent", false)
-    .lte("date_visite", twoHoursAgo)
+    .lte("date_visite", threeHoursAgo)
     .limit(50);
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   let sent = 0;
-
   for (const v of visites || []) {
     if (!v.client_id) continue;
-    const { data: client } = await supabase.from("clients").select("user_id").eq("id", v.client_id).maybeSingle();
-    const { data: profile } = await supabase.from("profiles").select("prenom").eq("id", client?.user_id).maybeSingle();
+    const { data: client } = await supabase
+      .from("clients").select("user_id").eq("id", v.client_id).maybeSingle();
+    const { data: profile } = await supabase
+      .from("profiles").select("prenom").eq("id", client?.user_id).maybeSingle();
+    const offre = await loadOffreDetails(supabase, v.offre_id);
+    const agentName = await loadAgentName(supabase, v.agent_id);
 
-    await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-      body: JSON.stringify({
-        event_type: "post_visite_question",
-        template_key: "post_visite_question",
-        client_id: v.client_id,
-        variables: [profile?.prenom || "Client", v.adresse],
-      }),
+    await callSendWhatsApp({
+      event_type: "post_visite_question",
+      template_key: "post_visite_question",
+      client_id: v.client_id,
+      preference_key: "visit_reminders_enabled",
+      variables: [
+        profile?.prenom || "Client",
+        fmtPieces(offre?.pieces),
+        String(offre?.surface ?? "—"),
+        offre?.adresse || v.adresse || "—",
+        fmtPrixCHF(offre?.prix),
+        lienAnnonceOuFallback(offre?.lien_annonce),
+        agentName,
+      ],
     });
 
-    await supabase
-      .from("visites")
+    await supabase.from("visites")
       .update({ post_visit_question_sent: true, post_visit_question_sent_at: new Date().toISOString() })
       .eq("id", v.id);
     sent++;

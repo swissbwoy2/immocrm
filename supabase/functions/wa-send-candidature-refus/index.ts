@@ -1,8 +1,7 @@
-// T8 — wa-send-application-accepted (8 vars) — fr enrichi
+// T7 — wa-send-candidature-refus (7 vars) on UPDATE candidatures.statut=refusee
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-  fmtPieces, fmtPrixCHF, fmtDateCourtFR, lienAnnonceOuFallback,
-  loadOffreDetails, callSendWhatsApp,
+  fmtPieces, fmtPrixCHF, loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";
 
 const corsHeaders = {
@@ -18,7 +17,7 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const { candidature_id } = await req.json().catch(() => ({}));
+  const { candidature_id, motif } = await req.json().catch(() => ({}));
   if (!candidature_id) {
     return new Response(JSON.stringify({ error: "candidature_id required" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -26,10 +25,7 @@ Deno.serve(async (req) => {
   }
 
   const { data: c } = await supabase
-    .from("candidatures")
-    .select("id, client_id, offre_id, date_signature_choisie")
-    .eq("id", candidature_id)
-    .maybeSingle();
+    .from("candidatures").select("id, client_id, offre_id").eq("id", candidature_id).maybeSingle();
   if (!c?.client_id) return new Response(JSON.stringify({ skipped: "no_client" }), { status: 200, headers: corsHeaders });
 
   const offre = await loadOffreDetails(supabase, c.offre_id);
@@ -38,19 +34,18 @@ Deno.serve(async (req) => {
   const regieNom = (offre as any)?.regie_nom || client?.gerance_actuelle || "Régie";
 
   const result = await callSendWhatsApp({
-    event_type: "application_accepted",
-    template_key: "application_accepted",
+    event_type: "candidature_refus_client",
+    template_key: "candidature_refus_client",
     client_id: c.client_id,
     preference_key: "candidature_updates_enabled",
     variables: [
       profile?.prenom || "Client",
-      regieNom,
       fmtPieces(offre?.pieces),
       String(offre?.surface ?? "—"),
       offre?.adresse || "—",
       fmtPrixCHF(offre?.prix),
-      c.date_signature_choisie ? fmtDateCourtFR(c.date_signature_choisie) : "À confirmer",
-      lienAnnonceOuFallback(offre?.lien_annonce),
+      regieNom,
+      motif || "Non précisé",
     ],
   });
 
