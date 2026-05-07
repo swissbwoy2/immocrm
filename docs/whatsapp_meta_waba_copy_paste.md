@@ -3,6 +3,10 @@
 > Pour chaque template, va sur Meta Business Manager → WhatsApp Manager → Templates → **Créer template** (ou éditer si existe).
 > Catégorie · Langue · Header · Body · Footer · Boutons. Tous en `fr`.
 
+> ⚠️ **Mention "message automatique" intégrée en fin de Body** des templates clients T1–T14 (le champ Footer Meta est limité à 60 caractères) :
+> `--- Message automatique. Pour répondre, écrivez à votre agent sur WhatsApp ou via logisorama.ch`
+> Resoumission Meta requise après modification d'un template existant.
+
 ---
 
 ## T1 · `welcome_activation` · MARKETING
