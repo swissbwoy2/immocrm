@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
   const result = await callSendWhatsApp({
     event_type: "agent_message",
-    template_key: "agent_message",
+    template_key: "agent_message_alert",
     client_id,
     preference_key: "agent_messages_enabled",
     variables: [

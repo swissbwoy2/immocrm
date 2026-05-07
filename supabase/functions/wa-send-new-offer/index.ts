@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
   const result = await callSendWhatsApp({
     event_type: "new_offer",
-    template_key: "new_offer",
+    template_key: "new_offer_available",
     client_id: offreFull.client_id,
     preference_key: "offer_alerts_enabled",
     variables: [
