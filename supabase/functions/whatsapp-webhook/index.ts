@@ -231,7 +231,7 @@ async function handleLifecycleButton(
     // Find latest proposed visit for this client
     const { data: visite } = await supabase
       .from("visites")
-      .select("id, adresse, date_visite")
+      .select("id, adresse, date_visite, offre_id")
       .eq("client_id", client.id)
       .eq("statut", "proposee")
       .order("created_at", { ascending: false })
@@ -266,19 +266,43 @@ async function handleLifecycleButton(
 
     await sendWhatsAppText(phoneE164, clientReply);
 
-    // Forward to agent + admin via template alerte_agent_reponse_visite
+    // Load offre details for the 8-var template
+    let offre: any = null;
+    if (visite?.offre_id) {
+      const { data: o } = await supabase
+        .from("offres")
+        .select("pieces, surface, adresse, prix, lien_annonce")
+        .eq("id", visite.offre_id)
+        .maybeSingle();
+      offre = o;
+    }
+
+    const fmtPrix = (n: any) => {
+      if (n == null || n === "") return "—";
+      const num = typeof n === "string" ? parseFloat(n) : n;
+      if (!isFinite(num)) return String(n);
+      return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+    };
+    const creneau = visite?.date_visite
+      ? new Date(visite.date_visite).toLocaleString("fr-CH", { timeZone: "Europe/Zurich", dateStyle: "short", timeStyle: "short" })
+      : "—";
+
+    // Forward to agent + admin via template alerte_agent_reponse_visite (8 vars)
     await forwardClientReplyToStaff({
       supabase,
       clientId: client.id,
       agentId: client.agent_id,
-      summary: `${reponse} — visite ${visite?.adresse || ""}`,
+      summary: `${reponse} — visite ${offre?.adresse || visite?.adresse || ""}`,
       templateKey: "alerte_agent_reponse_visite",
       variables: [
-        clientName,
-        visite?.adresse || "—",
-        visite?.date_visite ? new Date(visite.date_visite).toLocaleString("fr-CH", { timeZone: "Europe/Zurich" }) : "—",
-        reponse,
-        profile.telephone || phoneE164,
+        clientName,                                  // {{1}} client
+        String(offre?.pieces ?? "—"),                // {{2}} pièces
+        String(offre?.surface ?? "—"),               // {{3}} surface
+        offre?.adresse || visite?.adresse || "—",    // {{4}} adresse
+        fmtPrix(offre?.prix),                        // {{5}} prix
+        creneau,                                     // {{6}} créneau
+        reponse,                                     // {{7}} réponse
+        offre?.lien_annonce || "Sur demande",        // {{8}} lien annonce
       ],
       notifTitle,
       notifLink: "/agent/visites",
