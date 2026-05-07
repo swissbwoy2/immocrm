@@ -303,6 +303,12 @@ export default function DemandesActivation() {
         .update({ statut: 'active' })
         .eq('id', demande.id);
 
+      // 📱 Envoi WhatsApp de bienvenue (fire-and-forget)
+      if (clientId) {
+        supabase.functions.invoke('wa-send-welcome', { body: { client_id: clientId } })
+          .catch((e) => console.error('wa-send-welcome failed:', e));
+      }
+
       // S'assurer que le profil est bien activé (éviter la désynchronisation)
       const { error: profileError } = await supabase
         .from('profiles')
