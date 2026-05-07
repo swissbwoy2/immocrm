@@ -30,11 +30,13 @@ export async function forwardClientReplyToStaff(args: ForwardArgs): Promise<void
       agentUserId = agent.user_id;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("whatsapp_phone, telephone, whatsapp_opt_in")
+        .select("whatsapp_phone, telephone")
         .eq("id", agent.user_id)
         .maybeSingle();
-      if (profile?.whatsapp_opt_in !== false) {
-        agentPhone = normalizePhoneE164(profile?.whatsapp_phone || profile?.telephone || "");
+      // Agents are staff: no opt-in required for operational alerts
+      agentPhone = normalizePhoneE164(profile?.whatsapp_phone || profile?.telephone || "");
+      if (!agentPhone) {
+        console.warn("forwardClientReplyToStaff: agent has no usable phone", agent.user_id);
       }
     }
   }
