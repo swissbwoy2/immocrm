@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
       description,
       lienAnnonceOuFallback(offre.lien_annonce),
     ],
+    // Dynamic suffix for the "Voir l'offre" URL button: full app link to the offer
+    url_button_params: [`client/offres-recues?offreId=${offre_id}`],
   });
 
   return new Response(JSON.stringify({ ok: true, result }), {
