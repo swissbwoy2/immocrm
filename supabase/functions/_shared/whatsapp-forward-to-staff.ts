@@ -71,6 +71,10 @@ export async function forwardClientReplyToStaff(args: ForwardArgs): Promise<void
   }
 
   for (const phone of [agentPhone, adminPhone].filter(Boolean) as string[]) {
+    if (excludeNorm && phone === excludeNorm) {
+      console.log("[forwardClientReplyToStaff] skip WA send: phone matches client phone", phone);
+      continue;
+    }
     if (templateKey) {
       await sendTemplateTo(phone);
     } else {
