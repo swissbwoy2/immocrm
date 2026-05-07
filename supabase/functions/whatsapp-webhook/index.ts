@@ -193,8 +193,9 @@ async function handleLifecycleButton(
   const id = (buttonId || "").trim();
 
   // Pattern detection
-  const isVisitYes = id === "visit_propose_yes" || /^oui.*(visite|particip)/i.test(txt) || txt === "oui, je participe" || txt === "je participe";
-  const isVisitNo = id === "visit_propose_no" || /^non.*(visite|merci)/i.test(txt) || txt === "non merci";
+  const isVisitYes = id === "visit_propose_yes" || /^oui.*(visite|particip)/i.test(txt) || txt === "oui, je participe" || txt === "je participe" || txt === "je confirme" || id === "visit_propose_confirm";
+  const isVisitNo = id === "visit_propose_no" || id === "visit_propose_unavailable" || /indisponible/i.test(txt) || /^non.*(visite|merci)/i.test(txt) || txt === "non merci";
+  const isVisitDelegate = id === "visit_propose_delegate" || /d[ée]l[ée]gu/i.test(txt);
   const isPostulate = id === "post_visit_postuler" || /postul|d[eé]poser.*candidature/i.test(txt);
   const isRefuseAfterVisit = id === "post_visit_refuser" || (txt.startsWith("non") && txt.includes("merci"));
   const isAppValidate = id === "application_validate" || /^je valide|^oui.*signer/i.test(txt);
@@ -203,7 +204,7 @@ async function handleLifecycleButton(
   const isKeysNotYet = id === "keys_not_yet" || /pas encore/i.test(txt);
   const isReviewLater = id === "review_later" || /plus tard/i.test(txt);
 
-  if (!isVisitYes && !isVisitNo && !isPostulate && !isRefuseAfterVisit
+  if (!isVisitYes && !isVisitNo && !isVisitDelegate && !isPostulate && !isRefuseAfterVisit
       && !isAppValidate && !isAppRefuse && !isKeysReceived && !isKeysNotYet && !isReviewLater) {
     return false;
   }
@@ -226,8 +227,8 @@ async function handleLifecycleButton(
 
   const clientName = `${profile.prenom || ""} ${profile.nom || ""}`.trim() || "Client";
 
-  // === VISIT YES/NO (response to template #3) ===
-  if (isVisitYes || isVisitNo) {
+  // === VISIT YES / NO / DELEGATE (response to template proposition_visite_client) ===
+  if (isVisitYes || isVisitNo || isVisitDelegate) {
     // Find latest proposed visit for this client
     const { data: visite } = await supabase
       .from("visites")
@@ -238,18 +239,35 @@ async function handleLifecycleButton(
       .limit(1)
       .maybeSingle();
 
-    const newStatut = isVisitYes ? "planifiee" : "annulee";
-    const reponse = isVisitYes ? "✅ Accepte" : "❌ Refuse";
+    let newStatut = "annulee";
+    let reponse = "❌ Refuse";
+    let clientReply = "Bien noté, visite annulée. Votre agent vous proposera d'autres créneaux.";
+    let notifTitle = "📅 Réponse client à proposition de visite";
 
-    if (visite) {
-      await supabase.from("visites").update({ statut: newStatut }).eq("id", visite.id);
+    if (isVisitYes) {
+      newStatut = "planifiee";
+      reponse = "✅ Accepte";
+      clientReply = "✅ Parfait ! Votre visite est confirmée. Vous recevrez un rappel 24h avant.";
+    } else if (isVisitDelegate) {
+      newStatut = "a_deleguer";
+      reponse = "🛵 Déléguée (coursier)";
+      clientReply = "✅ Bien noté ! Un coursier s'y rend pour vous et vous enverra photos + vidéo + compte-rendu.";
+      notifTitle = "🛵 Visite à déléguer (coursier)";
+    } else {
+      reponse = "❌ Indisponible";
     }
 
-    await sendWhatsAppText(phoneE164, isVisitYes
-      ? "✅ Parfait ! Votre visite est confirmée. Vous recevrez un rappel 24h avant."
-      : "Bien noté, visite annulée. Votre agent vous proposera d'autres biens prochainement.");
+    if (visite) {
+      const { error: updErr } = await supabase.from("visites").update({ statut: newStatut }).eq("id", visite.id);
+      if (updErr && isVisitDelegate) {
+        // Fallback if a_deleguer not in enum
+        await supabase.from("visites").update({ statut: "proposee" }).eq("id", visite.id);
+      }
+    }
 
-    // Forward to agent + admin via template #4
+    await sendWhatsAppText(phoneE164, clientReply);
+
+    // Forward to agent + admin via template alerte_agent_reponse_visite
     await forwardClientReplyToStaff({
       supabase,
       clientId: client.id,
@@ -263,7 +281,7 @@ async function handleLifecycleButton(
         reponse,
         profile.telephone || phoneE164,
       ],
-      notifTitle: "📅 Réponse client à proposition de visite",
+      notifTitle,
       notifLink: "/agent/visites",
     });
     return true;
