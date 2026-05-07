@@ -116,20 +116,13 @@ export function PremiumFeedbackCard({
     }
     setPosting(true);
     try {
-      const { data: agentRow } = await supabase
-        .from('clients')
-        .select('agent_id')
-        .eq('id', visite.client_id)
-        .maybeSingle();
-
       const { data, error } = await supabase
         .from('candidatures')
         .insert({
           offre_id: visite.offre_id,
           client_id: visite.client_id,
-          agent_id: agentRow?.agent_id ?? null,
-          statut: 'demandee',
-          source: 'visite_deleguee',
+          statut: 'en_attente',
+          message_client: 'Candidature déposée suite à la visite déléguée',
         })
         .select('id')
         .single();
