@@ -1901,6 +1901,7 @@ export type Database = {
           agent_valide_regie: boolean | null
           agent_valide_regie_at: string | null
           alerte_cles_vue: boolean | null
+          avis_google_clicked_at: string | null
           avis_google_envoye: boolean | null
           bail_recu: boolean | null
           bail_recu_at: string | null
@@ -1937,6 +1938,7 @@ export type Database = {
           agent_valide_regie?: boolean | null
           agent_valide_regie_at?: string | null
           alerte_cles_vue?: boolean | null
+          avis_google_clicked_at?: string | null
           avis_google_envoye?: boolean | null
           bail_recu?: boolean | null
           bail_recu_at?: string | null
@@ -1973,6 +1975,7 @@ export type Database = {
           agent_valide_regie?: boolean | null
           agent_valide_regie_at?: string | null
           alerte_cles_vue?: boolean | null
+          avis_google_clicked_at?: string | null
           avis_google_envoye?: boolean | null
           bail_recu?: boolean | null
           bail_recu_at?: string | null
@@ -10098,6 +10101,7 @@ export type Database = {
         Row: {
           adresse: string
           agent_id: string | null
+          client_decision: string | null
           client_id: string | null
           coursier_id: string | null
           created_at: string | null
@@ -10108,6 +10112,7 @@ export type Database = {
           feedback_coursier: string | null
           id: string
           medias: Json | null
+          medias_coursier: Json
           notes: string | null
           offre_id: string | null
           paye_coursier: boolean | null
@@ -10125,6 +10130,7 @@ export type Database = {
         Insert: {
           adresse: string
           agent_id?: string | null
+          client_decision?: string | null
           client_id?: string | null
           coursier_id?: string | null
           created_at?: string | null
@@ -10135,6 +10141,7 @@ export type Database = {
           feedback_coursier?: string | null
           id?: string
           medias?: Json | null
+          medias_coursier?: Json
           notes?: string | null
           offre_id?: string | null
           paye_coursier?: boolean | null
@@ -10152,6 +10159,7 @@ export type Database = {
         Update: {
           adresse?: string
           agent_id?: string | null
+          client_decision?: string | null
           client_id?: string | null
           coursier_id?: string | null
           created_at?: string | null
@@ -10162,6 +10170,7 @@ export type Database = {
           feedback_coursier?: string | null
           id?: string
           medias?: Json | null
+          medias_coursier?: Json
           notes?: string | null
           offre_id?: string | null
           paye_coursier?: boolean | null
