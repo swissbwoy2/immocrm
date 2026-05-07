@@ -306,7 +306,8 @@ async function handleLifecycleButton(
       ],
       notifTitle,
       notifLink: "/agent/visites",
-    });
+          excludePhone: phoneE164,
+      });
     return true;
   }
 
@@ -316,7 +317,7 @@ async function handleLifecycleButton(
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
     const { data: visite } = await supabase
       .from("visites")
-      .select("id, offre_id, adresse")
+      .select("id, offre_id, adresse, date_visite")
       .eq("client_id", client.id)
       .eq("statut", "effectuee")
       .gte("date_visite", sevenDaysAgo)
@@ -336,7 +337,29 @@ async function handleLifecycleButton(
         }
       }
 
-      // Send confirmation #7 to client
+      // Load offre details for proper templates
+      let offre: any = null;
+      if (visite?.offre_id) {
+        const { data: o } = await supabase.from("offres")
+          .select("pieces, surface, adresse, prix, lien_annonce")
+          .eq("id", visite.offre_id).maybeSingle();
+        offre = o;
+      }
+      const { data: clientFull } = await supabase
+        .from("clients").select("gerance_actuelle").eq("id", client.id).maybeSingle();
+      const regieNom = clientFull?.gerance_actuelle || "Régie";
+      const fmtPrix = (n: any) => {
+        if (n == null || n === "") return "—";
+        const num = typeof n === "string" ? parseFloat(n) : n;
+        if (!isFinite(num)) return String(n);
+        return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+      };
+      const visiteDateFR = visite?.date_visite
+        ? new Date(visite.date_visite).toLocaleDateString("fr-CH", { timeZone: "Europe/Zurich", day: "numeric", month: "long", year: "numeric" })
+        : "—";
+      const adresse = offre?.adresse || visite?.adresse || "—";
+
+      // Send confirmation #6 to client (8 vars: prenom, pieces, surface, adresse, prix, regie, lien, agent)
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
@@ -346,20 +369,39 @@ async function handleLifecycleButton(
           event_type: "candidature_demandee_client",
           template_key: "candidature_demandee_client",
           client_id: client.id,
-          variables: [profile.prenom || "Client", visite?.adresse || "—", agentName],
+          variables: [
+            profile.prenom || "Client",
+            String(offre?.pieces ?? "—"),
+            String(offre?.surface ?? "—"),
+            adresse,
+            fmtPrix(offre?.prix),
+            regieNom,
+            offre?.lien_annonce || "Sur demande",
+            agentName,
+          ],
         }),
       }).catch(() => {});
 
-      // Forward to agent + admin via template #9
+      // Forward to agent + admin via T16 alerte_agent_candidature (8 vars)
       await forwardClientReplyToStaff({
         supabase,
         clientId: client.id,
         agentId: client.agent_id,
-        summary: `🎯 ${clientName} veut postuler pour ${visite?.adresse || "ce bien"}`,
+        summary: `🎯 ${clientName} veut postuler pour ${adresse}`,
         templateKey: "alerte_agent_candidature",
-        variables: [clientName, visite?.adresse || "—", "https://logisorama.ch/agent/deposer-candidature"],
+        variables: [
+          clientName,
+          String(offre?.pieces ?? "—"),
+          String(offre?.surface ?? "—"),
+          adresse,
+          fmtPrix(offre?.prix),
+          visiteDateFR,
+          regieNom,
+          offre?.lien_annonce || "Sur demande",
+        ],
         notifTitle: "🎯 Nouvelle demande de candidature client",
         notifLink: "/agent/deposer-candidature",
+        excludePhone: phoneE164,
       });
     } else {
       // Send #8 refus
@@ -383,6 +425,7 @@ async function handleLifecycleButton(
         summary: `❌ ${clientName} ne souhaite pas postuler pour ${visite?.adresse || "ce bien"}`,
         notifTitle: "Client ne postule pas après visite",
         notifLink: "/agent/visites",
+              excludePhone: phoneE164,
       });
     }
     return true;
@@ -421,7 +464,8 @@ async function handleLifecycleButton(
         : `❌ ${clientName} refuse le dossier accepté`,
       notifTitle: isAppValidate ? "✅ Client valide la signature" : "❌ Client refuse le dossier",
       notifLink: "/agent/candidatures",
-    });
+          excludePhone: phoneE164,
+      });
     return true;
   }
 
@@ -455,7 +499,8 @@ async function handleLifecycleButton(
         : `⚠️ URGENT — ${clientName} n'a PAS encore reçu les clés`,
       notifTitle: isKeysReceived ? "✅ Clés confirmées par client" : "⚠️ URGENT — Clés non reçues",
       notifLink: "/agent/candidatures",
-    });
+          excludePhone: phoneE164,
+      });
     return true;
   }
 
@@ -541,7 +586,8 @@ async function handleNewQRButtons(
       summary,
       notifTitle,
       notifLink,
-    }).catch((e) => console.error("forward failed", e));
+          excludePhone: phoneE164,
+      }).catch((e) => console.error("forward failed", e));
   };
 
   // Lookup latest visite with offre context
@@ -1011,7 +1057,8 @@ Deno.serve(async (req) => {
               summary: `📱 [WA] ${text.slice(0, 250)}\n→ logisorama.ch/agent/messagerie`,
               notifTitle: "📱 Message WhatsApp client",
               notifLink: "/agent/messagerie",
-            }).catch((e) => console.error("forward failed", e));
+                          excludePhone: phoneE164,
+      }).catch((e) => console.error("forward failed", e));
           }
         }
       }

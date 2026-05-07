@@ -10,12 +10,17 @@ interface ForwardArgs {
   variables?: string[];
   notifTitle?: string;
   notifLink?: string;
+  // If set, skip WhatsApp send to this phone (e.g. when agent phone == client phone in tests)
+  // In-app + email notifications are still created.
+  excludePhone?: string | null;
 }
 
 const ADMIN_PHONE_RAW = Deno.env.get("WHATSAPP_ADMIN_PHONE") || "";
 
 export async function forwardClientReplyToStaff(args: ForwardArgs): Promise<void> {
-  const { supabase, clientId, agentId, summary, templateKey, variables, notifTitle, notifLink } = args;
+  const { supabase, clientId, agentId, summary, templateKey, variables, notifTitle, notifLink, excludePhone } = args;
+
+  const excludeNorm = excludePhone ? normalizePhoneE164(excludePhone) : null;
 
   // Resolve agent phone + user_id
   let agentPhone: string | null = null;
@@ -66,6 +71,10 @@ export async function forwardClientReplyToStaff(args: ForwardArgs): Promise<void
   }
 
   for (const phone of [agentPhone, adminPhone].filter(Boolean) as string[]) {
+    if (excludeNorm && phone === excludeNorm) {
+      console.log("[forwardClientReplyToStaff] skip WA send: phone matches client phone", phone);
+      continue;
+    }
     if (templateKey) {
       await sendTemplateTo(phone);
     } else {

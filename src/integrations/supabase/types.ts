@@ -10114,6 +10114,8 @@ export type Database = {
           post_visit_question_sent: boolean | null
           post_visit_question_sent_at: string | null
           recommandation_agent: string | null
+          reminder_24h_sent: boolean | null
+          reminder_24h_sent_at: string | null
           remuneration_coursier: number | null
           source: string | null
           statut: string | null
@@ -10139,6 +10141,8 @@ export type Database = {
           post_visit_question_sent?: boolean | null
           post_visit_question_sent_at?: string | null
           recommandation_agent?: string | null
+          reminder_24h_sent?: boolean | null
+          reminder_24h_sent_at?: string | null
           remuneration_coursier?: number | null
           source?: string | null
           statut?: string | null
@@ -10164,6 +10168,8 @@ export type Database = {
           post_visit_question_sent?: boolean | null
           post_visit_question_sent_at?: string | null
           recommandation_agent?: string | null
+          reminder_24h_sent?: boolean | null
+          reminder_24h_sent_at?: string | null
           remuneration_coursier?: number | null
           source?: string | null
           statut?: string | null
