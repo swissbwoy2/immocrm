@@ -30,6 +30,7 @@ export default function CoursierMissions() {
   const [feedbackMedias, setFeedbackMedias] = useState<any[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
 
   useEffect(() => {
     if (user) loadData();
