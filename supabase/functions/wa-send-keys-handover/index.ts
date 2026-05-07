@@ -1,5 +1,9 @@
-// Send keys_handover template
+// T11 — Send keys_handover (7 vars)
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  fmtPieces, fmtPrixCHF, fmtDateCourtFR,
+  loadOffreDetails, callSendWhatsApp,
+} from "../_shared/wa-helpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,35 +19,40 @@ Deno.serve(async (req) => {
   );
 
   const { candidature_id } = await req.json().catch(() => ({}));
-  if (!candidature_id) return new Response("missing", { status: 400, headers: corsHeaders });
+  if (!candidature_id) {
+    return new Response(JSON.stringify({ error: "candidature_id required" }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const { data: c } = await supabase
     .from("candidatures")
-    .select("client_id, offre_id")
-    .eq("id", candidature_id)
-    .maybeSingle();
-  if (!c?.client_id) return new Response("no data", { status: 200, headers: corsHeaders });
+    .select("client_id, offre_id, cles_remises_at")
+    .eq("id", candidature_id).maybeSingle();
+  if (!c?.client_id) return new Response(JSON.stringify({ skipped: "no_client" }), { status: 200, headers: corsHeaders });
 
-  const { data: offre } = await supabase.from("offres").select("adresse").eq("id", c.offre_id).maybeSingle();
+  const offre = await loadOffreDetails(supabase, c.offre_id);
   const { data: client } = await supabase.from("clients").select("user_id").eq("id", c.client_id).maybeSingle();
   const { data: profile } = await supabase.from("profiles").select("prenom").eq("id", client?.user_id).maybeSingle();
+  const dateClés = c.cles_remises_at ? fmtDateCourtFR(c.cles_remises_at) : fmtDateCourtFR(new Date().toISOString());
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notification`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
-    body: JSON.stringify({
-      event_type: "keys_handover",
-      template_key: "keys_handover",
-      client_id: c.client_id,
-      variables: [
-        profile?.prenom || "Client",
-        offre?.adresse || "votre logement",
-      ],
-      preference_key: "candidature_updates_enabled",
-    }),
+  const result = await callSendWhatsApp({
+    event_type: "keys_handover",
+    template_key: "keys_handover",
+    client_id: c.client_id,
+    preference_key: "candidature_updates_enabled",
+    variables: [
+      profile?.prenom || "Client",
+      fmtPieces(offre?.pieces),
+      String(offre?.surface ?? "—"),
+      offre?.adresse || "—",
+      fmtPrixCHF(offre?.prix),
+      dateClés,
+      "démarrer",
+    ],
   });
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ ok: true, result }), {
+    status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 });
