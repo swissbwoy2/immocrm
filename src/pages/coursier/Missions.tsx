@@ -117,7 +117,10 @@ export default function CoursierMissions() {
         .from('visites')
         .update({
           statut_coursier: 'termine',
+          statut: 'effectuee',
           feedback_coursier: feedback,
+          medias_coursier: feedbackMedias,
+          recommandation_agent: recommandation,
         })
         .eq('id', selectedMission.id);
 
@@ -126,6 +129,7 @@ export default function CoursierMissions() {
       setCompleteOpen(false);
       setFeedback('');
       setFeedbackMedias([]);
+      setRecommandation('neutre');
       loadData();
     } catch (error) {
       toast.error('Erreur lors de la complétion');
