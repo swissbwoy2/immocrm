@@ -220,18 +220,11 @@ const EnvoyerOffre = () => {
 
         if (offreError) throw offreError;
 
-        // 📱 Notification WhatsApp non bloquante (Lot 1)
+        // 📱 Notification WhatsApp non bloquante — template new_offer (9 vars chargées côté edge)
         try {
-          const prenom = client?.profiles?.prenom || '';
-          supabase.functions.invoke('send-whatsapp-notification', {
-            body: {
-              event_type: 'new_offer',
-              template_key: 'new_offer_available',
-              client_id: clientId,
-              preference_key: 'offer_alerts_enabled',
-              variables: [prenom, `https://logisorama.ch/client/offres-recues?offreId=${offre.id}`],
-            },
-          }).catch((e) => console.warn('WA send failed (non-blocking)', e));
+          supabase.functions.invoke('wa-send-new-offer', {
+            body: { offre_id: offre.id },
+          }).catch((e) => console.warn('WA new_offer failed (non-blocking)', e));
         } catch (e) {
           console.warn('WA invoke skipped', e);
         }
