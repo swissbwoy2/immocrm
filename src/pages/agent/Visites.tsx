@@ -621,7 +621,7 @@ export default function AgentVisites() {
     (v.est_deleguee && v.statut === 'planifiee' && !v.feedback_agent) ||
     (v.statut === 'deleguee' && (v.statut_coursier === 'a_assigner' || !v.statut_coursier))
   );
-  const visitesDelegueesAVenir = visites.filter(v => v.statut === 'deleguee' && new Date(v.date_visite) >= now);
+  const visitesDeleguees = visites.filter(v => (v.est_deleguee && v.statut === 'confirmee' && new Date(v.date_visite) >= now) || (v.statut === 'deleguee' && new Date(v.date_visite) >= now));
   const visitesAVenir = visites.filter(v => (v.statut === 'planifiee' || v.statut === 'confirmee' || v.statut === 'proposee') && new Date(v.date_visite) >= now && !v.est_deleguee);
   const visitesPassees = visites.filter(v => v.statut === 'effectuee' || v.statut === 'refusee' || ((v.statut === 'planifiee' || v.statut === 'confirmee') && new Date(v.date_visite) < now));
   
