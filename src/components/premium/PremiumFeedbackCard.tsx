@@ -165,7 +165,25 @@ export function PremiumFeedbackCard({
     }
   };
 
-  return (
+  const handleConfirmVisite = async () => {
+    setConfirming(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const { error } = await supabase
+        .from('visites')
+        .update({ client_confirme_visite_at: nowIso })
+        .eq('id', visite.id);
+      if (error) throw error;
+      setConfirmedAt(nowIso);
+      toast.success('Merci, compte rendu confirmé');
+      onUpdate?.();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
     <div
       className={cn(
         'group relative overflow-hidden rounded-xl',
