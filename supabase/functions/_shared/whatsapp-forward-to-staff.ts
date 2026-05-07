@@ -96,7 +96,7 @@ export async function forwardClientReplyToStaff(args: ForwardArgs): Promise<void
         p_title: title,
         p_message: summary.slice(0, 250),
         p_link: link,
-        p_data: { client_id: clientId },
+        p_metadata: { client_id: clientId },
       });
     } catch (e) {
       console.error("notif failed", e);
