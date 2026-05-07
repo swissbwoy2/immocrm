@@ -28,6 +28,7 @@ interface PremiumFeedbackCardProps {
     medias_coursier?: any;
     coursier_id?: string | null;
     client_decision?: string | null;
+    client_confirme_visite_at?: string | null;
     offres?: {
       pieces?: number;
       surface?: number;
