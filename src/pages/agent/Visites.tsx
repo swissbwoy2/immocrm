@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -94,6 +94,7 @@ export default function AgentVisites() {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -937,6 +938,18 @@ export default function AgentVisites() {
                 Annuler délégation
               </Button>
             </div>
+          )}
+
+          {/* Compte-rendu button — visible for past or completed visits */}
+          {!isShared && (isVisiteDatePassed || visite.statut === 'effectuee') && (
+            <Button
+              onClick={(e) => { e.stopPropagation(); navigate(`/agent/visites/${visite.id}/compte-rendu`); }}
+              variant="default"
+              size="sm"
+              className="w-full mt-2"
+            >
+              📝 Faire le compte-rendu
+            </Button>
           )}
         </div>
       </div>

@@ -100,6 +100,8 @@ const AgentOffresEnvoyees = lazy(() => import("./pages/agent/OffresEnvoyees"));
 const Wishlist = lazy(() => import("./pages/shared/Wishlist"));
 const AgentMessagerie = lazy(() => import("./pages/agent/Messagerie"));
 const AgentVisites = lazy(() => import("./pages/agent/Visites"));
+const AgentCompteRenduVisite = lazy(() => import("./pages/agent/CompteRenduVisite"));
+const AgentFicheDetailleeBien = lazy(() => import("./pages/agent/FicheDetailleeBien"));
 const AgentCalendrier = lazy(() => import("./pages/agent/Calendrier"));
 const AgentDocuments = lazy(() => import("./pages/agent/Documents"));
 const AgentConclureAffaire = lazy(() => import("./pages/agent/ConclureAffaire"));
@@ -338,6 +340,8 @@ const App = () => (
               <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/wishlist" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><Wishlist /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/visites/:id/compte-rendu" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCompteRenduVisite /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/offres/:id/fiche-detaillee" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFicheDetailleeBien /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/calendrier" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/documents" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDocuments /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
