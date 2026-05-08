@@ -269,6 +269,8 @@ Deno.serve(async (req) => {
       status: "sent",
       meta_message_id: metaMessageId,
       sent_at: new Date().toISOString(),
+      context_type: context_type ?? null,
+      context_ref: context_ref ?? null,
     });
 
     return new Response(JSON.stringify({ ok: true, meta_message_id: metaMessageId }), {
