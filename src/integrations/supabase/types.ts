@@ -2963,6 +2963,41 @@ export type Database = {
           },
         ]
       }
+      compte_rendu_alerts: {
+        Row: {
+          agent_id: string | null
+          alert_type: string
+          alerted_at: string
+          hours_late: number
+          id: string
+          visite_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          alert_type?: string
+          alerted_at?: string
+          hours_late: number
+          id?: string
+          visite_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          alert_type?: string
+          alerted_at?: string
+          hours_late?: number
+          id?: string
+          visite_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compte_rendu_alerts_visite_id_fkey"
+            columns: ["visite_id"]
+            isOneToOne: false
+            referencedRelation: "visites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           adresse: string | null
@@ -6162,6 +6197,7 @@ export type Database = {
         Row: {
           attachment_name: string | null
           attachment_size: number | null
+          attachment_thumbnail_url: string | null
           attachment_type: string | null
           attachment_url: string | null
           content: string | null
@@ -6177,6 +6213,7 @@ export type Database = {
         Insert: {
           attachment_name?: string | null
           attachment_size?: number | null
+          attachment_thumbnail_url?: string | null
           attachment_type?: string | null
           attachment_url?: string | null
           content?: string | null
@@ -6192,6 +6229,7 @@ export type Database = {
         Update: {
           attachment_name?: string | null
           attachment_size?: number | null
+          attachment_thumbnail_url?: string | null
           attachment_type?: string | null
           attachment_url?: string | null
           content?: string | null
