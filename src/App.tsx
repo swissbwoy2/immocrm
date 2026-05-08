@@ -100,6 +100,7 @@ const AgentOffresEnvoyees = lazy(() => import("./pages/agent/OffresEnvoyees"));
 const Wishlist = lazy(() => import("./pages/shared/Wishlist"));
 const AgentMessagerie = lazy(() => import("./pages/agent/Messagerie"));
 const AgentVisites = lazy(() => import("./pages/agent/Visites"));
+const AgentCompteRenduVisite = lazy(() => import("./pages/agent/CompteRenduVisite"));
 const AgentCalendrier = lazy(() => import("./pages/agent/Calendrier"));
 const AgentDocuments = lazy(() => import("./pages/agent/Documents"));
 const AgentConclureAffaire = lazy(() => import("./pages/agent/ConclureAffaire"));
