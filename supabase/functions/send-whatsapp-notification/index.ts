@@ -289,6 +289,8 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: String(err?.message || err).slice(0, 1000),
         failed_at: new Date().toISOString(),
+        context_type: context_type ?? null,
+        context_ref: context_ref ?? null,
       });
     } catch (_) { /* swallow */ }
     return new Response(JSON.stringify({ ok: false, error: String(err?.message || err) }), {
