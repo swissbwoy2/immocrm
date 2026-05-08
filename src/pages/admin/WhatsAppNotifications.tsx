@@ -207,9 +207,26 @@ export default function AdminWhatsAppNotifications() {
               <Input value={testVar2} onChange={(e) => setTestVar2(e.target.value)} />
             </div>
           </div>
-          <Button onClick={sendTest} disabled={sendingTest}>
-            {sendingTest ? "Envoi..." : "Envoyer"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={sendTest} disabled={sendingTest}>
+              {sendingTest ? "Envoi..." : "Envoyer test simple"}
+            </Button>
+            <Button variant="outline" onClick={runAllTemplatesTest} disabled={testingAll}>
+              {testingAll ? "Test en cours..." : "Tester TOUS les templates"}
+            </Button>
+          </div>
+          {allReport && (
+            <div className="mt-3 border rounded-md p-3 bg-muted/30">
+              <p className="text-sm font-medium mb-2">Rapport ({allReport.filter(r => r.ok).length}/{allReport.length} OK)</p>
+              <div className="space-y-1 max-h-64 overflow-auto text-xs font-mono">
+                {allReport.map((r) => (
+                  <div key={r.template_key} className={r.ok ? "text-emerald-600" : "text-red-600"}>
+                    {r.ok ? "✅" : "❌"} {r.template_key} {r.ok ? `→ ${r.meta_message_id?.slice(0, 30)}…` : `→ ${JSON.stringify(r.error).slice(0, 200)}`}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
