@@ -41,6 +41,24 @@ function pickMediaKind(att: Attachment): "image" | "video" | "audio" | "document
   return null;
 }
 
+function inferMime(att: Attachment): string {
+  if (att.mime) return att.mime.toLowerCase();
+  const name = (att.name || att.url || "").toLowerCase();
+  if (name.endsWith(".mp4")) return "video/mp4";
+  if (name.endsWith(".3gp") || name.endsWith(".3gpp")) return "video/3gpp";
+  if (name.endsWith(".mov")) return "video/quicktime";
+  if (name.endsWith(".webm")) return "video/webm";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  if (name.endsWith(".heic")) return "image/heic";
+  if (name.endsWith(".m4a")) return "audio/mp4";
+  if (name.endsWith(".aac")) return "audio/aac";
+  if (name.endsWith(".mp3")) return "audio/mpeg";
+  if (name.endsWith(".ogg") || name.endsWith(".opus")) return "audio/ogg";
+  return "";
+}
+
 function isMediaSendable(att: Attachment, kind: string): boolean {
   const size = att.size || 0;
   const mime = (att.mime || "").toLowerCase();
