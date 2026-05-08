@@ -24,6 +24,8 @@ interface LogRow {
   delivered_at: string | null;
   read_at: string | null;
   failed_at: string | null;
+  context_type?: string | null;
+  context_ref?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -47,6 +49,28 @@ export default function AdminWhatsAppNotifications() {
   const [testVar1, setTestVar1] = useState("Test");
   const [testVar2, setTestVar2] = useState("https://logisorama.ch");
   const [sendingTest, setSendingTest] = useState(false);
+  const [testingAll, setTestingAll] = useState(false);
+  const [allReport, setAllReport] = useState<any[] | null>(null);
+
+  const runAllTemplatesTest = async () => {
+    if (!testPhone) { toast.error("Numéro requis pour le test global"); return; }
+    setTestingAll(true);
+    setAllReport(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("wa-test-all-templates", {
+        body: { recipient_phone: testPhone },
+      });
+      if (error) throw error;
+      setAllReport((data as any)?.report || []);
+      const s = (data as any)?.summary;
+      if (s) toast.success(`Test global : ${s.ok}/${s.total} OK, ${s.failed} échec(s)`);
+      load();
+    } catch (e: any) {
+      toast.error("Erreur : " + (e?.message || "inconnue"));
+    } finally {
+      setTestingAll(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -183,9 +207,26 @@ export default function AdminWhatsAppNotifications() {
               <Input value={testVar2} onChange={(e) => setTestVar2(e.target.value)} />
             </div>
           </div>
-          <Button onClick={sendTest} disabled={sendingTest}>
-            {sendingTest ? "Envoi..." : "Envoyer"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={sendTest} disabled={sendingTest}>
+              {sendingTest ? "Envoi..." : "Envoyer test simple"}
+            </Button>
+            <Button variant="outline" onClick={runAllTemplatesTest} disabled={testingAll}>
+              {testingAll ? "Test en cours..." : "Tester TOUS les templates"}
+            </Button>
+          </div>
+          {allReport && (
+            <div className="mt-3 border rounded-md p-3 bg-muted/30">
+              <p className="text-sm font-medium mb-2">Rapport ({allReport.filter(r => r.ok).length}/{allReport.length} OK)</p>
+              <div className="space-y-1 max-h-64 overflow-auto text-xs font-mono">
+                {allReport.map((r) => (
+                  <div key={r.template_key} className={r.ok ? "text-emerald-600" : "text-red-600"}>
+                    {r.ok ? "✅" : "❌"} {r.template_key} {r.ok ? `→ ${r.meta_message_id?.slice(0, 30)}…` : `→ ${JSON.stringify(r.error).slice(0, 200)}`}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -230,6 +271,7 @@ export default function AdminWhatsAppNotifications() {
                     <TableHead>Template</TableHead>
                     <TableHead>Téléphone</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Contexte</TableHead>
                     <TableHead>Erreur</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -246,6 +288,9 @@ export default function AdminWhatsAppNotifications() {
                         <Badge className={STATUS_COLORS[l.status] || ""} variant="outline">
                           {l.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {l.context_ref ? <span className="font-mono">{l.context_type}:{l.context_ref.slice(0, 8)}</span> : "—"}
                       </TableCell>
                       <TableCell className="text-xs text-red-500 max-w-[280px] truncate">
                         {l.error_message || "—"}

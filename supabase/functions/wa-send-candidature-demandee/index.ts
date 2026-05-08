@@ -42,6 +42,8 @@ Deno.serve(async (req) => {
     event_type: "candidature_demandee_client",
     template_key: "candidature_demandee_client",
     client_id: c.client_id,
+    context_type: "candidature",
+    context_ref: candidature_id,
     preference_key: "candidature_updates_enabled",
     variables: [
       profile?.prenom || "Client",

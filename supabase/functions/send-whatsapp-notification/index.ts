@@ -31,6 +31,9 @@ interface ReqBody {
     | "agent_messages_enabled"
     | "candidature_updates_enabled"
     | null;
+  // Optional context tracking (e.g. candidature_id) for traceability in logs
+  context_type?: string | null;
+  context_ref?: string | null;
 }
 
 function normalizePhone(raw: string): string | null {
@@ -65,7 +68,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params, header_params } = body;
+  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params, header_params, context_type, context_ref } = body;
 
   if (!event_type || !template_key || !Array.isArray(variables)) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -246,6 +249,8 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: JSON.stringify(responseJson).slice(0, 1000),
         failed_at: new Date().toISOString(),
+        context_type: context_type ?? null,
+        context_ref: context_ref ?? null,
       });
       return new Response(JSON.stringify({ ok: false, error: responseJson }), {
         status: 200, // never block calling action
@@ -264,6 +269,8 @@ Deno.serve(async (req) => {
       status: "sent",
       meta_message_id: metaMessageId,
       sent_at: new Date().toISOString(),
+      context_type: context_type ?? null,
+      context_ref: context_ref ?? null,
     });
 
     return new Response(JSON.stringify({ ok: true, meta_message_id: metaMessageId }), {
@@ -282,6 +289,8 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: String(err?.message || err).slice(0, 1000),
         failed_at: new Date().toISOString(),
+        context_type: context_type ?? null,
+        context_ref: context_ref ?? null,
       });
     } catch (_) { /* swallow */ }
     return new Response(JSON.stringify({ ok: false, error: String(err?.message || err) }), {
