@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params, header_params } = body;
+  const { event_type, template_key, client_id, agent_id, recipient_phone_override, variables, preference_key, url_button_params, header_params, context_type, context_ref } = body;
 
   if (!event_type || !template_key || !Array.isArray(variables)) {
     return new Response(JSON.stringify({ error: "Missing required fields" }), {
