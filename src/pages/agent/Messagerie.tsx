@@ -551,6 +551,7 @@ const Messagerie = () => {
           sender_type: 'agent',
           content: content || null,
           attachment_url: pendingAttachment?.url || null,
+          attachment_thumbnail_url: (pendingAttachment as any)?.thumbnail_url || null,
           attachment_type: pendingAttachment?.type || null,
           attachment_name: pendingAttachment?.name || null,
           attachment_size: pendingAttachment?.size || null,
