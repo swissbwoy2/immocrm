@@ -341,6 +341,7 @@ const App = () => (
               <Route path="/agent/wishlist" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><Wishlist /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites/:id/compte-rendu" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCompteRenduVisite /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/offres/:id/fiche-detaillee" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFicheDetailleeBien /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/calendrier" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/documents" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDocuments /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
