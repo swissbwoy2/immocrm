@@ -1,119 +1,109 @@
-Deux plans complémentaires pour livrer tous les manques identifiés (hors calendrier partagé inter-agents).
+# Plan — Notifications push & Inbox WhatsApp temps réel
 
-# 📋 PLAN A — Communication, mobile & monitoring (priorité immédiate)
+État actuel relevé :
+- Tables `device_tokens` et `push_preferences` déjà présentes.
+- Edge function `send-push-notification` déjà déployée (FCM HTTP v1, JWT Google OAuth2).
+- Pages `/agent/whatsapp`, `/admin/whatsapp` et `/admin/whatsapp-logs` déjà créées avec realtime via `supabase.channel('postgres_changes')`.
+- Aucun secret FCM ni VAPID configurés. Aucune logique d'enregistrement de token côté client. Aucun déclencheur.
 
-Objectif : finir le triangle messagerie / WhatsApp / mobile pour que rien ne se perde, et donner aux admins une vraie console de supervision.
-
-## Lot A1 — Inbox WhatsApp dédié
-- Page **`/agent/whatsapp`** + **`/admin/whatsapp`** : timeline temps réel des messages entrants WhatsApp (filtrés depuis `messages` avec préfixe `📱 [WhatsApp]`), regroupés par client, avec badge non-lu, statut fenêtre 24h ouverte/fermée, lien direct vers la conversation.
-- Composant `WhatsAppBadge` réutilisable affiché dans la liste des conversations existantes (`Messagerie.tsx`) pour distinguer source WA vs in-app.
-- Realtime via `supabase.channel` sur la table `messages`.
-
-## Lot A2 — Notifications push mobiles (FCM + APNs via Capacitor)
-- Plugin `@capacitor/push-notifications` côté mobile + Web Push (VAPID) côté PWA pour navigateurs supportés.
-- Nouvelle table `device_tokens` (user_id, platform, token, last_seen_at, app_version).
-- Edge Function `push-notify` qui consomme les `notifications` insérées en DB et envoie aux tokens correspondants.
-- Préférences utilisateur : choisir les types (nouveau message, candidature, retard CR, paiement reçu).
-- Action manuelle utilisateur : créer un projet Firebase + secret `FCM_SERVER_KEY`.
-
-## Lot A3 — Console admin WhatsApp logs
-- Page **`/admin/whatsapp-logs`** : table des `whatsapp_notification_logs` avec filtres (statut, template, code erreur Meta, période, agent, client), recherche full-text, code 132001 mis en évidence.
-- Bouton **« Renvoyer »** par ligne (ré-invoque l'edge function du même `event_type`).
-- Stats en haut : taux de succès 24h / 7j, top 3 erreurs.
-- Bouton **« Tester un template »** (déjà couvert par `wa-test-all-templates` — branchement UI uniquement).
-
-## Lot A4 — Templates de messages rapides
-- Nouvelle table `message_templates` (agent_id nullable pour templates agence, label, body, variables `{{prenom}}`, `{{adresse}}`).
-- Sélecteur dans `MessageAttachmentUploader` / chat input : menu déroulant → insertion + remplacement variables auto.
-- Page `/agent/parametres/templates` pour CRUD personnel.
-
-## Lot A5 — Reconnaissance vocale compte-rendu
-- Bouton 🎤 dans `CompteRenduVisite.tsx` utilisant l'API native `webkitSpeechRecognition` (langue `fr-CH`) → texte injecté dans le champ `commentaire_libre`.
-- Fallback : enregistrement audio + transcription via Lovable AI (`google/gemini-2.5-flash` audio input) si API native indisponible.
+Le travail restant se concentre donc sur **2 lots**.
 
 ---
 
-# 📋 PLAN B — Workflow contractuel, finances & confiance (priorité moyenne)
+## Lot 1 — Activation des notifications push (envoi + réception)
 
-Objectif : combler les gros manques métier (signature, états des lieux, paiement, conformité) et améliorer le quotidien.
+### 1.1 Secrets requis (à demander au user via add_secret)
+- `FCM_SERVICE_ACCOUNT_JSON` : JSON du compte de service Firebase (Android + Web Push via FCM).
+- `APNS_KEY_P8`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` : pour iOS natif (Capacitor APNs direct si on n'utilise pas FCM iOS).
+- `VITE_FIREBASE_VAPID_KEY` (publique, dans `.env` ou en clair) : pour Web Push navigateur via FCM.
+- `VITE_FIREBASE_CONFIG` (publique) : config Firebase JS SDK pour Web Push.
 
-## Lot B1 — Page client de consultation du compte-rendu
-- Route publique signée `/cr/:visite_id?token=...` (token JWT 30j stocké dans `visite_comptes_rendus.public_token`).
-- Page mobile-first : médias (photos/vidéos), points forts/faibles, intérêt client, prochaines étapes.
-- Bouton « Télécharger PDF » via Edge Function `compte-rendu-pdf` (pdf-lib avec sanitization U+202F/U+00A0).
-- WhatsApp envoie maintenant ce lien `/cr/:id?token=...` au lieu du lien brut vidéo.
+Décision recommandée : **tout router via FCM** (Android + iOS + Web). Plus simple, un seul backend. APNs direct seulement si rejet App Store.
 
-## Lot B2 — Signature électronique du bail
-- Réutilise l'architecture **Mandat V3** (zero public write, edge functions à token) pour un nouveau module **Bail V1**.
-- Tables : `baux` (bien_id, locataire_id, proprietaire_id, statut, date_debut, loyer, charges, dépôt, pdf_url) + `bail_signatures` (signataire, type, signed_at, ip, user_agent, signature_image_path).
-- Pages publiques `/bail/:access_token/sign-locataire` et `/sign-proprietaire`.
-- Génération PDF côté serveur ; cron de relance non signataires (24h, 72h).
+### 1.2 Côté client web (PWA) — `src/lib/push/webPush.ts`
+- Init Firebase JS SDK + `getMessaging` + `getToken` avec VAPID.
+- Service worker `public/firebase-messaging-sw.js` pour notifications en background.
+- Fonction `registerWebPush()` : demande permission, récupère token FCM, enregistre dans `device_tokens` (`platform='web'`, `user_id`, `token`).
 
-## Lot B3 — État des lieux digital (entrée + sortie)
-- Table `etats_des_lieux` (bail_id, type entrée/sortie, signataire_locataire_at, signataire_proprietaire_at, pdf_url).
-- Table `etats_des_lieux_pieces` (eldl_id, nom_piece, ordre) + `etats_des_lieux_observations` (piece_id, élément, état, commentaire, photos[]).
-- Page agent mobile-first : pièce par pièce (cuisine/salon/chambres/sdb/extérieur), cases état (neuf/bon/usé/dégradé), zone photos (réutilise upload 1 GB).
-- Signature tactile des deux parties → PDF final + envoi WhatsApp + stockage dossier client.
+### 1.3 Côté Capacitor (mobile natif) — `src/lib/push/nativePush.ts`
+- `@capacitor/push-notifications` : `register()`, listener `registration` → token → `device_tokens` (`platform='ios'|'android'`).
+- Listener `pushNotificationReceived` (foreground) → toast.
+- Listener `pushNotificationActionPerformed` → navigation vers `link`.
 
-## Lot B4 — Paiement intégré TWINT / Carte
-- Connecter **Stripe** (TWINT activé en CH) via le tool `payments--enable_stripe_payments`.
-- Flow : page `/client/activation/payer` → Stripe Checkout 300 CHF → webhook `stripe-webhook` → marque `clients.frais_activation_payes_at` + déclenche `invite-client`.
-- Conserve AbaNinja en parallèle pour facturation comptable (Stripe pour l'encaissement, AbaNinja pour la facture).
+### 1.4 Hook unifié `usePushRegistration()`
+- Détecte `Capacitor.isNativePlatform()` → enregistre native, sinon web.
+- Appelé après login dans `App.tsx` ou `AuthProvider`.
+- Dédupe par `token` (unique constraint à vérifier dans `device_tokens`).
 
-## Lot B5 — Statistiques agent enrichies
-- Étendre `/admin/statistiques-agents` :
-  - Taux de conversion : candidatures envoyées → visites → reloges (par agent, mensuel).
-  - Durée moyenne mandat → reloge.
-  - ROI par source de lead (Instagram / Meta Ads / Direct / Google Ads).
-  - CA généré et commission projetée mois en cours.
-- Vue d'ensemble par graphique Recharts.
+### 1.5 Page préférences `/parametres/notifications`
+- Toggle global push + par catégorie : `nouveau_message`, `nouvelle_candidature`, `visite_confirmee`, `compte_rendu_rappel`, `bail_a_signer`, `paiement_recu`, `lead_assigne`.
+- Lit/écrit `push_preferences` (1 ligne par user, JSONB ou colonnes booléennes).
+- Bouton « Tester » → invoque `send-push-notification` sur soi-même.
 
-## Lot B6 — Recherche globale (Cmd+K / 🔍)
-- Composant `GlobalSearch` (cmdk) accessible Cmd+K ou icône loupe topbar.
-- Indexation côté client des entités visibles selon RLS : clients, biens, candidatures, transactions, mandats.
-- Résultats groupés, navigation clavier, raccourcis directs vers la fiche.
+### 1.6 Déclencheurs (database triggers + edge function)
+Créer triggers SQL `AFTER INSERT` qui appellent `pg_net` → edge function `dispatch-notification` (nouvelle, plus fine que `send-push-notification`) :
+| Table | Catégorie | Destinataires |
+|-------|-----------|---------------|
+| `messages` | nouveau_message | autres participants de la conversation |
+| `applications` (candidatures) | nouvelle_candidature | agent du bien + admins |
+| `visites` (status='confirmee') | visite_confirmee | client + agent |
+| `comptes_rendus` (rappel cron) | compte_rendu_rappel | agent en retard |
+| `baux` (status='a_signer') | bail_a_signer | locataire + propriétaire |
+| `payments` (status='paid') | paiement_recu | admins + agent |
+| `leads` (assigned) | lead_assigne | agent assigné |
 
-## Lot B7 — Audit log & RGPD
-- Table `audit_logs` (table_name, record_id, action, before, after, user_id, ip, ua, created_at) avec triggers sur `mandats`, `transactions`, `baux`, `clients`.
-- Page admin `/admin/audit-log` consultable.
-- Bouton client `/client/parametres/exporter-mes-donnees` → Edge Function `rgpd-export` qui génère un ZIP (profil JSON + documents + messages CSV).
-- Cron mensuel `cleanup-candidatures-rejetees` : supprime les candidatures `refusee` > 6 mois (soft delete avec `deleted_at`).
+Edge function `dispatch-notification` :
+- Reçoit `{event, record}`, mappe vers catégorie + liste user_ids.
+- Filtre selon `push_preferences`.
+- Appelle `send-push-notification` avec `link` profond (`/agent/whatsapp`, `/agent/visites/:id`, etc.).
+- Insère aussi dans `notifications_in_app` (cloche) pour fallback.
 
-## Lot B8 — 2FA admin/agent
-- Activer Supabase Auth MFA (TOTP) — déjà supporté nativement.
-- Page `/parametres/securite` : enrôlement QR code, codes de récupération.
-- Forcer MFA pour `role IN ('admin','agent')` après une période de grâce de 14 jours.
-
-## Lot B9 — Import/Export Excel
-- Bouton « Exporter Excel » sur `/admin/clients`, `/admin/transactions`, `/admin/biens-en-vente` via lib `xlsx` (côté client, pas de dépendance serveur).
-- Bouton « Importer » sur `/admin/clients` : aperçu + validation avant insertion (zod).
-
-## Lot B10 — Mode hors-ligne PWA (visite terrain)
-- Workbox : cache-first sur les assets ; stratégie `NetworkFirst` avec fallback IndexedDB pour les routes `/agent/visites`, `/agent/visites/:id/compte-rendu`, `/agent/mes-clients/:id`.
-- File d'attente locale (IndexedDB via `idb-keyval`) pour les médias uploadés hors ligne → sync automatique au retour réseau.
-- Indicateur visuel « 🔴 Hors ligne — 3 actions en attente ».
+### 1.7 iOS Capacitor — fichier `capacitor.config.ts`
+- Plugin `PushNotifications` déclaré, `ios.entitlements` doc fournie au user (manuel).
 
 ---
 
-## Détails techniques transverses
+## Lot 2 — Finalisation Inbox WhatsApp
 
-- Toutes les Edge Functions : `import { corsHeaders } from '@supabase/supabase-js/cors'` + JWT validation in-code + Europe/Zurich pour les dates.
-- Toutes les nouvelles tables : RLS activée, fonction `has_role` (LANGUAGE plpgsql + SECURITY DEFINER), pas de récursion.
-- Toutes les nouvelles vues : RLS via vue invoker, pas de SECURITY DEFINER view.
-- Mobile-first strict (91 % du trafic) : composants ≥ 44px tactile, bottom sheets sur mobile, safe-areas iOS.
-- PDF : sanitize U+202F / U+00A0 avant pdf-lib.
-- Pagination : `.limit(15000)` ou `fetchAllPaginated` partout.
-- Service Worker : pas de SKIP_WAITING.
+L'inbox existe déjà mais à compléter :
 
-## Hors périmètre des deux plans
-- Calendrier partagé inter-agents (exclu sur demande utilisateur).
-- Refonte de la landing publique (séparée si décidée plus tard).
-- Intégration Instagram Stories/Reels (suggestion analytics, à valider à part).
+### 2.1 Améliorations `WhatsAppInbox.tsx`
+- Vue **timeline conversationnelle groupée par client** (left = liste conversations, right = thread).
+- Distinction visuelle entrant (client → agent) vs sortant.
+- Compteur non lu par conversation, badge total dans `WhatsAppBadge` (sidebar).
+- Bouton **« Répondre »** ouvre composer rapide (texte libre + `MessageTemplatePicker` déjà créé).
+- Filtres : non lus, < 24h (fenêtre WhatsApp Business), par agent (admin).
+- Marquer comme lu au focus message.
 
-## Action utilisateur requise après implémentation
-- **Plan A** : créer projet Firebase (FCM) + envoyer `FCM_SERVER_KEY` ; rotation clé VAPID Web Push automatique.
-- **Plan B** : connecter compte Stripe (tool d'activation guidé) ; valider les 2 templates WhatsApp supplémentaires côté Meta si ajout.
+### 2.2 Routage profond depuis push
+- Notif « Nouveau message WhatsApp de X » → `link=/agent/whatsapp?conversation=<id>` → ouvre directement le thread.
 
-## Ordre d'exécution recommandé
-1. Plan A complet (impact opérationnel immédiat).
-2. Plan B : B1 → B2 → B3 (chaîne contractuelle) → B4 (revenus) → B5–B10 (qualité).
+### 2.3 Indicateur live
+- Pastille « En ligne » via canal `presence` Supabase déjà existant (mémoire projet).
+- Toast léger quand nouveau message arrive sur une conversation non ouverte.
+
+---
+
+## Hors périmètre
+- Calendrier inter-agents (exclu par demande précédente).
+- APNs direct (utilisation de FCM pour iOS via APNs sandbox/prod en backend Firebase).
+- Templates WhatsApp Meta nouveaux.
+
+---
+
+## Détails techniques
+- Edge functions : `corsHeaders`, validation JWT, dates Europe/Zurich, RLS via `has_role` (plpgsql + SECURITY DEFINER).
+- `pg_net` + `pg_cron` activés (déjà fait dans le projet).
+- `device_tokens` : index unique `(user_id, token)`, colonne `last_seen_at` mise à jour à chaque login.
+- Nettoyage tokens invalides (FCM `UNREGISTERED` → DELETE).
+- Pas de `SKIP_WAITING` dans le SW (mémoire projet).
+- Mobile-first ≥44px touch targets.
+
+---
+
+## Action requise après approbation
+1. Créer un projet Firebase + activer Cloud Messaging + générer compte de service JSON + clé VAPID.
+2. Me fournir `FCM_SERVICE_ACCOUNT_JSON` et `VITE_FIREBASE_VAPID_KEY` + `VITE_FIREBASE_CONFIG` (objet JSON public).
+3. Pour iOS App Store : activer Push Notifications capability dans Xcode (doc fournie).
+
+Approuvez pour démarrer Lot 1 puis Lot 2.
