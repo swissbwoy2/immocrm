@@ -295,8 +295,11 @@ export default function CompteRenduVisite() {
           />
 
           <div>
-            <Label>Commentaire libre</Label>
-            <Textarea rows={4} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} placeholder="Vos observations détaillées sur le bien..." />
+            <div className="flex items-center justify-between mb-1">
+              <Label>Commentaire libre</Label>
+              <VoiceDictationButton onTranscript={(t) => setCommentaire(t)} />
+            </div>
+            <Textarea rows={4} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} placeholder="Vos observations détaillées sur le bien... (ou utilisez le bouton 🎙️ Dicter)" />
           </div>
           <div>
             <Label>Prochaines étapes</Label>
