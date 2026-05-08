@@ -88,6 +88,10 @@ const AdminMetaLeads = lazy(() => import("./pages/admin/MetaLeads"));
 const AdminCampagnesSuivi = lazy(() => import("./pages/admin/CampagnesSuivi"));
 const AdminAgentIA = lazy(() => import("./pages/admin/AgentIA"));
 const AdminComptesRendus = lazy(() => import("./pages/admin/ComptesRendus"));
+const AdminWhatsAppInbox = lazy(() => import("./pages/admin/WhatsAppInbox"));
+const AdminWhatsAppLogs = lazy(() => import("./pages/admin/WhatsAppLogs"));
+const AgentWhatsAppInbox = lazy(() => import("./pages/agent/WhatsAppInbox"));
+const AgentMessageTemplates = lazy(() => import("./pages/agent/MessageTemplates"));
 const StaffMandatPrefill = lazy(() => import("./pages/staff/MandatPrefill"));
 const MandatV3SignOnly = lazy(() => import("./pages/mandat-v3/SignOnly"));
 
