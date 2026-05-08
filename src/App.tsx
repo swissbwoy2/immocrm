@@ -87,6 +87,7 @@ const AdminSalaires = lazy(() => import("./pages/admin/Salaires"));
 const AdminMetaLeads = lazy(() => import("./pages/admin/MetaLeads"));
 const AdminCampagnesSuivi = lazy(() => import("./pages/admin/CampagnesSuivi"));
 const AdminAgentIA = lazy(() => import("./pages/admin/AgentIA"));
+const AdminComptesRendus = lazy(() => import("./pages/admin/ComptesRendus"));
 const StaffMandatPrefill = lazy(() => import("./pages/staff/MandatPrefill"));
 const MandatV3SignOnly = lazy(() => import("./pages/mandat-v3/SignOnly"));
 
