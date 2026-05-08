@@ -24,6 +24,8 @@ interface LogRow {
   delivered_at: string | null;
   read_at: string | null;
   failed_at: string | null;
+  context_type?: string | null;
+  context_ref?: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
