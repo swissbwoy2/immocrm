@@ -249,6 +249,8 @@ Deno.serve(async (req) => {
         status: "failed",
         error_message: JSON.stringify(responseJson).slice(0, 1000),
         failed_at: new Date().toISOString(),
+        context_type: context_type ?? null,
+        context_ref: context_ref ?? null,
       });
       return new Response(JSON.stringify({ ok: false, error: responseJson }), {
         status: 200, // never block calling action
