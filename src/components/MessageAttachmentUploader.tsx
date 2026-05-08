@@ -37,6 +37,7 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
   const [preview, setPreview] = useState<AttachmentData | null>(null);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'document'; result: ConversionResult } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
