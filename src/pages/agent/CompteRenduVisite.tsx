@@ -157,21 +157,19 @@ export default function CompteRenduVisite() {
       const { data: conv } = await supabase
         .from("conversations")
         .select("id")
-        .eq("client_id", visite.client_id)
-        .eq("agent_id", visite.agent_id)
+        .eq("client_id", String(visite.client_id))
+        .eq("agent_id", String(visite.agent_id))
         .eq("conversation_type", "client-agent")
         .maybeSingle();
       let conversationId = conv?.id;
       if (!conversationId) {
-        const { data: { user } } = await supabase.auth.getUser();
         const { data: newConv, error: convErr } = await supabase
           .from("conversations")
           .insert({
-            client_id: visite.client_id,
-            agent_id: visite.agent_id,
+            client_id: String(visite.client_id),
+            agent_id: String(visite.agent_id),
             conversation_type: "client-agent",
             subject: `Compte-rendu visite ${visite.adresse}`,
-            created_by: user?.id,
           })
           .select("id")
           .single();
