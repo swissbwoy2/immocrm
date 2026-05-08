@@ -938,6 +938,18 @@ export default function AgentVisites() {
               </Button>
             </div>
           )}
+
+          {/* Compte-rendu button — visible for past or completed visits */}
+          {!isShared && (isVisiteDatePassed || visite.statut === 'effectuee') && (
+            <Button
+              onClick={(e) => { e.stopPropagation(); navigate(`/agent/visites/${visite.id}/compte-rendu`); }}
+              variant="default"
+              size="sm"
+              className="w-full mt-2"
+            >
+              📝 Faire le compte-rendu
+            </Button>
+          )}
         </div>
       </div>
     );
