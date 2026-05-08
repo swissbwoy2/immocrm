@@ -28,6 +28,7 @@ interface Attachment {
   mime?: string;
   name?: string;
   size?: number;
+  thumbnail_url?: string; // miniature pour vidéos (envoyée en image native si fenêtre 24h ouverte)
 }
 
 function pickMediaKind(att: Attachment): "image" | "video" | "audio" | "document" | null {
