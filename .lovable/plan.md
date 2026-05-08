@@ -1,109 +1,52 @@
-# Plan — Notifications push & Inbox WhatsApp temps réel
+# Plan — 2 fixes WhatsApp critiques
 
-État actuel relevé :
-- Tables `device_tokens` et `push_preferences` déjà présentes.
-- Edge function `send-push-notification` déjà déployée (FCM HTTP v1, JWT Google OAuth2).
-- Pages `/agent/whatsapp`, `/admin/whatsapp` et `/admin/whatsapp-logs` déjà créées avec realtime via `supabase.channel('postgres_changes')`.
-- Aucun secret FCM ni VAPID configurés. Aucune logique d'enregistrement de token côté client. Aucun déclencheur.
+## Bug 1 — Mauvais nom d'agent dans la notification WhatsApp client
 
-Le travail restant se concentre donc sur **2 lots**.
+**Cause** : Le trigger `notify_client_wa_on_agent_message` (migration `20260508004654`) utilise `conversations.agent_id` comme source de vérité pour le nom de l'agent, **ET** la fonction `wa-send-agent-message` fait `loadAgentName(supabase, agent_id || client?.agent_id)` — donc l'agent_id de la conversation prime.
 
----
+Confirmé en base sur le client Christ Ramazani (`82515fba`) :
+- `clients.agent_id` = `6fe4d48a` (Christ Ramazani) ← le vrai agent assigné
+- `conversations.agent_id` = `ed0ca4bb` (Victoria Martins) ← conversation rattachée à l'ancien agent
 
-## Lot 1 — Activation des notifications push (envoi + réception)
+→ Le template WhatsApp affiche « Votre agent Victoria Martins » au lieu de « Christ Ramazani ».
 
-### 1.1 Secrets requis (à demander au user via add_secret)
-- `FCM_SERVICE_ACCOUNT_JSON` : JSON du compte de service Firebase (Android + Web Push via FCM).
-- `APNS_KEY_P8`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` : pour iOS natif (Capacitor APNs direct si on n'utilise pas FCM iOS).
-- `VITE_FIREBASE_VAPID_KEY` (publique, dans `.env` ou en clair) : pour Web Push navigateur via FCM.
-- `VITE_FIREBASE_CONFIG` (publique) : config Firebase JS SDK pour Web Push.
+**Correctif** :
+1. Dans le trigger SQL `notify_client_wa_on_agent_message`, lire en priorité `clients.agent_id` (source de vérité projet : « Always keep client_agents and clients.agent_id in sync »). Fallback sur `conversations.agent_id` uniquement si null.
+2. Dans `wa-send-agent-message/index.ts`, inverser la priorité : `loadAgentName(supabase, client?.agent_id || agent_id)` — l'agent réel du client prime sur celui passé par la conversation.
+3. Optionnel mais utile : aligner la `conversations.agent_id` sur `clients.agent_id` pour les conversations existantes (UPDATE one-shot).
 
-Décision recommandée : **tout router via FCM** (Android + iOS + Web). Plus simple, un seul backend. APNs direct seulement si rejet App Store.
+## Bug 2 — Victoria ne reçoit aucun WhatsApp quand un client lui répond
 
-### 1.2 Côté client web (PWA) — `src/lib/push/webPush.ts`
-- Init Firebase JS SDK + `getMessaging` + `getToken` avec VAPID.
-- Service worker `public/firebase-messaging-sw.js` pour notifications en background.
-- Fonction `registerWebPush()` : demande permission, récupère token FCM, enregistre dans `device_tokens` (`platform='web'`, `user_id`, `token`).
+**Cause** : Dans `whatsapp-webhook` (ligne 1062), `forwardClientReplyToStaff` est appelé **sans `templateKey`**. Le helper tombe alors dans la branche « free text » via `sendWhatsAppText`, qui n'est livrée par Meta **que si la fenêtre 24h est ouverte côté destinataire** (l'agent). Comme l'agent n'a jamais initié de chat WhatsApp avec le numéro Logisorama, sa fenêtre n'est jamais ouverte → Meta rejette silencieusement (erreur 131047 / 131051).
 
-### 1.3 Côté Capacitor (mobile natif) — `src/lib/push/nativePush.ts`
-- `@capacitor/push-notifications` : `register()`, listener `registration` → token → `device_tokens` (`platform='ios'|'android'`).
-- Listener `pushNotificationReceived` (foreground) → toast.
-- Listener `pushNotificationActionPerformed` → navigation vers `link`.
+Vérifications faites :
+- `_shared/whatsapp-forward-to-staff.ts` confirme : `if (templateKey) sendTemplateTo else sendWhatsAppText` (texte libre).
+- Aucun template HSM staff n'est aujourd'hui passé pour le forward d'un message texte WhatsApp.
 
-### 1.4 Hook unifié `usePushRegistration()`
-- Détecte `Capacitor.isNativePlatform()` → enregistre native, sinon web.
-- Appelé après login dans `App.tsx` ou `AuthProvider`.
-- Dédupe par `token` (unique constraint à vérifier dans `device_tokens`).
+**Correctif** :
+1. Créer (ou réutiliser) un template Meta utilitaire **`staff_client_inbound`** (FR, UTILITY) avec 3 variables :
+   - `{{1}}` = prénom client
+   - `{{2}}` = extrait du message (200 char max, U+202F/U+00A0 nettoyés)
+   - `{{3}}` = lien `logisorama.ch/agent/whatsapp?conversation={id}`
+   
+   Body proposé :
+   > 📱 *Nouveau message WhatsApp*  
+   > {{1}} vient de vous écrire :  
+   > « {{2}} »  
+   > Répondez ici : {{3}}
 
-### 1.5 Page préférences `/parametres/notifications`
-- Toggle global push + par catégorie : `nouveau_message`, `nouvelle_candidature`, `visite_confirmee`, `compte_rendu_rappel`, `bail_a_signer`, `paiement_recu`, `lead_assigne`.
-- Lit/écrit `push_preferences` (1 ligne par user, JSONB ou colonnes booléennes).
-- Bouton « Tester » → invoque `send-push-notification` sur soi-même.
-
-### 1.6 Déclencheurs (database triggers + edge function)
-Créer triggers SQL `AFTER INSERT` qui appellent `pg_net` → edge function `dispatch-notification` (nouvelle, plus fine que `send-push-notification`) :
-| Table | Catégorie | Destinataires |
-|-------|-----------|---------------|
-| `messages` | nouveau_message | autres participants de la conversation |
-| `applications` (candidatures) | nouvelle_candidature | agent du bien + admins |
-| `visites` (status='confirmee') | visite_confirmee | client + agent |
-| `comptes_rendus` (rappel cron) | compte_rendu_rappel | agent en retard |
-| `baux` (status='a_signer') | bail_a_signer | locataire + propriétaire |
-| `payments` (status='paid') | paiement_recu | admins + agent |
-| `leads` (assigned) | lead_assigne | agent assigné |
-
-Edge function `dispatch-notification` :
-- Reçoit `{event, record}`, mappe vers catégorie + liste user_ids.
-- Filtre selon `push_preferences`.
-- Appelle `send-push-notification` avec `link` profond (`/agent/whatsapp`, `/agent/visites/:id`, etc.).
-- Insère aussi dans `notifications_in_app` (cloche) pour fallback.
-
-### 1.7 iOS Capacitor — fichier `capacitor.config.ts`
-- Plugin `PushNotifications` déclaré, `ios.entitlements` doc fournie au user (manuel).
-
----
-
-## Lot 2 — Finalisation Inbox WhatsApp
-
-L'inbox existe déjà mais à compléter :
-
-### 2.1 Améliorations `WhatsAppInbox.tsx`
-- Vue **timeline conversationnelle groupée par client** (left = liste conversations, right = thread).
-- Distinction visuelle entrant (client → agent) vs sortant.
-- Compteur non lu par conversation, badge total dans `WhatsAppBadge` (sidebar).
-- Bouton **« Répondre »** ouvre composer rapide (texte libre + `MessageTemplatePicker` déjà créé).
-- Filtres : non lus, < 24h (fenêtre WhatsApp Business), par agent (admin).
-- Marquer comme lu au focus message.
-
-### 2.2 Routage profond depuis push
-- Notif « Nouveau message WhatsApp de X » → `link=/agent/whatsapp?conversation=<id>` → ouvre directement le thread.
-
-### 2.3 Indicateur live
-- Pastille « En ligne » via canal `presence` Supabase déjà existant (mémoire projet).
-- Toast léger quand nouveau message arrive sur une conversation non ouverte.
-
----
-
-## Hors périmètre
-- Calendrier inter-agents (exclu par demande précédente).
-- APNs direct (utilisation de FCM pour iOS via APNs sandbox/prod en backend Firebase).
-- Templates WhatsApp Meta nouveaux.
-
----
+2. Insérer le template dans `whatsapp_templates` (statut PENDING jusqu'à validation Meta — à soumettre côté Meta Business Manager par l'utilisateur).
+3. Modifier le call dans `whatsapp-webhook/index.ts` pour passer `templateKey: "staff_client_inbound"` + variables. Garder le free text en **second** essai (best-effort) si la fenêtre est ouverte.
+4. Logger explicitement `whatsapp_notification_logs` côté forward staff (event_type `staff_client_inbound`) pour debug.
 
 ## Détails techniques
-- Edge functions : `corsHeaders`, validation JWT, dates Europe/Zurich, RLS via `has_role` (plpgsql + SECURITY DEFINER).
-- `pg_net` + `pg_cron` activés (déjà fait dans le projet).
-- `device_tokens` : index unique `(user_id, token)`, colonne `last_seen_at` mise à jour à chaque login.
-- Nettoyage tokens invalides (FCM `UNREGISTERED` → DELETE).
-- Pas de `SKIP_WAITING` dans le SW (mémoire projet).
-- Mobile-first ≥44px touch targets.
+- Triggers PL/pgSQL : `LANGUAGE plpgsql + SECURITY DEFINER` (mémoire projet RLS).
+- Edge functions : `corsHeaders`, dates Europe/Zurich, sanitisation `replace(/[\u202F\u00A0]/g, ' ')` sur `message_extract`.
+- Pas de modification du flux client → conversation (déjà OK).
+- Action requise utilisateur : créer le template `staff_client_inbound` dans Meta Business Manager (je fournirai le copy-paste exact dans `docs/whatsapp_templates_logisorama_v3.md`).
 
----
+## Hors périmètre
+- Refonte de l'inbox WhatsApp (déjà livrée).
+- Push notifications (en attente des secrets Firebase).
 
-## Action requise après approbation
-1. Créer un projet Firebase + activer Cloud Messaging + générer compte de service JSON + clé VAPID.
-2. Me fournir `FCM_SERVICE_ACCOUNT_JSON` et `VITE_FIREBASE_VAPID_KEY` + `VITE_FIREBASE_CONFIG` (objet JSON public).
-3. Pour iOS App Store : activer Push Notifications capability dans Xcode (doc fournie).
-
-Approuvez pour démarrer Lot 1 puis Lot 2.
+Approuvez pour appliquer les 2 fixes.
