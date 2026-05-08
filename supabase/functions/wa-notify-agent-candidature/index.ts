@@ -58,6 +58,8 @@ Deno.serve(async (req) => {
     template_key: "alerte_agent_candidature",
     recipient_phone_override: agentPhone,
     agent_id: client.agent_id,
+    context_type: "candidature",
+    context_ref: candidature_id,
     variables: [
       clientFull,
       fmtPieces(offre?.pieces),
