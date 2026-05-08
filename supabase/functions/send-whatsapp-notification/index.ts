@@ -31,6 +31,9 @@ interface ReqBody {
     | "agent_messages_enabled"
     | "candidature_updates_enabled"
     | null;
+  // Optional context tracking (e.g. candidature_id) for traceability in logs
+  context_type?: string | null;
+  context_ref?: string | null;
 }
 
 function normalizePhone(raw: string): string | null {
