@@ -1,104 +1,119 @@
-## Objectif
+Deux plans complémentaires pour livrer tous les manques identifiés (hors calendrier partagé inter-agents).
 
-1. Rendre le compte-rendu de visite **obligatoire** (non bloquant, mais avec rappels et alerte admin).
-2. Permettre à l'agent d'uploader des **vidéos mobiles jusqu'à 1 GB** (iPhone/Android, depuis caméra ou galerie) dans la messagerie et le compte-rendu.
-3. Envoyer ces vidéos au client via WhatsApp sous forme de **lien sécurisé + miniature** générée automatiquement.
+# 📋 PLAN A — Communication, mobile & monitoring (priorité immédiate)
 
----
+Objectif : finir le triangle messagerie / WhatsApp / mobile pour que rien ne se perde, et donner aux admins une vraie console de supervision.
 
-## Lot 1 — Compte-rendu obligatoire (non bloquant + rappels + alerte admin)
+## Lot A1 — Inbox WhatsApp dédié
+- Page **`/agent/whatsapp`** + **`/admin/whatsapp`** : timeline temps réel des messages entrants WhatsApp (filtrés depuis `messages` avec préfixe `📱 [WhatsApp]`), regroupés par client, avec badge non-lu, statut fenêtre 24h ouverte/fermée, lien direct vers la conversation.
+- Composant `WhatsAppBadge` réutilisable affiché dans la liste des conversations existantes (`Messagerie.tsx`) pour distinguer source WA vs in-app.
+- Realtime via `supabase.channel` sur la table `messages`.
 
-### Logique de statut
-Sur la table `visites`, ajout d'une colonne calculée logique `compte_rendu_status` (via vue ou logique côté UI) basée sur :
-- `effectuee_at` : timestamp de fin de visite
-- `visite_comptes_rendus.envoye_au_client_at` : preuve d'envoi
+## Lot A2 — Notifications push mobiles (FCM + APNs via Capacitor)
+- Plugin `@capacitor/push-notifications` côté mobile + Web Push (VAPID) côté PWA pour navigateurs supportés.
+- Nouvelle table `device_tokens` (user_id, platform, token, last_seen_at, app_version).
+- Edge Function `push-notify` qui consomme les `notifications` insérées en DB et envoie aux tokens correspondants.
+- Préférences utilisateur : choisir les types (nouveau message, candidature, retard CR, paiement reçu).
+- Action manuelle utilisateur : créer un projet Firebase + secret `FCM_SERVER_KEY`.
 
-États :
-- `non_requis` : visite future ou annulée
-- `a_faire` : visite effectuée, < 24h, pas de compte-rendu
-- `en_retard` : effectuée, > 24h, pas de compte-rendu  
-- `fait` : compte-rendu envoyé au client
+## Lot A3 — Console admin WhatsApp logs
+- Page **`/admin/whatsapp-logs`** : table des `whatsapp_notification_logs` avec filtres (statut, template, code erreur Meta, période, agent, client), recherche full-text, code 132001 mis en évidence.
+- Bouton **« Renvoyer »** par ligne (ré-invoque l'edge function du même `event_type`).
+- Stats en haut : taux de succès 24h / 7j, top 3 erreurs.
+- Bouton **« Tester un template »** (déjà couvert par `wa-test-all-templates` — branchement UI uniquement).
 
-### UI Agent
-- **Liste des visites** (`/agent/visites`) : badge rouge "⚠️ Compte-rendu manquant" sur les visites `en_retard`. Tri en haut de liste.
-- **Dashboard agent** : widget "Comptes-rendus à faire" avec compteur cliquable.
-- **Notification in-app** quotidienne (toast au login) listant les comptes-rendus en retard.
+## Lot A4 — Templates de messages rapides
+- Nouvelle table `message_templates` (agent_id nullable pour templates agence, label, body, variables `{{prenom}}`, `{{adresse}}`).
+- Sélecteur dans `MessageAttachmentUploader` / chat input : menu déroulant → insertion + remplacement variables auto.
+- Page `/agent/parametres/templates` pour CRUD personnel.
 
-### UI Admin
-- **Dashboard admin** : nouveau widget "Comptes-rendus en retard" (par agent, par âge).
-- **Page `/admin/comptes-rendus`** : liste filtrable (agent, état, date), permet de relancer l'agent.
-- **Alerte automatique** : Edge Function cron quotidienne (8h Europe/Zurich) qui :
-  - Détecte les visites effectuées depuis > 48h sans compte-rendu
-  - Envoie une notification in-app à l'admin
-  - Envoie un email récap à l'admin (1 par jour, groupé)
-
-### Pas de blocage
-L'agent peut continuer à utiliser l'app normalement. Seuls les badges, notifications et alertes admin sont activés.
+## Lot A5 — Reconnaissance vocale compte-rendu
+- Bouton 🎤 dans `CompteRenduVisite.tsx` utilisant l'API native `webkitSpeechRecognition` (langue `fr-CH`) → texte injecté dans le champ `commentaire_libre`.
+- Fallback : enregistrement audio + transcription via Lovable AI (`google/gemini-2.5-flash` audio input) si API native indisponible.
 
 ---
 
-## Lot 2 — Upload vidéo mobile jusqu'à 1 GB
+# 📋 PLAN B — Workflow contractuel, finances & confiance (priorité moyenne)
 
-### Buckets storage
-- `visite-medias` : passer la limite de fichier à **1 GB** (1073741824 bytes), MIME types autorisés : `video/mp4`, `video/quicktime` (iPhone .mov), `video/3gpp`, `video/webm`, `image/*`.
-- `bien-medias` : idem.
-- Bucket messagerie (à identifier via codebase) : idem 1 GB.
+Objectif : combler les gros manques métier (signature, états des lieux, paiement, conformité) et améliorer le quotidien.
 
-### Upload côté mobile (`MessageAttachmentUploader.tsx`)
-- Boutons distincts :
-  - 📷 **Photo (caméra)** : `accept="image/*" capture="environment"`
-  - 🎥 **Vidéo (caméra)** : `accept="video/*" capture="environment"`
-  - 🖼️ **Galerie** : `accept="image/*,video/*"` (sans capture, ouvre la galerie native)
-- **Upload chunké/resumable** via Supabase storage `upload` avec `upsert: false` ; pour les fichiers > 50 MB, utiliser `uploadToSignedUrl` avec progress tracking.
-- **Barre de progression** visible (% + MB/s) avec bouton "Annuler".
-- **Validation client** : refuser > 1 GB avec message clair, avertir si > 100 MB sur connexion mobile.
+## Lot B1 — Page client de consultation du compte-rendu
+- Route publique signée `/cr/:visite_id?token=...` (token JWT 30j stocké dans `visite_comptes_rendus.public_token`).
+- Page mobile-first : médias (photos/vidéos), points forts/faibles, intérêt client, prochaines étapes.
+- Bouton « Télécharger PDF » via Edge Function `compte-rendu-pdf` (pdf-lib avec sanitization U+202F/U+00A0).
+- WhatsApp envoie maintenant ce lien `/cr/:id?token=...` au lieu du lien brut vidéo.
 
-### Génération de miniature vidéo (côté client)
-- Utiliser `<video>` + `<canvas>` pour extraire une frame à t=1s.
-- Upload de la miniature `.jpg` dans le même bucket sous `<video_path>.thumb.jpg`.
-- Stockage du chemin de la miniature à côté de la vidéo dans les métadonnées du message / compte-rendu.
+## Lot B2 — Signature électronique du bail
+- Réutilise l'architecture **Mandat V3** (zero public write, edge functions à token) pour un nouveau module **Bail V1**.
+- Tables : `baux` (bien_id, locataire_id, proprietaire_id, statut, date_debut, loyer, charges, dépôt, pdf_url) + `bail_signatures` (signataire, type, signed_at, ip, user_agent, signature_image_path).
+- Pages publiques `/bail/:access_token/sign-locataire` et `/sign-proprietaire`.
+- Génération PDF côté serveur ; cron de relance non signataires (24h, 72h).
+
+## Lot B3 — État des lieux digital (entrée + sortie)
+- Table `etats_des_lieux` (bail_id, type entrée/sortie, signataire_locataire_at, signataire_proprietaire_at, pdf_url).
+- Table `etats_des_lieux_pieces` (eldl_id, nom_piece, ordre) + `etats_des_lieux_observations` (piece_id, élément, état, commentaire, photos[]).
+- Page agent mobile-first : pièce par pièce (cuisine/salon/chambres/sdb/extérieur), cases état (neuf/bon/usé/dégradé), zone photos (réutilise upload 1 GB).
+- Signature tactile des deux parties → PDF final + envoi WhatsApp + stockage dossier client.
+
+## Lot B4 — Paiement intégré TWINT / Carte
+- Connecter **Stripe** (TWINT activé en CH) via le tool `payments--enable_stripe_payments`.
+- Flow : page `/client/activation/payer` → Stripe Checkout 300 CHF → webhook `stripe-webhook` → marque `clients.frais_activation_payes_at` + déclenche `invite-client`.
+- Conserve AbaNinja en parallèle pour facturation comptable (Stripe pour l'encaissement, AbaNinja pour la facture).
+
+## Lot B5 — Statistiques agent enrichies
+- Étendre `/admin/statistiques-agents` :
+  - Taux de conversion : candidatures envoyées → visites → reloges (par agent, mensuel).
+  - Durée moyenne mandat → reloge.
+  - ROI par source de lead (Instagram / Meta Ads / Direct / Google Ads).
+  - CA généré et commission projetée mois en cours.
+- Vue d'ensemble par graphique Recharts.
+
+## Lot B6 — Recherche globale (Cmd+K / 🔍)
+- Composant `GlobalSearch` (cmdk) accessible Cmd+K ou icône loupe topbar.
+- Indexation côté client des entités visibles selon RLS : clients, biens, candidatures, transactions, mandats.
+- Résultats groupés, navigation clavier, raccourcis directs vers la fiche.
+
+## Lot B7 — Audit log & RGPD
+- Table `audit_logs` (table_name, record_id, action, before, after, user_id, ip, ua, created_at) avec triggers sur `mandats`, `transactions`, `baux`, `clients`.
+- Page admin `/admin/audit-log` consultable.
+- Bouton client `/client/parametres/exporter-mes-donnees` → Edge Function `rgpd-export` qui génère un ZIP (profil JSON + documents + messages CSV).
+- Cron mensuel `cleanup-candidatures-rejetees` : supprime les candidatures `refusee` > 6 mois (soft delete avec `deleted_at`).
+
+## Lot B8 — 2FA admin/agent
+- Activer Supabase Auth MFA (TOTP) — déjà supporté nativement.
+- Page `/parametres/securite` : enrôlement QR code, codes de récupération.
+- Forcer MFA pour `role IN ('admin','agent')` après une période de grâce de 14 jours.
+
+## Lot B9 — Import/Export Excel
+- Bouton « Exporter Excel » sur `/admin/clients`, `/admin/transactions`, `/admin/biens-en-vente` via lib `xlsx` (côté client, pas de dépendance serveur).
+- Bouton « Importer » sur `/admin/clients` : aperçu + validation avant insertion (zod).
+
+## Lot B10 — Mode hors-ligne PWA (visite terrain)
+- Workbox : cache-first sur les assets ; stratégie `NetworkFirst` avec fallback IndexedDB pour les routes `/agent/visites`, `/agent/visites/:id/compte-rendu`, `/agent/mes-clients/:id`.
+- File d'attente locale (IndexedDB via `idb-keyval`) pour les médias uploadés hors ligne → sync automatique au retour réseau.
+- Indicateur visuel « 🔴 Hors ligne — 3 actions en attente ».
 
 ---
 
-## Lot 3 — WhatsApp : lien sécurisé + miniature
+## Détails techniques transverses
 
-### Modification `wa-send-agent-message`
-Pour les attachments **vidéo** :
-- **Toujours** envoyer en mode lien (peu importe la taille), car la miniature donne un meilleur rendu que la vidéo native 16 MB tronquée.
-- Génération signed URL 7 jours pour la vidéo + 7 jours pour la miniature.
-- Utiliser un nouveau template WhatsApp **`agent_video_message`** (à créer côté Meta) :
-  - Header : **IMAGE** (la miniature)
-  - Body : "{{1}} vous a envoyé une vidéo. Cliquez ici pour la regarder : {{2}}"
-  - Variables : nom agent, lien signé vidéo
-- Si template non disponible / hors fenêtre 24h : fallback `agent_message_alert` avec le lien dans le texte.
-- Si la fenêtre 24h est ouverte : envoyer un message libre `image` (la miniature) suivi d'un message `text` avec le lien.
+- Toutes les Edge Functions : `import { corsHeaders } from '@supabase/supabase-js/cors'` + JWT validation in-code + Europe/Zurich pour les dates.
+- Toutes les nouvelles tables : RLS activée, fonction `has_role` (LANGUAGE plpgsql + SECURITY DEFINER), pas de récursion.
+- Toutes les nouvelles vues : RLS via vue invoker, pas de SECURITY DEFINER view.
+- Mobile-first strict (91 % du trafic) : composants ≥ 44px tactile, bottom sheets sur mobile, safe-areas iOS.
+- PDF : sanitize U+202F / U+00A0 avant pdf-lib.
+- Pagination : `.limit(15000)` ou `fetchAllPaginated` partout.
+- Service Worker : pas de SKIP_WAITING.
 
-### Logs
-La table `whatsapp_notification_logs.delivery_mode` accepte la nouvelle valeur `link_with_thumbnail`.
+## Hors périmètre des deux plans
+- Calendrier partagé inter-agents (exclu sur demande utilisateur).
+- Refonte de la landing publique (séparée si décidée plus tard).
+- Intégration Instagram Stories/Reels (suggestion analytics, à valider à part).
 
----
+## Action utilisateur requise après implémentation
+- **Plan A** : créer projet Firebase (FCM) + envoyer `FCM_SERVER_KEY` ; rotation clé VAPID Web Push automatique.
+- **Plan B** : connecter compte Stripe (tool d'activation guidé) ; valider les 2 templates WhatsApp supplémentaires côté Meta si ajout.
 
-## Détails techniques
-
-### Fichiers modifiés
-- `src/components/MessageAttachmentUploader.tsx` — boutons caméra/galerie + miniature + progression
-- `src/pages/agent/CompteRenduVisite.tsx` — réutilise le nouvel uploader
-- `src/pages/agent/Visites.tsx` — badge "compte-rendu manquant"
-- `src/pages/agent/Dashboard.tsx` — widget rappel
-- `src/pages/admin/Dashboard.tsx` — widget alerte admin
-- `src/App.tsx` — route `/admin/comptes-rendus`
-- `src/pages/admin/ComptesRendus.tsx` — **nouveau** page admin
-- `supabase/functions/wa-send-agent-message/index.ts` — logique lien + miniature
-- `supabase/functions/cron-comptes-rendus-retard/index.ts` — **nouvelle** Edge Function cron
-- `supabase/functions/_shared/wa-helpers.ts` — helper template vidéo
-
-### Migration
-- `ALTER` buckets `visite-medias`, `bien-medias`, messagerie → `file_size_limit = 1073741824`, MIME types vidéo étendus.
-- Index sur `visites(effectuee_at)` pour requête cron.
-- Cron job pg_cron quotidien 8h Europe/Zurich appelant `cron-comptes-rendus-retard`.
-
-### Hors périmètre
-- Pas de blocage de l'app pour l'agent.
-- Pas de compression vidéo serveur.
-- Pas de modification du flux de paiement / facturation.
-- Création du template `agent_video_message` côté Meta Business Manager : **action manuelle utilisateur** après déploiement (je fournirai le contenu exact à coller).
+## Ordre d'exécution recommandé
+1. Plan A complet (impact opérationnel immédiat).
+2. Plan B : B1 → B2 → B3 (chaîne contractuelle) → B4 (revenus) → B5–B10 (qualité).
