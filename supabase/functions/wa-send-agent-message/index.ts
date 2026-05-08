@@ -61,7 +61,7 @@ function inferMime(att: Attachment): string {
 
 function isMediaSendable(att: Attachment, kind: string): boolean {
   const size = att.size || 0;
-  const mime = (att.mime || "").toLowerCase();
+  const mime = inferMime(att);
   if (!att.url) return false;
   if (kind === "video") return size > 0 && size <= MAX_VIDEO && VIDEO_MIMES.has(mime);
   if (kind === "image") return size > 0 && size <= MAX_IMG && IMAGE_MIMES.has(mime);
