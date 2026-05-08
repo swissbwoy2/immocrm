@@ -94,6 +94,7 @@ export default function AgentVisites() {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
