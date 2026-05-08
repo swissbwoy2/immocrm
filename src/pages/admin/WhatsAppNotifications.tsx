@@ -49,6 +49,28 @@ export default function AdminWhatsAppNotifications() {
   const [testVar1, setTestVar1] = useState("Test");
   const [testVar2, setTestVar2] = useState("https://logisorama.ch");
   const [sendingTest, setSendingTest] = useState(false);
+  const [testingAll, setTestingAll] = useState(false);
+  const [allReport, setAllReport] = useState<any[] | null>(null);
+
+  const runAllTemplatesTest = async () => {
+    if (!testPhone) { toast.error("Numéro requis pour le test global"); return; }
+    setTestingAll(true);
+    setAllReport(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("wa-test-all-templates", {
+        body: { recipient_phone: testPhone },
+      });
+      if (error) throw error;
+      setAllReport((data as any)?.report || []);
+      const s = (data as any)?.summary;
+      if (s) toast.success(`Test global : ${s.ok}/${s.total} OK, ${s.failed} échec(s)`);
+      load();
+    } catch (e: any) {
+      toast.error("Erreur : " + (e?.message || "inconnue"));
+    } finally {
+      setTestingAll(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
