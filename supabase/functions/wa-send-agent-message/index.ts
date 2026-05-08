@@ -163,52 +163,70 @@ Deno.serve(async (req) => {
   let nativeMode: "sent" | "skipped" | "failed" = "skipped";
   let nativeMetaId: string | undefined;
   let nativeError: any = null;
+  let deliveryMode: "media_native" | "link_with_thumbnail" | "link_fallback" = "link_fallback";
 
-  // 1) Try native media if eligible
-  if (hasMedia && recipient && isMediaSendable(att!, kind!)) {
-    const open = await isWindowOpen(supabase, client_id);
-    if (open) {
-      const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-      const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-      if (phoneNumberId && accessToken) {
-        const caption = (message_extract && String(message_extract).trim())
-          ? String(message_extract).slice(0, 900)
-          : undefined;
-        const result = await sendNativeMedia({
-          phoneNumberId,
-          accessToken,
-          to: recipient,
-          kind: kind!,
-          link: att!.url!,
-          filename: att!.name,
-          caption,
-        });
-        if (result.ok) {
-          nativeMode = "sent";
-          nativeMetaId = result.meta_message_id;
-          await supabase.from("whatsapp_notification_logs").insert({
-            client_id,
-            agent_id: agent_id || client?.agent_id || null,
-            event_type: "agent_message_media",
-            template_key: null,
-            recipient_phone: recipient,
-            payload_json: { kind, url: att!.url, name: att!.name, size: att!.size, mime: att!.mime, caption },
-            status: "sent",
-            meta_message_id: nativeMetaId || null,
-            sent_at: new Date().toISOString(),
-            delivery_mode: "media_native",
-            context_type: context_type ?? "agent_message",
-            context_ref: context_ref ?? null,
-          });
-        } else {
-          nativeMode = "failed";
-          nativeError = result.error;
-        }
-      }
+  const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+  const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+  const open = hasMedia && recipient ? await isWindowOpen(supabase, client_id) : false;
+
+  // 1) VIDEO: jamais en natif (limite 16 MB peu utile pour vidéos mobiles).
+  //    Si fenêtre 24h ouverte ET miniature disponible: envoyer la miniature en image native + texte avec lien.
+  if (hasMedia && kind === "video" && open && phoneNumberId && accessToken && att!.thumbnail_url) {
+    const result = await sendNativeMedia({
+      phoneNumberId, accessToken, to: recipient!,
+      kind: "image", link: att!.thumbnail_url,
+      caption: `📹 Vidéo de ${agentName} — Cliquez sur le lien pour la regarder : ${att!.url}`,
+    });
+    if (result.ok) {
+      nativeMode = "sent";
+      nativeMetaId = result.meta_message_id;
+      deliveryMode = "link_with_thumbnail";
+      await supabase.from("whatsapp_notification_logs").insert({
+        client_id, agent_id: agent_id || client?.agent_id || null,
+        event_type: "agent_message_media", template_key: null,
+        recipient_phone: recipient,
+        payload_json: { kind: "video", url: att!.url, thumbnail_url: att!.thumbnail_url, name: att!.name, size: att!.size, mime: att!.mime },
+        status: "sent", meta_message_id: nativeMetaId || null,
+        sent_at: new Date().toISOString(),
+        delivery_mode: "link_with_thumbnail",
+        context_type: context_type ?? "agent_message",
+        context_ref: context_ref ?? null,
+      });
+    } else {
+      nativeMode = "failed";
+      nativeError = result.error;
+    }
+  }
+  // 2) Autres médias (image/audio/document): tenter natif si éligible et fenêtre ouverte
+  else if (hasMedia && kind !== "video" && open && isMediaSendable(att!, kind!) && phoneNumberId && accessToken) {
+    const caption = (message_extract && String(message_extract).trim())
+      ? String(message_extract).slice(0, 900) : undefined;
+    const result = await sendNativeMedia({
+      phoneNumberId, accessToken, to: recipient!,
+      kind: kind!, link: att!.url!, filename: att!.name, caption,
+    });
+    if (result.ok) {
+      nativeMode = "sent";
+      nativeMetaId = result.meta_message_id;
+      deliveryMode = "media_native";
+      await supabase.from("whatsapp_notification_logs").insert({
+        client_id, agent_id: agent_id || client?.agent_id || null,
+        event_type: "agent_message_media", template_key: null,
+        recipient_phone: recipient,
+        payload_json: { kind, url: att!.url, name: att!.name, size: att!.size, mime: att!.mime, caption },
+        status: "sent", meta_message_id: nativeMetaId || null,
+        sent_at: new Date().toISOString(),
+        delivery_mode: "media_native",
+        context_type: context_type ?? "agent_message",
+        context_ref: context_ref ?? null,
+      });
+    } else {
+      nativeMode = "failed";
+      nativeError = result.error;
     }
   }
 
-  // 2) Fallback / always: send template alert (with link inside extract if media not natively sent)
+  // 3) Fallback / always: send template alert (with link inside extract if media not natively sent)
   let extract = String(message_extract ?? "").trim();
   if (hasMedia && nativeMode !== "sent") {
     const emoji =
