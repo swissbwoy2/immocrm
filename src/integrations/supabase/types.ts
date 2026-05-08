@@ -10376,6 +10376,8 @@ export type Database = {
         Row: {
           agent_id: string | null
           client_id: string | null
+          context_ref: string | null
+          context_type: string | null
           created_at: string
           delivered_at: string | null
           error_message: string | null
@@ -10394,6 +10396,8 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           client_id?: string | null
+          context_ref?: string | null
+          context_type?: string | null
           created_at?: string
           delivered_at?: string | null
           error_message?: string | null
@@ -10412,6 +10416,8 @@ export type Database = {
         Update: {
           agent_id?: string | null
           client_id?: string | null
+          context_ref?: string | null
+          context_type?: string | null
           created_at?: string
           delivered_at?: string | null
           error_message?: string | null
