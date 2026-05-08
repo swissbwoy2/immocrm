@@ -6193,6 +6193,45 @@ export type Database = {
         }
         Relationships: []
       }
+      message_templates: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          label: string
+          owner_user_id: string | null
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          owner_user_id?: string | null
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          owner_user_id?: string | null
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -7478,6 +7517,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_preferences: {
+        Row: {
+          notif_candidatures: boolean
+          notif_compte_rendu: boolean
+          notif_messages: boolean
+          notif_paiements: boolean
+          notif_visites: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          notif_candidatures?: boolean
+          notif_compte_rendu?: boolean
+          notif_messages?: boolean
+          notif_paiements?: boolean
+          notif_visites?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          notif_candidatures?: boolean
+          notif_compte_rendu?: boolean
+          notif_messages?: boolean
+          notif_paiements?: boolean
+          notif_visites?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       received_emails: {
         Row: {

@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { VoiceDictationButton } from "@/components/VoiceDictationButton";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -295,8 +296,11 @@ export default function CompteRenduVisite() {
           />
 
           <div>
-            <Label>Commentaire libre</Label>
-            <Textarea rows={4} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} placeholder="Vos observations détaillées sur le bien..." />
+            <div className="flex items-center justify-between mb-1">
+              <Label>Commentaire libre</Label>
+              <VoiceDictationButton onTranscript={(t) => setCommentaire(t)} />
+            </div>
+            <Textarea rows={4} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} placeholder="Vos observations détaillées sur le bien... (ou utilisez le bouton 🎙️ Dicter)" />
           </div>
           <div>
             <Label>Prochaines étapes</Label>
