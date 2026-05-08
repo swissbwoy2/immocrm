@@ -153,7 +153,9 @@ Deno.serve(async (req) => {
     .from("profiles")
     .select("prenom, telephone, whatsapp_phone, whatsapp_opt_in")
     .eq("id", client?.user_id).maybeSingle();
-  const agentName = await loadAgentName(supabase, agent_id || client?.agent_id);
+  // Bug fix: priorité au vrai agent du client (clients.agent_id) plutôt qu'à
+  // l'agent figé sur la conversation, qui peut être obsolète après réassignation.
+  const agentName = await loadAgentName(supabase, client?.agent_id || agent_id);
   const recipient = profile?.whatsapp_phone || profile?.telephone;
 
   const att: Attachment | null = attachment && typeof attachment === "object" ? attachment : null;

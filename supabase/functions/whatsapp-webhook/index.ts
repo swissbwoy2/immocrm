@@ -1058,16 +1058,23 @@ Deno.serve(async (req) => {
               p_metadata: { conversation_id: conversationId },
             }).then(() => {}).catch(() => {});
 
-            // Forward WhatsApp à l'agent + admin (fenêtre 24h ouverte par le client)
+            // Forward WhatsApp à l'agent + admin via template HSM
+            // (le free text ne marche que si fenêtre 24h ouverte côté agent — rare)
+            const { data: clientProfile } = await supabase
+              .from("profiles").select("prenom, nom").eq("id", profile.id).maybeSingle();
+            const clientName = `${clientProfile?.prenom || ""} ${clientProfile?.nom || ""}`.trim() || "Client";
+            const extract = text.replace(/[\u202F\u00A0]/g, ' ').slice(0, 200);
             await forwardClientReplyToStaff({
               supabase,
               clientId: client.id,
               agentId: client.agent_id,
-              summary: `📱 [WA] ${text.slice(0, 250)}\n→ logisorama.ch/agent/messagerie`,
+              templateKey: "staff_client_inbound",
+              variables: [clientName, extract, "logisorama.ch/agent/whatsapp"],
+              summary: `📱 [WA] ${clientName} : ${extract}\n→ logisorama.ch/agent/whatsapp`,
               notifTitle: "📱 Message WhatsApp client",
-              notifLink: "/agent/messagerie",
-                          excludePhone: phoneE164,
-      }).catch((e) => console.error("forward failed", e));
+              notifLink: "/agent/whatsapp",
+              excludePhone: phoneE164,
+            }).catch((e) => console.error("forward failed", e));
           }
         }
       }
