@@ -314,6 +314,10 @@ const App = () => (
               <Route path="/admin/whatsapp-notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminWhatsAppNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-email" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerEmail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/comptes-rendus" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminComptesRendus /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/whatsapp" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminWhatsAppInbox /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/whatsapp-logs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminWhatsAppLogs /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/whatsapp" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentWhatsAppInbox /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/parametres/templates" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentMessageTemplates /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-offre" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerOffre /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/historique-emails" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminHistoriqueEmails /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/boite-reception" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBoiteReception /></AppLayout></ProtectedRoute>} />
