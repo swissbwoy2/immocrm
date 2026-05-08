@@ -257,6 +257,7 @@ Deno.serve(async (req) => {
 
   return new Response(JSON.stringify({
     ok: true,
+    delivery_mode: deliveryMode,
     media: { mode: nativeMode, meta_message_id: nativeMetaId, error: nativeError },
     template: tplResult,
   }), {
