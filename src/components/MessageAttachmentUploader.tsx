@@ -196,8 +196,17 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
 
   const triggerFileInput = (accept: string) => {
     if (fileInputRef.current) {
+      fileInputRef.current.removeAttribute('capture');
       fileInputRef.current.accept = accept;
       fileInputRef.current.click();
+    }
+  };
+
+  const triggerCamera = (mode: 'image' | 'video') => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.accept = mode === 'video' ? 'video/*' : 'image/*';
+      cameraInputRef.current.setAttribute('capture', 'environment');
+      cameraInputRef.current.click();
     }
   };
 
