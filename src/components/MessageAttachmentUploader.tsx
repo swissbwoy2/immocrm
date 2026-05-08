@@ -277,6 +277,20 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
             const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'document';
             handleFileSelect(file, type);
           }
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const type = file.type.startsWith('video/') ? 'video' : 'image';
+            handleFileSelect(file, type);
+          }
+          e.target.value = '';
         }}
       />
 
@@ -295,8 +309,28 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
               <Image className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-48 p-2" align="start">
+          <PopoverContent className="w-56 p-2" align="start">
             <div className="flex flex-col gap-1">
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground px-2 pt-1">Caméra</div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={() => triggerCamera('video')}
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Filmer une vidéo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={() => triggerCamera('image')}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Prendre une photo
+              </Button>
+              <div className="text-[10px] font-semibold uppercase text-muted-foreground px-2 pt-2">Galerie / fichiers</div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -304,7 +338,7 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
                 onClick={() => triggerFileInput('image/*')}
               >
                 <Image className="h-4 w-4 mr-2" />
-                Photo
+                Photo (galerie)
               </Button>
               <Button
                 variant="ghost"
@@ -313,7 +347,7 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
                 onClick={() => triggerFileInput('video/*')}
               >
                 <Video className="h-4 w-4 mr-2" />
-                Vidéo
+                Vidéo (galerie)
               </Button>
               <Button
                 variant="ghost"
