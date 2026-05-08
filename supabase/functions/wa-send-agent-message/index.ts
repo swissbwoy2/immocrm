@@ -237,7 +237,9 @@ Deno.serve(async (req) => {
   if (!extract) extract = hasMedia ? "Pièce jointe" : "Nouveau message";
   if (extract.length > 200) extract = extract.slice(0, 200) + "…";
 
-  const tplResult = await callSendWhatsApp({
+  // Si on a déjà envoyé le média en natif (image/audio/doc) ou la miniature vidéo,
+  // pas besoin du template d'alerte (le message est déjà arrivé sur WhatsApp).
+  const tplResult = nativeMode === "sent" ? { skipped: true, reason: "media_already_delivered" } : await callSendWhatsApp({
     event_type: "agent_message",
     template_key: "agent_message_alert",
     client_id,
