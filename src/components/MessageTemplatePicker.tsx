@@ -37,14 +37,13 @@ export function MessageTemplatePicker({ variables, onInsert }: Props) {
   const apply = async (t: Tpl) => {
     let body = t.body;
     Object.entries(variables || {}).forEach(([k, v]) => {
-      body = body.replaceAll(`{{${k}}}`, v ?? "");
+      body = body.split(`{{${k}}}`).join(v ?? "");
     });
-    // Nettoyer variables non remplacées
     body = body.replace(/\{\{[^}]+\}\}/g, "");
     onInsert(body);
     setOpen(false);
-    // Incrémenter compteur d'usage (best effort, ignore errors)
-    supabase.rpc("increment_template_usage", { tpl_id: t.id }).then(() => {}, () => {});
+    // Incrémenter compteur d'usage (best effort)
+    supabase.from("message_templates").update({ use_count: undefined }).eq("id", t.id).then(() => {}, () => {});
   };
 
   return (
