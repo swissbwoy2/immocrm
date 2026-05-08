@@ -298,17 +298,40 @@ export default function AgentVisites() {
         });
       }
 
+      // Récupérer les comptes-rendus existants pour ces visites
+      const visiteIds = visitesData?.map(v => v.id).filter(Boolean) || [];
+      let crMap = new Map<string, { envoye_au_client_at: string | null }>();
+      if (visiteIds.length > 0) {
+        const { data: crs } = await supabase
+          .from('visite_comptes_rendus')
+          .select('visite_id, envoye_au_client_at')
+          .in('visite_id', visiteIds);
+        (crs || []).forEach((c: any) => crMap.set(c.visite_id, c));
+      }
+      const nowMs = Date.now();
+
       const visitesWithProfiles = visitesData?.map(v => {
         const isShared = v.is_own === false;
         const sharedAgent: any = v.agents;
         const prenom = sharedAgent?.profiles?.prenom ?? '';
         const nom = sharedAgent?.profiles?.nom ?? '';
+        // Statut compte-rendu
+        const cr = crMap.get(v.id);
+        const visitMs = new Date(v.date_visite).getTime();
+        const isPast = v.statut === 'effectuee' || (visitMs < nowMs && (v.statut === 'planifiee' || v.statut === 'confirmee'));
+        let cr_status: 'non_requis' | 'a_faire' | 'en_retard' | 'fait' = 'non_requis';
+        if (cr?.envoye_au_client_at) cr_status = 'fait';
+        else if (isPast) {
+          const hoursLate = (nowMs - visitMs) / (1000 * 60 * 60);
+          cr_status = hoursLate > 24 ? 'en_retard' : 'a_faire';
+        }
         return {
           ...v,
           client_profile: profilesMap.get(v.clients?.user_id),
           candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null,
           is_shared: isShared,
           shared_by_name: isShared ? `${prenom} ${nom.charAt(0)}.`.trim() : null,
+          cr_status,
         };
       }) || [];
 
@@ -942,14 +965,31 @@ export default function AgentVisites() {
 
           {/* Compte-rendu button — visible for past or completed visits */}
           {!isShared && (isVisiteDatePassed || visite.statut === 'effectuee') && (
-            <Button
-              onClick={(e) => { e.stopPropagation(); navigate(`/agent/visites/${visite.id}/compte-rendu`); }}
-              variant="default"
-              size="sm"
-              className="w-full mt-2"
-            >
-              📝 Faire le compte-rendu
-            </Button>
+            <div className="mt-2 space-y-1">
+              {visite.cr_status === 'en_retard' && (
+                <div className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded px-2 py-1">
+                  ⚠️ Compte-rendu en retard
+                </div>
+              )}
+              {visite.cr_status === 'a_faire' && (
+                <div className="text-xs font-semibold text-orange-600 bg-orange-100 border border-orange-300 rounded px-2 py-1 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800">
+                  📝 Compte-rendu à faire
+                </div>
+              )}
+              {visite.cr_status === 'fait' && (
+                <div className="text-xs font-semibold text-green-700 bg-green-100 border border-green-300 rounded px-2 py-1 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                  ✅ Compte-rendu envoyé
+                </div>
+              )}
+              <Button
+                onClick={(e) => { e.stopPropagation(); navigate(`/agent/visites/${visite.id}/compte-rendu`); }}
+                variant={visite.cr_status === 'fait' ? 'outline' : 'default'}
+                size="sm"
+                className="w-full"
+              >
+                📝 {visite.cr_status === 'fait' ? 'Voir le compte-rendu' : 'Faire le compte-rendu'}
+              </Button>
+            </div>
           )}
         </div>
       </div>

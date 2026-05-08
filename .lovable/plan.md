@@ -1,109 +1,104 @@
 ## Objectif
 
-1. L'agent peut filmer/joindre une vidéo (iPhone/Samsung/desktop) depuis la messagerie → le client la reçoit dans WhatsApp (vidéo native si possible, sinon lien sécurisé).
-2. Nouvelle page **Compte-rendu de visite** (saisie post-visite + envoi récap WA au client).
-3. Nouvelle page **Fiche détaillée du bien** (caractéristiques + médias).
+1. Rendre le compte-rendu de visite **obligatoire** (non bloquant, mais avec rappels et alerte admin).
+2. Permettre à l'agent d'uploader des **vidéos mobiles jusqu'à 1 GB** (iPhone/Android, depuis caméra ou galerie) dans la messagerie et le compte-rendu.
+3. Envoyer ces vidéos au client via WhatsApp sous forme de **lien sécurisé + miniature** générée automatiquement.
 
 ---
 
-## Lot 1 — Vidéo WhatsApp (média natif + fallback lien)
+## Lot 1 — Compte-rendu obligatoire (non bloquant + rappels + alerte admin)
 
-### Capture mobile native
-- `MessageAttachmentUploader.tsx` : sur le bouton **Vidéo**, ajouter `capture="environment"` (caméra arrière) en plus de `accept="video/*"`. Sur iPhone/Android cela ouvre directement l'appareil photo en mode vidéo. On garde l'option "choisir depuis la galerie" via un second item du popover ("Vidéo (galerie)").
+### Logique de statut
+Sur la table `visites`, ajout d'une colonne calculée logique `compte_rendu_status` (via vue ou logique côté UI) basée sur :
+- `effectuee_at` : timestamp de fin de visite
+- `visite_comptes_rendus.envoye_au_client_at` : preuve d'envoi
 
-### Logique d'envoi WA (les deux modes)
-- Modifier `wa-send-agent-message` (Edge Function) pour accepter un nouveau champ optionnel `attachment` : `{ url, type, name, size, mime }`.
-- Si `attachment.type === 'video'` :
-  1. **Tentative média natif** : si `size <= 16 MB` ET mime ∈ `video/mp4|video/3gpp` ET fenêtre 24h ouverte (dernier inbound client < 24h, à lire depuis `whatsapp_inbound_messages` ou équivalent), appel direct Meta Graph API `messages` avec `type: "video"` + `link: signed_url`.
-  2. **Fallback lien** : sinon (>16 MB, mauvais format, ou hors fenêtre), envoyer le template `agent_message_alert` existant en injectant un message du type `📹 Vidéo de votre agent : {signed_url}` (URL signée Supabase Storage 7 jours).
-- Pour les images/audio/documents : même logique générique (image native ≤5 MB, audio ≤16 MB, document ≤100 MB, sinon lien).
-- Trigger DB `notify_client_wa_on_agent_message` : étendre pour passer `attachment_url`, `attachment_type`, `attachment_size`, `attachment_mime` du `messages` vers la fonction.
+États :
+- `non_requis` : visite future ou annulée
+- `a_faire` : visite effectuée, < 24h, pas de compte-rendu
+- `en_retard` : effectuée, > 24h, pas de compte-rendu  
+- `fait` : compte-rendu envoyé au client
 
-### Détection fenêtre 24h
-- Lire la dernière entrée `whatsapp_inbound_messages` (ou la table où `whatsapp-webhook` enregistre les messages reçus) pour ce client. Si `received_at > now() - 24h` → fenêtre ouverte.
-- Logger le mode utilisé (`media_native` / `link_fallback`) dans `whatsapp_notification_logs` (nouvelle colonne `delivery_mode`).
+### UI Agent
+- **Liste des visites** (`/agent/visites`) : badge rouge "⚠️ Compte-rendu manquant" sur les visites `en_retard`. Tri en haut de liste.
+- **Dashboard agent** : widget "Comptes-rendus à faire" avec compteur cliquable.
+- **Notification in-app** quotidienne (toast au login) listant les comptes-rendus en retard.
 
-### Erreurs Meta gérées
-- `131047` (hors fenêtre 24h) → fallback automatique vers template+lien.
-- `131053` (média trop gros / format invalide) → fallback lien.
-- Toute autre erreur → notification admin existante (déjà en place).
+### UI Admin
+- **Dashboard admin** : nouveau widget "Comptes-rendus en retard" (par agent, par âge).
+- **Page `/admin/comptes-rendus`** : liste filtrable (agent, état, date), permet de relancer l'agent.
+- **Alerte automatique** : Edge Function cron quotidienne (8h Europe/Zurich) qui :
+  - Détecte les visites effectuées depuis > 48h sans compte-rendu
+  - Envoie une notification in-app à l'admin
+  - Envoie un email récap à l'admin (1 par jour, groupé)
 
----
-
-## Lot 2 — Page Compte-rendu de visite
-
-### Route et accès
-- `/agent/visites/:id/compte-rendu` (et bouton "Faire le compte-rendu" sur les visites passées).
-- Accessible aussi depuis `/admin/visites/:id/compte-rendu` (lecture seule pour admin si l'agent est différent).
-
-### Schéma DB (nouvelle table `visite_comptes_rendus`)
-- `visite_id` (FK), `agent_id`, `client_id`, `bien_id`
-- `appreciation_globale` (enum: tres_positif | positif | mitige | negatif)
-- `points_forts` (text[]), `points_faibles` (text[])
-- `etat_general` (enum: excellent | bon | moyen | a_renover)
-- `interet_client` (enum: tres_interesse | interesse | hesitant | non_interesse)
-- `commentaire_libre` (text)
-- `prochaines_etapes` (text)
-- `medias` (jsonb : `[{url, type, name, size}]`) — photos + vidéos uploadées dans bucket `visite-medias`
-- `envoye_au_client_at`, `wa_envoye_at`
-- RLS : agent assigné OR co-assigné OR admin
-
-### UI saisie
-- Composant `CompteRenduForm` : sections pliables (Appréciation / État du bien / Intérêt client / Médias / Prochaines étapes).
-- Upload médias = même `MessageAttachmentUploader` réutilisé (multi-fichiers ici).
-- Bouton "Enregistrer brouillon" + "Envoyer au client".
-
-### Envoi au client
-- À l'envoi : insertion d'un `messages` dans la conversation client-agent avec un récap formaté + liens vers les médias.
-- Trigger WA existant prendra le relais (Lot 1) → vidéos envoyées en natif/lien.
-- Optionnel : nouveau template Meta `compte_rendu_visite` (5 vars: prénom, agent, adresse_bien, appreciation, lien_complet) — sinon réutilise `agent_message_alert`.
+### Pas de blocage
+L'agent peut continuer à utiliser l'app normalement. Seuls les badges, notifications et alertes admin sont activés.
 
 ---
 
-## Lot 3 — Fiche détaillée du bien
+## Lot 2 — Upload vidéo mobile jusqu'à 1 GB
 
-### Cadrage
-La table `biens` existe déjà avec les champs principaux. Cette fiche = **vue agent enrichie** pour ajouter les médias et caractéristiques marketing manquantes.
+### Buckets storage
+- `visite-medias` : passer la limite de fichier à **1 GB** (1073741824 bytes), MIME types autorisés : `video/mp4`, `video/quicktime` (iPhone .mov), `video/3gpp`, `video/webm`, `image/*`.
+- `bien-medias` : idem.
+- Bucket messagerie (à identifier via codebase) : idem 1 GB.
 
-### Schéma (extension table `biens` si colonnes manquantes)
-À vérifier puis ajouter si absentes : `equipements` (text[]), `description_marketing` (text), `annee_construction`, `etat_bien`, `chauffage`, `orientation`, `etage`, `dpe`, `medias_galerie` (jsonb).
+### Upload côté mobile (`MessageAttachmentUploader.tsx`)
+- Boutons distincts :
+  - 📷 **Photo (caméra)** : `accept="image/*" capture="environment"`
+  - 🎥 **Vidéo (caméra)** : `accept="video/*" capture="environment"`
+  - 🖼️ **Galerie** : `accept="image/*,video/*"` (sans capture, ouvre la galerie native)
+- **Upload chunké/resumable** via Supabase storage `upload` avec `upsert: false` ; pour les fichiers > 50 MB, utiliser `uploadToSignedUrl` avec progress tracking.
+- **Barre de progression** visible (% + MB/s) avec bouton "Annuler".
+- **Validation client** : refuser > 1 GB avec message clair, avertir si > 100 MB sur connexion mobile.
 
-### Route et UI
-- `/agent/biens/:id/fiche-detaillee` (édition).
-- Sections : Caractéristiques / Équipements / Description / Médias (photos + vidéos + plans) / Documents.
-- Upload réutilise le bucket `bien-medias` existant (ou nouveau si absent).
-- Bouton "Partager au client" : envoie via messagerie un message avec lien vers une fiche publique (read-only) ou le PDF généré.
+### Génération de miniature vidéo (côté client)
+- Utiliser `<video>` + `<canvas>` pour extraire une frame à t=1s.
+- Upload de la miniature `.jpg` dans le même bucket sous `<video_path>.thumb.jpg`.
+- Stockage du chemin de la miniature à côté de la vidéo dans les métadonnées du message / compte-rendu.
+
+---
+
+## Lot 3 — WhatsApp : lien sécurisé + miniature
+
+### Modification `wa-send-agent-message`
+Pour les attachments **vidéo** :
+- **Toujours** envoyer en mode lien (peu importe la taille), car la miniature donne un meilleur rendu que la vidéo native 16 MB tronquée.
+- Génération signed URL 7 jours pour la vidéo + 7 jours pour la miniature.
+- Utiliser un nouveau template WhatsApp **`agent_video_message`** (à créer côté Meta) :
+  - Header : **IMAGE** (la miniature)
+  - Body : "{{1}} vous a envoyé une vidéo. Cliquez ici pour la regarder : {{2}}"
+  - Variables : nom agent, lien signé vidéo
+- Si template non disponible / hors fenêtre 24h : fallback `agent_message_alert` avec le lien dans le texte.
+- Si la fenêtre 24h est ouverte : envoyer un message libre `image` (la miniature) suivi d'un message `text` avec le lien.
+
+### Logs
+La table `whatsapp_notification_logs.delivery_mode` accepte la nouvelle valeur `link_with_thumbnail`.
 
 ---
 
 ## Détails techniques
 
-### Storage
-- Vérifier bucket `message-attachments` (existant, public). OK pour vidéos jusqu'à 1 GB déjà côté upload.
-- Nouveau bucket `visite-medias` (privé, RLS : agent + admin + client lié à la visite).
-- Pour les liens WA : `createSignedUrl(path, 60*60*24*7)` (7 jours).
+### Fichiers modifiés
+- `src/components/MessageAttachmentUploader.tsx` — boutons caméra/galerie + miniature + progression
+- `src/pages/agent/CompteRenduVisite.tsx` — réutilise le nouvel uploader
+- `src/pages/agent/Visites.tsx` — badge "compte-rendu manquant"
+- `src/pages/agent/Dashboard.tsx` — widget rappel
+- `src/pages/admin/Dashboard.tsx` — widget alerte admin
+- `src/App.tsx` — route `/admin/comptes-rendus`
+- `src/pages/admin/ComptesRendus.tsx` — **nouveau** page admin
+- `supabase/functions/wa-send-agent-message/index.ts` — logique lien + miniature
+- `supabase/functions/cron-comptes-rendus-retard/index.ts` — **nouvelle** Edge Function cron
+- `supabase/functions/_shared/wa-helpers.ts` — helper template vidéo
 
-### Edge Functions modifiées/créées
-- `wa-send-agent-message` (modifié) — support attachment + fenêtre 24h + média natif Meta.
-- `_shared/wa-helpers.ts` — nouvelle fonction `sendWhatsAppMedia({ to, type, link, caption })`.
-- `compte-rendu-send` (nouveau, optionnel) — orchestre l'envoi du compte-rendu (insert message + appel WA).
+### Migration
+- `ALTER` buckets `visite-medias`, `bien-medias`, messagerie → `file_size_limit = 1073741824`, MIME types vidéo étendus.
+- Index sur `visites(effectuee_at)` pour requête cron.
+- Cron job pg_cron quotidien 8h Europe/Zurich appelant `cron-comptes-rendus-retard`.
 
-### Migrations
-- `whatsapp_notification_logs` : ajouter colonne `delivery_mode text`.
-- Nouvelle table `visite_comptes_rendus` + RLS.
-- Bucket `visite-medias` + policies.
-- (Conditionnel) Colonnes manquantes sur `biens`.
-
-### Frontend
-- `MessageAttachmentUploader` : ajouter `capture="environment"` + item "Vidéo (galerie)".
-- Nouvelle route `/agent/visites/:id/compte-rendu` + composant.
-- Nouvelle route `/agent/biens/:id/fiche-detaillee` + composant.
-- Bouton "Faire le compte-rendu" sur cartes visite passée.
-
----
-
-## Hors périmètre
-
-- Pas de nouveau template WA pour le compte-rendu si `agent_message_alert` suffit (à confirmer après tests).
-- Pas de génération PDF du compte-rendu dans cette itération (peut venir après).
-- Pas de modification des autres flux WA (candidatures, refus, etc.).
+### Hors périmètre
+- Pas de blocage de l'app pour l'agent.
+- Pas de compression vidéo serveur.
+- Pas de modification du flux de paiement / facturation.
+- Création du template `agent_video_message` côté Meta Business Manager : **action manuelle utilisateur** après déploiement (je fournirai le contenu exact à coller).

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVideoConverter, ConversionResult } from "@/hooks/useVideoConverter";
 import { VideoConversionProgress } from "@/components/VideoConversionProgress";
+import { generateVideoThumbnail } from "@/lib/videoThumbnail";
 import {
   Popover,
   PopoverContent,
@@ -17,6 +18,7 @@ interface AttachmentData {
   type: string;
   name: string;
   size: number;
+  thumbnail_url?: string;
 }
 
 interface MessageAttachmentUploaderProps {
@@ -45,7 +47,8 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
 
   const uploadFile = async (fileToUpload: File) => {
     const fileExt = fileToUpload.name.split('.').pop();
-    const filePath = `${conversationId}/${Date.now()}.${fileExt}`;
+    const baseName = `${Date.now()}`;
+    const filePath = `${conversationId}/${baseName}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('message-attachments')
@@ -57,11 +60,31 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
       .from('message-attachments')
       .getPublicUrl(filePath);
 
+    let thumbnailUrl: string | undefined;
+    // Pour les vidéos, génère et upload une miniature JPEG (utilisée par WhatsApp)
+    if (fileToUpload.type.startsWith('video/')) {
+      try {
+        const thumb = await generateVideoThumbnail(fileToUpload, 1);
+        if (thumb) {
+          const thumbPath = `${conversationId}/${baseName}.thumb.jpg`;
+          const { error: thumbErr } = await supabase.storage
+            .from('message-attachments')
+            .upload(thumbPath, thumb, { contentType: 'image/jpeg' });
+          if (!thumbErr) {
+            thumbnailUrl = supabase.storage.from('message-attachments').getPublicUrl(thumbPath).data.publicUrl;
+          }
+        }
+      } catch (e) {
+        console.warn('thumbnail generation failed', e);
+      }
+    }
+
     const attachment: AttachmentData = {
       url: urlData.publicUrl,
       type: normalizeAttachmentType(fileToUpload.type),
       name: fileToUpload.name,
       size: fileToUpload.size,
+      thumbnail_url: thumbnailUrl,
     };
 
     setPreview(attachment);
