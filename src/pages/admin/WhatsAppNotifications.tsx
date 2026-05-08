@@ -289,6 +289,9 @@ export default function AdminWhatsAppNotifications() {
                           {l.status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-xs">
+                        {l.context_ref ? <span className="font-mono">{l.context_type}:{l.context_ref.slice(0, 8)}</span> : "—"}
+                      </TableCell>
                       <TableCell className="text-xs text-red-500 max-w-[280px] truncate">
                         {l.error_message || "—"}
                       </TableCell>
