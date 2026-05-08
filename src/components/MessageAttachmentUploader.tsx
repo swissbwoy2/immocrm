@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVideoConverter, ConversionResult } from "@/hooks/useVideoConverter";
 import { VideoConversionProgress } from "@/components/VideoConversionProgress";
+import { generateVideoThumbnail } from "@/lib/videoThumbnail";
 import {
   Popover,
   PopoverContent,
@@ -17,6 +18,7 @@ interface AttachmentData {
   type: string;
   name: string;
   size: number;
+  thumbnail_url?: string;
 }
 
 interface MessageAttachmentUploaderProps {
