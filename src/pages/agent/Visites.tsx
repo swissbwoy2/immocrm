@@ -298,17 +298,40 @@ export default function AgentVisites() {
         });
       }
 
+      // Récupérer les comptes-rendus existants pour ces visites
+      const visiteIds = visitesData?.map(v => v.id).filter(Boolean) || [];
+      let crMap = new Map<string, { envoye_au_client_at: string | null }>();
+      if (visiteIds.length > 0) {
+        const { data: crs } = await supabase
+          .from('visite_comptes_rendus')
+          .select('visite_id, envoye_au_client_at')
+          .in('visite_id', visiteIds);
+        (crs || []).forEach((c: any) => crMap.set(c.visite_id, c));
+      }
+      const nowMs = Date.now();
+
       const visitesWithProfiles = visitesData?.map(v => {
         const isShared = v.is_own === false;
         const sharedAgent: any = v.agents;
         const prenom = sharedAgent?.profiles?.prenom ?? '';
         const nom = sharedAgent?.profiles?.nom ?? '';
+        // Statut compte-rendu
+        const cr = crMap.get(v.id);
+        const visitMs = new Date(v.date_visite).getTime();
+        const isPast = v.statut === 'effectuee' || (visitMs < nowMs && (v.statut === 'planifiee' || v.statut === 'confirmee'));
+        let cr_status: 'non_requis' | 'a_faire' | 'en_retard' | 'fait' = 'non_requis';
+        if (cr?.envoye_au_client_at) cr_status = 'fait';
+        else if (isPast) {
+          const hoursLate = (nowMs - visitMs) / (1000 * 60 * 60);
+          cr_status = hoursLate > 24 ? 'en_retard' : 'a_faire';
+        }
         return {
           ...v,
           client_profile: profilesMap.get(v.clients?.user_id),
           candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null,
           is_shared: isShared,
           shared_by_name: isShared ? `${prenom} ${nom.charAt(0)}.`.trim() : null,
+          cr_status,
         };
       }) || [];
 
