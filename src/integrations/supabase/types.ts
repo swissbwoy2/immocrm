@@ -6572,6 +6572,8 @@ export type Database = {
         Row: {
           adresse: string
           agent_id: string | null
+          annee_construction: number | null
+          classe_energetique: string | null
           client_id: string | null
           code_immeuble: string | null
           commentaires: string | null
@@ -6580,23 +6582,30 @@ export type Database = {
           created_at: string | null
           date_envoi: string | null
           description: string | null
+          description_marketing: string | null
           disponibilite: string | null
+          equipements: string[] | null
           etage: string | null
           id: string
           lien_annonce: string | null
           locataire_nom: string | null
           locataire_tel: string | null
+          medias_galerie: Json | null
+          orientation: string | null
           pieces: number | null
           prix: number
           statut: string | null
           surface: number | null
           titre: string | null
           type_bien: string | null
+          type_chauffage: string | null
           updated_at: string | null
         }
         Insert: {
           adresse: string
           agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
           client_id?: string | null
           code_immeuble?: string | null
           commentaires?: string | null
@@ -6605,23 +6614,30 @@ export type Database = {
           created_at?: string | null
           date_envoi?: string | null
           description?: string | null
+          description_marketing?: string | null
           disponibilite?: string | null
+          equipements?: string[] | null
           etage?: string | null
           id?: string
           lien_annonce?: string | null
           locataire_nom?: string | null
           locataire_tel?: string | null
+          medias_galerie?: Json | null
+          orientation?: string | null
           pieces?: number | null
           prix: number
           statut?: string | null
           surface?: number | null
           titre?: string | null
           type_bien?: string | null
+          type_chauffage?: string | null
           updated_at?: string | null
         }
         Update: {
           adresse?: string
           agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
           client_id?: string | null
           code_immeuble?: string | null
           commentaires?: string | null
@@ -6630,18 +6646,23 @@ export type Database = {
           created_at?: string | null
           date_envoi?: string | null
           description?: string | null
+          description_marketing?: string | null
           disponibilite?: string | null
+          equipements?: string[] | null
           etage?: string | null
           id?: string
           lien_annonce?: string | null
           locataire_nom?: string | null
           locataire_tel?: string | null
+          medias_galerie?: Json | null
+          orientation?: string | null
           pieces?: number | null
           prix?: number
           statut?: string | null
           surface?: number | null
           titre?: string | null
           type_bien?: string | null
+          type_chauffage?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -10097,6 +10118,98 @@ export type Database = {
           },
         ]
       }
+      visite_comptes_rendus: {
+        Row: {
+          agent_id: string | null
+          appreciation_globale: string | null
+          client_id: string | null
+          commentaire_libre: string | null
+          created_at: string
+          created_by: string | null
+          envoye_au_client_at: string | null
+          etat_general: string | null
+          id: string
+          interet_client: string | null
+          medias: Json
+          offre_id: string | null
+          points_faibles: string[] | null
+          points_forts: string[] | null
+          prochaines_etapes: string | null
+          updated_at: string
+          visite_id: string
+          wa_envoye_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          appreciation_globale?: string | null
+          client_id?: string | null
+          commentaire_libre?: string | null
+          created_at?: string
+          created_by?: string | null
+          envoye_au_client_at?: string | null
+          etat_general?: string | null
+          id?: string
+          interet_client?: string | null
+          medias?: Json
+          offre_id?: string | null
+          points_faibles?: string[] | null
+          points_forts?: string[] | null
+          prochaines_etapes?: string | null
+          updated_at?: string
+          visite_id: string
+          wa_envoye_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          appreciation_globale?: string | null
+          client_id?: string | null
+          commentaire_libre?: string | null
+          created_at?: string
+          created_by?: string | null
+          envoye_au_client_at?: string | null
+          etat_general?: string | null
+          id?: string
+          interet_client?: string | null
+          medias?: Json
+          offre_id?: string | null
+          points_faibles?: string[] | null
+          points_forts?: string[] | null
+          prochaines_etapes?: string | null
+          updated_at?: string
+          visite_id?: string
+          wa_envoye_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visite_comptes_rendus_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visite_comptes_rendus_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visite_comptes_rendus_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visite_comptes_rendus_visite_id_fkey"
+            columns: ["visite_id"]
+            isOneToOne: true
+            referencedRelation: "visites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visites: {
         Row: {
           adresse: string
@@ -10380,6 +10493,7 @@ export type Database = {
           context_type: string | null
           created_at: string
           delivered_at: string | null
+          delivery_mode: string | null
           error_message: string | null
           event_type: string
           failed_at: string | null
@@ -10400,6 +10514,7 @@ export type Database = {
           context_type?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_mode?: string | null
           error_message?: string | null
           event_type: string
           failed_at?: string | null
@@ -10420,6 +10535,7 @@ export type Database = {
           context_type?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_mode?: string | null
           error_message?: string | null
           event_type?: string
           failed_at?: string | null
