@@ -271,6 +271,7 @@ export default function AdminWhatsAppNotifications() {
                     <TableHead>Template</TableHead>
                     <TableHead>Téléphone</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Contexte</TableHead>
                     <TableHead>Erreur</TableHead>
                   </TableRow>
                 </TableHeader>
