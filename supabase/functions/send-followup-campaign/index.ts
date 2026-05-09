@@ -96,6 +96,203 @@ function injectTracking(html: string, logId: string | null): string {
   return out;
 }
 
+// ───────────────────────────────────────────────────────────
+// LOCATION campaign — dedicated renderer (RDV-first design)
+// ───────────────────────────────────────────────────────────
+function renderLocationEmail(_campaign: Campaign, lead: LeadData, unsubscribeToken: string): string {
+  const firstName = lead.first_name?.trim() || '';
+  const greetingSuffix = firstName ? ` ${escapeHtml(firstName)}` : '';
+  const unsubscribeUrl = `${PUBLIC_BASE_URL}/unsubscribe/${unsubscribeToken}`;
+  const logoUrl = `${PUBLIC_BASE_URL}/email/logo-immo-rama.png`;
+
+  const benefits = [
+    'Clarifier tes critères de recherche',
+    'Vérifier si ton dossier est suffisamment solide',
+    'Identifier les logements qui correspondent vraiment à ta situation',
+    'Comprendre comment augmenter tes chances auprès des régies',
+    "Découvrir comment Logisorama peut t'accompagner jusqu'à la signature du bail",
+  ]
+    .map(
+      (b) => `
+        <tr>
+          <td style="padding:9px 0;vertical-align:top;width:26px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:#D4A853;color:#1c1814;font-weight:700;font-size:13px;text-align:center;line-height:22px;font-family:Arial,sans-serif;">✓</div>
+          </td>
+          <td style="padding:9px 0 9px 12px;color:#e8dfce;font-size:15px;line-height:1.55;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(b)}</td>
+        </tr>`,
+    )
+    .join('');
+
+  const trustCards = [
+    { title: 'Agent dédié', text: "Un expert suit ta recherche et t'aide à cibler les bons logements." },
+    { title: 'Dossier optimisé', text: "Ton dossier est mieux préparé avant d'être transmis aux régies." },
+    { title: 'Visites déléguées', text: "Si tu n'es pas disponible, ton agent peut visiter pour toi." },
+  ]
+    .map(
+      (c) => `
+        <td class="trust-col" align="center" valign="top" width="33%" style="padding:8px;">
+          <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,83,0.22);border-radius:12px;padding:18px 14px;">
+            <div style="font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:700;color:#D4A853;margin-bottom:6px;">${escapeHtml(c.title)}</div>
+            <div style="font-size:13px;line-height:1.5;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(c.text)}</div>
+          </div>
+        </td>`,
+    )
+    .join('');
+
+  // Primary CTA (filled gold) — used in hero and as final reminder
+  const ctaPrimary = (url: string, label: string) => `
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:54px;v-text-anchor:middle;width:320px;" arcsize="16%" stroke="f" fillcolor="#D4A853">
+          <w:anchorlock/>
+          <center style="color:#1c1814;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">${escapeHtml(label)}</center>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-- -->
+        <a href="${url}" class="btn-primary" style="display:inline-block;background:#D4A853;color:#1c1814;text-decoration:none;font-weight:700;font-size:15px;padding:18px 32px;border-radius:10px;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.3px;box-shadow:0 6px 18px rgba(212,168,83,0.35);max-width:320px;width:100%;box-sizing:border-box;text-align:center;line-height:1.2;">${escapeHtml(label)}</a>
+        <!--<![endif]-->`;
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>${escapeHtml(buildLocationSubject(firstName))}</title>
+<style>
+  @media only screen and (max-width: 600px) {
+    .stack { display:block !important; width:100% !important; max-width:100% !important; }
+    .px-mobile { padding-left:20px !important; padding-right:20px !important; }
+    .h1-mobile { font-size:24px !important; line-height:1.25 !important; }
+    .btn-primary, .btn-secondary { width:100% !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#F5F5F0;font-family:Arial,Helvetica,sans-serif;">
+<!-- Preheader (hidden, shown in inbox preview) -->
+<div style="display:none !important;visibility:hidden;mso-hide:all;font-size:1px;color:#F5F5F0;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${escapeHtml(LOCATION_PREHEADER)}</div>
+<div style="display:none;max-height:0;overflow:hidden;">&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F0;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:linear-gradient(180deg,#1c1814 0%,#231d18 100%);border-radius:14px;overflow:hidden;border:1px solid rgba(212,168,83,0.30);box-shadow:0 18px 50px rgba(0,0,0,0.22);">
+
+      <!-- HERO -->
+      <tr><td class="px-mobile" style="padding:36px 32px 16px;text-align:center;">
+        <!-- Badge -->
+        <div style="display:inline-block;background:rgba(212,168,83,0.10);border:1px solid rgba(212,168,83,0.45);border-radius:999px;padding:7px 16px;margin-bottom:20px;">
+          <span style="font-size:12px;color:#E8C77E;font-weight:600;letter-spacing:0.4px;font-family:Arial,Helvetica,sans-serif;">👑 Service premium de recherche d'appartement en Suisse romande</span>
+        </div>
+        <!-- Logo -->
+        <div style="margin:4px 0 18px;">
+          <img src="${logoUrl}" alt="Immo-Rama" height="70" style="display:inline-block;height:70px;width:auto;max-width:160px;">
+        </div>
+        <!-- H1 -->
+        <h1 class="h1-mobile" style="margin:0 0 14px;font-size:28px;line-height:1.25;color:#f4ecd8;font-weight:700;font-family:Georgia,'Times New Roman',serif;">Bonjour${greetingSuffix}, viens faire analyser ta recherche gratuitement.</h1>
+        <!-- Subtitle -->
+        <p style="margin:0 auto 26px;max-width:480px;font-size:15px;line-height:1.6;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Tu cherches un appartement en Suisse romande ? Passe à nos bureaux de Crissier : un expert Logisorama analyse ton dossier, tes critères et ta situation en 30 minutes.</p>
+        <!-- Primary CTA -->
+        ${ctaPrimary(LOCATION_CTA_RDV_HERO_URL, '📍 Réserver mon RDV gratuit à Crissier')}
+        <p style="margin:14px auto 0;max-width:380px;font-size:13px;line-height:1.5;color:#E8C77E;font-style:italic;font-family:Georgia,serif;">30 min avec un expert · 100&nbsp;% gratuit · Sans engagement</p>
+      </td></tr>
+
+      <!-- BENEFITS -->
+      <tr><td class="px-mobile" style="padding:14px 32px 6px;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(212,168,83,0.22);border-radius:12px;padding:18px 22px;">
+          <div style="font-family:Georgia,serif;font-size:15px;color:#E8C77E;font-weight:700;margin-bottom:6px;">Pendant ton rendez-vous, on t'aide à :</div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${benefits}</table>
+        </div>
+      </td></tr>
+
+      <!-- SOCIAL PROOF -->
+      <tr><td class="px-mobile" style="padding:22px 32px 4px;text-align:center;">
+        <div style="font-size:14px;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;line-height:1.55;">
+          <span style="color:#D4A853;letter-spacing:2px;">★ ★ ★ ★ ★</span><br>
+          Plus de 500 locataires accompagnés en Suisse romande · <span style="color:#a89c87;">Avis Google vérifiés</span>
+        </div>
+      </td></tr>
+
+      <!-- TRUST CARDS -->
+      <tr><td class="px-mobile" style="padding:18px 24px 6px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>${trustCards}</tr>
+        </table>
+      </td></tr>
+
+      <!-- FINAL CTA RDV -->
+      <tr><td class="px-mobile" style="padding:26px 32px 6px;text-align:center;">
+        <div style="font-family:Georgia,serif;font-size:14px;color:#a89c87;margin-bottom:14px;font-style:italic;">Prêt à avancer ?</div>
+        ${ctaPrimary(LOCATION_CTA_RDV_FINAL_URL, '📍 Fixer mon rendez-vous gratuit')}
+        <div style="margin-top:14px;font-size:13px;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;line-height:1.55;">
+          Chemin de l'Esparsette 5, 1023 Crissier<br>
+          <span style="color:#8a7f6e;">30 min · 1-to-1 avec un expert · Sans engagement</span>
+        </div>
+      </td></tr>
+
+      <!-- ALT: ONLINE ACTIVATION -->
+      <tr><td class="px-mobile" style="padding:30px 32px 6px;text-align:center;">
+        <div style="height:1px;background:rgba(212,168,83,0.22);margin:0 auto 22px;max-width:240px;"></div>
+        <div style="font-family:Georgia,serif;font-size:15px;color:#f4ecd8;font-weight:700;margin-bottom:6px;">Tu préfères commencer directement en ligne ?</div>
+        <p style="margin:0 auto 16px;max-width:420px;font-size:13px;color:#a89c87;line-height:1.55;font-family:Arial,Helvetica,sans-serif;">Crée ton compte et indique tes critères en 2 minutes.</p>
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${LOCATION_CTA_ACTIVATION_URL}" style="height:46px;v-text-anchor:middle;width:260px;" arcsize="18%" strokecolor="#D4A853" strokeweight="2px" fillcolor="#1c1814">
+          <w:anchorlock/>
+          <center style="color:#D4A853;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Activer ma recherche en ligne</center>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-- -->
+        <a href="${LOCATION_CTA_ACTIVATION_URL}" class="btn-secondary" style="display:inline-block;background:transparent;border:2px solid #D4A853;color:#D4A853;text-decoration:none;font-weight:600;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.2px;max-width:260px;width:100%;box-sizing:border-box;text-align:center;line-height:1.2;">Activer ma recherche en ligne</a>
+        <!--<![endif]-->
+        <p style="margin:10px auto 0;max-width:380px;font-size:12px;color:#8a7f6e;font-style:italic;font-family:Georgia,serif;">Essai gratuit 48h · Sans engagement immédiat</p>
+      </td></tr>
+
+      <!-- GOOGLE REVIEWS COMPACT -->
+      <tr><td class="px-mobile" style="padding:30px 32px 8px;text-align:center;">
+        <div style="font-size:18px;letter-spacing:3px;color:#D4A853;line-height:1;margin-bottom:6px;">★ ★ ★ ★ ★</div>
+        <div style="font-family:Georgia,serif;font-size:14px;color:#f4ecd8;font-weight:700;margin-bottom:4px;">Avis Google vérifiés</div>
+        <p style="margin:0 0 10px;font-size:13px;color:#a89c87;font-family:Arial,Helvetica,sans-serif;line-height:1.5;">Découvre les retours de nos clients accompagnés dans leur recherche de logement.</p>
+        <a href="https://www.google.com/maps/place/Immo-rama.ch/@46.553728,6.572675,17z/data=!4m8!3m7!1s0x478c31710ee69131:0x868b9609d0284202!8m2!3d46.553728!4d6.572675!9m1!1b1" style="font-size:13px;color:#D4A853;text-decoration:underline;font-family:Arial,Helvetica,sans-serif;">Lire nos avis Google →</a>
+      </td></tr>
+
+      <!-- SIGNATURE -->
+      <tr><td class="px-mobile" style="padding:28px 32px 18px;color:#c9bfac;font-size:14px;line-height:1.7;font-family:Georgia,serif;font-style:italic;">
+        À très vite,<br>
+        L'équipe Logisorama.ch<br>
+        by Immo-Rama.ch
+      </td></tr>
+
+      <!-- FOOTER -->
+      <tr><td style="background:#0e0c0a;padding:22px 28px;text-align:center;border-top:1px solid rgba(212,168,83,0.18);">
+        <div style="color:#8a7f6e;font-size:12px;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
+          <strong style="color:#c9a96a;">Immo-Rama.ch</strong> · CHE-442.303.796<br>
+          Suisse romande · <a href="${PUBLIC_BASE_URL}" style="color:#D4A853;text-decoration:none;">logisorama.ch</a>
+        </div>
+        <div style="margin-top:14px;color:#5a5246;font-size:11px;font-family:Arial,Helvetica,sans-serif;">
+          Tu reçois cet email car tu as demandé des informations via l'une de nos campagnes.<br>
+          <a href="${unsubscribeUrl}" style="color:#8a7f6e;text-decoration:underline;">Se désinscrire</a>
+        </div>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function renderForCampaign(campaign: Campaign, lead: LeadData, unsubscribeToken: string): string {
+  if (campaign.campaign_key === 'location') {
+    return renderLocationEmail(campaign, lead, unsubscribeToken);
+  }
+  return renderEmail(campaign, lead, unsubscribeToken);
+}
+
+function subjectForCampaign(campaign: Campaign, lead: LeadData): string {
+  if (campaign.campaign_key === 'location') {
+    return buildLocationSubject(lead.first_name?.trim() || '');
+  }
+  return campaign.subject;
+}
+
 function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: string): string {
   const firstName = lead.first_name?.trim() || '';
   let intro = campaign.body_intro || '';
