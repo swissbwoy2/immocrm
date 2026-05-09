@@ -298,8 +298,116 @@ export default function CampagnesSuivi() {
     toast.success("Email test envoyé", { description: `Destinataire : info@immo-rama.ch` });
   };
 
-  // ───── Filtered leads
-  const filteredLeads = useMemo(() => {
+  // ───── WhatsApp Location campaign
+  const WA_TEMPLATE_KEY = "location_rdv_activation_v2";
+
+  const loadWaAlreadySent = async () => {
+    const locationLeadIds = leads.filter((l) => l.campaign_key === "location").map((l) => l.id);
+    if (locationLeadIds.length === 0) {
+      setWaAlreadySent(new Set());
+      return;
+    }
+    const { data } = await supabase
+      .from("whatsapp_notification_logs")
+      .select("context_ref")
+      .eq("template_key", WA_TEMPLATE_KEY)
+      .eq("status", "sent")
+      .in("context_ref", locationLeadIds)
+      .limit(15000);
+    setWaAlreadySent(new Set((data || []).map((r: any) => r.context_ref).filter(Boolean)));
+  };
+
+  const handleWaPreview = async () => {
+    setWaPreviewLoading(true);
+    setWaPreview(null);
+    const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
+      body: { mode: "preview", first_name: "V-Yael" },
+    });
+    setWaPreviewLoading(false);
+    if (error || data?.error) {
+      toast.error("Erreur aperçu WhatsApp", { description: error?.message || data?.error });
+      return;
+    }
+    setWaPreview(data);
+  };
+
+  const handleWaTest = async () => {
+    setWaTesting(true);
+    const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
+      body: { mode: "test", first_name: "à toi" },
+    });
+    setWaTesting(false);
+    if (error || data?.error || data?.ok === false) {
+      toast.error("Échec test WhatsApp", { description: error?.message || data?.error || JSON.stringify(data?.result || {}) });
+      return;
+    }
+    toast.success("Message WhatsApp test envoyé", { description: "Vérifie ton numéro test." });
+  };
+
+  const handleWaSend = async () => {
+    if (waSelectedIds.size === 0) return;
+    setWaSending(true);
+    setWaLastResult(null);
+    const ids = Array.from(waSelectedIds);
+    let totalSent = 0, totalSkipped = 0, totalFailed = 0, totalProcessed = 0;
+    // Batches of 3 (Edge Function enforces MAX_BATCH=3)
+    for (let i = 0; i < ids.length; i += 3) {
+      const slice = ids.slice(i, i + 3);
+      const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
+        body: { mode: "send", lead_ids: slice, allowResend: waAllowResend },
+      });
+      if (error || data?.error) {
+        toast.error(`Batch ${i / 3 + 1} échoué`, { description: error?.message || data?.error });
+        totalFailed += slice.length;
+        continue;
+      }
+      const s = data?.summary || {};
+      totalSent += s.sent || 0;
+      totalSkipped += s.skipped || 0;
+      totalFailed += s.failed || 0;
+      totalProcessed += s.processed || 0;
+    }
+    setWaSending(false);
+    setWaLastResult({ sent: totalSent, skipped: totalSkipped, failed: totalFailed, processed: totalProcessed, total_requested: ids.length });
+    setWaSelectedIds(new Set());
+    await loadWaAlreadySent();
+    toast.success(`Campagne WhatsApp terminée`, {
+      description: `${totalSent} envoyés · ${totalSkipped} ignorés · ${totalFailed} échecs sur ${ids.length}`,
+    });
+  };
+
+  // ───── Filtered leads (WhatsApp)
+  const waFilteredLeads = useMemo(() => {
+    return leads.filter((l) => {
+      if (l.campaign_key !== "location") return false;
+      if (!l.phone) return false;
+      if (!waAllowResend && waAlreadySent.has(l.id)) return false;
+      if (waSearch) {
+        const s = waSearch.toLowerCase();
+        const hay = `${l.email} ${l.first_name || ""} ${l.last_name || ""} ${l.phone || ""}`.toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      return true;
+    });
+  }, [leads, waAlreadySent, waAllowResend, waSearch]);
+
+  const toggleWaSelect = (id: string) => {
+    setWaSelectedIds((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+  const toggleWaSelectAll = () => {
+    if (waSelectedIds.size === waFilteredLeads.length) setWaSelectedIds(new Set());
+    else setWaSelectedIds(new Set(waFilteredLeads.map((l) => l.id)));
+  };
+
+  useEffect(() => {
+    if (activeTab === "whatsapp" && leads.length > 0) loadWaAlreadySent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, leads.length]);
+
     return leads.filter((l) => {
       if (l.campaign_key !== selectedCampaign) return false;
       if (hideAlreadySent && sentLeadIds.has(l.id)) return false;
