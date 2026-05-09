@@ -765,7 +765,14 @@ export default function CampagnesSuivi() {
                       Campagne : <span className="font-medium">{currentCampaign.name}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                      <Checkbox
+                        checked={allowResend}
+                        onCheckedChange={(v) => setAllowResend(v === true)}
+                      />
+                      <span>🔁 Renvoyer aux leads déjà contactés</span>
+                    </label>
                     <Button variant="outline" onClick={() => setSelectedIds(new Set())}>
                       Désélectionner
                     </Button>
