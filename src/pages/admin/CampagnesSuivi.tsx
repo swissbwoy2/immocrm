@@ -781,13 +781,11 @@ export default function CampagnesSuivi() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                      <Checkbox
-                        checked={allowResend}
-                        onCheckedChange={(v) => setAllowResend(v === true)}
-                      />
-                      <span>🔁 Renvoyer aux leads déjà contactés</span>
-                    </label>
+                    {allowResend && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
+                        🔁 Mode renvoi activé
+                      </Badge>
+                    )}
                     <Button variant="outline" onClick={() => setSelectedIds(new Set())}>
                       Désélectionner
                     </Button>
