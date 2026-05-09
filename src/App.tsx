@@ -26,6 +26,7 @@ const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
 const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
 const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
+const RendezVousBureau = lazy(() => import("./pages/RendezVousBureau"));
 const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
 const ConstruireRenover = lazy(() => import("./pages/ConstruireRenover"));
 const FormulaireConstruireRenover = lazy(() => import("./pages/FormulaireConstruireRenover"));
@@ -270,6 +271,7 @@ const App = () => (
               <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
               <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
               <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
+              <Route path="/rendez-vous" element={<RendezVousBureau />} />
               <Route path="/formulaire-relouer" element={<FormulaireRelouer />} />
               <Route path="/construire-renover" element={<ConstruireRenover />} />
               <Route path="/formulaire-construire-renover" element={<FormulaireConstruireRenover />} />
