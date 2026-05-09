@@ -572,12 +572,13 @@ Deno.serve(async (req) => {
     }
 
     const camp = campaign as Campaign;
-    const fakeLead: LeadData = { first_name: 'Marie', email: TEST_RECIPIENT };
+    const fakeLead: LeadData = { first_name: '', email: TEST_RECIPIENT };
 
     // ───── PREVIEW
     if (mode === 'preview') {
-      const html = renderEmail(camp, fakeLead, 'preview-token');
-      return new Response(JSON.stringify({ html, subject: camp.subject }), {
+      const html = renderForCampaign(camp, fakeLead, 'preview-token');
+      const subject = subjectForCampaign(camp, fakeLead);
+      return new Response(JSON.stringify({ html, subject }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -585,6 +586,7 @@ Deno.serve(async (req) => {
     // ───── TEST
     if (mode === 'test') {
       const unsubToken = crypto.randomUUID();
+      const testSubject = `[TEST] ${subjectForCampaign(camp, fakeLead)}`;
       const { data: preLog } = await supabaseAdmin
         .from('lead_email_logs')
         .insert({
@@ -592,7 +594,7 @@ Deno.serve(async (req) => {
           campaign_id: camp.id,
           campaign_key: camp.campaign_key,
           recipient_email: TEST_RECIPIENT,
-          subject: `[TEST] ${camp.subject}`,
+          subject: testSubject,
           status: 'pending',
           unsubscribe_token: unsubToken,
           test_send: true,
@@ -600,9 +602,9 @@ Deno.serve(async (req) => {
         .select('id')
         .single();
       const logId = preLog?.id || null;
-      const rawHtml = renderEmail(camp, fakeLead, unsubToken);
+      const rawHtml = renderForCampaign(camp, fakeLead, unsubToken);
       const html = injectTracking(rawHtml, logId);
-      const result = await sendViaResend(TEST_RECIPIENT, `[TEST] ${camp.subject}`, html);
+      const result = await sendViaResend(TEST_RECIPIENT, testSubject, html);
 
       if (logId) {
         await supabaseAdmin
