@@ -166,6 +166,17 @@ export default function CampagnesSuivi() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
+  // WhatsApp Location tab
+  const [waPreview, setWaPreview] = useState<{ body_rendered: string; button_url: string; activation_link: string; first_name_param: string } | null>(null);
+  const [waPreviewLoading, setWaPreviewLoading] = useState(false);
+  const [waTesting, setWaTesting] = useState(false);
+  const [waSelectedIds, setWaSelectedIds] = useState<Set<string>>(new Set());
+  const [waAlreadySent, setWaAlreadySent] = useState<Set<string>>(new Set());
+  const [waAllowResend, setWaAllowResend] = useState(false);
+  const [waSearch, setWaSearch] = useState("");
+  const [waSending, setWaSending] = useState(false);
+  const [waLastResult, setWaLastResult] = useState<{ sent: number; skipped: number; failed: number; processed: number; total_requested: number } | null>(null);
+
   // ───── Load campaigns
   useEffect(() => {
     (async () => {
