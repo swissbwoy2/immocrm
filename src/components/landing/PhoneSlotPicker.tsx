@@ -92,12 +92,29 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
           Étape finale
         </div>
         <h3 className="text-lg md:text-xl font-bold text-foreground">
-          Choisis un créneau d'appel téléphonique
+          Choisis ton créneau au bureau
         </h3>
         <p className="text-sm text-muted-foreground">
-          15 minutes — 7j/7 entre 7h30 et 22h00
+          30 minutes — Lun→Sam, 08h30→12h00 et 13h30→16h30
         </p>
       </div>
+
+      {/* Adresse du bureau */}
+      <a
+        href={OFFICE_MAPS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+          <MapPin className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-primary uppercase tracking-wide">Bureau Logisorama</p>
+          <p className="text-sm font-medium text-foreground truncate">{OFFICE_ADDRESS}</p>
+        </div>
+        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      </a>
 
       {/* Date picker */}
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
