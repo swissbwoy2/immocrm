@@ -35,7 +35,14 @@ export function useWhatsAppUnreadCount(scope: "admin" | "agent" | "both" = "both
         .eq("sender_type", "client")
         .eq("read", false)
         .ilike("content", "📱 [WhatsApp]%");
-      setCount(c || 0);
+
+      const { count: u } = await supabase
+        .from("whatsapp_unknown_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("direction", "in")
+        .eq("read", false);
+
+      setCount((c || 0) + (u || 0));
     } catch (e) {
       console.warn("useWhatsAppUnreadCount load error", e);
     }
@@ -56,6 +63,9 @@ export function useWhatsAppUnreadCount(scope: "admin" | "agent" | "both" = "both
         })
       .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "messages" },
+        () => load())
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "whatsapp_unknown_messages" },
         () => load())
       .subscribe();
     return () => { supabase.removeChannel(chan); };

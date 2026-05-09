@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, MessageCircle, Search, RefreshCw, Send, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, MessageCircle, Search, RefreshCw, Send, AlertTriangle, ArrowLeft, Phone } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -14,12 +15,15 @@ import { toast } from "sonner";
 interface InboundMessage {
   id: string;
   conversation_id: string;
+  unknown_conversation_id?: string;
   content: string;
   created_at: string;
   read: boolean;
   client_id?: string;
   client_name?: string;
   agent_id?: string;
+  phone?: string;
+  isUnknown?: boolean;
 }
 
 interface ConvMessage {
@@ -35,7 +39,9 @@ interface Props {
 }
 
 export function WhatsAppInbox({ scope }: Props) {
+  const [tab, setTab] = useState<"clients" | "inconnus">("clients");
   const [messages, setMessages] = useState<InboundMessage[]>([]);
+  const [unknowns, setUnknowns] = useState<InboundMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedConv, setSelectedConv] = useState<InboundMessage | null>(null);
@@ -45,10 +51,8 @@ export function WhatsAppInbox({ scope }: Props) {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const loadClients = async () => {
     let agentId: string | null = null;
-
     if (scope === "agent") {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -56,12 +60,11 @@ export function WhatsAppInbox({ scope }: Props) {
         agentId = a?.id ?? null;
       }
     }
-
     let convQuery = supabase.from("conversations").select("id, client_id, agent_id");
     if (scope === "agent" && agentId) convQuery = convQuery.eq("agent_id", agentId);
     const { data: convs } = await convQuery;
     const convIds = (convs || []).map((c: any) => c.id);
-    if (!convIds.length) { setMessages([]); setLoading(false); return; }
+    if (!convIds.length) { setMessages([]); return; }
 
     const { data: msgs } = await supabase
       .from("messages")
@@ -72,18 +75,17 @@ export function WhatsAppInbox({ scope }: Props) {
       .order("created_at", { ascending: false })
       .limit(300);
 
-    // Group: latest message per conversation
     const seen = new Set<string>();
-    const latestPerConv = (msgs || []).filter((m: any) => {
+    const latest = (msgs || []).filter((m: any) => {
       if (seen.has(m.conversation_id)) return false;
       seen.add(m.conversation_id);
       return true;
     });
 
     const convMap = new Map((convs || []).map((c: any) => [c.id, c]));
-    const clientIds = Array.from(new Set(latestPerConv.map((m: any) => convMap.get(m.conversation_id)?.client_id).filter(Boolean)));
+    const clientIds = Array.from(new Set(latest.map((m: any) => convMap.get(m.conversation_id)?.client_id).filter(Boolean)));
 
-    let nameMap = new Map<string, string>();
+    const nameMap = new Map<string, string>();
     if (clientIds.length) {
       const { data: clients } = await supabase.from("clients").select("id, user_id").in("id", clientIds as string[]);
       const userIds = (clients || []).map((c: any) => c.user_id).filter(Boolean);
@@ -94,13 +96,12 @@ export function WhatsAppInbox({ scope }: Props) {
       (clients || []).forEach((c: any) => nameMap.set(c.id, profileMap.get(c.user_id) || "Client"));
     }
 
-    // Unread counts
     const unreadMap = new Map<string, number>();
     (msgs || []).forEach((m: any) => {
       if (!m.read) unreadMap.set(m.conversation_id, (unreadMap.get(m.conversation_id) || 0) + 1);
     });
 
-    const enriched: InboundMessage[] = latestPerConv.map((m: any) => {
+    setMessages(latest.map((m: any) => {
       const conv = convMap.get(m.conversation_id) || {};
       return {
         ...m,
@@ -109,9 +110,51 @@ export function WhatsAppInbox({ scope }: Props) {
         agent_id: conv.agent_id,
         client_name: nameMap.get(conv.client_id) || "—",
       };
-    });
+    }));
+  };
 
-    setMessages(enriched);
+  const loadUnknowns = async () => {
+    const { data } = await supabase
+      .from("whatsapp_unknown_conversations")
+      .select("id, phone_e164, display_name, last_message_at, status")
+      .order("last_message_at", { ascending: false })
+      .limit(200);
+
+    const ids = (data || []).map(c => c.id);
+    let lastMsgMap = new Map<string, { content: string; read: boolean }>();
+    let unreadMap = new Map<string, number>();
+    if (ids.length) {
+      const { data: msgs } = await supabase
+        .from("whatsapp_unknown_messages")
+        .select("conversation_id, content, created_at, read, direction")
+        .in("conversation_id", ids)
+        .order("created_at", { ascending: false });
+      (msgs || []).forEach((m: any) => {
+        if (!lastMsgMap.has(m.conversation_id)) {
+          lastMsgMap.set(m.conversation_id, { content: m.content, read: m.read });
+        }
+        if (m.direction === "in" && !m.read) {
+          unreadMap.set(m.conversation_id, (unreadMap.get(m.conversation_id) || 0) + 1);
+        }
+      });
+    }
+
+    setUnknowns((data || []).map((c: any) => ({
+      id: c.id,
+      conversation_id: c.id,
+      unknown_conversation_id: c.id,
+      content: lastMsgMap.get(c.id)?.content || "(aucun message)",
+      created_at: c.last_message_at,
+      read: (unreadMap.get(c.id) || 0) === 0,
+      client_name: c.display_name || c.phone_e164,
+      phone: c.phone_e164,
+      isUnknown: true,
+    })));
+  };
+
+  const load = async () => {
+    setLoading(true);
+    await Promise.all([loadClients(), loadUnknowns()]);
     setLoading(false);
   };
 
@@ -119,27 +162,45 @@ export function WhatsAppInbox({ scope }: Props) {
     setSelectedConv(m);
     setConvLoading(true);
     setConvMessages([]);
-    const { data } = await supabase
-      .from("messages")
-      .select("id, content, created_at, sender_type, read")
-      .eq("conversation_id", m.conversation_id)
-      .or("content.ilike.📱 [WhatsApp]%,content.ilike.📱 [WhatsApp →]%")
-      .order("created_at", { ascending: true })
-      .limit(100);
-    setConvMessages(data || []);
+
+    if (m.isUnknown) {
+      const { data } = await supabase
+        .from("whatsapp_unknown_messages")
+        .select("id, content, created_at, direction, read")
+        .eq("conversation_id", m.conversation_id)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      setConvMessages((data || []).map((x: any) => ({
+        id: x.id, content: x.content, created_at: x.created_at,
+        sender_type: x.direction === "in" ? "client" : "agent", read: x.read,
+      })));
+      await supabase
+        .from("whatsapp_unknown_messages")
+        .update({ read: true })
+        .eq("conversation_id", m.conversation_id)
+        .eq("direction", "in")
+        .eq("read", false);
+      setUnknowns(prev => prev.map(x => x.conversation_id === m.conversation_id ? { ...x, read: true } : x));
+    } else {
+      const { data } = await supabase
+        .from("messages")
+        .select("id, content, created_at, sender_type, read")
+        .eq("conversation_id", m.conversation_id)
+        .or("content.ilike.📱 [WhatsApp]%,content.ilike.📱 [WhatsApp →]%")
+        .order("created_at", { ascending: true })
+        .limit(100);
+      setConvMessages(data || []);
+      await supabase
+        .from("messages")
+        .update({ read: true })
+        .eq("conversation_id", m.conversation_id)
+        .eq("sender_type", "client")
+        .eq("read", false)
+        .ilike("content", "📱 [WhatsApp]%");
+      setMessages(prev => prev.map(x => x.conversation_id === m.conversation_id ? { ...x, read: true } : x));
+    }
+
     setConvLoading(false);
-
-    // Mark inbound as read
-    await supabase
-      .from("messages")
-      .update({ read: true })
-      .eq("conversation_id", m.conversation_id)
-      .eq("sender_type", "client")
-      .eq("read", false)
-      .ilike("content", "📱 [WhatsApp]%");
-
-    setMessages(prev => prev.map(x => x.conversation_id === m.conversation_id ? { ...x, read: true } : x));
-
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }), 50);
   };
 
@@ -147,18 +208,16 @@ export function WhatsAppInbox({ scope }: Props) {
     if (!selectedConv || !reply.trim() || sending) return;
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("wa-reply-text", {
-        body: { conversation_id: selectedConv.conversation_id, text: reply.trim() },
-      });
+      const body: any = { text: reply.trim() };
+      if (selectedConv.isUnknown) body.unknown_conversation_id = selectedConv.conversation_id;
+      else body.conversation_id = selectedConv.conversation_id;
+
+      const { data, error } = await supabase.functions.invoke("wa-reply-text", { body });
       if (error || (data as any)?.error) {
         const errCode = (data as any)?.error || error?.message || "erreur";
-        if (errCode === "window_closed") {
-          toast.error("Fenêtre 24h Meta fermée. Le client doit vous écrire d'abord, ou utilisez un template.");
-        } else if (errCode === "invalid_phone") {
-          toast.error("Numéro WhatsApp du client invalide ou manquant.");
-        } else {
-          toast.error("Erreur d'envoi : " + errCode);
-        }
+        if (errCode === "window_closed") toast.error("Fenêtre 24h Meta fermée. Le client doit vous écrire d'abord, ou utilisez un template.");
+        else if (errCode === "invalid_phone") toast.error("Numéro WhatsApp invalide.");
+        else toast.error("Erreur d'envoi : " + errCode);
         return;
       }
       setReply("");
@@ -171,35 +230,37 @@ export function WhatsAppInbox({ scope }: Props) {
 
   useEffect(() => {
     load();
-    const chan = supabase.channel("wa-inbox-" + scope).on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "messages" },
-      (payload: any) => {
+    const chan = supabase.channel("wa-inbox-" + scope)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload: any) => {
         const c = payload.new?.content || "";
         if (payload.new?.sender_type === "client" && c.startsWith("📱 [WhatsApp]")) {
-          load();
-          if (selectedConv && payload.new?.conversation_id === selectedConv.conversation_id) {
-            loadConversation(selectedConv);
-          }
+          loadClients();
+          if (selectedConv && !selectedConv.isUnknown && payload.new?.conversation_id === selectedConv.conversation_id) loadConversation(selectedConv);
         }
-      },
-    ).subscribe();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_unknown_messages" }, (payload: any) => {
+        loadUnknowns();
+        if (selectedConv?.isUnknown && (payload.new as any)?.conversation_id === selectedConv.conversation_id) loadConversation(selectedConv);
+      })
+      .subscribe();
     return () => { supabase.removeChannel(chan); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, selectedConv?.conversation_id]);
 
+  const currentList = tab === "clients" ? messages : unknowns;
   const filtered = useMemo(() => {
-    if (!search.trim()) return messages;
+    if (!search.trim()) return currentList;
     const q = search.toLowerCase();
-    return messages.filter(m =>
+    return currentList.filter(m =>
       (m.client_name || "").toLowerCase().includes(q) ||
-      (m.content || "").toLowerCase().includes(q),
+      (m.content || "").toLowerCase().includes(q) ||
+      (m.phone || "").toLowerCase().includes(q),
     );
-  }, [messages, search]);
+  }, [currentList, search]);
 
-  const unreadCount = messages.filter(m => !m.read).length;
+  const unreadClients = messages.filter(m => !m.read).length;
+  const unreadUnknowns = unknowns.filter(m => !m.read).length;
 
-  // 24h window check for selected conv
   const lastInbound = useMemo(() => {
     const inbounds = convMessages.filter(m => m.sender_type === "client");
     return inbounds[inbounds.length - 1];
@@ -212,7 +273,6 @@ export function WhatsAppInbox({ scope }: Props) {
         <div className="flex items-center gap-3">
           <MessageCircle className="h-6 w-6 text-green-600" />
           <h1 className="text-2xl font-bold">Inbox WhatsApp</h1>
-          {unreadCount > 0 && <Badge variant="destructive">{unreadCount} non lu(s)</Badge>}
         </div>
         <Button variant="outline" size="sm" onClick={load}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualiser
@@ -220,29 +280,37 @@ export function WhatsAppInbox({ scope }: Props) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
-        {/* Liste */}
         <div className={selectedConv ? "hidden lg:block" : ""}>
+          <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelectedConv(null); }} className="mb-3">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="clients" className="gap-2">
+                Clients
+                {unreadClients > 0 && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{unreadClients}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="inconnus" className="gap-2">
+                Inconnus
+                {unreadUnknowns > 0 && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{unreadUnknowns}</Badge>}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <Card className="mb-3">
             <CardContent className="p-3">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="border-0 focus-visible:ring-0"
-                />
+                <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="border-0 focus-visible:ring-0" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="py-3"><CardTitle className="text-sm">Conversations</CardTitle></CardHeader>
             <CardContent className="p-0">
               {loading ? (
                 <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
               ) : filtered.length === 0 ? (
-                <p className="text-muted-foreground text-center py-10 px-4 text-sm">Aucun message WhatsApp reçu pour le moment.</p>
+                <p className="text-muted-foreground text-center py-10 px-4 text-sm">
+                  {tab === "clients" ? "Aucun message client." : "Aucun message d'inconnu."}
+                </p>
               ) : (
                 <ScrollArea className="h-[65vh]">
                   <div className="divide-y">
@@ -258,6 +326,7 @@ export function WhatsAppInbox({ scope }: Props) {
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
+                                {m.isUnknown && <Phone className="h-3 w-3 text-amber-600 shrink-0" />}
                                 <span className="font-medium text-sm truncate">{m.client_name}</span>
                                 {!m.read && <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />}
                               </div>
@@ -277,18 +346,19 @@ export function WhatsAppInbox({ scope }: Props) {
           </Card>
         </div>
 
-        {/* Conversation */}
         <div className={selectedConv ? "" : "hidden lg:block"}>
           <Card className="h-[75vh] flex flex-col">
             {selectedConv ? (
               <>
                 <CardHeader className="py-3 border-b shrink-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSelectedConv(null)}>
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400">WhatsApp</Badge>
+                    {selectedConv.isUnknown && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">Inconnu</Badge>}
                     <CardTitle className="text-base">{selectedConv.client_name}</CardTitle>
+                    {selectedConv.phone && <span className="text-xs text-muted-foreground">{selectedConv.phone}</span>}
                   </div>
                 </CardHeader>
 
@@ -298,7 +368,7 @@ export function WhatsAppInbox({ scope }: Props) {
                       {convLoading ? (
                         <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
                       ) : convMessages.length === 0 ? (
-                        <p className="text-center text-muted-foreground text-sm py-10">Aucun message WhatsApp dans cette conversation.</p>
+                        <p className="text-center text-muted-foreground text-sm py-10">Aucun message.</p>
                       ) : (
                         convMessages.map(m => {
                           const isAgent = m.sender_type === "agent";
@@ -323,7 +393,7 @@ export function WhatsAppInbox({ scope }: Props) {
                   {!windowOpen && (
                     <div className="flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-md p-2">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <span>Fenêtre 24h Meta fermée. Le client doit vous écrire en premier, sinon utilisez un template depuis les Logs WhatsApp.</span>
+                      <span>Fenêtre 24h Meta fermée. Le contact doit vous écrire en premier pour rouvrir la conversation.</span>
                     </div>
                   )}
                   <div className="flex gap-2">
@@ -333,12 +403,7 @@ export function WhatsAppInbox({ scope }: Props) {
                       onChange={(e) => setReply(e.target.value)}
                       rows={2}
                       disabled={!windowOpen || sending}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          sendReply();
-                        }
-                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                       className="resize-none"
                     />
                     <Button onClick={sendReply} disabled={!windowOpen || sending || !reply.trim()} className="bg-green-600 hover:bg-green-700">
