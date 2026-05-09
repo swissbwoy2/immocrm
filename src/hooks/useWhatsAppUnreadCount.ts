@@ -64,6 +64,9 @@ export function useWhatsAppUnreadCount(scope: "admin" | "agent" | "both" = "both
       .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "messages" },
         () => load())
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "whatsapp_unknown_messages" },
+        () => load())
       .subscribe();
     return () => { supabase.removeChannel(chan); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
