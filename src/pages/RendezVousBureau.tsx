@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
 import { MapPin, ExternalLink, CheckCircle2, Loader2, Sun, Sunset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
