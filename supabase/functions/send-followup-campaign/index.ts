@@ -216,11 +216,11 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
         </table>
       </td></tr>
 
-      <!-- CTA FINAL — Appel téléphonique -->
+      <!-- CTA FINAL — RDV au bureau -->
       <tr><td style="padding:0 40px 36px;text-align:center;">
         <div style="margin:0 auto 16px;max-width:280px;height:1px;background:rgba(184,137,61,0.25);"></div>
-        <a href="${PUBLIC_BASE_URL}/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📞  Préférez un appel téléphonique gratuit&nbsp;?</a>
-        <p style="margin:10px auto 0;max-width:380px;font-size:12px;line-height:1.5;color:#8a7f6e;font-family:Arial,sans-serif;">15 min avec un expert · analyse en direct de votre dossier</p>
+        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_rdv_bureau_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📍  Préférez un rendez-vous à nos bureaux&nbsp;?</a>
+        <p style="margin:10px auto 0;max-width:380px;font-size:12px;line-height:1.5;color:#8a7f6e;font-family:Arial,sans-serif;">30 min avec un expert · Chemin de l'Esparsette 5, 1023 Crissier</p>
       </td></tr>
 
       <!-- SIGNATURE -->
