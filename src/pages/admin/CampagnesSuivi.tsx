@@ -1022,7 +1022,7 @@ export default function CampagnesSuivi() {
                 Campagne WhatsApp — Location (RDV gratuit Crissier)
               </CardTitle>
               <CardDescription>
-                Template Meta : <code className="text-xs bg-muted px-1.5 py-0.5 rounded">logisorama_location_rdv_activation_v2</code>
+                Template Meta : <code className="text-xs bg-muted px-1.5 py-0.5 rounded">logisorama_location_rdv_crissier_v1</code>
                 {" · "}Bouton CTA : <strong>Réserver mon RDV</strong>
                 {" · "}Lien activation dans le corps du message.
               </CardDescription>
