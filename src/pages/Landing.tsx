@@ -114,6 +114,7 @@ export default function Landing() {
           <TestimonialVideoSection />
           <VideoSection />
           <WhatYouGetSection />
+          <div id="dossier-form" />
           <DossierAnalyseSection />
           <GuaranteeSection />
           <PricingSection />
