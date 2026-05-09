@@ -346,7 +346,7 @@ export default function CampagnesSuivi() {
   const handleWaTest = async () => {
     setWaTesting(true);
     const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
-      body: { mode: "test", first_name: "à toi" },
+      body: { mode: "test", first_name: "Christ" },
     });
     setWaTesting(false);
     if (error || data?.error || data?.ok === false) {
