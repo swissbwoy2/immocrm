@@ -101,15 +101,19 @@ Deno.serve(async (req) => {
     });
 
     const ADMIN_EMAIL = 'info@immo-rama.ch';
+    const OFFICE_ADDRESS = "Chemin de l'Esparsette 5, 1023 Crissier";
+    const OFFICE_MAPS_URL =
+      'https://www.google.com/maps/search/?api=1&query=' +
+      encodeURIComponent(OFFICE_ADDRESS);
 
     // Send confirmation email + ICS via existing send-calendar-invite function
     if (RESEND_API_KEY) {
       try {
         await admin.functions.invoke('send-calendar-invite', {
           body: {
-            title: 'Rendez-vous téléphonique avec Logisorama',
-            description: `Notre équipe vous appellera au ${appt.prospect_phone}. Merci d'être disponible à l'heure prévue.`,
-            location: `Téléphone : ${appt.prospect_phone}`,
+            title: 'Rendez-vous au bureau Logisorama',
+            description: `Nous vous accueillons à notre bureau : ${OFFICE_ADDRESS}. Merci d'arriver 5 minutes en avance.`,
+            location: OFFICE_ADDRESS,
             start_date: appt.slot_start,
             end_date: appt.slot_end,
             all_day: false,
@@ -124,9 +128,9 @@ Deno.serve(async (req) => {
       try {
         await admin.functions.invoke('send-calendar-invite', {
           body: {
-            title: `[RDV Lead] ${appt.prospect_name} — ${appt.prospect_phone}`,
-            description: `RDV téléphonique confirmé avec ${appt.prospect_name}.\nEmail : ${appt.prospect_email}\nTéléphone : ${appt.prospect_phone}`,
-            location: `Téléphone : ${appt.prospect_phone}`,
+            title: `[RDV Bureau] ${appt.prospect_name} — ${appt.prospect_phone}`,
+            description: `RDV au bureau confirmé avec ${appt.prospect_name}.\nEmail : ${appt.prospect_email}\nTéléphone : ${appt.prospect_phone}\nLieu : ${OFFICE_ADDRESS}`,
+            location: OFFICE_ADDRESS,
             start_date: appt.slot_start,
             end_date: appt.slot_end,
             all_day: false,
@@ -142,20 +146,23 @@ Deno.serve(async (req) => {
         const htmlBody = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 30px; color: white; margin-bottom: 20px;">
-              <h1 style="margin: 0 0 10px 0; font-size: 24px;">📞 Rendez-vous confirmé</h1>
+              <h1 style="margin: 0 0 10px 0; font-size: 24px;">✅ Rendez-vous au bureau confirmé</h1>
               <p style="margin: 0; opacity: 0.9; font-size: 16px;">Bonjour ${appt.prospect_name},</p>
             </div>
             <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
-              <p style="margin: 0 0 16px 0; font-size: 16px;">Votre rendez-vous téléphonique est <strong>fixé</strong> :</p>
+              <p style="margin: 0 0 16px 0; font-size: 16px;">Votre rendez-vous au bureau est <strong>fixé</strong> :</p>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr><td style="padding: 8px 0; color: #666; width: 100px;">📆 Date</td><td style="padding: 8px 0; font-weight: 600;">${dateStr}</td></tr>
                 <tr><td style="padding: 8px 0; color: #666;">🕐 Heure</td><td style="padding: 8px 0; font-weight: 600;">${timeStr}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">⏱️ Durée</td><td style="padding: 8px 0; font-weight: 600;">15 minutes</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">📞 Numéro</td><td style="padding: 8px 0; font-weight: 600;">${appt.prospect_phone}</td></tr>
+                <tr><td style="padding: 8px 0; color: #666;">⏱️ Durée</td><td style="padding: 8px 0; font-weight: 600;">30 minutes</td></tr>
+                <tr><td style="padding: 8px 0; color: #666; vertical-align: top;">📍 Adresse</td><td style="padding: 8px 0; font-weight: 600;">${OFFICE_ADDRESS}</td></tr>
               </table>
+              <div style="text-align: center; margin-top: 20px;">
+                <a href="${OFFICE_MAPS_URL}" style="display: inline-block; padding: 12px 24px; background: #1a1a2e; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">🗺️ Voir l'itinéraire</a>
+              </div>
             </div>
             <p style="color: #666; font-size: 14px; text-align: center;">
-              Vous recevrez aussi une invitation calendrier (.ics) à ajouter à votre agenda.
+              Merci d'arriver <strong>5 minutes en avance</strong>. Une invitation calendrier (.ics) est jointe à cet email.
             </p>
             <p style="color: #999; font-size: 12px; text-align: center; margin-top: 24px;">
               Logisorama by Immo-Rama · support@logisorama.ch
@@ -172,7 +179,7 @@ Deno.serve(async (req) => {
             from: 'Logisorama <support@logisorama.ch>',
             to: [appt.prospect_email],
             bcc: [ADMIN_EMAIL],
-            subject: `📞 Rendez-vous téléphonique confirmé — ${dateStr} à ${timeStr}`,
+            subject: `📍 Rendez-vous au bureau confirmé — ${dateStr} à ${timeStr}`,
             html: htmlBody,
           }),
         });
