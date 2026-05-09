@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: 'Logisorama <support@logisorama.ch>',
             to: [appt.prospect_email],
-            subject: `📞 Rappel : votre rendez-vous téléphonique demain — ${dateStr} à ${timeStr}`,
+            subject: `📍 Rappel : votre rendez-vous au bureau demain — ${dateStr} à ${timeStr}`,
             html,
             attachments: [
               {
