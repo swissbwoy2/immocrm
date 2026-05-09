@@ -1,31 +1,47 @@
-## Diagnostic
+## Objectif
+1. Joindre un fichier `.ics` à **chaque** rappel email (24h, 3h, 1h, 30 min).
+2. Activer WhatsApp dès que Meta approuve `logisorama_rdv_bureau_rappel`.
 
-Le test de rappel a marqué les colonnes `*_sent_at` mais rien n'est arrivé :
+## 1. ICS à chaque rappel — modification de `send-phone-appointment-reminders`
 
-- **WhatsApp** : le template `rdv_bureau_rappel` est marqué **`is_active = false`** dans `whatsapp_message_templates`. La fonction `send-whatsapp-notification` retourne `{skipped: true, reason: "template_inactive"}` avec un status 200 → notre logique a interprété "pas d'erreur" comme "envoyé".
-- **Email** : Resend a probablement répondu 200 (donc on a marqué la colonne), mais on ne logge pas le body de la réponse pour vérifier si l'email a vraiment été accepté ou s'il est en spam.
+Avant l'appel Resend HTML actuel, on invoque `send-calendar-invite` (déjà utilisé par `confirm-phone-appointment`) avec :
 
-## Corrections
-
-### 1. Activer le template WhatsApp
-```sql
-UPDATE whatsapp_message_templates SET is_active = true WHERE template_key = 'rdv_bureau_rappel';
 ```
-(Si Meta a rejeté la traduction fr, on verra l'erreur dans les logs — mais le template a été créé donc on suppose qu'il est approuvé.)
+title       = "Rappel : RDV au bureau Logisorama"
+description = <intro du tier> + adresse complète
+location    = "Chemin de l'Esparsette 5, 1023 Crissier"
+start_date  = appt.slot_start
+end_date    = appt.slot_end
+recipient_email = appt.prospect_email
+```
 
-### 2. Durcir la logique de `send-phone-appointment-reminders`
-- **WhatsApp** : ne marquer `wa_*_sent_at` QUE si la réponse contient un `meta_message_id` (ou au minimum pas de `skipped` / `error`). Logger le `r.data` pour comprendre.
-- **Email** : logger le body de la réponse Resend (qui contient `id` quand OK, `message` quand erreur). Ne marquer `*_sent_at` QUE si le body contient un `id`.
+Résultat utilisateur :
+- À chaque rappel, l'email Resend HTML actuel arrive ✅
+- Et **en parallèle**, un email avec pièce jointe `.ics` arrive (l'app calendrier propose d'ajouter/mettre à jour l'événement)
 
-### 3. Reset du RDV test et nouveau tir
-- Remettre `slot_start = now() + 30 min`, `reminder_30m_sent_at = NULL`, `wa_reminder_30m_sent_at = NULL`
-- Relancer la fonction
-- Lire les logs Edge pour confirmer
+Le marquage `*_sent_at` reste basé sur le succès de l'email Resend principal (ICS = best-effort, on log les erreurs mais on ne re-tente pas).
 
-### 4. Vérification finale
-- Lecture de `whatsapp_notification_logs` pour voir si Meta a accepté
-- Lecture des logs `send-phone-appointment-reminders` pour voir le body Resend
-- Si Meta refuse la fr → activer en `language='en'` ou contacter le support Meta (le template doit être approuvé manuellement dans le Business Manager)
+## 2. WhatsApp — aucune modif code
 
-## Hors scope (pour plus tard si besoin)
-- Vérifier que le from `support@logisorama.ch` est bien dans le domaine Resend vérifié. Si non, basculer sur `notify.logisorama.ch` (mémoire projet : "Emails use notify.logisorama.ch").
+Le code envoie déjà :
+- `template_key = 'rdv_bureau_rappel'`
+- `variables = [firstName, waHoraire(timeStr)]`
+
+Mappings `waHoraire` actuels (rien à changer) :
+- 24h → `demain à 10h00`
+- 3h → `dans environ 3 heures (10h00)`
+- 1h → `dans 1 heure (10h00)`
+- 30m → `dans 30 minutes (10h00)`
+
+Dès que Meta approuve `logisorama_rdv_bureau_rappel`, **le prochain cron (toutes les 5 min)** enverra automatiquement les 4 rappels WhatsApp. Aucun déploiement requis.
+
+## 3. Test final
+Après déploiement de l'edge function modifiée, on remet le RDV test à T+30 min, on relance la fonction, et on vérifie :
+- ✅ 1 email HTML Resend
+- ✅ 1 email avec pièce jointe `.ics`
+- ✅ 1 message WhatsApp template (si Meta a déjà approuvé)
+
+## Hors scope
+- Pas de changement sur `confirm-phone-appointment` (déjà OK).
+- Pas de changement de template Meta (laisse Meta valider).
+- Pas de changement sur le format de date/heure (déjà `Europe/Zurich`).
