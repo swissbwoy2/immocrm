@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarIcon, Clock, CheckCircle2, Sun, Sunset, Moon } from 'lucide-react';
+import { CalendarIcon, Clock, CheckCircle2, Sun, Sunset, MapPin, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import {
   type Slot,
   type DayPart,
   getDayPart,
+  OFFICE_ADDRESS,
+  OFFICE_MAPS_URL,
 } from '@/lib/phoneSlots';
 
 interface PhoneSlotPickerProps {
@@ -22,9 +24,8 @@ interface PhoneSlotPickerProps {
 }
 
 const DAY_PARTS: { key: DayPart; label: string; icon: typeof Sun; range: string }[] = [
-  { key: 'matin', label: 'Matin', icon: Sun, range: '7h30 → 12h00' },
-  { key: 'apres-midi', label: 'Après-midi', icon: Sunset, range: '12h00 → 18h00' },
-  { key: 'soir', label: 'Soir', icon: Moon, range: '18h00 → 22h00' },
+  { key: 'matin', label: 'Matin', icon: Sun, range: '08h30 → 12h00' },
+  { key: 'apres-midi', label: 'Après-midi', icon: Sunset, range: '13h30 → 16h30' },
 ];
 
 export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
@@ -91,12 +92,29 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
           Étape finale
         </div>
         <h3 className="text-lg md:text-xl font-bold text-foreground">
-          Choisis un créneau d'appel téléphonique
+          Choisis ton créneau au bureau
         </h3>
         <p className="text-sm text-muted-foreground">
-          15 minutes — 7j/7 entre 7h30 et 22h00
+          30 minutes — Lun→Sam, 08h30→12h00 et 13h30→16h30
         </p>
       </div>
+
+      {/* Adresse du bureau */}
+      <a
+        href={OFFICE_MAPS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors"
+      >
+        <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+          <MapPin className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-primary uppercase tracking-wide">Bureau Logisorama</p>
+          <p className="text-sm font-medium text-foreground truncate">{OFFICE_ADDRESS}</p>
+        </div>
+        <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      </a>
 
       {/* Date picker */}
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -126,7 +144,8 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
               day.setHours(0, 0, 0, 0);
               const min = availableDays[0];
               const max = availableDays[availableDays.length - 1];
-              return day < min || day > max;
+              if (day < min || day > max) return true;
+              return day.getDay() === 0; // dimanche fermé
             }}
             initialFocus
             className={cn('p-3 pointer-events-auto')}
@@ -135,7 +154,7 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
       </Popover>
 
       {/* Day part tabs */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {DAY_PARTS.map(({ key, label, icon: Icon, range }) => (
           <button
             key={key}
@@ -216,7 +235,7 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
               Créneau sélectionné : {format(selected.start, 'EEEE d MMMM', { locale: fr })} à {selected.label}
             </p>
             <p className="text-xs text-muted-foreground">
-              Notre équipe te rappellera à ce moment précis (15 min).
+              Rendez-vous au bureau (30 min) — {OFFICE_ADDRESS}.
             </p>
           </div>
         </motion.div>

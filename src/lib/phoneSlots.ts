@@ -1,37 +1,49 @@
-// Génération des créneaux téléphoniques 7j/7, de 7h30 à 22h00, par tranches de 15 min.
-// Toute manipulation est en heure locale (Europe/Zurich = heure du navigateur du prospect suisse).
+// Génération des créneaux de rendez-vous AU BUREAU (Logisorama, Crissier).
+// Lundi → Samedi (dimanche fermé), 08h30→12h00 et 13h30→16h30, par tranches de 30 min.
+// Toute manipulation est en heure locale (Europe/Zurich).
 
 export type Slot = {
   start: Date;
   end: Date;
   key: string; // ISO string of slot_start (used as unique key + for query matching)
-  label: string; // "07h30"
+  label: string; // "08h30"
 };
 
-export const SLOT_DURATION_MIN = 15;
-export const SLOT_START_HOUR = 7;
-export const SLOT_START_MIN = 30;
-export const SLOT_END_HOUR = 22;
-export const SLOT_END_MIN = 0;
+export const SLOT_DURATION_MIN = 30;
 
-export type DayPart = 'matin' | 'apres-midi' | 'soir';
+// Plage matin
+export const MORNING_START_HOUR = 8;
+export const MORNING_START_MIN = 30;
+export const MORNING_END_HOUR = 12;
+export const MORNING_END_MIN = 0;
+
+// Plage après-midi
+export const AFTERNOON_START_HOUR = 13;
+export const AFTERNOON_START_MIN = 30;
+export const AFTERNOON_END_HOUR = 16;
+export const AFTERNOON_END_MIN = 30;
+
+export type DayPart = 'matin' | 'apres-midi';
 
 export function getDayPart(slot: Slot): DayPart {
   const h = slot.start.getHours();
-  if (h < 12) return 'matin';
-  if (h < 18) return 'apres-midi';
-  return 'soir';
+  return h < 12 ? 'matin' : 'apres-midi';
 }
 
-export function generateSlotsForDay(date: Date): Slot[] {
+function buildRange(
+  date: Date,
+  startH: number,
+  startM: number,
+  endH: number,
+  endM: number
+): Slot[] {
   const slots: Slot[] = [];
-  const day = new Date(date);
-  day.setHours(SLOT_START_HOUR, SLOT_START_MIN, 0, 0);
-
+  const start = new Date(date);
+  start.setHours(startH, startM, 0, 0);
   const end = new Date(date);
-  end.setHours(SLOT_END_HOUR, SLOT_END_MIN, 0, 0);
+  end.setHours(endH, endM, 0, 0);
 
-  let cursor = new Date(day);
+  let cursor = new Date(start);
   while (cursor < end) {
     const slotEnd = new Date(cursor.getTime() + SLOT_DURATION_MIN * 60_000);
     if (slotEnd > end) break;
@@ -46,14 +58,22 @@ export function generateSlotsForDay(date: Date): Slot[] {
   return slots;
 }
 
-// Available days: tomorrow → today + 14 (inclusive), 7d/7
+export function generateSlotsForDay(date: Date): Slot[] {
+  return [
+    ...buildRange(date, MORNING_START_HOUR, MORNING_START_MIN, MORNING_END_HOUR, MORNING_END_MIN),
+    ...buildRange(date, AFTERNOON_START_HOUR, AFTERNOON_START_MIN, AFTERNOON_END_HOUR, AFTERNOON_END_MIN),
+  ];
+}
+
+// Available days: tomorrow → +21 jours calendaires, exclut les dimanches.
 export function getAvailableDays(): Date[] {
   const days: Date[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (let i = 1; i <= 14; i++) {
+  for (let i = 1; i <= 21; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
+    if (d.getDay() === 0) continue; // dimanche fermé
     days.push(d);
   }
   return days;
@@ -66,3 +86,9 @@ export function formatDayLabel(d: Date): string {
     month: 'long',
   });
 }
+
+// Adresse du bureau Logisorama (utilisée dans UI + emails + ICS)
+export const OFFICE_ADDRESS = "Chemin de l'Esparsette 5, 1023 Crissier";
+export const OFFICE_MAPS_URL =
+  'https://www.google.com/maps/search/?api=1&query=' +
+  encodeURIComponent("Chemin de l'Esparsette 5, 1023 Crissier");

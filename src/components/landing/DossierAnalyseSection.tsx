@@ -17,13 +17,14 @@ import {
   MapPin,
   ShieldCheck,
   ClipboardCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { useUTMParams } from '@/hooks/useUTMParams';
 import { PhoneSlotPicker } from '@/components/landing/PhoneSlotPicker';
-import type { Slot } from '@/lib/phoneSlots';
+import { OFFICE_ADDRESS, OFFICE_MAPS_URL, type Slot } from '@/lib/phoneSlots';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
@@ -97,7 +98,7 @@ export function DossierAnalyseSection() {
 
     let createdApptId: string | null = null;
     try {
-      // 1. Réserver le créneau téléphonique d'abord (gestion conflit)
+      // 1. Réserver le créneau de RDV au bureau d'abord (gestion conflit)
       // Pas de .select() : RLS SELECT anonyme bloque RETURNING. On génère l'id côté client.
       const apptId = crypto.randomUUID();
       const { error: apptErr } = await supabase
@@ -217,10 +218,26 @@ export function DossierAnalyseSection() {
             <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">
               Merci {prenom} ! 🎉
             </h3>
-            <p className="text-muted-foreground">
-              Un expert va analyser ton dossier et te contacter sous 24h pour un
-              rendez-vous personnalisé.
+            <p className="text-muted-foreground mb-6">
+              Ton rendez-vous au bureau est réservé. Nous t'accueillons à l'adresse ci-dessous.
+              Un email de confirmation vient de t'être envoyé.
             </p>
+            <a
+              href={OFFICE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/30 hover:bg-primary/10 transition-colors text-left"
+            >
+              <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide">Bureau Logisorama</p>
+                <p className="text-sm font-medium text-foreground">{OFFICE_ADDRESS}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Lun→Sam · 08h30→12h00 · 13h30→16h30</p>
+              </div>
+              <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            </a>
           </div>
         </div>
       </section>
@@ -462,8 +479,7 @@ export function DossierAnalyseSection() {
                       ✅ Informations reçues !
                     </p>
                     <p className="text-muted-foreground text-sm mt-1">
-                      Nos experts analysent ton dossier et te recontactent pour
-                      un rendez-vous personnalisé
+                      Choisis ton créneau de rendez-vous au bureau (30 min, sur place à Crissier)
                     </p>
                   </div>
 
@@ -535,7 +551,7 @@ export function DossierAnalyseSection() {
                     />
                   </div>
 
-                  {/* Étape obligatoire : créneau téléphonique */}
+                  {/* Étape obligatoire : créneau RDV au bureau */}
                   <div className="pt-4 border-t border-border/40">
                     <PhoneSlotPicker selected={selectedSlot} onSelect={setSelectedSlot} />
                   </div>

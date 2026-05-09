@@ -27,14 +27,14 @@ function buildICS(appt: any) {
     `DTSTAMP:${toICSDate(new Date())}`,
     `DTSTART:${toICSDate(start)}`,
     `DTEND:${toICSDate(end)}`,
-    `SUMMARY:${escapeICS('Rendez-vous téléphonique avec Logisorama')}`,
-    `DESCRIPTION:${escapeICS(`Notre équipe vous appellera au ${appt.prospect_phone}.`)}`,
-    `LOCATION:${escapeICS(`Téléphone : ${appt.prospect_phone}`)}`,
+    `SUMMARY:${escapeICS('Rendez-vous au bureau Logisorama')}`,
+    `DESCRIPTION:${escapeICS("Nous vous accueillons à notre bureau : Chemin de l'Esparsette 5, 1023 Crissier.")}`,
+    `LOCATION:${escapeICS("Chemin de l'Esparsette 5, 1023 Crissier")}`,
     'STATUS:CONFIRMED',
     'BEGIN:VALARM',
     'TRIGGER:-PT15M',
     'ACTION:DISPLAY',
-    `DESCRIPTION:${escapeICS('Rappel RDV Logisorama dans 15 minutes')}`,
+    `DESCRIPTION:${escapeICS('Rappel RDV au bureau Logisorama dans 15 minutes')}`,
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR',
@@ -94,18 +94,18 @@ Deno.serve(async (req) => {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f7;">
             <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; padding: 36px; color: white; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15);">
               <div style="font-size: 14px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Rappel</div>
-              <h1 style="margin: 0 0 12px 0; font-size: 28px; font-weight: 700;">📞 Votre RDV téléphonique demain</h1>
+              <h1 style="margin: 0 0 12px 0; font-size: 28px; font-weight: 700;">📍 Votre RDV au bureau demain</h1>
               <p style="margin: 0; opacity: 0.85; font-size: 16px;">Bonjour ${appt.prospect_name},</p>
             </div>
             <div style="background: white; border-radius: 16px; padding: 28px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
               <p style="margin: 0 0 20px 0; font-size: 16px; color: #333;">
-                Petit rappel amical : notre équipe vous appellera <strong>demain</strong> au numéro indiqué.
+                Petit rappel amical : nous vous accueillons <strong>demain</strong> à notre bureau. Merci d'arriver 5 minutes en avance.
               </p>
               <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
                 <tr><td style="padding: 10px 0; color: #777; width: 110px;">📆 Date</td><td style="padding: 10px 0; font-weight: 600; color: #1a1a2e;">${dateStr}</td></tr>
                 <tr><td style="padding: 10px 0; color: #777;">🕐 Heure</td><td style="padding: 10px 0; font-weight: 600; color: #1a1a2e;">${timeStr}</td></tr>
-                <tr><td style="padding: 10px 0; color: #777;">⏱️ Durée</td><td style="padding: 10px 0; font-weight: 600; color: #1a1a2e;">15 minutes</td></tr>
-                <tr><td style="padding: 10px 0; color: #777;">📞 Numéro</td><td style="padding: 10px 0; font-weight: 600; color: #1a1a2e;">${appt.prospect_phone}</td></tr>
+                <tr><td style="padding: 10px 0; color: #777;">⏱️ Durée</td><td style="padding: 10px 0; font-weight: 600; color: #1a1a2e;">30 minutes</td></tr>
+                <tr><td style="padding: 10px 0; color: #777; vertical-align: top;">📍 Adresse</td><td style="padding: 10px 0; font-weight: 600; color: #1a1a2e;">Chemin de l'Esparsette 5<br/>1023 Crissier</td></tr>
               </table>
               <div style="text-align: center; margin-top: 28px;">
                 <a href="${calendarUrl}"
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: 'Logisorama <support@logisorama.ch>',
             to: [appt.prospect_email],
-            subject: `📞 Rappel : votre rendez-vous téléphonique demain — ${dateStr} à ${timeStr}`,
+            subject: `📍 Rappel : votre rendez-vous au bureau demain — ${dateStr} à ${timeStr}`,
             html,
             attachments: [
               {
