@@ -49,6 +49,8 @@ function normalizePhone(raw: string): string | null {
     if (p.startsWith("0")) p = "+41" + p.slice(1);
     else p = "+" + p;
   }
+  // Fix common Swiss formatting error: "+410xxxxxxxxx" → "+41xxxxxxxxx"
+  if (/^\+410\d{9,10}$/.test(p)) p = "+41" + p.slice(4);
   // E.164 basic check
   if (!/^\+\d{8,15}$/.test(p)) return null;
   return p;
