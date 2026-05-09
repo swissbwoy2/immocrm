@@ -1,59 +1,42 @@
 ## Objectif
 
-Sur la landing page (section « Analyse gratuite de ton dossier »), remplacer la réservation d'un **entretien téléphonique** par la réservation d'un **rendez-vous physique au bureau** :
+1. Dans les **4 campagnes de suivi** (`achat`, `location`, `vente`, `renovation`), remplacer les CTA actuels (« Active ta recherche prioritaire », « Continuer ma recherche », etc. → `nouveau-mandat`, `vendre-mon-bien`, …) par un CTA unique : **« Fixer un rendez-vous à nos bureaux »** pointant vers la section de prise de RDV physique de la landing (`https://logisorama.ch/#analyse-dossier`).
 
-**Adresse** : Chemin de l'Esparsette 5, 1023 Crissier
-**Jours** : Lundi → Samedi (fermé le dimanche)
-**Horaires** : 08h30 → 12h00 et 13h30 → 16h30
-**Durée** : 30 minutes par créneau
+   - Mêmes horaires que la section landing déjà mise à jour (Lun→Sam, 08h30→12h00 / 13h30→16h30, créneaux 30 min, Crissier).
+   - Le 2ᵉ CTA actuel (« 📞 Réservez votre appel téléphonique gratuit ») est obsolète : il sera relabellé « 📍 Fixer un RDV gratuit à nos bureaux (30 min) » et son texte d'accompagnement aligné (accueil au bureau, plus d'appel téléphonique).
+
+2. Permettre de **renvoyer une campagne aux leads déjà contactés** (aujourd'hui ils sont silencieusement filtrés via `skipped_already_sent`).
+
+## Design email
+
+**Inchangé** — même template, même charte (or/noir Logisorama), mêmes blocs (hero, badge couronne, logo, bénéfices, parcours secondaires, avis Google, signature, footer). Seuls les libellés/URLs des deux CTA changent.
 
 ## Fichiers modifiés
 
-### 1. `src/lib/phoneSlots.ts` (logique des créneaux)
-- Durée passe de 15 → **30 minutes**
-- Deux plages horaires : matin `08:30 → 12:00` et après-midi `13:30 → 16:30`
-- Exclure les **dimanches** dans `getAvailableDays()`
-- Renommer la notion `DayPart` à 2 valeurs : `matin` / `apres-midi` (suppression du `soir`)
+### 1. Migration DB — table `email_followup_campaigns`
+Mettre à jour les 4 lignes :
+- `cta_label` → `Fixer un rendez-vous au bureau`
+- `cta_url` → `https://logisorama.ch/?utm_source=email&utm_medium=followup&utm_campaign=<key>&utm_content=cta_rdv_bureau#analyse-dossier`
 
-### 2. `src/components/landing/PhoneSlotPicker.tsx`
-- Mettre à jour `DAY_PARTS` : Matin `08h30 → 12h00`, Après-midi `13h30 → 16h30`
-- Ajouter un encart visible avec l'adresse complète + lien Google Maps :
-  « 📍 Bureau Logisorama — Chemin de l'Esparsette 5, 1023 Crissier »
-- Renommer titres internes (« Choisis ton créneau d'appel » → « Choisis ton créneau au bureau »)
+### 2. `supabase/functions/send-followup-campaign/index.ts`
+- 2ᵉ CTA (lignes ~174 et ~222) : libellé « 📍 Fixer un RDV gratuit à nos bureaux (30 min) » + texte « Un expert Logisorama vous accueille à Crissier — c'est 100 % gratuit, durée 30 min. ».
+- Mode `send` : accepter un flag `allowResend: boolean` dans le body. Si `true`, ne pas pré-filtrer via `alreadySent` (l'unsub reste filtré). Compteur `skipped_already_sent` toujours retourné (à 0 quand `allowResend`).
 
-### 3. `src/components/landing/DossierAnalyseSection.tsx`
-- Remplacer toutes les mentions « rendez-vous personnalisé » / « entretien téléphonique » par « rendez-vous au bureau »
-- Écran de succès : afficher l'adresse + bouton « Itinéraire Google Maps »
-- Texte intermédiaire (étape 2) : « Choisis ton créneau de rendez-vous au bureau »
-- Commentaires de code mis à jour
+### 3. `src/pages/admin/CampagnesSuivi.tsx`
+- Ajouter une **case à cocher « 🔁 Renvoyer aux leads déjà contactés »** dans la barre d'action de l'onglet Leads (à côté du bouton « Envoyer »).
+- Passer `allowResend` à `supabase.functions.invoke("send-followup-campaign", …)`.
+- Adapter le dialog de confirmation : si `allowResend`, afficher un avertissement « Cette action enverra l'email même aux leads ayant déjà reçu cette campagne ».
+- Ne pas désactiver/dégriser les leads `sentLeadIds` quand `allowResend` est coché (pour pouvoir les sélectionner).
 
-### 4. Edge Function `supabase/functions/confirm-phone-appointment/index.ts`
-- Email de confirmation : titre « ✅ Rendez-vous au bureau confirmé »
-- Remplacer « Notre équipe vous appellera » par « Nous vous accueillons à notre bureau »
-- `location` Google Calendar = `Chemin de l'Esparsette 5, 1023 Crissier`
-- Ajouter dans le HTML de l'email un bloc adresse + lien Maps + rappel « Merci d'arriver 5 min en avance »
+## Hors scope
 
-### 5. Edge Function `supabase/functions/download-phone-appointment-ics/index.ts`
-- ICS : `SUMMARY` = « Rendez-vous au bureau Logisorama »
-- `LOCATION` = `Chemin de l'Esparsette 5, 1023 Crissier`
-- `DESCRIPTION` mise à jour (accueil au bureau, pas appel)
-
-### 6. Edge Function `supabase/functions/send-phone-appointment-reminders/index.ts`
-- Sujet : « 📍 Rappel : votre rendez-vous au bureau demain »
-- ICS et corps email : adresse du bureau au lieu du numéro de téléphone
-- Ligne tableau : remplacer « 📞 Numéro » par « 📍 Adresse » avec l'adresse complète
-
-## Hors scope (non touché)
-
-- Schéma DB `lead_phone_appointments` — conservé tel quel (le nom de table reste, seule la sémantique change). Pas de migration nécessaire.
-- Section publique `src/components/public-site/sections/DossierAnalyseSection.tsx` — n'utilise pas le PhoneSlotPicker (formulaire simplifié sans créneau), donc aucun changement.
-- Adresse e-mail expéditeur, design global, autres landings.
+- Aucun changement de schéma DB autre que `UPDATE` sur les 4 lignes campagnes.
+- Pas de migration `lead_email_logs` : l'historique conserve toutes les traces (un lead renvoyé aura simplement plusieurs lignes `sent`).
+- Aucun changement design/layout email.
+- La landing `#analyse-dossier` (déjà mise à jour précédemment vers RDV bureau) reste telle quelle.
 
 ## Vérification post-implémentation
 
-- Ouvrir la landing `/index` mobile (430×777), parcourir le formulaire « Analyse de ton dossier » → étape 2, vérifier :
-  - Plages 08h30→12h00 et 13h30→16h30 uniquement
-  - Créneaux de 30 min
-  - Dimanches absents du calendrier
-  - Encart adresse visible
-- Soumettre un test → écran de succès affiche l'adresse + lien Maps
+1. Aperçu (mode `preview`) des 4 campagnes : vérifier que les 2 CTA pointent bien vers `…#analyse-dossier` avec libellés corrects.
+2. Envoi test (mode `test`) sur `info@immo-rama.ch` pour la campagne `location` → contrôler le rendu Gmail/Apple Mail.
+3. Cocher « Renvoyer » sur un lead déjà marqué « envoyé » → vérifier que le bouton Envoyer s'active et que la fonction renvoie réellement (nouvelle ligne `sent` dans `lead_email_logs`).
