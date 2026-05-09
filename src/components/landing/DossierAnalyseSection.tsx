@@ -218,10 +218,26 @@ export function DossierAnalyseSection() {
             <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">
               Merci {prenom} ! 🎉
             </h3>
-            <p className="text-muted-foreground">
-              Un expert va analyser ton dossier et te contacter sous 24h pour un
-              rendez-vous personnalisé.
+            <p className="text-muted-foreground mb-6">
+              Ton rendez-vous au bureau est réservé. Nous t'accueillons à l'adresse ci-dessous.
+              Un email de confirmation vient de t'être envoyé.
             </p>
+            <a
+              href={OFFICE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/30 hover:bg-primary/10 transition-colors text-left"
+            >
+              <div className="w-11 h-11 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide">Bureau Logisorama</p>
+                <p className="text-sm font-medium text-foreground">{OFFICE_ADDRESS}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Lun→Sam · 08h30→12h00 · 13h30→16h30</p>
+              </div>
+              <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            </a>
           </div>
         </div>
       </section>
