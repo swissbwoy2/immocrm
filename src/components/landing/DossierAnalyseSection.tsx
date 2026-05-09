@@ -551,7 +551,7 @@ export function DossierAnalyseSection() {
                     />
                   </div>
 
-                  {/* Étape obligatoire : créneau téléphonique */}
+                  {/* Étape obligatoire : créneau RDV au bureau */}
                   <div className="pt-4 border-t border-border/40">
                     <PhoneSlotPicker selected={selectedSlot} onSelect={setSelectedSlot} />
                   </div>
