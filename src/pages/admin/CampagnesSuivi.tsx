@@ -300,6 +300,18 @@ export default function CampagnesSuivi() {
 
   // ───── WhatsApp Location campaign
   const WA_TEMPLATE_KEY = "location_rdv_activation_v2";
+  const [waMetaTemplateName, setWaMetaTemplateName] = useState<string>("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("whatsapp_message_templates")
+        .select("template_name_meta")
+        .eq("template_key", WA_TEMPLATE_KEY)
+        .maybeSingle();
+      if (data?.template_name_meta) setWaMetaTemplateName(data.template_name_meta);
+    })();
+  }, []);
 
   const loadWaAlreadySent = async () => {
     const locationLeadIds = leads.filter((l) => l.campaign_key === "location").map((l) => l.id);
@@ -1022,7 +1034,13 @@ export default function CampagnesSuivi() {
                 Campagne WhatsApp — Location (RDV gratuit Crissier)
               </CardTitle>
               <CardDescription>
-                Template Meta : <code className="text-xs bg-muted px-1.5 py-0.5 rounded">logisorama_location_rdv_crissier_v1</code>
+                Template Meta actif : <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{waMetaTemplateName || "—"}</code>
+                {waMetaTemplateName?.endsWith("_v1") && (
+                  <span className="ml-2 inline-block text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded">v2 en attente Meta</span>
+                )}
+                {waMetaTemplateName?.endsWith("_v2") && (
+                  <span className="ml-2 inline-block text-[10px] uppercase tracking-wide bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">v2 actif</span>
+                )}
                 {" · "}Bouton CTA : <strong>Réserver mon RDV</strong>
                 {" · "}Lien activation dans le corps du message.
               </CardDescription>
