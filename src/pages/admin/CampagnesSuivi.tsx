@@ -388,6 +388,69 @@ export default function CampagnesSuivi() {
     });
   };
 
+  // Retry only the leads that previously failed (never delivered)
+  const handleWaRetryFailed = async () => {
+    setWaSending(true);
+    setWaLastResult(null);
+    const locationLeadIds = leads.filter((l) => l.campaign_key === "location" && l.phone).map((l) => l.id);
+    if (locationLeadIds.length === 0) {
+      setWaSending(false);
+      toast.info("Aucun lead Location avec téléphone");
+      return;
+    }
+    // Fetch all logs for these leads in chunks to bypass row limits
+    const allLogs: { context_ref: string; status: string }[] = [];
+    for (let i = 0; i < locationLeadIds.length; i += 500) {
+      const slice = locationLeadIds.slice(i, i + 500);
+      const { data } = await supabase
+        .from("whatsapp_notification_logs")
+        .select("context_ref,status")
+        .eq("template_key", WA_TEMPLATE_KEY)
+        .in("context_ref", slice)
+        .limit(15000);
+      if (data) allLogs.push(...(data as any));
+    }
+    const everSent = new Set<string>();
+    const everFailed = new Set<string>();
+    for (const r of allLogs) {
+      if (!r.context_ref) continue;
+      if (["sent", "delivered", "read"].includes(r.status)) everSent.add(r.context_ref);
+      if (r.status === "failed") everFailed.add(r.context_ref);
+    }
+    const failedOnly = [...everFailed].filter((id) => !everSent.has(id));
+    if (failedOnly.length === 0) {
+      setWaSending(false);
+      toast.info("Aucun échec à relancer 🎉");
+      return;
+    }
+    if (!confirm(`Relancer ${failedOnly.length} lead(s) en échec ?`)) {
+      setWaSending(false);
+      return;
+    }
+    let totalSent = 0, totalSkipped = 0, totalFailed = 0, totalProcessed = 0;
+    for (let i = 0; i < failedOnly.length; i += 3) {
+      const slice = failedOnly.slice(i, i + 3);
+      const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
+        body: { mode: "send", lead_ids: slice, allowResend: true },
+      });
+      if (error || data?.error) {
+        totalFailed += slice.length;
+        continue;
+      }
+      const s = data?.summary || {};
+      totalSent += s.sent || 0;
+      totalSkipped += s.skipped || 0;
+      totalFailed += s.failed || 0;
+      totalProcessed += s.processed || 0;
+    }
+    setWaSending(false);
+    setWaLastResult({ sent: totalSent, skipped: totalSkipped, failed: totalFailed, processed: totalProcessed, total_requested: failedOnly.length });
+    await loadWaAlreadySent();
+    toast.success("Relance des échecs terminée", {
+      description: `${totalSent} envoyés · ${totalSkipped} ignorés · ${totalFailed} échecs sur ${failedOnly.length}`,
+    });
+  };
+
   // ───── Filtered leads (WhatsApp)
   const waFilteredLeads = useMemo(() => {
     return leads.filter((l) => {
