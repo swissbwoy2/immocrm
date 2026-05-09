@@ -35,7 +35,14 @@ export function useWhatsAppUnreadCount(scope: "admin" | "agent" | "both" = "both
         .eq("sender_type", "client")
         .eq("read", false)
         .ilike("content", "📱 [WhatsApp]%");
-      setCount(c || 0);
+
+      const { count: u } = await supabase
+        .from("whatsapp_unknown_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("direction", "in")
+        .eq("read", false);
+
+      setCount((c || 0) + (u || 0));
     } catch (e) {
       console.warn("useWhatsAppUnreadCount load error", e);
     }
