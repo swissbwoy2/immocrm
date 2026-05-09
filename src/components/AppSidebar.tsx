@@ -421,6 +421,9 @@ export function AppSidebar() {
   const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
+  const whatsappUnread = useWhatsAppUnreadCount(
+    userRole === 'admin' ? 'admin' : userRole === 'agent' ? 'agent' : 'both'
+  );
   const [hasDrafts, setHasDrafts] = useState(false);
 
   const handleNavClick = () => {
