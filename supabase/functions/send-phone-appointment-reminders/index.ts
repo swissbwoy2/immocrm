@@ -155,14 +155,18 @@ Deno.serve(async (req) => {
                 html,
               }),
             });
-            if (res.ok) {
+            const respText = await res.text();
+            let respJson: any = null;
+            try { respJson = JSON.parse(respText); } catch { /* ignore */ }
+            if (res.ok && respJson?.id) {
               await admin.from('lead_phone_appointments')
                 .update({ [tier.emailCol]: new Date().toISOString() })
                 .eq('id', appt.id);
               emailSent++;
+              console.log(`[reminder ${tier.key}] email OK`, appt.id, respJson.id);
             } else {
               errors++;
-              console.error(`[reminder ${tier.key}] resend error`, appt.id, await res.text());
+              console.error(`[reminder ${tier.key}] resend error`, appt.id, res.status, respText);
             }
           } catch (e) {
             errors++;
@@ -185,14 +189,17 @@ Deno.serve(async (req) => {
                   context_ref: appt.id,
                 },
               });
-              if (!r.error) {
+              const data: any = r.data || {};
+              const reallySent = !r.error && !data.skipped && !data.error && (data.success === true || data.meta_message_id);
+              if (reallySent) {
                 await admin.from('lead_phone_appointments')
                   .update({ [tier.waCol]: new Date().toISOString() })
                   .eq('id', appt.id);
                 waSent++;
+                console.log(`[reminder ${tier.key}] wa OK`, appt.id, data.meta_message_id);
               } else {
                 errors++;
-                console.error(`[reminder ${tier.key}] wa error`, appt.id, r.error);
+                console.error(`[reminder ${tier.key}] wa not sent`, appt.id, JSON.stringify({ error: r.error, data }));
               }
             } catch (e) {
               errors++;
