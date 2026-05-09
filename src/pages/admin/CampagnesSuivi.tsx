@@ -1156,6 +1156,15 @@ export default function CampagnesSuivi() {
                   </Label>
                 </div>
                 <Button
+                  variant="outline"
+                  onClick={handleWaRetryFailed}
+                  disabled={waSending}
+                  className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                >
+                  {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <span className="mr-1">🔁</span>}
+                  Réessayer les échecs
+                </Button>
+                <Button
                   onClick={handleWaSend}
                   disabled={waSelectedIds.size === 0 || waSending}
                 >
