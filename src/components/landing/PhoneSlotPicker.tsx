@@ -14,6 +14,8 @@ import {
   type Slot,
   type DayPart,
   getDayPart,
+  OFFICE_ADDRESS,
+  OFFICE_MAPS_URL,
 } from '@/lib/phoneSlots';
 
 interface PhoneSlotPickerProps {
@@ -22,9 +24,8 @@ interface PhoneSlotPickerProps {
 }
 
 const DAY_PARTS: { key: DayPart; label: string; icon: typeof Sun; range: string }[] = [
-  { key: 'matin', label: 'Matin', icon: Sun, range: '7h30 → 12h00' },
-  { key: 'apres-midi', label: 'Après-midi', icon: Sunset, range: '12h00 → 18h00' },
-  { key: 'soir', label: 'Soir', icon: Moon, range: '18h00 → 22h00' },
+  { key: 'matin', label: 'Matin', icon: Sun, range: '08h30 → 12h00' },
+  { key: 'apres-midi', label: 'Après-midi', icon: Sunset, range: '13h30 → 16h30' },
 ];
 
 export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
