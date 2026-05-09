@@ -258,11 +258,11 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
       <tr><td style="background:#0e0c0a;padding:26px 32px;text-align:center;border-top:1px solid rgba(184,137,61,0.15);">
         <div style="font-family:Georgia,serif;font-size:18px;color:#d4a857;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Logisorama<span style="color:#f4ecd8;">.ch</span></div>
         <div style="color:#8a7f6e;font-size:12px;line-height:1.7;font-family:Arial,sans-serif;">
-          by <strong style="color:#c9a96a;">Immo-Rama Sàrl</strong> &middot; CHE-442.303.796<br>
+          by <strong style="color:#c9a96a;">Immo-Rama.ch</strong> &middot; CHE-442.303.796<br>
           Suisse romande &middot; <a href="${PUBLIC_BASE_URL}" style="color:#d4a857;text-decoration:none;">logisorama.ch</a>
         </div>
         <div style="margin-top:16px;color:#5a5246;font-size:11px;font-family:Arial,sans-serif;">
-          Vous recevez cet email car vous nous avez contactés via une de nos campagnes.<br>
+          Tu reçois cet email car tu nous as contactés via une de nos campagnes.<br>
           <a href="${unsubscribeUrl}" style="color:#8a7f6e;text-decoration:underline;">Se désinscrire</a>
         </div>
       </td></tr>
