@@ -28,6 +28,7 @@ import { NotificationBadge } from './NotificationBadge';
 import { NotificationBell } from './NotificationBell';
 import { SilentErrorBoundary } from './SilentErrorBoundary';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useWhatsAppUnreadCount } from '@/hooks/useWhatsAppUnreadCount';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
 
 interface MenuItem {
