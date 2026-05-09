@@ -170,9 +170,9 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
           <div style="flex:1;height:1px;background:rgba(184,137,61,0.3);"></div>
         </div>
 
-        <!-- 2e CTA — Appel téléphonique gratuit -->
-        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;line-height:1.3;">📞  Réservez votre appel téléphonique gratuit (15 min)</a>
-        <p style="margin:12px auto 0;max-width:420px;font-size:13px;line-height:1.55;color:#a89b82;font-style:italic;font-family:Georgia,serif;">Un expert Logisorama vous appelle au numéro de votre choix et analyse votre dossier en direct — c'est <strong style="color:#d4a857;font-style:normal;">100&nbsp;% gratuit</strong>.</p>
+        <!-- 2e CTA — RDV au bureau -->
+        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_rdv_bureau_hero#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;line-height:1.3;">📍  Fixer un RDV gratuit à nos bureaux (30 min)</a>
+        <p style="margin:12px auto 0;max-width:420px;font-size:13px;line-height:1.55;color:#a89b82;font-style:italic;font-family:Georgia,serif;">Un expert Logisorama vous accueille à Crissier et analyse votre dossier en direct — c'est <strong style="color:#d4a857;font-style:normal;">100&nbsp;% gratuit</strong>, durée 30&nbsp;min.</p>
       </td></tr>
 
       <!-- INTRO -->
@@ -216,11 +216,11 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
         </table>
       </td></tr>
 
-      <!-- CTA FINAL — Appel téléphonique -->
+      <!-- CTA FINAL — RDV au bureau -->
       <tr><td style="padding:0 40px 36px;text-align:center;">
         <div style="margin:0 auto 16px;max-width:280px;height:1px;background:rgba(184,137,61,0.25);"></div>
-        <a href="${PUBLIC_BASE_URL}/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_appel_tel_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📞  Préférez un appel téléphonique gratuit&nbsp;?</a>
-        <p style="margin:10px auto 0;max-width:380px;font-size:12px;line-height:1.5;color:#8a7f6e;font-family:Arial,sans-serif;">15 min avec un expert · analyse en direct de votre dossier</p>
+        <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_rdv_bureau_final#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;">📍  Préférez un rendez-vous à nos bureaux&nbsp;?</a>
+        <p style="margin:10px auto 0;max-width:380px;font-size:12px;line-height:1.5;color:#8a7f6e;font-family:Arial,sans-serif;">30 min avec un expert · Chemin de l'Esparsette 5, 1023 Crissier</p>
       </td></tr>
 
       <!-- SIGNATURE -->
@@ -412,6 +412,7 @@ Deno.serve(async (req) => {
       }
 
       const leadIds = Array.isArray(body?.leadIds) ? body.leadIds.slice(0, MAX_LEADS_PER_INVOCATION) : [];
+      const allowResend = body?.allowResend === true;
       if (leadIds.length === 0) {
         return new Response(JSON.stringify({ error: 'Aucun lead sélectionné' }), {
           status: 400,
@@ -431,15 +432,18 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Already-sent lookup
-      const { data: alreadySent } = await supabaseAdmin
-        .from('lead_email_logs')
-        .select('lead_id')
-        .eq('campaign_id', camp.id)
-        .eq('status', 'sent')
-        .eq('test_send', false)
-        .in('lead_id', leadIds);
-      const sentSet = new Set((alreadySent || []).map((r: any) => r.lead_id));
+      // Already-sent lookup (skip when allowResend = true)
+      let sentSet = new Set<string>();
+      if (!allowResend) {
+        const { data: alreadySent } = await supabaseAdmin
+          .from('lead_email_logs')
+          .select('lead_id')
+          .eq('campaign_id', camp.id)
+          .eq('status', 'sent')
+          .eq('test_send', false)
+          .in('lead_id', leadIds);
+        sentSet = new Set((alreadySent || []).map((r: any) => r.lead_id));
+      }
 
       // Unsubscribed lookup
       const emails = (leads || []).map((l: any) => l.email).filter(Boolean);

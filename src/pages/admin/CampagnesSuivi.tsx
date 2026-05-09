@@ -140,6 +140,7 @@ export default function CampagnesSuivi() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [hideAlreadySent, setHideAlreadySent] = useState(true);
+  const [allowResend, setAllowResend] = useState(false);
   const [sentLeadIds, setSentLeadIds] = useState<Set<string>>(new Set());
   const [sentCountByLead, setSentCountByLead] = useState<Map<string, number>>(new Map());
   const [trackingByLead, setTrackingByLead] = useState<Map<string, LeadTracking>>(new Map());
@@ -441,6 +442,7 @@ export default function CampagnesSuivi() {
         mode: "send",
         campaignKey: currentCampaign.campaign_key,
         leadIds: Array.from(selectedIds),
+        allowResend,
       },
     });
     setSending(false);
@@ -672,13 +674,14 @@ export default function CampagnesSuivi() {
                     ) : (
                       filteredLeads.map((l) => {
                         const already = sentLeadIds.has(l.id);
+                        const lockedRow = already && !allowResend;
                         return (
-                          <TableRow key={l.id} className={already ? "opacity-60" : ""}>
+                          <TableRow key={l.id} className={lockedRow ? "opacity-60" : ""}>
                             <TableCell>
                               <Checkbox
                                 checked={selectedIds.has(l.id)}
                                 onCheckedChange={() => toggleSelect(l.id)}
-                                disabled={already}
+                                disabled={lockedRow}
                               />
                             </TableCell>
                             <TableCell className="font-medium">
@@ -762,7 +765,14 @@ export default function CampagnesSuivi() {
                       Campagne : <span className="font-medium">{currentCampaign.name}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                      <Checkbox
+                        checked={allowResend}
+                        onCheckedChange={(v) => setAllowResend(v === true)}
+                      />
+                      <span>🔁 Renvoyer aux leads déjà contactés</span>
+                    </label>
                     <Button variant="outline" onClick={() => setSelectedIds(new Set())}>
                       Désélectionner
                     </Button>
@@ -1086,6 +1096,11 @@ export default function CampagnesSuivi() {
               <span className="block text-sm">
                 Cette action est irréversible. Les emails seront envoyés immédiatement via Logisorama.
               </span>
+              {allowResend && (
+                <span className="block text-sm font-medium text-amber-600 dark:text-amber-400">
+                  ⚠️ Mode renvoi activé : l'email sera également envoyé aux leads ayant déjà reçu cette campagne.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
