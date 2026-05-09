@@ -599,7 +599,8 @@ Deno.serve(async (req) => {
     // ───── TEST
     if (mode === 'test') {
       const unsubToken = crypto.randomUUID();
-      const testSubject = `[TEST] ${subjectForCampaign(camp, fakeLead)}`;
+      const finalSubject = `[TEST] ${subjectForCampaign(camp, fakeLead)}`;
+      console.log('[send-followup]', { mode: 'test', campaign_key: camp.campaign_key, finalSubject });
       const { data: preLog } = await supabaseAdmin
         .from('lead_email_logs')
         .insert({
@@ -607,7 +608,7 @@ Deno.serve(async (req) => {
           campaign_id: camp.id,
           campaign_key: camp.campaign_key,
           recipient_email: TEST_RECIPIENT,
-          subject: testSubject,
+          subject: finalSubject,
           status: 'pending',
           unsubscribe_token: unsubToken,
           test_send: true,
@@ -617,7 +618,7 @@ Deno.serve(async (req) => {
       const logId = preLog?.id || null;
       const rawHtml = renderForCampaign(camp, fakeLead, unsubToken);
       const html = injectTracking(rawHtml, logId);
-      const result = await sendViaResend(TEST_RECIPIENT, testSubject, html);
+      const result = await sendViaResend(TEST_RECIPIENT, finalSubject, html);
 
       if (logId) {
         await supabaseAdmin
