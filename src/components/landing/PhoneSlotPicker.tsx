@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarIcon, Clock, CheckCircle2, Sun, Sunset, Moon } from 'lucide-react';
+import { CalendarIcon, Clock, CheckCircle2, Sun, Sunset, MapPin, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
