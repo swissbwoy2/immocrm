@@ -158,12 +158,33 @@ Deno.serve(async (req) => {
             const respText = await res.text();
             let respJson: any = null;
             try { respJson = JSON.parse(respText); } catch { /* ignore */ }
-            if (res.ok && respJson?.id) {
+             if (res.ok && respJson?.id) {
               await admin.from('lead_phone_appointments')
                 .update({ [tier.emailCol]: new Date().toISOString() })
                 .eq('id', appt.id);
               emailSent++;
               console.log(`[reminder ${tier.key}] email OK`, appt.id, respJson.id);
+
+              // ICS calendar invite (best-effort, does not gate _sent_at)
+              try {
+                const icsRes = await admin.functions.invoke('send-calendar-invite', {
+                  body: {
+                    title: 'Rappel : RDV au bureau Logisorama',
+                    description: `${tier.emailIntro}\n\nAdresse : Chemin de l'Esparcette 5, 1023 Crissier`,
+                    location: "Chemin de l'Esparcette 5, 1023 Crissier",
+                    start_date: appt.slot_start,
+                    end_date: appt.slot_end,
+                    recipient_email: appt.prospect_email,
+                  },
+                });
+                if (icsRes.error) {
+                  console.error(`[reminder ${tier.key}] ics error`, appt.id, icsRes.error);
+                } else {
+                  console.log(`[reminder ${tier.key}] ics OK`, appt.id);
+                }
+              } catch (e) {
+                console.error(`[reminder ${tier.key}] ics exception`, appt.id, e);
+              }
             } else {
               errors++;
               console.error(`[reminder ${tier.key}] resend error`, appt.id, res.status, respText);
