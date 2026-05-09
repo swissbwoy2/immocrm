@@ -479,8 +479,7 @@ export function DossierAnalyseSection() {
                       ✅ Informations reçues !
                     </p>
                     <p className="text-muted-foreground text-sm mt-1">
-                      Nos experts analysent ton dossier et te recontactent pour
-                      un rendez-vous personnalisé
+                      Choisis ton créneau de rendez-vous au bureau (30 min, sur place à Crissier)
                     </p>
                   </div>
 
