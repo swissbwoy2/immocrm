@@ -1054,9 +1054,32 @@ Deno.serve(async (req) => {
               p_type: "whatsapp_reply",
               p_title: "📱 Réponse WhatsApp client",
               p_message: text.slice(0, 200),
-              p_link: "/agent/messagerie",
+              p_link: "/agent/whatsapp",
               p_metadata: { conversation_id: conversationId },
             }).then(() => {}).catch(() => {});
+
+            // Push notification mobile (PWA) — best-effort
+            try {
+              const { data: clientProfile } = await supabase
+                .from("profiles").select("prenom, nom").eq("id", profile.id).maybeSingle();
+              const senderName = `${clientProfile?.prenom || ""} ${clientProfile?.nom || ""}`.trim() || "Client";
+              const { data: admins } = await supabase
+                .from("user_roles").select("user_id").eq("role", "admin");
+              const targetIds = Array.from(new Set([
+                agent.user_id,
+                ...(admins || []).map((a: any) => a.user_id),
+              ].filter(Boolean)));
+              await supabase.functions.invoke("send-push-notification", {
+                body: {
+                  user_ids: targetIds,
+                  title: `💬 WhatsApp — ${senderName}`,
+                  body: text.slice(0, 120),
+                  link: "/admin/whatsapp",
+                  data: { conversation_id: String(conversationId), type: "whatsapp_inbound" },
+                },
+              });
+            } catch (e) { console.warn("push notif failed", e); }
+
 
             // Forward WhatsApp à l'agent + admin via template HSM
             // (le free text ne marche que si fenêtre 24h ouverte côté agent — rare)
