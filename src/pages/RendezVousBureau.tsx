@@ -228,13 +228,6 @@ export default function RendezVousBureau() {
 
   return (
     <>
-      <Helmet>
-        <title>Réserver un RDV gratuit — Bureau Logisorama Crissier</title>
-        <meta
-          name="description"
-          content="Réserve ton rendez-vous gratuit au bureau Logisorama, Chemin de l'Esparcette 5, 1023 Crissier. Créneaux 30 min, lun–sam."
-        />
-      </Helmet>
       <main className="min-h-screen bg-background">
         <header className="border-b bg-card">
           <div className="max-w-3xl mx-auto px-4 py-6 text-center">
