@@ -442,6 +442,7 @@ export default function CampagnesSuivi() {
         mode: "send",
         campaignKey: currentCampaign.campaign_key,
         leadIds: Array.from(selectedIds),
+        allowResend,
       },
     });
     setSending(false);
