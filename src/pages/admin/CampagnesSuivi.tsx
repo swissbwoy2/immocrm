@@ -616,9 +616,12 @@ export default function CampagnesSuivi() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+       <TabsList className="grid grid-cols-4 w-full sm:w-auto">
           <TabsTrigger value="campagnes">Campagnes</TabsTrigger>
           <TabsTrigger value="leads">Leads & envoi</TabsTrigger>
+          <TabsTrigger value="whatsapp">
+            <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
+          </TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
