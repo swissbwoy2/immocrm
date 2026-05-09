@@ -192,6 +192,9 @@ Deno.serve(async (req) => {
       const param = buildWhatsappFirstNameParam(lead.first_name);
       console.log("[send-followup-whatsapp]", { mode, lead_id: lead.id, phone, param });
 
+      const inboxBody = bodyPreviewText(param);
+      const displayName = [lead.first_name, lead.last_name].filter(Boolean).join(" ").trim() || null;
+
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp-notification`, {
         method: "POST",
         headers: {
@@ -206,6 +209,8 @@ Deno.serve(async (req) => {
           variables: [param],
           context_type: "lead",
           context_ref: lead.id,
+          inbox_body_text: inboxBody,
+          inbox_display_name: displayName,
         }),
       });
       const json = await res.json().catch(() => ({}));
