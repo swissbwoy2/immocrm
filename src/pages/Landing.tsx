@@ -56,6 +56,27 @@ export default function Landing() {
     }
   }, [user, userRole, loading, navigate]);
 
+  // Scroll to hash anchor (handles lazy-loaded sections like #analyse-dossier and #dossier-form)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const scrollToHash = () => {
+      const hash = window.location.hash?.replace('#', '');
+      if (!hash) return;
+      const tryScroll = (attempt = 0) => {
+        const el = document.getElementById(hash);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else if (attempt < 20) {
+          setTimeout(() => tryScroll(attempt + 1), 150);
+        }
+      };
+      tryScroll();
+    };
+    scrollToHash();
+    window.addEventListener('hashchange', scrollToHash);
+    return () => window.removeEventListener('hashchange', scrollToHash);
+  }, []);
+
   return (
     <SearchTypeProvider>
       <div className="min-h-screen bg-background">
@@ -93,6 +114,7 @@ export default function Landing() {
           <TestimonialVideoSection />
           <VideoSection />
           <WhatYouGetSection />
+          <div id="dossier-form" />
           <DossierAnalyseSection />
           <GuaranteeSection />
           <PricingSection />
