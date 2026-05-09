@@ -239,15 +239,21 @@ function renderLocationEmail(_campaign: Campaign, lead: LeadData, unsubscribeTok
         <div style="height:1px;background:rgba(212,168,83,0.22);margin:0 auto 22px;max-width:240px;"></div>
         <div style="font-family:Georgia,serif;font-size:15px;color:#f4ecd8;font-weight:700;margin-bottom:6px;">Tu préfères commencer directement en ligne ?</div>
         <p style="margin:0 auto 16px;max-width:420px;font-size:13px;color:#a89c87;line-height:1.55;font-family:Arial,Helvetica,sans-serif;">Crée ton compte et indique tes critères en 2 minutes.</p>
-        <!--[if mso]>
-        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${LOCATION_CTA_ACTIVATION_URL}" style="height:46px;v-text-anchor:middle;width:260px;" arcsize="18%" strokecolor="#D4A853" strokeweight="2px" fillcolor="#1c1814">
-          <w:anchorlock/>
-          <center style="color:#D4A853;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Activer ma recherche en ligne</center>
-        </v:roundrect>
-        <![endif]-->
-        <!--[if !mso]><!-- -->
-        <a href="${LOCATION_CTA_ACTIVATION_URL}" class="btn-secondary" style="display:inline-block;background:transparent;border:2px solid #D4A853;color:#D4A853;text-decoration:none;font-weight:600;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.2px;max-width:260px;width:100%;box-sizing:border-box;text-align:center;line-height:1.2;">Activer ma recherche en ligne</a>
-        <!--<![endif]-->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;max-width:260px;border-collapse:separate;">
+          <tr>
+            <td align="center" bgcolor="#1c1814" style="border-radius:10px;background:#1c1814;border:2px solid #D4A853;mso-padding-alt:14px 28px;">
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${LOCATION_CTA_ACTIVATION_URL}" style="height:46px;v-text-anchor:middle;width:260px;" arcsize="20%" strokecolor="#D4A853" strokeweight="2px" fillcolor="#1c1814">
+                <w:anchorlock/>
+                <center style="color:#D4A853;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">Activer ma recherche en ligne</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-- -->
+              <a href="${LOCATION_CTA_ACTIVATION_URL}" target="_blank" style="display:block;padding:14px 28px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;line-height:1.2;color:#D4A853;text-decoration:none;border-radius:10px;letter-spacing:0.2px;text-align:center;">Activer ma recherche en ligne</a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+        </table>
         <p style="margin:10px auto 0;max-width:380px;font-size:12px;color:#8a7f6e;font-style:italic;font-family:Georgia,serif;">Essai gratuit 48h · Sans engagement immédiat</p>
       </td></tr>
 
