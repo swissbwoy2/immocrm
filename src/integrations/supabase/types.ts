@@ -6423,11 +6423,14 @@ export type Database = {
           page_id: string | null
           page_name: string | null
           phone: string | null
+          phone_e164: string | null
           postal_code: string | null
           raw_answers: Json | null
           raw_meta_payload: Json | null
           source: string | null
           updated_at: string | null
+          whatsapp_opt_in: boolean
+          whatsapp_opt_out: boolean
         }
         Insert: {
           ad_id?: string | null
@@ -6458,11 +6461,14 @@ export type Database = {
           page_id?: string | null
           page_name?: string | null
           phone?: string | null
+          phone_e164?: string | null
           postal_code?: string | null
           raw_answers?: Json | null
           raw_meta_payload?: Json | null
           source?: string | null
           updated_at?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_out?: boolean
         }
         Update: {
           ad_id?: string | null
@@ -6493,11 +6499,14 @@ export type Database = {
           page_id?: string | null
           page_name?: string | null
           phone?: string | null
+          phone_e164?: string | null
           postal_code?: string | null
           raw_answers?: Json | null
           raw_meta_payload?: Json | null
           source?: string | null
           updated_at?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_out?: boolean
         }
         Relationships: []
       }
