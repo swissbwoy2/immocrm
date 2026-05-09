@@ -1096,6 +1096,11 @@ export default function CampagnesSuivi() {
               <span className="block text-sm">
                 Cette action est irréversible. Les emails seront envoyés immédiatement via Logisorama.
               </span>
+              {allowResend && (
+                <span className="block text-sm font-medium text-amber-600 dark:text-amber-400">
+                  ⚠️ Mode renvoi activé : l'email sera également envoyé aux leads ayant déjà reçu cette campagne.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
