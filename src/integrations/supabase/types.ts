@@ -10753,6 +10753,77 @@ export type Database = {
           },
         ]
       }
+      whatsapp_unknown_conversations: {
+        Row: {
+          assigned_to_client_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_message_at: string
+          phone_e164: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_client_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_message_at?: string
+          phone_e164: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_client_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_message_at?: string
+          phone_e164?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      whatsapp_unknown_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          id: string
+          meta_message_id: string | null
+          read: boolean
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          id?: string
+          meta_message_id?: string | null
+          read?: boolean
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          meta_message_id?: string | null
+          read?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_unknown_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_unknown_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wishlist_biens: {
         Row: {
           adresse: string
