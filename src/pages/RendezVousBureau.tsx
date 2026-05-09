@@ -41,6 +41,10 @@ export default function RendezVousBureau() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  useEffect(() => {
+    document.title = 'Réserver un RDV gratuit — Bureau Logisorama Crissier';
+  }, []);
+
   // Charger les créneaux occupés (vue publique) + realtime
   useEffect(() => {
     let mounted = true;
