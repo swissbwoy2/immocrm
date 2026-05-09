@@ -603,9 +603,24 @@ export default function CampagnesSuivi() {
                     id="hide-sent"
                     checked={hideAlreadySent}
                     onCheckedChange={(v) => setHideAlreadySent(!!v)}
+                    disabled={allowResend}
                   />
                   <Label htmlFor="hide-sent" className="text-sm cursor-pointer">
                     Masquer déjà envoyés
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2 pb-1">
+                  <Checkbox
+                    id="allow-resend"
+                    checked={allowResend}
+                    onCheckedChange={(v) => {
+                      const on = v === true;
+                      setAllowResend(on);
+                      if (on) setHideAlreadySent(false);
+                    }}
+                  />
+                  <Label htmlFor="allow-resend" className="text-sm cursor-pointer text-amber-700 dark:text-amber-400 font-medium">
+                    🔁 Renvoyer aux leads déjà contactés
                   </Label>
                 </div>
                 <Button onClick={() => setImportOpen(true)} variant="outline">
