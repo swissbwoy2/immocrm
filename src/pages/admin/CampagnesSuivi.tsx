@@ -1012,6 +1012,148 @@ export default function CampagnesSuivi() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ───────── ONGLET WHATSAPP LOCATION ───────── */}
+        <TabsContent value="whatsapp" className="space-y-4 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-green-600" />
+                Campagne WhatsApp — Location (RDV gratuit Crissier)
+              </CardTitle>
+              <CardDescription>
+                Template Meta : <code className="text-xs bg-muted px-1.5 py-0.5 rounded">logisorama_location_rdv_activation_v2</code>
+                {" · "}Bouton CTA : <strong>Réserver mon RDV</strong>
+                {" · "}Lien activation dans le corps du message.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={handleWaPreview} disabled={waPreviewLoading}>
+                  {waPreviewLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Eye className="h-4 w-4 mr-1" />}
+                  Aperçu
+                </Button>
+                <Button variant="outline" onClick={handleWaTest} disabled={waTesting}>
+                  {waTesting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-1" />}
+                  Test interne
+                </Button>
+              </div>
+
+              {waPreview && (
+                <div className="rounded-md border bg-muted/30 p-4 space-y-2">
+                  <div className="text-xs text-muted-foreground">Aperçu du message envoyé :</div>
+                  <pre className="whitespace-pre-wrap font-sans text-sm bg-background border rounded p-3">{waPreview.body_rendered}</pre>
+                  <div className="text-xs space-y-1">
+                    <div><strong>Variable {"{{1}}"} :</strong> {waPreview.first_name_param}</div>
+                    <div className="truncate"><strong>Bouton URL :</strong> <a href={waPreview.button_url} target="_blank" rel="noopener" className="text-primary underline">{waPreview.button_url}</a></div>
+                    <div className="truncate"><strong>Lien activation :</strong> <a href={waPreview.activation_link} target="_blank" rel="noopener" className="text-primary underline">{waPreview.activation_link}</a></div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex-1 min-w-[220px]">
+                  <Label className="text-xs">Recherche</Label>
+                  <Input
+                    placeholder="Email, nom, téléphone…"
+                    value={waSearch}
+                    onChange={(e) => setWaSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2 pb-1">
+                  <Checkbox
+                    id="wa-allow-resend"
+                    checked={waAllowResend}
+                    onCheckedChange={(v) => setWaAllowResend(v === true)}
+                  />
+                  <Label htmlFor="wa-allow-resend" className="text-sm cursor-pointer text-amber-700 dark:text-amber-400 font-medium">
+                    🔁 Renvoyer aux leads déjà contactés
+                  </Label>
+                </div>
+                <Button
+                  onClick={handleWaSend}
+                  disabled={waSelectedIds.size === 0 || waSending}
+                >
+                  {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+                  Envoyer aux {waSelectedIds.size} lead{waSelectedIds.size > 1 ? "s" : ""}
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="outline">Leads location avec téléphone : <strong className="ml-1">{leads.filter((l) => l.campaign_key === "location" && l.phone).length}</strong></Badge>
+                <Badge variant="outline" className="bg-green-50 text-green-800 border-green-300">Déjà envoyés WhatsApp : <strong className="ml-1">{waAlreadySent.size}</strong></Badge>
+                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">Disponibles : <strong className="ml-1">{waFilteredLeads.length}</strong></Badge>
+              </div>
+
+              {waLastResult && (
+                <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm">
+                  <div className="font-semibold text-green-900">Dernier envoi : {waLastResult.processed} / {waLastResult.total_requested} traités</div>
+                  <div className="text-green-800 text-xs mt-1">
+                    ✅ {waLastResult.sent} envoyés · ⏭ {waLastResult.skipped} ignorés · ❌ {waLastResult.failed} échecs
+                  </div>
+                </div>
+              )}
+
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={waFilteredLeads.length > 0 && waSelectedIds.size === waFilteredLeads.length}
+                          onCheckedChange={toggleWaSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead>Lead</TableHead>
+                      <TableHead className="hidden md:table-cell">Email</TableHead>
+                      <TableHead>Téléphone</TableHead>
+                      <TableHead>Statut</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {waFilteredLeads.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-sm">
+                          Aucun lead disponible. Importez des leads location avec téléphone, ou activez le mode renvoi.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      waFilteredLeads.map((l) => {
+                        const already = waAlreadySent.has(l.id);
+                        return (
+                          <TableRow key={l.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={waSelectedIds.has(l.id)}
+                                onCheckedChange={() => toggleWaSelect(l.id)}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {l.first_name || l.last_name ? `${l.first_name || ""} ${l.last_name || ""}`.trim() : "—"}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">{l.email}</TableCell>
+                            <TableCell className="text-sm">{l.phone || "—"}</TableCell>
+                            <TableCell>
+                              {already ? (
+                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 text-xs">WhatsApp envoyé</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs">En attente</Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* ───────── PREVIEW DIALOG ───────── */}
