@@ -197,38 +197,32 @@ export default function RendezVousBureau() {
 
   if (done) {
     return (
-      <>
-        <Helmet>
-          <title>RDV confirmé — Logisorama Crissier</title>
-          <meta name="description" content="Votre rendez-vous au bureau Logisorama de Crissier est confirmé." />
-        </Helmet>
-        <main className="min-h-screen bg-background flex items-center justify-center p-6">
-          <Card className="max-w-lg w-full p-8 text-center space-y-4">
-            <CheckCircle2 className="h-14 w-14 text-primary mx-auto" />
-            <h1 className="text-2xl font-bold">Rendez-vous confirmé</h1>
-            <p className="text-muted-foreground">
-              Le {formatDayLabel(selected!.start)} à {selected!.label}.
-            </p>
-            <div className="bg-muted/40 rounded-lg p-4 text-sm space-y-2">
-              <div className="flex items-start justify-center gap-2">
-                <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                <span>{OFFICE_ADDRESS}</span>
-              </div>
-              <a
-                href={OFFICE_MAPS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
-              >
-                Itinéraire <ExternalLink className="h-3 w-3" />
-              </a>
+      <main className="min-h-screen bg-background flex items-center justify-center p-6">
+        <Card className="max-w-lg w-full p-8 text-center space-y-4">
+          <CheckCircle2 className="h-14 w-14 text-primary mx-auto" />
+          <h1 className="text-2xl font-bold">Rendez-vous confirmé</h1>
+          <p className="text-muted-foreground">
+            Le {formatDayLabel(selected!.start)} à {selected!.label}.
+          </p>
+          <div className="bg-muted/40 rounded-lg p-4 text-sm space-y-2">
+            <div className="flex items-start justify-center gap-2">
+              <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <span>{OFFICE_ADDRESS}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Un email avec invitation calendrier (ICS) vient d'être envoyé. Tu recevras aussi des rappels 24h, 3h, 1h et 30 min avant.
-            </p>
-          </Card>
-        </main>
-      </>
+            <a
+              href={OFFICE_MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+            >
+              Itinéraire <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Un email avec invitation calendrier (ICS) vient d'être envoyé. Tu recevras aussi des rappels 24h, 3h, 1h et 30 min avant.
+          </p>
+        </Card>
+      </main>
     );
   }
 
