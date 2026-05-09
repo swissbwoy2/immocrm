@@ -235,7 +235,7 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
               Créneau sélectionné : {format(selected.start, 'EEEE d MMMM', { locale: fr })} à {selected.label}
             </p>
             <p className="text-xs text-muted-foreground">
-              Notre équipe te rappellera à ce moment précis (15 min).
+              Rendez-vous au bureau (30 min) — {OFFICE_ADDRESS}.
             </p>
           </div>
         </motion.div>
