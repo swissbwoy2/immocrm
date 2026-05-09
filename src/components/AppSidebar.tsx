@@ -28,6 +28,7 @@ import { NotificationBadge } from './NotificationBadge';
 import { NotificationBell } from './NotificationBell';
 import { SilentErrorBoundary } from './SilentErrorBoundary';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useWhatsAppUnreadCount } from '@/hooks/useWhatsAppUnreadCount';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
 
 interface MenuItem {
@@ -99,7 +100,8 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
-            { name: 'WhatsApp', icon: MessageSquare, path: '/admin/whatsapp-notifications', notifKey: null },
+            { name: 'Inbox WhatsApp', icon: MessageSquare, path: '/admin/whatsapp', notifKey: 'whatsapp_unread' },
+            { name: 'Logs WhatsApp', icon: History, path: '/admin/whatsapp-notifications', notifKey: null },
           ],
         },
         {
@@ -176,6 +178,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/agent/boite-reception', notifKey: null },
+            { name: 'Inbox WhatsApp', icon: MessageSquare, path: '/agent/whatsapp', notifKey: 'whatsapp_unread' },
           ],
         },
         {
@@ -418,6 +421,9 @@ export function AppSidebar() {
   const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
+  const whatsappUnread = useWhatsAppUnreadCount(
+    userRole === 'admin' ? 'admin' : userRole === 'agent' ? 'agent' : 'both'
+  );
   const [hasDrafts, setHasDrafts] = useState(false);
 
   const handleNavClick = () => {
@@ -469,6 +475,7 @@ export function AppSidebar() {
 
   const getNotificationCount = (notifKey: string | null): number => {
     if (!notifKey) return 0;
+    if (notifKey === 'whatsapp_unread') return whatsappUnread;
     if (notifKey === 'visit_combined') {
       return (counts.new_visit || 0) + (counts.visit_reminder || 0);
     }

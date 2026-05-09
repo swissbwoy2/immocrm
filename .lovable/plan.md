@@ -1,47 +1,55 @@
 ## Objectif
-1. Joindre un fichier `.ics` à **chaque** rappel email (24h, 3h, 1h, 30 min).
-2. Activer WhatsApp dès que Meta approuve `logisorama_rdv_bureau_rappel`.
+Rendre l'**Inbox WhatsApp** accessible et visible pour Christ depuis n'importe où (desktop + iPhone), avec alerte temps réel quand un client répond.
 
-## 1. ICS à chaque rappel — modification de `send-phone-appointment-reminders`
+## 1. Sidebar — Ajouter "Inbox WhatsApp" (admin + agent)
 
-Avant l'appel Resend HTML actuel, on invoque `send-calendar-invite` (déjà utilisé par `confirm-phone-appointment`) avec :
+Dans la section **COMMUNICATIONS** des sidebars admin et agent, ajouter une nouvelle entrée :
 
-```
-title       = "Rappel : RDV au bureau Logisorama"
-description = <intro du tier> + adresse complète
-location    = "Chemin de l'Esparsette 5, 1023 Crissier"
-start_date  = appt.slot_start
-end_date    = appt.slot_end
-recipient_email = appt.prospect_email
-```
+- **Label** : `Inbox WhatsApp`
+- **Icône** : `MessageCircle` (couleur verte WhatsApp)
+- **Route** : `/admin/whatsapp` (admin) et `/agent/whatsapp` (agent)
+- **Badge non-lus** : pastille rouge avec le nombre de messages WhatsApp `read=false` (count temps réel via Supabase realtime sur la table `messages` filtrée `sender_type='client'` + `content ILIKE '📱 [WhatsApp]%'`)
+- **Position** : juste sous "Boîte de réception", au-dessus de "WhatsApp" (qui devient "Logs WhatsApp" pour clarifier)
 
-Résultat utilisateur :
-- À chaque rappel, l'email Resend HTML actuel arrive ✅
-- Et **en parallèle**, un email avec pièce jointe `.ics` arrive (l'app calendrier propose d'ajouter/mettre à jour l'événement)
+Renommer l'entrée existante `WhatsApp` (qui pointe vers `/admin/whatsapp-notifications`) en **"Logs WhatsApp"** pour éviter la confusion entre l'inbox et les logs.
 
-Le marquage `*_sent_at` reste basé sur le succès de l'email Resend principal (ICS = best-effort, on log les erreurs mais on ne re-tente pas).
+## 2. Hook partagé `useWhatsAppUnreadCount`
 
-## 2. WhatsApp — aucune modif code
+Créer `src/hooks/useWhatsAppUnreadCount.ts` :
+- Charge le count initial des messages WhatsApp non lus (scope agent ou admin)
+- Souscrit en realtime au canal `messages` pour incrémenter/décrémenter
+- Retourne `{ count, loading }`
 
-Le code envoie déjà :
-- `template_key = 'rdv_bureau_rappel'`
-- `variables = [firstName, waHoraire(timeStr)]`
+Utilisé par :
+- Le badge sidebar
+- Le badge bottom-nav mobile (si présent)
 
-Mappings `waHoraire` actuels (rien à changer) :
-- 24h → `demain à 10h00`
-- 3h → `dans environ 3 heures (10h00)`
-- 1h → `dans 1 heure (10h00)`
-- 30m → `dans 30 minutes (10h00)`
+## 3. Notifications push mobile (PWA)
 
-Dès que Meta approuve `logisorama_rdv_bureau_rappel`, **le prochain cron (toutes les 5 min)** enverra automatiquement les 4 rappels WhatsApp. Aucun déploiement requis.
+Le projet a déjà un système de push (`usePushNotifications.ts` + edge function `send-push-notification`).
 
-## 3. Test final
-Après déploiement de l'edge function modifiée, on remet le RDV test à T+30 min, on relance la fonction, et on vérifie :
-- ✅ 1 email HTML Resend
-- ✅ 1 email avec pièce jointe `.ics`
-- ✅ 1 message WhatsApp template (si Meta a déjà approuvé)
+Ajouter dans le webhook WhatsApp existant (`whatsapp-webhook` edge function) : à chaque message client entrant, déclencher un push vers l'admin/agent assigné avec :
+- **Titre** : `💬 WhatsApp — {nom client}`
+- **Body** : 80 premiers caractères du message
+- **URL d'ouverture** : `/admin/whatsapp?conversation={id}` (ou `/agent/whatsapp`)
+- **Tag** : `whatsapp-{conversation_id}` pour grouper
+
+Sur iOS PWA, ces notifications apparaissent comme celles de WhatsApp Business App, avec son et badge.
+
+## 4. Test final
+
+1. Envoyer un message WhatsApp depuis un téléphone test vers +41 76 244 10 06
+2. Vérifier : badge sidebar passe de 0 à 1 en temps réel ✅
+3. Vérifier : notification push reçue sur l'iPhone (PWA Logisorama installée) ✅
+4. Cliquer sur la notif → ouvre directement la conversation dans l'inbox ✅
+5. Répondre depuis l'inbox → message arrive sur WhatsApp du client ✅
 
 ## Hors scope
-- Pas de changement sur `confirm-phone-appointment` (déjà OK).
-- Pas de changement de template Meta (laisse Meta valider).
-- Pas de changement sur le format de date/heure (déjà `Europe/Zurich`).
+- Pas d'activation de la coexistence Meta (process séparé côté Business Manager, ~1 semaine)
+- Pas de modif du webhook WhatsApp pour la logique entrante (déjà fonctionnelle)
+- Pas de refonte de la page inbox elle-même (déjà OK)
+
+## Détails techniques
+- Sidebar : modifier les composants sidebar admin/agent (à localiser : probablement `src/components/AppSidebar.tsx` ou similaire)
+- Realtime : channel Supabase `whatsapp-unread-{userId}` avec filtre `sender_type=eq.client`
+- Push : réutiliser l'infrastructure `web-push` + `push_subscriptions` existante
