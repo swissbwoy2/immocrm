@@ -20,6 +20,28 @@ const PUBLIC_BASE_URL = 'https://logisorama.ch';
 const MAX_LEADS_PER_INVOCATION = 500;
 const SEND_DELAY_MS = 200;
 
+// ────── Location campaign — configurable URLs & copy ──────
+const LOCATION_CTA_RDV_HERO_URL =
+  'https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=location&utm_content=cta_rdv_hero#analyse-dossier';
+const LOCATION_CTA_RDV_FINAL_URL =
+  'https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=location&utm_content=cta_rdv_final#analyse-dossier';
+const LOCATION_CTA_ACTIVATION_URL =
+  'https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=location&utm_content=cta_activation_secondaire#dossier-form';
+const LOCATION_PREHEADER =
+  'Passe 30 min avec un expert Logisorama pour vérifier ton dossier, tes critères et tes chances.';
+
+// Sanitize a string for use in an email Subject header (no CRLF/control chars).
+function sanitizeSubject(s: string): string {
+  return (s || '').replace(/[\r\n\t\u0000-\u001F\u007F]+/g, ' ').trim().slice(0, 180);
+}
+
+function buildLocationSubject(firstName: string): string {
+  const fn = sanitizeSubject(firstName);
+  return fn
+    ? `${fn}, on analyse ta recherche d'appart gratuitement 👋`
+    : `On analyse ta recherche d'appart gratuitement 👋`;
+}
+
 interface Campaign {
   id: string;
   campaign_key: string;
