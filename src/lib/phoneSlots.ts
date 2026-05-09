@@ -88,7 +88,7 @@ export function formatDayLabel(d: Date): string {
 }
 
 // Adresse du bureau Logisorama (utilisée dans UI + emails + ICS)
-export const OFFICE_ADDRESS = "Chemin de l'Esparsette 5, 1023 Crissier";
+export const OFFICE_ADDRESS = "Chemin de l'Esparcette 5, 1023 Crissier";
 export const OFFICE_MAPS_URL =
   'https://www.google.com/maps/search/?api=1&query=' +
-  encodeURIComponent("Chemin de l'Esparsette 5, 1023 Crissier");
+  encodeURIComponent("Chemin de l'Esparcette 5, 1023 Crissier");
