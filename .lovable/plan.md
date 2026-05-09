@@ -1,44 +1,53 @@
-## Diagnostic
+## Objectif
 
-Tu as raison, c'est confus :
+Étendre le système de RDV au bureau pour envoyer :
+- **Confirmation** : email (déjà OK) + **WhatsApp** (à ajouter)
+- **Rappels** : J-24h, H-3h, H-1h, H-30min — chacun envoyé par **email + WhatsApp**
 
-- **Label UI** dans `CampagnesSuivi.tsx` ligne 1025 : affiche encore `logisorama_location_rdv_crissier_v1` (oubli de mise à jour, purement cosmétique).
-- **Code réel** (`send-followup-whatsapp/index.ts` + DB `whatsapp_message_templates`) : envoie via la clé `location_rdv_activation_v2` → template Meta `logisorama_location_rdv_crissier_v2`.
-- **Meta** : `v2` est encore *en cours d'examen* → les envois sont rejetés silencieusement par Meta, donc tu ne reçois rien sur ton test.
+## Ce qui existe déjà
 
-Donc deux problèmes : (1) on envoie sur un template non approuvé, (2) le label ment.
+- Table `lead_phone_appointments` contient déjà toutes les colonnes nécessaires :
+  - `reminder_24h_sent_at`, `reminder_3h_sent_at`, `reminder_1h_sent_at`, `reminder_30m_sent_at` (email)
+  - `wa_reminder_24h_sent_at`, `wa_reminder_3h_sent_at`, `wa_reminder_1h_sent_at`, `wa_reminder_30m_sent_at` (WhatsApp)
+- Template WhatsApp Meta `rdv_bureau_rappel` déjà approuvé : 2 variables (prénom, horaire textuel)
+- Edge Function `send-phone-appointment-reminders` existe mais ne gère **que le rappel email J-24h**
+- Cron actuel : `phone-appointment-reminders-24h` → toutes les heures (insuffisant pour H-30min)
 
-## Ce que je vais faire
+## Modifications
 
-### 1. Repasser temporairement sur v1 (envoi qui marche maintenant)
-- DB : `UPDATE whatsapp_message_templates SET template_name_meta='logisorama_location_rdv_crissier_v1' WHERE template_key='location_rdv_activation_v2'` (on garde la clé interne `_v2` pour ne pas casser le code, on remappe juste vers le template Meta v1 qui est APPROVED).
-- `send-followup-whatsapp/index.ts` : garder `TEMPLATE_KEY = "location_rdv_activation_v2"` mais remettre `RDV_BUTTON_URL` = lien que tu utilisais en v1 (le bouton du template v1 pointe vers ce que Meta a approuvé chez eux — à confirmer avec toi : la home `https://logisorama.ch/` ou autre ?).
-- Test immédiat : tu dois recevoir le message.
+### 1. `confirm-phone-appointment` (ajout WhatsApp confirmation)
+Après l'envoi de l'email de confirmation, envoyer aussi un message WhatsApp via `send-whatsapp-notification` en utilisant le template `rdv_bureau_rappel` avec :
+- var 1 : prénom du prospect
+- var 2 : `"le {dateStr} à {timeStr}"` (date complète, pas un "demain")
 
-### 2. Label UI honnête + dynamique
-- Lire la valeur réelle de `template_name_meta` depuis `whatsapp_message_templates` au montage de l'onglet WhatsApp et l'afficher (au lieu d'un texte en dur). Plus jamais de label désynchronisé.
-- Ajouter à côté un petit badge "v1 (actif)" / "v2 (en attente Meta)" pour que tu voies en un clin d'œil ce qui est envoyé.
+### 2. `send-phone-appointment-reminders` (refonte complète)
+Nouvelle logique : la fonction parcourt les RDV `confirme` à venir, et pour chaque palier (24h / 3h / 1h / 30min) :
+- Calcule la fenêtre temporelle (ex. H-30min = `slot_start` entre now+25min et now+35min)
+- Envoie l'email s'il n'a pas déjà été envoyé pour ce palier (`reminder_Xh_sent_at IS NULL`)
+- Envoie le WhatsApp via `send-whatsapp-notification` (template `rdv_bureau_rappel`) si `wa_reminder_Xh_sent_at IS NULL`
+- Marque les colonnes correspondantes après envoi
+- Texte de l'horaire adapté au palier : "demain à HH:MM", "dans 3 heures", "dans 1 heure", "dans 30 minutes"
 
-### 3. Bascule v2 quand Meta approuve
-- Quand Meta passe v2 en APPROVED, une seule action :
-  ```sql
-  UPDATE whatsapp_message_templates 
-  SET template_name_meta='logisorama_location_rdv_crissier_v2' 
-  WHERE template_key='location_rdv_activation_v2';
-  ```
-  + remettre `RDV_BUTTON_URL` sur `https://logisorama.ch/rendez-vous?...`.
-- Aucun redéploiement de code nécessaire côté template (juste l'URL bouton dans la fonction edge si elle change).
+Email : on conserve le rendu HTML existant, mais le sujet/intro est adapté au palier ("demain", "dans 3h", "dans 1h", "dans 30 min"). Pas de pièce ICS pour les rappels < 24h.
 
-### 4. Page `/rendez-vous`
-- **Reste en place** et fonctionnelle. Quand v2 sera approuvée, le bouton WhatsApp pointera dessus.
-- En attendant, tu peux tester `/rendez-vous` directement dans le navigateur (réservation + email + ICS doivent fonctionner).
+### 3. Cron : passer à toutes les 5 minutes
+Recréer le cron `phone-appointment-reminders-24h` (ou le renommer en `phone-appointment-reminders`) avec schedule `*/5 * * * *` pour pouvoir attraper la fenêtre H-30min de manière fiable.
 
-## Question avant d'exécuter
+### Sécurité / robustesse
+- Normalisation E.164 du `prospect_phone` avant envoi WhatsApp
+- Si pas de téléphone valide → on log et on continue (n'empêche pas l'email)
+- Idempotence garantie par les colonnes `*_sent_at` (jamais 2 envois pour le même palier)
+- Pas de changement de schéma DB (toutes les colonnes existent déjà)
 
-**Quel lien doit ouvrir le bouton du template v1 (celui qui marche maintenant) ?**
+## Détails techniques
 
-1. La home `https://logisorama.ch/` (comportement historique avant tout ce chantier)
-2. Directement `https://logisorama.ch/rendez-vous` (si Meta a déjà approuvé v1 avec cette URL)
-3. Autre URL — précise
+```text
+Palier   | Fenêtre slot_start                  | Texte horaire WA
+---------|-------------------------------------|---------------------------
+24h      | now+23h .. now+25h                  | "demain à HH:MM"
+3h       | now+2h50  .. now+3h10               | "dans environ 3 heures (HH:MM)"
+1h       | now+50min .. now+1h10               | "dans 1 heure (HH:MM)"
+30min    | now+25min .. now+35min              | "dans 30 minutes (HH:MM)"
+```
 
-Réponds-moi avec 1 / 2 / 3 et je bascule tout de suite. Les rappels automatiques (24h/3h/1h/30 min) je les fais après, comme prévu.
+Aucune migration SQL applicative (les colonnes sont là). Le seul changement BDD est la mise à jour du schedule pg_cron, fait via `supabase.insert`.
