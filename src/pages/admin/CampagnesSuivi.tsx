@@ -674,13 +674,14 @@ export default function CampagnesSuivi() {
                     ) : (
                       filteredLeads.map((l) => {
                         const already = sentLeadIds.has(l.id);
+                        const lockedRow = already && !allowResend;
                         return (
-                          <TableRow key={l.id} className={already ? "opacity-60" : ""}>
+                          <TableRow key={l.id} className={lockedRow ? "opacity-60" : ""}>
                             <TableCell>
                               <Checkbox
                                 checked={selectedIds.has(l.id)}
                                 onCheckedChange={() => toggleSelect(l.id)}
-                                disabled={already}
+                                disabled={lockedRow}
                               />
                             </TableCell>
                             <TableCell className="font-medium">
