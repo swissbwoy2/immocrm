@@ -139,17 +139,23 @@ function renderLocationEmail(_campaign: Campaign, lead: LeadData, unsubscribeTok
     )
     .join('');
 
-  // Primary CTA (filled gold) — used in hero and as final reminder
+  // Primary CTA — bulletproof button (table + inline styles, works in Gmail/Apple Mail/Outlook)
   const ctaPrimary = (url: string, label: string) => `
-        <!--[if mso]>
-        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:54px;v-text-anchor:middle;width:320px;" arcsize="16%" stroke="f" fillcolor="#D4A853">
-          <w:anchorlock/>
-          <center style="color:#1c1814;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">${escapeHtml(label)}</center>
-        </v:roundrect>
-        <![endif]-->
-        <!--[if !mso]><!-- -->
-        <a href="${url}" class="btn-primary" style="display:inline-block;background:#D4A853;color:#1c1814;text-decoration:none;font-weight:700;font-size:15px;padding:18px 32px;border-radius:10px;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.3px;box-shadow:0 6px 18px rgba(212,168,83,0.35);max-width:320px;width:100%;box-sizing:border-box;text-align:center;line-height:1.2;">${escapeHtml(label)}</a>
-        <!--<![endif]-->`;
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;max-width:320px;border-collapse:separate;">
+          <tr>
+            <td align="center" bgcolor="#D4A853" style="border-radius:10px;background:#D4A853;mso-padding-alt:18px 28px;box-shadow:0 6px 18px rgba(212,168,83,0.35);">
+              <!--[if mso]>
+              <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:54px;v-text-anchor:middle;width:320px;" arcsize="18%" stroke="f" fillcolor="#D4A853">
+                <w:anchorlock/>
+                <center style="color:#1c1814;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">${escapeHtml(label)}</center>
+              </v:roundrect>
+              <![endif]-->
+              <!--[if !mso]><!-- -->
+              <a href="${url}" target="_blank" style="display:block;padding:18px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:1.2;color:#1c1814;text-decoration:none;border-radius:10px;letter-spacing:0.3px;text-align:center;">${escapeHtml(label)}</a>
+              <!--<![endif]-->
+            </td>
+          </tr>
+        </table>`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
