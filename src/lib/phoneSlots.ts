@@ -1,5 +1,5 @@
 // Génération des créneaux de rendez-vous AU BUREAU (Logisorama, Crissier).
-// Lundi → Samedi (dimanche fermé), 08h30→12h00 et 13h30→16h30, par tranches de 30 min.
+// Lundi → Samedi (dimanche fermé), 08h30→12h00 et 13h30→16h00, par tranches de 30 min.
 // Toute manipulation est en heure locale (Europe/Zurich).
 
 export type Slot = {
