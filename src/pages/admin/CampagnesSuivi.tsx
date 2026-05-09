@@ -408,6 +408,8 @@ export default function CampagnesSuivi() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, leads.length]);
 
+  // ───── Filtered leads
+  const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
       if (l.campaign_key !== selectedCampaign) return false;
       if (hideAlreadySent && sentLeadIds.has(l.id)) return false;
