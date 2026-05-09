@@ -588,9 +588,10 @@ Deno.serve(async (req) => {
 
     // ───── PREVIEW
     if (mode === 'preview') {
+      const finalSubject = subjectForCampaign(camp, fakeLead);
       const html = renderForCampaign(camp, fakeLead, 'preview-token');
-      const subject = subjectForCampaign(camp, fakeLead);
-      return new Response(JSON.stringify({ html, subject }), {
+      console.log('[send-followup]', { mode: 'preview', campaign_key: camp.campaign_key, finalSubject });
+      return new Response(JSON.stringify({ html, subject: finalSubject }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
