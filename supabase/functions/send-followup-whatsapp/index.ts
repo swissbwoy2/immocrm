@@ -10,8 +10,8 @@ const corsHeaders = {
 const TEMPLATE_KEY = "location_rdv_activation_v2";
 const EVENT_TYPE = "campaign_location";
 const RDV_BUTTON_URL =
-  "https://logisorama.ch/?utm_source=whatsapp&utm_medium=business_message&utm_campaign=location&utm_content=cta_rdv#analyse-dossier";
-const ACTIVATION_LINK = "https://logisorama.ch/nouveau-mandat";
+  "https://logisorama.ch/rendez-vous?utm_source=whatsapp&utm_medium=business_message&utm_campaign=location_v2";
+const ACTIVATION_LINK = "https://logisorama.ch/rendez-vous";
 const MAX_BATCH = 3;
 
 function sanitizeWhatsappText(s: string): string {
