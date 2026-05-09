@@ -177,6 +177,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/agent/boite-reception', notifKey: null },
+            { name: 'Inbox WhatsApp', icon: MessageSquare, path: '/agent/whatsapp', notifKey: 'whatsapp_unread' },
           ],
         },
         {
