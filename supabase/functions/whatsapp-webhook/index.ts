@@ -997,7 +997,72 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (!profile) {
-            console.log("Incoming WA from unknown phone", fromPhone);
+            console.log("Incoming WA from unknown phone", fromPhone, "→ saving to public inbox");
+            try {
+              const phoneE164Norm = phoneE164 || `+${fromPhone}`;
+              const pushName = value?.contacts?.[0]?.profile?.name || null;
+
+              // Upsert conversation
+              const { data: existing } = await supabase
+                .from("whatsapp_unknown_conversations")
+                .select("id, display_name")
+                .eq("phone_e164", phoneE164Norm)
+                .maybeSingle();
+
+              let unknownConvId = existing?.id as string | undefined;
+              if (!unknownConvId) {
+                const { data: created } = await supabase
+                  .from("whatsapp_unknown_conversations")
+                  .insert({
+                    phone_e164: phoneE164Norm,
+                    display_name: pushName,
+                    last_message_at: new Date().toISOString(),
+                    status: "nouveau",
+                  })
+                  .select("id")
+                  .single();
+                unknownConvId = created?.id;
+              } else {
+                await supabase
+                  .from("whatsapp_unknown_conversations")
+                  .update({
+                    last_message_at: new Date().toISOString(),
+                    status: "nouveau",
+                    display_name: existing?.display_name || pushName,
+                  })
+                  .eq("id", unknownConvId);
+              }
+
+              if (unknownConvId) {
+                await supabase.from("whatsapp_unknown_messages").insert({
+                  conversation_id: unknownConvId,
+                  direction: "in",
+                  content: text,
+                  meta_message_id: msg.id || null,
+                  read: false,
+                });
+
+                // Push notif aux admins
+                try {
+                  const { data: admins } = await supabase
+                    .from("user_roles").select("user_id").eq("role", "admin");
+                  const targetIds = Array.from(new Set((admins || []).map((a: any) => a.user_id).filter(Boolean)));
+                  if (targetIds.length) {
+                    await supabase.functions.invoke("send-push-notification", {
+                      body: {
+                        user_ids: targetIds,
+                        title: `💬 WhatsApp — ${pushName || phoneE164Norm}`,
+                        body: text.slice(0, 120),
+                        link: "/admin/whatsapp",
+                        data: { unknown_conversation_id: String(unknownConvId), type: "whatsapp_inbound_unknown" },
+                      },
+                    });
+                  }
+                } catch (e) { console.warn("push unknown failed", e); }
+              }
+            } catch (e) {
+              console.error("unknown WA save failed", e);
+            }
             continue;
           }
 
