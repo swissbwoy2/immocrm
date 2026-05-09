@@ -412,6 +412,7 @@ Deno.serve(async (req) => {
       }
 
       const leadIds = Array.isArray(body?.leadIds) ? body.leadIds.slice(0, MAX_LEADS_PER_INVOCATION) : [];
+      const allowResend = body?.allowResend === true;
       if (leadIds.length === 0) {
         return new Response(JSON.stringify({ error: 'Aucun lead sélectionné' }), {
           status: 400,
@@ -431,15 +432,18 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Already-sent lookup
-      const { data: alreadySent } = await supabaseAdmin
-        .from('lead_email_logs')
-        .select('lead_id')
-        .eq('campaign_id', camp.id)
-        .eq('status', 'sent')
-        .eq('test_send', false)
-        .in('lead_id', leadIds);
-      const sentSet = new Set((alreadySent || []).map((r: any) => r.lead_id));
+      // Already-sent lookup (skip when allowResend = true)
+      let sentSet = new Set<string>();
+      if (!allowResend) {
+        const { data: alreadySent } = await supabaseAdmin
+          .from('lead_email_logs')
+          .select('lead_id')
+          .eq('campaign_id', camp.id)
+          .eq('status', 'sent')
+          .eq('test_send', false)
+          .in('lead_id', leadIds);
+        sentSet = new Set((alreadySent || []).map((r: any) => r.lead_id));
+      }
 
       // Unsubscribed lookup
       const emails = (leads || []).map((l: any) => l.email).filter(Boolean);
