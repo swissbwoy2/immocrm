@@ -144,7 +144,8 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
               day.setHours(0, 0, 0, 0);
               const min = availableDays[0];
               const max = availableDays[availableDays.length - 1];
-              return day < min || day > max;
+              if (day < min || day > max) return true;
+              return day.getDay() === 0; // dimanche fermé
             }}
             initialFocus
             className={cn('p-3 pointer-events-auto')}
@@ -153,7 +154,7 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
       </Popover>
 
       {/* Day part tabs */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {DAY_PARTS.map(({ key, label, icon: Icon, range }) => (
           <button
             key={key}
