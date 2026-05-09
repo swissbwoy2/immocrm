@@ -1,5 +1,11 @@
 @tailwind base;
 
+/* Anchor scroll offset to clear sticky header */
+#analyse-dossier,
+#dossier-form {
+  scroll-margin-top: 90px;
+}
+
 /* iOS performance optimizations */
 .ios-gpu-accelerated {
   -webkit-transform: translateZ(0);
