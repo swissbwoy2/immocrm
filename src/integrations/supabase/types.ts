@@ -5331,6 +5331,7 @@ export type Database = {
           nom: string | null
           notes: string | null
           permis_nationalite: string | null
+          phone_e164: string | null
           poursuites: boolean | null
           prenom: string | null
           source: string | null
@@ -5343,6 +5344,8 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           utm_term: string | null
+          whatsapp_opt_in: boolean
+          whatsapp_opt_out: boolean
         }
         Insert: {
           a_garant?: boolean | null
@@ -5359,6 +5362,7 @@ export type Database = {
           nom?: string | null
           notes?: string | null
           permis_nationalite?: string | null
+          phone_e164?: string | null
           poursuites?: boolean | null
           prenom?: string | null
           source?: string | null
@@ -5371,6 +5375,8 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_out?: boolean
         }
         Update: {
           a_garant?: boolean | null
@@ -5387,6 +5393,7 @@ export type Database = {
           nom?: string | null
           notes?: string | null
           permis_nationalite?: string | null
+          phone_e164?: string | null
           poursuites?: boolean | null
           prenom?: string | null
           source?: string | null
@@ -5399,6 +5406,8 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          whatsapp_opt_in?: boolean
+          whatsapp_opt_out?: boolean
         }
         Relationships: []
       }
