@@ -277,6 +277,52 @@ Deno.serve(async (req) => {
       context_ref: context_ref ?? null,
     });
 
+    // Mirror outbound template into the WhatsApp inbox so admin/agent see the full thread
+    if (inbox_body_text && recipientPhone) {
+      try {
+        const phoneKey = recipientPhone.replace("+", "");
+        const nowIso = new Date().toISOString();
+        // Upsert conversation by phone_e164
+        const { data: existingConv } = await supabase
+          .from("whatsapp_unknown_conversations")
+          .select("id")
+          .eq("phone_e164", phoneKey)
+          .maybeSingle();
+
+        let conversationId = existingConv?.id as string | undefined;
+        if (!conversationId) {
+          const { data: newConv } = await supabase
+            .from("whatsapp_unknown_conversations")
+            .insert({
+              phone_e164: phoneKey,
+              display_name: inbox_display_name ?? null,
+              last_message_at: nowIso,
+              status: "open",
+            })
+            .select("id")
+            .single();
+          conversationId = newConv?.id;
+        } else {
+          await supabase
+            .from("whatsapp_unknown_conversations")
+            .update({ last_message_at: nowIso, ...(inbox_display_name ? { display_name: inbox_display_name } : {}) })
+            .eq("id", conversationId);
+        }
+
+        if (conversationId) {
+          await supabase.from("whatsapp_unknown_messages").insert({
+            conversation_id: conversationId,
+            direction: "outbound",
+            content: inbox_body_text,
+            meta_message_id: metaMessageId,
+            read: true,
+          });
+        }
+      } catch (mirrorErr) {
+        console.error("[send-whatsapp-notification] inbox mirror failed", mirrorErr);
+      }
+    }
+
     return new Response(JSON.stringify({ ok: true, meta_message_id: metaMessageId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
