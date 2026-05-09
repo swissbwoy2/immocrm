@@ -95,7 +95,7 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
           Choisis ton créneau au bureau
         </h3>
         <p className="text-sm text-muted-foreground">
-          30 minutes — Lun→Sam, 08h30→12h00 et 13h30→16h30
+          30 minutes — Lun→Sam, 08h30→12h00 et 13h30→16h00
         </p>
       </div>
 
