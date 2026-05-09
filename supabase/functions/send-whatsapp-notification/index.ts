@@ -34,6 +34,10 @@ interface ReqBody {
   // Optional context tracking (e.g. candidature_id) for traceability in logs
   context_type?: string | null;
   context_ref?: string | null;
+  // Optional rendered body text to mirror in the WhatsApp inbox (outbound message)
+  inbox_body_text?: string | null;
+  // Optional display name for the inbox conversation (e.g. lead first+last name)
+  inbox_display_name?: string | null;
 }
 
 function normalizePhone(raw: string): string | null {
