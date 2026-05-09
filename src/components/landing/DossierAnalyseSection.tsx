@@ -17,13 +17,14 @@ import {
   MapPin,
   ShieldCheck,
   ClipboardCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { useUTMParams } from '@/hooks/useUTMParams';
 import { PhoneSlotPicker } from '@/components/landing/PhoneSlotPicker';
-import type { Slot } from '@/lib/phoneSlots';
+import { OFFICE_ADDRESS, OFFICE_MAPS_URL, type Slot } from '@/lib/phoneSlots';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
