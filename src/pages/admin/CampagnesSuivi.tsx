@@ -300,6 +300,18 @@ export default function CampagnesSuivi() {
 
   // ───── WhatsApp Location campaign
   const WA_TEMPLATE_KEY = "location_rdv_activation_v2";
+  const [waMetaTemplateName, setWaMetaTemplateName] = useState<string>("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("whatsapp_message_templates")
+        .select("template_name_meta")
+        .eq("template_key", WA_TEMPLATE_KEY)
+        .maybeSingle();
+      if (data?.template_name_meta) setWaMetaTemplateName(data.template_name_meta);
+    })();
+  }, []);
 
   const loadWaAlreadySent = async () => {
     const locationLeadIds = leads.filter((l) => l.campaign_key === "location").map((l) => l.id);
