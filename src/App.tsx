@@ -26,6 +26,7 @@ const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
 const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
 const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
+const RendezVousBureau = lazy(() => import("./pages/RendezVousBureau"));
 const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
 const ConstruireRenover = lazy(() => import("./pages/ConstruireRenover"));
 const FormulaireConstruireRenover = lazy(() => import("./pages/FormulaireConstruireRenover"));
