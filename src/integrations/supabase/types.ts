@@ -5262,12 +5262,19 @@ export type Database = {
           prospect_email: string
           prospect_name: string
           prospect_phone: string
+          reminder_1h_sent_at: string | null
           reminder_24h_sent_at: string | null
+          reminder_30m_sent_at: string | null
+          reminder_3h_sent_at: string | null
           slot_end: string
           slot_start: string
           source_form: string
           status: string
           updated_at: string
+          wa_reminder_1h_sent_at: string | null
+          wa_reminder_24h_sent_at: string | null
+          wa_reminder_30m_sent_at: string | null
+          wa_reminder_3h_sent_at: string | null
         }
         Insert: {
           confirmed_at?: string | null
@@ -5280,12 +5287,19 @@ export type Database = {
           prospect_email: string
           prospect_name: string
           prospect_phone: string
+          reminder_1h_sent_at?: string | null
           reminder_24h_sent_at?: string | null
+          reminder_30m_sent_at?: string | null
+          reminder_3h_sent_at?: string | null
           slot_end: string
           slot_start: string
           source_form?: string
           status?: string
           updated_at?: string
+          wa_reminder_1h_sent_at?: string | null
+          wa_reminder_24h_sent_at?: string | null
+          wa_reminder_30m_sent_at?: string | null
+          wa_reminder_3h_sent_at?: string | null
         }
         Update: {
           confirmed_at?: string | null
@@ -5298,12 +5312,19 @@ export type Database = {
           prospect_email?: string
           prospect_name?: string
           prospect_phone?: string
+          reminder_1h_sent_at?: string | null
           reminder_24h_sent_at?: string | null
+          reminder_30m_sent_at?: string | null
+          reminder_3h_sent_at?: string | null
           slot_end?: string
           slot_start?: string
           source_form?: string
           status?: string
           updated_at?: string
+          wa_reminder_1h_sent_at?: string | null
+          wa_reminder_24h_sent_at?: string | null
+          wa_reminder_30m_sent_at?: string | null
+          wa_reminder_3h_sent_at?: string | null
         }
         Relationships: [
           {
