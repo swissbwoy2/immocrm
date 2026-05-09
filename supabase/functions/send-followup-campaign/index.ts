@@ -184,7 +184,7 @@ function renderLocationEmail(_campaign: Campaign, lead: LeadData, unsubscribeTok
 
       <!-- SOCIAL PROOF -->
       <tr><td class="px-mobile" style="padding:18px 32px 6px;">
-        <p style="margin:0;font-size:15px;line-height:1.6;color:#E8C77E;font-family:Arial,Helvetica,sans-serif;font-weight:600;">⭐ Plus de 500 locataires ont déjà été accompagnés.</p>
+        <p style="margin:0;font-size:15px;line-height:1.6;color:#E8C77E;font-family:Arial,Helvetica,sans-serif;font-weight:600;">⭐ Plus de 500 locataires ont déjà trouvé leur appartement grâce à notre accompagnement . ⭐</p>
       </td></tr>
 
       <!-- OPTION RECOMMANDÉE -->
