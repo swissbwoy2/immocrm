@@ -603,9 +603,24 @@ export default function CampagnesSuivi() {
                     id="hide-sent"
                     checked={hideAlreadySent}
                     onCheckedChange={(v) => setHideAlreadySent(!!v)}
+                    disabled={allowResend}
                   />
                   <Label htmlFor="hide-sent" className="text-sm cursor-pointer">
                     Masquer déjà envoyés
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2 pb-1">
+                  <Checkbox
+                    id="allow-resend"
+                    checked={allowResend}
+                    onCheckedChange={(v) => {
+                      const on = v === true;
+                      setAllowResend(on);
+                      if (on) setHideAlreadySent(false);
+                    }}
+                  />
+                  <Label htmlFor="allow-resend" className="text-sm cursor-pointer text-amber-700 dark:text-amber-400 font-medium">
+                    🔁 Renvoyer aux leads déjà contactés
                   </Label>
                 </div>
                 <Button onClick={() => setImportOpen(true)} variant="outline">
@@ -766,13 +781,11 @@ export default function CampagnesSuivi() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                      <Checkbox
-                        checked={allowResend}
-                        onCheckedChange={(v) => setAllowResend(v === true)}
-                      />
-                      <span>🔁 Renvoyer aux leads déjà contactés</span>
-                    </label>
+                    {allowResend && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
+                        🔁 Mode renvoi activé
+                      </Badge>
+                    )}
                     <Button variant="outline" onClick={() => setSelectedIds(new Set())}>
                       Désélectionner
                     </Button>
