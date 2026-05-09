@@ -709,6 +709,7 @@ Deno.serve(async (req) => {
         }
 
         const unsubToken = crypto.randomUUID();
+        const personalizedSubject = subjectForCampaign(camp, lead);
 
         // Pre-insert log row (status pending) to get an id we can embed in tracking links
         const { data: preLog } = await supabaseAdmin
@@ -718,7 +719,7 @@ Deno.serve(async (req) => {
             campaign_id: camp.id,
             campaign_key: camp.campaign_key,
             recipient_email: lead.email,
-            subject: camp.subject,
+            subject: personalizedSubject,
             status: 'pending',
             unsubscribe_token: unsubToken,
             test_send: false,
@@ -727,9 +728,9 @@ Deno.serve(async (req) => {
           .single();
 
         const logId = preLog?.id || null;
-        const rawHtml = renderEmail(camp, lead, unsubToken);
+        const rawHtml = renderForCampaign(camp, lead, unsubToken);
         const html = injectTracking(rawHtml, logId);
-        const result = await sendViaResend(lead.email, camp.subject, html, {
+        const result = await sendViaResend(lead.email, personalizedSubject, html, {
           bcc: ['info@immo-rama.ch'],
         });
 
