@@ -37,11 +37,8 @@ function sanitizeSubject(s: string): string {
   return (s || '').replace(/[\r\n\t\u0000-\u001F\u007F]+/g, ' ').trim().slice(0, 180);
 }
 
-function buildLocationSubject(firstName: string): string {
-  const fn = sanitizeSubject(firstName);
-  return fn
-    ? `${fn}, on analyse ta recherche d'appart gratuitement 👋`
-    : `On analyse ta recherche d'appart gratuitement 👋`;
+function buildLocationSubject(_firstName: string): string {
+  return `Ton futur appartement t'attend !!!`;
 }
 
 interface Campaign {
