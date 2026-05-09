@@ -1,28 +1,59 @@
-## Activation du template `staff_client_inbound`
+## Objectif
 
-Meta a approuvé le template `logisorama_staff_client_inbound`. Il reste une seule action côté base pour déclencher les envois WhatsApp aux agents/admins lorsqu'un client répond.
+Sur la landing page (section « Analyse gratuite de ton dossier »), remplacer la réservation d'un **entretien téléphonique** par la réservation d'un **rendez-vous physique au bureau** :
 
-### Étape unique
+**Adresse** : Chemin de l'Esparsette 5, 1023 Crissier
+**Jours** : Lundi → Samedi (fermé le dimanche)
+**Horaires** : 08h30 → 12h00 et 13h30 → 16h30
+**Durée** : 30 minutes par créneau
 
-Migration SQL one-shot :
+## Fichiers modifiés
 
-```sql
-UPDATE whatsapp_message_templates
-SET is_active = true,
-    status = 'APPROVED',
-    updated_at = now()
-WHERE template_key = 'staff_client_inbound';
-```
+### 1. `src/lib/phoneSlots.ts` (logique des créneaux)
+- Durée passe de 15 → **30 minutes**
+- Deux plages horaires : matin `08:30 → 12:00` et après-midi `13:30 → 16:30`
+- Exclure les **dimanches** dans `getAvailableDays()`
+- Renommer la notion `DayPart` à 2 valeurs : `matin` / `apres-midi` (suppression du `soir`)
 
-### Vérification post-activation
+### 2. `src/components/landing/PhoneSlotPicker.tsx`
+- Mettre à jour `DAY_PARTS` : Matin `08h30 → 12h00`, Après-midi `13h30 → 16h30`
+- Ajouter un encart visible avec l'adresse complète + lien Google Maps :
+  « 📍 Bureau Logisorama — Chemin de l'Esparsette 5, 1023 Crissier »
+- Renommer titres internes (« Choisis ton créneau d'appel » → « Choisis ton créneau au bureau »)
 
-1. Lecture de contrôle sur `whatsapp_message_templates` (is_active = true, status = APPROVED).
-2. Test live : envoyer un message WhatsApp depuis le numéro client de test vers le numéro Logisorama → Victoria doit recevoir le WhatsApp formaté avec son lien `/agent/whatsapp`.
-3. Inspection de `whatsapp_notification_logs` (event_type `forward_staff_client_inbound`) pour confirmer le `meta_message_id`.
+### 3. `src/components/landing/DossierAnalyseSection.tsx`
+- Remplacer toutes les mentions « rendez-vous personnalisé » / « entretien téléphonique » par « rendez-vous au bureau »
+- Écran de succès : afficher l'adresse + bouton « Itinéraire Google Maps »
+- Texte intermédiaire (étape 2) : « Choisis ton créneau de rendez-vous au bureau »
+- Commentaires de code mis à jour
 
-### Hors périmètre
+### 4. Edge Function `supabase/functions/confirm-phone-appointment/index.ts`
+- Email de confirmation : titre « ✅ Rendez-vous au bureau confirmé »
+- Remplacer « Notre équipe vous appellera » par « Nous vous accueillons à notre bureau »
+- `location` Google Calendar = `Chemin de l'Esparsette 5, 1023 Crissier`
+- Ajouter dans le HTML de l'email un bloc adresse + lien Maps + rappel « Merci d'arriver 5 min en avance »
 
-- Aucun changement de code (le webhook passe déjà `templateKey: "staff_client_inbound"` + variables).
-- Pas de modification du template Meta lui-même (déjà validé côté Business Manager).
+### 5. Edge Function `supabase/functions/download-phone-appointment-ics/index.ts`
+- ICS : `SUMMARY` = « Rendez-vous au bureau Logisorama »
+- `LOCATION` = `Chemin de l'Esparsette 5, 1023 Crissier`
+- `DESCRIPTION` mise à jour (accueil au bureau, pas appel)
 
-Approuvez pour appliquer la migration d'activation.
+### 6. Edge Function `supabase/functions/send-phone-appointment-reminders/index.ts`
+- Sujet : « 📍 Rappel : votre rendez-vous au bureau demain »
+- ICS et corps email : adresse du bureau au lieu du numéro de téléphone
+- Ligne tableau : remplacer « 📞 Numéro » par « 📍 Adresse » avec l'adresse complète
+
+## Hors scope (non touché)
+
+- Schéma DB `lead_phone_appointments` — conservé tel quel (le nom de table reste, seule la sémantique change). Pas de migration nécessaire.
+- Section publique `src/components/public-site/sections/DossierAnalyseSection.tsx` — n'utilise pas le PhoneSlotPicker (formulaire simplifié sans créneau), donc aucun changement.
+- Adresse e-mail expéditeur, design global, autres landings.
+
+## Vérification post-implémentation
+
+- Ouvrir la landing `/index` mobile (430×777), parcourir le formulaire « Analyse de ton dossier » → étape 2, vérifier :
+  - Plages 08h30→12h00 et 13h30→16h30 uniquement
+  - Créneaux de 30 min
+  - Dimanches absents du calendrier
+  - Encart adresse visible
+- Soumettre un test → écran de succès affiche l'adresse + lien Maps
