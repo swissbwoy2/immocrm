@@ -28,7 +28,9 @@ const LOCATION_CTA_RDV_FINAL_URL =
 const LOCATION_CTA_ACTIVATION_URL =
   'https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=location&utm_content=cta_activation_secondaire#dossier-form';
 const LOCATION_PREHEADER =
-  'Passe 30 min avec un expert Logisorama pour vérifier ton dossier, tes critères et tes chances.';
+  '🏠 Tu cherches un appartement en Suisse romande ?';
+const LOCATION_CTA_NOUVEAU_MANDAT_URL =
+  'https://logisorama.ch/nouveau-mandat?utm_source=campagne_suivi&utm_medium=email&utm_campaign=location&utm_content=cta_activation_inline';
 
 // Sanitize a string for use in an email Subject header (no CRLF/control chars).
 function sanitizeSubject(s: string): string {
