@@ -98,7 +98,7 @@ export function DossierAnalyseSection() {
 
     let createdApptId: string | null = null;
     try {
-      // 1. Réserver le créneau téléphonique d'abord (gestion conflit)
+      // 1. Réserver le créneau de RDV au bureau d'abord (gestion conflit)
       // Pas de .select() : RLS SELECT anonyme bloque RETURNING. On génère l'id côté client.
       const apptId = crypto.randomUUID();
       const { error: apptErr } = await supabase
