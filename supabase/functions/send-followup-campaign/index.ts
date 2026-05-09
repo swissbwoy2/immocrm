@@ -97,8 +97,14 @@ function injectTracking(html: string, logId: string | null): string {
 }
 
 function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: string): string {
-  const firstName = lead.first_name?.trim() || 'cher futur client';
-  const intro = (campaign.body_intro || '').replace(/\{\{first_name\}\}/g, escapeHtml(firstName));
+  const firstName = lead.first_name?.trim() || '';
+  let intro = campaign.body_intro || '';
+  if (firstName) {
+    intro = intro.replace(/\{\{first_name\}\}/g, escapeHtml(firstName));
+  } else {
+    // Drop the placeholder cleanly so we get "Bonjour, …" instead of "Bonjour , …"
+    intro = intro.replace(/\s*\{\{first_name\}\}/g, '').replace(/\{\{first_name\}\}/g, '');
+  }
   const benefits = (campaign.benefits || [])
     .map(
       (b) => `
