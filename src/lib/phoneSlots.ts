@@ -21,7 +21,7 @@ export const MORNING_END_MIN = 0;
 export const AFTERNOON_START_HOUR = 13;
 export const AFTERNOON_START_MIN = 30;
 export const AFTERNOON_END_HOUR = 16;
-export const AFTERNOON_END_MIN = 30;
+export const AFTERNOON_END_MIN = 0;
 
 export type DayPart = 'matin' | 'apres-midi';
 
