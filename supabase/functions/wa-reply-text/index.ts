@@ -29,9 +29,10 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json().catch(() => ({}));
-    const conversationId = String(body.conversation_id || "");
+    const conversationId = body.conversation_id ? String(body.conversation_id) : "";
+    const unknownConvId = body.unknown_conversation_id ? String(body.unknown_conversation_id) : "";
     const text = String(body.text || "").trim();
-    if (!conversationId || !text) {
+    if ((!conversationId && !unknownConvId) || !text) {
       return new Response(JSON.stringify({ error: "missing_params" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -42,6 +43,64 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === UNKNOWN conversation branch ===
+    if (unknownConvId) {
+      const { data: uconv } = await admin
+        .from("whatsapp_unknown_conversations")
+        .select("id, phone_e164")
+        .eq("id", unknownConvId)
+        .maybeSingle();
+      if (!uconv) {
+        return new Response(JSON.stringify({ error: "conversation_not_found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const phone = normalizePhoneE164(uconv.phone_e164);
+      if (!phone) {
+        return new Response(JSON.stringify({ error: "invalid_phone" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // 24h window check on unknown_messages
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const { data: recent } = await admin
+        .from("whatsapp_unknown_messages")
+        .select("id")
+        .eq("conversation_id", unknownConvId)
+        .eq("direction", "in")
+        .gte("created_at", since)
+        .limit(1);
+      if (!recent || recent.length === 0) {
+        return new Response(JSON.stringify({ error: "window_closed" }), {
+          status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const result = await sendWhatsAppText(phone, text);
+      if (!result.ok) {
+        return new Response(JSON.stringify({ error: "send_failed", details: result.error }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      await admin.from("whatsapp_unknown_messages").insert({
+        conversation_id: unknownConvId,
+        direction: "out",
+        content: text,
+        meta_message_id: result.meta_message_id || null,
+        read: true,
+      });
+      await admin.from("whatsapp_unknown_conversations")
+        .update({ last_message_at: new Date().toISOString(), status: "en_cours" })
+        .eq("id", unknownConvId);
+
+      return new Response(JSON.stringify({ ok: true, meta_message_id: result.meta_message_id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // === KNOWN client conversation branch ===
     const { data: conv, error: convErr } = await admin
       .from("conversations")
       .select("id, client_id, agent_id")
@@ -67,7 +126,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check 24h window: latest inbound from client
     const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data: recentInbound } = await admin
       .from("messages")
@@ -79,7 +137,7 @@ Deno.serve(async (req) => {
       .limit(1);
 
     if (!recentInbound || recentInbound.length === 0) {
-      return new Response(JSON.stringify({ error: "window_closed", message: "Fenêtre 24h Meta fermée — utilisez un template." }), {
+      return new Response(JSON.stringify({ error: "window_closed" }), {
         status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -91,19 +149,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Find agent's user_id (sender)
-    let senderId: string | null = user.id;
-    const { data: agent } = await admin
-      .from("agents")
-      .select("id, user_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const agentRowId = agent?.id || conv.agent_id || null;
-
     await admin.from("messages").insert({
       conversation_id: conversationId,
       sender_type: "agent",
-      sender_id: senderId,
+      sender_id: user.id,
       content: `📱 [WhatsApp →] ${text}`,
       read: true,
     });
