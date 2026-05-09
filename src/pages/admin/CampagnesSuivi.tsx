@@ -140,6 +140,7 @@ export default function CampagnesSuivi() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [hideAlreadySent, setHideAlreadySent] = useState(true);
+  const [allowResend, setAllowResend] = useState(false);
   const [sentLeadIds, setSentLeadIds] = useState<Set<string>>(new Set());
   const [sentCountByLead, setSentCountByLead] = useState<Map<string, number>>(new Map());
   const [trackingByLead, setTrackingByLead] = useState<Map<string, LeadTracking>>(new Map());
