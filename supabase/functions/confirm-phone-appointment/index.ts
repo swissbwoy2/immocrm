@@ -193,6 +193,30 @@ Deno.serve(async (req) => {
         .eq('id', appointment_id);
     }
 
+    // WhatsApp confirmation via template rdv_bureau_rappel
+    try {
+      const firstName = (appt.prospect_name || 'à toi').split(' ')[0];
+      const horaire = `le ${dateStr} à ${timeStr}`;
+      const phoneRaw = appt.prospect_phone || '';
+      let phone = phoneRaw.replace(/[^\d+]/g, '');
+      if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+      if (!phone.startsWith('+')) phone = phone.startsWith('0') ? '+41' + phone.slice(1) : '+' + phone;
+      if (/^\+\d{8,15}$/.test(phone)) {
+        await admin.functions.invoke('send-whatsapp-notification', {
+          body: {
+            event_type: 'phone_appointment_confirmed',
+            template_key: 'rdv_bureau_rappel',
+            recipient_phone_override: phone,
+            variables: [firstName, horaire],
+            context_type: 'phone_appointment',
+            context_ref: appointment_id,
+          },
+        });
+      }
+    } catch (e) {
+      console.error('WhatsApp confirmation failed:', e);
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
