@@ -1,40 +1,84 @@
-## Bug
 
-Sur l'onglet WhatsApp de **Campagnes de suivi**, après chaque envoi (et au rafraîchissement), les mêmes leads (numéros / prénoms) réapparaissent dans la liste alors qu'ils ont bien été envoyés. Le filtre « masquer déjà envoyés » ne fonctionne plus.
+# Refonte UI WhatsApp + Fix bug compteur "déjà envoyés"
 
-## Cause racine
+## 0. Bug compteur (root cause)
 
-Dans `src/pages/admin/CampagnesSuivi.tsx`, fonction `loadWaAlreadySent` (≈ ligne 316) :
+`loadWaAlreadySent` filtre uniquement `status='sent'`. Or Meta met à jour la ligne en `'delivered'` puis `'read'` via webhook → ces leads sortent du Set "déjà envoyés" et réapparaissent comme "Disponibles". D'où **156 disponibles affichés** vs ~16 réels.
 
-```ts
-const locationLeadIds = leads.filter((l) => l.campaign_key === "location").map((l) => l.id);
-await supabase
-  .from("whatsapp_notification_logs")
-  .select("context_ref")
-  .eq("template_key", WA_TEMPLATE_KEY)
-  .eq("status", "sent")
-  .in("context_ref", locationLeadIds)   // ← tableau de plusieurs centaines d'UUID
-  .limit(15000);
-```
+**Fix** : utiliser `.in("status", ["sent","delivered","read"])` dans :
+- `loadWaAlreadySent` (compteur UI + Set de dédup)
+- `handleWaRetryFailed` (pour ne PAS retry un lead déjà delivered/read même si une ancienne ligne 'failed' existe)
 
-`loadLeads` charge jusqu'à 2000 leads. Le `.in("context_ref", [...])` pousse alors une URL PostgREST de plus de 8 KB → la requête échoue silencieusement (le code n'inspecte pas `error`). Résultat : `waAlreadySent` reste vide, le filtre `!waAlreadySent.has(l.id)` laisse tout passer, et les leads déjà contactés sont ré-affichés (et risquent même d'être renvoyés).
+Pas de changement edge function (la fonction `send-followup-whatsapp` fait déjà la bonne dédup côté serveur dans `alreadySent`, à vérifier et aligner).
 
-Bonus : si un jour le tab WhatsApp est ouvert sans passer par "Leads & envoi" (qui déclenche `loadLeads`), `leads.length === 0` et `loadWaAlreadySent` n'est jamais appelé non plus.
+## 1. Onglet WhatsApp dans `CampagnesSuivi.tsx`
 
-## Correctif proposé
+### Header campagne (compact + premium)
+- Bandeau dégradé vert WhatsApp (#25D366 → #128C7E) avec logo, nom campagne, badge statut template, mini-stats inline
+- Boutons **Aperçu** / **Test** en haut à droite (icônes seules sur mobile)
 
-1. Réécrire `loadWaAlreadySent` pour **ne plus utiliser `.in()`** : on interroge directement par `template_key` + `status = sent` (et facultativement `context_type = 'lead'`), puis on construit le `Set` côté client. Pagination via `fetchAllPaginated` / `range()` pour dépasser la limite de 1000 lignes.
-2. Logger `error` côté toast si la requête échoue, pour ne plus louper ce genre de panne.
-3. Garantir le déclenchement : appeler `loadLeads()` aussi quand l'utilisateur arrive sur le tab `whatsapp` (et pas seulement `leads`), pour que `waFilteredLeads` soit cohérent même en accès direct au tab.
-4. Après `handleWaSend` / `handleWaRetryFailed`, on rappelle déjà `loadWaAlreadySent()` — on s'assure que cette nouvelle version se base sur le `template_key` et reflète bien les envois qui viennent d'être faits.
+### Aperçu message
+- Bulle WhatsApp réaliste (fond crème, bulle verte sortante #DCF8C6, double check vert, CTA stylé)
 
-Aucune modification des Edge Functions n'est nécessaire ; le bug est purement frontend.
+### Barre d'actions
+- Sur mobile : barre **sticky bas** (search + bouton principal "Envoyer aux N") avec safe-area
+- Sur desktop : barre flottante haut avec backdrop-blur
+- "Renvoyer aux déjà contactés" + "Réessayer échecs" → menu kebab pour désencombrer
+
+### Stats compteurs
+- 3 mini-cards colorées (Total · Déjà envoyés ✓ · Disponibles) avec animation count-up
+- **Compteurs maintenant exacts** grâce au fix bug
+
+### Liste leads
+- Mobile : cartes tactiles avec avatar initiales colorées, nom/téléphone, checkbox 44px, badge statut
+- Desktop : Table densifiée + zebra rows + hover
+
+### Résultat envoi
+- Toast riche avec ✓ animé + breakdown sent/skipped/failed
+
+## 2. Page Inbox WhatsApp (`agent/WhatsAppInbox.tsx`)
+
+### Header global
+- Sticky avec avatar + titre + badge non lus + actions à droite (search/filter/refresh)
+
+### Sidebar conversations (look WhatsApp)
+- Tabs Clients/Inconnus en chips arrondis
+- Cartes conversation : avatar circulaire avec gradient par hash, indicateur fenêtre 24h ouverte (point vert), heure relative ("il y a 5 min"), badge non-lus pill verte, hover shift droite
+
+### Zone conversation (la grosse upgrade)
+- Fond crème WhatsApp (#ECE5DD light / #0B141A dark) avec pattern SVG subtil
+- Bulles avec queue asymétrique, ombre douce, double check vert intégré, slide-in à l'arrivée
+- Header conversation : avatar + nom + statut "en ligne / vu il y a X"
+
+### Zone saisie
+- Input rounded-full + bouton emoji placeholder
+- Bouton envoi rond vert quand texte présent
+- Bandeau "Fenêtre 24h fermée" plus visible avec compte à rebours
+- Auto-resize textarea + Enter envoie / Shift+Enter newline
+
+### États vides
+- Illustration + message clair sur desktop
+- Mobile : liste plein écran quand rien sélectionné, conversation plein écran avec back arrow
+
+### Mobile (430px)
+- Touch targets ≥44px, haptic feedback sur envoi, safe-area respectée
+
+## 3. Détails techniques
+
+- Tokens couleur dans `index.css` : `--whatsapp-green`, `--whatsapp-green-dark`, `--whatsapp-bubble-out`, `--whatsapp-bubble-in`, `--whatsapp-bg`
+- Nouveaux composants `src/components/whatsapp/` : `WhatsAppBubble`, `ConversationListItem`, `LeadAvatar`
+- `formatDistanceToNow` de `date-fns` (locale fr) pour heures relatives
+- Aucune modif RLS / edge functions / schéma DB
 
 ## Fichiers touchés
 
-- `src/pages/admin/CampagnesSuivi.tsx` (≈ lignes 195-260, 316-330, 498-501)
+- `src/pages/admin/CampagnesSuivi.tsx` — fix bug compteur (~5 lignes) + refonte `TabsContent value="whatsapp"` (~150 lignes)
+- `src/pages/agent/WhatsAppInbox.tsx` — refonte rendu (~250 lignes)
+- `src/index.css` — tokens WhatsApp
+- `src/components/whatsapp/` — 3 nouveaux composants
 
-## Validation
+## Ce qui reste identique
 
-- Recharger l'onglet WhatsApp après un envoi → les leads envoyés disparaissent (filtre actif), réapparaissent uniquement si « Renvoyer aux leads déjà contactés » est coché.
-- Vérifier dans la console qu'aucune erreur Supabase n'est levée et que `waAlreadySent.size` reflète bien les sends récents.
+- Toute la logique d'envoi, dédup serveur, RLS, realtime
+- Edge functions `send-followup-whatsapp`, `send-whatsapp-notification`, `wa-reply-text`
+- Schéma DB + webhooks Meta

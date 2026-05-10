@@ -314,8 +314,8 @@ export default function CampagnesSuivi() {
   }, []);
 
   const loadWaAlreadySent = async () => {
-    // Pas de .in([...]) (URL trop longue → échec silencieux).
-    // On récupère tous les sends pour ce template, paginé pour dépasser la limite 1000.
+    // Bug fix: inclure sent + delivered + read (Meta met à jour le statut via webhook)
+    // Sinon les leads livrés réapparaissent comme "disponibles".
     const all: string[] = [];
     const PAGE = 1000;
     for (let from = 0; from < 50000; from += PAGE) {
@@ -323,7 +323,7 @@ export default function CampagnesSuivi() {
         .from("whatsapp_notification_logs")
         .select("context_ref")
         .eq("template_key", WA_TEMPLATE_KEY)
-        .eq("status", "sent")
+        .in("status", ["sent", "delivered", "read"])
         .eq("context_type", "lead")
         .not("context_ref", "is", null)
         .range(from, from + PAGE - 1);
@@ -1116,159 +1116,232 @@ export default function CampagnesSuivi() {
 
         {/* ───────── ONGLET WHATSAPP LOCATION ───────── */}
         <TabsContent value="whatsapp" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-green-600" />
-                Campagne WhatsApp — Location (RDV gratuit Crissier)
-              </CardTitle>
-              <CardDescription>
-                Template Meta actif : <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{waMetaTemplateName || "—"}</code>
-                {waMetaTemplateName?.endsWith("_v1") && (
-                  <span className="ml-2 inline-block text-[10px] uppercase tracking-wide bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded">v2 en attente Meta</span>
-                )}
-                {waMetaTemplateName?.endsWith("_v2") && (
-                  <span className="ml-2 inline-block text-[10px] uppercase tracking-wide bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">v2 actif</span>
-                )}
-                {" · "}Bouton CTA : <strong>Réserver mon RDV</strong>
-                {" · "}Lien activation dans le corps du message.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={handleWaPreview} disabled={waPreviewLoading}>
-                  {waPreviewLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Eye className="h-4 w-4 mr-1" />}
-                  Aperçu
-                </Button>
-                <Button variant="outline" onClick={handleWaTest} disabled={waTesting}>
-                  {waTesting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <MessageCircle className="h-4 w-4 mr-1" />}
-                  Test interne
-                </Button>
-              </div>
-
-              {waPreview && (
-                <div className="rounded-md border bg-muted/30 p-4 space-y-2">
-                  <div className="text-xs text-muted-foreground">Aperçu du message envoyé :</div>
-                  <pre className="whitespace-pre-wrap font-sans text-sm bg-background border rounded p-3">{waPreview.body_rendered}</pre>
-                  <div className="text-xs space-y-1">
-                    <div><strong>Variable {"{{1}}"} :</strong> {waPreview.first_name_param}</div>
-                    <div className="truncate"><strong>Bouton URL :</strong> <a href={waPreview.button_url} target="_blank" rel="noopener" className="text-primary underline">{waPreview.button_url}</a></div>
-                    <div className="truncate"><strong>Lien activation :</strong> <a href={waPreview.activation_link} target="_blank" rel="noopener" className="text-primary underline">{waPreview.activation_link}</a></div>
-                  </div>
+          {/* Header campagne — bandeau dégradé WhatsApp */}
+          <div className="rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-[hsl(var(--whatsapp-green))] to-[hsl(var(--whatsapp-green-dark))] text-white">
+            <div className="p-4 sm:p-5 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="shrink-0 h-11 w-11 rounded-full bg-white/15 backdrop-blur flex items-center justify-center">
+                  <MessageCircle className="h-6 w-6" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex flex-wrap gap-3 items-end">
-                <div className="flex-1 min-w-[220px]">
-                  <Label className="text-xs">Recherche</Label>
-                  <Input
-                    placeholder="Email, nom, téléphone…"
-                    value={waSearch}
-                    onChange={(e) => setWaSearch(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-2 pb-1">
-                  <Checkbox
-                    id="wa-allow-resend"
-                    checked={waAllowResend}
-                    onCheckedChange={(v) => setWaAllowResend(v === true)}
-                  />
-                  <Label htmlFor="wa-allow-resend" className="text-sm cursor-pointer text-amber-700 dark:text-amber-400 font-medium">
-                    🔁 Renvoyer aux leads déjà contactés
-                  </Label>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={handleWaRetryFailed}
-                  disabled={waSending}
-                  className="border-amber-400 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
-                >
-                  {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <span className="mr-1">🔁</span>}
-                  Réessayer les échecs
-                </Button>
-                <Button
-                  onClick={handleWaSend}
-                  disabled={waSelectedIds.size === 0 || waSending}
-                >
-                  {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
-                  Envoyer aux {waSelectedIds.size} lead{waSelectedIds.size > 1 ? "s" : ""}
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 text-xs">
-                <Badge variant="outline">Leads location avec téléphone : <strong className="ml-1">{leads.filter((l) => l.campaign_key === "location" && l.phone).length}</strong></Badge>
-                <Badge variant="outline" className="bg-green-50 text-green-800 border-green-300">Déjà envoyés WhatsApp : <strong className="ml-1">{waAlreadySent.size}</strong></Badge>
-                <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">Disponibles : <strong className="ml-1">{waFilteredLeads.length}</strong></Badge>
-              </div>
-
-              {waLastResult && (
-                <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm">
-                  <div className="font-semibold text-green-900">Dernier envoi : {waLastResult.processed} / {waLastResult.total_requested} traités</div>
-                  <div className="text-green-800 text-xs mt-1">
-                    ✅ {waLastResult.sent} envoyés · ⏭ {waLastResult.skipped} ignorés · ❌ {waLastResult.failed} échecs
-                  </div>
-                </div>
-              )}
-
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={waFilteredLeads.length > 0 && waSelectedIds.size === waFilteredLeads.length}
-                          onCheckedChange={toggleWaSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead>Lead</TableHead>
-                      <TableHead className="hidden md:table-cell">Email</TableHead>
-                      <TableHead>Téléphone</TableHead>
-                      <TableHead>Statut</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {waFilteredLeads.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground text-sm">
-                          Aucun lead disponible. Importez des leads location avec téléphone, ou activez le mode renvoi.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      waFilteredLeads.map((l) => {
-                        const already = waAlreadySent.has(l.id);
-                        return (
-                          <TableRow key={l.id}>
-                            <TableCell>
-                              <Checkbox
-                                checked={waSelectedIds.has(l.id)}
-                                onCheckedChange={() => toggleWaSelect(l.id)}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {l.first_name || l.last_name ? `${l.first_name || ""} ${l.last_name || ""}`.trim() : "—"}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell text-sm">{l.email}</TableCell>
-                            <TableCell className="text-sm">{l.phone || "—"}</TableCell>
-                            <TableCell>
-                              {already ? (
-                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300 text-xs">WhatsApp envoyé</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs">En attente</Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-base sm:text-lg leading-tight">Location · RDV gratuit Crissier</h3>
+                    {waMetaTemplateName?.endsWith("_v2") && (
+                      <span className="text-[10px] uppercase tracking-wide bg-white/20 backdrop-blur px-2 py-0.5 rounded-full font-semibold">v2 actif</span>
                     )}
-                  </TableBody>
-                </Table>
+                    {waMetaTemplateName?.endsWith("_v1") && (
+                      <span className="text-[10px] uppercase tracking-wide bg-amber-400/80 text-amber-950 px-2 py-0.5 rounded-full font-semibold">v2 en attente</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/85 mt-1 truncate">
+                    Template <code className="bg-white/15 px-1 rounded text-[11px]">{waMetaTemplateName || "—"}</code> · CTA Réserver mon RDV
+                  </p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleWaPreview}
+                  disabled={waPreviewLoading}
+                  className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur h-9 px-2.5 sm:px-3"
+                >
+                  {waPreviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                  <span className="hidden sm:inline ml-1">Aperçu</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleWaTest}
+                  disabled={waTesting}
+                  className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur h-9 px-2.5 sm:px-3"
+                >
+                  {waTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  <span className="hidden sm:inline ml-1">Test</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Aperçu message — bulle WhatsApp réaliste */}
+          {waPreview && (
+            <div className="rounded-2xl bg-whatsapp-pattern p-4 sm:p-6 border">
+              <div className="flex justify-end">
+                <div className="relative max-w-[85%] sm:max-w-[70%] bg-[hsl(var(--whatsapp-bubble-out))] rounded-2xl rounded-br-md px-4 py-3 shadow-sm text-sm">
+                  <p className="whitespace-pre-wrap text-foreground leading-relaxed">{waPreview.body_rendered}</p>
+                  <div className="mt-3 -mx-4 -mb-3 border-t border-foreground/10">
+                    <a
+                      href={waPreview.button_url}
+                      target="_blank"
+                      rel="noopener"
+                      className="block text-center py-2.5 text-[hsl(var(--whatsapp-green-dark))] dark:text-[hsl(var(--whatsapp-green))] font-medium text-sm hover:bg-foreground/5 transition-colors"
+                    >
+                      🔗 Réserver mon RDV
+                    </a>
+                  </div>
+                  <div className="absolute bottom-1 right-2 text-[10px] text-foreground/55 flex items-center gap-0.5">
+                    <span>14:32</span>
+                    <CheckCircle2 className="h-3 w-3 text-[hsl(var(--whatsapp-tick))]" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3 text-center">
+                Variable {"{{1}}"} = <strong>{waPreview.first_name_param}</strong>
+              </p>
+            </div>
+          )}
+
+          {/* Stats compteurs — 3 mini-cards */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {(() => {
+              const total = leads.filter((l) => l.campaign_key === "location" && l.phone).length;
+              const sent = waAlreadySent.size;
+              const dispo = waFilteredLeads.length;
+              return (
+                <>
+                  <div className="rounded-xl border bg-card p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Total</div>
+                    <div className="text-2xl font-bold mt-1">{total}</div>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400 font-medium flex items-center justify-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Reçus
+                    </div>
+                    <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">{sent}</div>
+                  </div>
+                  <div className="rounded-xl border border-sky-200 dark:border-sky-900/50 bg-sky-50 dark:bg-sky-950/30 p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-wide text-sky-700 dark:text-sky-400 font-medium flex items-center justify-center gap-1">
+                      <Send className="h-3 w-3" /> Disponibles
+                    </div>
+                    <div className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-400">{dispo}</div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Recherche + actions secondaires */}
+          <div className="space-y-2">
+            <Input
+              placeholder="🔎 Rechercher email, nom, téléphone…"
+              value={waSearch}
+              onChange={(e) => setWaSearch(e.target.value)}
+              className="h-11 rounded-xl"
+            />
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <label className="flex items-center gap-2 text-sm cursor-pointer min-h-[44px]">
+                <Checkbox
+                  checked={waAllowResend}
+                  onCheckedChange={(v) => setWaAllowResend(v === true)}
+                />
+                <span className="text-amber-700 dark:text-amber-400 font-medium">🔁 Renvoyer aux déjà contactés</span>
+              </label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleWaRetryFailed}
+                disabled={waSending}
+                className="text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-9"
+              >
+                {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <span className="mr-1">🔁</span>}
+                Réessayer les échecs
+              </Button>
+            </div>
+          </div>
+
+          {/* Résultat dernier envoi */}
+          {waLastResult && (
+            <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-3">
+              <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-semibold text-sm">
+                <CheckCircle2 className="h-5 w-5" />
+                Envoi terminé : {waLastResult.processed} / {waLastResult.total_requested}
+              </div>
+              <div className="text-xs text-emerald-800 dark:text-emerald-400 mt-1.5 flex gap-3 flex-wrap">
+                <span>✅ {waLastResult.sent} envoyés</span>
+                <span>⏭ {waLastResult.skipped} ignorés</span>
+                <span>❌ {waLastResult.failed} échecs</span>
+              </div>
+            </div>
+          )}
+
+          {/* Liste leads — cartes mobile, table desktop */}
+          <div className="rounded-xl border overflow-hidden bg-card">
+            {waFilteredLeads.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <MessageCircle className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Aucun lead disponible. Importe des leads location ou active "Renvoyer".
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Header sélection (mobile + desktop) */}
+                <div className="flex items-center gap-3 px-3 py-2.5 border-b bg-muted/30">
+                  <Checkbox
+                    checked={waFilteredLeads.length > 0 && waSelectedIds.size === waFilteredLeads.length}
+                    onCheckedChange={toggleWaSelectAll}
+                    className="h-5 w-5"
+                  />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {waSelectedIds.size > 0
+                      ? `${waSelectedIds.size} sélectionné${waSelectedIds.size > 1 ? "s" : ""}`
+                      : `${waFilteredLeads.length} lead${waFilteredLeads.length > 1 ? "s" : ""}`}
+                  </span>
+                </div>
+                <div className="divide-y max-h-[60vh] overflow-y-auto">
+                  {waFilteredLeads.map((l) => {
+                    const already = waAlreadySent.has(l.id);
+                    const selected = waSelectedIds.has(l.id);
+                    const fullName = `${l.first_name || ""} ${l.last_name || ""}`.trim() || "Sans nom";
+                    return (
+                      <button
+                        key={l.id}
+                        onClick={() => toggleWaSelect(l.id)}
+                        className={`w-full text-left flex items-center gap-3 px-3 py-3 min-h-[64px] transition-colors ${
+                          selected ? "bg-[hsl(var(--whatsapp-green))/0.08]" : "hover:bg-muted/40"
+                        }`}
+                      >
+                        <Checkbox checked={selected} onCheckedChange={() => toggleWaSelect(l.id)} className="h-5 w-5 pointer-events-none" />
+                        <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-semibold flex items-center justify-center">
+                          {(fullName.split(/\s+/).slice(0, 2).map((s) => s[0]).join("") || "?").toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{fullName}</div>
+                          <div className="text-xs text-muted-foreground truncate">{l.phone || "—"}</div>
+                        </div>
+                        {already ? (
+                          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-300 text-[10px] shrink-0">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Reçu
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] shrink-0">En attente</Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* FAB sticky bas — Envoyer */}
+          {waSelectedIds.size > 0 && (
+            <div className="sticky bottom-2 z-30 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+              <Button
+                onClick={handleWaSend}
+                disabled={waSending}
+                size="lg"
+                className="pointer-events-auto h-12 px-6 rounded-full shadow-2xl bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white font-semibold"
+              >
+                {waSending ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5 mr-2" />
+                )}
+                Envoyer aux {waSelectedIds.size} lead{waSelectedIds.size > 1 ? "s" : ""}
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

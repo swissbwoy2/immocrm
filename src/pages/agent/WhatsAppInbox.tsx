@@ -11,6 +11,9 @@ import { Loader2, MessageCircle, Search, RefreshCw, Send, AlertTriangle, ArrowLe
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import { LeadAvatar } from "@/components/whatsapp/LeadAvatar";
+import { WhatsAppBubble } from "@/components/whatsapp/WhatsAppBubble";
+import { ConversationListItem } from "@/components/whatsapp/ConversationListItem";
 
 interface InboundMessage {
   id: string;
@@ -268,120 +271,157 @@ export function WhatsAppInbox({ scope }: Props) {
   const windowOpen = lastInbound ? (Date.now() - new Date(lastInbound.created_at).getTime()) < 24 * 3600 * 1000 : false;
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-7xl">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <MessageCircle className="h-6 w-6 text-green-600" />
-          <h1 className="text-2xl font-bold">Inbox WhatsApp</h1>
+    <div className="container mx-auto p-3 sm:p-6 max-w-7xl">
+      {/* Header sticky */}
+      <div className="sticky top-0 z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 mb-4 bg-background/85 backdrop-blur-md border-b">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[hsl(var(--whatsapp-green))] to-[hsl(var(--whatsapp-green-dark))] flex items-center justify-center text-white shrink-0">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold leading-tight truncate">Inbox WhatsApp</h1>
+              <p className="text-xs text-muted-foreground">
+                {unreadClients + unreadUnknowns > 0
+                  ? `${unreadClients + unreadUnknowns} message${unreadClients + unreadUnknowns > 1 ? "s" : ""} non lu${unreadClients + unreadUnknowns > 1 ? "s" : ""}`
+                  : "Tout est lu"}
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={load} className="rounded-full h-9">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline ml-2">Actualiser</span>
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Actualiser
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
+        {/* Sidebar conversations */}
         <div className={selectedConv ? "hidden lg:block" : ""}>
-          <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelectedConv(null); }} className="mb-3">
-            <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="clients" className="gap-2">
-                Clients
-                {unreadClients > 0 && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{unreadClients}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="inconnus" className="gap-2">
-                Inconnus
-                {unreadUnknowns > 0 && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">{unreadUnknowns}</Badge>}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* Tabs en chips */}
+          <div className="flex gap-2 mb-3 p-1 bg-muted rounded-full">
+            <button
+              onClick={() => { setTab("clients"); setSelectedConv(null); }}
+              className={`flex-1 h-9 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                tab === "clients" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Clients
+              {unreadClients > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[hsl(var(--whatsapp-green))] text-white text-[10px] font-bold flex items-center justify-center">
+                  {unreadClients}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => { setTab("inconnus"); setSelectedConv(null); }}
+              className={`flex-1 h-9 rounded-full text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                tab === "inconnus" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Inconnus
+              {unreadUnknowns > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {unreadUnknowns}
+                </span>
+              )}
+            </button>
+          </div>
 
-          <Card className="mb-3">
-            <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="border-0 focus-visible:ring-0" />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Recherche */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Rechercher une conversation…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10 rounded-full bg-muted/50 border-0 focus-visible:ring-1"
+            />
+          </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
-              ) : filtered.length === 0 ? (
-                <p className="text-muted-foreground text-center py-10 px-4 text-sm">
+          {/* Liste */}
+          <Card className="overflow-hidden">
+            {loading ? (
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <MessageCircle className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">
                   {tab === "clients" ? "Aucun message client." : "Aucun message d'inconnu."}
                 </p>
-              ) : (
-                <ScrollArea className="h-[65vh]">
-                  <div className="divide-y">
-                    {filtered.map(m => {
-                      const cleanContent = m.content.replace(/^📱 \[WhatsApp\]\s*/, "");
-                      const active = selectedConv?.conversation_id === m.conversation_id;
-                      return (
-                        <button
-                          key={m.id}
-                          onClick={() => loadConversation(m)}
-                          className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${active ? "bg-muted" : ""}`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {m.isUnknown && <Phone className="h-3 w-3 text-amber-600 shrink-0" />}
-                                <span className="font-medium text-sm truncate">{m.client_name}</span>
-                                {!m.read && <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />}
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-1 break-words">{cleanContent}</p>
-                            </div>
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {format(new Date(m.created_at), "d MMM HH:mm", { locale: fr })}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              )}
-            </CardContent>
+              </div>
+            ) : (
+              <ScrollArea className="h-[65vh]">
+                <div className="divide-y">
+                  {filtered.map(m => {
+                    const cleanContent = m.content.replace(/^📱 \[WhatsApp\]\s*/, "");
+                    const active = selectedConv?.conversation_id === m.conversation_id;
+                    return (
+                      <ConversationListItem
+                        key={m.id}
+                        name={m.client_name || "—"}
+                        preview={cleanContent}
+                        createdAt={m.created_at}
+                        unread={!m.read}
+                        active={active}
+                        isUnknown={m.isUnknown}
+                        onClick={() => loadConversation(m)}
+                      />
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </Card>
         </div>
 
+        {/* Zone conversation */}
         <div className={selectedConv ? "" : "hidden lg:block"}>
-          <Card className="h-[75vh] flex flex-col">
+          <Card className="h-[78vh] flex flex-col overflow-hidden">
             {selectedConv ? (
               <>
-                <CardHeader className="py-3 border-b shrink-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSelectedConv(null)}>
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400">WhatsApp</Badge>
-                    {selectedConv.isUnknown && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">Inconnu</Badge>}
-                    <CardTitle className="text-base">{selectedConv.client_name}</CardTitle>
-                    {selectedConv.phone && <span className="text-xs text-muted-foreground">{selectedConv.phone}</span>}
+                {/* Header conversation */}
+                <div className="py-3 px-3 sm:px-4 border-b shrink-0 bg-card flex items-center gap-3">
+                  <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 -ml-1" onClick={() => setSelectedConv(null)}>
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <LeadAvatar name={selectedConv.client_name || "—"} size={40} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="font-semibold text-sm sm:text-base truncate">{selectedConv.client_name}</h2>
+                      {selectedConv.isUnknown && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] dark:bg-amber-950/30 dark:text-amber-400">Inconnu</Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5">
+                      {windowOpen && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[hsl(var(--whatsapp-green))]" />}
+                      {windowOpen ? "Fenêtre 24h ouverte" : "Fenêtre 24h fermée"}
+                      {selectedConv.phone && <span className="text-muted-foreground/60"> · {selectedConv.phone}</span>}
+                    </p>
                   </div>
-                </CardHeader>
+                </div>
 
-                <CardContent className="flex-1 overflow-hidden p-0">
+                {/* Messages */}
+                <CardContent className="flex-1 overflow-hidden p-0 bg-whatsapp-pattern">
                   <ScrollArea className="h-full" ref={scrollRef as any}>
-                    <div className="p-4 space-y-2">
+                    <div className="p-3 sm:p-4 space-y-1.5">
                       {convLoading ? (
-                        <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
+                        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-muted-foreground" /></div>
                       ) : convMessages.length === 0 ? (
-                        <p className="text-center text-muted-foreground text-sm py-10">Aucun message.</p>
+                        <p className="text-center text-muted-foreground text-sm py-10">Aucun message dans cette conversation.</p>
                       ) : (
                         convMessages.map(m => {
                           const isAgent = m.sender_type === "agent";
                           const clean = m.content.replace(/^📱 \[WhatsApp( →)?\]\s*/, "");
                           return (
-                            <div key={m.id} className={`flex ${isAgent ? "justify-end" : "justify-start"}`}>
-                              <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${isAgent ? "bg-green-600 text-white" : "bg-muted"}`}>
-                                <p className="whitespace-pre-wrap break-words">{clean}</p>
-                                <p className={`text-[10px] mt-1 ${isAgent ? "text-white/70" : "text-muted-foreground"}`}>
-                                  {format(new Date(m.created_at), "d MMM HH:mm", { locale: fr })}
-                                </p>
-                              </div>
-                            </div>
+                            <WhatsAppBubble
+                              key={m.id}
+                              content={clean}
+                              createdAt={m.created_at}
+                              outgoing={isAgent}
+                              read={isAgent ? m.read : undefined}
+                              delivered={isAgent}
+                            />
                           );
                         })
                       )}
@@ -389,32 +429,44 @@ export function WhatsAppInbox({ scope }: Props) {
                   </ScrollArea>
                 </CardContent>
 
-                <div className="border-t p-3 shrink-0 space-y-2">
+                {/* Zone saisie */}
+                <div className="border-t p-2.5 sm:p-3 shrink-0 bg-card space-y-2 pb-[max(env(safe-area-inset-bottom,0px),0.625rem)]">
                   {!windowOpen && (
-                    <div className="flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-md p-2">
+                    <div className="flex items-start gap-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg p-2.5">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                       <span>Fenêtre 24h Meta fermée. Le contact doit vous écrire en premier pour rouvrir la conversation.</span>
                     </div>
                   )}
-                  <div className="flex gap-2">
+                  <div className="flex items-end gap-2">
                     <Textarea
-                      placeholder={windowOpen ? "Votre réponse WhatsApp..." : "Réponse impossible (fenêtre 24h fermée)"}
+                      placeholder={windowOpen ? "Écrire un message…" : "Réponse impossible (fenêtre 24h fermée)"}
                       value={reply}
                       onChange={(e) => setReply(e.target.value)}
-                      rows={2}
+                      rows={1}
                       disabled={!windowOpen || sending}
                       onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
-                      className="resize-none"
+                      className="resize-none rounded-2xl min-h-[44px] max-h-32 py-2.5 px-4 bg-muted/40 border-0 focus-visible:ring-1"
                     />
-                    <Button onClick={sendReply} disabled={!windowOpen || sending || !reply.trim()} className="bg-green-600 hover:bg-green-700">
-                      {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <Button
+                      onClick={sendReply}
+                      disabled={!windowOpen || sending || !reply.trim()}
+                      size="icon"
+                      className="h-11 w-11 rounded-full bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white shrink-0 transition-transform active:scale-95 disabled:bg-muted-foreground/30"
+                    >
+                      {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                     </Button>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm p-6 text-center">
-                Sélectionnez une conversation pour voir les messages et répondre.
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-whatsapp-pattern">
+                <div className="h-20 w-20 rounded-full bg-background/80 backdrop-blur shadow-md flex items-center justify-center mb-4">
+                  <MessageCircle className="h-10 w-10 text-[hsl(var(--whatsapp-green))]" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-1">Inbox WhatsApp</h3>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Sélectionnez une conversation à gauche pour afficher l'historique et répondre.
+                </p>
               </div>
             )}
           </Card>
