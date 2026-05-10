@@ -505,9 +505,9 @@ export default function CampagnesSuivi() {
   };
 
   useEffect(() => {
-    if (activeTab === "whatsapp" && leads.length > 0) loadWaAlreadySent();
+    if (activeTab === "whatsapp") loadWaAlreadySent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, leads.length]);
+  }, [activeTab]);
 
   // ───── Filtered leads
   const filteredLeads = useMemo(() => {
