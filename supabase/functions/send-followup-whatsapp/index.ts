@@ -192,6 +192,13 @@ Deno.serve(async (req) => {
         results.push({ lead_id: lead.id, status: "skipped", reason: "déjà envoyé" });
         continue;
       }
+      if (!allowResend && recentSet.has(lead.id)) {
+        results.push({ lead_id: lead.id, status: "skipped", reason: "envoi récent (<24h)" });
+        continue;
+      }
+      if (allowResend && recentSet.has(lead.id)) {
+        console.warn("[send-followup-whatsapp] allowResend=true bypassing 24h guard", { lead_id: lead.id });
+      }
       const phone = normalizePhoneE164(lead.phone_e164 || lead.phone);
       if (!phone) {
         results.push({ lead_id: lead.id, status: "skipped", reason: "téléphone invalide" });
