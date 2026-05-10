@@ -362,6 +362,7 @@ export default function CampagnesSuivi() {
     setWaLastResult(null);
     const ids = Array.from(waSelectedIds);
     let totalSent = 0, totalSkipped = 0, totalFailed = 0, totalProcessed = 0;
+    let aborted = false;
     // Batches of 3 (Edge Function enforces MAX_BATCH=3)
     for (let i = 0; i < ids.length; i += 3) {
       const slice = ids.slice(i, i + 3);
@@ -378,14 +379,30 @@ export default function CampagnesSuivi() {
       totalSkipped += s.skipped || 0;
       totalFailed += s.failed || 0;
       totalProcessed += s.processed || 0;
+
+      // Detect Meta payment issue (error 131042) → stop the campaign immediately
+      const results = Array.isArray(data?.results) ? data.results : [];
+      const hasPaymentIssue = results.some((r: any) =>
+        r?.status === "failed" && typeof r?.reason === "string" && r.reason.includes("131042")
+      );
+      if (hasPaymentIssue) {
+        aborted = true;
+        toast.error("⚠️ Problème de paiement Meta WhatsApp", {
+          description: "Règle ta facturation sur business.facebook.com → WhatsApp puis relance. Campagne stoppée.",
+          duration: 15000,
+        });
+        break;
+      }
     }
     setWaSending(false);
     setWaLastResult({ sent: totalSent, skipped: totalSkipped, failed: totalFailed, processed: totalProcessed, total_requested: ids.length });
     setWaSelectedIds(new Set());
     await loadWaAlreadySent();
-    toast.success(`Campagne WhatsApp terminée`, {
-      description: `${totalSent} envoyés · ${totalSkipped} ignorés · ${totalFailed} échecs sur ${ids.length}`,
-    });
+    if (!aborted) {
+      toast.success(`Campagne WhatsApp terminée`, {
+        description: `${totalSent} envoyés · ${totalSkipped} ignorés · ${totalFailed} échecs sur ${ids.length}`,
+      });
+    }
   };
 
   // Retry only the leads that previously failed (never delivered)
