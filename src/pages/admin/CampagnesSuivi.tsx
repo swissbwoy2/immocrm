@@ -314,8 +314,8 @@ export default function CampagnesSuivi() {
   }, []);
 
   const loadWaAlreadySent = async () => {
-    // Pas de .in([...]) (URL trop longue → échec silencieux).
-    // On récupère tous les sends pour ce template, paginé pour dépasser la limite 1000.
+    // Bug fix: inclure sent + delivered + read (Meta met à jour le statut via webhook)
+    // Sinon les leads livrés réapparaissent comme "disponibles".
     const all: string[] = [];
     const PAGE = 1000;
     for (let from = 0; from < 50000; from += PAGE) {
@@ -323,7 +323,7 @@ export default function CampagnesSuivi() {
         .from("whatsapp_notification_logs")
         .select("context_ref")
         .eq("template_key", WA_TEMPLATE_KEY)
-        .eq("status", "sent")
+        .in("status", ["sent", "delivered", "read"])
         .eq("context_type", "lead")
         .not("context_ref", "is", null)
         .range(from, from + PAGE - 1);
