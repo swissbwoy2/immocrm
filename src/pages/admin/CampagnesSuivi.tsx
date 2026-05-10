@@ -247,7 +247,7 @@ export default function CampagnesSuivi() {
   };
 
   useEffect(() => {
-    if (activeTab === "leads" && campaigns.length > 0) loadLeads();
+    if ((activeTab === "leads" || activeTab === "whatsapp") && campaigns.length > 0) loadLeads();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedCampaign, campaigns.length]);
 
@@ -314,19 +314,28 @@ export default function CampagnesSuivi() {
   }, []);
 
   const loadWaAlreadySent = async () => {
-    const locationLeadIds = leads.filter((l) => l.campaign_key === "location").map((l) => l.id);
-    if (locationLeadIds.length === 0) {
-      setWaAlreadySent(new Set());
-      return;
+    // Pas de .in([...]) (URL trop longue → échec silencieux).
+    // On récupère tous les sends pour ce template, paginé pour dépasser la limite 1000.
+    const all: string[] = [];
+    const PAGE = 1000;
+    for (let from = 0; from < 50000; from += PAGE) {
+      const { data, error } = await supabase
+        .from("whatsapp_notification_logs")
+        .select("context_ref")
+        .eq("template_key", WA_TEMPLATE_KEY)
+        .eq("status", "sent")
+        .eq("context_type", "lead")
+        .not("context_ref", "is", null)
+        .range(from, from + PAGE - 1);
+      if (error) {
+        toast.error("Erreur chargement envois WhatsApp", { description: error.message });
+        break;
+      }
+      const rows = data || [];
+      rows.forEach((r: any) => { if (r.context_ref) all.push(r.context_ref); });
+      if (rows.length < PAGE) break;
     }
-    const { data } = await supabase
-      .from("whatsapp_notification_logs")
-      .select("context_ref")
-      .eq("template_key", WA_TEMPLATE_KEY)
-      .eq("status", "sent")
-      .in("context_ref", locationLeadIds)
-      .limit(15000);
-    setWaAlreadySent(new Set((data || []).map((r: any) => r.context_ref).filter(Boolean)));
+    setWaAlreadySent(new Set(all));
   };
 
   const handleWaPreview = async () => {
@@ -496,9 +505,9 @@ export default function CampagnesSuivi() {
   };
 
   useEffect(() => {
-    if (activeTab === "whatsapp" && leads.length > 0) loadWaAlreadySent();
+    if (activeTab === "whatsapp") loadWaAlreadySent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, leads.length]);
+  }, [activeTab]);
 
   // ───── Filtered leads
   const filteredLeads = useMemo(() => {

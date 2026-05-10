@@ -1,31 +1,40 @@
-## 🔴 Cause identifiée : problème de paiement WhatsApp Business
+## Bug
 
-J'ai vérifié les logs des 2 dernières heures sur le template `location_rdv_activation_v2` :
+Sur l'onglet WhatsApp de **Campagnes de suivi**, après chaque envoi (et au rafraîchissement), les mêmes leads (numéros / prénoms) réapparaissent dans la liste alors qu'ils ont bien été envoyés. Le filtre « masquer déjà envoyés » ne fonctionne plus.
 
-- **131 échecs** vs **2 envoyés**
-- **124 échecs sur 131** = même erreur Meta : **`131042 — Business eligibility payment issue`**
-  > *"Message failed to send because there were one or more errors related to your payment method."*
-- 12 autres = `131026 Message undeliverable` (numéros non WhatsApp, déjà connu)
+## Cause racine
 
-**👉 Ce n'est PAS un bug de code.** Meta refuse d'envoyer car ton compte WhatsApp Business a un problème de moyen de paiement (carte expirée, plafond atteint, ou facturation à régler).
+Dans `src/pages/admin/CampagnesSuivi.tsx`, fonction `loadWaAlreadySent` (≈ ligne 316) :
 
-## ✅ Action requise (côté Meta, pas dans Lovable)
+```ts
+const locationLeadIds = leads.filter((l) => l.campaign_key === "location").map((l) => l.id);
+await supabase
+  .from("whatsapp_notification_logs")
+  .select("context_ref")
+  .eq("template_key", WA_TEMPLATE_KEY)
+  .eq("status", "sent")
+  .in("context_ref", locationLeadIds)   // ← tableau de plusieurs centaines d'UUID
+  .limit(15000);
+```
 
-1. Aller sur **business.facebook.com** → Paramètres entreprise → **Facturation et paiements** → **WhatsApp**
-2. Vérifier :
-   - Carte de crédit valide et non expirée
-   - Aucune facture impayée en attente
-   - Plafond de dépense (spending limit) pas atteint
-3. Mettre à jour la carte si besoin → Meta réactive l'envoi en quelques minutes
+`loadLeads` charge jusqu'à 2000 leads. Le `.in("context_ref", [...])` pousse alors une URL PostgREST de plus de 8 KB → la requête échoue silencieusement (le code n'inspecte pas `error`). Résultat : `waAlreadySent` reste vide, le filtre `!waAlreadySent.has(l.id)` laisse tout passer, et les leads déjà contactés sont ré-affichés (et risquent même d'être renvoyés).
 
-## 🔁 Une fois le paiement réglé
+Bonus : si un jour le tab WhatsApp est ouvert sans passer par "Leads & envoi" (qui déclenche `loadLeads`), `leads.length === 0` et `loadWaAlreadySent` n'est jamais appelé non plus.
 
-Le bouton **"Envoyer aux 171 leads"** fonctionnera tel quel — pas besoin de modifier le code. Les 171 leads encore disponibles sont juste bloqués en file d'attente côté Meta.
+## Correctif proposé
 
-## 📝 Amélioration optionnelle (à valider)
+1. Réécrire `loadWaAlreadySent` pour **ne plus utiliser `.in()`** : on interroge directement par `template_key` + `status = sent` (et facultativement `context_type = 'lead'`), puis on construit le `Set` côté client. Pagination via `fetchAllPaginated` / `range()` pour dépasser la limite de 1000 lignes.
+2. Logger `error` côté toast si la requête échoue, pour ne plus louper ce genre de panne.
+3. Garantir le déclenchement : appeler `loadLeads()` aussi quand l'utilisateur arrive sur le tab `whatsapp` (et pas seulement `leads`), pour que `waFilteredLeads` soit cohérent même en accès direct au tab.
+4. Après `handleWaSend` / `handleWaRetryFailed`, on rappelle déjà `loadWaAlreadySent()` — on s'assure que cette nouvelle version se base sur le `template_key` et reflète bien les envois qui viennent d'être faits.
 
-Si tu veux, je peux ajouter une **détection automatique** de l'erreur `131042` côté front :
-- Quand le batch retourne cette erreur, on **stoppe la boucle immédiatement** (au lieu d'enchaîner 168 batches qui vont tous échouer)
-- Affichage d'un toast clair : *"⚠️ Problème de paiement Meta — règle ta facturation WhatsApp Business avant de relancer"*
+Aucune modification des Edge Functions n'est nécessaire ; le bug est purement frontend.
 
-**Hors périmètre** : aucune modification d'edge function, aucune migration DB, aucun changement de template.
+## Fichiers touchés
+
+- `src/pages/admin/CampagnesSuivi.tsx` (≈ lignes 195-260, 316-330, 498-501)
+
+## Validation
+
+- Recharger l'onglet WhatsApp après un envoi → les leads envoyés disparaissent (filtre actif), réapparaissent uniquement si « Renvoyer aux leads déjà contactés » est coché.
+- Vérifier dans la console qu'aucune erreur Supabase n'est levée et que `waAlreadySent.size` reflète bien les sends récents.
