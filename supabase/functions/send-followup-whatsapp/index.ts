@@ -157,17 +157,28 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Pre-load already-sent set for dedup
+  // Pre-load already-sent set for dedup (sent + delivered + read, all-time)
   let alreadySent = new Set<string>();
   if (!allowResend) {
     const { data: sent } = await supabase
       .from("whatsapp_notification_logs")
       .select("context_ref")
       .eq("template_key", TEMPLATE_KEY)
-      .eq("status", "sent")
+      .in("status", ["sent", "delivered", "read"])
       .in("context_ref", batch);
     alreadySent = new Set((sent || []).map((r: any) => r.context_ref));
   }
+
+  // Hard 24h guard: any non-failed log within last 24h blocks the send
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: recent24h } = await supabase
+    .from("whatsapp_notification_logs")
+    .select("context_ref")
+    .eq("template_key", TEMPLATE_KEY)
+    .neq("status", "failed")
+    .in("context_ref", batch)
+    .gte("created_at", since24h);
+  const recentSet = new Set((recent24h || []).map((r: any) => r.context_ref));
 
   const results: Array<{ lead_id: string; status: "sent" | "skipped" | "failed"; reason?: string }> = [];
 
@@ -180,6 +191,13 @@ Deno.serve(async (req) => {
       if (!allowResend && alreadySent.has(lead.id)) {
         results.push({ lead_id: lead.id, status: "skipped", reason: "déjà envoyé" });
         continue;
+      }
+      if (!allowResend && recentSet.has(lead.id)) {
+        results.push({ lead_id: lead.id, status: "skipped", reason: "envoi récent (<24h)" });
+        continue;
+      }
+      if (allowResend && recentSet.has(lead.id)) {
+        console.warn("[send-followup-whatsapp] allowResend=true bypassing 24h guard", { lead_id: lead.id });
       }
       const phone = normalizePhoneE164(lead.phone_e164 || lead.phone);
       if (!phone) {

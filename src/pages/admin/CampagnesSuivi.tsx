@@ -176,6 +176,14 @@ export default function CampagnesSuivi() {
   const [waSearch, setWaSearch] = useState("");
   const [waSending, setWaSending] = useState(false);
   const [waLastResult, setWaLastResult] = useState<{ sent: number; skipped: number; failed: number; processed: number; total_requested: number } | null>(null);
+  const [waConfirmOpen, setWaConfirmOpen] = useState(false);
+  const [waCooldown, setWaCooldown] = useState(0);
+
+  useEffect(() => {
+    if (waCooldown <= 0) return;
+    const t = setTimeout(() => setWaCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [waCooldown]);
 
   // ───── Load campaigns
   useEffect(() => {
@@ -1328,8 +1336,8 @@ export default function CampagnesSuivi() {
           {waSelectedIds.size > 0 && (
             <div className="sticky bottom-2 z-30 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
               <Button
-                onClick={handleWaSend}
-                disabled={waSending}
+                onClick={() => setWaConfirmOpen(true)}
+                disabled={waSending || waCooldown > 0}
                 size="lg"
                 className="pointer-events-auto h-12 px-6 rounded-full shadow-2xl bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white font-semibold"
               >
@@ -1338,10 +1346,44 @@ export default function CampagnesSuivi() {
                 ) : (
                   <Send className="h-5 w-5 mr-2" />
                 )}
-                Envoyer aux {waSelectedIds.size} lead{waSelectedIds.size > 1 ? "s" : ""}
+                {waCooldown > 0
+                  ? `Patientez ${waCooldown}s`
+                  : `Envoyer aux ${waSelectedIds.size} lead${waSelectedIds.size > 1 ? "s" : ""}`}
               </Button>
             </div>
           )}
+
+          <AlertDialog open={waConfirmOpen} onOpenChange={setWaConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer l'envoi WhatsApp</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2 pt-2">
+                  <span className="block">
+                    Vous allez envoyer le template à <strong>{waSelectedIds.size} lead{waSelectedIds.size > 1 ? "s" : ""}</strong>.
+                  </span>
+                  <span className="block text-amber-600 dark:text-amber-400">
+                    ⚠️ Cette campagne ne doit être envoyée qu'<strong>une seule fois</strong> par lead.
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    Une protection 24h bloque automatiquement les doublons côté serveur.
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setWaConfirmOpen(false);
+                    setWaCooldown(30);
+                    await handleWaSend();
+                  }}
+                  className="bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white"
+                >
+                  Confirmer l'envoi
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
       </Tabs>
 
