@@ -176,6 +176,14 @@ export default function CampagnesSuivi() {
   const [waSearch, setWaSearch] = useState("");
   const [waSending, setWaSending] = useState(false);
   const [waLastResult, setWaLastResult] = useState<{ sent: number; skipped: number; failed: number; processed: number; total_requested: number } | null>(null);
+  const [waConfirmOpen, setWaConfirmOpen] = useState(false);
+  const [waCooldown, setWaCooldown] = useState(0);
+
+  useEffect(() => {
+    if (waCooldown <= 0) return;
+    const t = setTimeout(() => setWaCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [waCooldown]);
 
   // ───── Load campaigns
   useEffect(() => {
