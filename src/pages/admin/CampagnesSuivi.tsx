@@ -247,7 +247,7 @@ export default function CampagnesSuivi() {
   };
 
   useEffect(() => {
-    if (activeTab === "leads" && campaigns.length > 0) loadLeads();
+    if ((activeTab === "leads" || activeTab === "whatsapp") && campaigns.length > 0) loadLeads();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedCampaign, campaigns.length]);
 
