@@ -43,6 +43,7 @@ interface Props {
 
 export function WhatsAppInbox({ scope }: Props) {
   const [tab, setTab] = useState<"clients" | "inconnus">("clients");
+  const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [messages, setMessages] = useState<InboundMessage[]>([]);
   const [unknowns, setUnknowns] = useState<InboundMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,14 +253,17 @@ export function WhatsAppInbox({ scope }: Props) {
 
   const currentList = tab === "clients" ? messages : unknowns;
   const filtered = useMemo(() => {
-    if (!search.trim()) return currentList;
+    let list = currentList;
+    if (readFilter === "unread") list = list.filter(m => !m.read);
+    else if (readFilter === "read") list = list.filter(m => m.read);
+    if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return currentList.filter(m =>
+    return list.filter(m =>
       (m.client_name || "").toLowerCase().includes(q) ||
       (m.content || "").toLowerCase().includes(q) ||
       (m.phone || "").toLowerCase().includes(q),
     );
-  }, [currentList, search]);
+  }, [currentList, search, readFilter]);
 
   const unreadClients = messages.filter(m => !m.read).length;
   const unreadUnknowns = unknowns.filter(m => !m.read).length;
@@ -339,7 +343,30 @@ export function WhatsAppInbox({ scope }: Props) {
             />
           </div>
 
-          {/* Liste */}
+          {/* Filtre lus / non lus */}
+          <div className="flex gap-1.5 mb-3">
+            {([
+              { k: "all", label: "Tous", count: currentList.length },
+              { k: "unread", label: "Non lus", count: currentList.filter(m => !m.read).length },
+              { k: "read", label: "Lus", count: currentList.filter(m => m.read).length },
+            ] as const).map(opt => (
+              <button
+                key={opt.k}
+                onClick={() => setReadFilter(opt.k)}
+                className={`flex-1 h-8 px-2 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-1.5 border ${
+                  readFilter === opt.k
+                    ? "bg-[hsl(var(--whatsapp-green))] text-white border-transparent"
+                    : "bg-background text-muted-foreground border-border hover:text-foreground"
+                }`}
+              >
+                {opt.label}
+                <span className={`text-[10px] font-bold ${readFilter === opt.k ? "opacity-90" : "opacity-60"}`}>
+                  {opt.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
           <Card className="overflow-hidden">
             {loading ? (
               <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted-foreground" /></div>
