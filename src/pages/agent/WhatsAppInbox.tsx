@@ -253,14 +253,17 @@ export function WhatsAppInbox({ scope }: Props) {
 
   const currentList = tab === "clients" ? messages : unknowns;
   const filtered = useMemo(() => {
-    if (!search.trim()) return currentList;
+    let list = currentList;
+    if (readFilter === "unread") list = list.filter(m => !m.read);
+    else if (readFilter === "read") list = list.filter(m => m.read);
+    if (!search.trim()) return list;
     const q = search.toLowerCase();
-    return currentList.filter(m =>
+    return list.filter(m =>
       (m.client_name || "").toLowerCase().includes(q) ||
       (m.content || "").toLowerCase().includes(q) ||
       (m.phone || "").toLowerCase().includes(q),
     );
-  }, [currentList, search]);
+  }, [currentList, search, readFilter]);
 
   const unreadClients = messages.filter(m => !m.read).length;
   const unreadUnknowns = unknowns.filter(m => !m.read).length;
