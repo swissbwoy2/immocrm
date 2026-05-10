@@ -43,6 +43,7 @@ interface Props {
 
 export function WhatsAppInbox({ scope }: Props) {
   const [tab, setTab] = useState<"clients" | "inconnus">("clients");
+  const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [messages, setMessages] = useState<InboundMessage[]>([]);
   const [unknowns, setUnknowns] = useState<InboundMessage[]>([]);
   const [loading, setLoading] = useState(true);
