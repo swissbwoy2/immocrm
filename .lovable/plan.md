@@ -1,84 +1,35 @@
+## Objectif
 
-# Refonte UI WhatsApp + Fix bug compteur "déjà envoyés"
+Empêcher qu'un lead puisse recevoir plusieurs fois le même template WhatsApp de campagne. Cause : la dédup dans l'Edge Function ne regarde que `status='sent'` et ignore `delivered`/`read` (mis à jour par le webhook Meta).
 
-## 0. Bug compteur (root cause)
+## Étape 1 — Fix Edge Function `send-followup-whatsapp`
 
-`loadWaAlreadySent` filtre uniquement `status='sent'`. Or Meta met à jour la ligne en `'delivered'` puis `'read'` via webhook → ces leads sortent du Set "déjà envoyés" et réapparaissent comme "Disponibles". D'où **156 disponibles affichés** vs ~16 réels.
+Dans `supabase/functions/send-followup-whatsapp/index.ts` :
 
-**Fix** : utiliser `.in("status", ["sent","delivered","read"])` dans :
-- `loadWaAlreadySent` (compteur UI + Set de dédup)
-- `handleWaRetryFailed` (pour ne PAS retry un lead déjà delivered/read même si une ancienne ligne 'failed' existe)
+1. **Élargir la dédup** aux statuts `sent`, `delivered`, `read` (au lieu de `sent` seul).
+2. **Ajouter une garde anti-doublon dure 24h** : avant chaque envoi, recheck en direct dans `whatsapp_notification_logs` qu'aucun envoi du même `template_key` au même `context_ref` n'existe dans les dernières 24h (tous statuts sauf `failed`). Cette vérif se fait dans la boucle, juste avant l'appel à `send-whatsapp-notification`, pour blinder même contre les double-clics rapprochés.
+3. Si `allowResend=true` (case "Renvoyer même si déjà envoyé" cochée volontairement), la garde 24h est bypassée mais un log warning est émis.
 
-Pas de changement edge function (la fonction `send-followup-whatsapp` fait déjà la bonne dédup côté serveur dans `alreadySent`, à vérifier et aligner).
+## Étape 2 — Garde-fou UI dans `CampagnesSuivi.tsx` (onglet WhatsApp)
 
-## 1. Onglet WhatsApp dans `CampagnesSuivi.tsx`
+1. **Confirmation modale** au clic sur "Envoyer aux N leads" : 
+   - Titre : "Confirmer l'envoi WhatsApp"
+   - Corps : "Vous allez envoyer le template à **N leads**. Cette campagne ne doit être envoyée qu'**une seule fois** par lead. Continuer ?"
+   - Boutons : Annuler / Confirmer l'envoi
+2. **Anti double-clic** : bouton désactivé pendant 30 secondes après un clic réussi (cooldown visible avec compte à rebours).
+3. **Badge ⚠️ "Déjà contacté X fois"** sur chaque ligne lead si l'historique montre ≥1 envoi (récupéré via `loadWaAlreadySent` enrichi pour compter au lieu de juste flagger).
 
-### Header campagne (compact + premium)
-- Bandeau dégradé vert WhatsApp (#25D366 → #128C7E) avec logo, nom campagne, badge statut template, mini-stats inline
-- Boutons **Aperçu** / **Test** en haut à droite (icônes seules sur mobile)
+## Étape 3 — Pas de nettoyage destructif
 
-### Aperçu message
-- Bulle WhatsApp réaliste (fond crème, bulle verte sortante #DCF8C6, double check vert, CTA stylé)
-
-### Barre d'actions
-- Sur mobile : barre **sticky bas** (search + bouton principal "Envoyer aux N") avec safe-area
-- Sur desktop : barre flottante haut avec backdrop-blur
-- "Renvoyer aux déjà contactés" + "Réessayer échecs" → menu kebab pour désencombrer
-
-### Stats compteurs
-- 3 mini-cards colorées (Total · Déjà envoyés ✓ · Disponibles) avec animation count-up
-- **Compteurs maintenant exacts** grâce au fix bug
-
-### Liste leads
-- Mobile : cartes tactiles avec avatar initiales colorées, nom/téléphone, checkbox 44px, badge statut
-- Desktop : Table densifiée + zebra rows + hover
-
-### Résultat envoi
-- Toast riche avec ✓ animé + breakdown sent/skipped/failed
-
-## 2. Page Inbox WhatsApp (`agent/WhatsAppInbox.tsx`)
-
-### Header global
-- Sticky avec avatar + titre + badge non lus + actions à droite (search/filter/refresh)
-
-### Sidebar conversations (look WhatsApp)
-- Tabs Clients/Inconnus en chips arrondis
-- Cartes conversation : avatar circulaire avec gradient par hash, indicateur fenêtre 24h ouverte (point vert), heure relative ("il y a 5 min"), badge non-lus pill verte, hover shift droite
-
-### Zone conversation (la grosse upgrade)
-- Fond crème WhatsApp (#ECE5DD light / #0B141A dark) avec pattern SVG subtil
-- Bulles avec queue asymétrique, ombre douce, double check vert intégré, slide-in à l'arrivée
-- Header conversation : avatar + nom + statut "en ligne / vu il y a X"
-
-### Zone saisie
-- Input rounded-full + bouton emoji placeholder
-- Bouton envoi rond vert quand texte présent
-- Bandeau "Fenêtre 24h fermée" plus visible avec compte à rebours
-- Auto-resize textarea + Enter envoie / Shift+Enter newline
-
-### États vides
-- Illustration + message clair sur desktop
-- Mobile : liste plein écran quand rien sélectionné, conversation plein écran avec back arrow
-
-### Mobile (430px)
-- Touch targets ≥44px, haptic feedback sur envoi, safe-area respectée
-
-## 3. Détails techniques
-
-- Tokens couleur dans `index.css` : `--whatsapp-green`, `--whatsapp-green-dark`, `--whatsapp-bubble-out`, `--whatsapp-bubble-in`, `--whatsapp-bg`
-- Nouveaux composants `src/components/whatsapp/` : `WhatsAppBubble`, `ConversationListItem`, `LeadAvatar`
-- `formatDistanceToNow` de `date-fns` (locale fr) pour heures relatives
-- Aucune modif RLS / edge functions / schéma DB
+Les messages partis chez Meta ne peuvent pas être annulés. On laisse l'historique `whatsapp_notification_logs` intact pour l'audit. La transparence est assurée par le badge UI à l'étape 2.
 
 ## Fichiers touchés
 
-- `src/pages/admin/CampagnesSuivi.tsx` — fix bug compteur (~5 lignes) + refonte `TabsContent value="whatsapp"` (~150 lignes)
-- `src/pages/agent/WhatsAppInbox.tsx` — refonte rendu (~250 lignes)
-- `src/index.css` — tokens WhatsApp
-- `src/components/whatsapp/` — 3 nouveaux composants
+- `supabase/functions/send-followup-whatsapp/index.ts` (~15 lignes modifiées)
+- `src/pages/admin/CampagnesSuivi.tsx` (~50 lignes : modale confirm + cooldown + comptage envois)
 
-## Ce qui reste identique
+## Hors périmètre
 
-- Toute la logique d'envoi, dédup serveur, RLS, realtime
-- Edge functions `send-followup-whatsapp`, `send-whatsapp-notification`, `wa-reply-text`
-- Schéma DB + webhooks Meta
+- Pas de migration SQL.
+- Pas de modification des autres campagnes (vente, achat) — même pattern à appliquer plus tard si besoin.
+- Pas de modification du webhook Meta ni de `send-whatsapp-notification`.
