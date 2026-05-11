@@ -670,8 +670,14 @@ function ClientDashboardLocation() {
               icon={MessageSquare}
               variant="wide"
               title="Messagerie"
-              subtitle={agent ? `Votre agent : ${agent.prenom} ${agent.nom}` : 'Contactez votre agent'}
-              badge={counts.new_message || undefined}
+              subtitle={
+                counts.new_message > 0
+                  ? `${counts.new_message} nouveau${counts.new_message > 1 ? 'x' : ''} message${counts.new_message > 1 ? 's' : ''}`
+                  : agent
+                    ? `Votre agent : ${agent.prenom} ${agent.nom}`
+                    : 'Aucun agent assigné pour le moment'
+              }
+              badge={counts.new_message > 0 ? counts.new_message : undefined}
               badgeVariant="destructive"
               onClick={() => navigate('/client/messagerie')}
               index={4}
