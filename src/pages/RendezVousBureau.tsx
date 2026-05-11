@@ -170,7 +170,14 @@ export default function RendezVousBureau() {
             .then(() => {});
         }, () => {});
 
-      // Notification interne admin (best-effort)
+      // Notif interne admin (email Resend + WhatsApp + cloche in-app) — best-effort
+      supabase.functions
+        .invoke('notify-admin-new-phone-appointment', {
+          body: { appointment_id: apptId },
+        })
+        .then(() => {}, () => {});
+
+      // ICS calendrier admin (best-effort, conservé pour agenda Google)
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
@@ -180,7 +187,7 @@ export default function RendezVousBureau() {
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
             all_day: false,
-            recipient_email: 'support@logisorama.ch',
+            recipient_email: 'info@immo-rama.ch',
           },
         })
         .then(() => {}, () => {});
