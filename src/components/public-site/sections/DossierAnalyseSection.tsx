@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck } from 'lucide-react';
+import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
