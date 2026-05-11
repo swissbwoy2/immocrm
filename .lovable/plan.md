@@ -1,65 +1,59 @@
-# Diagnostic RDV bureau + WhatsApp `rdv_bureau_rappel`
+## Refonte du Hero — orientation "RDV gratuit au bureau"
 
-## 1. Oui, un client a bien réservé
+Objectif : transformer le hero actuel (orienté "Activer ma recherche") en un hero orienté **prise de RDV gratuit au bureau de Crissier** pour analyse de dossier, avec deux gros CTA Location / Achat qui pointent vers `/rendez-vous`.
 
-**Stéphane Botella** — `botellastephane@icloud.com` — `076 228 53 56`
-- Réservé le **2026-05-09 15:22** via `/rendez-vous-bureau` (source `whatsapp_rdv_crissier`)
-- Créneau : **aujourd'hui 11.05 à 11h00 (Europe/Zurich)**
-- Note client : *« il est possible de faire par téléphone ? »*
-- `status='confirme'` posé d'office, mais `confirmed_at`, `confirmed_by`, `ics_sent_at` = NULL
+### Périmètre
+- **Fichier modifié** : `src/components/landing/premium/PremiumHero.tsx` (réécriture du contenu, structure conservée).
+- **Fichier modifié** : `src/components/landing/premium/StickyMobileCTA.tsx` (CTA principal → "Réserver mon RDV gratuit", CTA secondaire vers activation en ligne).
+- **Aucun changement backend**, aucune modif de routes, aucune modif des autres sections de la landing.
 
-## 2. Pourquoi tu n'as reçu ni demande ni demande de confirmation
+### Nouvelle structure du Hero
 
-Le flux `src/pages/RendezVousBureau.tsx` (réservation publique) est cassé côté admin :
+1. **Badge top** (remplace "Chasseur N°1")
+   `📍 À nos bureaux de Crissier · Analyse gratuite`
 
-- L'insertion se fait **côté client** avec `status: 'confirme'` directement → **il n'y a aucune étape « en attente de confirmation »**, donc aucun email/WA « demande de confirmation » n'est jamais envoyé à l'admin (la fonction `confirm-phone-appointment` ne tourne que sur action manuelle admin).
-- La seule notif admin est un `send-calendar-invite` best-effort vers `support@logisorama.ch` avec sujet « Nouveau RDV bureau — … ». Il est lancé sans `await` puis l'utilisateur est redirigé. Si Resend a rejeté ou si le mail est parti en spam, **rien ne te prévient**.
-- Aucune notification **WhatsApp** ni **push** n'est envoyée à l'admin à la création.
+2. **Logo + slogan** (inchangés)
 
-## 3. Pourquoi `rdv_bureau_rappel` passe en `failed`
+3. **H1 (douleur + promesse)**
+   *Fais analyser ton dossier gratuitement avant d'envoyer tes candidatures*
 
-Les logs Meta du 10.05 sont sans ambiguïté :
+4. **Sous-titre**
+   *Tu cherches un logement en Suisse romande ? En 30 minutes, un expert Logisorama vérifie ton dossier, tes critères et tes chances réelles auprès des régies.*
 
-```
-(#132001) Template name does not exist in the translation
-details: template name (logisorama_rdv_bureau_rappel) does not exist in fr
-```
+5. **Deux blocs côte à côte (grid md:grid-cols-2)**
+   - **Gauche — Analyse personnalisée** : 4 puces ✅ (atouts / blocages / améliorations / logements à viser) + ligne objectif.
+   - **Droite — 500+ familles accompagnées** : 4 puces (⭐ 🏠 📩 🤝) + tag "RDV gratuit · Sans engagement · 30 minutes".
 
-- En base `whatsapp_message_templates` : `template_name_meta = logisorama_rdv_bureau_rappel`, `language = fr`, `is_active = true`.
-- Sur **Meta Business Manager**, ce template n'existe pas en langue `fr` (soit jamais soumis/approuvé, soit créé en `fr_FR` / `fr_CH`, soit en statut REJECTED/PAUSED).
-- Les erreurs plus récentes (`131000 Something went wrong`) sur 3h/1h/30m sont la conséquence directe : Meta renvoie un message générique quand le template est introuvable/non approuvé.
-- C'est pour ça que **Stéphane n'a reçu aucun rappel WhatsApp** (24h, 3h, 1h, 30m → tous `failed`). Les rappels **email** sont eux bien partis (colonnes `reminder_*_sent_at` remplies).
+6. **Phrase de conversion juste avant les CTA**
+   *Ne laisse plus ton dossier être refusé sans comprendre pourquoi. Réserve ton analyse gratuite maintenant.*
 
-## Plan d'action
+7. **Deux gros CTA verticaux (ou 2 colonnes desktop)** — remplacent les onglets Location/Achat actuels :
+   - 🏠 **Je cherche une location** → `Réserver mon analyse gratuite` → `/rendez-vous?type=location`
+   - 🔑 **Je veux acheter un bien** → `Réserver mon analyse gratuite` → `/rendez-vous?type=achat`
+   - Sous-texte : *Choisis ton projet et réserve directement ton créneau au bureau.*
 
-### A. Réparer le template Meta (urgent — action manuelle de toi)
-1. Aller dans **Meta Business Manager → WhatsApp Manager → Templates**.
-2. Vérifier `logisorama_rdv_bureau_rappel` :
-   - S'il existe en `fr_FR` ou `fr_CH` → mettre à jour la base : `UPDATE whatsapp_message_templates SET language='fr_FR' WHERE template_key='rdv_bureau_rappel'`.
-   - S'il n'existe pas → le créer (catégorie UTILITY, langue `fr`) avec exactement le body :
-     ```
-     Bonjour {{1}}, petit rappel : ton RDV au bureau Logisorama (Chemin de l'Esparcette 5, 1023 Crissier) est prévu {{2}}. À tout bientôt !
-     ```
-   - S'il est REJECTED/PAUSED → corriger et resoumettre.
-3. Une fois APPROVED, je peux relancer manuellement le rappel pour Stéphane via la fonction `send-whatsapp-notification` (test ciblé).
+8. **Lien secondaire discret** : *Activer ma recherche en ligne* → `/nouveau-mandat`
 
-### B. Notifications admin à la réservation (code, déjà identifié)
-Modifier `src/pages/RendezVousBureau.tsx` pour ajouter, juste après l'insertion du RDV :
-1. **WhatsApp staff** : `supabase.functions.invoke('send-whatsapp-notification', { template_key: 'staff_new_inbound', recipient_phone_override: '+41…ton numéro', variables: [fullName, horaire, telephone] })`. Réutilise le template staff déjà existant si présent ; sinon, fallback sur un template UTILITY existant (à confirmer avec toi).
-2. **Email admin enrichi** : passer le `send-calendar-invite` admin en `await` + ajouter un `Resend` HTML clair (« 🚨 Nouveau RDV bureau — Nom / Téléphone / Heure / Note »). Envoi vers `info@immo-rama.ch` (et pas `support@logisorama.ch` qui est l'expéditeur).
-3. **Notif in-app** : insérer une ligne dans `notifications` (type `phone_appointment_new`) pour que la cloche admin sonne.
+9. **Réassurance finale** : Gratuit · Sans engagement · 30 min · Bureau de Crissier
 
-### C. Workflow « demande de confirmation » (optionnel mais recommandé)
-Aujourd'hui chaque RDV est `confirme` automatiquement. Deux options à choisir :
-- **Option 1 — garder auto-confirme** : on ajoute simplement les notifs B ci-dessus. C'est ce que je recommande car le créneau est déjà bloqué côté UX.
-- **Option 2 — passer en `en_attente`** : insertion avec `status='en_attente'`, l'admin clique dans le calendrier pour déclencher `confirm-phone-appointment` (qui lui envoie déjà email + ICS + WA `rdv_bureau_rappel` au client). Plus contrôlé mais double clic admin obligatoire.
+### Suppressions
+- Sélecteur d'onglets Location / Achat (remplacé par les 2 gros CTA).
+- Mini-form (Zone / Budget / Permis) → déplacé hors du hero (supprimé du hero, le formulaire complet reste sur `/nouveau-mandat`).
+- Bloc "Achat" legacy long → remplacé par le CTA achat.
+- Variantes A/B headline et `useSearchType` côté hero (le contexte reste utilisé ailleurs, on n'y touche pas).
 
-### Hors scope
-- Aucune migration DB.
-- Pas de modification du flux `confirm-phone-appointment` ni de `send-phone-appointment-reminders`.
-- Réparer le template Meta n'est pas faisable côté code (action sur le BM Meta).
+### StickyMobileCTA
+- CTA principal : **Réserver mon RDV gratuit** → `/rendez-vous`
+- CTA secondaire (lien petit en dessous) : *Activer ma recherche en ligne* → `/nouveau-mandat`
 
-## Questions pour toi avant build
-1. Pour le **template Meta** `logisorama_rdv_bureau_rappel` : tu veux que je vérifie sa langue exacte sur Meta (et tu me dis ce que tu vois), ou tu préfères le recréer en `fr` ?
-2. Pour la **notif WhatsApp admin** à la réservation : quel numéro WA admin utiliser, et tu veux passer par un template existant (lequel ?) ou j'en crée un dédié `staff_new_phone_appointment` ?
-3. **Auto-confirme ou en_attente** ? (Option 1 vs 2 ci-dessus)
+### Détails techniques
+- Tokens sémantiques uniquement (`primary`, `foreground`, `muted-foreground`, `card`, `border`) — pas de couleurs en dur.
+- Icônes lucide existantes : `Key`, `Home`, `MapPin`, `Calendar`, `CheckCircle`, `ArrowRight`, `Sparkles`, `Users`.
+- Animations `animate-fade-in` conservées.
+- Responsive : blocs gauche/droite empilés en mobile, côte à côte ≥ md. CTA Location/Achat empilés mobile, 2 colonnes ≥ sm.
+- SEO : H1 unique conservé, alt logo conservé.
+
+### Hors périmètre
+- Pas de modif de `/rendez-vous` (la page lit déjà `?type=` ou non — à vérifier au moment du build, sinon on passe juste sans param).
+- Pas de modif des sections suivantes (`SocialProofBar`, `TeamSection`, etc.).
+- Pas de modif backend / DB / edge functions.
