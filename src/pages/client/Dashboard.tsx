@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User, FolderOpen, Map } from 'lucide-react';
+import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffresKPI';
+import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { ProchainesVisitesCard } from '@/components/client/dashboard/ProchainesVisitesCard';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
