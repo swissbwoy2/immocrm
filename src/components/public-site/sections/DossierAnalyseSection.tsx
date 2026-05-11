@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck } from 'lucide-react';
+import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
@@ -167,26 +168,72 @@ export function DossierAnalyseSection() {
   return (
     <section id="analyse-dossier" className="relative overflow-hidden">
       <CinematicHero
-        brandName="Immo-Rama"
-        tagline1="Analyse gratuite"
-        tagline2="de ton dossier 📋"
-        cardHeading="Dossier personnalisé"
-        cardDescription="Nos experts te disent ce qui joue et ce qui ne joue pas. Réponse personnalisée sous 24h."
+        brandName="Bureau de Crissier · Analyse gratuite"
+        tagline1="Fais analyser ton dossier"
+        tagline2="gratuitement avant tes candidatures"
+        cardHeading="Analyse personnalisée de ton dossier"
+        cardDescription="Nos experts te disent ce qui joue en ta faveur, ce qui bloque tes candidatures, comment l'améliorer et quels logements viser. Objectif : maximiser tes chances rapidement."
         metricValue="500+"
         metricLabel="familles accompagnées avec succès"
-        ctaHeading="Commence maintenant"
-        ctaDescription="Gratuit · Sans engagement · Réponse sous 24h"
+        ctaHeading="Réserve ton analyse gratuite"
+        ctaDescription="30 min · Bureau de Crissier · Sans engagement"
       >
-        {/* Placeholder CTA inside card - formulaire follows below */}
         <div className="text-xs text-[hsl(40_20%_50%)] border-t border-[hsl(38_45%_48%/0.15)] pt-3 mt-3">
-          👇 Remplis le formulaire ci-dessous
+          👇 Choisis ton projet ci-dessous
         </div>
       </CinematicHero>
 
       <div className="bg-gradient-to-b from-[hsl(30_15%_8%)] to-background relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,hsl(var(--primary)/0.06)_0%,transparent_60%)]" />
       <div className="container mx-auto px-4 py-12 relative z-10">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
+
+          {/* Phrase de conversion */}
+          <p className="text-center text-base md:text-lg font-semibold text-foreground max-w-2xl mx-auto mb-6 animate-fade-in">
+            Ne laisse plus ton dossier être refusé sans comprendre pourquoi.<br className="hidden sm:inline" />
+            <span className="text-primary">Réserve ton analyse gratuite maintenant.</span>
+          </p>
+
+          {/* 2 gros CTA RDV bureau */}
+          <div className="grid sm:grid-cols-2 gap-4 mb-3 animate-fade-in">
+            <Button asChild size="lg" className="group h-auto py-5 md:py-6 flex-col gap-1 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
+              <Link to="/rendez-vous?type=location">
+                <span className="flex items-center gap-2 text-lg md:text-xl font-bold">
+                  <Key className="h-5 w-5" />
+                  Je cherche une location
+                </span>
+                <span className="text-sm font-medium opacity-90 flex items-center gap-1">
+                  Réserver mon analyse gratuite
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="group h-auto py-5 md:py-6 flex-col gap-1 border-2 border-primary/40 hover:border-primary hover:bg-primary/5 shadow-lg hover:scale-[1.02] transition-all">
+              <Link to="/rendez-vous?type=achat">
+                <span className="flex items-center gap-2 text-lg md:text-xl font-bold text-foreground">
+                  <Home className="h-5 w-5 text-primary" />
+                  Je veux acheter un bien
+                </span>
+                <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  Réserver mon analyse gratuite
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Link>
+            </Button>
+          </div>
+          <p className="text-center text-sm text-muted-foreground mb-10">
+            Choisis ton projet et réserve directement ton créneau au bureau.
+          </p>
+
+          {/* Séparateur parcours en ligne */}
+          <div className="flex items-center gap-3 max-w-2xl mx-auto mb-6">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs uppercase tracking-widest text-muted-foreground">Ou en ligne</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <h2 className="text-center text-lg md:text-xl font-semibold text-foreground mb-6 max-w-2xl mx-auto">
+            Préfères tout faire en ligne ? Réponds à quelques questions pour pré-qualifier ton dossier.
+          </h2>
 
           {!searchType && (
             <div className="flex justify-center gap-3 mb-8 animate-fade-in">

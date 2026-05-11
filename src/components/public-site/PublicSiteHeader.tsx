@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Rocket, Menu, LogIn, Sparkles } from 'lucide-react';
+import { Rocket, Menu, LogIn, Sparkles, Calendar } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 import { PublicSiteMenu } from './PublicSiteMenu';
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
@@ -109,12 +109,24 @@ export function PublicSiteHeader() {
                     size="sm"
                     className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0"
                   >
-                    <Link to="/nouveau-mandat">
-                      <Rocket className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Activer ma recherche</span>
+                    <Link to="/rendez-vous">
+                      <Calendar className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Réserver mon RDV gratuit</span>
                     </Link>
                   </Button>
                 </motion.div>
+
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="hidden lg:inline-flex text-muted-foreground hover:text-foreground"
+                >
+                  <Link to="/nouveau-mandat">
+                    <Rocket className="h-4 w-4 mr-1.5" />
+                    Activer ma recherche
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>
