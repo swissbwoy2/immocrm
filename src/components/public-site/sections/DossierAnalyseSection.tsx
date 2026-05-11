@@ -58,6 +58,15 @@ export function DossierAnalyseSection() {
   const [localite, setLocalite] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const openForm = (type: 'location' | 'achat') => {
+    setSearchType(type);
+    setStep('qualification');
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const isQualificationValidLocation = statutEmploi && permisNationalite;
   const isQualificationValidAchat = accordBancaire && apportPersonnel;
