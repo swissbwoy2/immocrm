@@ -12,10 +12,24 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
-    
-    if (!url) {
+    const { url: rawUrl } = await req.json();
+
+    if (!rawUrl || typeof rawUrl !== 'string') {
       return new Response(JSON.stringify({ error: 'URL is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Normalize: prepend https:// if scheme missing, then validate
+    let url = rawUrl.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+    try {
+      new URL(url);
+    } catch {
+      return new Response(JSON.stringify({ error: `Invalid URL: '${rawUrl}'` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
