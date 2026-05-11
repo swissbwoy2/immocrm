@@ -615,37 +615,76 @@ function ClientDashboardLocation() {
             </div>
           )}
 
-          {/* KPIs avec effets premium */}
-          <SectionErrorBoundary sectionName="KPIs">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
-              <PremiumKPICard
-                title="Offres reçues"
-                value={stats.offresRecues}
-                icon={Home}
-                subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
-                variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
-                onClick={() => navigate('/client/offres-recues')}
+          {/* === Dernières offres (style Post / Logisorama mockup) === */}
+          <SectionErrorBoundary sectionName="DernieresOffres">
+            <div className="mb-6">
+              <DernieresOffresKPI
+                offres={offres}
+                onSeeAll={() => navigate('/client/offres-recues')}
+                onOffreClick={(id) => navigate(`/client/offres-recues?offre=${id}`)}
               />
-              <PremiumKPICard
-                title="Visites à venir"
-                value={stats.visitesAVenir}
-                icon={Calendar}
-                onClick={() => navigate('/client/visites')}
-              />
-              <PremiumKPICard
-                title="Visites effectuées"
-                value={stats.visitesEffectuees}
-                icon={Calendar}
-                variant="success"
-                onClick={() => navigate('/client/visites')}
-              />
-              <PremiumKPICard
-                title="Candidatures"
-                value={stats.candidaturesDeposees}
-                icon={FileCheck}
-                subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
-                variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
-                onClick={() => navigate('/client/mes-candidatures')}
+            </div>
+          </SectionErrorBoundary>
+
+          {/* === Tuiles d'action XL — 2 colonnes principales === */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+            <QuickTileXL
+              icon={FolderOpen}
+              title="Mon dossier"
+              subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''}`}
+              onClick={() => navigate('/client/dossier')}
+              index={0}
+            />
+            <QuickTileXL
+              icon={Calendar}
+              title="Calendrier"
+              subtitle={stats.visitesAVenir > 0 ? `${stats.visitesAVenir} visite${stats.visitesAVenir > 1 ? 's' : ''} à venir` : 'Aucune visite'}
+              badge={stats.visitesAVenir || undefined}
+              onClick={() => navigate('/client/calendrier')}
+              index={1}
+            />
+          </div>
+
+          {/* === Tuiles secondaires pleine largeur === */}
+          <div className="grid grid-cols-1 gap-3 mb-8">
+            <QuickTileXL
+              icon={FileText}
+              variant="wide"
+              title="Mes offres reçues"
+              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelle${stats.offresNonVues > 1 ? 's' : ''} à traiter` : `${offres.length} au total`}
+              badge={stats.offresNonVues || undefined}
+              badgeVariant={stats.offresNonVues > 0 ? 'destructive' : 'default'}
+              onClick={() => navigate('/client/offres-recues')}
+              index={2}
+            />
+            <QuickTileXL
+              icon={FileCheck}
+              variant="wide"
+              title="Mes candidatures"
+              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : `${stats.candidaturesDeposees} déposée${stats.candidaturesDeposees > 1 ? 's' : ''}`}
+              badge={stats.candidaturesDeposees || undefined}
+              onClick={() => navigate('/client/mes-candidatures')}
+              index={3}
+            />
+            <QuickTileXL
+              icon={MessageSquare}
+              variant="wide"
+              title="Messagerie"
+              subtitle={agent ? `Votre agent : ${agent.prenom} ${agent.nom}` : 'Contactez votre agent'}
+              badge={counts.new_message || undefined}
+              badgeVariant="destructive"
+              onClick={() => navigate('/client/messagerie')}
+              index={4}
+            />
+          </div>
+
+          {/* === Prochaines visites — liste compacte avec date stylée === */}
+          <SectionErrorBoundary sectionName="ProchainesVisitesNew">
+            <div className="mb-8">
+              <ProchainesVisitesCard
+                visites={visites}
+                onSeeAll={() => navigate('/client/visites')}
+                onVisiteClick={() => navigate('/client/visites')}
               />
             </div>
           </SectionErrorBoundary>
