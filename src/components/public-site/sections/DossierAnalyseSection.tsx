@@ -348,6 +348,7 @@ export function DossierAnalyseSection() {
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
       </div>
