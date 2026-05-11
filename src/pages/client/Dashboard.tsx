@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User, FolderOpen, Map } from 'lucide-react';
+import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffresKPI';
+import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { ProchainesVisitesCard } from '@/components/client/dashboard/ProchainesVisitesCard';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -612,37 +615,76 @@ function ClientDashboardLocation() {
             </div>
           )}
 
-          {/* KPIs avec effets premium */}
-          <SectionErrorBoundary sectionName="KPIs">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
-              <PremiumKPICard
-                title="Offres reçues"
-                value={stats.offresRecues}
-                icon={Home}
-                subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
-                variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
-                onClick={() => navigate('/client/offres-recues')}
+          {/* === Dernières offres (style Post / Logisorama mockup) === */}
+          <SectionErrorBoundary sectionName="DernieresOffres">
+            <div className="mb-6">
+              <DernieresOffresKPI
+                offres={offres}
+                onSeeAll={() => navigate('/client/offres-recues')}
+                onOffreClick={(id) => navigate(`/client/offres-recues?offre=${id}`)}
               />
-              <PremiumKPICard
-                title="Visites à venir"
-                value={stats.visitesAVenir}
-                icon={Calendar}
-                onClick={() => navigate('/client/visites')}
-              />
-              <PremiumKPICard
-                title="Visites effectuées"
-                value={stats.visitesEffectuees}
-                icon={Calendar}
-                variant="success"
-                onClick={() => navigate('/client/visites')}
-              />
-              <PremiumKPICard
-                title="Candidatures"
-                value={stats.candidaturesDeposees}
-                icon={FileCheck}
-                subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
-                variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
-                onClick={() => navigate('/client/mes-candidatures')}
+            </div>
+          </SectionErrorBoundary>
+
+          {/* === Tuiles d'action XL — 2 colonnes principales === */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+            <QuickTileXL
+              icon={FolderOpen}
+              title="Mon dossier"
+              subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''}`}
+              onClick={() => navigate('/client/dossier')}
+              index={0}
+            />
+            <QuickTileXL
+              icon={Calendar}
+              title="Calendrier"
+              subtitle={stats.visitesAVenir > 0 ? `${stats.visitesAVenir} visite${stats.visitesAVenir > 1 ? 's' : ''} à venir` : 'Aucune visite'}
+              badge={stats.visitesAVenir || undefined}
+              onClick={() => navigate('/client/calendrier')}
+              index={1}
+            />
+          </div>
+
+          {/* === Tuiles secondaires pleine largeur === */}
+          <div className="grid grid-cols-1 gap-3 mb-8">
+            <QuickTileXL
+              icon={FileText}
+              variant="wide"
+              title="Mes offres reçues"
+              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelle${stats.offresNonVues > 1 ? 's' : ''} à traiter` : `${offres.length} au total`}
+              badge={stats.offresNonVues || undefined}
+              badgeVariant={stats.offresNonVues > 0 ? 'destructive' : 'default'}
+              onClick={() => navigate('/client/offres-recues')}
+              index={2}
+            />
+            <QuickTileXL
+              icon={FileCheck}
+              variant="wide"
+              title="Mes candidatures"
+              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : `${stats.candidaturesDeposees} déposée${stats.candidaturesDeposees > 1 ? 's' : ''}`}
+              badge={stats.candidaturesDeposees || undefined}
+              onClick={() => navigate('/client/mes-candidatures')}
+              index={3}
+            />
+            <QuickTileXL
+              icon={MessageSquare}
+              variant="wide"
+              title="Messagerie"
+              subtitle={agent ? `Votre agent : ${agent.prenom} ${agent.nom}` : 'Contactez votre agent'}
+              badge={counts.new_message || undefined}
+              badgeVariant="destructive"
+              onClick={() => navigate('/client/messagerie')}
+              index={4}
+            />
+          </div>
+
+          {/* === Prochaines visites — liste compacte avec date stylée === */}
+          <SectionErrorBoundary sectionName="ProchainesVisitesNew">
+            <div className="mb-8">
+              <ProchainesVisitesCard
+                visites={visites}
+                onSeeAll={() => navigate('/client/visites')}
+                onVisiteClick={() => navigate('/client/visites')}
               />
             </div>
           </SectionErrorBoundary>
@@ -872,162 +914,7 @@ function ClientDashboardLocation() {
             </div>
           )}
 
-          {/* Prochaines visites - Premium Section */}
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '600ms' }}>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50 group">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-              </div>
-              
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-lg shadow-primary/10">
-                        <Calendar className="w-6 h-6 text-primary" />
-                      </div>
-                      {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
-                          {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                        Prochaines visites
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Vos rendez-vous à venir
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 && (
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
-                      onClick={() => navigate('/client/visites')}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Tout voir
-                    </Button>
-                  )}
-                </div>
-                
-                {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {visites
-                        .filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now)
-                        .slice(0, 3)
-                        .map((visite, index) => (
-                          <PremiumVisiteCard
-                            key={visite.id}
-                            visite={visite}
-                            index={index}
-                            onClick={() => navigate('/client/visites')}
-                          />
-                        ))}
-                    </div>
-                    
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group/btn"
-                      onClick={() => navigate('/client/visites')}
-                    >
-                      <span>Voir toutes les visites</span>
-                      <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
-                    </Button>
-                  </div>
-                ) : (
-                  <PremiumEmptyState
-                    icon={Calendar}
-                    title="Aucune visite planifiée"
-                    description="Vos prochaines visites de logements apparaîtront ici dès qu'elles seront programmées."
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Mes offres reçues - Premium Section */}
-          <div className="animate-fade-in" style={{ animationDelay: '650ms' }}>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50 group">
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
-                <div className="absolute bottom-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
-              </div>
-              
-              <div className="relative p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
-                      <div className="p-3 rounded-2xl bg-gradient-to-br from-accent/20 to-primary/20 shadow-lg shadow-accent/10">
-                        <FileText className="w-6 h-6 text-primary" />
-                      </div>
-                      {offres.filter(o => o.statut === 'envoyee').length > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
-                          {offres.filter(o => o.statut === 'envoyee').length}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                        Mes offres reçues
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {offres.length} offre{offres.length > 1 ? 's' : ''} • {offres.filter(o => o.statut === 'envoyee').length} nouvelle{offres.filter(o => o.statut === 'envoyee').length > 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {offres.length > 0 && (
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
-                      onClick={() => navigate('/client/offres-recues')}
-                    >
-                      <FileText className="w-4 h-4" />
-                      Tout voir
-                    </Button>
-                  )}
-                </div>
-                
-                {offres.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {offres.slice(0, 3).map((offre, index) => (
-                        <PremiumOffreRecueCard
-                          key={offre.id}
-                          offre={offre}
-                          index={index}
-                          onClick={() => navigate(`/client/offres-recues?offre=${offre.id}`)}
-                        />
-                      ))}
-                    </div>
-                    
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group/btn"
-                      onClick={() => navigate('/client/offres-recues')}
-                    >
-                      <span>Voir toutes mes offres</span>
-                      <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
-                    </Button>
-                  </div>
-                ) : (
-                  <PremiumEmptyState
-                    icon={FileText}
-                    title="Aucune offre reçue"
-                    description="Les offres de logements correspondant à vos critères apparaîtront ici."
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Anciennes sections "Prochaines visites" et "Mes offres reçues" déplacées plus haut dans la nouvelle hiérarchie */}
         </PremiumPageShellV2>
       </PullToRefresh>
 
