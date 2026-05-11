@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,7 +6,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
@@ -59,6 +58,15 @@ export function DossierAnalyseSection() {
   const [localite, setLocalite] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const openForm = (type: 'location' | 'achat') => {
+    setSearchType(type);
+    setStep('qualification');
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const isQualificationValidLocation = statutEmploi && permisNationalite;
   const isQualificationValidAchat = accordBancaire && apportPersonnel;
@@ -194,55 +202,38 @@ export function DossierAnalyseSection() {
             <span className="text-primary">Réserve ton analyse gratuite maintenant.</span>
           </p>
 
-          {/* 2 gros CTA RDV bureau */}
+          {/* 2 gros CTA RDV bureau — ouvrent le formulaire ci-dessous */}
           <div className="grid sm:grid-cols-2 gap-4 mb-3 animate-fade-in">
-            <Button asChild size="lg" className="group h-auto py-5 md:py-6 flex-col gap-1 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
-              <Link to="/rendez-vous?type=location">
-                <span className="flex items-center gap-2 text-lg md:text-xl font-bold">
-                  <Key className="h-5 w-5" />
-                  Je cherche une location
-                </span>
-                <span className="text-sm font-medium opacity-90 flex items-center gap-1">
-                  Réserver mon analyse gratuite
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Link>
+            <Button type="button" size="lg" onClick={() => openForm('location')} className="group h-auto py-5 md:py-6 flex-col gap-1 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
+              <span className="flex items-center gap-2 text-lg md:text-xl font-bold">
+                <Key className="h-5 w-5" />
+                Je cherche une location
+              </span>
+              <span className="text-sm font-medium opacity-90 flex items-center gap-1">
+                Démarrer mon analyse gratuite
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
             </Button>
-            <Button asChild size="lg" variant="outline" className="group h-auto py-5 md:py-6 flex-col gap-1 border-2 border-primary/40 hover:border-primary hover:bg-primary/5 shadow-lg hover:scale-[1.02] transition-all">
-              <Link to="/rendez-vous?type=achat">
-                <span className="flex items-center gap-2 text-lg md:text-xl font-bold text-foreground">
-                  <Home className="h-5 w-5 text-primary" />
-                  Je veux acheter un bien
-                </span>
-                <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  Réserver mon analyse gratuite
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Link>
+            <Button type="button" size="lg" variant="outline" onClick={() => openForm('achat')} className="group h-auto py-5 md:py-6 flex-col gap-1 border-2 border-primary/40 hover:border-primary hover:bg-primary/5 shadow-lg hover:scale-[1.02] transition-all">
+              <span className="flex items-center gap-2 text-lg md:text-xl font-bold text-foreground">
+                <Home className="h-5 w-5 text-primary" />
+                Je veux acheter un bien
+              </span>
+              <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                Démarrer mon analyse gratuite
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </span>
             </Button>
           </div>
           <p className="text-center text-sm text-muted-foreground mb-10">
-            Choisis ton projet et réserve directement ton créneau au bureau.
+            Choisis ton projet ci-dessous, puis bloque ton créneau au bureau de Crissier (étape finale du formulaire).
           </p>
 
-          {/* Séparateur parcours en ligne */}
-          <div className="flex items-center gap-3 max-w-2xl mx-auto mb-6">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">Ou en ligne</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-          <h2 className="text-center text-lg md:text-xl font-semibold text-foreground mb-6 max-w-2xl mx-auto">
-            Préfères tout faire en ligne ? Réponds à quelques questions pour pré-qualifier ton dossier.
-          </h2>
-
-          {!searchType && (
-            <div className="flex justify-center gap-3 mb-8 animate-fade-in">
-              <Button variant="outline" size="lg" className="flex-1 max-w-[200px]" onClick={() => setSearchType('location')}>🏠 Location</Button>
-              <Button variant="outline" size="lg" className="flex-1 max-w-[200px]" onClick={() => setSearchType('achat')}>🏡 Achat</Button>
-            </div>
-          )}
-
           {searchType && (
+            <>
+              <h2 ref={formRef} className="text-center text-lg md:text-xl font-semibold text-foreground mb-6 max-w-2xl mx-auto scroll-mt-24">
+                Étape 1 — Qualifie ton dossier en 30 secondes, puis choisis ton créneau au bureau.
+              </h2>
             <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl border border-[hsl(38_45%_48%/0.2)] shadow-lg p-6 md:p-8 overflow-hidden">
             <BorderBeam duration={10} />
               <div className="flex justify-center gap-2 mb-6">
@@ -357,6 +348,7 @@ export function DossierAnalyseSection() {
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
       </div>

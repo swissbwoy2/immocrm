@@ -1,49 +1,28 @@
-## Refonte du hero — sur le BON composant (public-site)
+## Correction : les CTA Location/Achat doivent ouvrir le formulaire (pas naviguer)
 
-J'avais modifié le mauvais hero (Landing.tsx, jamais affiché). Le `/` rend `HomePage` (public-site), dont le hero visible est `DossierAnalyseSection` qui utilise `<CinematicHero>` ("Analyse gratuite de ton dossier" / "Commence maintenant"). Voici les vraies modifs.
+### Problème
+Actuellement les 2 gros boutons "Je cherche une location" / "Je veux acheter un bien" naviguent vers `/rendez-vous?type=...` (autre page). Le bon parcours est : ces boutons doivent **ouvrir le formulaire qualification → coordonnées → créneau au bureau** déjà présent en dessous, sur la même page.
 
-### Périmètre
-- **`src/components/public-site/sections/DossierAnalyseSection.tsx`** : nouveau contenu CinematicHero + 2 gros CTA Location/Achat avant le formulaire.
-- **`src/components/ui/cinematic-hero.tsx`** : aucune modif structurelle (on passe juste de nouveaux props + on ajoute une 3e ligne de titre via `tagline2`/children si besoin).
-- **`src/components/public-site/PublicSiteHeader.tsx`** : CTA principal top → "Réserver mon RDV gratuit" (`/rendez-vous`), "Activer ma recherche" devient secondaire.
-- **`src/components/public-site/sections/StickyMobileCTA.tsx`** : CTA principal → "Réserver mon RDV gratuit" (`/rendez-vous`) + lien secondaire "Activer ma recherche en ligne".
-- Ne pas toucher `src/components/landing/premium/PremiumHero.tsx` (pas affiché sur `/`). Restaurer l'ancien `landing/premium/StickyMobileCTA.tsx` à son état original.
+### Modifs — `src/components/public-site/sections/DossierAnalyseSection.tsx`
 
-### Contenu CinematicHero (nouveaux props)
-- `brandName` : `À nos bureaux de Crissier · Analyse gratuite` (avec icône MapPin via children/badge — sinon on garde brandName court : `Bureau de Crissier`).
-- `tagline1` : `Fais analyser ton dossier`
-- `tagline2` : `gratuitement avant tes candidatures`
-- `cardHeading` : `Analyse personnalisée de ton dossier`
-- `cardDescription` : `Nos experts te disent ce qui joue en ta faveur, ce qui bloque tes candidatures, comment l'améliorer et quels logements viser. Objectif : maximiser tes chances rapidement.`
-- `metricValue` : `500+`
-- `metricLabel` : `familles accompagnées avec succès`
-- `ctaHeading` : `Réserve ton analyse gratuite`
-- `ctaDescription` : `30 min · Bureau de Crissier · Sans engagement`
+1. **Remplacer les 2 `<Button asChild><Link to="/rendez-vous?...">` par des `<Button onClick>`** :
+   - Bouton Location : `onClick={() => { setSearchType('location'); scrollToForm(); }}`
+   - Bouton Achat : `onClick={() => { setSearchType('achat'); scrollToForm(); }}`
+   - Retirer l'import `Link` si plus utilisé ailleurs dans le fichier (sinon le garder).
 
-### Bloc CTA injecté via `children` du CinematicHero (ou juste après)
-Phrase de conversion :
-> *Ne laisse plus ton dossier être refusé sans comprendre pourquoi. Réserve ton analyse gratuite maintenant.*
+2. **Ajouter un `ref` sur le bloc formulaire** (le `<div className="relative bg-card/50 ...">` à la ligne 246) et une fonction `scrollToForm()` qui fait `formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })` avec un petit `setTimeout(0)` pour laisser React monter le bloc si `searchType` était vide.
 
-Deux gros boutons (grid sm:grid-cols-2) :
-- 🔑 **Je cherche une location** → `Réserver mon analyse gratuite` → `/rendez-vous?type=location`
-- 🏠 **Je veux acheter un bien** → `Réserver mon analyse gratuite` → `/rendez-vous?type=achat`
+3. **Adapter le bloc "préfères tout faire en ligne"** : ce n'est plus un parcours secondaire — c'est LE parcours déclenché par les CTA. Reformuler le séparateur :
+   - Retirer "Ou en ligne" / "Préfères tout faire en ligne ?…"
+   - Remplacer par un titre dynamique affiché uniquement quand `searchType` est sélectionné : *"Étape 1 — Qualifie ton dossier en 30 secondes, puis choisis ton créneau au bureau."*
+   - Si `searchType` est vide (utilisateur n'a pas cliqué un CTA), masquer complètement le bloc form (au lieu d'afficher les 2 boutons "Location/Achat" doublons).
 
-Sous-texte : *Choisis ton projet et réserve directement ton créneau au bureau.*
-
-### Suite du formulaire existant
-Conservé intégralement (steps qualification → coordonnées → submitted, RLS, lead_phone_appointments). Il devient un parcours secondaire "préfères tout faire en ligne ?", positionné juste sous les 2 CTA RDV avec un H2 doux : *Ou réponds à quelques questions en ligne pour pré-qualifier ton dossier.*
-
-### Header public-site
-- Bouton principal (or, shimmer) : **Réserver mon RDV gratuit** → `/rendez-vous` (icône `Calendar`).
-- Bouton secondaire (outline) : *Activer ma recherche* → `/nouveau-mandat`.
-- "Mon espace client" et "Essayer la démo" : inchangés.
-
-### Sticky mobile (public-site)
-- Bouton plein : **Réserver mon RDV gratuit** → `/rendez-vous`
-- Lien petit dessous : *Activer ma recherche en ligne* → `/nouveau-mandat`
+4. **Sous-texte sous les CTA** : remplacer *"Choisis ton projet et réserve directement ton créneau au bureau."* par *"Choisis ton projet ci-dessous, puis bloque ton créneau au bureau de Crissier (étape finale du formulaire)."*
 
 ### Hors périmètre
-- Aucune modif backend / RLS / edge function.
-- Aucune modif des autres sections (HeroSection, AppShowcase, Pricing, etc.).
-- Pas de modif du formulaire existant ni de son flux de soumission.
-- Tokens sémantiques uniquement, pas de couleurs en dur ajoutées.
+- Pas de changement à `/rendez-vous` (`RendezVousBureau.tsx`) — la page existe toujours et reste accessible via le header / sticky mobile.
+- Pas de changement au flux backend (insert `lead_phone_appointments` + `leads` + edge function `notify-new-lead`) — il fait déjà créneau bureau via `PhoneSlotPicker`.
+- Pas de changement aux autres CTA (header, sticky mobile) — ils peuvent rester sur `/rendez-vous`.
+
+### Résultat attendu
+Clic sur "Je cherche une location" → la page **scrolle** vers le formulaire qui s'ouvre directement à l'étape qualification location → étape coordonnées → **étape finale = choix du créneau au bureau** dans la même section, sans changement de page.
