@@ -159,9 +159,10 @@ export default function Leads() {
     const seen = new Set<string>();
     const in24h = Date.now() + 24 * 3600_000;
     const now = Date.now();
+    const staleCutoff = now - 2 * 3600_000;
     leads.forEach((l) => {
       const a = getApptForLead(l);
-      if (a && a.status === "en_attente") {
+      if (a && a.status === "en_attente" && new Date(a.slot_start).getTime() >= staleCutoff) {
         items.push({ lead: l, reason: "rdv_today", appt: a });
         seen.add(l.id);
         return;
