@@ -43,11 +43,10 @@ export function PhoneSlotPicker({ selected, onSelect }: PhoneSlotPickerProps) {
       const start = new Date();
       const end = new Date();
       end.setDate(end.getDate() + 15);
-      const { data } = await supabase
-        .from('available_phone_slots' as any)
-        .select('slot_start, status')
-        .gte('slot_start', start.toISOString())
-        .lte('slot_start', end.toISOString());
+      const { data } = await supabase.rpc('get_available_phone_slots', {
+        p_from: start.toISOString(),
+        p_to: end.toISOString(),
+      } as any);
       if (!mounted) return;
       const set = new Set<string>();
       (data || []).forEach((row: any) => {
