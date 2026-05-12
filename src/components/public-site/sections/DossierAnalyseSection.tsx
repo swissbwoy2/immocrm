@@ -107,9 +107,8 @@ export function DossierAnalyseSection() {
       }
       createdApptId = apptId;
 
-      const leadId = crypto.randomUUID();
-      const { error } = await supabase.from('leads').insert({
-        id: leadId,
+      let leadId = crypto.randomUUID();
+      const leadPayload = {
         email: email.trim(), prenom: prenom.trim(), nom: nom.trim(), telephone: telephone.trim(),
         localite: localite.trim() || null, statut_emploi: isAchat ? null : statutEmploi,
         permis_nationalite: isAchat ? null : permisNationalite, poursuites: isAchat ? null : !confirmNoPoursuites,
@@ -119,8 +118,24 @@ export function DossierAnalyseSection() {
         apport_personnel: isAchat ? apportPersonnel : null, type_bien: isAchat ? typeBien : null,
         utm_source: utmParams.utm_source, utm_medium: utmParams.utm_medium,
         utm_campaign: utmParams.utm_campaign, utm_content: utmParams.utm_content, utm_term: utmParams.utm_term,
-      });
-      if (error) throw error;
+      };
+      const { error } = await supabase.from('leads').insert({ id: leadId, ...leadPayload });
+      if (error) {
+        if ((error as any).code === '23505') {
+          // Lead déjà existant pour ce formulaire — on récupère et on rafraîchit
+          const { data: existing, error: selErr } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('email', email.trim())
+            .eq('source', 'landing_analyse_dossier')
+            .maybeSingle();
+          if (selErr || !existing) throw error;
+          leadId = (existing as any).id;
+          await supabase.from('leads').update(leadPayload).eq('id', leadId);
+        } else {
+          throw error;
+        }
+      }
 
       await supabase
         .from('lead_phone_appointments')

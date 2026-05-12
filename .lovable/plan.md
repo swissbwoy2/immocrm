@@ -1,23 +1,25 @@
-## Problème
+## Cause
 
-Carina affiche 22 clients alors qu'elle n'en a que 13 actifs. La requête actuelle filtre seulement `statut <> 'reloge'`, ce qui inclut aussi les clients `inactif` (8) et `suspendu` (1) → 13 + 8 + 1 = 22.
+L'erreur "Une erreur est survenue" sur la réservation au bureau via le formulaire shortlist (`DossierAnalyseSection`) vient de la base de données :
 
-Répartition réelle en base pour Carina :
-- actif : 13
-- inactif : 8
-- suspendu : 1
-- reloge : 1
+```
+duplicate key value violates unique constraint "leads_email_formulaire_unique_idx"
+```
 
-## Décision
+Cet email a déjà été enregistré une première fois via le même formulaire (`source = 'landing_analyse_dossier'`). Un index unique empêche un deuxième `INSERT` dans `leads` avec le même couple email + formulaire, donc le `try` échoue, le toast d'erreur s'affiche, et le créneau qui venait d'être créé est annulé.
 
-Compter uniquement les clients au statut `actif` partout où on affiche un nombre de clients par agent.
+Le créneau lui-même (`lead_phone_appointments`) avait pourtant bien été pris : c'est uniquement la deuxième écriture (le lead) qui casse.
 
-## Changements
+## Correctif proposé
 
-1. **`src/pages/admin/Agents.tsx`** (liste des agents, KPI "Actifs", badge par carte) — remplacer `.neq('clients.statut', 'reloge')` par `.eq('clients.statut', 'actif')`.
+Dans `src/components/public-site/sections/DossierAnalyseSection.tsx`, fonction `handleSubmit` :
 
-2. **`src/pages/admin/AgentDetail.tsx`** — la requête `client_agents` qui alimente la liste et le badge `{clients.length}` doit elle aussi filtrer `clients.statut = 'actif'` au lieu de `<> 'reloge'`. Cela impactera également la projection financière, qui ne prendra plus en compte que les mandats actifs (cohérent avec l'intention du KPI).
+1. Tenter l'`INSERT` dans `leads` comme aujourd'hui.
+2. Si Postgres renvoie `23505` sur la contrainte d'unicité de l'email du formulaire :
+   - récupérer le lead existant (`select id from leads where email = ... and source = 'landing_analyse_dossier'`),
+   - faire un `update` des champs utiles (téléphone, localité, qualification, UTM, etc.) pour rafraîchir les infos,
+   - réutiliser son `id` comme `leadId`.
+3. Continuer le flow normal : lier le `lead_phone_appointments` créé à ce `leadId`, déclencher `notify-new-lead`, le pixel Meta, et passer en `step = 'submitted'`.
+4. Ne plus annuler le créneau dans ce cas (l'annulation reste uniquement pour les vraies erreurs inattendues).
 
-3. **`src/pages/admin/StatistiquesAgents.tsx`** — même changement pour le `total_clients`.
-
-Aucun changement de schéma ni de RLS, uniquement la logique de filtrage côté requête.
+Aucun changement de schéma, RLS, ou edge function n'est nécessaire — uniquement le composant front. Le toast d'erreur ne s'affichera plus pour un prospect qui retente le formulaire avec le même email.
