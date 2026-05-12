@@ -244,13 +244,31 @@ export default function Leads() {
     }
   };
 
+  // Mappe le parcours du lead vers la bonne campagne email.
+  // "achat" est volontairement laissé en `null` (campagne en draft) -> lead ignoré.
+  const getCampaignKeyForLead = (lead: Lead): string | null => {
+    const t = (lead.type_recherche || "").toLowerCase().trim();
+    if (t === "location" || t === "louer") return "location";
+    if (t === "vente" || t === "vendre") return "vente";
+    if (t === "renovation" || t === "rénovation") return "renovation";
+    // achat / acheter / autre / vide -> ignoré pour l'instant
+    return null;
+  };
+
   const sendSingleRelance = async (lead: Lead) => {
+    const campaignKey = getCampaignKeyForLead(lead);
+    if (!campaignKey) {
+      toast.error("Parcours non supporté", {
+        description: `Type "${lead.type_recherche || "inconnu"}" : aucune campagne associée (achat en attente).`,
+      });
+      return;
+    }
     toast.loading(`Envoi à ${lead.prenom || lead.email}…`, { id: `relance-${lead.id}` });
     try {
       const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
         body: {
           mode: "send",
-          campaignKey: "location",
+          campaignKey,
           leadSource: "leads",
           leadIds: [lead.id],
         },
@@ -301,28 +319,54 @@ export default function Leads() {
     }
   };
 
+  // Répartition des leads non-contactés par campagne (utilisée par le dialog + l'envoi bulk)
+  const relanceBreakdown = useMemo(() => {
+    const groups: Record<string, string[]> = { location: [], vente: [], renovation: [] };
+    const ignored: { id: string; type: string }[] = [];
+    for (const l of filteredLeads) {
+      if (l.contacted) continue;
+      const key = getCampaignKeyForLead(l);
+      if (key && groups[key]) groups[key].push(l.id);
+      else ignored.push({ id: l.id, type: l.type_recherche || "inconnu" });
+    }
+    return { groups, ignored };
+  }, [filteredLeads]);
+
+  const sendableCount =
+    relanceBreakdown.groups.location.length +
+    relanceBreakdown.groups.vente.length +
+    relanceBreakdown.groups.renovation.length;
+
   const sendRelanceAll = async () => {
-    const ids = filteredLeads.filter((l) => !l.contacted).map((l) => l.id);
     setRelanceSending(true);
     try {
       let totalSent = 0, totalErrors = 0;
-      // Batch via la campagne "location" (suivi de campagne implanté)
-      for (let i = 0; i < ids.length; i += 50) {
-        const batch = ids.slice(i, i + 50);
-        const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
-          body: {
-            mode: "send",
-            campaignKey: "location",
-            leadSource: "leads",
-            leadIds: batch,
-          },
-        });
-        if (error) throw error;
-        if (!data?.success) throw new Error(data?.error || "Erreur campagne");
-        totalSent += data.sent || 0;
-        totalErrors += data.failed || 0;
+      const perCampaign: Record<string, number> = {};
+      for (const [campaignKey, ids] of Object.entries(relanceBreakdown.groups)) {
+        if (!ids.length) continue;
+        let sentForCampaign = 0;
+        for (let i = 0; i < ids.length; i += 50) {
+          const batch = ids.slice(i, i + 50);
+          const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
+            body: { mode: "send", campaignKey, leadSource: "leads", leadIds: batch },
+          });
+          if (error) throw error;
+          if (!data?.success) throw new Error(data?.error || `Erreur campagne ${campaignKey}`);
+          totalSent += data.sent || 0;
+          totalErrors += data.failed || 0;
+          sentForCampaign += data.sent || 0;
+        }
+        perCampaign[campaignKey] = sentForCampaign;
       }
-      toast.success(`${totalSent} email(s) envoyé(s)`, { description: totalErrors > 0 ? `${totalErrors} erreur(s)` : undefined });
+      const detail = Object.entries(perCampaign).map(([k, n]) => `${n} ${k}`).join(" • ");
+      const ignoredCount = relanceBreakdown.ignored.length;
+      toast.success(`${totalSent} email(s) envoyé(s)`, {
+        description: [
+          detail || null,
+          ignoredCount ? `${ignoredCount} ignoré(s) (parcours non supporté)` : null,
+          totalErrors ? `${totalErrors} erreur(s)` : null,
+        ].filter(Boolean).join(" • ") || undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       setShowRelanceDialog(false);
     } catch (err) {
@@ -446,14 +490,23 @@ export default function Leads() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Relance marketing</DialogTitle>
             <DialogDescription>
-              Un email marketing sera envoyé aux <strong>{notContactedCount}</strong> leads non contactés des résultats actuels.
+              Chaque lead reçoit l'email de la campagne correspondant à son parcours.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span>Location (recherche appartement)</span><strong>{relanceBreakdown.groups.location.length}</strong></div>
+            <div className="flex justify-between"><span>Vente (vendre son bien)</span><strong>{relanceBreakdown.groups.vente.length}</strong></div>
+            <div className="flex justify-between"><span>Rénovation</span><strong>{relanceBreakdown.groups.renovation.length}</strong></div>
+            <div className="flex justify-between text-muted-foreground border-t pt-2">
+              <span>Ignorés (achat / parcours non supporté)</span>
+              <strong>{relanceBreakdown.ignored.length}</strong>
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>Annuler</Button>
-            <Button onClick={sendRelanceAll} disabled={relanceSending || notContactedCount === 0} className="gap-2">
+            <Button onClick={sendRelanceAll} disabled={relanceSending || sendableCount === 0} className="gap-2">
               {relanceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {relanceSending ? "Envoi…" : `Envoyer à ${notContactedCount}`}
+              {relanceSending ? "Envoi…" : `Envoyer à ${sendableCount}`}
             </Button>
           </DialogFooter>
         </DialogContent>
