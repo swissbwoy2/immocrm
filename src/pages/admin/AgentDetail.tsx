@@ -87,6 +87,35 @@ const AgentDetail = () => {
     telephone: ''
   });
 
+  // Projection financière (modèle location, ≤90j, hors reloge)
+  const projectionItems: ProjectionItem[] = useMemo(() => {
+    const now = Date.now();
+    return clients
+      .filter(c => {
+        if (c.statut === 'reloge') return false;
+        if (!c.date_ajout) return true;
+        const days = (now - new Date(c.date_ajout).getTime()) / (1000 * 60 * 60 * 24);
+        return days <= 90;
+      })
+      .map(c => {
+        const splitAgent = c.agent_commission_split ?? c.commission_split ?? 45;
+        const base = c.budget_max || 0;
+        const commissionAgent = Math.round(base * (splitAgent / 100));
+        const partAgence = Math.round(base * ((100 - splitAgent) / 100));
+        const fullName = `${c.profiles?.prenom || ''} ${c.profiles?.nom || ''}`.trim() || 'Client';
+        return {
+          clientId: c.id,
+          clientName: fullName,
+          base,
+          splitAgent,
+          commissionAgent,
+          partAgence,
+          isPrimary: !!c.is_primary,
+        };
+      })
+      .filter(i => i.base > 0);
+  }, [clients]);
+
   useEffect(() => {
     if (agentId) {
       fetchAgentDetails();
