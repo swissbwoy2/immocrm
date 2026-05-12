@@ -57,7 +57,7 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
                   <div className="font-medium text-sm truncate">{fullName(h.lead)}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {h.reason === "rdv_today" && h.appt ? (
-                      <>📞 {format(new Date(h.appt.slot_start), "EEE HH'h'mm", { locale: fr })} · {h.appt.status === "confirme" ? "confirmé" : "à confirmer"}</>
+                      <>📍 RDV bureau · {format(new Date(h.appt.slot_start), "EEE HH'h'mm", { locale: fr })} · {h.appt.status === "confirme" ? "confirmé" : "à confirmer"}</>
                     ) : (
                       <>Qualifié non contacté</>
                     )}
