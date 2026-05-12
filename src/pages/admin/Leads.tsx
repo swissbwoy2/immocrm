@@ -490,14 +490,23 @@ export default function Leads() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Relance marketing</DialogTitle>
             <DialogDescription>
-              Un email marketing sera envoyé aux <strong>{notContactedCount}</strong> leads non contactés des résultats actuels.
+              Chaque lead reçoit l'email de la campagne correspondant à son parcours.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span>Location (recherche appartement)</span><strong>{relanceBreakdown.groups.location.length}</strong></div>
+            <div className="flex justify-between"><span>Vente (vendre son bien)</span><strong>{relanceBreakdown.groups.vente.length}</strong></div>
+            <div className="flex justify-between"><span>Rénovation</span><strong>{relanceBreakdown.groups.renovation.length}</strong></div>
+            <div className="flex justify-between text-muted-foreground border-t pt-2">
+              <span>Ignorés (achat / parcours non supporté)</span>
+              <strong>{relanceBreakdown.ignored.length}</strong>
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>Annuler</Button>
-            <Button onClick={sendRelanceAll} disabled={relanceSending || notContactedCount === 0} className="gap-2">
+            <Button onClick={sendRelanceAll} disabled={relanceSending || sendableCount === 0} className="gap-2">
               {relanceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {relanceSending ? "Envoi…" : `Envoyer à ${notContactedCount}`}
+              {relanceSending ? "Envoi…" : `Envoyer à ${sendableCount}`}
             </Button>
           </DialogFooter>
         </DialogContent>
