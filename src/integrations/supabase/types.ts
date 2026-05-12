@@ -10918,21 +10918,6 @@ export type Database = {
       }
     }
     Views: {
-      available_phone_slots: {
-        Row: {
-          slot_start: string | null
-          status: string | null
-        }
-        Insert: {
-          slot_start?: string | null
-          status?: string | null
-        }
-        Update: {
-          slot_start?: string | null
-          status?: string | null
-        }
-        Relationships: []
-      }
       renovation_my_company_score_view: {
         Row: {
           company_id: string | null
@@ -11063,6 +11048,13 @@ export type Database = {
         Returns: undefined
       }
       generate_parrainage_code: { Args: never; Returns: string }
+      get_available_phone_slots: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          slot_start: string
+          status: string
+        }[]
+      }
       get_client_agent_id: {
         Args: { _client_user_id: string }
         Returns: string
@@ -11071,6 +11063,23 @@ export type Database = {
       get_my_agent_id: { Args: never; Returns: string }
       get_my_co_agent_client_ids: { Args: never; Returns: string[] }
       get_next_abaninja_client_number: { Args: never; Returns: string }
+      get_public_annonceurs: {
+        Args: never
+        Returns: {
+          canton: string
+          created_at: string
+          est_verifie: boolean
+          id: string
+          logo_url: string
+          nb_avis: number
+          nom: string
+          nom_entreprise: string
+          note_moyenne: number
+          prenom: string
+          type_annonceur: string
+          ville: string
+        }[]
+      }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
         Returns: boolean
