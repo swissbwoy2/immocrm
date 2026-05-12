@@ -247,7 +247,14 @@ export default function Leads() {
   const sendSingleRelance = async (lead: Lead) => {
     toast.loading(`Envoi à ${lead.prenom || lead.email}…`, { id: `relance-${lead.id}` });
     try {
-      const { data, error } = await supabase.functions.invoke("send-lead-relance", { body: { lead_ids: [lead.id] } });
+      const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
+        body: {
+          mode: "send",
+          campaignKey: "location",
+          leadSource: "leads",
+          leadIds: [lead.id],
+        },
+      });
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "Erreur");
       toast.success(`Email envoyé à ${lead.prenom || lead.email}`, { id: `relance-${lead.id}` });
