@@ -66,6 +66,13 @@ export default function Assignations() {
   const [deleting, setDeleting] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelectedClients, setBulkSelectedClients] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
+  const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [coFilter, setCoFilter] = useState<'all' | 'mono' | 'multi'>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'old' | 'name'>('recent');
+  const [quickAddClient, setQuickAddClient] = useState<string | null>(null);
+  const [quickAddAgentId, setQuickAddAgentId] = useState<string>('');
+  const [quickAddSplit, setQuickAddSplit] = useState<number>(45);
   const { toast } = useToast();
 
   useEffect(() => {
