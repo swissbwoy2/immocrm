@@ -4,7 +4,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, List, Rows, Zap, Upload, Download, MoreHorizontal, Sparkles } from "lucide-react";
+import { LayoutGrid, List, Rows, Zap, Upload, Download, MoreHorizontal, Sparkles, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "pipeline" | "list" | "cards";
@@ -16,7 +16,10 @@ interface Props {
   rdvCount: number;
   hotCount: number;
   notContactedCount: number;
+  whatsappCount?: number;
   onRelance: () => void;
+  onWhatsapp?: () => void;
+  whatsappLoading?: boolean;
   onImport?: () => void;
   onExport: () => void;
 }
@@ -29,7 +32,8 @@ const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
 
 export function LeadsHero({
   view, setView, total, rdvCount, hotCount, notContactedCount,
-  onRelance, onImport, onExport,
+  whatsappCount = 0, onRelance, onWhatsapp, whatsappLoading,
+  onImport, onExport,
 }: Props) {
   return (
     <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 justify-between items-stretch lg:items-center">
@@ -91,6 +95,18 @@ export function LeadsHero({
           <Zap className="h-4 w-4" />
           Relancer ({notContactedCount})
         </Button>
+
+        {onWhatsapp && (
+          <Button
+            onClick={onWhatsapp}
+            disabled={whatsappLoading || whatsappCount === 0}
+            variant="secondary"
+            className="gap-2 min-h-[44px] sm:min-h-[40px] w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <MessageCircle className="h-4 w-4" />
+            {whatsappLoading ? "Envoi…" : `WhatsApp (${whatsappCount})`}
+          </Button>
+        )}
       </div>
     </div>
   );

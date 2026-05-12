@@ -377,14 +377,16 @@ export default function Leads() {
   };
 
   // ─── WHATSAPP RELANCE (template "location_rdv_activation_v2") ───
-  // Cible : leads avec téléphone (location uniquement, comme la campagne meta_leads).
+  // Cible : tous les leads non contactés ayant un téléphone (hors opt-out).
+  // Le template parle de location mais on l'utilise comme relance générique
+  // sur tous les parcours (mêmes destinataires que la relance email).
   const waCandidates = useMemo(
     () =>
       filteredLeads.filter((l) => {
         if (l.contacted) return false;
         if (!l.telephone && !(l as any).phone_e164) return false;
         if ((l as any).whatsapp_opt_out) return false;
-        return getCampaignKeyForLead(l) === "location";
+        return true;
       }),
     [filteredLeads],
   );
@@ -460,6 +462,12 @@ export default function Leads() {
           rdvCount={kpis.rdvCount}
           hotCount={hotItems.length}
           notContactedCount={notContactedCount}
+          whatsappCount={waCandidates.length}
+          whatsappLoading={waSending}
+          onWhatsapp={() => {
+            if (!confirm(`Envoyer le template WhatsApp à ${waCandidates.length} lead(s) ?\n(par paquets de 3, dédup 24h)`)) return;
+            sendWhatsappRelanceAll();
+          }}
           onRelance={() => setShowRelanceDialog(true)}
           onExport={exportCSV}
         />
