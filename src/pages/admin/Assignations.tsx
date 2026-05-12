@@ -491,6 +491,143 @@ export default function Assignations() {
     }
   };
 
+  const handleRemoveSingleAgent = async (clientId: string, agentId: string) => {
+    try {
+      const assignments = clientAgents.filter(ca => ca.client_id === clientId);
+      const removed = assignments.find(a => a.agent_id === agentId);
+      if (!removed) return;
+      const wasPrimary = removed.is_primary;
+      const remaining = assignments.filter(a => a.agent_id !== agentId);
+
+      // Delete the single line
+      const { error: delErr } = await supabase
+        .from('client_agents')
+        .delete()
+        .eq('client_id', clientId)
+        .eq('agent_id', agentId);
+      if (delErr) throw delErr;
+
+      await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: agentId });
+
+      // Archive conversation
+      await supabase
+        .from('conversations')
+        .update({ is_archived: true })
+        .eq('agent_id', agentId)
+        .eq('client_id', clientId);
+
+      // Notify removed agent
+      const { data: agentData } = await supabase
+        .from('agents').select('user_id').eq('id', agentId).single();
+      const { data: clientData } = await supabase
+        .from('clients').select('user_id').eq('id', clientId).single();
+      const { data: clientProfile } = clientData ? await supabase
+        .from('profiles').select('prenom, nom').eq('id', clientData.user_id).single() : { data: null };
+      const clientName = clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'ce client';
+      if (agentData) {
+        await supabase.rpc('create_notification', {
+          p_user_id: agentData.user_id,
+          p_type: 'client_removed',
+          p_title: 'Client retiré',
+          p_message: `${clientName} a été retiré de votre portefeuille`,
+          p_link: '/agent/mes-clients',
+          p_metadata: { client_id: clientId },
+        });
+      }
+
+      // Re-sync clients.agent_id with current primary
+      if (wasPrimary && remaining.length > 0) {
+        // Promote the first remaining co-agent to primary
+        const newPrimary = remaining[0];
+        await supabase
+          .from('client_agents')
+          .update({ is_primary: true })
+          .eq('client_id', clientId)
+          .eq('agent_id', newPrimary.agent_id);
+        await supabase
+          .from('clients')
+          .update({ agent_id: newPrimary.agent_id, commission_split: newPrimary.commission_split })
+          .eq('id', clientId);
+      } else if (remaining.length === 0) {
+        await supabase.from('clients').update({ agent_id: null }).eq('id', clientId);
+      }
+
+      await loadData();
+      toast({ title: 'Agent retiré', description: 'L\'agent a été retiré de ce client' });
+    } catch (e: any) {
+      console.error('handleRemoveSingleAgent', e);
+      toast({ title: 'Erreur', description: 'Impossible de retirer cet agent', variant: 'destructive' });
+    }
+  };
+
+  const handlePromoteToPrimary = async (clientId: string, agentId: string) => {
+    try {
+      const assignments = clientAgents.filter(ca => ca.client_id === clientId);
+      const target = assignments.find(a => a.agent_id === agentId);
+      if (!target || target.is_primary) return;
+
+      // Unset all primaries
+      await supabase
+        .from('client_agents')
+        .update({ is_primary: false })
+        .eq('client_id', clientId);
+      // Set new primary
+      await supabase
+        .from('client_agents')
+        .update({ is_primary: true })
+        .eq('client_id', clientId)
+        .eq('agent_id', agentId);
+      // Sync legacy column
+      await supabase
+        .from('clients')
+        .update({ agent_id: agentId, commission_split: target.commission_split })
+        .eq('id', clientId);
+
+      await loadData();
+      toast({ title: 'Agent principal mis à jour', description: 'Cet agent est désormais principal' });
+    } catch (e: any) {
+      console.error('handlePromoteToPrimary', e);
+      toast({ title: 'Erreur', description: 'Impossible de promouvoir cet agent', variant: 'destructive' });
+    }
+  };
+
+  const handleQuickAddCoAgent = async (clientId: string, agentId: string, split: number) => {
+    try {
+      const assignments = clientAgents.filter(ca => ca.client_id === clientId);
+      if (assignments.length >= 4) {
+        toast({ title: 'Limite atteinte', description: 'Maximum 4 agents par client', variant: 'destructive' });
+        return;
+      }
+      if (assignments.some(a => a.agent_id === agentId)) {
+        toast({ title: 'Déjà assigné', description: 'Cet agent est déjà assigné à ce client', variant: 'destructive' });
+        return;
+      }
+      const { error } = await supabase.from('client_agents').insert({
+        client_id: clientId,
+        agent_id: agentId,
+        is_primary: false,
+        commission_split: split,
+      });
+      if (error) throw error;
+
+      await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: agentId });
+      await supabase
+        .from('conversations')
+        .update({ is_archived: false })
+        .eq('agent_id', agentId)
+        .eq('client_id', clientId);
+
+      setQuickAddClient(null);
+      setQuickAddAgentId('');
+      setQuickAddSplit(45);
+      await loadData();
+      toast({ title: 'Co-agent ajouté', description: 'L\'agent a été ajouté en co-assignation' });
+    } catch (e: any) {
+      console.error('handleQuickAddCoAgent', e);
+      toast({ title: 'Erreur', description: 'Impossible d\'ajouter ce co-agent', variant: 'destructive' });
+    }
+  };
+
   const handleDeleteAllClients = async () => {
     try {
       setDeleting(true);
