@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Zap } from "lucide-react";
+import { Loader2, Send, Zap, MessageCircle } from "lucide-react";
 import { getLeadSource, type LeadSourceKey } from "@/lib/lead-source";
 import { LeadsHero, type ViewMode } from "@/components/admin/leads/LeadsHero";
 import { LeadsKpiStrip } from "@/components/admin/leads/LeadsKpiStrip";
