@@ -135,8 +135,13 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Email sent result:", data);
 
     if (!res.ok) {
-      console.error("Resend API error:", data);
-      throw new Error(data.message || "Failed to send email");
+      // Do not fail the lead capture flow if email cannot be sent
+      // (e.g. Resend daily quota exceeded). Log and return 200.
+      console.error("Resend API error (non-blocking):", data);
+      return new Response(
+        JSON.stringify({ success: false, emailSkipped: true, reason: data?.message || "email_failed" }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
     return new Response(JSON.stringify({ success: true, data }), {
@@ -144,13 +149,11 @@ const handler = async (req: Request): Promise<Response> => {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error in notify-new-lead function:", error);
+    console.error("Error in notify-new-lead function (non-blocking):", error);
+    // Never break the lead capture flow because of email errors
     return new Response(
-      JSON.stringify({ error: (error instanceof Error ? error.message : String(error)) }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      JSON.stringify({ success: false, emailSkipped: true, reason: error instanceof Error ? error.message : String(error) }),
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
