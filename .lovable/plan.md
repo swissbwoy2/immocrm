@@ -1,37 +1,37 @@
-## Objectif
-Fiabiliser deux bugs backend liés aux rendez-vous bureau :
-- les RDV avec demande de confirmation ne remontent pas correctement dans LeadShort List
-- les messages WhatsApp `rdv_bureau_rappel` continuent d’échouer
+## Constat
+
+Sur `/admin/leads`, la "LeadShort List" (carrousel **À traiter en priorité**) remonte actuellement **tous** les RDV bureau au statut `en_attente`, peu importe leur date. Résultat :
+- 9 RDV `en_attente` en base, dont certains datent du 22 avril, remontent comme "à confirmer" alors qu'ils sont **passés** et probablement déjà traités hors-app → l'admin a l'impression que tout a été "remis à zéro".
+- Le carrousel affiche un pictogramme `📞` et le libellé est ambigu, alors qu'il n'existe plus que des **RDV bureau** (le RDV téléphonique a été retiré côté formulaire public).
 
 ## Plan
 
-### 1. Stabiliser le lien Lead ↔ RDV bureau dans LeadShort List
-- Revoir le flux public de création de lead + rendez-vous pour éviter le rattachement tardif et fragile.
-- Identifier tous les écrans admin qui déduisent le RDV depuis `lead_id` ou l’email, puis unifier la logique.
-- Faire en sorte que LeadShort List affiche bien les RDV bureau même si le lead a été créé juste avant, si l’email varie en casse, ou si le `lead_id` a été lié après insertion.
+### 1. Recentrer la LeadShort List sur les RDV bureau **actionnables**
+Dans `src/pages/admin/Leads.tsx` (`hotItems`) :
+- Garder dans le hot uniquement les RDV bureau `en_attente` **futurs** (`slot_start >= maintenant`) ou **du jour même passé de moins de 2h** (cas d'un RDV oublié à confirmer en début de journée).
+- Les RDV `en_attente` plus anciens que ça sont considérés stales et **n'apparaissent plus** dans le hot — ils restent visibles dans la liste/pipeline classique pour ne rien perdre.
+- Conserver l'affichage des RDV `confirme` dans les 24h à venir et des leads qualifiés froids.
 
-### 2. Vérifier et corriger la source exacte des erreurs WhatsApp
-- Corriger la config du template `rdv_bureau_rappel` pour qu’elle corresponde exactement au template réellement disponible côté Meta.
-- Vérifier le code d’envoi `send-whatsapp-notification` et les appels depuis `confirm-phone-appointment` et `send-phone-appointment-reminders`.
-- Séparer les erreurs de configuration template (`132001`) des erreurs de délivrabilité numéro (`131026`) pour éviter de conclure qu’un seul bug reste.
+### 2. Étiqueter clairement "RDV bureau" partout dans la LeadShort List
+Dans `src/components/admin/leads/LeadsHotCarousel.tsx` :
+- Remplacer le pictogramme `📞` par `📍` et préfixer la ligne par **"RDV bureau"** suivi de la date/heure et du statut (`à confirmer` / `confirmé`).
+- Garder le bouton **Confirmer** uniquement pour les `en_attente`.
 
-### 3. Fiabiliser confirmation + rappels RDV bureau
-- Revoir le flux de confirmation admin pour qu’il réinitialise correctement les marqueurs de rappel WhatsApp/email si un RDV est reconfirmé.
-- Harmoniser les variables envoyées au template entre confirmation et rappels.
-- Ajouter les garde-fous nécessaires pour ne pas marquer un rappel comme envoyé si Meta le refuse.
+Dans `src/components/admin/leads/LeadsKpiStrip.tsx` :
+- Renommer la KPI actuelle "RDV" en **"RDV bureau"** pour lever toute ambiguïté avec un éventuel ancien "RDV téléphonique".
+- Conserver le sous-libellé "X à confirmer · Y confirmés".
 
-### 4. Valider sur données réelles
-- Tester sur un RDV bureau récent et sur les logs WhatsApp existants.
-- Vérifier que LeadShort List remonte bien le RDV avec demande de confirmation.
-- Vérifier qu’un envoi template ne produit plus l’erreur `132001`, puis isoler les éventuels échecs restants dus aux numéros destinataires.
+### 3. Optionnel : petit garde-fou côté KPI "à confirmer"
+- Ne compter dans `rdvPending` que les `en_attente` non stales (même règle que le hot), pour que le chiffre affiché corresponde à ce qui est réellement actionnable dans le carrousel.
 
 ## Détails techniques
-- Fichiers principalement concernés :
-  - `src/pages/admin/Leads.tsx`
-  - `src/components/admin/leads/*`
-  - `src/components/landing/DossierAnalyseSection.tsx`
-  - `src/components/public-site/sections/DossierAnalyseSection.tsx`
-  - `supabase/functions/confirm-phone-appointment/index.ts`
-  - `supabase/functions/send-phone-appointment-reminders/index.ts`
-  - potentiellement une migration pour corriger `whatsapp_message_templates`
-- Une migration backend sera probablement nécessaire pour corriger proprement la ligne template stockée en base si le nom/langage Meta actuel n’est pas le bon.
+
+Fichiers modifiés :
+- `src/pages/admin/Leads.tsx` — logique `hotItems` + éventuellement `kpis.rdvPending`
+- `src/components/admin/leads/LeadsHotCarousel.tsx` — libellé "RDV bureau" + icône
+- `src/components/admin/leads/LeadsKpiStrip.tsx` — renommage KPI
+
+Aucune migration DB, aucun changement aux Edge Functions, aucun `status` modifié sur les RDV existants — on filtre simplement l'affichage.
+
+## Question ouverte
+Pour les 9 RDV `en_attente` historiques (avril → début mai) qui n'apparaîtront plus dans le hot : préfères-tu qu'on te propose plus tard un **bouton de purge** ("marquer ces RDV passés non confirmés comme `annule`") pour nettoyer la base ? Sinon on les laisse tels quels, ils restent visibles dans le pipeline.
