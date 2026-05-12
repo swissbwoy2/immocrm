@@ -210,13 +210,21 @@ const AgentDetail = () => {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // Fetch assigned clients
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('agent_id', agentId);
+      // Fetch assigned clients via client_agents (source of truth, includes co-assignments)
+      const { data: caRows, error: clientsError } = await supabase
+        .from('client_agents')
+        .select('is_primary, commission_split, clients!inner(*)')
+        .eq('agent_id', agentId)
+        .neq('clients.statut', 'reloge')
+        .limit(15000);
 
       if (clientsError) throw clientsError;
+
+      const clientsData = (caRows || []).map((r: any) => ({
+        ...r.clients,
+        is_primary: r.is_primary,
+        commission_split: r.commission_split,
+      }));
 
       // Fetch clients profiles
       const userIds = clientsData?.map(c => c.user_id) || [];
