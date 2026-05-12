@@ -77,7 +77,7 @@ const Agents = () => {
           .from('client_agents')
           .select('agent_id, clients!inner(statut)')
           .in('agent_id', agentIds)
-          .neq('clients.statut', 'reloge'),
+          .eq('clients.statut', 'actif'),
       ]);
 
       if (profilesResult.error) throw profilesResult.error;

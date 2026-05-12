@@ -248,7 +248,7 @@ const AgentDetail = () => {
         .from('client_agents')
         .select('is_primary, commission_split, clients!inner(*)')
         .eq('agent_id', agentId)
-        .neq('clients.statut', 'reloge')
+        .eq('clients.statut', 'actif')
         .limit(15000);
 
       if (clientsError) throw clientsError;
