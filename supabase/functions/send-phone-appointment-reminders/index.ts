@@ -40,7 +40,7 @@ const TIERS: Tier[] = [
     waCol: 'wa_reminder_3h_sent_at',
     subjectFr: (_d, t) => `⏰ Rappel : votre RDV dans 3 heures à ${t}`,
     emailIntro: 'Petit rappel : votre rendez-vous au bureau est <strong>dans environ 3 heures</strong>.',
-    waHoraire: (t) => `dans environ 3 heures (${t})`,
+    waHoraire: (t) => `dans 3 heures à ${t}`,
   },
   {
     key: '1h',
@@ -50,7 +50,7 @@ const TIERS: Tier[] = [
     waCol: 'wa_reminder_1h_sent_at',
     subjectFr: (_d, t) => `⏰ Votre RDV dans 1 heure à ${t}`,
     emailIntro: 'Votre rendez-vous au bureau est <strong>dans 1 heure</strong>. Merci d\'arriver 5 minutes en avance.',
-    waHoraire: (t) => `dans 1 heure (${t})`,
+    waHoraire: (t) => `dans 1 heure à ${t}`,
   },
   {
     key: '30m',
@@ -60,7 +60,7 @@ const TIERS: Tier[] = [
     waCol: 'wa_reminder_30m_sent_at',
     subjectFr: (_d, t) => `🚨 Votre RDV dans 30 minutes à ${t}`,
     emailIntro: 'Votre rendez-vous au bureau est <strong>dans 30 minutes</strong>. À tout de suite !',
-    waHoraire: (t) => `dans 30 minutes (${t})`,
+    waHoraire: (t) => `dans 30 minutes à ${t}`,
   },
 ];
 
