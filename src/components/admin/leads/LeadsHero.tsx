@@ -95,6 +95,18 @@ export function LeadsHero({
           <Zap className="h-4 w-4" />
           Relancer ({notContactedCount})
         </Button>
+
+        {onWhatsapp && (
+          <Button
+            onClick={onWhatsapp}
+            disabled={whatsappLoading || whatsappCount === 0}
+            variant="secondary"
+            className="gap-2 min-h-[44px] sm:min-h-[40px] w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <MessageCircle className="h-4 w-4" />
+            {whatsappLoading ? "Envoi…" : `WhatsApp (${whatsappCount})`}
+          </Button>
+        )}
       </div>
     </div>
   );
