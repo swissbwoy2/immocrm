@@ -820,6 +820,9 @@ const AgentDetail = () => {
           />
         </PremiumCard>
 
+        {/* Projection financière */}
+        <AgentFinancialProjection items={projectionItems} />
+
         {/* Premium Clients Card */}
         <div className="space-y-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="flex items-center justify-between">
