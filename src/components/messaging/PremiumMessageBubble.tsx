@@ -6,7 +6,7 @@ import { MessageAttachment } from '@/components/MessageAttachment';
 
 interface MessagePayload {
   type?: string;
-  medias?: Array<{url: string, type: string, name: string, size: number}>;
+  medias?: Array<{ url: string; type: string; name: string; size: number }>;
 }
 
 interface PremiumMessageBubbleProps {
@@ -24,6 +24,12 @@ interface PremiumMessageBubbleProps {
   index?: number;
 }
 
+/**
+ * WhatsApp-style message bubble.
+ * Outgoing → green-tinted bubble on the right.
+ * Incoming → white/dark bubble on the left.
+ * API kept identical to the previous "premium" version.
+ */
 export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   content,
   isSent,
@@ -36,66 +42,37 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   attachmentSize,
   payload,
   className,
-  index = 0,
 }) => {
   const formattedTime = formatSwissTime(timestamp);
+  const hasAttachments =
+    !!attachmentUrl || (payload?.medias && payload.medias.length > 0);
 
   return (
     <div
-      style={{ animationDelay: `${index * 30}ms` }}
       className={cn(
-        'flex w-full mb-2 overflow-hidden min-w-0',
+        'flex w-full mb-1.5 min-w-0 animate-wa-bubble',
         isSent ? 'justify-end' : 'justify-start',
-        'animate-fade-in',
-        className
+        className,
       )}
     >
-      <div className={cn(
-        "flex flex-col max-w-[70%] sm:max-w-[75%] md:max-w-[60%]",
-        "group overflow-hidden min-w-0"
-      )}>
+      <div className="flex flex-col max-w-[85%] sm:max-w-[75%] md:max-w-[65%] min-w-0">
         {!isSent && senderName && (
-          <span className="text-xs text-muted-foreground mb-1 ml-3 font-medium">
+          <span className="text-[11px] text-muted-foreground mb-0.5 ml-3 font-medium">
             {senderName}
           </span>
         )}
+
         <div
           className={cn(
-            'relative px-4 py-3 rounded-2xl',
-            'transition-all duration-300',
-            'hover:shadow-xl hover:-translate-y-0.5',
+            'relative px-3 py-1.5 text-sm shadow-sm break-words',
             isSent
-              ? [
-                  'bg-gradient-to-br from-primary to-primary/90',
-                  'text-primary-foreground rounded-br-md',
-                  'shadow-lg shadow-primary/20',
-                  'hover:shadow-primary/30'
-                ]
-              : [
-                  'bg-gradient-to-br from-muted/80 to-muted',
-                  'backdrop-blur-sm',
-                  'border border-border/50',
-                  'rounded-bl-md',
-                  'shadow-md'
-                ]
+              ? 'rounded-2xl rounded-br-md bg-[hsl(var(--whatsapp-bubble-out))] text-foreground'
+              : 'rounded-2xl rounded-bl-md bg-[hsl(var(--whatsapp-bubble-in))] text-foreground border border-border/40',
           )}
         >
-          {/* Glassmorphism overlay for received messages */}
-          {!isSent && (
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-2xl rounded-bl-md pointer-events-none" />
-          )}
-
-          {/* Gradient shine effect on hover */}
-          <div className={cn(
-            'absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500',
-            isSent ? 'rounded-br-md' : 'rounded-bl-md',
-            'bg-gradient-to-r from-transparent via-white/10 to-transparent',
-            'animate-shimmer'
-          )} />
-
-          {/* Payload medias (multiple) */}
+          {/* Multiple medias */}
           {payload?.medias && payload.medias.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mb-2 relative z-10">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               {payload.medias.map((media, idx) => (
                 <MessageAttachment
                   key={idx}
@@ -108,9 +85,9 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
             </div>
           )}
 
-          {/* Single Attachment */}
+          {/* Single attachment */}
           {attachmentUrl && (
-            <div className="mb-2 relative z-10">
+            <div className="mb-2">
               <MessageAttachment
                 url={attachmentUrl}
                 type={attachmentType || 'application/octet-stream'}
@@ -120,36 +97,36 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
             </div>
           )}
 
-          {/* Message content */}
+          {/* Text content */}
           {content && (
-            <p className={cn(
-              "text-sm whitespace-pre-wrap break-words relative z-10",
-              "overflow-hidden overflow-wrap-anywhere",
-              isSent ? "text-primary-foreground" : "text-foreground"
-            )}
-            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+            <p
+              className={cn(
+                'whitespace-pre-wrap leading-relaxed',
+                hasAttachments ? '' : 'pr-12',
+              )}
+              style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             >
               {content}
             </p>
           )}
 
-          {/* Timestamp and read status */}
+          {/* Time + ticks */}
           <div
             className={cn(
-              'flex items-center gap-1.5 mt-2 justify-end relative z-10',
-              isSent ? 'text-primary-foreground/70' : 'text-muted-foreground'
+              'flex items-center gap-0.5 text-[10px] leading-none',
+              hasAttachments
+                ? 'justify-end mt-1'
+                : 'absolute bottom-1 right-2',
+              isSent ? 'text-foreground/55' : 'text-muted-foreground',
             )}
           >
-            <span className="text-[10px]">{formattedTime}</span>
+            <span>{formattedTime}</span>
             {isSent && (
-              <span className={cn(
-                'transition-all duration-300',
-                read ? 'text-blue-300 scale-110' : 'text-primary-foreground/50'
-              )}>
+              <span className="inline-flex">
                 {read ? (
-                  <CheckCheck className="h-4 w-4" />
+                  <CheckCheck className="h-3 w-3 text-[hsl(var(--whatsapp-tick))]" />
                 ) : (
-                  <Check className="h-4 w-4" />
+                  <Check className="h-3 w-3" />
                 )}
               </span>
             )}
