@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
       }
       // Persist normalized phone for future runs
       if (phone !== lead.phone_e164) {
-        await supabase.from("meta_leads").update({ phone_e164: phone }).eq("id", lead.id);
+        await supabase.from(leadSource).update({ phone_e164: phone }).eq("id", lead.id);
       }
 
       const param = buildWhatsappFirstNameParam(lead.first_name);
