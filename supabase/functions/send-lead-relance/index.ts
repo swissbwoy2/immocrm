@@ -113,7 +113,7 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 <!-- HERO -->
 <tr><td style="padding:40px 40px 15px;text-align:center;">
   <h1 style="margin:0;font-size:26px;font-weight:800;color:#1e3a5f;line-height:1.3;">
-    ${prenom}, tu as déjà trouvé<br>ton futur logement ? 🤔
+    ${prenom}, tu cherches un appartement ?<br>Est-ce que c'est toujours le cas ? 🤔
   </h1>
 </td></tr>
 
