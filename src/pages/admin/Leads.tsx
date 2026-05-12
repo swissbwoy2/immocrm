@@ -138,7 +138,13 @@ export default function Leads() {
     const rdvLeads = filteredLeads.filter((l) => !!getApptForLead(l));
     const rdvCount = rdvLeads.length;
     const rdvConfirmed = rdvLeads.filter((l) => getApptForLead(l)?.status === "confirme").length;
-    const rdvPending = rdvLeads.filter((l) => getApptForLead(l)?.status === "en_attente").length;
+    const nowMs = Date.now();
+    const staleCutoff = nowMs - 2 * 3600_000;
+    const rdvPending = rdvLeads.filter((l) => {
+      const a = getApptForLead(l);
+      if (!a || a.status !== "en_attente") return false;
+      return new Date(a.slot_start).getTime() >= staleCutoff;
+    }).length;
     const qualified = filteredLeads.filter((l) => l.is_qualified === true).length;
     const contacted = filteredLeads.filter((l) => l.contacted).length;
     return { total, rdvCount, rdvConfirmed, rdvPending, qualified, contacted };
@@ -153,9 +159,10 @@ export default function Leads() {
     const seen = new Set<string>();
     const in24h = Date.now() + 24 * 3600_000;
     const now = Date.now();
+    const staleCutoff = now - 2 * 3600_000;
     leads.forEach((l) => {
       const a = getApptForLead(l);
-      if (a && a.status === "en_attente") {
+      if (a && a.status === "en_attente" && new Date(a.slot_start).getTime() >= staleCutoff) {
         items.push({ lead: l, reason: "rdv_today", appt: a });
         seen.add(l.id);
         return;
