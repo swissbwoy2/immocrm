@@ -87,18 +87,7 @@ export default function RendezVousBureau() {
     setSubmitting(true);
 
     try {
-      // Anti-doublon : recheck le slot
-      const { data: existing } = await supabase
-        .from('available_phone_slots' as any)
-        .select('slot_start')
-        .eq('slot_start', selected.start.toISOString())
-        .maybeSingle();
-      if (existing) {
-        toast.error('Ce créneau vient d\'être réservé. Choisis-en un autre.');
-        setSelected(null);
-        setSubmitting(false);
-        return;
-      }
+      // Anti-doublon: la contrainte unique côté DB renverra 23505 si déjà pris.
 
       const apptId = crypto.randomUUID();
       const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
