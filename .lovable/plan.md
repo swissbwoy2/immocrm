@@ -1,55 +1,34 @@
-# Refonte visuelle Messagerie → style WhatsApp Inbox
+# Fix template WhatsApp `rdv_bureau_rappel`
 
-## Objectif
-Aligner l'apparence des 4 pages Messagerie sur le look déjà utilisé dans `WhatsAppInbox` (liste à gauche style WhatsApp, bulles vertes/blanches à droite, header conversation, fond discret). **Aucune modification de la logique métier** : realtime, envoi, attachements, templates, multi-canaux, sélection conversation, comptage non-lus, etc. restent identiques.
+## Diagnostic
+- Template Meta `logisorama_rdv_bureau_rappel` (langue `fr`) est désormais **actif** avec 2 variables : `{{1}}` = prénom, `{{2}}` = horaire.
+- Logs `whatsapp_notification_logs` :
+  - Avant activation : erreur `132001` (template inexistant) → résolu côté Meta.
+  - Depuis activation : erreur `131000` « Something went wrong » sur les rappels 24h / 3h / 1h / 30 min.
+- Seul changement entre l'ancien format qui passait (`"demain à 11:00"`) et les nouveaux qui échouent : `{{2}}` est devenu `"dans 30 minutes (11:00)"`, `"dans 1 heure (11:00)"`, `"dans environ 3 heures (11:00)"`. Les parenthèses + double information de temps sont la cause la plus probable du rejet silencieux Meta.
 
-## Périmètre
-- `src/pages/admin/Messagerie.tsx`
-- `src/pages/agent/Messagerie.tsx`
-- `src/pages/client/Messagerie.tsx`
-- `src/pages/proprietaire/Messagerie.tsx`
+## Correction
+Normaliser la valeur de `{{2}}` envoyée par les 2 fonctions edge qui appellent ce template, en gardant un format simple « contexte temporel + à HH:MM », sans parenthèses ni ponctuation décorative.
 
-## Composants visuels réutilisés (déjà existants)
-- `src/components/MessagingLayout.tsx` — split panel mobile/desktop (déjà utilisé)
-- `src/components/whatsapp/ConversationListItem.tsx` — item liste style WhatsApp
-- `src/components/whatsapp/WhatsAppBubble.tsx` — bulles `whatsapp-bubble-out` / `whatsapp-bubble-in`
-- `src/components/whatsapp/LeadAvatar.tsx` — avatar coloré
+### Fichier 1 : `supabase/functions/send-phone-appointment-reminders/index.ts`
+Modifier les `waHoraire` des 4 tiers :
+- `24h`  → `"demain à HH:MM"`
+- `3h`   → `"dans 3 heures à HH:MM"`
+- `1h`   → `"dans 1 heure à HH:MM"`
+- `30m`  → `"dans 30 minutes à HH:MM"`
 
-## Nouveaux composants visuels (présentation pure, partagés)
-1. **`src/components/whatsapp/WhatsAppConversationList.tsx`**
-   - Wrapper liste : header (titre + recherche), filtres optionnels (tabs `all / unread`), scroll, rendu d'items via `ConversationListItem`.
-   - Props purement visuelles (items, search, onSearch, activeId, onSelect, onlineMap?).
-2. **`src/components/whatsapp/WhatsAppChatHeader.tsx`**
-   - Header de conversation : avatar + nom + sous-titre (statut/agent/canal) + boutons d'action (slot `actions` pour réinjecter les boutons existants : pièce jointe, template, etc.).
-3. **`src/components/whatsapp/WhatsAppChatBackground.tsx`**
-   - Fond du panneau de chat avec la texture/teinte WhatsApp (token `--whatsapp-chat-bg` si dispo, sinon `bg-muted/30` + pattern subtil), pour wrapper la zone des bulles.
-4. **`src/components/whatsapp/WhatsAppComposer.tsx`**
-   - Barre de saisie style WhatsApp (textarea arrondi, bouton envoi rond vert). Slots pour les actions auxiliaires existantes (attach, template, emoji…).
-   - Garde la même API d'envoi : reçoit `value`, `onChange`, `onSend`, `disabled`, `leftActions`, `rightActions`.
+(suppression des parenthèses, du mot "environ", harmonisation avec le format historique qui fonctionnait).
 
-Tous ces composants sont **purement présentation** : ils n'appellent pas Supabase, ne touchent pas au state métier.
+### Fichier 2 : `supabase/functions/confirm-phone-appointment/index.ts`
+Le format actuel `"le ${dateStr} à ${timeStr}"` reste valide (pas de parenthèses) → **aucune modification nécessaire**, mais on vérifie que `dateStr`/`timeStr` ne contiennent pas U+202F / U+00A0 (déjà géré par `sanitizeVar` dans `send-whatsapp-notification`).
 
-## Refactor par page (visuel only)
-Pour chacune des 4 pages :
-- Conserver intégralement : hooks, queries, realtime, état (`selectedConv`, `messages`, `reply`, `sending`, attachments, templates, filtres métier).
-- Remplacer le markup de :
-  - liste de conversations → `WhatsAppConversationList` + map vers `ConversationListItem`.
-  - header conversation → `WhatsAppChatHeader` (slot `actions` = boutons existants).
-  - liste de messages → boucle inchangée mais chaque message rendu via `WhatsAppBubble` (mapping `outgoing` selon sender, `read`/`delivered` si dispo). Attachements existants restent affichés via `MessageAttachment` au-dessus/en-dessous de la bulle, sans changer leur logique.
-  - composer → `WhatsAppComposer` recevant les boutons attach/template existants comme `leftActions`.
-- Layout global = `MessagingLayout` (déjà en place pour la plupart) avec `WhatsAppChatBackground` autour de la zone messages.
-
-## Tokens / couleurs
-- Vérifier que `--whatsapp-green`, `--whatsapp-bubble-in`, `--whatsapp-bubble-out`, `--whatsapp-tick` existent dans `index.css` (déjà référencés par `WhatsAppBubble`). Si manquants, les ajouter en HSL côté light + dark, alignés sur la palette WhatsApp officielle, puis whitelister dans `tailwind.config.ts` si utilisés en classes.
-- Aucune couleur en dur dans les nouveaux composants : uniquement tokens.
-
-## Hors périmètre (explicitement non touché)
-- Schéma DB, RLS, edge functions.
-- Logique d'envoi, upload, templates, realtime, comptage non-lus.
-- Routes et navigation.
-- `WhatsAppInbox` lui-même (sert de référence visuelle).
+## Hors périmètre
+- Pas de changement DB ni de template Meta.
+- Pas de changement de la fonction `send-whatsapp-notification` (sanitize déjà OK).
+- Pas de changement du nom de template (`logisorama_rdv_bureau_rappel`) ni de la langue (`fr`).
 
 ## Validation
-- Build TypeScript OK.
-- Vérification visuelle préview sur les 4 rôles (desktop + mobile via `MessagingLayout`).
-- Smoke test : ouvrir une conversation, voir bulles correctement orientées (sortantes vertes à droite, entrantes blanches à gauche), envoyer un message, vérifier que l'item de liste se met à jour.
+1. Déployer les 2 fonctions edge modifiées (auto).
+2. Forcer un envoi test via cron `send-phone-appointment-reminders` ou via insertion d'un RDV proche.
+3. Vérifier dans `whatsapp_notification_logs` que les nouvelles entrées passent en `status='sent'` avec un `meta_message_id` non null.
+4. Si erreur 131000 persiste : tester variable {{2}} ultra-minimale (`"demain"`) pour isoler — auquel cas le template Meta réel n'a qu'1 variable et il faudra retomber côté code à 1 seul param.
