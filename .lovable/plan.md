@@ -1,100 +1,55 @@
-## Refonte Tableau de bord Client — inspiration Post App + maquette Logisorama
+# Refonte visuelle Messagerie → style WhatsApp Inbox
 
-Oui, c'est tout à fait possible — et ça va vraiment moderniser l'espace client. On garde **strictement** notre palette actuelle (primary bleu Logisorama, fond sombre, cards `bg-card/80` + bordures `border-border/60`, accents primary/glow). Aucune trace du jaune Post.
+## Objectif
+Aligner l'apparence des 4 pages Messagerie sur le look déjà utilisé dans `WhatsAppInbox` (liste à gauche style WhatsApp, bulles vertes/blanches à droite, header conversation, fond discret). **Aucune modification de la logique métier** : realtime, envoi, attachements, templates, multi-canaux, sélection conversation, comptage non-lus, etc. restent identiques.
 
-### Ce qu'on reprend des références (sans copier les couleurs)
+## Périmètre
+- `src/pages/admin/Messagerie.tsx`
+- `src/pages/agent/Messagerie.tsx`
+- `src/pages/client/Messagerie.tsx`
+- `src/pages/proprietaire/Messagerie.tsx`
 
-**De l'app Post (IMG_4104 / 4105) :**
-- Header "Bonjour [Prénom]" XL avec accent visuel fort
-- Section "Actuel" avec **grandes cards d'événements** (offres récentes) ultra lisibles, badges de statut colorés
-- Grille de **2 tuiles d'action principales** côte à côte (équivalent de "Mes envois / Affranchir")
-- Tuiles secondaires pleine largeur avec icône ronde à gauche (Messagerie, Calendrier…)
-- Une carte avec **mini-aperçu visuel à droite** (équivalent "Où nous trouver" → on met un mini calendrier ou une carte des biens)
+## Composants visuels réutilisés (déjà existants)
+- `src/components/MessagingLayout.tsx` — split panel mobile/desktop (déjà utilisé)
+- `src/components/whatsapp/ConversationListItem.tsx` — item liste style WhatsApp
+- `src/components/whatsapp/WhatsAppBubble.tsx` — bulles `whatsapp-bubble-out` / `whatsapp-bubble-in`
+- `src/components/whatsapp/LeadAvatar.tsx` — avatar coloré
 
-**De la maquette Logisorama (IMG_4106) :**
-- Cards d'offres avec **vraie image du bien** + adresse + pièces/m² + prix CHF
-- Bloc "Prochaines visites" avec date stylée (jour/mois en gros)
-- Bloc "Dossier de candidature" avec checklist validée
+## Nouveaux composants visuels (présentation pure, partagés)
+1. **`src/components/whatsapp/WhatsAppConversationList.tsx`**
+   - Wrapper liste : header (titre + recherche), filtres optionnels (tabs `all / unread`), scroll, rendu d'items via `ConversationListItem`.
+   - Props purement visuelles (items, search, onSearch, activeId, onSelect, onlineMap?).
+2. **`src/components/whatsapp/WhatsAppChatHeader.tsx`**
+   - Header de conversation : avatar + nom + sous-titre (statut/agent/canal) + boutons d'action (slot `actions` pour réinjecter les boutons existants : pièce jointe, template, etc.).
+3. **`src/components/whatsapp/WhatsAppChatBackground.tsx`**
+   - Fond du panneau de chat avec la texture/teinte WhatsApp (token `--whatsapp-chat-bg` si dispo, sinon `bg-muted/30` + pattern subtil), pour wrapper la zone des bulles.
+4. **`src/components/whatsapp/WhatsAppComposer.tsx`**
+   - Barre de saisie style WhatsApp (textarea arrondi, bouton envoi rond vert). Slots pour les actions auxiliaires existantes (attach, template, emoji…).
+   - Garde la même API d'envoi : reçoit `value`, `onChange`, `onSend`, `disabled`, `leftActions`, `rightActions`.
 
-### Nouvelle structure du dashboard client (location)
+Tous ces composants sont **purement présentation** : ils n'appellent pas Supabase, ne touchent pas au state métier.
 
-```text
-┌─────────────────────────────────────────────┐
-│ Bonjour, [Prénom]              🔔   👤      │  ← Header premium, accent primary
-│ Voici le suivi de votre recherche.          │
-└─────────────────────────────────────────────┘
+## Refactor par page (visuel only)
+Pour chacune des 4 pages :
+- Conserver intégralement : hooks, queries, realtime, état (`selectedConv`, `messages`, `reply`, `sending`, attachments, templates, filtres métier).
+- Remplacer le markup de :
+  - liste de conversations → `WhatsAppConversationList` + map vers `ConversationListItem`.
+  - header conversation → `WhatsAppChatHeader` (slot `actions` = boutons existants).
+  - liste de messages → boucle inchangée mais chaque message rendu via `WhatsAppBubble` (mapping `outgoing` selon sender, `read`/`delivered` si dispo). Attachements existants restent affichés via `MessageAttachment` au-dessus/en-dessous de la bulle, sans changer leur logique.
+  - composer → `WhatsAppComposer` recevant les boutons attach/template existants comme `leftActions`.
+- Layout global = `MessagingLayout` (déjà en place pour la plupart) avec `WhatsAppChatBackground` autour de la zone messages.
 
-┌─── Dernières offres reçues ────── Voir tout ┐
-│ ┌────────┬──────────────────────────────┐  │  ← KPI cards style Post
-│ │ [img]  │ Lausanne — Centre        ♡   │  │     avec aperçu image du lien
-│ │ bien   │ 4.5 p · 120 m²               │  │     (lien_annonce → og:image
-│ │        │ CHF 3'450.– /mois            │  │     ou photo de l'offre)
-│ │        │ [Nouvelle] [À traiter]       │  │
-│ └────────┴──────────────────────────────┘  │
-│ (2-3 dernières offres, scroll horizontal    │
-│  sur mobile)                                │
-└─────────────────────────────────────────────┘
+## Tokens / couleurs
+- Vérifier que `--whatsapp-green`, `--whatsapp-bubble-in`, `--whatsapp-bubble-out`, `--whatsapp-tick` existent dans `index.css` (déjà référencés par `WhatsAppBubble`). Si manquants, les ajouter en HSL côté light + dark, alignés sur la palette WhatsApp officielle, puis whitelister dans `tailwind.config.ts` si utilisés en classes.
+- Aucune couleur en dur dans les nouveaux composants : uniquement tokens.
 
-┌──────────────────┬──────────────────┐
-│ 📁 Mon dossier   │ 📅 Calendrier    │  ← 2 tuiles XL côte à côte
-│ 4/5 documents    │ 2 visites cette  │     (style Mes envois / Affranchir)
-│ Compléter →      │ semaine          │
-└──────────────────┴──────────────────┘
+## Hors périmètre (explicitement non touché)
+- Schéma DB, RLS, edge functions.
+- Logique d'envoi, upload, templates, realtime, comptage non-lus.
+- Routes et navigation.
+- `WhatsAppInbox` lui-même (sert de référence visuelle).
 
-┌─────────────────────────────────────────────┐
-│ 📨 Mes offres reçues             12  →     │  ← Tuile pleine largeur
-│ 3 nouvelles à traiter                       │
-└─────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────┐
-│ 💬 Messagerie                    2  →      │
-│ Votre agent : Élise M. · En ligne           │
-└─────────────────────────────────────────────┘
-
-┌─── Prochaines visites ─────── Voir tout ───┐
-│  25  Lausanne — Appartement 4.5 p           │
-│  MAI 14:00                                  │
-│  ─────────────────────────────────          │
-│  27  Genève — Appartement 3.5 p             │
-│  MAI 16:30                                  │
-└─────────────────────────────────────────────┘
-
-┌─── Mandat & dossier ───────────────────────┐
-│ Progression du mandat ████████░░ 67 j / 90 │
-│ Dossier complet ✓  Solvabilité ✓           │
-└─────────────────────────────────────────────┘
-```
-
-### Composants à créer / modifier
-
-1. **Nouveau** `src/components/client/dashboard/DernieresOffresKPI.tsx`
-   - Card horizontale : image (1ère photo de l'offre OU `og:image` du `lien_annonce` via `LinkPreviewCard` déjà existant), adresse, pieces/surface/prix, badges statut
-   - 2-3 plus récentes, lien "Voir tout" → `/client/offres-recues`
-
-2. **Nouveau** `src/components/client/dashboard/QuickTileXL.tsx`
-   - Tuile carrée premium avec icône ronde primary/10, titre, sous-titre, badge compteur
-   - Variant `large` (2 par ligne) et `wide` (pleine largeur)
-
-3. **Nouveau** `src/components/client/dashboard/ProchainesVisitesCard.tsx`
-   - Liste compacte : bloc date à gauche (25 / MAI gros) + adresse + heure
-   - Reprend le style de la maquette Logisorama
-
-4. **Refonte** `src/pages/client/Dashboard.tsx` (`ClientDashboardLocation`)
-   - Remplace la structure actuelle (cards éparpillées) par la nouvelle hiérarchie ci-dessus
-   - Garde toute la logique existante : `loadData`, alerts solvabilité, modal activation, renouvellement mandat, realtime visites, pull-to-refresh
-   - Garde `MissingDocumentsAlert`, `SolvabilityAlert`, `PurchaseSolvabilityAlert`, `AccountActivationModal` au-dessus du nouveau layout
-   - `PremiumMandatProgress`, `PremiumAgentCard` regroupés dans la section bas
-
-### Couleurs (strict)
-
-- Aucun jaune. On utilise `primary` (bleu Logisorama), `bg-card/80 backdrop-blur-sm`, `border-border/60`, accents `from-primary/10 via-primary/5`, badges existants (`secondary`, `destructive` pour "nouveau"/"urgent")
-- Style cohérent avec `PremiumKPICardV2` et `PremiumPageShellV2` déjà en place
-
-### Hors scope
-
-- Pas de changement aux dashboards Vente / Rénovation / Relocation (autres parcours)
-- Pas de modification BDD ni edge functions
-- Pas de changement aux pages détaillées (`/client/offres-recues`, `/client/calendrier`, `/client/dossier`) — uniquement le dashboard `/client`
-- Pas de touche au site public ni à `DossierAnalyseSection`
-
-Confirme-moi si je lance l'implémentation, ou si tu veux ajuster la liste des tuiles (ex : ajouter "Mes candidatures", retirer "Messagerie", inverser l'ordre).
+## Validation
+- Build TypeScript OK.
+- Vérification visuelle préview sur les 4 rôles (desktop + mobile via `MessagingLayout`).
+- Smoke test : ouvrir une conversation, voir bulles correctement orientées (sortantes vertes à droite, entrantes blanches à gauche), envoyer un message, vérifier que l'item de liste se met à jour.
