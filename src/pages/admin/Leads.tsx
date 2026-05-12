@@ -380,6 +380,8 @@ export default function Leads() {
   // Cible : tous les leads avec téléphone (hors opt-out) jamais contactés
   // sur WhatsApp (dédup via whatsapp_notification_logs).
   // `contacted` = email envoyé, n'a aucun rapport avec WhatsApp.
+  // On dédup sur tous les statuts (sent/delivered/read ET failed) pour ne pas
+  // re-tenter en boucle des numéros que Meta refuse (code 131026, etc.)
   const { data: waSentRows = [] } = useQuery({
     queryKey: ["leads-wa-sent"],
     queryFn: async () => {
@@ -391,7 +393,7 @@ export default function Leads() {
           .select("context_ref")
           .eq("template_key", "location_rdv_activation_v2")
           .eq("context_type", "lead")
-          .in("status", ["sent", "delivered", "read"])
+          .in("status", ["sent", "delivered", "read", "failed"])
           .not("context_ref", "is", null)
           .range(from, from + PAGE - 1);
         if (error) throw error;
@@ -407,10 +409,26 @@ export default function Leads() {
     [waSentRows],
   );
 
+  // Validation stricte E.164. Pour CH (+41), on exige +41 + 9 chiffres exactement.
+  const isValidWaPhone = (raw: string | null | undefined): boolean => {
+    if (!raw) return false;
+    let p = String(raw).replace(/[^\d+]/g, "");
+    if (p.startsWith("00")) p = "+" + p.slice(2);
+    if (!p.startsWith("+")) {
+      if (p.startsWith("0")) p = "+41" + p.slice(1);
+      else p = "+" + p;
+    }
+    if (/^\+410\d{9,10}$/.test(p)) p = "+41" + p.slice(4);
+    if (!/^\+\d{10,15}$/.test(p)) return false;
+    if (p.startsWith("+41") && p.length !== 12) return false;
+    return true;
+  };
+
   const waCandidates = useMemo(
     () =>
       filteredLeads.filter((l) => {
-        if (!l.telephone && !(l as any).phone_e164) return false;
+        const phone = (l as any).phone_e164 || l.telephone;
+        if (!isValidWaPhone(phone)) return false;
         if ((l as any).whatsapp_opt_out) return false;
         if (waAlreadySent.has(l.id)) return false;
         return true;
