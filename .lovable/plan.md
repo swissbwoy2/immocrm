@@ -1,34 +1,36 @@
-# Fix template WhatsApp `rdv_bureau_rappel`
+# Fix incohérence compteurs page Assignations
 
-## Diagnostic
-- Template Meta `logisorama_rdv_bureau_rappel` (langue `fr`) est désormais **actif** avec 2 variables : `{{1}}` = prénom, `{{2}}` = horaire.
-- Logs `whatsapp_notification_logs` :
-  - Avant activation : erreur `132001` (template inexistant) → résolu côté Meta.
-  - Depuis activation : erreur `131000` « Something went wrong » sur les rappels 24h / 3h / 1h / 30 min.
-- Seul changement entre l'ancien format qui passait (`"demain à 11:00"`) et les nouveaux qui échouent : `{{2}}` est devenu `"dans 30 minutes (11:00)"`, `"dans 1 heure (11:00)"`, `"dans environ 3 heures (11:00)"`. Les parenthèses + double information de temps sont la cause la plus probable du rejet silencieux Meta.
+## Cause
+`src/pages/admin/Assignations.tsx` charge `clients` **sans aucun filtre**, donc inclut les 65 comptes anonymisés RGPD :
+- « Clients sans agent : 69 » = 4 vrais + 65 anonymisés RGPD
+- « Clients assignés : 48 » = OK
+- Total Gestion Clients (52) ≠ 69 + 48 = 117
 
 ## Correction
-Normaliser la valeur de `{{2}}` envoyée par les 2 fonctions edge qui appellent ce template, en gardant un format simple « contexte temporel + à HH:MM », sans parenthèses ni ponctuation décorative.
 
-### Fichier 1 : `supabase/functions/send-phone-appointment-reminders/index.ts`
-Modifier les `waHoraire` des 4 tiers :
-- `24h`  → `"demain à HH:MM"`
-- `3h`   → `"dans 3 heures à HH:MM"`
-- `1h`   → `"dans 1 heure à HH:MM"`
-- `30m`  → `"dans 30 minutes à HH:MM"`
+### Fichier : `src/pages/admin/Assignations.tsx`
 
-(suppression des parenthèses, du mot "environ", harmonisation avec le format historique qui fonctionnait).
+1. **Requête `clients`** (ligne 77-81) : ajouter `.is('anonymise_at', null)` pour aligner avec `Clients.tsx`.
+   ```ts
+   .from('clients')
+   .select('*')
+   .is('anonymise_at', null)
+   .order('created_at', { ascending: false })
+   .limit(15000);
+   ```
 
-### Fichier 2 : `supabase/functions/confirm-phone-appointment/index.ts`
-Le format actuel `"le ${dateStr} à ${timeStr}"` reste valide (pas de parenthèses) → **aucune modification nécessaire**, mais on vérifie que `dateStr`/`timeStr` ne contiennent pas U+202F / U+00A0 (déjà géré par `sanitizeVar` dans `send-whatsapp-notification`).
+2. **Aucun autre changement** : la liste « Sans agent » dérive de `clients` filtré, les KPI dérivent du même état → tout devient cohérent automatiquement.
+
+## Résultat attendu
+- Clients sans agent : **4** (au lieu de 69)
+- Clients assignés : **48** (inchangé)
+- Total = 52 → cohérent avec Gestion des Clients.
 
 ## Hors périmètre
-- Pas de changement DB ni de template Meta.
-- Pas de changement de la fonction `send-whatsapp-notification` (sanitize déjà OK).
-- Pas de changement du nom de template (`logisorama_rdv_bureau_rappel`) ni de la langue (`fr`).
+- Pas de migration DB.
+- Pas de modification de la logique d'assignation, du dialogue d'édition, du bulk mode, ni du compteur d'agents actifs.
+- Pas de modification de la page Clients.
 
 ## Validation
-1. Déployer les 2 fonctions edge modifiées (auto).
-2. Forcer un envoi test via cron `send-phone-appointment-reminders` ou via insertion d'un RDV proche.
-3. Vérifier dans `whatsapp_notification_logs` que les nouvelles entrées passent en `status='sent'` avec un `meta_message_id` non null.
-4. Si erreur 131000 persiste : tester variable {{2}} ultra-minimale (`"demain"`) pour isoler — auquel cas le template Meta réel n'a qu'1 variable et il faudra retomber côté code à 1 seul param.
+- Recharger `/admin/assignations` : vérifier les KPI 4 / 48 / 5.
+- Vérifier que la liste des clients sans agent ne contient que des profils réels (pas de noms vides ou « anonymisé »).
