@@ -299,13 +299,21 @@ export default function Leads() {
     setRelanceSending(true);
     try {
       let totalSent = 0, totalErrors = 0;
-      for (let i = 0; i < ids.length; i += 3) {
-        const batch = ids.slice(i, i + 3);
-        const { data, error } = await supabase.functions.invoke("send-lead-relance", { body: { lead_ids: batch } });
+      // Batch via la campagne "location" (suivi de campagne implanté)
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
+          body: {
+            mode: "send",
+            campaignKey: "location",
+            leadSource: "leads",
+            leadIds: batch,
+          },
+        });
         if (error) throw error;
-        if (!data.success) throw new Error(data.error);
+        if (!data?.success) throw new Error(data?.error || "Erreur campagne");
         totalSent += data.sent || 0;
-        totalErrors += data.errors || 0;
+        totalErrors += data.failed || 0;
       }
       toast.success(`${totalSent} email(s) envoyé(s)`, { description: totalErrors > 0 ? `${totalErrors} erreur(s)` : undefined });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
