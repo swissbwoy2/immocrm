@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Users, UserPlus, Upload, Trash2, Pencil, Users2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Users, UserPlus, Upload, Trash2, Pencil, Users2, Search, Star, X, Crown, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
@@ -63,6 +66,13 @@ export default function Assignations() {
   const [deleting, setDeleting] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelectedClients, setBulkSelectedClients] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
+  const [agentFilter, setAgentFilter] = useState<string>('all');
+  const [coFilter, setCoFilter] = useState<'all' | 'mono' | 'multi'>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'old' | 'name'>('recent');
+  const [quickAddClient, setQuickAddClient] = useState<string | null>(null);
+  const [quickAddAgentId, setQuickAddAgentId] = useState<string>('');
+  const [quickAddSplit, setQuickAddSplit] = useState<number>(45);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -481,6 +491,143 @@ export default function Assignations() {
     }
   };
 
+  const handleRemoveSingleAgent = async (clientId: string, agentId: string) => {
+    try {
+      const assignments = clientAgents.filter(ca => ca.client_id === clientId);
+      const removed = assignments.find(a => a.agent_id === agentId);
+      if (!removed) return;
+      const wasPrimary = removed.is_primary;
+      const remaining = assignments.filter(a => a.agent_id !== agentId);
+
+      // Delete the single line
+      const { error: delErr } = await supabase
+        .from('client_agents')
+        .delete()
+        .eq('client_id', clientId)
+        .eq('agent_id', agentId);
+      if (delErr) throw delErr;
+
+      await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: agentId });
+
+      // Archive conversation
+      await supabase
+        .from('conversations')
+        .update({ is_archived: true })
+        .eq('agent_id', agentId)
+        .eq('client_id', clientId);
+
+      // Notify removed agent
+      const { data: agentData } = await supabase
+        .from('agents').select('user_id').eq('id', agentId).single();
+      const { data: clientData } = await supabase
+        .from('clients').select('user_id').eq('id', clientId).single();
+      const { data: clientProfile } = clientData ? await supabase
+        .from('profiles').select('prenom, nom').eq('id', clientData.user_id).single() : { data: null };
+      const clientName = clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'ce client';
+      if (agentData) {
+        await supabase.rpc('create_notification', {
+          p_user_id: agentData.user_id,
+          p_type: 'client_removed',
+          p_title: 'Client retiré',
+          p_message: `${clientName} a été retiré de votre portefeuille`,
+          p_link: '/agent/mes-clients',
+          p_metadata: { client_id: clientId },
+        });
+      }
+
+      // Re-sync clients.agent_id with current primary
+      if (wasPrimary && remaining.length > 0) {
+        // Promote the first remaining co-agent to primary
+        const newPrimary = remaining[0];
+        await supabase
+          .from('client_agents')
+          .update({ is_primary: true })
+          .eq('client_id', clientId)
+          .eq('agent_id', newPrimary.agent_id);
+        await supabase
+          .from('clients')
+          .update({ agent_id: newPrimary.agent_id, commission_split: newPrimary.commission_split })
+          .eq('id', clientId);
+      } else if (remaining.length === 0) {
+        await supabase.from('clients').update({ agent_id: null }).eq('id', clientId);
+      }
+
+      await loadData();
+      toast({ title: 'Agent retiré', description: 'L\'agent a été retiré de ce client' });
+    } catch (e: any) {
+      console.error('handleRemoveSingleAgent', e);
+      toast({ title: 'Erreur', description: 'Impossible de retirer cet agent', variant: 'destructive' });
+    }
+  };
+
+  const handlePromoteToPrimary = async (clientId: string, agentId: string) => {
+    try {
+      const assignments = clientAgents.filter(ca => ca.client_id === clientId);
+      const target = assignments.find(a => a.agent_id === agentId);
+      if (!target || target.is_primary) return;
+
+      // Unset all primaries
+      await supabase
+        .from('client_agents')
+        .update({ is_primary: false })
+        .eq('client_id', clientId);
+      // Set new primary
+      await supabase
+        .from('client_agents')
+        .update({ is_primary: true })
+        .eq('client_id', clientId)
+        .eq('agent_id', agentId);
+      // Sync legacy column
+      await supabase
+        .from('clients')
+        .update({ agent_id: agentId, commission_split: target.commission_split })
+        .eq('id', clientId);
+
+      await loadData();
+      toast({ title: 'Agent principal mis à jour', description: 'Cet agent est désormais principal' });
+    } catch (e: any) {
+      console.error('handlePromoteToPrimary', e);
+      toast({ title: 'Erreur', description: 'Impossible de promouvoir cet agent', variant: 'destructive' });
+    }
+  };
+
+  const handleQuickAddCoAgent = async (clientId: string, agentId: string, split: number) => {
+    try {
+      const assignments = clientAgents.filter(ca => ca.client_id === clientId);
+      if (assignments.length >= 4) {
+        toast({ title: 'Limite atteinte', description: 'Maximum 4 agents par client', variant: 'destructive' });
+        return;
+      }
+      if (assignments.some(a => a.agent_id === agentId)) {
+        toast({ title: 'Déjà assigné', description: 'Cet agent est déjà assigné à ce client', variant: 'destructive' });
+        return;
+      }
+      const { error } = await supabase.from('client_agents').insert({
+        client_id: clientId,
+        agent_id: agentId,
+        is_primary: false,
+        commission_split: split,
+      });
+      if (error) throw error;
+
+      await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: agentId });
+      await supabase
+        .from('conversations')
+        .update({ is_archived: false })
+        .eq('agent_id', agentId)
+        .eq('client_id', clientId);
+
+      setQuickAddClient(null);
+      setQuickAddAgentId('');
+      setQuickAddSplit(45);
+      await loadData();
+      toast({ title: 'Co-agent ajouté', description: 'L\'agent a été ajouté en co-assignation' });
+    } catch (e: any) {
+      console.error('handleQuickAddCoAgent', e);
+      toast({ title: 'Erreur', description: 'Impossible d\'ajouter ce co-agent', variant: 'destructive' });
+    }
+  };
+
   const handleDeleteAllClients = async () => {
     try {
       setDeleting(true);
@@ -660,7 +807,7 @@ export default function Assignations() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Clients sans agent</CardTitle>
@@ -675,6 +822,16 @@ export default function Assignations() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{assignedClients.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Co-assignés</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {clients.filter(c => clientAgents.filter(ca => ca.client_id === c.id).length >= 2).length}
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -855,73 +1012,230 @@ export default function Assignations() {
             </Card>
           )}
 
-          {/* Liste des clients par agent */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Clients assignés par agent</h2>
-            {agents.map(agent => {
-              const agentClients = getClientsByAgent(agent.id);
-              if (agentClients.length === 0) return null;
+          {/* Liste des clients assignés (vue par client) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <CardTitle>Clients assignés</CardTitle>
+                  <CardDescription>
+                    Recherche, filtre et gestion fine des agents par client
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-4">
+                <div className="relative md:col-span-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher (nom, email, téléphone)..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={agentFilter} onValueChange={setAgentFilter}>
+                  <SelectTrigger><SelectValue placeholder="Agent" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les agents</SelectItem>
+                    {agents.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.profile.prenom} {a.profile.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                  <Select value={coFilter} onValueChange={(v: any) => setCoFilter(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      <SelectItem value="mono">Mono-agent</SelectItem>
+                      <SelectItem value="multi">Co-assignés</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recent">Récents</SelectItem>
+                      <SelectItem value="old">Anciens</SelectItem>
+                      <SelectItem value="name">Nom A→Z</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const q = search.trim().toLowerCase();
+                let list = assignedClients.filter(c => {
+                  const profile = clientProfiles.get(c.user_id);
+                  if (q) {
+                    const blob = `${profile?.prenom || ''} ${profile?.nom || ''} ${profile?.email || ''} ${profile?.telephone || ''}`.toLowerCase();
+                    if (!blob.includes(q)) return false;
+                  }
+                  const assigns = clientAgents.filter(ca => ca.client_id === c.id);
+                  if (agentFilter !== 'all' && !assigns.some(a => a.agent_id === agentFilter)) return false;
+                  if (coFilter === 'mono' && assigns.length !== 1) return false;
+                  if (coFilter === 'multi' && assigns.length < 2) return false;
+                  return true;
+                });
+                list = [...list].sort((a, b) => {
+                  if (sortBy === 'name') {
+                    const pa = clientProfiles.get(a.user_id);
+                    const pb = clientProfiles.get(b.user_id);
+                    return `${pa?.nom || ''} ${pa?.prenom || ''}`.localeCompare(`${pb?.nom || ''} ${pb?.prenom || ''}`);
+                  }
+                  const ta = new Date(a.created_at || 0).getTime();
+                  const tb = new Date(b.created_at || 0).getTime();
+                  return sortBy === 'recent' ? tb - ta : ta - tb;
+                });
 
-              return (
-                <Card key={agent.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">
-                          {agent.profile.prenom} {agent.profile.nom}
-                        </CardTitle>
-                        <CardDescription>{agent.profile.email}</CardDescription>
-                      </div>
-                      <Badge variant="secondary">
-                        <Users className="w-3 h-3 mr-1" />
-                        {agentClients.length} clients
-                      </Badge>
+                if (list.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-muted-foreground">
+                      Aucun client ne correspond à ces critères
                     </div>
-                  </CardHeader>
-                  <CardContent>
+                  );
+                }
+
+                return (
+                  <TooltipProvider delayDuration={200}>
                     <div className="space-y-2">
-                      {agentClients.map(client => {
+                      {list.map(client => {
                         const profile = clientProfiles.get(client.user_id);
-                        const displayName = profile 
-                          ? `${profile.prenom} ${profile.nom}` 
-                          : `Client ID: ${client.id.substring(0, 8)}...`;
-                        const assignments = getClientAssignments(client.id);
-                        const primaryAssignment = assignments.find(a => a.is_primary);
-                        
+                        const displayName = profile
+                          ? `${profile.prenom} ${profile.nom}`
+                          : `Client ${client.id.substring(0, 8)}`;
+                        const assigns = clientAgents.filter(ca => ca.client_id === client.id);
+                        const primary = assigns.find(a => a.is_primary);
+                        const coAgents = assigns.filter(a => !a.is_primary);
+                        const availableAgents = agents.filter(a => !assigns.some(x => x.agent_id === a.id));
+
                         return (
                           <div
                             key={client.id}
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                            className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-3 bg-muted/50 hover:bg-muted rounded-lg transition-colors"
                           >
-                            <div className="relative flex-1">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-                              <p className="font-medium">
-                                {displayName}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{displayName}</p>
+                              <p className="text-xs text-muted-foreground truncate">
                                 {profile?.email} • Ajouté le {new Date(client.created_at || '').toLocaleDateString('fr-CH')}
                               </p>
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {assignments.map(assignment => {
-                                  const assignedAgent = agents.find(a => a.id === assignment.agent_id);
+                              <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+                                {primary && (() => {
+                                  const ag = agents.find(a => a.id === primary.agent_id);
                                   return (
-                                    <Badge key={assignment.id} variant={assignment.is_primary ? 'default' : 'secondary'} className="text-xs">
-                                      {assignedAgent ? `${assignedAgent.profile.prenom} ${assignedAgent.profile.nom}` : 'Agent inconnu'} ({assignment.commission_split}%)
+                                    <Badge variant="default" className="gap-1 pr-1">
+                                      <Crown className="h-3 w-3" />
+                                      <span>{ag ? `${ag.profile.prenom} ${ag.profile.nom}` : 'Inconnu'}</span>
+                                      <span className="opacity-70">{primary.commission_split}%</span>
+                                      {assigns.length > 1 && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <button
+                                              onClick={() => handleRemoveSingleAgent(client.id, primary.agent_id)}
+                                              className="ml-1 hover:bg-primary-foreground/20 rounded p-0.5"
+                                              aria-label="Retirer le principal"
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Retirer (un co-agent sera promu principal)</TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </Badge>
+                                  );
+                                })()}
+                                {coAgents.map(co => {
+                                  const ag = agents.find(a => a.id === co.agent_id);
+                                  return (
+                                    <Badge key={co.id} variant="outline" className="gap-1 pr-1">
+                                      <span>{ag ? `${ag.profile.prenom} ${ag.profile.nom}` : 'Inconnu'}</span>
+                                      <span className="opacity-60">{co.commission_split}%</span>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handlePromoteToPrimary(client.id, co.agent_id)}
+                                            className="ml-1 hover:bg-foreground/10 rounded p-0.5"
+                                            aria-label="Promouvoir principal"
+                                          >
+                                            <Star className="h-3 w-3" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Définir comme principal</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            onClick={() => handleRemoveSingleAgent(client.id, co.agent_id)}
+                                            className="hover:bg-destructive/20 rounded p-0.5"
+                                            aria-label="Retirer ce co-agent"
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Retirer ce co-agent</TooltipContent>
+                                      </Tooltip>
                                     </Badge>
                                   );
                                 })}
+                                {assigns.length < 4 && availableAgents.length > 0 && (
+                                  <Popover
+                                    open={quickAddClient === client.id}
+                                    onOpenChange={(o) => {
+                                      setQuickAddClient(o ? client.id : null);
+                                      if (o) { setQuickAddAgentId(''); setQuickAddSplit(45); }
+                                    }}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+                                        <Plus className="h-3 w-3" /> Co-agent
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-72 space-y-3" align="start">
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Agent</Label>
+                                        <Select value={quickAddAgentId} onValueChange={setQuickAddAgentId}>
+                                          <SelectTrigger><SelectValue placeholder="Choisir un agent" /></SelectTrigger>
+                                          <SelectContent>
+                                            {availableAgents.map(a => (
+                                              <SelectItem key={a.id} value={a.id}>
+                                                {a.profile.prenom} {a.profile.nom}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Commission %</Label>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          value={quickAddSplit}
+                                          onChange={(e) => setQuickAddSplit(Number(e.target.value) || 0)}
+                                        />
+                                      </div>
+                                      <Button
+                                        className="w-full"
+                                        size="sm"
+                                        disabled={!quickAddAgentId}
+                                        onClick={() => handleQuickAddCoAgent(client.id, quickAddAgentId, quickAddSplit)}
+                                      >
+                                        Ajouter
+                                      </Button>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 shrink-0">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
                                   setEditingClientId(client.id);
-                                  setEditAgentAssignments(assignments.map(a => ({
+                                  setEditAgentAssignments(assigns.map(a => ({
                                     agent_id: a.agent_id,
                                     is_primary: a.is_primary,
                                     commission_split: a.commission_split,
@@ -931,31 +1245,37 @@ export default function Assignations() {
                                 <Pencil className="w-4 h-4 mr-1" />
                                 Modifier
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleReassign(client.id)}
-                              >
-                                Retirer
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    Désassigner tout
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Désassigner tous les agents ?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {displayName} sera retiré de {assigns.length} agent(s). Les conversations seront archivées.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleReassign(client.id)}>
+                                      Confirmer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-
-            {assignedClients.length === 0 && (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Aucun client assigné pour le moment
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                  </TooltipProvider>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </div>
       </main>
 
