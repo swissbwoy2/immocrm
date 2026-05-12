@@ -552,11 +552,27 @@ export default function Leads() {
               <strong>{relanceBreakdown.ignored.length}</strong>
             </div>
           </div>
+          <div className="rounded-md border bg-muted/40 p-3 text-sm flex items-center justify-between gap-3">
+            <div>
+              <div className="font-medium flex items-center gap-2"><MessageCircle className="h-4 w-4 text-emerald-600" />WhatsApp (template location)</div>
+              <div className="text-xs text-muted-foreground">{waCandidates.length} lead(s) avec téléphone — envoi par paquets de 3</div>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={sendWhatsappRelanceAll}
+              disabled={waSending || relanceSending || waCandidates.length === 0}
+              className="gap-2"
+            >
+              {waSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+              {waSending ? "Envoi…" : `WhatsApp (${waCandidates.length})`}
+            </Button>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>Annuler</Button>
-            <Button onClick={sendRelanceAll} disabled={relanceSending || sendableCount === 0} className="gap-2">
+            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending || waSending}>Annuler</Button>
+            <Button onClick={sendRelanceAll} disabled={relanceSending || waSending || sendableCount === 0} className="gap-2">
               {relanceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {relanceSending ? "Envoi…" : `Envoyer à ${sendableCount}`}
+              {relanceSending ? "Envoi…" : `Email (${sendableCount})`}
             </Button>
           </DialogFooter>
         </DialogContent>
