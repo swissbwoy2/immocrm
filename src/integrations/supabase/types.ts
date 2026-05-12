@@ -1193,13 +1193,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "annonces_publiques_annonceur_id_fkey"
-            columns: ["annonceur_id"]
-            isOneToOne: false
-            referencedRelation: "annonceurs_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "annonces_publiques_categorie_id_fkey"
             columns: ["categorie_id"]
             isOneToOne: false
@@ -1668,13 +1661,6 @@ export type Database = {
             columns: ["annonceur_id"]
             isOneToOne: false
             referencedRelation: "annonceurs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "avis_annonceurs_annonceur_id_fkey"
-            columns: ["annonceur_id"]
-            isOneToOne: false
-            referencedRelation: "annonceurs_public"
             referencedColumns: ["id"]
           },
         ]
@@ -6960,13 +6946,6 @@ export type Database = {
             referencedRelation: "annonceurs"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "paiements_annonces_annonceur_id_fkey"
-            columns: ["annonceur_id"]
-            isOneToOne: false
-            referencedRelation: "annonceurs_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       pdf_exports_immeuble: {
@@ -9717,13 +9696,6 @@ export type Database = {
             referencedRelation: "annonceurs"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "signalements_annonces_annonceur_id_fkey"
-            columns: ["annonceur_id"]
-            isOneToOne: false
-            referencedRelation: "annonceurs_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       source_connectors: {
@@ -10946,69 +10918,6 @@ export type Database = {
       }
     }
     Views: {
-      annonceurs_public: {
-        Row: {
-          canton: string | null
-          created_at: string | null
-          est_verifie: boolean | null
-          id: string | null
-          logo_url: string | null
-          nb_avis: number | null
-          nom: string | null
-          nom_entreprise: string | null
-          note_moyenne: number | null
-          prenom: string | null
-          statut: string | null
-          type_annonceur: string | null
-          ville: string | null
-        }
-        Insert: {
-          canton?: string | null
-          created_at?: string | null
-          est_verifie?: boolean | null
-          id?: string | null
-          logo_url?: string | null
-          nb_avis?: number | null
-          nom?: string | null
-          nom_entreprise?: string | null
-          note_moyenne?: number | null
-          prenom?: string | null
-          statut?: string | null
-          type_annonceur?: string | null
-          ville?: string | null
-        }
-        Update: {
-          canton?: string | null
-          created_at?: string | null
-          est_verifie?: boolean | null
-          id?: string | null
-          logo_url?: string | null
-          nb_avis?: number | null
-          nom?: string | null
-          nom_entreprise?: string | null
-          note_moyenne?: number | null
-          prenom?: string | null
-          statut?: string | null
-          type_annonceur?: string | null
-          ville?: string | null
-        }
-        Relationships: []
-      }
-      available_phone_slots: {
-        Row: {
-          slot_start: string | null
-          status: string | null
-        }
-        Insert: {
-          slot_start?: string | null
-          status?: string | null
-        }
-        Update: {
-          slot_start?: string | null
-          status?: string | null
-        }
-        Relationships: []
-      }
       renovation_my_company_score_view: {
         Row: {
           company_id: string | null
@@ -11139,6 +11048,13 @@ export type Database = {
         Returns: undefined
       }
       generate_parrainage_code: { Args: never; Returns: string }
+      get_available_phone_slots: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          slot_start: string
+          status: string
+        }[]
+      }
       get_client_agent_id: {
         Args: { _client_user_id: string }
         Returns: string
@@ -11147,6 +11063,23 @@ export type Database = {
       get_my_agent_id: { Args: never; Returns: string }
       get_my_co_agent_client_ids: { Args: never; Returns: string[] }
       get_next_abaninja_client_number: { Args: never; Returns: string }
+      get_public_annonceurs: {
+        Args: never
+        Returns: {
+          canton: string
+          created_at: string
+          est_verifie: boolean
+          id: string
+          logo_url: string
+          nb_avis: number
+          nom: string
+          nom_entreprise: string
+          note_moyenne: number
+          prenom: string
+          type_annonceur: string
+          ville: string
+        }[]
+      }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
         Returns: boolean
