@@ -84,13 +84,13 @@ export default function PublicAnnonces() {
     queryKey: ['portal-stats'],
     queryFn: async () => {
       const [annoncesResult, annonceursResult] = await Promise.all([
-        supabase.from('annonces_publiques').select('id', { count: 'exact' }).eq('statut', 'publie'),
-        supabase.from('annonceurs').select('id', { count: 'exact' }).eq('statut', 'actif')
+        supabase.from('annonces_publiques').select('id', { count: 'exact', head: true }).eq('statut', 'publie'),
+        supabase.rpc('get_public_annonceurs' as any),
       ]);
-      
+
       return {
         annonces: annoncesResult.count || 0,
-        annonceurs: annonceursResult.count || 0
+        annonceurs: Array.isArray(annonceursResult.data) ? annonceursResult.data.length : 0,
       };
     }
   });
