@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, X, FileText, Image } from 'lucide-react';
+import { Send, X, FileText, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PendingAttachment {
@@ -23,6 +23,9 @@ interface PremiumChatInputProps {
   onMessageChange?: (message: string) => void;
 }
 
+/**
+ * WhatsApp-style chat input. API preserved.
+ */
 export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   onSendMessage,
   disabled = false,
@@ -35,10 +38,8 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   onMessageChange,
 }) => {
   const [internalMessage, setInternalMessage] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Support both controlled and uncontrolled modes
   const isControlled = controlledMessage !== undefined && onMessageChange !== undefined;
   const message = isControlled ? controlledMessage : internalMessage;
   const setMessage = isControlled ? onMessageChange : setInternalMessage;
@@ -55,15 +56,12 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Envoyer seulement avec Ctrl+Enter (Windows/Linux) ou Cmd+Enter (Mac)
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSubmit(e);
     }
-    // Sinon, Enter seul = retour à la ligne (comportement natif du textarea)
   };
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -71,27 +69,29 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
     }
   }, [message]);
 
-  const isImage = pendingAttachment?.type?.startsWith('image') || pendingAttachment?.type === 'image';
+  const isImage =
+    pendingAttachment?.type?.startsWith('image') || pendingAttachment?.type === 'image';
+
+  const canSend = !disabled && (!!message.trim() || !!pendingAttachment);
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn(
-        'p-4 border-t backdrop-blur-xl',
-        'bg-gradient-to-r from-background/95 via-background/98 to-background/95',
-        'transition-all duration-300',
-        isFocused && 'shadow-lg shadow-primary/5'
-      )}
-      style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+      className="px-3 py-2 border-t border-border/60 bg-card"
+      style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
       {/* Pending attachment preview */}
       {pendingAttachment && (
-        <div className="mb-3 p-3 rounded-xl bg-muted/50 border border-border/50 flex items-center gap-3 animate-fade-in">
-          <div className={cn(
-            'h-10 w-10 rounded-lg flex items-center justify-center',
-            isImage ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'
-          )}>
-            {isImage ? <Image className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+        <div className="mb-2 p-2 rounded-xl bg-muted/60 border border-border/50 flex items-center gap-3">
+          <div
+            className={cn(
+              'h-10 w-10 rounded-lg flex items-center justify-center',
+              isImage
+                ? 'bg-[hsl(var(--whatsapp-green))/0.12] text-[hsl(var(--whatsapp-green-dark))]'
+                : 'bg-primary/10 text-primary',
+            )}
+          >
+            {isImage ? <ImageIcon className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{pendingAttachment.name}</p>
@@ -111,68 +111,43 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
         </div>
       )}
 
-      <div className={cn(
-        'flex items-end gap-3 p-2 rounded-2xl',
-        'bg-muted/50 backdrop-blur-sm',
-        'border transition-all duration-300',
-        isFocused 
-          ? 'border-primary/50 shadow-lg shadow-primary/10 ring-2 ring-primary/20' 
-          : 'border-border/50'
-      )}>
-        {/* Attachment slot - renders the MessageAttachmentUploader */}
-        {attachmentSlot}
+      <div className="flex items-end gap-2">
+        {/* Left action slots (attachment + quick replies) inside the rounded pill */}
+        <div className="flex-1 flex items-end gap-1 bg-background border border-border/60 rounded-3xl px-2 py-1 focus-within:border-[hsl(var(--whatsapp-green))/0.5] transition-colors">
+          {attachmentSlot}
+          {quickRepliesSlot}
 
-        {/* Quick replies slot */}
-        {quickRepliesSlot}
-
-        {/* Input area */}
-        <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
             disabled={disabled}
             rows={1}
             className={cn(
-              'min-h-[40px] max-h-[120px] py-2.5 px-4 resize-none',
+              'flex-1 min-h-[40px] max-h-[120px] py-2 px-2 resize-none',
               'bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0',
               'placeholder:text-muted-foreground/60',
-              'text-sm'
+              'text-sm',
             )}
           />
         </div>
 
-        {/* Send button */}
+        {/* WhatsApp-style round green send button */}
         <Button
           type="submit"
           size="icon"
-          disabled={disabled || (!message.trim() && !pendingAttachment)}
+          disabled={!canSend}
           className={cn(
-            'shrink-0 rounded-xl h-10 w-10',
-            'bg-gradient-to-r from-primary to-primary/80',
-            'hover:from-primary/90 hover:to-primary/70',
-            'shadow-lg shadow-primary/30',
-            'transition-all duration-300 hover:scale-110 hover:shadow-primary/50',
-            'disabled:opacity-50 disabled:hover:scale-100'
+            'shrink-0 rounded-full h-11 w-11 text-white shadow-md',
+            'bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))]',
+            'disabled:opacity-50',
           )}
         >
           <Send className="h-5 w-5" />
         </Button>
       </div>
-
-      {/* Character count indicator */}
-      {message.length > 200 && (
-        <div className={cn(
-          'text-xs text-right mt-1 transition-colors',
-          message.length > 500 ? 'text-destructive' : 'text-muted-foreground'
-        )}>
-          {message.length}/1000
-        </div>
-      )}
     </form>
   );
 };
