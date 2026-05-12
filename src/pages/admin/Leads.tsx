@@ -447,6 +447,7 @@ export default function Leads() {
         ].filter(Boolean).join(" • ") || undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads-wa-sent"] });
       setShowRelanceDialog(false);
     } catch (err) {
       toast.error("Erreur WhatsApp", { description: err instanceof Error ? err.message : "Erreur inconnue" });
