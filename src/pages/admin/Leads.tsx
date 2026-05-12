@@ -244,13 +244,31 @@ export default function Leads() {
     }
   };
 
+  // Mappe le parcours du lead vers la bonne campagne email.
+  // "achat" est volontairement laissé en `null` (campagne en draft) -> lead ignoré.
+  const getCampaignKeyForLead = (lead: Lead): string | null => {
+    const t = (lead.type_recherche || "").toLowerCase().trim();
+    if (t === "location" || t === "louer") return "location";
+    if (t === "vente" || t === "vendre") return "vente";
+    if (t === "renovation" || t === "rénovation") return "renovation";
+    // achat / acheter / autre / vide -> ignoré pour l'instant
+    return null;
+  };
+
   const sendSingleRelance = async (lead: Lead) => {
+    const campaignKey = getCampaignKeyForLead(lead);
+    if (!campaignKey) {
+      toast.error("Parcours non supporté", {
+        description: `Type "${lead.type_recherche || "inconnu"}" : aucune campagne associée (achat en attente).`,
+      });
+      return;
+    }
     toast.loading(`Envoi à ${lead.prenom || lead.email}…`, { id: `relance-${lead.id}` });
     try {
       const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
         body: {
           mode: "send",
-          campaignKey: "location",
+          campaignKey,
           leadSource: "leads",
           leadIds: [lead.id],
         },
