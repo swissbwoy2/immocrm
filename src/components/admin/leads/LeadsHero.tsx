@@ -16,7 +16,10 @@ interface Props {
   rdvCount: number;
   hotCount: number;
   notContactedCount: number;
+  whatsappCount?: number;
   onRelance: () => void;
+  onWhatsapp?: () => void;
+  whatsappLoading?: boolean;
   onImport?: () => void;
   onExport: () => void;
 }
