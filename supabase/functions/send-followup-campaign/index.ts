@@ -710,7 +710,12 @@ Deno.serve(async (req) => {
         }
 
         if (result.error) failed++;
-        else sent++;
+        else {
+          sent++;
+          if (leadSource === 'leads') {
+            await supabaseAdmin.from('leads').update({ contacted: true }).eq('id', lead.id);
+          }
+        }
 
         await new Promise((r) => setTimeout(r, SEND_DELAY_MS));
       }
