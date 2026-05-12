@@ -183,7 +183,7 @@ export function LeadDetailSheet({
           {/* RDV téléphonique */}
           {appt && (
             <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Rendez-vous téléphonique</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Rendez-vous au bureau</h4>
               <div className={cn(
                 "rounded-lg p-3 border",
                 appt.status === "confirme"
