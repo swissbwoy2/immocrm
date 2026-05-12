@@ -19,6 +19,7 @@ interface Props {
   total: number;
   rdvCount: number;
   rdvConfirmed: number;
+  rdvPending?: number;
   qualifiedCount: number;
   contactedCount: number;
   onFilterTotal?: () => void;
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export function LeadsKpiStrip({
-  total, rdvCount, rdvConfirmed, qualifiedCount, contactedCount,
+  total, rdvCount, rdvConfirmed, rdvPending = 0, qualifiedCount, contactedCount,
   onFilterTotal, onFilterRdv, onFilterQualified, onFilterContacted,
 }: Props) {
   const qualifiedPct = total ? (qualifiedCount / total) * 100 : 0;
@@ -44,11 +45,15 @@ export function LeadsKpiStrip({
       onClick: onFilterTotal,
     },
     {
-      label: "RDV téléphoniques",
+      label: "RDV bureau",
       value: rdvCount,
-      hint: `${rdvConfirmed} confirmés`,
+      hint: rdvPending > 0
+        ? `${rdvPending} à confirmer · ${rdvConfirmed} confirmés`
+        : `${rdvConfirmed} confirmés`,
       icon: <Phone className="h-5 w-5" />,
-      accent: "from-amber-500/20 to-amber-500/5 text-amber-500",
+      accent: rdvPending > 0
+        ? "from-rose-500/25 to-amber-500/5 text-rose-500"
+        : "from-amber-500/20 to-amber-500/5 text-amber-500",
       decimals: 0,
       onClick: onFilterRdv,
     },
