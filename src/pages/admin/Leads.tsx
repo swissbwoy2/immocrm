@@ -138,28 +138,54 @@ export default function Leads() {
     const rdvLeads = filteredLeads.filter((l) => !!getApptForLead(l));
     const rdvCount = rdvLeads.length;
     const rdvConfirmed = rdvLeads.filter((l) => getApptForLead(l)?.status === "confirme").length;
+    const rdvPending = rdvLeads.filter((l) => getApptForLead(l)?.status === "en_attente").length;
     const qualified = filteredLeads.filter((l) => l.is_qualified === true).length;
     const contacted = filteredLeads.filter((l) => l.contacted).length;
-    return { total, rdvCount, rdvConfirmed, qualified, contacted };
+    return { total, rdvCount, rdvConfirmed, rdvPending, qualified, contacted };
   }, [filteredLeads, apptByLeadId, apptByEmail]);
 
   // ---------- Hot items ----------
+  // Priorité : (1) tout RDV bureau "en_attente" qui demande confirmation,
+  // peu importe la date — sinon les RDV passés ou >24h disparaissent du radar.
+  // (2) RDV confirmé dans les prochaines 24h. (3) Leads qualifiés froids.
   const hotItems: HotItem[] = useMemo(() => {
     const items: HotItem[] = [];
+    const seen = new Set<string>();
     const in24h = Date.now() + 24 * 3600_000;
     const now = Date.now();
     leads.forEach((l) => {
       const a = getApptForLead(l);
-      if (a && new Date(a.slot_start).getTime() <= in24h && new Date(a.slot_start).getTime() >= now && a.status !== "annule") {
+      if (a && a.status === "en_attente") {
         items.push({ lead: l, reason: "rdv_today", appt: a });
-      } else if (l.is_qualified === true && !l.contacted) {
+        seen.add(l.id);
+        return;
+      }
+      if (
+        a &&
+        a.status === "confirme" &&
+        new Date(a.slot_start).getTime() <= in24h &&
+        new Date(a.slot_start).getTime() >= now
+      ) {
+        items.push({ lead: l, reason: "rdv_today", appt: a });
+        seen.add(l.id);
+        return;
+      }
+      if (l.is_qualified === true && !l.contacted) {
         const created = l.created_at ? new Date(l.created_at).getTime() : 0;
-        if (now - created > 48 * 3600_000) {
+        if (now - created > 48 * 3600_000 && !seen.has(l.id)) {
           items.push({ lead: l, reason: "qualified_cold" });
         }
       }
     });
-    return items.slice(0, 12);
+    // Sort: pending first (oldest slot first), then upcoming confirmed, then cold
+    items.sort((a, b) => {
+      const wa = a.appt?.status === "en_attente" ? 0 : a.appt ? 1 : 2;
+      const wb = b.appt?.status === "en_attente" ? 0 : b.appt ? 1 : 2;
+      if (wa !== wb) return wa - wb;
+      if (a.appt && b.appt) return new Date(a.appt.slot_start).getTime() - new Date(b.appt.slot_start).getTime();
+      return 0;
+    });
+    return items.slice(0, 20);
   }, [leads, apptByLeadId, apptByEmail]);
 
   // ---------- Mutations & actions ----------
