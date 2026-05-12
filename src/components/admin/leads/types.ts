@@ -36,13 +36,13 @@ export type PhoneAppointment = {
   prospect_email: string | null;
 };
 
-export type PipelineStage = "nouveau" | "rdv" | "contacte" | "qualifie" | "client";
+export type PipelineStage = "nouveau" | "contacte" | "qualifie" | "rdv" | "client";
 
 export const STAGES: { key: PipelineStage; label: string; gradient: string; ring: string }[] = [
   { key: "nouveau", label: "Nouveau", gradient: "from-sky-500/15 to-sky-500/5", ring: "ring-sky-500/30" },
-  { key: "rdv", label: "RDV bureau", gradient: "from-amber-500/15 to-amber-500/5", ring: "ring-amber-500/30" },
   { key: "contacte", label: "Contacté", gradient: "from-violet-500/15 to-violet-500/5", ring: "ring-violet-500/30" },
   { key: "qualifie", label: "Qualifié", gradient: "from-emerald-500/15 to-emerald-500/5", ring: "ring-emerald-500/30" },
+  { key: "rdv", label: "RDV bureau", gradient: "from-amber-500/15 to-amber-500/5", ring: "ring-amber-500/30" },
   { key: "client", label: "Client", gradient: "from-primary/20 to-primary/5", ring: "ring-primary/40" },
 ];
 
