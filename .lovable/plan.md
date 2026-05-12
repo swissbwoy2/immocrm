@@ -1,30 +1,23 @@
-## Modifications dans `src/components/admin/AgentFinancialProjection.tsx`
+## Problème
 
-### 1. Ajouter une 3ᵉ tuile « Total encaissé »
-- `totalEncaisse = totalAgent + totalAgence` (somme des loyers de base, c.-à-d. la commission totale facturée).
-- Tuile violette/ambre cohérente avec les deux existantes, icône `Coins` (lucide).
-- Sous-titre : « Commission totale facturée par l'agence ».
-- Grille passe de `md:grid-cols-2` → `md:grid-cols-3`.
+Carina affiche 22 clients alors qu'elle n'en a que 13 actifs. La requête actuelle filtre seulement `statut <> 'reloge'`, ce qui inclut aussi les clients `inactif` (8) et `suspendu` (1) → 13 + 8 + 1 = 22.
 
-### 2. Tooltips explicatifs sur chaque tuile
-Utiliser le composant `Tooltip` de shadcn (`@/components/ui/tooltip`) avec un petit `Info` (lucide) à côté du titre :
-- **Commission agent** : « Part versée à l'agent selon son taux personnel (commission_split). »
-- **CA agence** : « Part qui reste à l'agence après avoir payé l'agent. Ce n'est pas le total facturé. »
-- **Total encaissé** : « Montant total que l'agence facture au client (équivaut à un mois de loyer brut par dossier). Total = Commission agent + Part agence. »
+Répartition réelle en base pour Carina :
+- actif : 13
+- inactif : 8
+- suspendu : 1
+- reloge : 1
 
-### 3. Mini récapitulatif tabulaire en bas de la section
-Sous le bloc « Détail par client » (ou juste avant la note italique), ajouter une petite carte « Récapitulatif » avec un tableau 1 ligne / 3 colonnes :
+## Décision
 
-| Commission agent | Part agence | Total encaissé |
-|---|---|---|
-| 9 840 CHF (45%) | 12 027 CHF (55%) | 21 867 CHF (100%) |
+Compter uniquement les clients au statut `actif` partout où on affiche un nombre de clients par agent.
 
-Affiche aussi le pourcentage moyen pondéré (`totalAgent / totalEncaisse * 100`) entre parenthèses sous chaque montant pour visualiser le partage réel.
+## Changements
 
-### 4. Note italique mise à jour
-Préciser : « Total encaissé = somme des loyers bruts (1 mois par dossier). Il se répartit ensuite entre l'agent et l'agence selon le commission_split. »
+1. **`src/pages/admin/Agents.tsx`** (liste des agents, KPI "Actifs", badge par carte) — remplacer `.neq('clients.statut', 'reloge')` par `.eq('clients.statut', 'actif')`.
 
-## Fichiers touchés
-- `src/components/admin/AgentFinancialProjection.tsx` uniquement (~40 lignes ajoutées).
+2. **`src/pages/admin/AgentDetail.tsx`** — la requête `client_agents` qui alimente la liste et le badge `{clients.length}` doit elle aussi filtrer `clients.statut = 'actif'` au lieu de `<> 'reloge'`. Cela impactera également la projection financière, qui ne prendra plus en compte que les mandats actifs (cohérent avec l'intention du KPI).
 
-Aucune modif DB, aucune autre page.
+3. **`src/pages/admin/StatistiquesAgents.tsx`** — même changement pour le `total_clients`.
+
+Aucun changement de schéma ni de RLS, uniquement la logique de filtrage côté requête.

@@ -64,7 +64,7 @@ export default function StatistiquesAgents() {
             .from('client_agents')
             .select('*, clients!inner(statut)', { count: 'exact', head: true })
             .eq('agent_id', agent.id)
-            .neq('clients.statut', 'reloge');
+            .eq('clients.statut', 'actif');
 
           // Get transactions
           let transactionsQuery = supabase
