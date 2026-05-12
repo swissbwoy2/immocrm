@@ -4,7 +4,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, List, Rows, Zap, Upload, Download, MoreHorizontal, Sparkles } from "lucide-react";
+import { LayoutGrid, List, Rows, Zap, Upload, Download, MoreHorizontal, Sparkles, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "pipeline" | "list" | "cards";
