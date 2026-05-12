@@ -101,6 +101,7 @@ export function LeadsHero({
             onClick={onWhatsapp}
             disabled={whatsappLoading || whatsappCount === 0}
             variant="secondary"
+            title="Leads Shortlist avec téléphone, jamais contactés sur WhatsApp (dédup logs Meta)."
             className="gap-2 min-h-[44px] sm:min-h-[40px] w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             <MessageCircle className="h-4 w-4" />
