@@ -226,7 +226,7 @@ const AgentDetail = () => {
       const clientsData = (caRows || []).map((r: any) => ({
         ...r.clients,
         is_primary: r.is_primary,
-        commission_split: r.commission_split,
+        agent_commission_split: r.commission_split,
       }));
 
       // Fetch clients profiles
