@@ -49,10 +49,12 @@ export default function RendezVousBureau() {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      const { data } = await supabase
-        .from('available_phone_slots' as any)
-        .select('slot_start')
-        .gte('slot_start', new Date().toISOString());
+      const from = new Date().toISOString();
+      const to = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase.rpc('get_available_phone_slots', {
+        p_from: from,
+        p_to: to,
+      });
       if (!mounted) return;
       const set = new Set<string>();
       (data || []).forEach((row: any) => set.add(new Date(row.slot_start).toISOString()));
