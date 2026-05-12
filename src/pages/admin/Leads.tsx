@@ -462,6 +462,12 @@ export default function Leads() {
           rdvCount={kpis.rdvCount}
           hotCount={hotItems.length}
           notContactedCount={notContactedCount}
+          whatsappCount={waCandidates.length}
+          whatsappLoading={waSending}
+          onWhatsapp={() => {
+            if (!confirm(`Envoyer le template WhatsApp à ${waCandidates.length} lead(s) ?\n(par paquets de 3, dédup 24h)`)) return;
+            sendWhatsappRelanceAll();
+          }}
           onRelance={() => setShowRelanceDialog(true)}
           onExport={exportCSV}
         />
