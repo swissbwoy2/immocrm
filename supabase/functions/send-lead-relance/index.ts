@@ -426,7 +426,7 @@ serve(async (req) => {
       const budget = lead.budget || '';
 
       try {
-        const subject = `${prenom}, tu as déjà trouvé ton futur logement ?`;
+        const subject = `${prenom}, tu cherches un appartement ? Est-ce que c'est toujours le cas ?`;
         const html = generateMarketingEmail(prenom, localite, budget, offres);
 
         try {
