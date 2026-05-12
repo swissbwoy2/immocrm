@@ -377,18 +377,45 @@ export default function Leads() {
   };
 
   // ─── WHATSAPP RELANCE (template "location_rdv_activation_v2") ───
-  // Cible : tous les leads non contactés ayant un téléphone (hors opt-out).
-  // Le template parle de location mais on l'utilise comme relance générique
-  // sur tous les parcours (mêmes destinataires que la relance email).
+  // Cible : tous les leads avec téléphone (hors opt-out) jamais contactés
+  // sur WhatsApp (dédup via whatsapp_notification_logs).
+  // `contacted` = email envoyé, n'a aucun rapport avec WhatsApp.
+  const { data: waSentRows = [] } = useQuery({
+    queryKey: ["leads-wa-sent"],
+    queryFn: async () => {
+      const all: { context_ref: string }[] = [];
+      const PAGE = 1000;
+      for (let from = 0; from < 50000; from += PAGE) {
+        const { data, error } = await supabase
+          .from("whatsapp_notification_logs")
+          .select("context_ref")
+          .eq("template_key", "location_rdv_activation_v2")
+          .eq("context_type", "lead")
+          .in("status", ["sent", "delivered", "read"])
+          .not("context_ref", "is", null)
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        const rows = (data || []) as any[];
+        all.push(...rows);
+        if (rows.length < PAGE) break;
+      }
+      return all;
+    },
+  });
+  const waAlreadySent = useMemo(
+    () => new Set(waSentRows.map((r) => r.context_ref).filter(Boolean)),
+    [waSentRows],
+  );
+
   const waCandidates = useMemo(
     () =>
       filteredLeads.filter((l) => {
-        if (l.contacted) return false;
         if (!l.telephone && !(l as any).phone_e164) return false;
         if ((l as any).whatsapp_opt_out) return false;
+        if (waAlreadySent.has(l.id)) return false;
         return true;
       }),
-    [filteredLeads],
+    [filteredLeads, waAlreadySent],
   );
 
   const [waSending, setWaSending] = useState(false);
