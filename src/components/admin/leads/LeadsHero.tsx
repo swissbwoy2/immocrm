@@ -32,7 +32,8 @@ const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
 
 export function LeadsHero({
   view, setView, total, rdvCount, hotCount, notContactedCount,
-  onRelance, onImport, onExport,
+  whatsappCount = 0, onRelance, onWhatsapp, whatsappLoading,
+  onImport, onExport,
 }: Props) {
   return (
     <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 justify-between items-stretch lg:items-center">
