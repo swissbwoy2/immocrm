@@ -377,14 +377,16 @@ export default function Leads() {
   };
 
   // ─── WHATSAPP RELANCE (template "location_rdv_activation_v2") ───
-  // Cible : leads avec téléphone (location uniquement, comme la campagne meta_leads).
+  // Cible : tous les leads non contactés ayant un téléphone (hors opt-out).
+  // Le template parle de location mais on l'utilise comme relance générique
+  // sur tous les parcours (mêmes destinataires que la relance email).
   const waCandidates = useMemo(
     () =>
       filteredLeads.filter((l) => {
         if (l.contacted) return false;
         if (!l.telephone && !(l as any).phone_e164) return false;
         if ((l as any).whatsapp_opt_out) return false;
-        return getCampaignKeyForLead(l) === "location";
+        return true;
       }),
     [filteredLeads],
   );
