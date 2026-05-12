@@ -352,6 +352,7 @@ export default function Leads() {
           total={kpis.total}
           rdvCount={kpis.rdvCount}
           rdvConfirmed={kpis.rdvConfirmed}
+          rdvPending={kpis.rdvPending}
           qualifiedCount={kpis.qualified}
           contactedCount={kpis.contacted}
           onFilterRdv={() => setHot(true)}
