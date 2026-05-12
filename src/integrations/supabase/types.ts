@@ -1193,6 +1193,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "annonces_publiques_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "annonces_publiques_categorie_id_fkey"
             columns: ["categorie_id"]
             isOneToOne: false
@@ -1661,6 +1668,13 @@ export type Database = {
             columns: ["annonceur_id"]
             isOneToOne: false
             referencedRelation: "annonceurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avis_annonceurs_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs_public"
             referencedColumns: ["id"]
           },
         ]
@@ -6946,6 +6960,13 @@ export type Database = {
             referencedRelation: "annonceurs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "paiements_annonces_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pdf_exports_immeuble: {
@@ -9696,6 +9717,13 @@ export type Database = {
             referencedRelation: "annonceurs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "signalements_annonces_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       source_connectors: {
@@ -10918,6 +10946,54 @@ export type Database = {
       }
     }
     Views: {
+      annonceurs_public: {
+        Row: {
+          canton: string | null
+          created_at: string | null
+          est_verifie: boolean | null
+          id: string | null
+          logo_url: string | null
+          nb_avis: number | null
+          nom: string | null
+          nom_entreprise: string | null
+          note_moyenne: number | null
+          prenom: string | null
+          statut: string | null
+          type_annonceur: string | null
+          ville: string | null
+        }
+        Insert: {
+          canton?: string | null
+          created_at?: string | null
+          est_verifie?: boolean | null
+          id?: string | null
+          logo_url?: string | null
+          nb_avis?: number | null
+          nom?: string | null
+          nom_entreprise?: string | null
+          note_moyenne?: number | null
+          prenom?: string | null
+          statut?: string | null
+          type_annonceur?: string | null
+          ville?: string | null
+        }
+        Update: {
+          canton?: string | null
+          created_at?: string | null
+          est_verifie?: boolean | null
+          id?: string | null
+          logo_url?: string | null
+          nb_avis?: number | null
+          nom?: string | null
+          nom_entreprise?: string | null
+          note_moyenne?: number | null
+          prenom?: string | null
+          statut?: string | null
+          type_annonceur?: string | null
+          ville?: string | null
+        }
+        Relationships: []
+      }
       available_phone_slots: {
         Row: {
           slot_start: string | null
