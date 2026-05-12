@@ -594,10 +594,25 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: leads, error: lErr } = await supabaseAdmin
-        .from('meta_leads')
-        .select('id, email, first_name')
-        .in('id', leadIds);
+      const leadSource = (body?.leadSource === 'leads' ? 'leads' : 'meta_leads') as 'leads' | 'meta_leads';
+
+      let leads: Array<{ id: string; email: string; first_name: string | null }> = [];
+      let lErr: any = null;
+      if (leadSource === 'leads') {
+        const res = await supabaseAdmin
+          .from('leads')
+          .select('id, email, prenom')
+          .in('id', leadIds);
+        lErr = res.error;
+        leads = (res.data || []).map((l: any) => ({ id: l.id, email: l.email, first_name: l.prenom }));
+      } else {
+        const res = await supabaseAdmin
+          .from('meta_leads')
+          .select('id, email, first_name')
+          .in('id', leadIds);
+        lErr = res.error;
+        leads = (res.data || []) as any;
+      }
 
       if (lErr) {
         return new Response(JSON.stringify({ error: lErr.message }), {
