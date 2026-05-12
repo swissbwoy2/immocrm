@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { PremiumCard } from "@/components/premium/PremiumCard";
 import { cn } from "@/lib/utils";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { AgentFinancialProjection, type ProjectionItem } from '@/components/admin/AgentFinancialProjection';
 
 interface Agent {
   id: string;
@@ -47,6 +48,9 @@ interface Client {
   region_recherche: string | null;
   date_ajout: string | null;
   statut: string | null;
+  commission_split?: number | null;
+  is_primary?: boolean;
+  agent_commission_split?: number | null;
   profiles: Profile;
 }
 
@@ -82,6 +86,35 @@ const AgentDetail = () => {
     nom: '',
     telephone: ''
   });
+
+  // Projection financière (modèle location, ≤90j, hors reloge)
+  const projectionItems: ProjectionItem[] = useMemo(() => {
+    const now = Date.now();
+    return clients
+      .filter(c => {
+        if (c.statut === 'reloge') return false;
+        if (!c.date_ajout) return true;
+        const days = (now - new Date(c.date_ajout).getTime()) / (1000 * 60 * 60 * 24);
+        return days <= 90;
+      })
+      .map(c => {
+        const splitAgent = c.agent_commission_split ?? c.commission_split ?? 45;
+        const base = c.budget_max || 0;
+        const commissionAgent = Math.round(base * (splitAgent / 100));
+        const partAgence = Math.round(base * ((100 - splitAgent) / 100));
+        const fullName = `${c.profiles?.prenom || ''} ${c.profiles?.nom || ''}`.trim() || 'Client';
+        return {
+          clientId: c.id,
+          clientName: fullName,
+          base,
+          splitAgent,
+          commissionAgent,
+          partAgence,
+          isPrimary: !!c.is_primary,
+        };
+      })
+      .filter(i => i.base > 0);
+  }, [clients]);
 
   useEffect(() => {
     if (agentId) {
@@ -223,7 +256,7 @@ const AgentDetail = () => {
       const clientsData = (caRows || []).map((r: any) => ({
         ...r.clients,
         is_primary: r.is_primary,
-        commission_split: r.commission_split,
+        agent_commission_split: r.commission_split,
       }));
 
       // Fetch clients profiles
@@ -786,6 +819,9 @@ const AgentDetail = () => {
             agentId={agent.id}
           />
         </PremiumCard>
+
+        {/* Projection financière */}
+        <AgentFinancialProjection items={projectionItems} />
 
         {/* Premium Clients Card */}
         <div className="space-y-4 animate-fade-in" style={{ animationDelay: '400ms' }}>

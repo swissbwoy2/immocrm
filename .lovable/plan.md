@@ -1,54 +1,54 @@
 
-## Constat (vérifié en DB)
+## Objectif
 
-| Agent | `clients.agent_id` (legacy) | `client_agents` (source de vérité) | Detail affiche | Liste affiche |
-|---|---|---|---|---|
-| Carina | **22** (dont 1 reloge → 23 brut) | **14** | 23 ❌ | 14 ✅ |
-| Elodie | **9** | **13** | 9 ❌ | 13 ✅ |
-| Victoria | 14 | 14 | 14 ✅ | 14 ✅ |
+Ajouter sur `/admin/agents/:id` un bloc **« Projection financière »** qui montre, pour cet agent uniquement :
+- **Commission projetée de l'agent** (sa part personnelle)
+- **CA projeté de l'agence** issu de ses dossiers (part agency)
+- Un détail ligne par ligne pour comprendre d'où viennent les chiffres
 
-Deux problèmes :
-1. **AgentDetail.tsx** lit la table legacy `clients.agent_id` au lieu de `client_agents` → compte faux et inclut même les clients `reloge`.
-2. **Drift réel des données** entre `clients.agent_id` et `client_agents` (mémoire « Always keep client_agents and clients.agent_id in sync » violée pour Carina et Elodie). Carina a 13 lignes orphelines `agent_id=Carina` sans entrée `client_agents`, Elodie a l'inverse (4 co/primaires côté `client_agents` sans `agent_id` correspondant).
+Réutilise exactement la même formule que le Dashboard admin pour rester cohérent.
 
-## Plan
+## Formule (identique à `Dashboard.tsx` lignes 246-275)
 
-### 1. Corriger l'affichage du detail agent (`src/pages/admin/AgentDetail.tsx`, lignes 213-244)
+Pour chaque client lié à l'agent (via `client_agents`, primaire **ou** co-agent) :
+- Filtre : `statut <> 'reloge'` ET ancienneté ≤ 90 jours
+- `splitAgent` = `client_agents.commission_split` de **la ligne de cet agent** (pas du primaire) → c'est la quote-part personnelle de cet agent ; fallback `clients.commission_split` puis `45`
+- `base` = `clients.budget_max` (loyer mensuel) — modèle location, commission = loyer brut sans TVA (mémoire)
+- `commissionAgent`  = `base × splitAgent / 100`
+- `partAgence`       = `base × (100 - splitAgent) / 100`
 
-Remplacer la requête actuelle :
-```ts
-.from('clients').select('*').eq('agent_id', agentId);
-```
-par :
-```ts
-.from('client_agents')
-  .select('is_primary, commission_split, clients!inner(*)')
-  .eq('agent_id', agentId)
-  .neq('clients.statut', 'reloge')
-  .limit(15000);
-```
-Mapper `data.map(r => ({ ...r.clients, is_primary: r.is_primary, commission_split: r.commission_split }))`. Le compteur `clients.length` (lignes 698 et 790) devient cohérent avec la liste `/admin/agents` et la page Assignations.
+Total agent = somme des `commissionAgent` ; Total agence = somme des `partAgence`.
 
-Bonus UI : sur la carte client (ligne 810), afficher un petit badge `Co-agent` quand `!is_primary` pour distinguer visuellement les co-assignations dans le portefeuille de l'agent.
+## Plan UI (un seul fichier : `src/pages/admin/AgentDetail.tsx`)
 
-### 2. Re-sync one-shot des données (migration SQL)
+### 1. Étendre le fetch (autour des lignes 213-244 où on charge déjà `client_agents` pour cet agent)
 
-Source de vérité retenue : **`client_agents`** (c'est elle qui pilote l'UI Assignations refondue, les RLS co-assignment et l'access control storage).
+Sélectionner aussi `commission_split, is_primary` (déjà fait) + `clients.budget_max, clients.commission_split, clients.statut, clients.date_ajout` (déjà via `clients!inner(*)`). Aucun appel supplémentaire nécessaire.
 
-Migration en deux passes :
+### 2. Calculer la projection en mémoire
 
-**Passe A — combler les trous dans `client_agents`** : pour chaque ligne `clients` ayant `agent_id IS NOT NULL` mais aucune ligne dans `client_agents`, insérer `(client_id, agent_id, is_primary=true, commission_split=100)`. Couvre les 13 orphelins de Carina.
+Dans un `useMemo`, mapper `clients` → `{ clientId, clientName, base, splitAgent, commissionAgent, partAgence, isPrimary, daysElapsed }` en filtrant statut/90 jours, puis sommer.
 
-**Passe B — réaligner `clients.agent_id`** : pour chaque client présent dans `client_agents`, mettre `clients.agent_id = (la ligne is_primary=true)`. Si plusieurs `is_primary=true` (ne devrait pas arriver), garder la plus ancienne et passer les autres à `false`. Si aucun primaire mais des co-agents, promouvoir le plus ancien.
+### 3. Insérer un nouveau bloc juste avant la section « Clients assignés » (ligne ~789)
 
-**Passe C — recompter le cache** : `UPDATE agents SET nombre_clients_assignes = (SELECT count(*) FROM client_agents ca JOIN clients c ON c.id=ca.client_id WHERE ca.agent_id=agents.id AND c.statut<>'reloge')` pour aligner aussi le compteur dénormalisé utilisé ailleurs (KPI, badges).
+Layout :
+- **2 grandes tuiles côte à côte** (style cohérent avec les KPIs existants ligne 730) :
+  - 💰 « Commission projetée agent » — gros chiffre CHF + sous-titre `X dossiers actifs`
+  - 🏢 « CA projeté agence » — gros chiffre CHF + sous-titre `Sur la base des budgets max`
+- **Mini-tableau dépliable** (`Collapsible`) listant chaque client contributeur : nom, badge `Principal`/`Co-agent`, budget, % agent, CHF commission, CHF agence. Trié par contribution agent décroissante.
+- **Note explicative** discrète : « Projection sur les locations, sur 90 jours d'ancienneté, hors clients relogés. Modèle : commission = loyer brut sans TVA. »
 
-Aucune suppression de données. Aucun changement de RLS ni d'Edge Function.
+### 4. Réutiliser le composant existant ?
 
-### 3. Aucune autre page touchée
+`AgencyProjectionSection` (admin/AgencyProjectionSection.tsx) est centré sur l'agence globale et liste **plusieurs agents**. Pour la page d'un agent on veut une vision plus condensée et centrée sur lui. → Créer un petit composant local `AgentFinancialProjection.tsx` (~80 lignes) qui prend `{ commissionAgent, partAgence, items[] }` en props pour ne pas alourdir AgentDetail.
 
-`/admin/agents` (liste) lit déjà `client_agents` correctement → pas de modif. La page Assignations refondue lit déjà `client_agents` → pas de modif.
+## Hors scope (à confirmer)
 
-## Question
+Ventes (`biens_en_vente`, modèle Net Seller) : la projection actuelle du Dashboard ne les inclut pas. Je propose de les laisser hors de cette projection pour rester strictement cohérent avec ce que voit déjà l'admin sur le Dashboard. Si tu veux les ajouter aussi (3ᵉ tuile « Pipeline ventes »), dis-le.
 
-OK pour exécuter la migration de resync (Passes A+B+C ci-dessus) en plus du fix d'affichage ? C'est elle qui résout définitivement le drift — sinon le compteur sera juste à l'écran mais Carina restera avec 13 clients « fantômes » uniquement reliés via `agent_id` legacy.
+## Fichiers touchés
+
+- `src/pages/admin/AgentDetail.tsx` (ajout du bloc + useMemo, ~30 lignes)
+- `src/components/admin/AgentFinancialProjection.tsx` (nouveau, ~80 lignes)
+
+Aucune migration DB, aucune Edge Function.
