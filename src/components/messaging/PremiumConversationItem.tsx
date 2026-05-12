@@ -1,9 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ChatAvatar } from './ChatAvatar';
+import { LeadAvatar } from '@/components/whatsapp/LeadAvatar';
 import { formatSwissMessageTime } from '@/lib/dateUtils';
-import { Archive, Sparkles } from 'lucide-react';
-import { isUserOnline, formatLastSeen } from '@/hooks/usePresence';
+import { Archive } from 'lucide-react';
+import { isUserOnline } from '@/hooks/usePresence';
 
 interface PremiumConversationItemProps {
   name: string;
@@ -19,116 +19,90 @@ interface PremiumConversationItemProps {
   isOnline?: boolean | null;
 }
 
+/**
+ * WhatsApp-style conversation list item.
+ * API kept identical to the previous "premium" version so pages don't need changes.
+ */
 export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = ({
   name,
-  avatarUrl,
   lastMessage,
   lastMessageTime,
   unreadCount = 0,
   isSelected = false,
   isArchived = false,
   onClick,
-  index = 0,
   lastSeenAt,
   isOnline: isOnlineProp,
 }) => {
   const online = isUserOnline(lastSeenAt, isOnlineProp);
+  const unread = unreadCount > 0;
+
   return (
     <button
       onClick={onClick}
-      style={{ animationDelay: `${index * 50}ms` }}
       className={cn(
-        'w-full flex items-center gap-3 p-4 border-b border-border/30',
-        'transition-all duration-300 ease-out',
-        'hover:bg-gradient-to-r hover:from-primary/5 hover:to-primary/10',
-        'hover:translate-x-2 hover:shadow-lg',
-        'active:scale-[0.98]',
-        'animate-fade-in opacity-0',
-        'group relative overflow-hidden',
-        isSelected && 'bg-gradient-to-r from-primary/10 to-primary/5 border-l-4 border-l-primary shadow-md',
+        'w-full text-left px-3 py-2.5 flex items-center gap-3 transition-colors duration-150 min-h-[68px] border-b border-border/40',
+        'hover:bg-[hsl(var(--whatsapp-green))/0.08] active:bg-[hsl(var(--whatsapp-green))/0.12]',
+        isSelected && 'bg-[hsl(var(--whatsapp-green))/0.10]',
         isArchived && 'opacity-60',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--whatsapp-green))/0.4]',
       )}
     >
-      {/* Animated gradient border on hover */}
-      <div className={cn(
-        'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300',
-        'bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0',
-        'animate-shimmer'
-      )} />
-      
-      {/* Glow effect for unread */}
-      {unreadCount > 0 && (
-        <div className="absolute inset-0 bg-primary/5 animate-pulse" />
-      )}
-
-      <div className="relative z-10">
-        <div className="relative">
-          <div className={cn(
-            'transition-transform duration-300 group-hover:scale-110',
-            isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background rounded-full'
-          )}>
-            <ChatAvatar name={name} avatarUrl={avatarUrl} size="md" />
-          </div>
-          {unreadCount > 0 && (
-            <span className={cn(
-              'absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1.5',
-              'flex items-center justify-center',
-              'bg-gradient-to-r from-primary to-primary/80',
-              'text-primary-foreground text-[10px] font-bold rounded-full',
-              'shadow-lg shadow-primary/30',
-              'animate-bounce-soft'
-            )}>
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-          {/* Online indicator - now dynamic */}
-          {online && (
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full animate-pulse" />
-          )}
-        </div>
+      <div className="relative shrink-0">
+        <LeadAvatar name={name} size={48} />
+        {online && (
+          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[hsl(var(--whatsapp-green))] border-2 border-background" />
+        )}
       </div>
-      
-      <div className="flex-1 min-w-0 text-left relative z-10">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className={cn(
-            "font-semibold text-sm truncate transition-colors duration-200",
-            unreadCount > 0 && "text-foreground",
-            isSelected && "text-primary",
-            "group-hover:text-primary"
-          )}>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className={cn(
+              'truncate text-sm',
+              unread ? 'font-semibold text-foreground' : 'font-medium text-foreground/90',
+            )}
+          >
             {name}
-          </h3>
+          </span>
           {lastMessageTime && (
-            <span className={cn(
-              "text-[10px] ml-2 shrink-0 transition-colors duration-200",
-              unreadCount > 0 ? "text-primary font-bold" : "text-muted-foreground"
-            )}>
+            <span
+              className={cn(
+                'text-[11px] shrink-0',
+                unread
+                  ? 'text-[hsl(var(--whatsapp-green-dark))] font-semibold'
+                  : 'text-muted-foreground',
+              )}
+            >
               {formatSwissMessageTime(lastMessageTime)}
             </span>
           )}
         </div>
-        
-        <div className="flex items-center justify-between gap-2">
-          <p className={cn(
-            "text-xs truncate transition-colors duration-200",
-            unreadCount > 0 ? "text-foreground font-medium" : "text-muted-foreground"
-          )}>
+
+        <div className="flex items-center justify-between gap-2 mt-0.5">
+          <p
+            className={cn(
+              'truncate text-xs',
+              unread ? 'text-foreground/80' : 'text-muted-foreground',
+            )}
+          >
             {lastMessage || 'Aucun message'}
           </p>
-          {isArchived && (
-            <span className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-              <Archive className="h-3 w-3" />
-              Archivée
-            </span>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {isArchived && (
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                <Archive className="h-3 w-3" />
+                Archivée
+              </span>
+            )}
+            {unread && (
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[hsl(var(--whatsapp-green))] text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Sparkle effect for selected */}
-      {isSelected && (
-        <Sparkles className="h-4 w-4 text-primary animate-pulse shrink-0" />
-      )}
     </button>
   );
 };
