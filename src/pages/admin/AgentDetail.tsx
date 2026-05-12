@@ -21,6 +21,7 @@ import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { PremiumCard } from "@/components/premium/PremiumCard";
 import { cn } from "@/lib/utils";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { AgentFinancialProjection, type ProjectionItem } from '@/components/admin/AgentFinancialProjection';
 
 interface Agent {
   id: string;
