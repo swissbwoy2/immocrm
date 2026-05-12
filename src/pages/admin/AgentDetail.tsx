@@ -47,6 +47,9 @@ interface Client {
   region_recherche: string | null;
   date_ajout: string | null;
   statut: string | null;
+  commission_split?: number | null;
+  is_primary?: boolean;
+  agent_commission_split?: number | null;
   profiles: Profile;
 }
 
