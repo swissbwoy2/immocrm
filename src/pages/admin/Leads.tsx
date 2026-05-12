@@ -319,28 +319,54 @@ export default function Leads() {
     }
   };
 
+  // Répartition des leads non-contactés par campagne (utilisée par le dialog + l'envoi bulk)
+  const relanceBreakdown = useMemo(() => {
+    const groups: Record<string, string[]> = { location: [], vente: [], renovation: [] };
+    const ignored: { id: string; type: string }[] = [];
+    for (const l of filteredLeads) {
+      if (l.contacted) continue;
+      const key = getCampaignKeyForLead(l);
+      if (key && groups[key]) groups[key].push(l.id);
+      else ignored.push({ id: l.id, type: l.type_recherche || "inconnu" });
+    }
+    return { groups, ignored };
+  }, [filteredLeads]);
+
+  const sendableCount =
+    relanceBreakdown.groups.location.length +
+    relanceBreakdown.groups.vente.length +
+    relanceBreakdown.groups.renovation.length;
+
   const sendRelanceAll = async () => {
-    const ids = filteredLeads.filter((l) => !l.contacted).map((l) => l.id);
     setRelanceSending(true);
     try {
       let totalSent = 0, totalErrors = 0;
-      // Batch via la campagne "location" (suivi de campagne implanté)
-      for (let i = 0; i < ids.length; i += 50) {
-        const batch = ids.slice(i, i + 50);
-        const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
-          body: {
-            mode: "send",
-            campaignKey: "location",
-            leadSource: "leads",
-            leadIds: batch,
-          },
-        });
-        if (error) throw error;
-        if (!data?.success) throw new Error(data?.error || "Erreur campagne");
-        totalSent += data.sent || 0;
-        totalErrors += data.failed || 0;
+      const perCampaign: Record<string, number> = {};
+      for (const [campaignKey, ids] of Object.entries(relanceBreakdown.groups)) {
+        if (!ids.length) continue;
+        let sentForCampaign = 0;
+        for (let i = 0; i < ids.length; i += 50) {
+          const batch = ids.slice(i, i + 50);
+          const { data, error } = await supabase.functions.invoke("send-followup-campaign", {
+            body: { mode: "send", campaignKey, leadSource: "leads", leadIds: batch },
+          });
+          if (error) throw error;
+          if (!data?.success) throw new Error(data?.error || `Erreur campagne ${campaignKey}`);
+          totalSent += data.sent || 0;
+          totalErrors += data.failed || 0;
+          sentForCampaign += data.sent || 0;
+        }
+        perCampaign[campaignKey] = sentForCampaign;
       }
-      toast.success(`${totalSent} email(s) envoyé(s)`, { description: totalErrors > 0 ? `${totalErrors} erreur(s)` : undefined });
+      const detail = Object.entries(perCampaign).map(([k, n]) => `${n} ${k}`).join(" • ");
+      const ignoredCount = relanceBreakdown.ignored.length;
+      toast.success(`${totalSent} email(s) envoyé(s)`, {
+        description: [
+          detail || null,
+          ignoredCount ? `${ignoredCount} ignoré(s) (parcours non supporté)` : null,
+          totalErrors ? `${totalErrors} erreur(s)` : null,
+        ].filter(Boolean).join(" • ") || undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       setShowRelanceDialog(false);
     } catch (err) {
