@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Zap } from "lucide-react";
+import { Loader2, Send, Zap, MessageCircle } from "lucide-react";
 import { getLeadSource, type LeadSourceKey } from "@/lib/lead-source";
 import { LeadsHero, type ViewMode } from "@/components/admin/leads/LeadsHero";
 import { LeadsKpiStrip } from "@/components/admin/leads/LeadsKpiStrip";
@@ -376,6 +376,56 @@ export default function Leads() {
     }
   };
 
+  // ─── WHATSAPP RELANCE (template "location_rdv_activation_v2") ───
+  // Cible : leads avec téléphone (location uniquement, comme la campagne meta_leads).
+  const waCandidates = useMemo(
+    () =>
+      filteredLeads.filter((l) => {
+        if (l.contacted) return false;
+        if (!l.telephone && !(l as any).phone_e164) return false;
+        if ((l as any).whatsapp_opt_out) return false;
+        return getCampaignKeyForLead(l) === "location";
+      }),
+    [filteredLeads],
+  );
+
+  const [waSending, setWaSending] = useState(false);
+
+  const sendWhatsappRelanceAll = async () => {
+    const ids = waCandidates.map((l) => l.id);
+    if (!ids.length) return;
+    setWaSending(true);
+    let totalSent = 0, totalSkipped = 0, totalFailed = 0;
+    try {
+      // Edge function MAX_BATCH = 3 → loop par paquets de 3
+      for (let i = 0; i < ids.length; i += 3) {
+        const batch = ids.slice(i, i + 3);
+        const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
+          body: { mode: "send", lead_source: "leads", lead_ids: batch },
+        });
+        if (error) throw error;
+        const s = data?.summary || {};
+        totalSent += s.sent || 0;
+        totalSkipped += s.skipped || 0;
+        totalFailed += s.failed || 0;
+        // petite pause anti-burst (rate-limit Meta)
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      toast.success(`${totalSent} WhatsApp envoyé(s)`, {
+        description: [
+          totalSkipped ? `${totalSkipped} ignoré(s)` : null,
+          totalFailed ? `${totalFailed} erreur(s)` : null,
+        ].filter(Boolean).join(" • ") || undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setShowRelanceDialog(false);
+    } catch (err) {
+      toast.error("Erreur WhatsApp", { description: err instanceof Error ? err.message : "Erreur inconnue" });
+    } finally {
+      setWaSending(false);
+    }
+  };
+
   const exportCSV = () => {
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Type", "Qualifié", "Date", "Contacté", "Source", "Notes"];
     const rows = filteredLeads.map((l) => [
@@ -502,11 +552,27 @@ export default function Leads() {
               <strong>{relanceBreakdown.ignored.length}</strong>
             </div>
           </div>
+          <div className="rounded-md border bg-muted/40 p-3 text-sm flex items-center justify-between gap-3">
+            <div>
+              <div className="font-medium flex items-center gap-2"><MessageCircle className="h-4 w-4 text-emerald-600" />WhatsApp (template location)</div>
+              <div className="text-xs text-muted-foreground">{waCandidates.length} lead(s) avec téléphone — envoi par paquets de 3</div>
+            </div>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={sendWhatsappRelanceAll}
+              disabled={waSending || relanceSending || waCandidates.length === 0}
+              className="gap-2"
+            >
+              {waSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+              {waSending ? "Envoi…" : `WhatsApp (${waCandidates.length})`}
+            </Button>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>Annuler</Button>
-            <Button onClick={sendRelanceAll} disabled={relanceSending || sendableCount === 0} className="gap-2">
+            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending || waSending}>Annuler</Button>
+            <Button onClick={sendRelanceAll} disabled={relanceSending || waSending || sendableCount === 0} className="gap-2">
               {relanceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              {relanceSending ? "Envoi…" : `Envoyer à ${sendableCount}`}
+              {relanceSending ? "Envoi…" : `Email (${sendableCount})`}
             </Button>
           </DialogFooter>
         </DialogContent>

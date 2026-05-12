@@ -145,11 +145,39 @@ Deno.serve(async (req) => {
   }
   const batch = leadIds.slice(0, MAX_BATCH);
 
-  // Fetch leads
-  const { data: leads, error: leadsErr } = await supabase
-    .from("meta_leads")
-    .select("id, first_name, last_name, email, phone, phone_e164, whatsapp_opt_in, whatsapp_opt_out, campaign_key")
-    .in("id", batch);
+  // lead_source: "meta_leads" (default) | "leads"
+  const leadSource: "meta_leads" | "leads" =
+    body?.lead_source === "leads" ? "leads" : "meta_leads";
+
+  let leads: any[] | null = null;
+  let leadsErr: any = null;
+
+  if (leadSource === "leads") {
+    const r = await supabase
+      .from("leads")
+      .select("id, prenom, nom, email, telephone, phone_e164, whatsapp_opt_in, whatsapp_opt_out")
+      .in("id", batch);
+    leadsErr = r.error;
+    leads = (r.data || []).map((l: any) => ({
+      id: l.id,
+      first_name: l.prenom,
+      last_name: l.nom,
+      email: l.email,
+      phone: l.telephone,
+      phone_e164: l.phone_e164,
+      // Leads from our forms n'ont pas toujours opt_in coché : on considère
+      // l'inscription au formulaire comme un opt-in implicite, sauf opt-out explicite.
+      whatsapp_opt_in: l.whatsapp_opt_in === false ? false : true,
+      whatsapp_opt_out: !!l.whatsapp_opt_out,
+    }));
+  } else {
+    const r = await supabase
+      .from("meta_leads")
+      .select("id, first_name, last_name, email, phone, phone_e164, whatsapp_opt_in, whatsapp_opt_out, campaign_key")
+      .in("id", batch);
+    leadsErr = r.error;
+    leads = r.data;
+  }
 
   if (leadsErr) {
     return new Response(JSON.stringify({ error: leadsErr.message }), {
@@ -206,7 +234,7 @@ Deno.serve(async (req) => {
       }
       // Persist normalized phone for future runs
       if (phone !== lead.phone_e164) {
-        await supabase.from("meta_leads").update({ phone_e164: phone }).eq("id", lead.id);
+        await supabase.from(leadSource).update({ phone_e164: phone }).eq("id", lead.id);
       }
 
       const param = buildWhatsappFirstNameParam(lead.first_name);
