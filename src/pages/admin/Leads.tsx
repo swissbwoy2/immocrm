@@ -376,6 +376,56 @@ export default function Leads() {
     }
   };
 
+  // ─── WHATSAPP RELANCE (template "location_rdv_activation_v2") ───
+  // Cible : leads avec téléphone (location uniquement, comme la campagne meta_leads).
+  const waCandidates = useMemo(
+    () =>
+      filteredLeads.filter((l) => {
+        if (l.contacted) return false;
+        if (!l.telephone && !(l as any).phone_e164) return false;
+        if ((l as any).whatsapp_opt_out) return false;
+        return getCampaignKeyForLead(l) === "location";
+      }),
+    [filteredLeads],
+  );
+
+  const [waSending, setWaSending] = useState(false);
+
+  const sendWhatsappRelanceAll = async () => {
+    const ids = waCandidates.map((l) => l.id);
+    if (!ids.length) return;
+    setWaSending(true);
+    let totalSent = 0, totalSkipped = 0, totalFailed = 0;
+    try {
+      // Edge function MAX_BATCH = 3 → loop par paquets de 3
+      for (let i = 0; i < ids.length; i += 3) {
+        const batch = ids.slice(i, i + 3);
+        const { data, error } = await supabase.functions.invoke("send-followup-whatsapp", {
+          body: { mode: "send", lead_source: "leads", lead_ids: batch },
+        });
+        if (error) throw error;
+        const s = data?.summary || {};
+        totalSent += s.sent || 0;
+        totalSkipped += s.skipped || 0;
+        totalFailed += s.failed || 0;
+        // petite pause anti-burst (rate-limit Meta)
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      toast.success(`${totalSent} WhatsApp envoyé(s)`, {
+        description: [
+          totalSkipped ? `${totalSkipped} ignoré(s)` : null,
+          totalFailed ? `${totalFailed} erreur(s)` : null,
+        ].filter(Boolean).join(" • ") || undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setShowRelanceDialog(false);
+    } catch (err) {
+      toast.error("Erreur WhatsApp", { description: err instanceof Error ? err.message : "Erreur inconnue" });
+    } finally {
+      setWaSending(false);
+    }
+  };
+
   const exportCSV = () => {
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Type", "Qualifié", "Date", "Contacté", "Source", "Notes"];
     const rows = filteredLeads.map((l) => [
