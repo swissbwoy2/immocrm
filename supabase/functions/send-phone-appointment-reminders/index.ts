@@ -212,20 +212,37 @@ Deno.serve(async (req) => {
               });
               const data: any = r.data || {};
               const reallySent = !r.error && !data.skipped && !data.error && (data.success === true || data.meta_message_id);
-              if (reallySent) {
+              // Detect Meta-side permanent errors so we stop retrying every 5 min.
+              // 132xxx = template config, 131026 = undeliverable, 131000 = generic Meta error.
+              const errStr = JSON.stringify({ error: r.error, data });
+              const isPermanent =
+                /\b13(2\d{3}|1026|1000|1047|1049|1051)\b/.test(errStr) ||
+                /Message undeliverable|Template name does not exist/i.test(errStr);
+
+              if (reallySent || isPermanent) {
                 await admin.from('lead_phone_appointments')
                   .update({ [tier.waCol]: new Date().toISOString() })
                   .eq('id', appt.id);
-                waSent++;
-                console.log(`[reminder ${tier.key}] wa OK`, appt.id, data.meta_message_id);
+                if (reallySent) {
+                  waSent++;
+                  console.log(`[reminder ${tier.key}] wa OK`, appt.id, data.meta_message_id);
+                } else {
+                  errors++;
+                  console.warn(`[reminder ${tier.key}] wa permanent error → marked to stop retry`, appt.id, errStr.slice(0, 300));
+                }
               } else {
                 errors++;
-                console.error(`[reminder ${tier.key}] wa not sent`, appt.id, JSON.stringify({ error: r.error, data }));
+                console.error(`[reminder ${tier.key}] wa not sent (transient)`, appt.id, errStr.slice(0, 300));
               }
             } catch (e) {
               errors++;
               console.error(`[reminder ${tier.key}] wa exception`, appt.id, e);
             }
+          } else {
+            // No valid phone → mark as done so we never retry
+            await admin.from('lead_phone_appointments')
+              .update({ [tier.waCol]: new Date().toISOString() })
+              .eq('id', appt.id);
           }
         }
       }
