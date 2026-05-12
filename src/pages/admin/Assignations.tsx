@@ -826,6 +826,16 @@ export default function Assignations() {
             </Card>
             <Card>
               <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Co-assignés</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {clients.filter(c => clientAgents.filter(ca => ca.client_id === c.id).length >= 2).length}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium">Agents actifs</CardTitle>
               </CardHeader>
               <CardContent>
