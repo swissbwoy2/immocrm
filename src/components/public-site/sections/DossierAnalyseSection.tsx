@@ -225,7 +225,7 @@ export function DossierAnalyseSection() {
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
                   <p className="text-white text-lg font-semibold">1 mois de loyer brut</p>
-                  <p className="text-white/60 text-xs mt-1">Aucun frais caché</p>
+                  <p className="text-white/70 text-xs mt-1">Acompte 300.- remboursé 100% si échec après 3 mois</p>
                 </div>
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
@@ -258,9 +258,23 @@ export function DossierAnalyseSection() {
                 </Button>
               </div>
 
-              <p className="text-white/70 text-sm flex items-center gap-2">
+              {/* Bouton RDV gratuit */}
+              <a
+                href="/nouveau-mandat"
+                className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-gradient-to-r from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20 border border-primary/50 hover:border-primary text-primary font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.4)] w-full sm:w-auto"
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="text-sm uppercase tracking-wide">Réserver mon RDV gratuit</span>
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </a>
+
+              <p className="text-white text-sm flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
-                Active ta recherche <span className="text-primary font-semibold">MAINTENANT</span> et décroche ton bail.
+                Active ta recherche{' '}
+                <a href="/nouveau-mandat" className="text-primary font-bold underline underline-offset-4 decoration-primary/60 hover:decoration-primary transition-colors">
+                  MAINTENANT
+                </a>{' '}
+                et décroche ton bail.
               </p>
             </div>
 
