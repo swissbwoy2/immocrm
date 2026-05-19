@@ -191,14 +191,14 @@ export function DossierAnalyseSection() {
   return (
     <section id="analyse-dossier" className="relative overflow-hidden">
       <CinematicHero
-        brandName="Bureau de Crissier · Analyse gratuite"
-        tagline1="Fais analyser ton dossier"
-        tagline2="gratuitement avant tes candidatures"
-        cardHeading="Analyse personnalisée de ton dossier"
-        cardDescription="Nos experts te disent ce qui joue en ta faveur, ce qui bloque tes candidatures, comment l'améliorer et quels logements viser. Objectif : maximiser tes chances rapidement."
+        brandName="Recherche d'appartement · Suisse romande"
+        tagline1="Nous aidons les profils solvables à trouver"
+        tagline2="rapidement leur futur appartement partout en Suisse romande 🏠"
+        cardHeading="Commission : 1 mois de loyer brut"
+        cardDescription="Active ta recherche MAINTENANT 👇 Choisis ton projet ci-dessous et bloque ton créneau au bureau de Crissier."
         metricValue="500+"
         metricLabel="familles accompagnées avec succès"
-        ctaHeading="Réserve ton analyse gratuite"
+        ctaHeading="Active ta recherche"
         ctaDescription="30 min · Bureau de Crissier · Sans engagement"
       >
         <div className="text-xs text-[hsl(40_20%_50%)] border-t border-[hsl(38_45%_48%/0.15)] pt-3 mt-3">
@@ -213,8 +213,8 @@ export function DossierAnalyseSection() {
 
           {/* Phrase de conversion */}
           <p className="text-center text-base md:text-lg font-semibold text-foreground max-w-2xl mx-auto mb-6 animate-fade-in">
-            Ne laisse plus ton dossier être refusé sans comprendre pourquoi.<br className="hidden sm:inline" />
-            <span className="text-primary">Réserve ton analyse gratuite maintenant.</span>
+            Commission : 1 mois de loyer brut.<br className="hidden sm:inline" />
+            <span className="text-primary">Active ta recherche MAINTENANT 👇</span>
           </p>
 
           {/* 2 gros CTA RDV bureau — ouvrent le formulaire ci-dessous */}
