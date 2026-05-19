@@ -1,19 +1,14 @@
-## Problème
+## Corriger la lisibilité du H2 "Étape 1"
 
-Le hero a un fond hardcodé sombre (`bg-[hsl(30_15%_5%)]`) mais les classes `text-foreground` / `text-muted-foreground` utilisent les tokens du thème public-site qui sont **sombres** (`--foreground: 30 15% 12%`). Résultat : texte foncé sur fond foncé → invisible.
+**Problème** : Dans `src/components/public-site/sections/DossierAnalyseSection.tsx` ligne 314, le titre utilise `text-foreground` qui résout en couleur sombre, alors qu'il est posé sur le fond dégradé sombre `from-[hsl(30_15%_8%)]` → invisible.
 
-## Correctif
+**Fix** : Remplacer la classe par une couleur claire forcée, cohérente avec le hero au-dessus :
 
-Dans `src/components/public-site/sections/DossierAnalyseSection.tsx`, uniquement sur le nouveau bloc HERO (avant le bloc formulaire) :
+- `text-foreground` → `text-[hsl(40_30%_96%)]` (ivoire clair, comme le H1 hero)
+- Mettre "Étape 1" en doré pour la hiérarchie : wrap `Étape 1` dans `<span className="text-primary font-bold">`
 
-1. **H1** : `text-foreground` → `text-[hsl(40_30%_96%)]` (ivoire clair).
-2. **Sous-titre** : `text-muted-foreground` → `text-white/70`.
-3. **Cards Commission / Confiance** :
-   - Titres `text-foreground` → `text-white`.
-   - Sous-lignes `text-muted-foreground` → `text-white/60`.
-   - Fond `bg-white/5` OK (déjà translucide).
-4. **Ligne "Active ta recherche MAINTENANT"** : `text-muted-foreground` → `text-white/70` ; garder le mot `MAINTENANT` en `text-primary`.
-5. **Badge "Bureau de Crissier"** dans l'image : déjà sur fond noir, OK.
-6. Le bloc formulaire en dessous garde ses tokens sémantiques (il s'affiche bien car son fond reste cohérent avec le thème).
+**Bonus lisibilité** dans la même section (toujours sur fond sombre) :
+- Le sous-texte `text-muted-foreground` ("Réponds à ces questions…") → `text-white/70`
+- Vérifier les labels du formulaire en dessous — si d'autres `text-foreground` / `text-muted-foreground` apparaissent invisibles, les forcer en `text-white` / `text-white/70`.
 
-Aucun autre fichier modifié. Aucune logique touchée.
+Aucun changement de logique, uniquement classes Tailwind.
