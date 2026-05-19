@@ -301,7 +301,7 @@ export function DossierAnalyseSection() {
                   <div className="flex-1">
                     <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-0.5">RDV gratuit</p>
                     <p className="text-xs md:text-sm text-white/90 font-medium leading-tight">
-                      Réserve ton créneau avec nos experts
+                      Réserve ton rendez-vous avec nos experts
                     </p>
                   </div>
                 </div>
@@ -326,7 +326,7 @@ export function DossierAnalyseSection() {
           {searchType && (
             <>
               <h2 ref={formRef} className="text-center text-lg md:text-xl font-semibold text-[hsl(40_30%_96%)] mb-6 max-w-2xl mx-auto scroll-mt-24">
-                <span className="text-primary font-bold">Étape 1</span> — Qualifie ton dossier en 30 secondes, puis choisis ton créneau au bureau.
+                <span className="text-primary font-bold">Étape 1</span> — Qualifie ton dossier en 30 secondes, puis choisis ton rendez-vous au bureau.
               </h2>
             <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl border border-[hsl(38_45%_48%/0.2)] shadow-lg p-6 md:p-8 overflow-hidden">
             <BorderBeam duration={10} />
