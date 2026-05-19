@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -952,7 +953,7 @@ export function ReplyEmailDialog({
                   <Label className="text-xs text-muted-foreground">Signature (ajoutée automatiquement) :</Label>
                   <div 
                     className="mt-1 text-sm"
-                    dangerouslySetInnerHTML={{ __html: signature }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(signature) }}
                   />
                 </div>
               )}

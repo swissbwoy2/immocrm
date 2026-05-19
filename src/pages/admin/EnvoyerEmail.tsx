@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -825,7 +826,7 @@ export default function EnvoyerEmail() {
                       <Label className="text-xs text-muted-foreground">Signature (ajoutée automatiquement) :</Label>
                       <div 
                         className="mt-1 text-sm overflow-auto max-h-48"
-                        dangerouslySetInnerHTML={{ __html: signature }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(signature) }}
                       />
                     </div>
                   ) : (

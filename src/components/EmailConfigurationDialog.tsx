@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -350,7 +351,7 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
                   <Label className="text-xs text-muted-foreground">Aperçu :</Label>
                   <div 
                     className="mt-1 text-sm"
-                    dangerouslySetInnerHTML={{ __html: config.signature_html }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.signature_html) }}
                   />
                 </div>
               )}

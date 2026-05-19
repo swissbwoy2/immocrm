@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1005,7 +1006,7 @@ export default function DeposerCandidature() {
                 </Label>
                 <div 
                   className="p-3 bg-muted/50 rounded-lg border border-border text-sm"
-                  dangerouslySetInnerHTML={{ __html: signatureHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(signatureHtml) }}
                 />
               </div>
             )}
@@ -1040,9 +1041,9 @@ export default function DeposerCandidature() {
                     <div 
                       className="prose prose-sm max-w-none whitespace-pre-wrap"
                       dangerouslySetInnerHTML={{ 
-                        __html: signatureHtml 
+                        __html: sanitizeHtml(signatureHtml 
                           ? `${bodyHtml.replace(/\n/g, '<br/>')}<br/><br/>${signatureHtml}` 
-                          : bodyHtml.replace(/\n/g, '<br/>') 
+                          : bodyHtml.replace(/\n/g, '<br/>'))
                       }}
                     />
                   </div>

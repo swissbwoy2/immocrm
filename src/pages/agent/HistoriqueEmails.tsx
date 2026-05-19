@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -407,7 +408,7 @@ export default function HistoriqueEmails() {
                 <span className="text-sm font-medium">Message :</span>
                 <div 
                   className="p-4 border rounded-md bg-muted/30 text-sm max-h-[300px] overflow-y-auto"
-                  dangerouslySetInnerHTML={{ __html: selectedEmail.body_html || "" }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html) }}
                 />
               </div>
 
