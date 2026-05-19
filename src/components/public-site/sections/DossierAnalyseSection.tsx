@@ -223,9 +223,9 @@ export function DossierAnalyseSection() {
               <div className="relative grid sm:grid-cols-2 gap-4">
                 <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
-                  <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
-                  <p className="text-white text-lg font-semibold">1 mois de loyer brut</p>
-                  <p className="text-white/60 text-xs mt-1">Aucun frais caché</p>
+                  <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Acompte d'activation</p>
+                  <p className="text-white text-lg font-semibold">300.- remboursés à 100%</p>
+                  <p className="text-white/70 text-xs mt-1">en cas d'échec après 3 mois de recherche</p>
                 </div>
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
