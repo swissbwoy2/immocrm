@@ -335,12 +335,7 @@ export default function BoiteReception() {
     return colors[hash % colors.length];
   };
 
-  const sanitizeHtml = (html: string) => {
-    return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/on\w+="[^"]*"/gi, '')
-      .replace(/javascript:/gi, '');
-  };
+  // sanitizeHtml is imported from @/lib/sanitizeHtml (uses DOMPurify)
 
   const showEmailList = !selectedEmail;
   const showEmailDetail = !!selectedEmail;

@@ -350,7 +350,7 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
                   <Label className="text-xs text-muted-foreground">Aperçu :</Label>
                   <div 
                     className="mt-1 text-sm"
-                    dangerouslySetInnerHTML={{ __html: config.signature_html }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(config.signature_html) }}
                   />
                 </div>
               )}

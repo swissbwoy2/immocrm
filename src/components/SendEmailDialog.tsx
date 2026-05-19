@@ -295,7 +295,7 @@ export function SendEmailDialog({
                   <Label className="text-xs text-muted-foreground">Signature (ajoutée automatiquement) :</Label>
                   <div 
                     className="mt-1 text-sm"
-                    dangerouslySetInnerHTML={{ __html: signature }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(signature) }}
                   />
                 </div>
               )}
