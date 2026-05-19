@@ -5,16 +5,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar } from 'lucide-react';
+import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { useUTMParams } from '@/hooks/useUTMParams';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
-import { CinematicHero } from '@/components/ui/cinematic-hero';
 import { PhoneSlotPicker } from '@/components/landing/PhoneSlotPicker';
 import type { Slot } from '@/lib/phoneSlots';
+import heroCoupleKeys from '@/assets/hero-couple-keys.jpg';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
@@ -189,60 +189,125 @@ export function DossierAnalyseSection() {
   }
 
   return (
-    <section id="analyse-dossier" className="relative overflow-hidden">
-      <CinematicHero
-        brandName="Recherche d'appartement · Suisse romande"
-        tagline1="Nous aidons les profils solvables à trouver"
-        tagline2="rapidement leur futur appartement partout en Suisse romande 🏠"
-        cardHeading="Commission : 1 mois de loyer brut"
-        cardDescription="Active ta recherche MAINTENANT 👇 Choisis ton projet ci-dessous et bloque ton créneau au bureau de Crissier."
-        metricValue="500+"
-        metricLabel="familles accompagnées avec succès"
-        ctaHeading="Active ta recherche"
-        ctaDescription="30 min · Bureau de Crissier · Sans engagement"
-      >
-        <div className="text-xs text-[hsl(40_20%_50%)] border-t border-[hsl(38_45%_48%/0.15)] pt-3 mt-3">
-          👇 Choisis ton projet ci-dessous
+    <section id="analyse-dossier" className="relative overflow-hidden bg-[hsl(30_15%_5%)]">
+      {/* HERO conversion */}
+      <div className="relative">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(38_45%_48%/0.12),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(38_45%_48%/0.08),transparent_50%)]" />
+        <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center max-w-7xl mx-auto">
+
+            {/* Colonne texte */}
+            <div className="flex flex-col gap-7 text-left animate-fade-in">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 w-fit px-3 py-1.5 rounded-full border border-primary/30 bg-primary/5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                </span>
+                <span className="text-primary text-[10px] md:text-xs font-semibold tracking-[0.18em] uppercase">
+                  Recherche d'appartement · Suisse Romande
+                </span>
+              </div>
+
+              {/* Headline */}
+              <div className="space-y-4">
+                <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground leading-[1.1]">
+                  Nous aidons les <span className="text-primary italic">profils solvables</span> à trouver leur futur appartement
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg max-w-xl leading-relaxed">
+                  L'expertise Logisorama pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.
+                </p>
+              </div>
+
+              {/* Trust cards translucides + gold blur */}
+              <div className="relative grid sm:grid-cols-2 gap-4">
+                <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
+                <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
+                  <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
+                  <p className="text-foreground text-lg font-semibold">1 mois de loyer brut</p>
+                  <p className="text-muted-foreground text-xs mt-1">Aucun frais caché</p>
+                </div>
+                <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
+                  <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
+                  <p className="text-foreground text-lg font-semibold">500+ familles</p>
+                  <p className="text-muted-foreground text-xs mt-1">Accompagnées avec succès</p>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => openForm('location')}
+                  className="group h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-[0_10px_30px_-10px_hsl(var(--primary)/0.5)] hover:shadow-[0_10px_40px_-5px_hsl(var(--primary)/0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                >
+                  <Key className="h-5 w-5" />
+                  <span className="text-base">Je cherche une location</span>
+                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => openForm('achat')}
+                  className="group h-auto py-4 px-6 border border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-foreground font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <Home className="h-5 w-5 text-primary" />
+                  <span className="text-base">Je veux acheter un bien</span>
+                </Button>
+              </div>
+
+              <p className="text-muted-foreground text-sm flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Active ta recherche <span className="text-primary font-semibold">MAINTENANT</span> et décroche ton bail.
+              </p>
+            </div>
+
+            {/* Colonne image */}
+            <div className="relative animate-fade-in" style={{ animationDelay: '120ms' }}>
+              <div className="absolute -inset-6 bg-primary/15 blur-3xl rounded-full pointer-events-none" />
+              <div className="relative overflow-hidden rounded-3xl border border-primary/20 shadow-2xl bg-card">
+                <img
+                  src={heroCoupleKeys}
+                  alt="Couple heureux recevant les clés de leur appartement en Suisse romande grâce à Logisorama"
+                  width={1024}
+                  height={1024}
+                  className="w-full aspect-[4/5] md:aspect-square object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[hsl(30_15%_5%)] via-transparent to-transparent opacity-70" />
+
+                {/* Floating card overlay */}
+                <div className="absolute bottom-5 left-5 right-5 p-4 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl flex items-center gap-4 shadow-xl">
+                  <div className="flex -space-x-2">
+                    <div className="w-9 h-9 rounded-full border-2 border-black bg-gradient-to-br from-primary/60 to-primary/30" />
+                    <div className="w-9 h-9 rounded-full border-2 border-black bg-gradient-to-br from-primary/40 to-primary/20" />
+                    <div className="w-9 h-9 rounded-full border-2 border-black bg-gradient-to-br from-primary/30 to-primary/10" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-0.5">RDV gratuit</p>
+                    <p className="text-xs md:text-sm text-white/90 font-medium leading-tight">
+                      Réserve ton créneau avec nos experts
+                    </p>
+                  </div>
+                </div>
+
+                {/* Decorative gold line */}
+                <div className="absolute top-6 left-6 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-primary/30">
+                  <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Bureau de Crissier</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </CinematicHero>
+      </div>
 
       <div className="bg-gradient-to-b from-[hsl(30_15%_8%)] to-background relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,hsl(var(--primary)/0.06)_0%,transparent_60%)]" />
       <div className="container mx-auto px-4 py-12 relative z-10">
         <div className="max-w-3xl mx-auto">
 
-          {/* Phrase de conversion */}
-          <p className="text-center text-base md:text-lg font-semibold text-foreground max-w-2xl mx-auto mb-6 animate-fade-in">
-            Commission : 1 mois de loyer brut.<br className="hidden sm:inline" />
-            <span className="text-primary">Active ta recherche MAINTENANT 👇</span>
-          </p>
-
-          {/* 2 gros CTA RDV bureau — ouvrent le formulaire ci-dessous */}
-          <div className="grid sm:grid-cols-2 gap-4 mb-3 animate-fade-in">
-            <Button type="button" size="lg" onClick={() => openForm('location')} className="group h-auto py-5 md:py-6 flex-col gap-1 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:scale-[1.02] transition-all">
-              <span className="flex items-center gap-2 text-lg md:text-xl font-bold">
-                <Key className="h-5 w-5" />
-                Je cherche une location
-              </span>
-              <span className="text-sm font-medium opacity-90 flex items-center gap-1">
-                Démarrer mon analyse gratuite
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Button>
-            <Button type="button" size="lg" variant="outline" onClick={() => openForm('achat')} className="group h-auto py-5 md:py-6 flex-col gap-1 border-2 border-primary/40 hover:border-primary hover:bg-primary/5 shadow-lg hover:scale-[1.02] transition-all">
-              <span className="flex items-center gap-2 text-lg md:text-xl font-bold text-foreground">
-                <Home className="h-5 w-5 text-primary" />
-                Je veux acheter un bien
-              </span>
-              <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                Démarrer mon analyse gratuite
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </Button>
-          </div>
-          <p className="text-center text-sm text-muted-foreground mb-10">
-            Choisis ton projet ci-dessous, puis bloque ton créneau au bureau de Crissier (étape finale du formulaire).
-          </p>
 
           {searchType && (
             <>
