@@ -5,16 +5,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar } from 'lucide-react';
+import { FileSearch, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, Mail, MapPin, ShieldCheck, ClipboardCheck, Key, Home, Calendar, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { useUTMParams } from '@/hooks/useUTMParams';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
-import { CinematicHero } from '@/components/ui/cinematic-hero';
 import { PhoneSlotPicker } from '@/components/landing/PhoneSlotPicker';
 import type { Slot } from '@/lib/phoneSlots';
+import heroCoupleKeys from '@/assets/hero-couple-keys.jpg';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
