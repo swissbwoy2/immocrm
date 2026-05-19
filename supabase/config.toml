@@ -4,7 +4,10 @@ project_id = "ydljsdscdnqrqnjvqela"
 verify_jwt = true
 
 [functions.reset-client-password]
-verify_jwt = false
+verify_jwt = true
+
+[functions.import-clients-csv]
+verify_jwt = true
 
 [functions.invite-client]
 verify_jwt = false
