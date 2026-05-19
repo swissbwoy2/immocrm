@@ -130,7 +130,7 @@ export function PremiumHero() {
 
           {/* Sous-texte CTA */}
           <p className="animate-fade-in text-sm text-muted-foreground mb-6" style={{ animationDelay: '320ms' }}>
-            Choisis ton projet et réserve directement ton créneau au bureau.
+            Choisis ton projet et réserve directement ton rendez-vous au bureau.
           </p>
 
           {/* Réassurance */}
