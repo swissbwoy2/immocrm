@@ -32,18 +32,18 @@ export function PremiumHero() {
 
           {/* Slogan */}
           <div className="animate-fade-in mb-4 md:mb-6" style={{ animationDelay: '75ms' }}>
-            <span className="text-sm md:text-lg font-semibold text-primary tracking-wide">L'immobilier accessible</span>
+            <span className="text-sm md:text-lg font-semibold text-primary tracking-wide">Recherche d'appartement · Suisse romande</span>
           </div>
 
           {/* H1 */}
           <h1 className="animate-fade-in text-2xl sm:text-3xl md:text-5xl font-bold text-foreground leading-tight max-w-4xl mb-4 md:mb-6" style={{ animationDelay: '100ms' }}>
-            Fais analyser ton dossier <span className="text-primary">gratuitement</span> avant d'envoyer tes candidatures
+            Nous aidons les <span className="text-primary">profils solvables</span> à trouver rapidement leur futur appartement partout en Suisse romande 🏠
           </h1>
 
           {/* Sous-titre */}
           <p className="animate-fade-in text-base md:text-lg text-muted-foreground max-w-3xl mb-8 md:mb-10 leading-relaxed" style={{ animationDelay: '150ms' }}>
-            Tu cherches un logement en Suisse romande ?<br className="hidden sm:inline" />
-            En 30 minutes, un expert Logisorama vérifie ton dossier, tes critères et tes chances réelles auprès des régies.
+            Commission : <span className="font-semibold text-foreground">1 mois de loyer brut</span>.<br className="hidden sm:inline" />
+            <span className="text-primary font-semibold">Active ta recherche MAINTENANT 👇</span>
           </p>
 
           {/* Deux blocs */}
