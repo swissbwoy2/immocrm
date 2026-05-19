@@ -97,7 +97,7 @@ export function DossierAnalyseSection() {
 
       if (apptErr) {
         if ((apptErr as any).code === '23505') {
-          toast.error('Ce créneau vient d\'être réservé. Choisis-en un autre.');
+          toast.error('Ce rendez-vous vient d\'être réservé. Choisis-en un autre.');
           setSelectedSlot(null);
         } else {
           throw apptErr;
