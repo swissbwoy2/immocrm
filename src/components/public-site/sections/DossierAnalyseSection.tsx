@@ -211,10 +211,10 @@ export function DossierAnalyseSection() {
 
               {/* Headline */}
               <div className="space-y-4">
-                <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground leading-[1.1]">
+                <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-[hsl(40_30%_96%)] leading-[1.1]">
                   Nous aidons les <span className="text-primary italic">profils solvables</span> à trouver leur futur appartement
                 </h1>
-                <p className="text-muted-foreground text-base md:text-lg max-w-xl leading-relaxed">
+                <p className="text-white/70 text-base md:text-lg max-w-xl leading-relaxed">
                   L'expertise Logisorama pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.
                 </p>
               </div>
@@ -224,13 +224,13 @@ export function DossierAnalyseSection() {
                 <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
-                  <p className="text-foreground text-lg font-semibold">1 mois de loyer brut</p>
-                  <p className="text-muted-foreground text-xs mt-1">Aucun frais caché</p>
+                  <p className="text-white text-lg font-semibold">1 mois de loyer brut</p>
+                  <p className="text-white/60 text-xs mt-1">Aucun frais caché</p>
                 </div>
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
-                  <p className="text-foreground text-lg font-semibold">500+ familles</p>
-                  <p className="text-muted-foreground text-xs mt-1">Accompagnées avec succès</p>
+                  <p className="text-white text-lg font-semibold">500+ familles</p>
+                  <p className="text-white/60 text-xs mt-1">Accompagnées avec succès</p>
                 </div>
               </div>
 
@@ -251,15 +251,15 @@ export function DossierAnalyseSection() {
                   size="lg"
                   variant="outline"
                   onClick={() => openForm('achat')}
-                  className="group h-auto py-4 px-6 border border-primary/30 hover:border-primary/60 hover:bg-primary/5 text-foreground font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                  className="group h-auto py-4 px-6 bg-transparent border border-primary/40 hover:border-primary/70 hover:bg-primary/5 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
                   <Home className="h-5 w-5 text-primary" />
                   <span className="text-base">Je veux acheter un bien</span>
                 </Button>
               </div>
 
-              <p className="text-muted-foreground text-sm flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
+              <p className="text-white/70 text-sm flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
                 Active ta recherche <span className="text-primary font-semibold">MAINTENANT</span> et décroche ton bail.
               </p>
             </div>
