@@ -254,13 +254,38 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // ---- AuthN + AuthZ: caller must be authenticated AND have admin role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authentification requise' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const userClient = createClient(supabaseUrl, anonKey);
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: 'Session invalide' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userData.user.id);
+    const isAdmin = (roles ?? []).some((r: any) => r.role === 'admin');
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: 'Accès refusé' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const { clients } = await req.json() as { clients: ImportClient[] };
 

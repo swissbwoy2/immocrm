@@ -324,7 +324,10 @@ function parseCSV(csvText: string): ParsedCSVData {
         continue;
       }
 
-      const password = 'immo' + (telephone?.replace(/\D/g, '').slice(-4) || '0000');
+      // Cryptographically random temporary password (user must reset on first login)
+      const password = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+        .map((b) => 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'[b % 54])
+        .join('');
 
       users.push({ email, password, prenom, nom, telephone });
       
