@@ -325,8 +325,8 @@ export function DossierAnalyseSection() {
 
           {searchType && (
             <>
-              <h2 ref={formRef} className="text-center text-lg md:text-xl font-semibold text-foreground mb-6 max-w-2xl mx-auto scroll-mt-24">
-                Étape 1 — Qualifie ton dossier en 30 secondes, puis choisis ton créneau au bureau.
+              <h2 ref={formRef} className="text-center text-lg md:text-xl font-semibold text-[hsl(40_30%_96%)] mb-6 max-w-2xl mx-auto scroll-mt-24">
+                <span className="text-primary font-bold">Étape 1</span> — Qualifie ton dossier en 30 secondes, puis choisis ton créneau au bureau.
               </h2>
             <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl border border-[hsl(38_45%_48%/0.2)] shadow-lg p-6 md:p-8 overflow-hidden">
             <BorderBeam duration={10} />
@@ -338,9 +338,10 @@ export function DossierAnalyseSection() {
 
               {step === 'qualification' && (
                 <div className="space-y-5 animate-fade-in">
-                  <p className="text-sm font-medium text-center text-muted-foreground mb-2">
+                  <p className="text-sm font-medium text-center text-white/70 mb-2">
                     {isAchat ? "Réponds à ces questions pour ton projet d'achat" : 'Réponds à ces questions pour ton dossier de location'}
                   </p>
+
 
                   {!isAchat && (
                     <>
