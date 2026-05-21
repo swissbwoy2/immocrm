@@ -1,52 +1,58 @@
-# Candidatures déposées par l'admin → compter pour l'agent principal
+# Mandat — Renouvellement automatique J+91 et bouton remboursement J80–J90
 
-## Contexte
+## Logique métier finale
 
-Quand l'admin dépose une candidature via `/admin/deposer-candidature`, la candidature est bien créée en base sur le client, mais elle n'apparaît pas dans le tableau de bord de l'agent principal du client (ex. Victoria affiche 0 alors qu'elle est l'agent principal de Redouane).
+- **Durée mandat** : 90 jours (inchangé).
+- **J80 → J90** : fenêtre d'éligibilité au remboursement. Le client peut cliquer "Demander un remboursement" depuis son tableau de bord ou Mon dossier.
+- **J91 sans action** : renouvellement automatique pour 90 jours. Le compteur repart à 0, le bouton remboursement redevient grisé jusqu'au prochain J80.
+- **Exceptions** : si le client a déjà demandé l'arrêt / l'annulation, aucun renouvellement automatique (logique déjà en place).
 
-## Cause identifiée
+## Communications
 
-Plusieurs pages côté agent et côté admin/agent ne comptent les candidatures qu'à travers **une seule** source d'assignation :
+### J80 — nouvelle relance (email + notification native)
+- Sujet : "Jour 80 : continuer votre recherche ou demander un remboursement ?"
+- Boutons : "Continuer ma recherche" / "Demander mon remboursement" / "Mettre en pause".
+- Notification in-app équivalente avec lien `/client/mon-contrat`.
 
-- `src/pages/agent/Dashboard.tsx` (KPI "Candidatures") → uniquement via `client_agents`
-- `src/pages/agent/Candidatures.tsx` (liste + KPIs) → uniquement via `client_agents`
-- `src/pages/admin/AgentDetail.tsx` (stats du jour pour un agent) → uniquement via `clients.agent_id`, **et** bug de state stale qui rend toujours `todayStats.candidatures = 0`
+### J91 — renouvellement automatique (email + notification)
+- Sujet : "Votre mandat a été renouvelé automatiquement"
+- Texte clé : « Votre mandat est renouvelé pour 90 jours. Aucun remboursement n'est possible sur cette période. Pour redevenir éligible, attendez 90 jours : un rappel vous sera envoyé au 80ème jour. »
 
-Pour Redouane, Victoria est bien en agent principal **et** en `client_agents`, donc le décompte devrait marcher. Mais dès qu'un seul des deux liens manque (cas fréquent suite à un dépôt admin ou à une réassignation), le compteur tombe à 0. Il faut rendre les comptages robustes à la double source (mémoire « Dual Assignment Integrity »).
+## Bouton "Demander un remboursement"
 
-## Changements
+Affiché dans :
+1. `src/pages/client/Dashboard.tsx` — bloc mandat (nouveau).
+2. `src/pages/client/MonContrat.tsx` — déjà présent, mise à jour du seuil 82 → 80.
 
-### 1. `src/pages/agent/Dashboard.tsx`
-- Lors de la récupération des clients de l'agent, faire l'**union** entre :
-  - `client_agents.client_id` où `agent_id = mon agent`
-  - `clients.id` où `agent_id = mon agent` (agent principal)
-- Utiliser cette liste unifiée pour toutes les requêtes en aval (candidatures, documents, renouvellements, profils).
-
-### 2. `src/pages/agent/Candidatures.tsx`
-- Même union des deux sources dans `loadCandidatures()` pour que les candidatures des clients dont l'agent est principal apparaissent toujours, même sans ligne `client_agents`.
-
-### 3. `src/pages/admin/AgentDetail.tsx`
-- Étendre la requête clients à l'union `clients.agent_id` + `client_agents`.
-- Corriger le bug de state stale ligne 200 : calculer `todayCandidatures` à partir de `candidaturesData` directement (variable locale) et non du state `candidatures` qui n'est pas encore mis à jour au moment du `setTodayStats`.
-
-### 4. `src/pages/admin/DeposerCandidature.tsx`
-- Après dépôt, notifier aussi l'agent principal du client (entrée `notifications` sur `agent.user_id`) pour qu'il voie immédiatement qu'une candidature a été déposée pour son client par l'admin. Texte : « L'admin a déposé une candidature pour {client} sur {adresse} ».
-
-## Hors périmètre
-
-- Pas de migration SQL : les données existantes sont correctes, c'est la logique de lecture qui est trop restrictive.
-- Pas de changement de RLS : les policies actuelles (mises à jour précédemment) couvrent déjà principal + co.
-- Pas de modification du workflow candidature → bail → clés.
+États du bouton :
+- **J0 → J79** : grisé, tooltip « Disponible à partir du 80ème jour (encore X jours) ».
+- **J80 → J90** : actif, vert, déclenche le dialogue d'annulation avec remboursement.
+- **J91+** : grisé après renouvellement auto (compteur remis à 0, donc à nouveau J0 → grisé). Tooltip explicite « Mandat renouvelé — nouvelle éligibilité au 80ème jour ».
+- **Demande déjà envoyée** : badge "Demande enregistrée le …", bouton désactivé.
 
 ## Détails techniques
 
-L'union des deux sources se fait en TypeScript après deux requêtes parallèles :
+### Constantes à mettre à jour (82 → 80)
+- `supabase/functions/mandate-expiry-reminders/index.ts` → `REFUND_ELIGIBILITY_DAY = 80`
+- `supabase/functions/mandate-renewal-action/index.ts` → `REFUND_ELIGIBILITY_DAY = 80`
+- `src/pages/client/MonContrat.tsx` → `REFUND_ELIGIBILITY_DAY = 80`
 
-```text
-ids = unique([
-  ...client_agents.select(client_id).eq(agent_id, me),
-  ...clients.select(id).eq(agent_id, me),
-])
-```
+### Edge function `mandate-expiry-reminders`
+- Ajouter une branche **J80 exactement** : envoi d'un email/notif dédié "fenêtre remboursement ouverte" (anti-doublon via `mandate_renewal_reminders_log` avec un canal distinct, p.ex. `refund_window_open`).
+- Adapter l'email de renouvellement auto J91 : nouveau texte expliquant que le remboursement n'est plus possible avant 90 nouveaux jours.
+- Notification in-app `mandate_auto_renewed` : mise à jour du message.
 
-Puis `clients.in('id', ids)` une seule fois pour récupérer les détails.
+### Composant Dashboard client
+- Nouveau petit bloc "Mandat" sous le résumé, affichant :
+  - Jours écoulés / restants
+  - Bouton "Demander un remboursement" (même handler que MonContrat, redirige vers `/client/mon-contrat?action=refund` pour réutiliser le dialogue existant — pas de duplication de logique).
+
+### Pas de migration DB
+La structure (`refund_status`, `refund_eligible`, `refund_requested_at`, `mandate_pause_days`, etc.) est déjà en place.
+
+## Fichiers modifiés
+
+1. `supabase/functions/mandate-expiry-reminders/index.ts` — seuil + branche J80 + email J91 mis à jour.
+2. `supabase/functions/mandate-renewal-action/index.ts` — seuil 80.
+3. `src/pages/client/MonContrat.tsx` — seuil 80, tooltips et libellés.
+4. `src/pages/client/Dashboard.tsx` — nouveau bloc bouton remboursement (lien vers `/client/mon-contrat`).
