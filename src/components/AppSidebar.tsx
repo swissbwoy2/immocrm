@@ -76,6 +76,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
             { name: 'Suivi extraits', icon: ShieldCheck, path: '/admin/suivi-extraits', notifKey: null },
             { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
+            { name: 'Déposer candidature', icon: Clipboard, path: '/admin/deposer-candidature', notifKey: null },
             { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
           ],
         },
