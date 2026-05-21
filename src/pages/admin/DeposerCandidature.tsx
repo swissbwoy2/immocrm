@@ -147,6 +147,29 @@ export default function AdminDeposerCandidature() {
           message: "Votre dossier a été déposé à la régie.",
           link: "/client/mes-candidatures",
         });
+
+        // Notifier aussi l'agent principal du client
+        const { data: clientRow } = await supabase
+          .from("clients")
+          .select("agent_id")
+          .eq("id", selectedClientId)
+          .maybeSingle();
+        if (clientRow?.agent_id) {
+          const { data: agentRow } = await supabase
+            .from("agents")
+            .select("user_id")
+            .eq("id", clientRow.agent_id)
+            .maybeSingle();
+          if (agentRow?.user_id) {
+            await supabase.from("notifications").insert({
+              user_id: agentRow.user_id,
+              type: "candidature_deposee",
+              title: "Candidature déposée par l'admin",
+              message: `L'admin a déposé une candidature pour ${selectedClient.profiles?.prenom ?? ""} ${selectedClient.profiles?.nom ?? ""} sur ${selectedOffre?.adresse ?? ""}.`,
+              link: "/agent/candidatures",
+            });
+          }
+        }
       }
 
       toast.success("Candidature déposée", {
