@@ -178,7 +178,7 @@ serve(async (req) => {
               user_id: client.user_id,
               type: "mandate_auto_renewed",
               title: "🔄 Mandat renouvelé automatiquement",
-              message: `Votre mandat de recherche a été renouvelé pour 90 jours supplémentaires. Vous pouvez l'annuler à tout moment depuis votre espace.`,
+              message: `Votre mandat a été renouvelé pour 90 jours. Aucun remboursement n'est possible sur cette période. Pour redevenir éligible, attendez 90 jours : un rappel vous sera envoyé au 80ème jour.`,
               link: "/client/mon-contrat",
               metadata: { client_id: client.id },
             });
