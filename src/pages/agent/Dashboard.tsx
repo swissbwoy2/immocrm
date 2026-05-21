@@ -59,13 +59,16 @@ export default function AgentDashboard() {
         return;
       }
 
-      // Récupérer les clients via client_agents (source de vérité)
-      const { data: clientAgentsData } = await supabase
-        .from('client_agents')
-        .select('client_id')
-        .eq('agent_id', agentData.id);
+      // Récupérer les clients via client_agents ET clients.agent_id (union des deux sources)
+      const [{ data: clientAgentsData }, { data: principalClientsData }] = await Promise.all([
+        supabase.from('client_agents').select('client_id').eq('agent_id', agentData.id),
+        supabase.from('clients').select('id').eq('agent_id', agentData.id),
+      ]);
 
-      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+      const clientIds = Array.from(new Set([
+        ...(clientAgentsData?.map(ca => ca.client_id) || []),
+        ...(principalClientsData?.map(c => c.id) || []),
+      ]));
 
       let clientsData: any[] = [];
       if (clientIds.length > 0) {
