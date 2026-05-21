@@ -1,40 +1,60 @@
-# Refonte page "Déposer une candidature" (agent)
+# Fix dépôt de candidature pour Victoria Martins (et tous les agents)
 
-## Objectif
+## Diagnostic
 
-Simplifier le dépôt de candidature : plus d'email, plus de pièces jointes, plus de templates. Juste un client + une offre + un bouton "Candidature déposée par l'agent". Le reste du workflow (bail reçu, client accepté, etc.) reste identique.
+Ce qui faisait planter l'**ancienne** page : elle appelait `send-smtp-email` avant de créer la candidature. Victoria n'a aucune ligne dans `email_configurations` → l'envoi SMTP échouait → toast "Erreur" → aucune candidature créée.
 
-## Nouvelle page (3 étapes)
+La **nouvelle** page (que je viens de livrer) n'envoie plus d'email, donc ce blocage disparaît. RLS vérifiée pour Victoria :
 
-1. **Sélection du client** — liste des clients actifs de l'agent (single-select, pas multi).
-2. **Sélection de l'offre** — uniquement les offres déjà envoyées à ce client (filtre `client_id = clientSélectionné`). Affiche adresse, pièces, prix.
-3. **Bouton "Marquer la candidature comme déposée"** — un seul CTA. Au clic :
-   - crée (ou met à jour si elle existe déjà) une ligne `candidatures` avec `statut='en_attente'`, `dossier_complet=true`, `date_depot=now()`,
-   - passe l'offre à `statut='candidature_deposee'`,
-   - crée une notification in-app pour le client : "Votre agent a déposé votre dossier à la régie",
-   - toast de confirmation, reset du formulaire.
+- `candidatures` INSERT/UPDATE — policy "Agents multi peuvent gérer candidatures" via `client_agents`. Tous les 17 clients actifs de Victoria ont bien leur ligne `client_agents` ↔ `clients.agent_id`. OK.
+- `offres` UPDATE (passage en `candidature_deposee`) — policy accepte agent principal **ou** co-agent. OK.
+- `notifications` INSERT — `with check (true)`. OK.
 
-Petit récap visuel en haut (client → offre) pour rassurer avant le clic.
+Donc la nouvelle page devrait déjà fonctionner pour Victoria.
 
-## À retirer
+## Renforcement RLS (défensif)
 
-- Étape "Confirmation" (checkbox).
-- Bloc "Modèle d'email" + genre du client + sujet + corps HTML.
-- Bloc pièces jointes (documents client + fichiers locaux + dropzone + preview).
-- Tous les appels à `send-smtp-email`, `useEmailTemplates`, `EmailTemplatesManager`, `AttachmentPreviewDialog`, signature email, etc.
-- Multi-sélection de clients (une candidature = un client).
+La policy `candidatures` "Agents multi peuvent gérer candidatures" ne reconnaît que la table `client_agents`. Si jamais un client a un `clients.agent_id` mais pas la ligne `client_agents` (désync), l'agent principal serait bloqué — alors que les memories projet rappellent que les deux sources doivent rester en sync, mais ne sont pas garanties au niveau DB.
 
-## Workflow inchangé
+Pour s'aligner sur la policy `offres` UPDATE et la policy DELETE candidatures (qui acceptent déjà les deux sources), on remplace la policy par une version qui accepte aussi `clients.agent_id`.
 
-Aucune modification côté `candidatures` / `offres` (colonnes, RLS, triggers). Les étapes suivantes du workflow (bail reçu, client accepté, clés remises…) continuent de fonctionner exactement comme aujourd'hui à partir de la page Candidatures.
+### Migration
 
-## Question ouverte
+```sql
+DROP POLICY "Agents multi peuvent gérer candidatures" ON public.candidatures;
 
-La page n'existe aujourd'hui que côté **agent** (`/agent/deposer-candidature`). Tu as parlé "agent et admin" : veux-tu que j'ajoute aussi une route `/admin/deposer-candidature` (même page, mais l'admin voit tous les clients/offres de l'agence) ? Si oui je l'ajoute dans la sidebar admin section "Candidatures".
+CREATE POLICY "Agents (principal + co) peuvent gérer candidatures"
+ON public.candidatures
+FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM clients c
+    JOIN agents a ON a.id = c.agent_id
+    WHERE c.id = candidatures.client_id AND a.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM client_agents ca
+    JOIN agents a ON a.id = ca.agent_id
+    WHERE ca.client_id = candidatures.client_id AND a.user_id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM clients c
+    JOIN agents a ON a.id = c.agent_id
+    WHERE c.id = candidatures.client_id AND a.user_id = auth.uid()
+  )
+  OR EXISTS (
+    SELECT 1 FROM client_agents ca
+    JOIN agents a ON a.id = ca.agent_id
+    WHERE ca.client_id = candidatures.client_id AND a.user_id = auth.uid()
+  )
+);
+```
+
+Aucun changement de schéma, aucun changement de UI. Workflow inchangé.
 
 ## Détails techniques
 
-- Fichier modifié : `src/pages/agent/DeposerCandidature.tsx` (réécriture, ~1097 → ~200 lignes).
-- Composants supprimés de l'import : `EmailTemplatesManager`, `AttachmentPreviewDialog`, `ClientMultiSelect` (remplacé par un Select simple), `useEmailTemplates`.
-- Requête offres : `.from('offres').select('id, adresse, prix, pieces, type_bien').eq('client_id', selectedClientId).order('date_envoi', { ascending: false })` — rechargée à chaque changement de client.
-- Logique candidature : reprise telle quelle du `handleSubmit` actuel (lignes 538-595), juste sans l'envoi d'email avant.
+- Aucune modif côté front nécessaire — la page `src/pages/agent/DeposerCandidature.tsx` refondue précédemment couvre le besoin.
+- Pas de mise à jour des données existantes : la sync `clients.agent_id` ↔ `client_agents` reste recommandée mais n'est plus une condition bloquante pour le dépôt de candidature.
