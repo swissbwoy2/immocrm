@@ -167,20 +167,25 @@ const AgentDetail = () => {
         .limit(15000);
       setVisites(visitesData || []);
 
-      // Fetch all candidatures for clients assigned to this agent
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('agent_id', agentId);
-      
-      const clientIds = clientsData?.map(c => c.id) || [];
-      
+      // Fetch all candidatures for clients assigned to this agent (principal OR co-assigned)
+      const [{ data: principalClientsData }, { data: coAssignedData }] = await Promise.all([
+        supabase.from('clients').select('id').eq('agent_id', agentId),
+        supabase.from('client_agents').select('client_id').eq('agent_id', agentId),
+      ]);
+
+      const clientIds = Array.from(new Set([
+        ...(principalClientsData?.map(c => c.id) || []),
+        ...(coAssignedData?.map(ca => ca.client_id) || []),
+      ]));
+
+      let candidaturesData: any[] = [];
       if (clientIds.length > 0) {
-        const { data: candidaturesData } = await supabase
+        const { data } = await supabase
           .from('candidatures')
           .select('*')
           .in('client_id', clientIds);
-        setCandidatures(candidaturesData || []);
+        candidaturesData = data || [];
+        setCandidatures(candidaturesData);
       }
 
       // Calculate today's stats - count unique offers (same date + address = 1 offer)
@@ -197,7 +202,7 @@ const AgentDetail = () => {
         todayEnd
       );
 
-      const todayCandidatures = (candidatures || []).filter(c => 
+      const todayCandidatures = candidaturesData.filter(c =>
         c.created_at && c.created_at >= todayStart && c.created_at <= todayEnd
       ).length;
 
