@@ -615,6 +615,36 @@ function ClientDashboardLocation() {
             </div>
           )}
 
+          {/* Bouton "Demander un remboursement" — visible en permanence, actif uniquement J80→J90 */}
+          {profileActif !== false && daysRemaining > 0 && (() => {
+            const REFUND_DAY = 80;
+            const elapsedInt = Math.floor(daysElapsed);
+            const refundActive = elapsedInt >= REFUND_DAY && elapsedInt <= 90;
+            const daysUntilRefund = Math.max(0, REFUND_DAY - elapsedInt);
+            const tooltip = refundActive
+              ? 'Vous êtes éligible au remboursement'
+              : `Disponible à partir du 80ème jour (encore ${daysUntilRefund} jour${daysUntilRefund > 1 ? 's' : ''})`;
+            return (
+              <div className="mb-6 animate-fade-in" style={{ animationDelay: '60ms' }}>
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Demander un remboursement</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tooltip}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={refundActive ? 'default' : 'outline'}
+                    disabled={!refundActive}
+                    onClick={() => navigate('/client/mon-contrat?action=refund')}
+                    title={tooltip}
+                  >
+                    {refundActive ? 'Demander mon remboursement' : `J${elapsedInt}/${REFUND_DAY}`}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* === Dernières offres (style Post / Logisorama mockup) === */}
           <SectionErrorBoundary sectionName="DernieresOffres">
             <div className="mb-6">
