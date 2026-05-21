@@ -76,6 +76,7 @@ const AdminBoiteReception = lazy(() => import("./pages/admin/BoiteReception"));
 const AdminCalendrier = lazy(() => import("./pages/admin/Calendrier"));
 const AdminRappels = lazy(() => import("./pages/admin/Rappels"));
 const AdminCandidatures = lazy(() => import("./pages/admin/Candidatures"));
+const AdminDeposerCandidature = lazy(() => import("./pages/admin/DeposerCandidature"));
 const AdminDemandesActivation = lazy(() => import("./pages/admin/DemandesActivation"));
 const AdminFacturesAbaNinja = lazy(() => import("./pages/admin/FacturesAbaNinja"));
 const AdminStatistiquesAgents = lazy(() => import("./pages/admin/StatistiquesAgents"));
@@ -326,6 +327,7 @@ const App = () => (
               <Route path="/admin/calendrier" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/rappels" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRappels /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/candidatures" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCandidatures /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/deposer-candidature" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDeposerCandidature /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/demandes-activation" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDemandesActivation /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/factures-abaninja" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminFacturesAbaNinja /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/statistiques-agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminStatistiquesAgents /></AppLayout></ProtectedRoute>} />
