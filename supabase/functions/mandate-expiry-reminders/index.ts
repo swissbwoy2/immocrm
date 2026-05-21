@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const MANDAT_DURATION_DAYS = 90;
 const REMINDER_WINDOW_DAYS = 30; // À partir de J+60 (= 30 jours restants)
-const REFUND_ELIGIBILITY_DAY = 82;
+const REFUND_ELIGIBILITY_DAY = 80;
 const APP_BASE_URL = "https://immocrm.lovable.app";
 
 function daysBetween(from: Date, to: Date): number {
