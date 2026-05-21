@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const MANDAT_DURATION_DAYS = 90;
-const REFUND_ELIGIBILITY_DAY = 82;
+const REFUND_ELIGIBILITY_DAY = 80;
 
 const VALID_REASONS = ["found_alone", "not_searching_anymore", "searching_alone"] as const;
 type CancellationReason = typeof VALID_REASONS[number];
