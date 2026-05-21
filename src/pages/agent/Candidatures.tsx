@@ -173,13 +173,16 @@ export default function Candidatures() {
         return;
       }
 
-      // Get clients via client_agents
-      const { data: clientAgentsData } = await supabase
-        .from('client_agents')
-        .select('client_id')
-        .eq('agent_id', agentData.id);
+      // Get clients via client_agents ET clients.agent_id (union des deux sources)
+      const [{ data: clientAgentsData }, { data: principalClientsData }] = await Promise.all([
+        supabase.from('client_agents').select('client_id').eq('agent_id', agentData.id),
+        supabase.from('clients').select('id').eq('agent_id', agentData.id),
+      ]);
 
-      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+      const clientIds = Array.from(new Set([
+        ...(clientAgentsData?.map(ca => ca.client_id) || []),
+        ...(principalClientsData?.map(c => c.id) || []),
+      ]));
 
       const { data: clientsData } = clientIds.length > 0
         ? await supabase
