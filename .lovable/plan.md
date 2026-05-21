@@ -1,58 +1,50 @@
-# Mandat — Renouvellement automatique J+91 et bouton remboursement J80–J90
+# Cohérence des compteurs mandat (Dashboard ↔ Mon contrat)
 
-## Logique métier finale
+## Constat (compte démo Dupont)
 
-- **Durée mandat** : 90 jours (inchangé).
-- **J80 → J90** : fenêtre d'éligibilité au remboursement. Le client peut cliquer "Demander un remboursement" depuis son tableau de bord ou Mon dossier.
-- **J91 sans action** : renouvellement automatique pour 90 jours. Le compteur repart à 0, le bouton remboursement redevient grisé jusqu'au prochain J80.
-- **Exceptions** : si le client a déjà demandé l'arrêt / l'annulation, aucun renouvellement automatique (logique déjà en place).
+| Endroit | Texte affiché | Source de la date de départ |
+|---|---|---|
+| Dashboard client | « Il vous reste **6j 3h** sur votre mandat » | `client.date_ajout` / `created_at` (≈ J84) |
+| Mon contrat | « Votre mandat se termine dans **0 jour** » | `client.mandat_date_signature` (18 déc 2025 → J90 dépassé) |
+| Mon contrat | « renouvelé automatiquement le **18 mars 2026** » | Affiche la fin *passée*, pas la prochaine date de renouvellement |
 
-## Communications
+Deux problèmes :
+1. **Source de vérité différente** : Dashboard ignore `mandat_date_signature`, Mon contrat le priorise → écarts de plusieurs semaines.
+2. **Date de renouvellement dans le passé** : quand J91+ a déjà eu lieu mais que la base n'a pas encore été mise à jour par le cron, on affiche la date de fin originale au lieu de la prochaine échéance.
 
-### J80 — nouvelle relance (email + notification native)
-- Sujet : "Jour 80 : continuer votre recherche ou demander un remboursement ?"
-- Boutons : "Continuer ma recherche" / "Demander mon remboursement" / "Mettre en pause".
-- Notification in-app équivalente avec lien `/client/mon-contrat`.
+## Correctifs
 
-### J91 — renouvellement automatique (email + notification)
-- Sujet : "Votre mandat a été renouvelé automatiquement"
-- Texte clé : « Votre mandat est renouvelé pour 90 jours. Aucun remboursement n'est possible sur cette période. Pour redevenir éligible, attendez 90 jours : un rappel vous sera envoyé au 80ème jour. »
+### 1. Source unique de vérité
 
-## Bouton "Demander un remboursement"
+Créer un util `src/utils/mandatDates.ts` exporté :
 
-Affiché dans :
-1. `src/pages/client/Dashboard.tsx` — bloc mandat (nouveau).
-2. `src/pages/client/MonContrat.tsx` — déjà présent, mise à jour du seuil 82 → 80.
+```ts
+getMandatDates(client) → { start, end, daysSinceSignature, daysRemaining, isAutoRenewed }
+```
 
-États du bouton :
-- **J0 → J79** : grisé, tooltip « Disponible à partir du 80ème jour (encore X jours) ».
-- **J80 → J90** : actif, vert, déclenche le dialogue d'annulation avec remboursement.
-- **J91+** : grisé après renouvellement auto (compteur remis à 0, donc à nouveau J0 → grisé). Tooltip explicite « Mandat renouvelé — nouvelle éligibilité au 80ème jour ».
-- **Demande déjà envoyée** : badge "Demande enregistrée le …", bouton désactivé.
+Règle de priorité (alignée sur l'edge function `mandate-expiry-reminders`) :
+- `mandat_date_signature` en priorité,
+- sinon `date_ajout`,
+- sinon `created_at`.
 
-## Détails techniques
+Soustraire `mandate_pause_days` du calcul (déjà fait dans MonContrat, à ajouter au Dashboard).
 
-### Constantes à mettre à jour (82 → 80)
-- `supabase/functions/mandate-expiry-reminders/index.ts` → `REFUND_ELIGIBILITY_DAY = 80`
-- `supabase/functions/mandate-renewal-action/index.ts` → `REFUND_ELIGIBILITY_DAY = 80`
-- `src/pages/client/MonContrat.tsx` → `REFUND_ELIGIBILITY_DAY = 80`
+### 2. Projection « auto-renouvelé » si la fin est dépassée
 
-### Edge function `mandate-expiry-reminders`
-- Ajouter une branche **J80 exactement** : envoi d'un email/notif dédié "fenêtre remboursement ouverte" (anti-doublon via `mandate_renewal_reminders_log` avec un canal distinct, p.ex. `refund_window_open`).
-- Adapter l'email de renouvellement auto J91 : nouveau texte expliquant que le remboursement n'est plus possible avant 90 nouveaux jours.
-- Notification in-app `mandate_auto_renewed` : mise à jour du message.
+Si `now > end` ET `client.refund_status` ∉ {pending, processed} ET pas d'annulation : considérer que le mandat a été renouvelé automatiquement → recalculer `end = end + 90j` (autant de fois que nécessaire pour repasser dans le futur) et remettre le compteur `daysSinceSignature` modulo 90.
 
-### Composant Dashboard client
-- Nouveau petit bloc "Mandat" sous le résumé, affichant :
-  - Jours écoulés / restants
-  - Bouton "Demander un remboursement" (même handler que MonContrat, redirige vers `/client/mon-contrat?action=refund` pour réutiliser le dialogue existant — pas de duplication de logique).
+Le texte devient : « Renouvelé automatiquement le {nouvelle date} » au lieu de la date passée.
 
-### Pas de migration DB
-La structure (`refund_status`, `refund_eligible`, `refund_requested_at`, `mandate_pause_days`, etc.) est déjà en place.
+### 3. Câblage
 
-## Fichiers modifiés
+- `src/pages/client/Dashboard.tsx` (lignes 454–464) : remplacer le calcul local par `getMandatDates(client)`.
+- `src/pages/client/MonContrat.tsx` (lignes 216–234) : remplacer `getMandatDates` local par l'import.
+- `src/pages/client/dashboards/RelocationClientDashboard.tsx` : vérifier qu'il consomme la même source (à inspecter).
 
-1. `supabase/functions/mandate-expiry-reminders/index.ts` — seuil + branche J80 + email J91 mis à jour.
-2. `supabase/functions/mandate-renewal-action/index.ts` — seuil 80.
-3. `src/pages/client/MonContrat.tsx` — seuil 80, tooltips et libellés.
-4. `src/pages/client/Dashboard.tsx` — nouveau bloc bouton remboursement (lien vers `/client/mon-contrat`).
+Aucun changement DB, aucun changement d'edge function.
+
+## Pourquoi ça résoudra l'écran démo
+
+- Dashboard et Mon contrat afficheront **le même nombre de jours** (basé sur `mandat_date_signature`).
+- La phrase « renouvelé automatiquement le 18 mars 2026 » deviendra « le 16 juin 2026 » (= 18 mars + 90j, projeté dans le futur).
+- Le bouton « Demander un remboursement » restera grisé puisque le compteur sera bien remis à 0 après renouvellement auto.
