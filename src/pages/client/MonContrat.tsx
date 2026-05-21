@@ -241,6 +241,29 @@ export default function MonContrat() {
   const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
   const showRefundRequested = client?.refund_status === 'pending';
 
+  // Auto-ouverture du dialogue remboursement via ?action=refund
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoOpenedRefund = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRefund.current) return;
+    if (loading || !client) return;
+    if (searchParams.get('action') !== 'refund') return;
+    autoOpenedRefund.current = true;
+    if (refundEligibleNow && !showRefundRequested) {
+      openCancelDialog(true);
+    } else {
+      toast({
+        title: refundEligibleNow ? 'Demande déjà enregistrée' : 'Pas encore éligible',
+        description: refundEligibleNow
+          ? 'Votre demande de remboursement est en cours de traitement.'
+          : `Le remboursement sera disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour (jour actuel : ${daysSinceSignature}).`,
+      });
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [loading, client, refundEligibleNow, showRefundRequested, daysSinceSignature, searchParams, setSearchParams]);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">
