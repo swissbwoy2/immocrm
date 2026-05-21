@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle, RefreshCw, Ban, Pause, Play, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const MANDAT_DURATION_DAYS = 90;
-const REFUND_ELIGIBILITY_DAY = 82;
+const REFUND_ELIGIBILITY_DAY = 80;
 
 interface ClientData {
   id: string;
@@ -239,6 +240,29 @@ export default function MonContrat() {
   const refundEligibleNow = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY;
   const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
   const showRefundRequested = client?.refund_status === 'pending';
+
+  // Auto-ouverture du dialogue remboursement via ?action=refund
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoOpenedRefund = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRefund.current) return;
+    if (loading || !client) return;
+    if (searchParams.get('action') !== 'refund') return;
+    autoOpenedRefund.current = true;
+    if (refundEligibleNow && !showRefundRequested) {
+      openCancelDialog(true);
+    } else {
+      toast({
+        title: refundEligibleNow ? 'Demande déjà enregistrée' : 'Pas encore éligible',
+        description: refundEligibleNow
+          ? 'Votre demande de remboursement est en cours de traitement.'
+          : `Le remboursement sera disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour (jour actuel : ${daysSinceSignature}).`,
+      });
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('action');
+    setSearchParams(next, { replace: true });
+  }, [loading, client, refundEligibleNow, showRefundRequested, daysSinceSignature, searchParams, setSearchParams]);
 
   if (loading) {
     return (

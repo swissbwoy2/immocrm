@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const MANDAT_DURATION_DAYS = 90;
 const REMINDER_WINDOW_DAYS = 30; // À partir de J+60 (= 30 jours restants)
-const REFUND_ELIGIBILITY_DAY = 82;
+const REFUND_ELIGIBILITY_DAY = 80;
 const APP_BASE_URL = "https://immocrm.lovable.app";
 
 function daysBetween(from: Date, to: Date): number {
@@ -178,7 +178,7 @@ serve(async (req) => {
               user_id: client.user_id,
               type: "mandate_auto_renewed",
               title: "🔄 Mandat renouvelé automatiquement",
-              message: `Votre mandat de recherche a été renouvelé pour 90 jours supplémentaires. Vous pouvez l'annuler à tout moment depuis votre espace.`,
+              message: `Votre mandat a été renouvelé pour 90 jours. Aucun remboursement n'est possible sur cette période. Pour redevenir éligible, attendez 90 jours : un rappel vous sera envoyé au 80ème jour.`,
               link: "/client/mon-contrat",
               metadata: { client_id: client.id },
             });
@@ -197,6 +197,52 @@ serve(async (req) => {
               });
             }
           }
+
+          // Email de confirmation du renouvellement automatique
+          if (resendApiKey && client.user_id) {
+            const { data: profile } = await supabase
+              .from("profiles").select("prenom, nom, email").eq("id", client.user_id).maybeSingle();
+            if (profile?.email) {
+              const newEndStr = newOfficialEnd.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+              const autoRenewHtml = `<!DOCTYPE html><html><body style="font-family:-apple-system,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
+                <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                  <div style="background:#1e40af;color:white;padding:30px 24px;text-align:center;">
+                    <div style="font-size:48px;margin-bottom:8px;">🔄</div>
+                    <h1 style="margin:0;font-size:22px;font-weight:700;">Votre mandat a été renouvelé</h1>
+                  </div>
+                  <div style="padding:30px 24px;color:#1f2937;">
+                    <p style="font-size:16px;margin:0 0 16px;">Bonjour ${profile.prenom ?? ""} ${profile.nom ?? ""},</p>
+                    <p style="font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 20px;">
+                      Faute d'action de votre part dans le délai imparti, votre mandat de recherche a été <strong>renouvelé automatiquement pour 90 jours</strong>, jusqu'au <strong>${newEndStr}</strong>.
+                    </p>
+                    <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;border-radius:8px;margin:0 0 24px;">
+                      <p style="margin:0;font-size:14px;color:#991b1b;">
+                        ⚠️ <strong>Aucun remboursement n'est possible sur cette nouvelle période.</strong><br/>
+                        Pour redevenir éligible au remboursement, vous devrez attendre 90 jours. Un rappel vous sera envoyé au <strong>80ème jour</strong> de ce nouveau mandat afin de choisir : continuer votre recherche ou demander un remboursement.
+                      </p>
+                    </div>
+                    <p style="font-size:13px;color:#6b7280;margin:0;">
+                      <a href="${APP_BASE_URL}/client/mon-contrat" style="color:#1e40af;">Accéder à mon espace</a>
+                    </p>
+                  </div>
+                  <div style="background:#f9fafb;padding:16px 24px;text-align:center;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;">
+                    Immo-rama.ch — Votre partenaire pour trouver votre logement
+                  </div>
+                </div>
+              </body></html>`;
+              await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  from: fromEmail,
+                  to: profile.email,
+                  subject: "🔄 Votre mandat a été renouvelé automatiquement (aucun remboursement possible)",
+                  html: autoRenewHtml,
+                }),
+              });
+            }
+          }
+
           autoRenewed++;
           continue;
         }
