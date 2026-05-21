@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const MANDAT_DURATION_DAYS = 90;
-const REFUND_ELIGIBILITY_DAY = 82;
+const REFUND_ELIGIBILITY_DAY = 80;
 
 interface ClientData {
   id: string;
