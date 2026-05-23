@@ -16,36 +16,26 @@ Deno.serve(async (req) => {
     const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const authHeader = req.headers.get("Authorization") ?? "";
-    const overrideHeader = req.headers.get("x-one-shot-token") ?? "";
-
-    // One-shot override (rotates per deploy; see ONE_SHOT_TOKEN below).
-    const ONE_SHOT_TOKEN = "ZxQv-7r4P-bM2t-9LkA-aH8d-3pTc-vNeJ";
-
-    let authorized = false;
-    if (overrideHeader && overrideHeader === ONE_SHOT_TOKEN) {
-      authorized = true;
-    } else {
-      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      });
-      const { data: userData } = await userClient.auth.getUser();
-      const caller = userData?.user;
-      if (caller) {
-        const adminCheck = createClient(SUPABASE_URL, SERVICE_KEY);
-        const { data: isAdmin } = await adminCheck.rpc("has_role", {
-          _user_id: caller.id, _role: "admin",
-        });
-        if (isAdmin) authorized = true;
-      }
-    }
-
-    if (!authorized) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
+    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData } = await userClient.auth.getUser();
+    const caller = userData?.user;
+    if (!caller) {
+      return new Response(JSON.stringify({ error: "unauthenticated" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: isAdmin, error: roleErr } = await admin.rpc("has_role", {
+      _user_id: caller.id, _role: "admin",
+    });
+    if (roleErr || !isAdmin) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { email, password } = await req.json();
     if (!email || !password || String(password).length < 8) {
