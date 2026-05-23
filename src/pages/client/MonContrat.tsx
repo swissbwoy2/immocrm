@@ -13,9 +13,7 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { CancellationReasonForm, type CancellationReason } from '@/components/mandat/CancellationReasonForm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
-const MANDAT_DURATION_DAYS = 90;
-const REFUND_ELIGIBILITY_DAY = 80;
+import { getMandatDates, MANDAT_DURATION_DAYS, REFUND_ELIGIBILITY_DAY } from '@/utils/mandatDates';
 
 interface ClientData {
   id: string;
@@ -213,25 +211,7 @@ export default function MonContrat() {
     }
   };
 
-  // Calculate mandate dates (uses real signature date when available + pause days)
-  const getMandatDates = () => {
-    const startDate = client?.mandat_date_signature || client?.date_ajout || client?.created_at;
-    if (!startDate) return { start: null, end: null, daysRemaining: 0, daysSinceSignature: 0 };
-
-    const start = new Date(startDate);
-    const pauseDays = client?.mandate_pause_days ?? 0;
-    const end = new Date(start);
-    end.setDate(end.getDate() + MANDAT_DURATION_DAYS + pauseDays);
-
-    const now = new Date();
-    const rawDaysSince = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const daysSinceSignature = Math.max(0, rawDaysSince - pauseDays);
-    const daysRemaining = Math.max(0, MANDAT_DURATION_DAYS - daysSinceSignature);
-
-    return { start, end, daysRemaining, daysSinceSignature };
-  };
-
-  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature } = getMandatDates();
+  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature, isAutoRenewed } = getMandatDates(client);
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
   const hasPdf = !!client?.id;
@@ -510,7 +490,7 @@ export default function MonContrat() {
                     <div>
                       <p className="font-semibold">Votre mandat se termine dans {daysRemaining} jour{daysRemaining > 1 ? 's' : ''}</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Sans action de votre part, il sera renouvelé automatiquement le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
+                        {isAutoRenewed ? 'Renouvelé automatiquement' : 'Sans action de votre part, il sera renouvelé automatiquement'} le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
                       </p>
                     </div>
                   </div>

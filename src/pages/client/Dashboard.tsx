@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsDemoAccount } from '@/hooks/useIsDemoAccount';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
+import { getMandatDates } from '@/utils/mandatDates';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -455,13 +456,18 @@ function ClientDashboardLocation() {
   const reloggedCandidatureForCalc = candidatures.find(c => 
     ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut)
   );
-  const mandatEndDate = reloggedCandidatureForCalc?.cles_remises_at || 
+  const reloggedEndDate = reloggedCandidatureForCalc?.cles_remises_at || 
                         reloggedCandidatureForCalc?.signature_effectuee_at || 
                         reloggedCandidatureForCalc?.date_etat_lieux || null;
-  
-  const mandatStartDate = client.date_ajout || client.created_at || new Date().toISOString();
-  const daysElapsed = calculateDaysElapsed(mandatStartDate, mandatEndDate);
-  const daysRemaining = calculateDaysRemaining(mandatStartDate, mandatEndDate);
+
+  // Source unique de vérité (alignée avec "Mon contrat")
+  const mandatInfo = getMandatDates(client as any);
+  const daysElapsed = reloggedEndDate
+    ? calculateDaysElapsed(client.date_ajout || client.created_at || new Date().toISOString(), reloggedEndDate)
+    : mandatInfo.daysSinceSignature;
+  const daysRemaining = reloggedEndDate
+    ? calculateDaysRemaining(client.date_ajout || client.created_at || new Date().toISOString(), reloggedEndDate)
+    : mandatInfo.daysRemaining;
 
   // Calculate stats
   const now = new Date();
