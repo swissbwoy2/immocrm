@@ -490,7 +490,7 @@ export default function MonContrat() {
                     <div>
                       <p className="font-semibold">Votre mandat se termine dans {daysRemaining} jour{daysRemaining > 1 ? 's' : ''}</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Sans action de votre part, il sera renouvelé automatiquement le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
+                        {isAutoRenewed ? 'Renouvelé automatiquement' : 'Sans action de votre part, il sera renouvelé automatiquement'} le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
                       </p>
                     </div>
                   </div>
