@@ -211,25 +211,7 @@ export default function MonContrat() {
     }
   };
 
-  // Calculate mandate dates (uses real signature date when available + pause days)
-  const getMandatDates = () => {
-    const startDate = client?.mandat_date_signature || client?.date_ajout || client?.created_at;
-    if (!startDate) return { start: null, end: null, daysRemaining: 0, daysSinceSignature: 0 };
-
-    const start = new Date(startDate);
-    const pauseDays = client?.mandate_pause_days ?? 0;
-    const end = new Date(start);
-    end.setDate(end.getDate() + MANDAT_DURATION_DAYS + pauseDays);
-
-    const now = new Date();
-    const rawDaysSince = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    const daysSinceSignature = Math.max(0, rawDaysSince - pauseDays);
-    const daysRemaining = Math.max(0, MANDAT_DURATION_DAYS - daysSinceSignature);
-
-    return { start, end, daysRemaining, daysSinceSignature };
-  };
-
-  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature } = getMandatDates();
+  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature, isAutoRenewed } = getMandatDates(client);
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
   const hasPdf = !!client?.id;
