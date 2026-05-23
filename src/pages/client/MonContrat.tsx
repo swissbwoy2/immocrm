@@ -13,9 +13,7 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { CancellationReasonForm, type CancellationReason } from '@/components/mandat/CancellationReasonForm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-
-const MANDAT_DURATION_DAYS = 90;
-const REFUND_ELIGIBILITY_DAY = 80;
+import { getMandatDates, MANDAT_DURATION_DAYS, REFUND_ELIGIBILITY_DAY } from '@/utils/mandatDates';
 
 interface ClientData {
   id: string;
