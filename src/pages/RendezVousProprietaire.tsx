@@ -134,15 +134,6 @@ export default function RendezVousProprietaire() {
 
   return (
     <div className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8]">
-      <Helmet>
-        <title>Vendez votre bien en toute discrétion | Logisorama</title>
-        <meta
-          name="description"
-          content="Demandez la visite de votre bien par un expert Logisorama. Vente off-market, 100% confidentielle, réponse sous 24h."
-        />
-        <meta name="robots" content="noindex,follow" />
-        <link rel="canonical" href="https://logisorama.ch/rendez-vous-proprietaire" />
-      </Helmet>
 
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-[#b8893d]/20 bg-gradient-to-br from-[#0e0c0a] via-[#1c1814] to-[#0e0c0a]">
