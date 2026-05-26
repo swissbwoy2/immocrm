@@ -133,8 +133,17 @@ export default function RendezVousProprietaire() {
     setSubmitting(true);
     try {
       const data = parsed.data;
+      const dateLabel = new Date(data.date_rdv).toLocaleDateString("fr-CH", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Europe/Zurich",
+      });
       const notes = [
         `Demande RDV visite propriétaire`,
+        `Date souhaitée: ${dateLabel} (${data.date_rdv})`,
+        `Créneau: ${data.creneau}`,
         `Adresse: ${data.adresse}`,
         `NPA: ${data.npa}`,
         `Type de bien: ${data.type_bien}`,
