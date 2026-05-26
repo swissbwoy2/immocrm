@@ -301,28 +301,51 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
       </td></tr>
 
       <!-- HERO -->
+      ${campaign.campaign_key === 'vente' ? `
+      <tr><td style="padding:0;background:#0e0c0a;line-height:0;font-size:0;">
+        <a href="${campaign.cta_url}" style="display:block;text-decoration:none;line-height:0;font-size:0;">
+          <img src="https://ydljsdscdnqrqnjvqela.supabase.co/storage/v1/object/public/email-assets/vente-hero-bg.jpg" alt="Découvrez combien d'acheteurs actifs veulent votre bien immobilier aujourd'hui" width="640" style="display:block;width:100%;max-width:640px;height:auto;border:0;outline:none;text-decoration:none;">
+        </a>
+      </td></tr>
+      <tr><td style="background:#1c1814;padding:34px 32px 22px;text-align:center;">
+        <div style="display:inline-block;background:linear-gradient(90deg,rgba(184,137,61,0.18),rgba(140,95,55,0.10));border:1px solid rgba(184,137,61,0.55);border-radius:999px;padding:8px 18px;margin-bottom:20px;">
+          <span style="font-size:12px;color:#e0c089;font-weight:600;letter-spacing:0.6px;font-family:Arial,sans-serif;">🤫 Vente off-market · 100% confidentiel</span>
+        </div>
+        <h1 style="margin:0 0 14px;font-size:26px;line-height:1.25;color:#f4ecd8;font-weight:700;font-family:Georgia,'Times New Roman',serif;">Propriétaires, votre bien peut être vendu <em style="color:#d4a857;font-style:italic;">dès aujourd'hui</em></h1>
+        <p style="margin:0 auto 22px;max-width:480px;font-size:15px;line-height:1.6;color:#c9bfac;font-family:Arial,sans-serif;">Immeuble, maison ou appartement — découvrez combien d'acheteurs qualifiés attendent un bien comme le vôtre, en toute discrétion.</p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 24px;">
+          <tr>
+            <td style="padding:0 4px;"><div style="display:inline-block;background:rgba(184,137,61,0.10);border:1px solid rgba(184,137,61,0.35);border-radius:999px;padding:7px 12px;color:#d4a857;font-size:12px;font-weight:700;font-family:Arial,sans-serif;letter-spacing:0.3px;">✓ Discrétion</div></td>
+            <td style="padding:0 4px;"><div style="display:inline-block;background:rgba(184,137,61,0.10);border:1px solid rgba(184,137,61,0.35);border-radius:999px;padding:7px 12px;color:#d4a857;font-size:12px;font-weight:700;font-family:Arial,sans-serif;letter-spacing:0.3px;">✓ Vente rapide</div></td>
+            <td style="padding:0 4px;"><div style="display:inline-block;background:rgba(184,137,61,0.10);border:1px solid rgba(184,137,61,0.35);border-radius:999px;padding:7px 12px;color:#d4a857;font-size:12px;font-weight:700;font-family:Arial,sans-serif;letter-spacing:0.3px;">✓ Acheteurs qualifiés</div></td>
+          </tr>
+        </table>
+
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${campaign.cta_url}" style="height:56px;v-text-anchor:middle;width:360px;" arcsize="20%" stroke="f" fillcolor="#b8893d">
+          <w:anchorlock/>
+          <center style="color:#1c1814;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">${escapeHtml(campaign.cta_label)}</center>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-- -->
+        <a href="${campaign.cta_url}" style="display:inline-block;background:linear-gradient(135deg,#d4a857 0%,#b8893d 100%);color:#1c1814;text-decoration:none;font-weight:800;font-size:15px;padding:18px 32px;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.4px;box-shadow:0 10px 28px rgba(184,137,61,0.45);">${escapeHtml(campaign.cta_label)}</a>
+        <!--<![endif]-->
+        <p style="margin:14px auto 0;max-width:420px;font-size:12px;line-height:1.55;color:#a89b82;font-family:Arial,sans-serif;">Réponse sous 24h · 100% confidentiel · Sans engagement</p>
+      </td></tr>
+      ` : `
       <tr><td style="background:#1c1814;padding:48px 32px 24px;text-align:center;">
-        <!-- Badge couronne -->
         <div style="display:inline-block;background:linear-gradient(90deg,rgba(184,137,61,0.18),rgba(140,95,55,0.10));border:1px solid rgba(184,137,61,0.55);border-radius:999px;padding:8px 18px;margin-bottom:24px;">
           <span style="font-size:12px;color:#e0c089;font-weight:600;letter-spacing:0.6px;font-family:Arial,sans-serif;">👑 Agence N°1 de relocation en Suisse romande • Chasseur premium</span>
         </div>
-
-        <!-- Logo -->
         <div style="margin:6px 0 22px;">
           <img src="${logoUrl}" alt="Immo-Rama" width="120" height="120" style="display:inline-block;width:120px;height:auto;filter:drop-shadow(0 0 24px rgba(184,137,61,0.35));">
         </div>
-
-        <!-- Slogan -->
         <div style="font-size:13px;letter-spacing:4px;text-transform:uppercase;color:#d4a857;font-weight:600;font-family:Arial,sans-serif;margin-bottom:18px;">L'immobilier accessible</div>
-
         <div style="height:1px;width:60px;background:#b8893d;margin:0 auto 28px;opacity:0.6;"></div>
-
-        <!-- Titre principal -->
         <h1 style="margin:0 0 14px;font-size:30px;line-height:1.2;color:#f4ecd8;font-weight:700;font-family:Georgia,'Times New Roman',serif;">${escapeHtml(campaign.hero_title)}</h1>
         ${campaign.preview_text ? `<p style="margin:0 auto 14px;max-width:520px;font-size:14px;line-height:1.55;color:#d4a857;font-weight:600;font-family:Arial,sans-serif;letter-spacing:0.2px;">${escapeHtml(campaign.preview_text)}</p>` : ''}
         ${campaign.hero_subtitle ? `<p style="margin:0 auto 30px;max-width:480px;font-size:16px;line-height:1.6;color:#c9bfac;font-family:Arial,sans-serif;">${escapeHtml(campaign.hero_subtitle)}</p>` : '<div style="height:24px;"></div>'}
-
-        <!-- CTA principal -->
         <!--[if mso]>
         <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${campaign.cta_url}" style="height:54px;v-text-anchor:middle;width:280px;" arcsize="20%" stroke="f" fillcolor="#b8893d">
           <w:anchorlock/>
@@ -332,18 +355,15 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
         <!--[if !mso]><!-- -->
         <a href="${campaign.cta_url}" style="display:inline-block;background:linear-gradient(135deg,#d4a857 0%,#b8893d 100%);color:#1c1814;text-decoration:none;font-weight:700;font-size:15px;padding:17px 38px;border-radius:12px;font-family:Arial,sans-serif;letter-spacing:0.4px;box-shadow:0 8px 24px rgba(184,137,61,0.35);">🚀  ${escapeHtml(campaign.cta_label)}</a>
         <!--<![endif]-->
-
-        <!-- Séparateur OU -->
         <div style="margin:26px auto 18px;display:flex;align-items:center;justify-content:center;max-width:280px;">
           <div style="flex:1;height:1px;background:rgba(184,137,61,0.3);"></div>
           <div style="padding:0 14px;color:#8a7f6e;font-size:11px;letter-spacing:3px;font-family:Arial,sans-serif;font-weight:600;">OU</div>
           <div style="flex:1;height:1px;background:rgba(184,137,61,0.3);"></div>
         </div>
-
-        <!-- 2e CTA — RDV au bureau -->
         <a href="https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=${encodeURIComponent(campaign.campaign_key)}&utm_content=cta_rdv_bureau_hero#analyse-dossier" style="display:inline-block;background:transparent;border:2px solid #b8893d;color:#d4a857;text-decoration:none;font-weight:700;font-size:14px;padding:14px 28px;border-radius:10px;font-family:Arial,sans-serif;letter-spacing:0.3px;line-height:1.3;">📍  Fixer un RDV gratuit à nos bureaux (30 min)</a>
         <p style="margin:12px auto 0;max-width:420px;font-size:13px;line-height:1.55;color:#a89b82;font-style:italic;font-family:Georgia,serif;">Un expert Logisorama vous accueille à Crissier et analyse votre dossier en direct — c'est <strong style="color:#d4a857;font-style:normal;">100&nbsp;% gratuit</strong>, durée 30&nbsp;min.</p>
       </td></tr>
+      `}
 
       <!-- INTRO -->
       ${intro ? `<tr><td style="padding:28px 40px 8px;color:#d8cfba;font-size:16px;line-height:1.7;font-family:Arial,sans-serif;">${intro}</td></tr>` : ''}
