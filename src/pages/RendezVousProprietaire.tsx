@@ -65,8 +65,11 @@ export default function RendezVousProprietaire() {
   const [params] = useSearchParams();
 
   useEffect(() => {
-    document.documentElement.classList.add("rdv-prop-dark");
-    return () => document.documentElement.classList.remove("rdv-prop-dark");
+    document.title = "Vendez votre bien en toute discrétion | Logisorama";
+    const meta = document.querySelector('meta[name="description"]');
+    const prev = meta?.getAttribute("content") ?? null;
+    if (meta) meta.setAttribute("content", "Demandez la visite de votre bien par un expert Logisorama. Vente off-market, 100% confidentielle, réponse sous 24h.");
+    return () => { if (meta && prev !== null) meta.setAttribute("content", prev); };
   }, []);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
