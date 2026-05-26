@@ -302,12 +302,7 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
 
       <!-- HERO -->
       ${campaign.campaign_key === 'vente' ? `
-      <tr><td style="padding:0;background:#0e0c0a;line-height:0;font-size:0;">
-        <a href="${campaign.cta_url}" style="display:block;text-decoration:none;line-height:0;font-size:0;">
-          <img src="https://ydljsdscdnqrqnjvqela.supabase.co/storage/v1/object/public/email-assets/vente-hero-bg.jpg" alt="Découvrez combien d'acheteurs actifs veulent votre bien immobilier aujourd'hui" width="640" style="display:block;width:100%;max-width:640px;height:auto;border:0;outline:none;text-decoration:none;">
-        </a>
-      </td></tr>
-      <tr><td style="background:#1c1814;padding:34px 32px 22px;text-align:center;">
+      <tr><td style="background:linear-gradient(135deg,#0e0c0a 0%,#1c1814 100%);padding:48px 32px 28px;text-align:center;">
         <div style="display:inline-block;background:linear-gradient(90deg,rgba(184,137,61,0.18),rgba(140,95,55,0.10));border:1px solid rgba(184,137,61,0.55);border-radius:999px;padding:8px 18px;margin-bottom:20px;">
           <span style="font-size:12px;color:#e0c089;font-weight:600;letter-spacing:0.6px;font-family:Arial,sans-serif;">🤫 Vente off-market · 100% confidentiel</span>
         </div>
