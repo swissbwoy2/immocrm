@@ -32,6 +32,8 @@ const schema = z.object({
     .trim()
     .regex(/^\d{4}$/, "NPA suisse à 4 chiffres"),
   type_bien: z.enum(["Appartement", "Maison", "Immeuble", "Terrain", "Autre"]),
+  date_rdv: z.string().min(1, "Sélectionnez une date"),
+  creneau: z.string().min(1, "Sélectionnez un créneau"),
   message: z.string().trim().max(1000).optional(),
 });
 
@@ -43,6 +45,8 @@ type FormState = {
   adresse: string;
   npa: string;
   type_bien: string;
+  date_rdv: string;
+  creneau: string;
   message: string;
 };
 
@@ -54,8 +58,42 @@ const INITIAL: FormState = {
   adresse: "",
   npa: "",
   type_bien: "",
+  date_rdv: "",
+  creneau: "",
   message: "",
 };
+
+const CRENEAUX = [
+  "09:00 - 10:00",
+  "10:00 - 11:00",
+  "11:00 - 12:00",
+  "14:00 - 15:00",
+  "15:00 - 16:00",
+  "16:00 - 17:00",
+  "17:00 - 18:00",
+];
+
+function getAvailableDates(count = 10): { value: string; label: string }[] {
+  const dates: { value: string; label: string }[] = [];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  while (dates.length < count) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) {
+      const value = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString("fr-CH", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "Europe/Zurich",
+      });
+      dates.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
 
 export default function RendezVousProprietaire() {
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -95,8 +133,17 @@ export default function RendezVousProprietaire() {
     setSubmitting(true);
     try {
       const data = parsed.data;
+      const dateLabel = new Date(data.date_rdv).toLocaleDateString("fr-CH", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Europe/Zurich",
+      });
       const notes = [
         `Demande RDV visite propriétaire`,
+        `Date souhaitée: ${dateLabel} (${data.date_rdv})`,
+        `Créneau: ${data.creneau}`,
         `Adresse: ${data.adresse}`,
         `NPA: ${data.npa}`,
         `Type de bien: ${data.type_bien}`,
@@ -174,7 +221,7 @@ export default function RendezVousProprietaire() {
               pour convenir d'un rendez-vous de visite sur place — en toute discrétion.
             </p>
             <p className="mt-2 text-sm text-[#8a7f6e]">
-              Une urgence ? <a className="text-[#d4a857] underline" href="tel:+41215110680">+41 21 511 06 80</a>
+              Une urgence ? <a className="text-[#d4a857] underline" href="tel:+41216342839">+41 21 634 28 39</a>
             </p>
           </div>
         ) : (
@@ -263,6 +310,63 @@ export default function RendezVousProprietaire() {
                   </SelectContent>
                 </Select>
               </Field>
+              <div className="md:col-span-2 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4">
+                <Label className="mb-3 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+                  📅 Choisissez votre créneau de visite
+                </Label>
+                <p className="mb-3 text-xs text-[#8a7f6e]">
+                  Sélectionnez un jour puis un horaire qui vous convient. Nous confirmons sous 24h.
+                </p>
+
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Jour
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {getAvailableDates(9).map((d) => {
+                    const active = form.date_rdv === d.value;
+                    return (
+                      <button
+                        type="button"
+                        key={d.value}
+                        onClick={() => set("date_rdv", d.value)}
+                        className={`rounded-lg border px-3 py-2 text-left text-xs transition ${
+                          active
+                            ? "border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]"
+                            : "border-[#b8893d]/25 bg-[#1c1814] text-[#c9bfac] hover:border-[#d4a857]/60"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.date_rdv ? <p className="mt-2 text-xs text-red-400">{errors.date_rdv}</p> : null}
+
+                <div className="mt-5 mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Horaire
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {CRENEAUX.map((c) => {
+                    const active = form.creneau === c;
+                    return (
+                      <button
+                        type="button"
+                        key={c}
+                        onClick={() => set("creneau", c)}
+                        className={`rounded-lg border px-3 py-2 text-center text-xs font-medium transition ${
+                          active
+                            ? "border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]"
+                            : "border-[#b8893d]/25 bg-[#1c1814] text-[#c9bfac] hover:border-[#d4a857]/60"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.creneau ? <p className="mt-2 text-xs text-red-400">{errors.creneau}</p> : null}
+              </div>
+
               <div className="md:col-span-2">
                 <Field label="Message (facultatif)" error={errors.message}>
                   <Textarea
