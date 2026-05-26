@@ -1470,13 +1470,14 @@ export default function CampagnesSuivi() {
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm space-y-1">
               <div className="font-semibold flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-primary" />
-                Filtre automatique — Campagne Location
+                Routage automatique — Location & Vente
               </div>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Seuls les leads dont le <strong>Formulaire</strong> contient « Logisorama »
-                <strong> ET</strong> dont l'<strong>Étape</strong> est <strong>« Qualifié »</strong> seront importés.
-                Tous les autres (À évaluer, Contacté, Converti, RENOV IA, vendeurs/acheteurs…)
-                sont automatiquement écartés.
+                Détection automatique selon le <strong>Formulaire</strong> :<br />
+                • <strong>« Logisorama… »</strong> → campagne <strong>Location</strong><br />
+                • <strong>« Vendeurs vs Acheteurs… »</strong> → campagne <strong>Vente</strong><br />
+                Seuls les leads avec <strong>Étape « Qualifié »</strong> sont importés. Les autres formulaires
+                (RENOV IA…) et étapes (À évaluer, Contacté, Converti…) sont écartés.
               </p>
             </div>
             <div>
