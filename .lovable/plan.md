@@ -1,25 +1,47 @@
-## Deux corrections
+## Problème
 
-### 1. Libellé du CTA (campagne « vente »)
-Le texte du bouton vient de la colonne `cta_label` en base (`email_followup_campaigns`), pas du code de l'edge function. Actuellement :
+L'import CSV (page **Campagnes de suivi** → bouton Importer) filtre actuellement de manière stricte :
 
-> 📞 Fixer un entretien téléphonique avec un agent
+- Garde uniquement les lignes dont `Formulaire` contient `logisorama` → **toutes les autres lignes sont rejetées silencieusement** (compteur "rejetés formulaire").
+- Force `campaign_key = "location"` côté Edge Function.
 
-Migration : mettre à jour cette ligne uniquement (campagne `vente`) avec :
+Conséquence : les lignes du CSV dont le formulaire est `vendeurs vs Acheteurs atifs-copy`, `vendeurs vs Acheteurs atifs-copy-copy`, etc. sont **rejetées** et ne sont jamais rattachées à la campagne `vente`.
 
-> 🏠 Organiser une visite de votre bien avec un agent
+## Objectif
 
-Aucune modif de l'edge function nécessaire — elle lit déjà `campaign.cta_label` dynamiquement. Les autres campagnes (location, etc.) ne sont pas touchées.
+Détecter automatiquement le type de lead à partir de la colonne `Formulaire` du CSV et le rattacher à la bonne campagne, sans toucher au reste du flux (filtre Étape = Qualifié, dédup, ré‑attache, Edge Function `import-leads-csv` inchangée).
 
-### 2. Erreur 404 sur `logisorama.ch/rendez-vous-proprietaire`
+## Règles de mapping
 
-La route `/rendez-vous-proprietaire` **existe bien** dans `src/App.tsx` (ligne 277) et la page `RendezVousProprietaire.tsx` est en place. Elle fonctionne sur l'URL de preview.
+Sur la valeur normalisée (lowercase, sans accents) de la colonne `Formulaire` :
 
-Le 404 sur `logisorama.ch` vient du fait que **le site publié n'a pas encore été mis à jour** depuis la création de la page. Sur Lovable, les changements frontend ne deviennent live qu'après un clic sur **Publier → Mettre à jour** (les fonctions backend, elles, se déploient automatiquement, c'est pour ça que le mail avec le nouveau CTA fonctionne déjà mais pointe vers une page pas encore publiée).
+| Motif détecté                          | Campagne cible |
+|----------------------------------------|----------------|
+| Contient `logisorama`                  | `location`     |
+| Contient `vendeur` **ou** `acheteur`   | `vente`        |
+| Autre                                  | Rejeté         |
 
-**Action utilisateur** (pas de code) : ouvrir la modale Publier et cliquer sur « Mettre à jour ». Après ça, l'URL `https://logisorama.ch/rendez-vous-proprietaire` répondra correctement (le SPA fallback Lovable gère le deep-link automatiquement, aucun `_redirects` requis).
+(Le motif `vendeurs vs Acheteurs` couvre les deux mots-clés, donc tout `…-copy`, `…-copy-copy`, etc. est capté.)
 
-### Hors scope
-- Pas de modification du code de l'edge function
-- Pas de modification du fichier `RendezVousProprietaire.tsx` (calendrier, formulaire, téléphone +41 21 634 28 39 déjà en place)
-- Pas de changement sur les autres campagnes
+Le filtre `Étape = Qualifié` reste appliqué aux deux types.
+
+## Changements
+
+**Fichier unique : `src/pages/admin/CampagnesSuivi.tsx`** — fonction `handleImport` :
+
+1. Pour chaque ligne, classer en `location` / `vente` / rejet selon la règle ci-dessus au lieu du test booléen `isLogisorama`.
+2. Constituer **deux tableaux** `parsedLocation` et `parsedVente`.
+3. Appeler `supabase.functions.invoke("import-leads-csv", …)` **une fois par campagne non vide**, en passant le bon `campaign_key` (`location` ou `vente`). L'Edge Function gère déjà la ré‑attache d'un email existant vers une autre `campaign_key`, donc aucun changement backend nécessaire.
+4. Agréger les compteurs (`inserted`, `reattached`, `duplicates`, `errors`) des deux appels dans un seul toast récap qui détaille :
+   - Nouveaux Location / Vente
+   - Ré‑attachés Location / Vente
+   - Doublons
+   - Rejetés (formulaire inconnu, étape ≠ Qualifié, email invalide)
+5. Mettre à jour le texte du `Dialog` d'import pour expliquer que **Logisorama → Location** et **Vendeurs vs Acheteurs → Vente** sont acceptés.
+
+## Hors-scope
+
+- Aucune migration SQL.
+- Aucune modification de l'Edge Function `import-leads-csv`.
+- Aucune modification des autres campagnes (`achat`, `renovation`).
+- Aucun changement de la logique d'envoi des emails de relance.

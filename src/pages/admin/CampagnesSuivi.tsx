@@ -586,10 +586,14 @@ export default function CampagnesSuivi() {
       if (formulaireIdx === -1) throw new Error("Colonne 'Formulaire' introuvable");
       if (etapeIdx === -1) throw new Error("Colonne 'Étape' introuvable");
 
-      const parsed: any[] = [];
+      const parsedLocation: any[] = [];
+      const parsedVente: any[] = [];
       let rejectedFormulaire = 0;
       let rejectedEtape = 0;
       let rejectedEmail = 0;
+
+      const normalize = (s: string) =>
+        s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
       for (let i = 1; i < lines.length; i++) {
         const cols = parseCSVLine(lines[i]);
@@ -599,20 +603,20 @@ export default function CampagnesSuivi() {
         const formulaire = cols[formulaireIdx] || "";
         const etape = cols[etapeIdx] || "";
 
-        const isLogisorama = formulaire.toLowerCase().includes("logisorama");
-        const normEtape = etape
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .trim();
+        const normForm = normalize(formulaire);
+        let targetCampaign: "location" | "vente" | null = null;
+        if (normForm.includes("logisorama")) targetCampaign = "location";
+        else if (normForm.includes("vendeur") || normForm.includes("acheteur")) targetCampaign = "vente";
+
+        const normEtape = normalize(etape);
         const isQualifie = normEtape === "qualifie";
 
-        if (!isLogisorama) { rejectedFormulaire++; continue; }
+        if (!targetCampaign) { rejectedFormulaire++; continue; }
         if (!isQualifie) { rejectedEtape++; continue; }
 
         const fullName = nameIdx >= 0 ? cols[nameIdx] : "";
         const parts = fullName.split(" ");
-        parsed.push({
+        const row = {
           email,
           prenom: parts[0] || null,
           nom: parts.slice(1).join(" ") || null,
@@ -620,35 +624,51 @@ export default function CampagnesSuivi() {
           source: sourceIdx >= 0 ? cols[sourceIdx] || "CSV Import" : "CSV Import",
           formulaire,
           etape,
-        });
+        };
+        if (targetCampaign === "location") parsedLocation.push(row);
+        else parsedVente.push(row);
       }
 
-      if (parsed.length === 0) {
+      if (parsedLocation.length === 0 && parsedVente.length === 0) {
         toast.error("Aucun lead conforme", {
-          description: `Vérifie que le CSV contient des leads avec Formulaire « Logisorama » ET Étape « Qualifié ». Rejetés : ${rejectedFormulaire} hors Logisorama · ${rejectedEtape} non Qualifiés.`,
+          description: `Vérifie que le CSV contient des leads avec Formulaire « Logisorama » ou « Vendeurs/Acheteurs » ET Étape « Qualifié ». Rejetés : ${rejectedFormulaire} formulaire inconnu · ${rejectedEtape} non Qualifiés.`,
         });
         setImporting(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("import-leads-csv", {
-        body: {
-          leads: parsed,
-          formulaire_name: importFile.name,
-          campaign_key: "location", // verrouillé
-        },
-      });
-      if (error) throw error;
-      const reattached = data.reattached || 0;
-      toast.success(`Import terminé : ${data.inserted} nouveau(x) + ${reattached} rattaché(s) à Location`, {
+      const totals = { inserted: 0, reattached: 0, duplicates: 0, errors: 0 };
+      const perCamp: Record<string, { inserted: number; reattached: number }> = {
+        location: { inserted: 0, reattached: 0 },
+        vente: { inserted: 0, reattached: 0 },
+      };
+
+      for (const [key, batch] of [
+        ["location", parsedLocation] as const,
+        ["vente", parsedVente] as const,
+      ]) {
+        if (batch.length === 0) continue;
+        const { data, error } = await supabase.functions.invoke("import-leads-csv", {
+          body: { leads: batch, formulaire_name: importFile.name, campaign_key: key },
+        });
+        if (error) throw error;
+        totals.inserted += data.inserted || 0;
+        totals.reattached += data.reattached || 0;
+        totals.duplicates += data.duplicates || 0;
+        totals.errors += data.errors || 0;
+        perCamp[key].inserted = data.inserted || 0;
+        perCamp[key].reattached = data.reattached || 0;
+      }
+
+      toast.success(`Import terminé : ${totals.inserted} nouveau(x) + ${totals.reattached} rattaché(s)`, {
         description:
           `📊 Sur ${lines.length - 1} lignes du CSV :\n` +
-          `• ✅ ${data.inserted} nouveaux importés\n` +
-          `• 🔗 ${reattached} existants rattachés à Location\n` +
-          `• 🔁 ${data.duplicates} déjà rattachés (vrais doublons)\n` +
-          `• 🚫 ${rejectedFormulaire} rejetés (formulaire ≠ Logisorama)\n` +
+          `• 🏠 Location → ${perCamp.location.inserted} nouveaux + ${perCamp.location.reattached} rattachés\n` +
+          `• 🏢 Vente → ${perCamp.vente.inserted} nouveaux + ${perCamp.vente.reattached} rattachés\n` +
+          `• 🔁 ${totals.duplicates} déjà rattachés (vrais doublons)\n` +
+          `• 🚫 ${rejectedFormulaire} rejetés (formulaire inconnu)\n` +
           `• 🚫 ${rejectedEtape} rejetés (étape ≠ Qualifié)\n` +
-          `• ⚠️ ${data.errors || 0} erreurs`,
+          `• ⚠️ ${totals.errors} erreurs`,
         duration: 12000,
       });
       setImportOpen(false);
@@ -660,6 +680,7 @@ export default function CampagnesSuivi() {
       setImporting(false);
     }
   };
+
 
   // ───── Send batch
   const currentCampaign = campaigns.find((c) => c.campaign_key === selectedCampaign);
