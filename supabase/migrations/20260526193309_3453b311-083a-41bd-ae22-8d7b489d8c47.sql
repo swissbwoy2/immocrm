@@ -1,0 +1,1 @@
+UPDATE public.email_followup_campaigns SET cta_label = '🏠 Organiser une visite de votre bien avec un agent' WHERE campaign_key = 'vente';

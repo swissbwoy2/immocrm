@@ -1,38 +1,25 @@
-## Nouvelle page `/rendez-vous-proprietaire` + CTA vente
+## Deux corrections
 
-### 1. Route & page
-- Ajouter `<Route path="/rendez-vous-proprietaire" element={<RendezVousProprietaire />} />` dans `src/App.tsx` (route publique, hors auth).
-- Créer `src/pages/RendezVousProprietaire.tsx` : landing page premium isolée (même charte sombre/dorée que la campagne Vente — pas de header admin/agent), réutilisant les composants `Card`, `Input`, `Button` du design system.
+### 1. Libellé du CTA (campagne « vente »)
+Le texte du bouton vient de la colonne `cta_label` en base (`email_followup_campaigns`), pas du code de l'edge function. Actuellement :
 
-### 2. Contenu de la page
-- **Hero** : badge « Vente off-market · 100% confidentiel », titre « Demandez la visite de votre bien par un expert Logisorama », sous-titre rappelant les bénéfices (discrétion, vente rapide, acheteurs qualifiés).
-- **Formulaire** unique (validation Zod, tous champs requis) :
-  - Prénom, Nom
-  - Email
-  - Téléphone (validation format CH)
-  - Adresse du bien (Google Places autocomplete — réutiliser `AddressAutocomplete` existant si dispo, sinon champ texte simple)
-  - Code postal (auto-rempli si autocomplete, sinon manuel)
-  - Type de bien (select : Appartement, Maison, Immeuble, Terrain, Autre)
-  - Message libre (facultatif)
-- **Trust block** : "Réponse sous 24h · Sans engagement · 100% confidentiel".
-- Après envoi : écran de confirmation « Merci, un expert vous contactera sous 24h ».
+> 📞 Fixer un entretien téléphonique avec un agent
 
-### 3. Backend (insertion lead)
-- Soumission insère dans `public.leads` (table existante) avec :
-  - `source = 'vente_proprietaire'`
-  - `campaign = 'rdv_visite_bien'`
-  - champs nom/email/téléphone mappés
-  - Adresse + NPA + type de bien stockés dans `notes` (ou colonnes dédiées si elles existent — à vérifier au moment du build).
-- Tracking UTM : capter les `utm_*` depuis l'URL et les stocker.
-- Notification : appeler l'edge function de notif lead existante (`notify-new-lead` ou équivalent) si présente.
+Migration : mettre à jour cette ligne uniquement (campagne `vente`) avec :
 
-*Aucune migration de schéma prévue* — on s'appuie sur `leads`. Si une colonne manque (`property_type`, `address`), la donnée ira dans `notes` formaté lisiblement.
+> 🏠 Organiser une visite de votre bien avec un agent
 
-### 4. CTA campagne « Vente » uniquement
-- Dans `supabase/functions/send-followup-campaign/index.ts`, pour le bloc hero `campaign.campaign_key === 'vente'`, forcer `href` du bouton vers `https://logisorama.ch/rendez-vous-proprietaire` (avec UTM `?utm_source=campagne_suivi&utm_medium=email&utm_campaign=vente&utm_content=cta_rdv_proprietaire`), **sans toucher** au CTA des autres campagnes (location, etc.).
-- Mettre à jour `email_followup_campaigns.cta_url` pour `campaign_key='vente'` → `https://logisorama.ch/rendez-vous-proprietaire`.
-- Redéployer la fonction.
+Aucune modif de l'edge function nécessaire — elle lit déjà `campaign.cta_label` dynamiquement. Les autres campagnes (location, etc.) ne sont pas touchées.
 
-### 5. Hors scope
-- Pas de calendrier de slots (différent du flux `/rendez-vous` bureau).
-- Pas de modification des autres campagnes ni de la page `/rendez-vous` existante.
+### 2. Erreur 404 sur `logisorama.ch/rendez-vous-proprietaire`
+
+La route `/rendez-vous-proprietaire` **existe bien** dans `src/App.tsx` (ligne 277) et la page `RendezVousProprietaire.tsx` est en place. Elle fonctionne sur l'URL de preview.
+
+Le 404 sur `logisorama.ch` vient du fait que **le site publié n'a pas encore été mis à jour** depuis la création de la page. Sur Lovable, les changements frontend ne deviennent live qu'après un clic sur **Publier → Mettre à jour** (les fonctions backend, elles, se déploient automatiquement, c'est pour ça que le mail avec le nouveau CTA fonctionne déjà mais pointe vers une page pas encore publiée).
+
+**Action utilisateur** (pas de code) : ouvrir la modale Publier et cliquer sur « Mettre à jour ». Après ça, l'URL `https://logisorama.ch/rendez-vous-proprietaire` répondra correctement (le SPA fallback Lovable gère le deep-link automatiquement, aucun `_redirects` requis).
+
+### Hors scope
+- Pas de modification du code de l'edge function
+- Pas de modification du fichier `RendezVousProprietaire.tsx` (calendrier, formulaire, téléphone +41 21 634 28 39 déjà en place)
+- Pas de changement sur les autres campagnes
