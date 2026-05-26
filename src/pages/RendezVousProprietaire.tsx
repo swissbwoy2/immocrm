@@ -32,6 +32,8 @@ const schema = z.object({
     .trim()
     .regex(/^\d{4}$/, "NPA suisse à 4 chiffres"),
   type_bien: z.enum(["Appartement", "Maison", "Immeuble", "Terrain", "Autre"]),
+  date_rdv: z.string().min(1, "Sélectionnez une date"),
+  creneau: z.string().min(1, "Sélectionnez un créneau"),
   message: z.string().trim().max(1000).optional(),
 });
 
@@ -43,6 +45,8 @@ type FormState = {
   adresse: string;
   npa: string;
   type_bien: string;
+  date_rdv: string;
+  creneau: string;
   message: string;
 };
 
@@ -54,8 +58,42 @@ const INITIAL: FormState = {
   adresse: "",
   npa: "",
   type_bien: "",
+  date_rdv: "",
+  creneau: "",
   message: "",
 };
+
+const CRENEAUX = [
+  "09:00 - 10:00",
+  "10:00 - 11:00",
+  "11:00 - 12:00",
+  "14:00 - 15:00",
+  "15:00 - 16:00",
+  "16:00 - 17:00",
+  "17:00 - 18:00",
+];
+
+function getAvailableDates(count = 10): { value: string; label: string }[] {
+  const dates: { value: string; label: string }[] = [];
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  while (dates.length < count) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) {
+      const value = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString("fr-CH", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: "Europe/Zurich",
+      });
+      dates.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return dates;
+}
 
 export default function RendezVousProprietaire() {
   const [form, setForm] = useState<FormState>(INITIAL);
