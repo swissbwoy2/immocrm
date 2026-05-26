@@ -480,11 +480,12 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.replace('Bearer ', '').trim();
+    console.log('[send-followup] token length:', token.length, 'starts:', token.slice(0, 12));
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('[send-followup] auth failed', authError?.message);
+      console.error('[send-followup] auth failed', authError?.message, 'token-prefix:', token.slice(0, 20));
       return new Response(JSON.stringify({ error: 'Non autorisé', detail: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
