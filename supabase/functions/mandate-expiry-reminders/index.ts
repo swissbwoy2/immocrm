@@ -289,29 +289,51 @@ serve(async (req) => {
               .from("profiles").select("prenom, nom, email").eq("id", client.user_id).maybeSingle();
             if (profile?.email) {
               const newEndStr = newOfficialEnd.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+              const refundWindowStart = new Date(newSignatureDate);
+              refundWindowStart.setDate(refundWindowStart.getDate() + REFUND_ELIGIBILITY_DAY);
+              const refundWindowEnd = new Date(newSignatureDate);
+              refundWindowEnd.setDate(refundWindowEnd.getDate() + MANDAT_DURATION_DAYS);
+              const refundStartStr = refundWindowStart.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+              const refundEndStr = refundWindowEnd.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
               const autoRenewHtml = `<!DOCTYPE html><html><body style="font-family:-apple-system,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
                 <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                   <div style="background:#1e40af;color:white;padding:30px 24px;text-align:center;">
                     <div style="font-size:48px;margin-bottom:8px;">🔄</div>
-                    <h1 style="margin:0;font-size:22px;font-weight:700;">Votre mandat a été renouvelé</h1>
+                    <h1 style="margin:0;font-size:22px;font-weight:700;">Votre mandat a été renouvelé automatiquement pour 90 jours</h1>
                   </div>
                   <div style="padding:30px 24px;color:#1f2937;">
                     <p style="font-size:16px;margin:0 0 16px;">Bonjour ${profile.prenom ?? ""} ${profile.nom ?? ""},</p>
                     <p style="font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 20px;">
-                      Faute d'action de votre part dans le délai imparti, votre mandat de recherche a été <strong>renouvelé automatiquement pour 90 jours</strong>, jusqu'au <strong>${newEndStr}</strong>.
+                      Votre mandat de recherche a été <strong>renouvelé automatiquement pour une nouvelle période de 90 jours</strong>, jusqu'au <strong>${newEndStr}</strong>. Nous continuons activement les recherches pour vous.
                     </p>
-                    <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;border-radius:8px;margin:0 0 24px;">
-                      <p style="margin:0;font-size:14px;color:#991b1b;">
-                        ⚠️ <strong>Aucun remboursement n'est possible sur cette nouvelle période.</strong><br/>
-                        Pour redevenir éligible au remboursement, vous devrez attendre 90 jours. Un rappel vous sera envoyé au <strong>80ème jour</strong> de ce nouveau mandat afin de choisir : continuer votre recherche ou demander un remboursement.
+                    <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;border-radius:8px;margin:0 0 20px;">
+                      <p style="margin:0;font-size:14px;color:#991b1b;font-weight:600;">
+                        ⚠️ Aucun remboursement n'est possible pendant cette période.
                       </p>
                     </div>
-                    <p style="font-size:13px;color:#6b7280;margin:0;">
-                      <a href="${APP_BASE_URL}/client/mon-contrat" style="color:#1e40af;">Accéder à mon espace</a>
-                    </p>
+                    <div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:16px;border-radius:8px;margin:0 0 20px;">
+                      <p style="margin:0 0 8px;font-size:14px;color:#1e3a8a;">
+                        ℹ️ <strong>Fenêtre de remboursement</strong>
+                      </p>
+                      <p style="margin:0;font-size:14px;color:#1e3a8a;line-height:1.6;">
+                        Pour bénéficier d'un remboursement, vous devez en faire la demande pendant la <strong>fenêtre de 10 jours</strong>, valable du <strong>80ème au 90ème jour</strong> de votre mandat de recherche — soit entre le <strong>${refundStartStr}</strong> et le <strong>${refundEndStr}</strong>. Un rappel automatique vous sera envoyé au 80ème jour.
+                      </p>
+                    </div>
+                    <div style="background:#f9fafb;border-left:4px solid #6b7280;padding:14px;border-radius:8px;margin:0 0 24px;">
+                      <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;">
+                        Sans action de votre part, le mandat se renouvelle automatiquement de 90 jours en 90 jours.
+                      </p>
+                    </div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
+                      <tr><td>
+                        <a href="${APP_BASE_URL}/client/mon-contrat" style="display:block;background:#1e40af;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                          Accéder à mon espace
+                        </a>
+                      </td></tr>
+                    </table>
                   </div>
                   <div style="background:#f9fafb;padding:16px 24px;text-align:center;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;">
-                    Immo-rama.ch — Votre partenaire pour trouver votre logement
+                    Logisorama — Immo-rama.ch · Votre partenaire pour trouver votre logement
                   </div>
                 </div>
               </body></html>`;
@@ -321,10 +343,11 @@ serve(async (req) => {
                 body: JSON.stringify({
                   from: fromEmail,
                   to: profile.email,
-                  subject: "🔄 Votre mandat a été renouvelé automatiquement (aucun remboursement possible)",
+                  subject: "🔄 Votre mandat a été renouvelé automatiquement pour 90 jours",
                   html: autoRenewHtml,
                 }),
               });
+
             }
           }
 
