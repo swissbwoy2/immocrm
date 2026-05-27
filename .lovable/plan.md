@@ -1,34 +1,42 @@
-## Ce que je vais faire
+## Objectif
 
-Permettre à l'admin et à l'agent assigné de déclencher une demande de remboursement (ou annulation simple) pour un client, sans avoir besoin du token email envoyé au client.
+1. S'assurer que le client reçoit **email + notification in-app** quand l'admin ou l'agent déclenche l'annulation/remboursement, avec un message adapté (« un agent/administrateur a effectué la demande pour vous »).
+2. Garder le message actuel quand c'est le client lui-même qui déclenche (« Nous avons bien reçu votre demande… »).
+3. Ajouter un bouton **"Tester l'email d'annulation"** côté admin pour prévisualiser/recevoir l'email réel.
 
-### 1. Edge function `mandate-renewal-action` — nouveau mode "staff"
+## 1. Edge function `mandate-renewal-action` — messages différenciés
 
-Ajouter un 4ème chemin d'authentification à côté de token / client_id-owner / webhook-trust :
+Dans le bloc `cancel` / `cancel_with_refund`, adapter `clientMsg` selon `staffTrust` :
 
-- Si le body contient `triggered_by: "staff"` + `client_id` + un header `Authorization` valide :
-  - Vérifier via `getClaims` que l'appelant est connecté
-  - Autoriser si l'appelant est **admin** (via `has_role`) OU **l'agent assigné** (via `clients.agent_id` ↔ `agents.user_id`, ou table `client_agents` pour co-assignation)
-  - Sinon → 403
-- Les actions `cancel` et `cancel_with_refund` deviennent autorisées par ce chemin (en plus de pause/resume si besoin futur)
-- La logique d'éligibilité reste identique (jour ≥ 80 + raison ≠ « trouvé seul »)
-- `triggered_by` enregistré dans `mandate_renewal_actions` = `"admin"` ou `"agent"` selon le rôle
-- Notifications adaptées : le client reçoit toujours son email/notif de confirmation ; l'admin/agent qui déclenche reçoit un toast côté front, pas de notif redondante
+- **Si `staffTrust` (admin ou agent)** et `refundEligible` :
+  > « Un{e} {administrateur·trice|agent·e} a effectué une demande de remboursement pour votre compte. Votre mandat reste actif jusqu'au {officialEnd}. Le remboursement sera traité sous 30 jours (au plus tard le {refundProcessDate}). Vous recevrez un email dès que le virement sera émis. »
+- **Si `staffTrust`** et annulation simple :
+  > « Un{e} {administrateur·trice|agent·e} a annulé votre mandat de recherche pour votre compte. »
+- **Si client lui-même** : message actuel inchangé (« Votre demande de remboursement a été validée automatiquement… »).
 
-### 2. UI — bouton dans la fiche client (admin + agent)
+Le `notify()` actuel insère déjà la notification + déclenche l'email via `send-notification-email` → rien d'autre à changer côté envoi. Juste le contenu du message à brancher sur `staffTrust`.
 
-Dans `src/pages/admin/ClientDetail.tsx` et `src/pages/agent/ClientDetail.tsx`, dans la carte « Contrat de mandat » (ou juste en-dessous de la progression du mandat) :
+Titre adapté aussi : `"💰 Remboursement initié pour vous"` vs `"✅ Remboursement confirmé"`.
 
-- Bouton **« Demander le remboursement pour le client »**
-  - Visible uniquement si `statut === 'actif'` et `refund_status !== 'pending' && refund_status !== 'processed'`
-  - Désactivé avec tooltip si `daysSinceSignature < 80` (avec message « disponible à partir du 80ème jour »)
-- Bouton secondaire **« Annuler le mandat (sans remboursement) »** (toujours visible si actif)
-- Clic → ouvre un Dialog réutilisant `CancellationReasonForm` (déjà en place pour le client)
-- Submit → `supabase.functions.invoke('mandate-renewal-action', { body: { triggered_by: 'staff', client_id, action: 'cancel_with_refund' | 'cancel', cancellation_reason } })`
-- Toast de succès + refresh des données client
+## 2. Bouton de test « Aperçu email annulation »
 
-### 3. Hors scope
+Sur `src/pages/admin/ClientDetail.tsx`, à côté des boutons annulation existants, ajouter un bouton **outline** « Tester l'email d'annulation ». Au clic :
 
-- Pas de migration DB
-- Pas de modification de la logique d'éligibilité
-- Pas de nouvelle notification pour staff (ils voient le toast et la fiche client mise à jour)
+- Insère une notification de type `mandate_cancelled` directement dans la table `notifications` ciblant l'admin connecté (pas le client) avec un message d'exemple représentatif des deux scénarios (staff + remboursement éligible).
+- Appelle ensuite `supabase.functions.invoke('send-notification-email', { body: { notification_id } })` → l'admin reçoit le vrai email tel qu'il sera envoyé au client.
+- Toast « Email de test envoyé à votre adresse ».
+
+Pas d'edge function dédiée ; on réutilise la chaîne `notifications` + `send-notification-email` existante. Visible uniquement pour le rôle admin.
+
+## 3. Hors scope
+
+- Pas de migration DB.
+- Pas de changement de la logique d'éligibilité.
+- Pas de nouveau template email — on s'appuie sur le rendu générique de `send-notification-email` (type `mandate_cancelled` → icône ✅, couleur verte déjà mappées).
+- Pas de bouton de test côté agent.
+
+## Détails techniques
+
+- Le label rôle injecté : `staffTrust.role === "admin" ? "administrateur" : "agent"`.
+- Title alternatif côté `notify()` : passé en argument depuis le bloc cancel selon `staffTrust`.
+- Bouton de test : `clientId` n'est pas nécessaire — on injecte la notif sur `auth.uid()` de l'admin courant via `supabase.auth.getUser()`.
