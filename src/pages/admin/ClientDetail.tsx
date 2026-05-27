@@ -2443,6 +2443,36 @@ export default function ClientDetail() {
                       {regeneratingContract ? 'Régénération...' : 'Régénérer le PDF'}
                     </Button>
                   )}
+
+                  {/* Annulation / Remboursement pour le compte du client */}
+                  {client.statut === 'actif' && client.mandat_date_signature && (
+                    <div className="pt-3 border-t border-border/40 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Si le client a fait sa demande par téléphone ou email :
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-card/50 hover:bg-green-500/10 hover:border-green-500/30"
+                        disabled={daysElapsed < 80}
+                        onClick={() => setRefundDialogOpen(true)}
+                        title={daysElapsed < 80 ? `Disponible à partir du 80ème jour (actuel : ${daysElapsed})` : undefined}
+                      >
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Demander le remboursement pour le client
+                        {daysElapsed < 80 && (
+                          <span className="ml-2 text-xs text-muted-foreground">(J{daysElapsed}/80)</span>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-card/50 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
+                        onClick={() => setCancelDialogOpen(true)}
+                      >
+                        <Ban className="w-4 h-4 mr-2" />
+                        Annuler le mandat (sans remboursement)
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-8">
