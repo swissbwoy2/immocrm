@@ -2482,7 +2482,7 @@ export default function ClientDetail() {
                               toast({ title: 'Erreur', description: 'Non authentifié', variant: 'destructive' });
                               return;
                             }
-                            const sampleEnd = client.mandate_official_end_date ?? new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+                            const sampleEnd = (client as any).mandate_official_end_date ?? new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
                             const refundDate = (() => { const d = new Date(sampleEnd); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
                             const { data: notif, error } = await supabase.from('notifications').insert({
                               user_id: userData.user.id,
