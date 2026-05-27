@@ -126,6 +126,8 @@ export default function ClientDetail() {
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
   const isAcheteur = client?.type_recherche === 'Acheter';
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
