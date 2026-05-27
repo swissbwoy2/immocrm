@@ -322,16 +322,27 @@ function reasonLabel(reason: CancellationReason): string {
   }
 }
 
+async function sendEmail(supabase: any, notificationId: string) {
+  try {
+    await supabase.functions.invoke("send-notification-email", {
+      body: { notification_id: notificationId },
+    });
+  } catch (e) {
+    console.error("send-notification-email failed:", e);
+  }
+}
+
 async function notify(supabase: any, client: any, type: string, title: string, message: string) {
   if (!client.user_id) return;
-  await supabase.from("notifications").insert({
+  const { data } = await supabase.from("notifications").insert({
     user_id: client.user_id,
     type,
     title,
     message,
     link: "/client/mon-contrat",
     metadata: { client_id: client.id },
-  });
+  }).select("id").single();
+  if (data?.id) await sendEmail(supabase, data.id);
 }
 
 async function notifyAgent(supabase: any, client: any, type: string, title: string, message: string) {
@@ -339,14 +350,15 @@ async function notifyAgent(supabase: any, client: any, type: string, title: stri
   const { data: agent } = await supabase
     .from("agents").select("user_id").eq("id", client.agent_id).maybeSingle();
   if (agent?.user_id) {
-    await supabase.from("notifications").insert({
+    const { data } = await supabase.from("notifications").insert({
       user_id: agent.user_id,
       type,
       title,
       message,
       link: "/agent/mes-clients",
       metadata: { client_id: client.id },
-    });
+    }).select("id").single();
+    if (data?.id) await sendEmail(supabase, data.id);
   }
 }
 
@@ -354,13 +366,15 @@ async function notifyAdmins(supabase: any, title: string, message: string, clien
   const { data: admins } = await supabase
     .from("user_roles").select("user_id").eq("role", "admin");
   for (const admin of admins ?? []) {
-    await supabase.from("notifications").insert({
+    const { data } = await supabase.from("notifications").insert({
       user_id: admin.user_id,
       type: "admin_mandate_update",
       title,
       message,
       link: "/admin/clients",
       metadata: { client_id: clientId },
-    });
+    }).select("id").single();
+    if (data?.id) await sendEmail(supabase, data.id);
   }
 }
+
