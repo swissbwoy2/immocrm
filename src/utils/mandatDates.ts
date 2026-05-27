@@ -12,6 +12,7 @@ export interface MandatClientLike {
   mandate_paused_at?: string | null;
   refund_status?: string | null;
   statut?: string | null;
+  cancellation_requested_at?: string | null;
 }
 
 export interface MandatDates {
