@@ -2172,6 +2172,25 @@ export default function ClientDetail() {
         profile={profile}
         candidates={candidates}
       />
+
+      <StaffCancellationDialog
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        clientId={client.id}
+        clientName={profile ? `${profile.prenom} ${profile.nom}` : undefined}
+        daysSinceSignature={Math.floor(daysElapsed)}
+        withRefund={true}
+        onSuccess={loadClientData}
+      />
+      <StaffCancellationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        clientId={client.id}
+        clientName={profile ? `${profile.prenom} ${profile.nom}` : undefined}
+        daysSinceSignature={Math.floor(daysElapsed)}
+        withRefund={false}
+        onSuccess={loadClientData}
+      />
     </main>
   );
 }
