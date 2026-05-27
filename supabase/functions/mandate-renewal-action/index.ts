@@ -326,9 +326,12 @@ serve(async (req) => {
         return jsonResponse({ ok: false, error: `Remboursement non éligible. ${reasonDetail}` }, 400);
       }
 
+      // IMPORTANT : on NE passe PAS statut à 'inactif' ici.
+      // Le mandat reste actif jusqu'à mandate_official_end_date, puis le cron
+      // mandate-expiry-reminders le passera automatiquement à 'stoppe'.
       const updates: Record<string, unknown> = {
-        statut: "inactif",
         cancellation_reason: reason,
+        cancellation_requested_at: new Date().toISOString(),
         refund_eligible: refundEligible,
         refund_status: refundEligible ? "pending" : "not_applicable",
       };
