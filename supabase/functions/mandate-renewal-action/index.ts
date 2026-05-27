@@ -188,6 +188,8 @@ serve(async (req) => {
         return jsonResponse({ ok: false, error: "Numéro non vérifié" }, 403);
       }
       clientId = webhookTrust.client_id;
+    } else if (staffTrust) {
+      clientId = staffTrust.client_id;
     } else {
       return jsonResponse({ ok: false, error: "Token ou client_id manquant" }, 400);
     }
