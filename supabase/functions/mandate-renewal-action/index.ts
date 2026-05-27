@@ -53,6 +53,75 @@ serve(async (req) => {
       token = body.token ?? null;
       action = body.action ?? null;
       cancellationReason = body.cancellation_reason ?? null;
+
+      // === Mode TEST email staff (non destructif) ===
+      if (body.action === "test_staff_email" && body.client_id) {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) return jsonResponse({ ok: false, error: "Auth requise" }, 401);
+        const userClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: authHeader } } },
+        );
+        const { data: userData } = await userClient.auth.getUser();
+        if (!userData?.user) return jsonResponse({ ok: false, error: "Session invalide" }, 401);
+        const { data: adminRole } = await supabase
+          .from("user_roles").select("role")
+          .eq("user_id", userData.user.id).eq("role", "admin").maybeSingle();
+        if (!adminRole) return jsonResponse({ ok: false, error: "Admin uniquement" }, 403);
+
+        const { data: cli } = await supabase
+          .from("clients").select("id, user_id, agent_id, mandate_official_end_date")
+          .eq("id", body.client_id).maybeSingle();
+        if (!cli) return jsonResponse({ ok: false, error: "Client introuvable" }, 404);
+        const { data: cliProfile } = await supabase
+          .from("profiles").select("prenom, nom, email").eq("id", cli.user_id).maybeSingle();
+        const clientFullName = cliProfile ? `${cliProfile.prenom ?? ""} ${cliProfile.nom ?? ""}`.trim() : "Client test";
+
+        const recipients: string[] = [ADMIN_EMAIL];
+        let agentEmail: string | null = null;
+        if (cli.agent_id) {
+          const { data: agentRow } = await supabase
+            .from("agents").select("user_id").eq("id", cli.agent_id).maybeSingle();
+          if (agentRow?.user_id) {
+            const { data: agentProfile } = await supabase
+              .from("profiles").select("email").eq("id", agentRow.user_id).maybeSingle();
+            if (agentProfile?.email) {
+              agentEmail = agentProfile.email;
+              recipients.push(agentProfile.email);
+            }
+          }
+        }
+
+        const officialEnd = cli.mandate_official_end_date ?? new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+        const refundProcessDate = (() => { const d = new Date(officialEnd); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0]; })();
+        const subject = `[TEST] 💰 Remboursement à traiter — ${clientFullName}`;
+        const html = `
+          <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111">
+            <div style="background:#fef3c7;border:1px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px">
+              ⚠️ <strong>Ceci est un email de TEST</strong> — aucun mandat n'a été modifié.
+            </div>
+            <h2 style="margin:0 0 16px">${subject}</h2>
+            <p><strong>Client :</strong> ${clientFullName}${cliProfile?.email ? ` (${cliProfile.email})` : ""}</p>
+            <p><strong>Action :</strong> Remboursement demandé</p>
+            <p><strong>Raison :</strong> Je continue mes recherches seul</p>
+            <p><strong>Origine :</strong> Initiée par un administrateur</p>
+            <p><strong>Jour du mandat :</strong> 82</p>
+            <p><strong>Fin officielle du mandat :</strong> ${officialEnd}<br/><strong>Virement à traiter au plus tard le :</strong> ${refundProcessDate}</p>
+            <p style="margin-top:24px"><a href="https://logisorama.ch/admin/clients" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Voir la fiche client</a></p>
+          </div>`;
+
+        console.log("[TEST staff email] recipients calculés:", recipients);
+        const result = await sendStaffEmailResult(subject, html, recipients);
+        return jsonResponse({
+          ok: result.ok,
+          recipients,
+          admin_email: ADMIN_EMAIL,
+          agent_email: agentEmail,
+          error: result.error,
+        }, result.ok ? 200 : 500);
+      }
+
       clientIdDirect = body.client_id ?? null;
       if (body.triggered_by === "whatsapp_webhook" && body.client_id && body.phone) {
         const authHeader = req.headers.get("Authorization") ?? "";
