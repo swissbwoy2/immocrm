@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
+
+const ADMIN_EMAIL = "info@immo-rama.ch";
+const STAFF_FROM = "Logisorama <support@logisorama.ch>";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -315,6 +319,44 @@ serve(async (req) => {
       } else {
         await notifyAdmins(supabase, `❌ Mandat annulé — ${clientFullName}`, `${clientFullName} a annulé son mandat. Raison : ${reasonLabel(reason)}.`, client.id);
       }
+
+      // Envoi email direct staff (info@immo-rama.ch + agent assigné)
+      try {
+        const recipients: string[] = [ADMIN_EMAIL];
+        if (client.agent_id) {
+          const { data: agentRow } = await supabase
+            .from("agents").select("user_id").eq("id", client.agent_id).maybeSingle();
+          if (agentRow?.user_id) {
+            const { data: agentProfile } = await supabase
+              .from("profiles").select("email").eq("id", agentRow.user_id).maybeSingle();
+            if (agentProfile?.email) recipients.push(agentProfile.email);
+          }
+        }
+        const origin = staffTrust
+          ? (staffTrust.role === "admin" ? "Initiée par un administrateur" : "Initiée par l'agent en charge")
+          : "Demande client (depuis l'application)";
+        const subject = refundEligible
+          ? `💰 Remboursement à traiter — ${clientFullName}`
+          : `❌ Mandat annulé — ${clientFullName}`;
+        const refundBlock = refundEligible
+          ? `<p><strong>Fin officielle du mandat :</strong> ${officialEnd}<br/><strong>Virement à traiter au plus tard le :</strong> ${refundProcessDate}</p>`
+          : "";
+        const html = `
+          <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111">
+            <h2 style="margin:0 0 16px">${subject}</h2>
+            <p><strong>Client :</strong> ${clientFullName}${clientProfile?.email ? ` (${clientProfile.email})` : ""}</p>
+            <p><strong>Action :</strong> ${refundEligible ? "Remboursement demandé" : "Mandat annulé"}</p>
+            <p><strong>Raison :</strong> ${reasonLabel(reason)}</p>
+            <p><strong>Origine :</strong> ${origin}</p>
+            <p><strong>Jour du mandat :</strong> ${daysSinceSignature}</p>
+            ${refundBlock}
+            <p style="margin-top:24px"><a href="https://logisorama.ch/admin/clients" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Voir la fiche client</a></p>
+          </div>`;
+        await sendStaffEmail(subject, html, recipients);
+      } catch (e) {
+        console.error("staff email send failed:", e);
+      }
+
     } else if (typedAction === "pause") {
       if (client.mandate_paused_at) {
         return jsonResponse({ ok: false, error: "Le mandat est déjà en pause" }, 400);
@@ -451,3 +493,22 @@ async function notifyAdmins(supabase: any, title: string, message: string, clien
   }
 }
 
+
+async function sendStaffEmail(subject: string, html: string, recipients: string[]) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) {
+    console.warn("RESEND_API_KEY missing — skipping staff email");
+    return;
+  }
+  const uniq = Array.from(new Set(recipients.filter(Boolean)));
+  if (uniq.length === 0) return;
+  const resend = new Resend(apiKey);
+  const { error } = await resend.emails.send({
+    from: STAFF_FROM,
+    to: uniq,
+    subject,
+    html,
+  });
+  if (error) console.error("Resend staff email error:", error);
+  else console.log("Staff email sent to:", uniq.join(", "));
+}
