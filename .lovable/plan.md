@@ -1,57 +1,58 @@
-## Objectif
+# Arrêt automatique du mandat après demande d'annulation/remboursement
 
-Remplacer l'email interne "staff" actuel (style sobre noir/blanc, celui de la capture) par **l'email réellement envoyé au client**, dans le style des campagnes de suivi Logisorama (fond crème, carte dark `#1c1814`, accents or `#D4A853`, logo Immo-Rama, bouton or). L'admin et l'agent reçoivent ce **même email** en copie — plus aucun mail interne séparé.
+## Comportement actuel (à corriger)
 
-## Comportement final
+Quand un client (ou l'admin/agent pour son compte) déclenche `cancel` ou `cancel_with_refund` :
+- `statut` passe **immédiatement à `inactif`** (ligne 330 de `mandate-renewal-action/index.ts`).
+- Le client n'apparaît plus comme actif, mais aucune date d'arrêt officiel n'est posée.
+- Aucun rendu "mandat gelé" n'est appliqué côté tableau de bord client (le statut `inactif` n'est pas dans la liste des statuts gelés).
+- Une action manuelle admin (bouton « Stopper le mandat ») est nécessaire pour passer en `stoppe` et figer proprement le dossier.
 
-### Email "client" unique (branded Logisorama)
+## Comportement souhaité
 
-Un seul template HTML construit dans `mandate-renewal-action`, déclinable selon le contexte :
+1. Dès qu'une demande de remboursement ou d'annulation est confirmée (email envoyé) :
+   - Le mandat **reste actif jusqu'à `mandate_official_end_date`** (les offres continuent d'être envoyées comme aujourd'hui dans le cas remboursement).
+   - On marque le dossier comme « arrêt programmé » (champ `cancellation_requested_at` + `cancellation_reason` déjà existants ; refund pose déjà `refund_status='pending'`).
+   - **Aucune action admin/agent requise.**
+2. À la date `mandate_official_end_date` (passage du cron quotidien) :
+   - Le mandat passe automatiquement à `statut = 'stoppe'` + `date_changement_statut = now()`.
+   - Une notification est envoyée au client, à l'agent et aux admins (« Mandat stoppé à échéance suite à la demande d'annulation/remboursement »).
+   - Une ligne `auto_stopped` est insérée dans `mandate_renewal_actions` pour audit.
+3. Tableau de bord client en mode gelé : déjà géré par `mandatDates.ts` et les écrans existants pour `stoppe` (bloc "Mandat gelé", aucune action possible, message inviter à contacter un admin).
 
-- **Remboursement initié par le staff (admin/agent)**
-  - Sujet : `💰 Votre demande de remboursement est en cours — Logisorama`
-  - Corps : "Bonjour {Prénom}, suite à votre demande adressée à {un administrateur / votre agent}, nous avons enregistré votre demande de remboursement. Votre mandat reste actif jusqu'au {fin_officielle} et nous continuons à vous envoyer des offres. Le remboursement sera versé sous 30 jours après cette date (au plus tard le {date_virement}). Vous recevrez une confirmation dès que le virement sera émis."
-  - CTA or : "Accéder à mon espace" → `https://logisorama.ch/client/dashboard`
+## Modifications
 
-- **Remboursement demandé par le client lui-même**
-  - Sujet : `✅ Nous avons bien reçu votre demande de remboursement`
-  - Corps : "Bonjour {Prénom}, nous confirmons la bonne réception de votre demande. Elle a été automatiquement validée (jour {N} du mandat). Votre mandat reste actif jusqu'au {fin_officielle}. Le remboursement sera traité sous 30 jours (au plus tard le {date_virement})."
+### 1. `supabase/functions/mandate-renewal-action/index.ts`
+- Sur `cancel` et `cancel_with_refund`, **ne plus** passer `statut` à `inactif`. Garder `statut = 'actif'` jusqu'à la fin.
+- Toujours poser :
+  - `cancellation_reason`
+  - `cancellation_requested_at = now()` (nouveau champ ; voir migration)
+  - `refund_eligible`, `refund_status`, `refund_requested_at` comme aujourd'hui pour le cas remboursement.
+- Le blocage du renouvellement automatique est déjà assuré par `refund_status IN ('pending','processed')` et le sera aussi par `cancellation_requested_at IS NOT NULL` (cf. cron).
 
-- **Annulation sans remboursement** (idem, sujet `Confirmation d'annulation de votre mandat`).
+### 2. `supabase/functions/mandate-expiry-reminders/index.ts` (cron quotidien existant)
+- Ajouter une étape **avant** le bloc de renouvellement auto : si le client a `cancellation_requested_at IS NOT NULL` (ou `refund_status IN ('pending','processed')`) ET `mandate_official_end_date <= today` :
+  - `clients.update({ statut: 'stoppe', date_changement_statut: now() })`
+  - Insert `mandate_renewal_actions { action: 'auto_stopped', triggered_by: 'system', metadata: { reason: cancellation_reason, refund_status } }`
+  - Notifications in-app : client (`"⏹ Mandat clôturé"`, message expliquant que la demande d'annulation/remboursement a pris effet et l'invitant à contacter l'admin pour toute question), agent, admins.
+- Élargir le filtre de la requête initiale pour inclure ces clients (actuellement `eq("statut","actif")` — OK puisqu'on garde `actif` jusqu'à l'arrêt).
 
-Tous les templates partagent le **même layout campagne-suivi** : fond `#F5F5F0`, carte `linear-gradient(180deg,#1c1814,#231d18)`, bordure or, titre en Georgia serif `#f4ecd8`, paragraphes `#e8dfce`, bouton or VML-compatible, footer Logisorama avec adresse Crissier.
+### 3. Migration SQL
+- Ajouter colonne `clients.cancellation_requested_at timestamptz` (nullable).
+- Mettre à jour `mandatDates.ts` : ajouter `cancellation_requested_at` comme cause de `blockRenewal` (sécurité ceinture-bretelles côté front, déjà couvert par `refund_status`/`statut`).
 
-### Destinataires lors d'un envoi réel
+### 4. Cas de Marie (rattrapage manuel)
+- Insert / update : si Marie a déjà une demande de remboursement enregistrée et que sa `mandate_official_end_date` est passée → repasser `statut = 'stoppe'`, `date_changement_statut = now()`, créer la ligne d'audit et envoyer la notification. Sera proposé via l'outil d'insertion DB après lecture de son enregistrement.
 
-- `to` : email du client
-- `cc` : `info@immo-rama.ch` + email de l'agent assigné (si présent)
-- Un seul envoi Resend, un seul template. Plus d'email "interne" séparé.
+### 5. Pas de changement front nécessaire pour le dashboard client
+- Le mode gelé pour `stoppe` est déjà rendu (`src/pages/admin/ClientDetail.tsx`, `src/utils/mandatDates.ts`, `Mandats.tsx`). Le dashboard client suit la même logique. À vérifier rapidement et ajouter un CTA « Contacter un administrateur » si manquant sur le dashboard client (composant `RelocationClientDashboard` / `PremiumDashboardHeader`).
 
-### Bouton "Test email"
-
-Le bouton dans `ClientDetail.tsx` envoie ce **même email branded** (variante "remboursement initié par admin", données fictives Jour 82 / fin 2026-05-24) à :
-- `info@immo-rama.ch`
-- email de l'agent assigné
-
-Avec une bannière `[TEST] Ceci est un aperçu de l'email réellement envoyé au client — aucun mandat n'a été modifié.` insérée tout en haut du corps branded (pas un email séparé). Sujet préfixé `[TEST] `. Aucune écriture en base.
-
-## Fichiers modifiés
-
-1. **`supabase/functions/mandate-renewal-action/index.ts`**
-   - Ajouter `buildClientRefundEmail({ variant, clientFirstName, officialEnd, refundDate, daysSinceSignature, originLabel, isTest })` qui retourne `{ subject, html }` au style campagne-suivi (logo, gold CTA, footer).
-   - Bloc `cancel/cancel_with_refund` : supprimer l'ancien `sendStaffEmail` interne ; appeler `resend.emails.send({ from: STAFF_FROM, to: [clientEmail], cc: [ADMIN_EMAIL, agentEmail?] , subject, html })`.
-   - Mode `test_staff_email` : utiliser `buildClientRefundEmail({ isTest: true })` et envoyer à `[ADMIN_EMAIL, agentEmail]` uniquement.
-   - Conserver les notifications in-app existantes (`notify`, `notifyAgent`, `notifyAdmins`).
-   - Logs détaillés (to/cc/messageId/erreur Resend).
-
-2. **`src/pages/admin/ClientDetail.tsx`** : aucun changement de logique nécessaire (le bouton appelle déjà `test_staff_email`). Mettre à jour le libellé du toast pour refléter "Aperçu de l'email client envoyé à …".
-
-Aucune migration DB. Aucun nouveau composant front. Aucune dépendance ajoutée.
+## Points de vérification après build
+- Déclencher `test_staff_email` puis une vraie annulation : confirmer que `statut` reste `actif`, que `cancellation_requested_at` est posé, que les offres continuent d'être envoyées.
+- Forcer le cron sur un client dont `mandate_official_end_date` est dans le passé → vérifier passage à `stoppe` + notification.
+- Se connecter en tant que client stoppé → confirmer mode gelé du dashboard et absence d'actions.
 
 ## Détails techniques
-
-- Le footer du template inclut adresse Crissier + lien `info@immo-rama.ch`, identique aux campagnes.
-- Le logo est chargé depuis l'URL publique déjà utilisée dans `send-followup-campaign` (réutilisation de `logoUrl`).
-- Pas d'unsubscribe (email transactionnel lié au mandat).
-- Resend `cc` accepte un array — on dédoublonne et on filtre les valeurs falsy.
-- Déploiement : `mandate-renewal-action`.
+- Aucun nouveau secret requis.
+- Pas de nouvelle fonction edge (réutilise `mandate-expiry-reminders` déjà planifiée).
+- Aucun changement de schéma destructif (ajout d'une colonne nullable uniquement).
