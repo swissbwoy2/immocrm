@@ -1,58 +1,44 @@
-# Deux corrections
+# Auto-renouvellement J91 + gel de Marie
 
-## 1. Remboursement impossible après le jour 90 (mandat auto-renouvelé)
+## 1. Email J91 — style "campagne de suivi"
 
-### Diagnostic
-- Marie : mandat signé le 23 février, fin officielle le 24 mai (jour 90). Aujourd'hui 27 mai = **jour 93**.
-- `REFUND_ELIGIBILITY_DAY = 80` mais **aucune borne supérieure** dans `supabase/functions/mandate-renewal-action/index.ts` (ligne 317-319) → on a pu accepter sa demande de remboursement alors que son mandat est techniquement auto-renouvelé.
-- Règle métier : la fenêtre de remboursement est **jour 80 → jour 90 inclus**. À partir du jour 91, le mandat se renouvelle pour 90 jours et le remboursement n'est plus possible.
+L'envoi existe déjà dans `supabase/functions/mandate-expiry-reminders/index.ts` (bloc "Renouvellement automatique"). On reprend la **même structure HTML que les templates de campagne de suivi** (en-tête bleu, carte blanche, encarts colorés, footer Logisorama) et on précise le wording demandé :
 
-### Changements
-**`supabase/functions/mandate-renewal-action/index.ts`**
-- Ajouter borne haute : `refundEligible = ... && daysSinceSignature >= 80 && daysSinceSignature <= 90`.
-- Si demande de remboursement au jour ≥ 91 → renvoyer une erreur claire : *« Votre mandat s'est automatiquement renouvelé le {date_fin}. La fenêtre de remboursement (jours 80 à 90) est close. Vous pourrez en faire la demande lors du prochain cycle, entre le {date+80j} et le {date+90j}. »*
-- Idem pour `cancel` simple : autorisé à tout moment, mais le mail/copie staff précisera que le mandat continue jusqu'à la prochaine échéance (sans remboursement).
+- **Sujet** : `🔄 Votre mandat a été renouvelé automatiquement pour 90 jours`
+- **Corps** :
+  - "Votre mandat de recherche a été **renouvelé automatiquement pour une nouvelle période de 90 jours**, jusqu'au {date_fin}."
+  - Encart rouge : "**Aucun remboursement n'est possible pendant cette période.**"
+  - Encart bleu info : "Pour bénéficier d'un remboursement, vous devrez en faire la demande **pendant la fenêtre de remboursement de 10 jours, valable du 80ème au 90ème jour** de votre mandat. Un rappel automatique vous sera envoyé au 80ème jour."
+  - "Sans action de votre part, le mandat se renouvelle automatiquement de 90 jours en 90 jours."
+  - CTA : « Accéder à mon espace » → `/client/mon-contrat`
 
-**Frontend client (dashboard relocation)**
-- Localiser le bouton « Demander un remboursement » et le **désactiver** quand `daysSinceSignature > 90` (ou `< 80`), avec une infobulle expliquant la fenêtre.
-- Mettre à jour le compte à rebours déjà affiché pour signaler clairement la fin de la fenêtre de remboursement à J90.
+Aucun changement de logique de déclenchement — on garde le bloc `daysRemaining < 0` qui tourne dans le cron quotidien. Seulement le HTML et le sujet sont retravaillés.
 
-**Frontend admin (`ClientDetail.tsx`)**
-- Même règle sur le bouton admin « Demander un remboursement pour ce client ».
+## 2. Gel exceptionnel de Marie-Christ Esmel (cas déjà passé J93)
 
-### Cas Marie (rattrapage)
-- Sa demande a déjà été enregistrée et l'email envoyé hier. **On ne touche pas** à son dossier : refund_status reste `pending`, mandat sera stoppé par le cron à J24 mai (déjà passé) au prochain run.
+Client `774cf603-9fe0-47d7-8866-25b0c38b3aff`, signature 23/02, fin officielle 24/05, demande de remboursement envoyée le 27/05.
 
----
+Action **manuelle one-shot** via l'outil d'insert :
+- `clients.statut = 'stoppe'`
+- `clients.date_changement_statut = now()`
+- `mandate_renewal_actions` : log `{ action: 'admin_manual_stop', metadata: { reason: 'refund_post_expiry_exception' } }`
+- Notification client : "Votre mandat est clôturé. Votre espace passe en mode gelé. Pour toute action, contactez un administrateur."
 
-## 2. Calendrier de Carina inaccessible
+Résultat côté client : peut se connecter, mais le dashboard relocation reste en mode gelé (le `RelocationClientDashboard` détecte déjà `statut === 'stoppe'`). On vérifiera ce comportement après.
 
-### Diagnostic
-- Carina a **832 visites** + 32 events + 45 clients co-assignés en base.
-- `src/pages/agent/Calendrier.tsx` (lignes 166-185) charge **toutes les visites** avec jointures lourdes : `*, offres(*), clients(...), agents(...)` → payload ~plusieurs Mo, timeout probable.
-- Pas de filtre de date : on charge tout l'historique depuis 2024.
-- Même problème à venir pour les autres agents qui accumulent du volume.
+## 3. Règle structurelle J91+ → remboursement bloqué
 
-### Changements
-**`src/pages/agent/Calendrier.tsx`**
-- Ajouter une **fenêtre temporelle glissante** sur les deux requêtes principales (`visites` et `calendar_events`) :
-  - `gte('date_visite', today - 60 jours)` (passé visible)
-  - `lte('date_visite', today + 365 jours)` (futur raisonnable)
-- Bouton/toggle « Voir l'historique complet » qui supprime le filtre passé pour les rares cas où l'agent doit consulter une visite ancienne.
-- Réduire la jointure : remplacer `offres(*)` par `offres(id, adresse, prix, pieces, surface, photos)` (seuls champs utilisés dans la vue calendrier).
-- Garder `.limit(15000)` en sécurité.
+Déjà en place depuis le dernier loop dans `supabase/functions/mandate-renewal-action/index.ts` et les boutons frontend (`MonContrat.tsx`, `ClientDetail.tsx`). Rien à refaire. Marie est un cas d'exception géré manuellement ci-dessus.
 
-**`src/pages/admin/` calendrier équivalent et `src/pages/coursier/Calendrier.tsx`**
-- Appliquer le même filtre de fenêtre glissante par défaut (pour éviter que le problème se reproduise à mesure que les volumes grossissent).
-- Le calendrier coursier n'a pas le souci (filtré par `coursier_id` + statuts), pas de changement requis là-bas.
+## Détails techniques
 
-### Vérification après build
-- Charger `/agent/calendrier` en tant que Carina → temps de chargement < 2 s, toutes ses visites des 60 derniers jours + futures visibles.
-- Activer le toggle « historique complet » → toutes les 832 visites se chargent.
-- Tester `cancel_with_refund` sur Marie (jour 93) côté API → réponse d'erreur explicite avec dates du prochain cycle.
-- Tester sur un client en jour 85 → demande acceptée comme aujourd'hui.
+- Fichier modifié : `supabase/functions/mandate-expiry-reminders/index.ts` (HTML + sujet du bloc auto-renouvellement uniquement).
+- Déploiement edge function nécessaire ensuite.
+- Action data one-shot via `supabase--insert` pour Marie (UPDATE clients + INSERT log + INSERT notification).
+- Aucune migration, aucun nouveau secret, aucun changement de schéma.
 
-### Détails techniques
-- Aucun changement de schéma.
-- Aucune nouvelle fonction edge.
-- Aucun nouveau secret.
+## Vérification
+
+- Relire le HTML rendu (sandbox) pour s'assurer du style cohérent avec les autres mails de campagne.
+- `SELECT statut FROM clients WHERE id = '774cf603-…'` → `stoppe`.
+- Charger `/client/mon-contrat` côté Marie → mode gelé visible.
