@@ -36,6 +36,8 @@ serve(async (req) => {
     let clientIdDirect: string | null = null;
     // Trust mode for whatsapp-webhook calls (server-to-server with phone validation already done)
     let webhookTrust: { client_id: string; phone: string } | null = null;
+    // Staff trust mode (admin or assigned agent triggers cancel/refund for client)
+    let staffTrust: { client_id: string; role: "admin" | "agent" } | null = null;
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -49,12 +51,53 @@ serve(async (req) => {
       cancellationReason = body.cancellation_reason ?? null;
       clientIdDirect = body.client_id ?? null;
       if (body.triggered_by === "whatsapp_webhook" && body.client_id && body.phone) {
-        // Verify caller is service role
         const authHeader = req.headers.get("Authorization") ?? "";
         const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
         if (authHeader === `Bearer ${serviceKey}`) {
           webhookTrust = { client_id: body.client_id, phone: body.phone };
         }
+      }
+      if (body.triggered_by === "staff" && body.client_id) {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader) {
+          return jsonResponse({ ok: false, error: "Authentification requise" }, 401);
+        }
+        const userClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: authHeader } } },
+        );
+        const { data: userData } = await userClient.auth.getUser();
+        if (!userData?.user) {
+          return jsonResponse({ ok: false, error: "Session invalide" }, 401);
+        }
+        const callerUserId = userData.user.id;
+
+        const { data: adminRole } = await supabase
+          .from("user_roles").select("role")
+          .eq("user_id", callerUserId).eq("role", "admin").maybeSingle();
+
+        let role: "admin" | "agent" | null = adminRole ? "admin" : null;
+
+        if (!role) {
+          const { data: agentRow } = await supabase
+            .from("agents").select("id").eq("user_id", callerUserId).maybeSingle();
+          if (agentRow?.id) {
+            const { data: cli } = await supabase
+              .from("clients").select("agent_id").eq("id", body.client_id).maybeSingle();
+            if (cli?.agent_id === agentRow.id) {
+              role = "agent";
+            } else {
+              const { data: coAssign } = await supabase
+                .from("client_agents").select("agent_id")
+                .eq("client_id", body.client_id).eq("agent_id", agentRow.id).maybeSingle();
+              if (coAssign) role = "agent";
+            }
+          }
+        }
+
+        if (!role) return jsonResponse({ ok: false, error: "Accès refusé" }, 403);
+        staffTrust = { client_id: body.client_id, role };
       }
     }
 
