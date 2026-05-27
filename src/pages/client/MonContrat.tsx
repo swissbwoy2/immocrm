@@ -433,11 +433,15 @@ export default function MonContrat() {
                 <Badge
                   className={refundEligibleNow
                     ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
-                    : 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30'}
+                    : refundWindowClosed
+                      ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
+                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30'}
                 >
                   {refundEligibleNow
-                    ? '🟢 Éligible au remboursement'
-                    : `🔴 Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
+                    ? `🟢 Éligible au remboursement (J${daysSinceSignature ?? 0}/${MANDAT_DURATION_DAYS})`
+                    : refundWindowClosed
+                      ? `⛔ Fenêtre close — mandat renouvelé (J${daysSinceSignature ?? 0})`
+                      : `🔴 Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
                 </Badge>
               </div>
             </CardHeader>
