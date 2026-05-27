@@ -766,6 +766,30 @@ export default function ClientDetail() {
               <span className="hidden sm:inline">Pré-remplir le mandat</span>
               <span className="sm:hidden">Mandat</span>
             </Button>
+            {client.statut === 'actif' && client.mandat_date_signature && (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto hover:bg-green-500/10 hover:border-green-500/30"
+                  disabled={daysElapsed < 80}
+                  onClick={() => setRefundDialogOpen(true)}
+                  title={daysElapsed < 80 ? `Disponible dès le 80ème jour (actuel : ${Math.floor(daysElapsed)})` : 'Demander remboursement pour le client'}
+                >
+                  <Wallet className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Remboursement</span>
+                  <span className="sm:hidden">Rembours.</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
+                  onClick={() => setCancelDialogOpen(true)}
+                >
+                  <Ban className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Annuler mandat</span>
+                  <span className="sm:hidden">Annuler</span>
+                </Button>
+              </>
+            )}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto" onClick={handleEditClick}>
