@@ -493,3 +493,22 @@ async function notifyAdmins(supabase: any, title: string, message: string, clien
   }
 }
 
+
+async function sendStaffEmail(subject: string, html: string, recipients: string[]) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) {
+    console.warn("RESEND_API_KEY missing — skipping staff email");
+    return;
+  }
+  const uniq = Array.from(new Set(recipients.filter(Boolean)));
+  if (uniq.length === 0) return;
+  const resend = new Resend(apiKey);
+  const { error } = await resend.emails.send({
+    from: STAFF_FROM,
+    to: uniq,
+    subject,
+    html,
+  });
+  if (error) console.error("Resend staff email error:", error);
+  else console.log("Staff email sent to:", uniq.join(", "));
+}
