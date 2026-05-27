@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw, Wallet, Ban } from 'lucide-react';
+import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
@@ -185,6 +186,8 @@ export default function ClientDetail() {
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [regeneratingContract, setRegeneratingContract] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
@@ -2440,6 +2443,36 @@ export default function ClientDetail() {
                       {regeneratingContract ? 'Régénération...' : 'Régénérer le PDF'}
                     </Button>
                   )}
+
+                  {/* Annulation / Remboursement pour le compte du client */}
+                  {client.statut === 'actif' && client.mandat_date_signature && (
+                    <div className="pt-3 border-t border-border/40 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Si le client a fait sa demande par téléphone ou email :
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-card/50 hover:bg-green-500/10 hover:border-green-500/30"
+                        disabled={daysElapsed < 80}
+                        onClick={() => setRefundDialogOpen(true)}
+                        title={daysElapsed < 80 ? `Disponible à partir du 80ème jour (actuel : ${daysElapsed})` : undefined}
+                      >
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Demander le remboursement pour le client
+                        {daysElapsed < 80 && (
+                          <span className="ml-2 text-xs text-muted-foreground">(J{daysElapsed}/80)</span>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full bg-card/50 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
+                        onClick={() => setCancelDialogOpen(true)}
+                      >
+                        <Ban className="w-4 h-4 mr-2" />
+                        Annuler le mandat (sans remboursement)
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-8">
@@ -2791,6 +2824,25 @@ export default function ClientDetail() {
         clientUserId={client.user_id}
         clientName={`${profile.prenom} ${profile.nom}`}
         onSuccess={loadDocuments}
+      />
+
+      <StaffCancellationDialog
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        clientId={client.id}
+        clientName={`${profile.prenom} ${profile.nom}`}
+        daysSinceSignature={daysElapsed}
+        withRefund={true}
+        onSuccess={loadClientData}
+      />
+      <StaffCancellationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        clientId={client.id}
+        clientName={`${profile.prenom} ${profile.nom}`}
+        daysSinceSignature={daysElapsed}
+        withRefund={false}
+        onSuccess={loadClientData}
       />
     </div>
   );

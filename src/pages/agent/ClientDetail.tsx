@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare, FileDown
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare, FileDown, Wallet, Ban
 } from 'lucide-react';
+import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
@@ -57,6 +58,7 @@ interface Client {
   priorite?: string;
   note_agent?: string;
   statut?: string;
+  mandat_date_signature?: string | null;
   nationalite?: string;
   type_permis?: string;
   residence?: string;
@@ -125,6 +127,8 @@ export default function ClientDetail() {
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
   const isAcheteur = client?.type_recherche === 'Acheter';
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
@@ -763,6 +767,30 @@ export default function ClientDetail() {
               <span className="hidden sm:inline">Pré-remplir le mandat</span>
               <span className="sm:hidden">Mandat</span>
             </Button>
+            {client.statut === 'actif' && client.mandat_date_signature && (
+              <>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto hover:bg-green-500/10 hover:border-green-500/30"
+                  disabled={daysElapsed < 80}
+                  onClick={() => setRefundDialogOpen(true)}
+                  title={daysElapsed < 80 ? `Disponible dès le 80ème jour (actuel : ${Math.floor(daysElapsed)})` : 'Demander remboursement pour le client'}
+                >
+                  <Wallet className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Remboursement</span>
+                  <span className="sm:hidden">Rembours.</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
+                  onClick={() => setCancelDialogOpen(true)}
+                >
+                  <Ban className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Annuler mandat</span>
+                  <span className="sm:hidden">Annuler</span>
+                </Button>
+              </>
+            )}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto" onClick={handleEditClick}>
@@ -2143,6 +2171,25 @@ export default function ClientDetail() {
         client={client}
         profile={profile}
         candidates={candidates}
+      />
+
+      <StaffCancellationDialog
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        clientId={client.id}
+        clientName={profile ? `${profile.prenom} ${profile.nom}` : undefined}
+        daysSinceSignature={Math.floor(daysElapsed)}
+        withRefund={true}
+        onSuccess={loadClientData}
+      />
+      <StaffCancellationDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        clientId={client.id}
+        clientName={profile ? `${profile.prenom} ${profile.nom}` : undefined}
+        daysSinceSignature={Math.floor(daysElapsed)}
+        withRefund={false}
+        onSuccess={loadClientData}
       />
     </main>
   );
