@@ -1,47 +1,45 @@
-## Problème
+## Contexte
 
-L'import CSV (page **Campagnes de suivi** → bouton Importer) filtre actuellement de manière stricte :
+Aujourd'hui, quand un client demande un remboursement via `mandate-renewal-action` (action `cancel_with_refund`) :
+- ✅ L'éligibilité est **déjà validée côté serveur** (jamais ≥ 80 jours + raison ≠ "trouvé seul")
+- ✅ Une notification **push** est créée pour les admins et le client
+- ❌ **Aucun email** n'est envoyé ni à toi ni au client
+- ❌ Tu n'as donc rien reçu pour la demande de Meless Marie-Christ Esmel
 
-- Garde uniquement les lignes dont `Formulaire` contient `logisorama` → **toutes les autres lignes sont rejetées silencieusement** (compteur "rejetés formulaire").
-- Force `campaign_key = "location"` côté Edge Function.
+Note : en base, aucune demande de remboursement de "Meless" n'a été enregistrée via le flux — elle t'a probablement contacté en direct. La signature date du 23 février 2026 → ~93 jours, donc **elle serait éligible** si elle passait par l'app.
 
-Conséquence : les lignes du CSV dont le formulaire est `vendeurs vs Acheteurs atifs-copy`, `vendeurs vs Acheteurs atifs-copy-copy`, etc. sont **rejetées** et ne sont jamais rattachées à la campagne `vente`.
+## Ce que je vais faire
 
-## Objectif
+### 1. Email admin instantané lors d'une demande de remboursement
 
-Détecter automatiquement le type de lead à partir de la colonne `Formulaire` du CSV et le rattacher à la bonne campagne, sans toucher au reste du flux (filtre Étape = Qualifié, dédup, ré‑attache, Edge Function `import-leads-csv` inchangée).
+Dans `supabase/functions/mandate-renewal-action/index.ts`, après le `notifyAdmins(...)` du cas `refundEligible = true` :
+- Récupérer tous les admins avec leur email
+- Envoyer un email via `send-notification-email` à chaque admin avec :
+  - Sujet : `💰 Demande de remboursement — {Prénom Nom}`
+  - Corps : nom du client, jours écoulés, date de fin officielle, date de traitement prévue (fin + 30j), lien vers la fiche client admin
 
-## Règles de mapping
+### 2. Email de confirmation au client (si éligible)
 
-Sur la valeur normalisée (lowercase, sans accents) de la colonne `Formulaire` :
+Toujours dans le même bloc, envoyer au client :
+- Sujet : `✅ Votre demande de remboursement est confirmée`
+- Corps : confirmation que le remboursement est éligible, rappel qu'il restera servi jusqu'au jour 90, traitement sous 30 jours après cette date, montant non précisé (la logique de calcul reste à ta main)
 
-| Motif détecté                          | Campagne cible |
-|----------------------------------------|----------------|
-| Contient `logisorama`                  | `location`     |
-| Contient `vendeur` **ou** `acheteur`   | `vente`        |
-| Autre                                  | Rejeté         |
+### 3. Email "annulation enregistrée" au client (si non éligible)
 
-(Le motif `vendeurs vs Acheteurs` couvre les deux mots-clés, donc tout `…-copy`, `…-copy-copy`, etc. est capté.)
+Pour `cancel` simple ou `cancel_with_refund` non éligible : email court de confirmation d'annulation, sans promesse de remboursement.
 
-Le filtre `Étape = Qualifié` reste appliqué aux deux types.
+### 4. Validation automatique = déjà faite
 
-## Changements
+Aucun changement nécessaire — la fonction calcule déjà `refundEligible` strictement côté serveur (jamais confiance au client). Le passage en `refund_status = 'pending'` est automatique dès qu'une demande éligible arrive.
 
-**Fichier unique : `src/pages/admin/CampagnesSuivi.tsx`** — fonction `handleImport` :
+## Détails techniques
 
-1. Pour chaque ligne, classer en `location` / `vente` / rejet selon la règle ci-dessus au lieu du test booléen `isLogisorama`.
-2. Constituer **deux tableaux** `parsedLocation` et `parsedVente`.
-3. Appeler `supabase.functions.invoke("import-leads-csv", …)` **une fois par campagne non vide**, en passant le bon `campaign_key` (`location` ou `vente`). L'Edge Function gère déjà la ré‑attache d'un email existant vers une autre `campaign_key`, donc aucun changement backend nécessaire.
-4. Agréger les compteurs (`inserted`, `reattached`, `duplicates`, `errors`) des deux appels dans un seul toast récap qui détaille :
-   - Nouveaux Location / Vente
-   - Ré‑attachés Location / Vente
-   - Doublons
-   - Rejetés (formulaire inconnu, étape ≠ Qualifié, email invalide)
-5. Mettre à jour le texte du `Dialog` d'import pour expliquer que **Logisorama → Location** et **Vendeurs vs Acheteurs → Vente** sont acceptés.
+- Réutilisation de l'edge function existante `send-notification-email` (déjà câblée Resend + templates)
+- Pas de migration DB nécessaire — toutes les colonnes (`refund_status`, `refund_requested_at`, `refund_eligible`) existent déjà
+- Pas de nouveau composant front
+- Idempotence : les emails sont envoyés une seule fois car le token de mandat est marqué `used_at` à la même étape
 
-## Hors-scope
+## Hors scope
 
-- Aucune migration SQL.
-- Aucune modification de l'Edge Function `import-leads-csv`.
-- Aucune modification des autres campagnes (`achat`, `renovation`).
-- Aucun changement de la logique d'envoi des emails de relance.
+- Traitement automatique du virement bancaire de remboursement (reste manuel)
+- Email pour le cas de Meless rétroactivement — je peux te générer un mail à la main si tu veux, mais cette demande n'a pas transité par le flux normal
