@@ -559,26 +559,196 @@ async function notifyAdmins(supabase: any, title: string, message: string, clien
 }
 
 
-async function sendStaffEmailResult(subject: string, html: string, recipients: string[]): Promise<{ ok: boolean; error?: string }> {
+function escapeHtml(s: string): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function formatDateFR(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Zurich" });
+  } catch { return iso; }
+}
+
+interface ClientEmailParams {
+  variant: "refund" | "cancellation";
+  initiator: "client" | "admin" | "agent";
+  firstName: string;
+  officialEnd: string;
+  refundProcessDate: string;
+  daysSinceSignature: number;
+  reasonLabel?: string;
+  isTest: boolean;
+}
+
+function buildClientEmail(p: ClientEmailParams): { subject: string; html: string } {
+  const PUBLIC_BASE_URL = "https://logisorama.ch";
+  const logoUrl = `${PUBLIC_BASE_URL}/email/logo-immo-rama.png`;
+  const dashboardUrl = `${PUBLIC_BASE_URL}/client/mon-contrat`;
+  const firstNameSafe = p.firstName?.trim() ? escapeHtml(p.firstName.trim()) : "";
+  const greeting = firstNameSafe ? `Bonjour ${firstNameSafe},` : "Bonjour,";
+  const officialEndFR = formatDateFR(p.officialEnd);
+  const refundDateFR = formatDateFR(p.refundProcessDate);
+
+  const initiatorLabel =
+    p.initiator === "admin" ? "un administrateur Logisorama" :
+    p.initiator === "agent" ? "votre agent Logisorama" :
+    "vous-même";
+
+  let subject: string;
+  let title: string;
+  let bodyHtml: string;
+
+  if (p.variant === "refund") {
+    if (p.initiator === "client") {
+      subject = `✅ Votre demande de remboursement a bien été reçue`;
+      title = "Demande de remboursement bien reçue";
+      bodyHtml = `
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">Nous confirmons la bonne réception de <strong style="color:#E8C77E;">votre demande de remboursement</strong>. Elle a été validée automatiquement (jour ${p.daysSinceSignature} de votre mandat).</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Votre mandat reste <strong style="color:#E8C77E;">actif jusqu'au ${escapeHtml(officialEndFR)}</strong> et nous continuons à vous envoyer des offres pendant cette période. Profitez-en pleinement.</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Le remboursement sera versé sous un délai de <strong style="color:#E8C77E;">30 jours</strong> après la fin du mandat, soit au plus tard le <strong style="color:#E8C77E;">${escapeHtml(refundDateFR)}</strong>. Vous recevrez un email de confirmation dès que le virement sera émis.</p>`;
+    } else {
+      subject = `💰 Votre demande de remboursement est en cours de traitement`;
+      title = "Votre remboursement est en cours";
+      bodyHtml = `
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">Suite à votre demande adressée à ${initiatorLabel}, nous avons enregistré pour votre compte une <strong style="color:#E8C77E;">demande de remboursement</strong> de votre acompte de mandat.</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Votre mandat reste <strong style="color:#E8C77E;">actif jusqu'au ${escapeHtml(officialEndFR)}</strong> et nous continuons à vous envoyer des offres pendant cette période. Profitez-en pour décrocher votre logement.</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Le remboursement sera versé sous un délai de <strong style="color:#E8C77E;">30 jours</strong> après la fin du mandat, soit au plus tard le <strong style="color:#E8C77E;">${escapeHtml(refundDateFR)}</strong>. Vous recevrez un email de confirmation dès que le virement sera émis.</p>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#8a7f6e;font-family:Arial,Helvetica,sans-serif;">Si cette demande ne correspond pas à votre intention, contactez-nous au plus vite à <a href="mailto:info@immo-rama.ch" style="color:#D4A853;text-decoration:underline;">info@immo-rama.ch</a>.</p>`;
+    }
+  } else {
+    if (p.initiator === "client") {
+      subject = `Confirmation de l'annulation de votre mandat`;
+      title = "Annulation confirmée";
+      bodyHtml = `
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">Nous confirmons l'annulation de votre mandat de recherche${p.reasonLabel ? ` (raison : ${escapeHtml(p.reasonLabel)})` : ""}.</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Merci pour la confiance que vous nous avez accordée. L'équipe Logisorama reste à votre disposition si vous souhaitez reprendre vos recherches.</p>`;
+    } else {
+      subject = `Confirmation de l'annulation de votre mandat`;
+      title = "Annulation de votre mandat";
+      bodyHtml = `
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">Suite à votre demande adressée à ${initiatorLabel}, votre mandat de recherche a été <strong style="color:#E8C77E;">annulé</strong>${p.reasonLabel ? ` (raison : ${escapeHtml(p.reasonLabel)})` : ""}.</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Merci pour la confiance que vous nous avez accordée. L'équipe Logisorama reste à votre disposition.</p>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#8a7f6e;font-family:Arial,Helvetica,sans-serif;">Si cette demande ne correspond pas à votre intention, contactez-nous au plus vite à <a href="mailto:info@immo-rama.ch" style="color:#D4A853;text-decoration:underline;">info@immo-rama.ch</a>.</p>`;
+    }
+  }
+
+  const finalSubject = p.isTest ? `[TEST] ${subject}` : subject;
+
+  const testBanner = p.isTest
+    ? `<tr><td style="padding:18px 28px 0;">
+         <div style="background:rgba(212,168,83,0.12);border:1px solid rgba(212,168,83,0.55);border-radius:10px;padding:12px 14px;color:#E8C77E;font-size:13px;line-height:1.55;font-family:Arial,Helvetica,sans-serif;">
+           ⚠️ <strong>Aperçu de TEST</strong> — ceci est exactement l'email qui sera envoyé au client lors d'un envoi réel. Aucun mandat n'a été modifié.
+         </div>
+       </td></tr>`
+    : "";
+
+  const ctaPrimary = `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto;width:100%;max-width:340px;border-collapse:separate;">
+      <tr>
+        <td align="center" bgcolor="#D4A853" style="border-radius:10px;background:#D4A853;mso-padding-alt:16px 28px;box-shadow:0 6px 18px rgba(212,168,83,0.35);">
+          <!--[if mso]>
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${dashboardUrl}" style="height:50px;v-text-anchor:middle;width:340px;" arcsize="20%" stroke="f" fillcolor="#D4A853">
+            <w:anchorlock/>
+            <center style="color:#1c1814;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Accéder à mon espace</center>
+          </v:roundrect>
+          <![endif]-->
+          <!--[if !mso]><!-- -->
+          <a href="${dashboardUrl}" target="_blank" style="display:block;padding:16px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;line-height:1.2;color:#1c1814;text-decoration:none;border-radius:10px;letter-spacing:0.3px;text-align:center;">Accéder à mon espace</a>
+          <!--<![endif]-->
+        </td>
+      </tr>
+    </table>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(finalSubject)}</title>
+<style>
+  @media only screen and (max-width: 600px) {
+    .px-mobile { padding-left:20px !important; padding-right:20px !important; }
+    .h1-mobile { font-size:22px !important; line-height:1.3 !important; }
+  }
+</style>
+</head>
+<body style="margin:0;padding:0;background:#F5F5F0;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none !important;visibility:hidden;mso-hide:all;font-size:1px;color:#F5F5F0;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${escapeHtml(title)} — Logisorama</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F5F0;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:linear-gradient(180deg,#1c1814 0%,#231d18 100%);border-radius:14px;overflow:hidden;border:1px solid rgba(212,168,83,0.30);box-shadow:0 18px 50px rgba(0,0,0,0.22);">
+      ${testBanner}
+      <tr><td class="px-mobile" style="padding:32px 32px 12px;text-align:center;">
+        <div style="margin:4px 0 18px;">
+          <img src="${logoUrl}" alt="Immo-Rama" height="64" style="display:inline-block;height:64px;width:auto;max-width:160px;">
+        </div>
+        <h1 class="h1-mobile" style="margin:0 0 6px;font-size:26px;line-height:1.3;color:#f4ecd8;font-weight:700;font-family:Georgia,'Times New Roman',serif;">${escapeHtml(title)}</h1>
+      </td></tr>
+      <tr><td class="px-mobile" style="padding:10px 32px 6px;">
+        ${bodyHtml}
+      </td></tr>
+      <tr><td class="px-mobile" style="padding:22px 32px 12px;">
+        ${ctaPrimary}
+      </td></tr>
+      <tr><td class="px-mobile" style="padding:24px 32px 22px;color:#c9bfac;font-size:14px;line-height:1.7;font-family:Georgia,serif;font-style:italic;text-align:center;">
+        L'équipe Logisorama<br/>Logisorama.ch By Immo-rama.ch
+      </td></tr>
+      <tr><td style="background:#0e0c0a;padding:22px 28px;text-align:center;border-top:1px solid rgba(212,168,83,0.18);">
+        <div style="color:#8a7f6e;font-size:12px;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
+          <strong style="color:#c9a96a;">Immo-Rama.ch</strong> · CHE-442.303.796<br>
+          Ch. de la Vignettaz 7 · 1023 Crissier · <a href="${PUBLIC_BASE_URL}" style="color:#D4A853;text-decoration:none;">logisorama.ch</a><br>
+          <a href="mailto:info@immo-rama.ch" style="color:#D4A853;text-decoration:none;">info@immo-rama.ch</a>
+        </div>
+        <div style="margin-top:12px;color:#5a5246;font-size:11px;font-family:Arial,Helvetica,sans-serif;">
+          Email transactionnel lié à votre mandat de recherche.
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+  return { subject: finalSubject, html };
+}
+
+async function sendBrandedEmailResult(
+  subject: string,
+  html: string,
+  to: string[],
+  cc: string[],
+): Promise<{ ok: boolean; error?: string }> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) {
     const msg = "RESEND_API_KEY missing";
     console.warn(msg);
     return { ok: false, error: msg };
   }
-  const uniq = Array.from(new Set(recipients.filter(Boolean)));
-  if (uniq.length === 0) return { ok: false, error: "Aucun destinataire" };
+  const toUniq = Array.from(new Set(to.filter(Boolean)));
+  const ccUniq = Array.from(new Set(cc.filter(Boolean))).filter((e) => !toUniq.includes(e));
+  if (toUniq.length === 0) return { ok: false, error: "Aucun destinataire" };
   const resend = new Resend(apiKey);
-  const { data, error } = await resend.emails.send({ from: STAFF_FROM, to: uniq, subject, html });
+  const { data, error } = await resend.emails.send({
+    from: STAFF_FROM,
+    to: toUniq,
+    cc: ccUniq.length > 0 ? ccUniq : undefined,
+    subject,
+    html,
+  });
   if (error) {
-    console.error("Resend staff email error:", error);
+    console.error("Resend branded email error:", error);
     return { ok: false, error: typeof error === "string" ? error : JSON.stringify(error) };
   }
-  console.log("Staff email sent to:", uniq.join(", "), "id:", (data as any)?.id);
+  console.log("Branded email sent. to:", toUniq.join(", "), "cc:", ccUniq.join(", "), "id:", (data as any)?.id);
   return { ok: true };
 }
 
-async function sendStaffEmail(subject: string, html: string, recipients: string[]) {
-  await sendStaffEmailResult(subject, html, recipients);
-}
 
