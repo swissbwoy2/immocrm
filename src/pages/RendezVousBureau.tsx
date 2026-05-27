@@ -1,11 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { MapPin, ExternalLink, CheckCircle2, Loader2, Sun, Sunset } from 'lucide-react';
+import {
+  MapPin,
+  ExternalLink,
+  CheckCircle2,
+  Loader2,
+  Sun,
+  Sunset,
+  Clock,
+  Lock,
+  ShieldCheck,
+  KeyRound,
+  Home,
+  Hammer,
+  Banknote,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useUTMParams } from '@/hooks/useUTMParams';
@@ -20,6 +33,27 @@ import {
   OFFICE_MAPS_URL,
 } from '@/lib/phoneSlots';
 
+type ProjectType = 'location' | 'achat' | 'renovation' | 'vente';
+
+const PROJECT_OPTIONS: {
+  key: ProjectType;
+  label: string;
+  sub: string;
+  icon: typeof KeyRound;
+}[] = [
+  { key: 'location', label: 'Louer', sub: 'un logement', icon: KeyRound },
+  { key: 'achat', label: 'Acheter', sub: 'un bien', icon: Home },
+  { key: 'renovation', label: 'Rénover', sub: 'mon bien', icon: Hammer },
+  { key: 'vente', label: 'Vendre', sub: 'mon bien', icon: Banknote },
+];
+
+const PROJECT_LABELS: Record<ProjectType, string> = {
+  location: 'Recherche de logement à louer',
+  achat: 'Achat d\'un bien',
+  renovation: 'Projet de rénovation',
+  vente: 'Vente d\'un bien',
+};
+
 const DAY_PARTS: { key: DayPart; label: string; icon: typeof Sun; range: string }[] = [
   { key: 'matin', label: 'Matin', icon: Sun, range: '08h30 → 12h00' },
   { key: 'apres-midi', label: 'Après-midi', icon: Sunset, range: '13h30 → 16h00' },
@@ -32,6 +66,7 @@ export default function RendezVousBureau() {
   const [activeDayPart, setActiveDayPart] = useState<DayPart>('matin');
   const [selected, setSelected] = useState<Slot | null>(null);
   const [taken, setTaken] = useState<Set<string>>(new Set());
+  const [projet, setProjet] = useState<ProjectType | ''>('');
 
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
@@ -42,10 +77,21 @@ export default function RendezVousBureau() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    document.title = 'Réserver un RDV gratuit — Bureau Logisorama Crissier';
+    document.title =
+      'RDV gratuit au bureau Logisorama Crissier — Location, achat, rénovation, vente';
+    const meta = document.querySelector('meta[name="description"]');
+    const prev = meta?.getAttribute('content') ?? null;
+    if (meta)
+      meta.setAttribute(
+        'content',
+        "Réservez 30 min gratuites au bureau Logisorama à Crissier. On parle de votre projet de location, achat, rénovation ou vente — confirmation immédiate.",
+      );
+    return () => {
+      if (meta && prev !== null) meta.setAttribute('content', prev);
+    };
   }, []);
 
-  // Charger les créneaux occupés (vue publique) + realtime
+  // Slots pris (realtime)
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -63,7 +109,11 @@ export default function RendezVousBureau() {
     load();
     const channel = supabase
       .channel('rdv-bureau-slots')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_phone_appointments' }, () => load())
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lead_phone_appointments' },
+        () => load(),
+      )
       .subscribe();
     return () => {
       mounted = false;
@@ -72,9 +122,13 @@ export default function RendezVousBureau() {
   }, []);
 
   const slots = useMemo(() => generateSlotsForDay(date), [date]);
-  const filtered = useMemo(() => slots.filter((s) => getDayPart(s) === activeDayPart), [slots, activeDayPart]);
+  const filtered = useMemo(
+    () => slots.filter((s) => getDayPart(s) === activeDayPart),
+    [slots, activeDayPart],
+  );
 
   const isFormValid =
+    !!projet &&
     !!selected &&
     prenom.trim().length >= 2 &&
     nom.trim().length >= 2 &&
@@ -83,29 +137,30 @@ export default function RendezVousBureau() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || !selected) return;
+    if (!isFormValid || !selected || !projet) return;
     setSubmitting(true);
 
     try {
-      // Anti-doublon: la contrainte unique côté DB renverra 23505 si déjà pris.
-
       const apptId = crypto.randomUUID();
       const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
-      const notes = message.trim() ? `Message client: ${message.trim()}` : null;
+      const projetLabel = PROJECT_LABELS[projet];
+      const notesParts = [
+        `Type de projet: ${projetLabel}`,
+        message.trim() ? `Message client: ${message.trim()}` : '',
+      ].filter(Boolean);
+      const notes = notesParts.join('\n');
 
-      const { error: apptErr } = await supabase
-        .from('lead_phone_appointments')
-        .insert({
-          id: apptId,
-          prospect_email: email.trim(),
-          prospect_phone: telephone.trim(),
-          prospect_name: fullName,
-          slot_start: selected.start.toISOString(),
-          slot_end: selected.end.toISOString(),
-          source_form: 'whatsapp_rdv_crissier',
-          status: 'confirme',
-          notes_admin: notes,
-        });
+      const { error: apptErr } = await supabase.from('lead_phone_appointments').insert({
+        id: apptId,
+        prospect_email: email.trim(),
+        prospect_phone: telephone.trim(),
+        prospect_name: fullName,
+        slot_start: selected.start.toISOString(),
+        slot_end: selected.end.toISOString(),
+        source_form: 'rdv_bureau_crissier',
+        status: 'confirme',
+        notes_admin: notes,
+      });
 
       if (apptErr) {
         if ((apptErr as any).code === '23505') {
@@ -118,7 +173,9 @@ export default function RendezVousBureau() {
         return;
       }
 
-      // Créer un lead léger pour traçabilité CRM
+      // Lead CRM
+      const leadTypeRecherche: 'location' | 'vente' =
+        projet === 'location' ? 'location' : 'vente';
       const leadId = crypto.randomUUID();
       await supabase.from('leads').insert({
         id: leadId,
@@ -126,12 +183,14 @@ export default function RendezVousBureau() {
         prenom: prenom.trim(),
         nom: nom.trim(),
         telephone: telephone.trim(),
-        source: 'whatsapp_rdv_crissier',
-        type_recherche: 'location',
+        source: 'rdv_bureau_crissier',
+        formulaire: 'rdv_bureau',
+        type_recherche: leadTypeRecherche,
         is_qualified: true,
-        utm_source: utm.utm_source || 'whatsapp',
-        utm_medium: utm.utm_medium || 'business_message',
-        utm_campaign: utm.utm_campaign || 'location_v2',
+        notes,
+        utm_source: utm.utm_source || 'direct',
+        utm_medium: utm.utm_medium || 'rdv_bureau',
+        utm_campaign: utm.utm_campaign || projet,
         utm_content: utm.utm_content,
         utm_term: utm.utm_term,
       });
@@ -140,12 +199,12 @@ export default function RendezVousBureau() {
         .update({ lead_id: leadId })
         .eq('id', apptId);
 
-      // Mail confirmation + ICS
+      // ICS prospect
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
             title: 'RDV Logisorama — Bureau Crissier',
-            description: `Rendez-vous confirmé avec ${fullName}.\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`,
+            description: `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`,
             location: OFFICE_ADDRESS,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
@@ -153,27 +212,33 @@ export default function RendezVousBureau() {
             recipient_email: email.trim(),
           },
         })
-        .then(() => {
-          supabase
-            .from('lead_phone_appointments')
-            .update({ ics_sent_at: new Date().toISOString() })
-            .eq('id', apptId)
-            .then(() => {});
-        }, () => {});
+        .then(
+          () => {
+            supabase
+              .from('lead_phone_appointments')
+              .update({ ics_sent_at: new Date().toISOString() })
+              .eq('id', apptId)
+              .then(() => {});
+          },
+          () => {},
+        );
 
-      // Notif interne admin (email Resend + WhatsApp + cloche in-app) — best-effort
+      // Notif admin
       supabase.functions
         .invoke('notify-admin-new-phone-appointment', {
-          body: { appointment_id: apptId },
+          body: { appointment_id: apptId, type_projet: projet, type_projet_label: projetLabel },
         })
-        .then(() => {}, () => {});
+        .then(
+          () => {},
+          () => {},
+        );
 
-      // ICS calendrier admin (best-effort, conservé pour agenda Google)
+      // ICS calendrier interne
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
-            title: `Nouveau RDV bureau — ${fullName}`,
-            description: `Email: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
+            title: `Nouveau RDV bureau (${projetLabel}) — ${fullName}`,
+            description: `Projet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
             location: OFFICE_ADDRESS,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
@@ -181,7 +246,10 @@ export default function RendezVousBureau() {
             recipient_email: 'info@immo-rama.ch',
           },
         })
-        .then(() => {}, () => {});
+        .then(
+          () => {},
+          () => {},
+        );
 
       setDone(true);
       toast.success('RDV confirmé. Tu vas recevoir un email de confirmation.');
@@ -193,200 +261,349 @@ export default function RendezVousBureau() {
     }
   };
 
-  if (done) {
+  if (done && selected) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="max-w-lg w-full p-8 text-center space-y-4">
-          <CheckCircle2 className="h-14 w-14 text-primary mx-auto" />
-          <h1 className="text-2xl font-bold">Rendez-vous confirmé</h1>
-          <p className="text-muted-foreground">
-            Le {formatDayLabel(selected!.start)} à {selected!.label}.
+      <main className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8] flex items-center justify-center p-6">
+        <div className="max-w-lg w-full rounded-2xl border border-[#b8893d]/40 bg-[#1c1814] p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <CheckCircle2 className="mx-auto h-14 w-14 text-[#d4a857]" />
+          <h1 className="mt-4 font-serif text-2xl text-[#f4ecd8]">
+            Votre RDV est confirmé
+          </h1>
+          <p className="mt-3 text-[#c9bfac]">
+            {formatDayLabel(selected.start)} à{' '}
+            <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
           </p>
-          <div className="bg-muted/40 rounded-lg p-4 text-sm space-y-2">
+          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2">
             <div className="flex items-start justify-center gap-2">
-              <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-              <span>{OFFICE_ADDRESS}</span>
+              <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+              <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
             </div>
             <a
               href={OFFICE_MAPS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+              className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
             >
               Itinéraire <ExternalLink className="h-3 w-3" />
             </a>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Un email avec invitation calendrier (ICS) vient d'être envoyé. Tu recevras aussi des rappels 24h, 3h, 1h et 30 min avant.
+          <p className="mt-4 text-xs text-[#8a7f6e]">
+            Email de confirmation + invitation calendrier (.ics) envoyés. Rappels automatiques 24h, 3h, 1h et 30 min avant.
           </p>
-        </Card>
+        </div>
       </main>
     );
   }
 
   return (
-    <>
-      <main className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="max-w-3xl mx-auto px-4 py-6 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Réserve ton RDV gratuit au bureau
-            </h1>
-            <p className="text-sm text-muted-foreground mt-2">
-              Logisorama · {OFFICE_ADDRESS}
-            </p>
+    <div className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8]">
+      {/* HERO */}
+      <section className="relative overflow-hidden border-b border-[#b8893d]/20 bg-gradient-to-br from-[#0e0c0a] via-[#1c1814] to-[#0e0c0a]">
+        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_10%,rgba(212,168,87,0.18),transparent_50%),radial-gradient(circle_at_80%_60%,rgba(184,137,61,0.12),transparent_55%)]" />
+        <div className="relative mx-auto max-w-3xl px-5 pt-12 pb-8 text-center">
+          <span className="inline-block rounded-full border border-[#b8893d]/50 bg-[#b8893d]/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-[#e0c089]">
+            🎯 RDV GRATUIT · BUREAU CRISSIER · SANS ENGAGEMENT
+          </span>
+          <h1 className="mt-5 font-serif text-3xl leading-tight md:text-4xl">
+            Discutons de votre projet —{' '}
+            <em className="not-italic text-[#d4a857]">au bureau, autour d'un café</em>
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-[#c9bfac] md:text-base">
+            30 minutes en tête-à-tête avec un conseiller Logisorama. Location, achat,
+            rénovation ou vente — on vous oriente clairement, sans blabla.
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {['✓ 100% gratuit', '✓ Sans engagement', '✓ Confirmation immédiate'].map((t) => (
+              <span
+                key={t}
+                className="rounded-full border border-[#b8893d]/40 bg-[#b8893d]/10 px-3 py-1.5 text-xs font-bold text-[#d4a857]"
+              >
+                {t}
+              </span>
+            ))}
           </div>
-        </header>
 
-        <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-          {/* Jours */}
-          <Card className="p-4">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Jour</Label>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-              {availableDays.map((d) => {
-                const active = d.toDateString() === date.toDateString();
-                return (
-                  <button
-                    key={d.toISOString()}
-                    type="button"
-                    onClick={() => {
-                      setDate(d);
-                      setSelected(null);
-                    }}
-                    className={cn(
-                      'shrink-0 rounded-lg px-3 py-2 text-sm border transition-colors min-w-[88px]',
-                      active
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-background hover:bg-muted border-border'
-                    )}
-                  >
-                    <div className="font-semibold capitalize">
-                      {d.toLocaleDateString('fr-CH', { weekday: 'short' })}
-                    </div>
-                    <div className="text-xs opacity-80">
-                      {d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'short' })}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Période matin / après-midi */}
-          <Card className="p-4">
-            <div className="flex gap-2 mb-3">
-              {DAY_PARTS.map((dp) => {
-                const Icon = dp.icon;
-                const active = activeDayPart === dp.key;
-                return (
-                  <button
-                    key={dp.key}
-                    type="button"
-                    onClick={() => setActiveDayPart(dp.key)}
-                    className={cn(
-                      'flex-1 rounded-lg px-3 py-2 text-sm border transition-colors flex items-center gap-2 justify-center',
-                      active
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-background hover:bg-muted border-border'
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="font-medium">{dp.label}</span>
-                    <span className="text-xs opacity-70 hidden sm:inline">{dp.range}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {filtered.map((slot) => {
-                const isTaken = taken.has(slot.start.toISOString());
-                const isSelected = selected?.start.getTime() === slot.start.getTime();
-                return (
-                  <button
-                    key={slot.key}
-                    type="button"
-                    disabled={isTaken}
-                    onClick={() => setSelected(slot)}
-                    className={cn(
-                      'rounded-lg px-2 py-2 text-sm border transition-all',
-                      isTaken && 'bg-muted text-muted-foreground line-through cursor-not-allowed opacity-60',
-                      !isTaken && !isSelected && 'bg-background hover:bg-muted border-border',
-                      isSelected && 'bg-primary text-primary-foreground border-primary scale-[1.02]'
-                    )}
-                  >
-                    {slot.label}
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Formulaire */}
-          {selected && (
-            <Card className="p-4 md:p-6">
-              <h2 className="font-semibold mb-1">Tes coordonnées</h2>
-              <p className="text-xs text-muted-foreground mb-4">
-                RDV le {formatDayLabel(selected.start)} à {selected.label} (30 min)
-              </p>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="prenom">Prénom *</Label>
-                    <Input id="prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="nom">Nom *</Label>
-                    <Input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="tel">Téléphone *</Label>
-                    <Input
-                      id="tel"
-                      type="tel"
-                      value={telephone}
-                      onChange={(e) => setTelephone(e.target.value)}
-                      placeholder="+41 ..."
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="msg">Message (facultatif)</Label>
-                  <Textarea
-                    id="msg"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Précise ta recherche, ton budget, tes besoins..."
-                    rows={3}
-                  />
-                </div>
-                <Button type="submit" disabled={!isFormValid || submitting} className="w-full">
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Réservation...
-                    </>
-                  ) : (
-                    'Confirmer mon rendez-vous'
-                  )}
-                </Button>
-              </form>
-            </Card>
-          )}
+          <p className="mt-6 inline-flex items-center gap-2 text-xs text-[#8a7f6e]">
+            <MapPin className="h-3.5 w-3.5 text-[#d4a857]" />
+            {OFFICE_ADDRESS}
+          </p>
         </div>
-      </main>
-    </>
+      </section>
+
+      <section className="mx-auto max-w-2xl px-5 py-10 space-y-5">
+        {/* 1. Type de projet */}
+        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+            1. Votre projet
+          </Label>
+          <p className="mb-4 text-xs text-[#8a7f6e]">
+            Pour qu'on prépare votre RDV avec le bon expert.
+          </p>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {PROJECT_OPTIONS.map((p) => {
+              const Icon = p.icon;
+              const active = projet === p.key;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setProjet(p.key)}
+                  className={cn(
+                    'rounded-xl border px-3 py-4 text-center transition',
+                    active
+                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
+                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'mx-auto h-6 w-6 mb-2',
+                      active ? 'text-[#d4a857]' : 'text-[#b8893d]',
+                    )}
+                  />
+                  <div className="text-sm font-semibold">{p.label}</div>
+                  <div className="text-[11px] opacity-80">{p.sub}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Jour + créneau */}
+        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+            2. Choisissez votre créneau
+          </Label>
+          <p className="mb-4 text-xs text-[#8a7f6e]">
+            Réservation ferme en temps réel. Les créneaux pris sont barrés.
+          </p>
+
+          {/* Jours */}
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+            Jour
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+            {availableDays.map((d) => {
+              const active = d.toDateString() === date.toDateString();
+              return (
+                <button
+                  key={d.toISOString()}
+                  type="button"
+                  onClick={() => {
+                    setDate(d);
+                    setSelected(null);
+                  }}
+                  className={cn(
+                    'shrink-0 rounded-lg px-3 py-2 text-sm border transition min-w-[88px]',
+                    active
+                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
+                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
+                  )}
+                >
+                  <div className="font-semibold capitalize">
+                    {d.toLocaleDateString('fr-CH', { weekday: 'short' })}
+                  </div>
+                  <div className="text-xs opacity-80">
+                    {d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'short' })}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Matin / Après-midi */}
+          <div className="mt-4 flex gap-2">
+            {DAY_PARTS.map((dp) => {
+              const Icon = dp.icon;
+              const active = activeDayPart === dp.key;
+              return (
+                <button
+                  key={dp.key}
+                  type="button"
+                  onClick={() => setActiveDayPart(dp.key)}
+                  className={cn(
+                    'flex-1 rounded-lg px-3 py-2 text-sm border transition flex items-center gap-2 justify-center',
+                    active
+                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
+                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="font-medium">{dp.label}</span>
+                  <span className="text-[11px] opacity-70 hidden sm:inline">{dp.range}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Slots */}
+          <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {filtered.map((slot) => {
+              const isTaken = taken.has(slot.start.toISOString());
+              const isSelected = selected?.start.getTime() === slot.start.getTime();
+              return (
+                <button
+                  key={slot.key}
+                  type="button"
+                  disabled={isTaken}
+                  onClick={() => setSelected(slot)}
+                  className={cn(
+                    'rounded-lg px-2 py-2 text-sm border transition',
+                    isTaken &&
+                      'bg-[#0e0c0a]/40 text-[#6b6253] line-through cursor-not-allowed opacity-60 border-[#b8893d]/15',
+                    !isTaken &&
+                      !isSelected &&
+                      'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
+                    isSelected &&
+                      'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] scale-[1.02] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]',
+                  )}
+                >
+                  {slot.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. Coordonnées + CTA */}
+        {selected && projet && (
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-4"
+          >
+            <div>
+              <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+                3. Vos coordonnées
+              </Label>
+              <p className="text-xs text-[#8a7f6e]">
+                RDV le <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
+                à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
+                {PROJECT_LABELS[projet]}
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="prenom" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Prénom *
+                </Label>
+                <Input
+                  id="prenom"
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  className="dark-input-rdv"
+                  autoComplete="given-name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="nom" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Nom *
+                </Label>
+                <Input
+                  id="nom"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  className="dark-input-rdv"
+                  autoComplete="family-name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Email *
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="dark-input-rdv"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="tel" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Téléphone *
+                </Label>
+                <Input
+                  id="tel"
+                  type="tel"
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  className="dark-input-rdv"
+                  placeholder="+41 ..."
+                  autoComplete="tel"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="msg" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
+                  Message (facultatif)
+                </Label>
+                <Textarea
+                  id="msg"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="dark-input-rdv min-h-24"
+                  placeholder="Précisez votre projet, votre budget, vos besoins..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={!isFormValid || submitting}
+              className="w-full bg-gradient-to-r from-[#d4a857] to-[#b8893d] text-[#1c1814] font-bold text-base py-6 rounded-xl shadow-[0_10px_28px_rgba(184,137,61,0.45)] hover:opacity-95 disabled:opacity-60"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Réservation...
+                </>
+              ) : (
+                '📍 Confirmer mon RDV gratuit au bureau'
+              )}
+            </Button>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[#8a7f6e]">
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Confirmation immédiate
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" /> Données sécurisées
+              </span>
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" /> Sans engagement
+              </span>
+            </div>
+          </form>
+        )}
+
+        {(!selected || !projet) && (
+          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
+            {!projet
+              ? '👆 Sélectionnez d\'abord votre type de projet'
+              : '👆 Choisissez un créneau pour continuer'}
+          </div>
+        )}
+      </section>
+
+      <style>{`
+        .dark-input-rdv {
+          background: #0e0c0a !important;
+          border: 1px solid rgba(184,137,61,0.25) !important;
+          color: #f4ecd8 !important;
+        }
+        .dark-input-rdv::placeholder { color: #6b6253 !important; }
+        .dark-input-rdv:focus-visible {
+          border-color: #d4a857 !important;
+          box-shadow: 0 0 0 2px rgba(212,168,87,0.25) !important;
+          outline: none !important;
+        }
+      `}</style>
+    </div>
   );
 }
