@@ -313,16 +313,34 @@ serve(async (req) => {
       await notifyAgent(supabase, client, "client_mandate_renewed", "✅ Client renouvelle son mandat", "Un de vos clients vient de renouveler son mandat.");
     } else if (typedAction === "cancel" || typedAction === "cancel_with_refund") {
       const reason = cancellationReason as CancellationReason;
-      // Calcul éligibilité côté serveur (jamais confiance au client)
+      // Fenêtre de remboursement : jour 80 → jour 90 inclus.
+      // À partir du jour 91, le mandat est auto-renouvelé → remboursement impossible.
+      const inRefundWindow =
+        daysSinceSignature >= REFUND_ELIGIBILITY_DAY &&
+        daysSinceSignature <= MANDAT_DURATION_DAYS;
       refundEligible = typedAction === "cancel_with_refund"
         && reason !== "found_alone"
-        && daysSinceSignature >= REFUND_ELIGIBILITY_DAY;
+        && inRefundWindow;
 
       // Si demande de remboursement mais non éligible, on rejette
       if (typedAction === "cancel_with_refund" && !refundEligible) {
-        const reasonDetail = reason === "found_alone"
-          ? "Les remboursements ne sont pas accordés si vous avez trouvé par vos propres moyens."
-          : `Le remboursement est disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour du mandat (jour actuel : ${daysSinceSignature}).`;
+        let reasonDetail: string;
+        if (reason === "found_alone") {
+          reasonDetail = "Les remboursements ne sont pas accordés si vous avez trouvé par vos propres moyens.";
+        } else if (daysSinceSignature > MANDAT_DURATION_DAYS) {
+          const cyclesPassed = Math.floor(daysSinceSignature / MANDAT_DURATION_DAYS);
+          const nextCycleStartDay = cyclesPassed * MANDAT_DURATION_DAYS;
+          const sig = client.mandat_date_signature ? new Date(client.mandat_date_signature) : new Date();
+          const pauseOffset = client.mandate_pause_days ?? 0;
+          const nextWindowStart = new Date(sig);
+          nextWindowStart.setDate(nextWindowStart.getDate() + nextCycleStartDay + REFUND_ELIGIBILITY_DAY + pauseOffset);
+          const nextWindowEnd = new Date(sig);
+          nextWindowEnd.setDate(nextWindowEnd.getDate() + nextCycleStartDay + MANDAT_DURATION_DAYS + pauseOffset);
+          const fmt = (d: Date) => d.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+          reasonDetail = `Votre mandat s'est automatiquement renouvelé. La fenêtre de remboursement (jours ${REFUND_ELIGIBILITY_DAY} à ${MANDAT_DURATION_DAYS}) est close pour ce cycle. Vous pourrez en faire la demande lors du prochain cycle, entre le ${fmt(nextWindowStart)} et le ${fmt(nextWindowEnd)}.`;
+        } else {
+          reasonDetail = `Le remboursement est disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour du mandat (jour actuel : ${daysSinceSignature}).`;
+        }
         return jsonResponse({ ok: false, error: `Remboursement non éligible. ${reasonDetail}` }, 400);
       }
 

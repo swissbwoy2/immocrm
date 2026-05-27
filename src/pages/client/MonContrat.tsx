@@ -217,7 +217,9 @@ export default function MonContrat() {
   const hasPdf = !!client?.id;
   const isPaused = !!client?.mandate_paused_at;
   const isInactif = client?.statut === 'inactif';
-  const refundEligibleNow = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY;
+  const refundWindowOpen = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY && (daysSinceSignature ?? 0) <= MANDAT_DURATION_DAYS;
+  const refundWindowClosed = (daysSinceSignature ?? 0) > MANDAT_DURATION_DAYS;
+  const refundEligibleNow = refundWindowOpen;
   const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
   const showRefundRequested = client?.refund_status === 'pending';
 
@@ -236,7 +238,9 @@ export default function MonContrat() {
         title: refundEligibleNow ? 'Demande déjà enregistrée' : 'Pas encore éligible',
         description: refundEligibleNow
           ? 'Votre demande de remboursement est en cours de traitement.'
-          : `Le remboursement sera disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour (jour actuel : ${daysSinceSignature}).`,
+          : refundWindowClosed
+            ? `La fenêtre de remboursement (jours ${REFUND_ELIGIBILITY_DAY} à ${MANDAT_DURATION_DAYS}) est close. Votre mandat s'est renouvelé automatiquement — prochaine fenêtre lors du cycle suivant.`
+            : `Le remboursement sera disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour (jour actuel : ${daysSinceSignature}).`,
       });
     }
     const next = new URLSearchParams(searchParams);
@@ -429,11 +433,15 @@ export default function MonContrat() {
                 <Badge
                   className={refundEligibleNow
                     ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
-                    : 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30'}
+                    : refundWindowClosed
+                      ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
+                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30'}
                 >
                   {refundEligibleNow
-                    ? '🟢 Éligible au remboursement'
-                    : `🔴 Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
+                    ? `🟢 Éligible au remboursement (J${daysSinceSignature ?? 0}/${MANDAT_DURATION_DAYS})`
+                    : refundWindowClosed
+                      ? `⛔ Fenêtre close — mandat renouvelé (J${daysSinceSignature ?? 0})`
+                      : `🔴 Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
                 </Badge>
               </div>
             </CardHeader>
@@ -523,13 +531,19 @@ export default function MonContrat() {
                     </Button>
                   )}
 
-                  {/* Annuler + Remboursement — visible toujours, désactivé avant J82 */}
+                  {/* Annuler + Remboursement — visible toujours, désactivé hors fenêtre J80→J90 */}
                   <Button
                     variant={refundEligibleNow ? 'default' : 'outline'}
                     onClick={() => openCancelDialog(true)}
                     disabled={!refundEligibleNow || actionLoading !== null}
                     className="w-full"
-                    title={!refundEligibleNow ? `Disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour` : undefined}
+                    title={
+                      !refundEligibleNow
+                        ? refundWindowClosed
+                          ? `Fenêtre close (jours ${REFUND_ELIGIBILITY_DAY}–${MANDAT_DURATION_DAYS}). Mandat renouvelé automatiquement.`
+                          : `Disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour`
+                        : undefined
+                    }
                   >
                     <DollarSign className="w-4 h-4 mr-2" />
                     Annuler + Remboursement
