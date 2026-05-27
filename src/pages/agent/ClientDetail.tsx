@@ -58,6 +58,7 @@ interface Client {
   priorite?: string;
   note_agent?: string;
   statut?: string;
+  mandat_date_signature?: string | null;
   nationalite?: string;
   type_permis?: string;
   residence?: string;
