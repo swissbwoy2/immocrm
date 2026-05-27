@@ -1,45 +1,34 @@
-## Contexte
-
-Aujourd'hui, quand un client demande un remboursement via `mandate-renewal-action` (action `cancel_with_refund`) :
-- ✅ L'éligibilité est **déjà validée côté serveur** (jamais ≥ 80 jours + raison ≠ "trouvé seul")
-- ✅ Une notification **push** est créée pour les admins et le client
-- ❌ **Aucun email** n'est envoyé ni à toi ni au client
-- ❌ Tu n'as donc rien reçu pour la demande de Meless Marie-Christ Esmel
-
-Note : en base, aucune demande de remboursement de "Meless" n'a été enregistrée via le flux — elle t'a probablement contacté en direct. La signature date du 23 février 2026 → ~93 jours, donc **elle serait éligible** si elle passait par l'app.
-
 ## Ce que je vais faire
 
-### 1. Email admin instantané lors d'une demande de remboursement
+Permettre à l'admin et à l'agent assigné de déclencher une demande de remboursement (ou annulation simple) pour un client, sans avoir besoin du token email envoyé au client.
 
-Dans `supabase/functions/mandate-renewal-action/index.ts`, après le `notifyAdmins(...)` du cas `refundEligible = true` :
-- Récupérer tous les admins avec leur email
-- Envoyer un email via `send-notification-email` à chaque admin avec :
-  - Sujet : `💰 Demande de remboursement — {Prénom Nom}`
-  - Corps : nom du client, jours écoulés, date de fin officielle, date de traitement prévue (fin + 30j), lien vers la fiche client admin
+### 1. Edge function `mandate-renewal-action` — nouveau mode "staff"
 
-### 2. Email de confirmation au client (si éligible)
+Ajouter un 4ème chemin d'authentification à côté de token / client_id-owner / webhook-trust :
 
-Toujours dans le même bloc, envoyer au client :
-- Sujet : `✅ Votre demande de remboursement est confirmée`
-- Corps : confirmation que le remboursement est éligible, rappel qu'il restera servi jusqu'au jour 90, traitement sous 30 jours après cette date, montant non précisé (la logique de calcul reste à ta main)
+- Si le body contient `triggered_by: "staff"` + `client_id` + un header `Authorization` valide :
+  - Vérifier via `getClaims` que l'appelant est connecté
+  - Autoriser si l'appelant est **admin** (via `has_role`) OU **l'agent assigné** (via `clients.agent_id` ↔ `agents.user_id`, ou table `client_agents` pour co-assignation)
+  - Sinon → 403
+- Les actions `cancel` et `cancel_with_refund` deviennent autorisées par ce chemin (en plus de pause/resume si besoin futur)
+- La logique d'éligibilité reste identique (jour ≥ 80 + raison ≠ « trouvé seul »)
+- `triggered_by` enregistré dans `mandate_renewal_actions` = `"admin"` ou `"agent"` selon le rôle
+- Notifications adaptées : le client reçoit toujours son email/notif de confirmation ; l'admin/agent qui déclenche reçoit un toast côté front, pas de notif redondante
 
-### 3. Email "annulation enregistrée" au client (si non éligible)
+### 2. UI — bouton dans la fiche client (admin + agent)
 
-Pour `cancel` simple ou `cancel_with_refund` non éligible : email court de confirmation d'annulation, sans promesse de remboursement.
+Dans `src/pages/admin/ClientDetail.tsx` et `src/pages/agent/ClientDetail.tsx`, dans la carte « Contrat de mandat » (ou juste en-dessous de la progression du mandat) :
 
-### 4. Validation automatique = déjà faite
+- Bouton **« Demander le remboursement pour le client »**
+  - Visible uniquement si `statut === 'actif'` et `refund_status !== 'pending' && refund_status !== 'processed'`
+  - Désactivé avec tooltip si `daysSinceSignature < 80` (avec message « disponible à partir du 80ème jour »)
+- Bouton secondaire **« Annuler le mandat (sans remboursement) »** (toujours visible si actif)
+- Clic → ouvre un Dialog réutilisant `CancellationReasonForm` (déjà en place pour le client)
+- Submit → `supabase.functions.invoke('mandate-renewal-action', { body: { triggered_by: 'staff', client_id, action: 'cancel_with_refund' | 'cancel', cancellation_reason } })`
+- Toast de succès + refresh des données client
 
-Aucun changement nécessaire — la fonction calcule déjà `refundEligible` strictement côté serveur (jamais confiance au client). Le passage en `refund_status = 'pending'` est automatique dès qu'une demande éligible arrive.
+### 3. Hors scope
 
-## Détails techniques
-
-- Réutilisation de l'edge function existante `send-notification-email` (déjà câblée Resend + templates)
-- Pas de migration DB nécessaire — toutes les colonnes (`refund_status`, `refund_requested_at`, `refund_eligible`) existent déjà
-- Pas de nouveau composant front
-- Idempotence : les emails sont envoyés une seule fois car le token de mandat est marqué `used_at` à la même étape
-
-## Hors scope
-
-- Traitement automatique du virement bancaire de remboursement (reste manuel)
-- Email pour le cas de Meless rétroactivement — je peux te générer un mail à la main si tu veux, mais cette demande n'a pas transité par le flux normal
+- Pas de migration DB
+- Pas de modification de la logique d'éligibilité
+- Pas de nouvelle notification pour staff (ils voient le toast et la fiche client mise à jour)
