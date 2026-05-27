@@ -238,7 +238,9 @@ export default function MonContrat() {
         title: refundEligibleNow ? 'Demande déjà enregistrée' : 'Pas encore éligible',
         description: refundEligibleNow
           ? 'Votre demande de remboursement est en cours de traitement.'
-          : `Le remboursement sera disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour (jour actuel : ${daysSinceSignature}).`,
+          : refundWindowClosed
+            ? `La fenêtre de remboursement (jours ${REFUND_ELIGIBILITY_DAY} à ${MANDAT_DURATION_DAYS}) est close. Votre mandat s'est renouvelé automatiquement — prochaine fenêtre lors du cycle suivant.`
+            : `Le remboursement sera disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour (jour actuel : ${daysSinceSignature}).`,
       });
     }
     const next = new URLSearchParams(searchParams);
