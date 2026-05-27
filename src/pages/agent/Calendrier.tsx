@@ -101,6 +101,7 @@ export default function AgentCalendrier() {
   const [clients, setClients] = useState<Client[]>([]);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showFullHistory, setShowFullHistory] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [showEventForm, setShowEventForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
