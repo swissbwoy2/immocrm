@@ -2471,6 +2471,41 @@ export default function ClientDetail() {
                         <Ban className="w-4 h-4 mr-2" />
                         Annuler le mandat (sans remboursement)
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-card/50 hover:bg-blue-500/10 hover:border-blue-500/30"
+                        onClick={async () => {
+                          try {
+                            const { data: userData } = await supabase.auth.getUser();
+                            if (!userData.user) {
+                              toast({ title: 'Erreur', description: 'Non authentifié', variant: 'destructive' });
+                              return;
+                            }
+                            const sampleEnd = client.mandate_official_end_date ?? new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
+                            const refundDate = (() => { const d = new Date(sampleEnd); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
+                            const { data: notif, error } = await supabase.from('notifications').insert({
+                              user_id: userData.user.id,
+                              type: 'mandate_cancelled',
+                              title: '💰 Remboursement initié pour vous (TEST)',
+                              message: `[TEST EMAIL] Un administrateur a effectué une demande de remboursement pour votre compte suite à votre demande (par téléphone ou email). Votre mandat reste actif jusqu'au ${sampleEnd} et nous continuons à vous envoyer des offres. Le remboursement sera traité sous un délai de 30 jours après cette date (au plus tard le ${refundDate}). Vous recevrez un email de confirmation dès que le virement sera émis.`,
+                              link: '/client/mon-contrat',
+                              metadata: { test: true, client_id: client.id },
+                            }).select('id').single();
+                            if (error || !notif) throw error || new Error('insert failed');
+                            const { error: emailErr } = await supabase.functions.invoke('send-notification-email', {
+                              body: { notification_id: notif.id },
+                            });
+                            if (emailErr) throw emailErr;
+                            toast({ title: '✅ Email de test envoyé', description: 'Vérifiez votre boîte mail et vos notifications.' });
+                          } catch (e: any) {
+                            toast({ title: 'Erreur', description: e.message || 'Envoi du test échoué', variant: 'destructive' });
+                          }
+                        }}
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        Tester l'email d'annulation (m'envoyer)
+                      </Button>
                     </div>
                   )}
                 </>
