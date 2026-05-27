@@ -1,42 +1,45 @@
-## Objectif
+## Problème
 
-1. S'assurer que le client reçoit **email + notification in-app** quand l'admin ou l'agent déclenche l'annulation/remboursement, avec un message adapté (« un agent/administrateur a effectué la demande pour vous »).
-2. Garder le message actuel quand c'est le client lui-même qui déclenche (« Nous avons bien reçu votre demande… »).
-3. Ajouter un bouton **"Tester l'email d'annulation"** côté admin pour prévisualiser/recevoir l'email réel.
+Quand une demande de remboursement / annulation est déclenchée, le client reçoit bien sa notification + email, mais l'admin (`info@immo-rama.ch`) et l'agent en charge ne reçoivent pas l'email. La fonction `mandate-renewal-action` insère bien des notifications in-app pour les admins/agent et appelle `send-notification-email`, mais celle-ci envoie uniquement à `profiles.email` du `user_id` cible. Résultat :
+- Si l'utilisateur admin connecté n'a pas `info@immo-rama.ch` comme email dans `profiles`, l'adresse n'est jamais touchée.
+- Idem pour l'agent si son email profil n'est pas celui attendu.
 
-## 1. Edge function `mandate-renewal-action` — messages différenciés
+## Solution — envoi direct ciblé en plus des notifs in-app
 
-Dans le bloc `cancel` / `cancel_with_refund`, adapter `clientMsg` selon `staffTrust` :
+Dans `supabase/functions/mandate-renewal-action/index.ts`, pour les actions `cancel` / `cancel_with_refund` uniquement, **ajouter un envoi email direct via Resend** (en plus du flux notifications existant) vers :
 
-- **Si `staffTrust` (admin ou agent)** et `refundEligible` :
-  > « Un{e} {administrateur·trice|agent·e} a effectué une demande de remboursement pour votre compte. Votre mandat reste actif jusqu'au {officialEnd}. Le remboursement sera traité sous 30 jours (au plus tard le {refundProcessDate}). Vous recevrez un email dès que le virement sera émis. »
-- **Si `staffTrust`** et annulation simple :
-  > « Un{e} {administrateur·trice|agent·e} a annulé votre mandat de recherche pour votre compte. »
-- **Si client lui-même** : message actuel inchangé (« Votre demande de remboursement a été validée automatiquement… »).
+1. **`info@immo-rama.ch`** (constante en dur, adresse admin officielle Logisorama).
+2. **L'email du profil de l'agent assigné** au client (lookup `agents.user_id` → `profiles.email`).
 
-Le `notify()` actuel insère déjà la notification + déclenche l'email via `send-notification-email` → rien d'autre à changer côté envoi. Juste le contenu du message à brancher sur `staffTrust`.
+Les notifications in-app pour l'agent et les admins restent inchangées (toujours créées via `notifyAgent` / `notifyAdmins`).
 
-Titre adapté aussi : `"💰 Remboursement initié pour vous"` vs `"✅ Remboursement confirmé"`.
+### Contenu de l'email staff
 
-## 2. Bouton de test « Aperçu email annulation »
+Un email unique, sobre, récapitulant :
+- Nom complet du client + email
+- Type d'action : `Remboursement demandé` ou `Mandat annulé`
+- Raison (`reasonLabel`)
+- Si remboursement éligible : date de fin officielle du mandat + date limite de traitement du virement
+- Origine : `Demande client`, `Initiée par administrateur`, ou `Initiée par agent` (basé sur `staffTrust`)
+- Lien vers la fiche client admin
 
-Sur `src/pages/admin/ClientDetail.tsx`, à côté des boutons annulation existants, ajouter un bouton **outline** « Tester l'email d'annulation ». Au clic :
+Sujet : `💰 Remboursement à traiter — {Nom Prénom}` ou `❌ Mandat annulé — {Nom Prénom}`.
 
-- Insère une notification de type `mandate_cancelled` directement dans la table `notifications` ciblant l'admin connecté (pas le client) avec un message d'exemple représentatif des deux scénarios (staff + remboursement éligible).
-- Appelle ensuite `supabase.functions.invoke('send-notification-email', { body: { notification_id } })` → l'admin reçoit le vrai email tel qu'il sera envoyé au client.
-- Toast « Email de test envoyé à votre adresse ».
+### Implémentation technique
 
-Pas d'edge function dédiée ; on réutilise la chaîne `notifications` + `send-notification-email` existante. Visible uniquement pour le rôle admin.
+- Importer `Resend` depuis `https://esm.sh/resend@2.0.0` en tête du fichier.
+- Lire `RESEND_API_KEY` depuis `Deno.env`. Si absent, log + skip silencieux (ne bloque pas l'action).
+- Ajouter une helper `sendStaffEmail(subject, html, recipients: string[])` qui dédoublonne les destinataires et envoie via `resend.emails.send` avec `from: "Logisorama <support@logisorama.ch>"` (même expéditeur que le reste du système).
+- Dans le bloc `cancel`, après les `notifyAgent` / `notifyAdmins` existants, construire `recipients = ["info@immo-rama.ch"]` + l'email de l'agent (récupéré via `agents.user_id` → `profiles.email`) puis appeler le helper.
+- Pas de migration DB, pas de changement côté UI, pas de changement de `send-notification-email`.
 
-## 3. Hors scope
+## Hors scope
 
-- Pas de migration DB.
-- Pas de changement de la logique d'éligibilité.
-- Pas de nouveau template email — on s'appuie sur le rendu générique de `send-notification-email` (type `mandate_cancelled` → icône ✅, couleur verte déjà mappées).
-- Pas de bouton de test côté agent.
+- Pas de modification du contenu email client (déjà OK).
+- Pas de changement pour les actions `renew`, `pause`, `resume`.
+- Pas de nouveau secret à demander : `RESEND_API_KEY` est déjà configuré (utilisé par `send-notification-email`).
+- Pas de désactivation du flux notification existant (admins gardent leur notif in-app + email profil si activé).
 
-## Détails techniques
+## Déploiement
 
-- Le label rôle injecté : `staffTrust.role === "admin" ? "administrateur" : "agent"`.
-- Title alternatif côté `notify()` : passé en argument depuis le bloc cancel selon `staffTrust`.
-- Bouton de test : `clientId` n'est pas nécessaire — on injecte la notif sur `auth.uid()` de l'admin courant via `supabase.auth.getUser()`.
+Redéploiement de `mandate-renewal-action` après modification.
