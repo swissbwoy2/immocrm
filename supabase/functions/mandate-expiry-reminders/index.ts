@@ -124,7 +124,7 @@ serve(async (req) => {
     // 1. Récupérer tous les clients actifs avec un mandat signé (skip ceux en pause)
     const { data: clients, error: clientsErr } = await supabase
       .from("clients")
-      .select("id, user_id, agent_id, mandat_date_signature, mandat_renewal_count, mandate_pause_days, mandate_paused_at, mandate_official_end_date")
+      .select("id, user_id, agent_id, mandat_date_signature, mandat_renewal_count, mandate_pause_days, mandate_paused_at, mandate_official_end_date, cancellation_requested_at, cancellation_reason, refund_status")
       .eq("statut", "actif")
       .is("mandate_paused_at", null)
       .not("mandat_date_signature", "is", null);
@@ -138,6 +138,7 @@ serve(async (req) => {
 
     let remindersSent = 0;
     let autoRenewed = 0;
+    let autoStopped = 0;
     const errors: string[] = [];
 
     for (const client of clients) {
@@ -147,6 +148,90 @@ serve(async (req) => {
         const pauseDays = client.mandate_pause_days ?? 0;
         const daysSinceSignature = Math.max(0, rawDaysElapsed - pauseDays);
         const daysRemaining = MANDAT_DURATION_DAYS - daysSinceSignature;
+
+        // === 0. Arrêt automatique si une demande d'annulation/remboursement a été faite ===
+        // Lorsque l'échéance est atteinte, on passe le mandat en 'stoppe' (mode gelé)
+        // sans action manuelle requise de l'admin/agent.
+        const hasCancellationRequest =
+          !!client.cancellation_requested_at ||
+          client.refund_status === "pending" ||
+          client.refund_status === "processed";
+
+        const officialEnd = client.mandate_official_end_date
+          ? new Date(client.mandate_official_end_date)
+          : null;
+        const endReached = officialEnd
+          ? today >= officialEnd
+          : daysRemaining <= 0;
+
+        if (hasCancellationRequest && endReached) {
+          await supabase
+            .from("clients")
+            .update({
+              statut: "stoppe",
+              date_changement_statut: new Date().toISOString(),
+            })
+            .eq("id", client.id);
+
+          await supabase.from("mandate_renewal_actions").insert({
+            client_id: client.id,
+            action: "auto_stopped",
+            triggered_by: "system",
+            metadata: {
+              reason: client.cancellation_reason ?? null,
+              refund_status: client.refund_status ?? null,
+              official_end: client.mandate_official_end_date ?? null,
+            },
+          });
+
+          // Notification client
+          if (client.user_id) {
+            await supabase.from("notifications").insert({
+              user_id: client.user_id,
+              type: "mandate_auto_stopped",
+              title: "⏹ Mandat clôturé",
+              message:
+                "Votre mandat est arrivé à échéance suite à votre demande d'annulation/remboursement et a été clôturé automatiquement. Votre espace reste accessible. Pour toute question, contactez un administrateur.",
+              link: "/client/mon-contrat",
+              metadata: { client_id: client.id },
+            });
+          }
+          // Notification agent
+          if (client.agent_id) {
+            const { data: agent } = await supabase
+              .from("agents").select("user_id").eq("id", client.agent_id).maybeSingle();
+            if (agent?.user_id) {
+              await supabase.from("notifications").insert({
+                user_id: agent.user_id,
+                type: "mandate_auto_stopped_agent",
+                title: "⏹ Mandat client clôturé automatiquement",
+                message:
+                  "Un de vos clients a vu son mandat clôturé automatiquement à échéance suite à sa demande d'annulation/remboursement.",
+                link: "/agent/mes-clients",
+                metadata: { client_id: client.id },
+              });
+            }
+          }
+          // Notification admins
+          const { data: admins } = await supabase
+            .from("user_roles").select("user_id").eq("role", "admin");
+          if (admins) {
+            for (const a of admins) {
+              await supabase.from("notifications").insert({
+                user_id: a.user_id,
+                type: "mandate_auto_stopped_admin",
+                title: "⏹ Mandat clôturé automatiquement",
+                message: `Le mandat du client ${client.id} a été clôturé automatiquement à échéance (demande d'annulation/remboursement reçue).`,
+                link: `/admin/clients/${client.id}`,
+                metadata: { client_id: client.id },
+              });
+            }
+          }
+
+          autoStopped += 1;
+          continue; // ne pas tenter de renouveler ce client
+        }
+
 
         // === A. Renouvellement automatique si échéance dépassée ===
         if (daysRemaining < 0) {
@@ -371,6 +456,7 @@ serve(async (req) => {
         processed: clients.length,
         reminders_sent: remindersSent,
         auto_renewed: autoRenewed,
+        auto_stopped: autoStopped,
         errors,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },

@@ -12,6 +12,7 @@ export interface MandatClientLike {
   mandate_paused_at?: string | null;
   refund_status?: string | null;
   statut?: string | null;
+  cancellation_requested_at?: string | null;
 }
 
 export interface MandatDates {
@@ -47,10 +48,12 @@ export function getMandatDates(client: MandatClientLike | null | undefined): Man
   const now = new Date();
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-  // Pas de renouvellement auto si remboursement en cours / traité ou client inactif/relogé/stoppé
+  // Pas de renouvellement auto si remboursement en cours / traité, demande d'annulation reçue,
+  // ou client inactif/relogé/stoppé/suspendu
   const blockRenewal =
     client.refund_status === 'pending' ||
     client.refund_status === 'processed' ||
+    !!client.cancellation_requested_at ||
     client.statut === 'inactif' ||
     client.statut === 'reloge' ||
     client.statut === 'stoppe' ||

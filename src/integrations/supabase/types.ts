@@ -2590,6 +2590,7 @@ export type Database = {
           autres_credits: boolean | null
           budget_max: number | null
           cancellation_reason: string | null
+          cancellation_requested_at: string | null
           charges_extraordinaires: boolean | null
           charges_mensuelles: number | null
           commission_split: number | null
@@ -2671,6 +2672,7 @@ export type Database = {
           autres_credits?: boolean | null
           budget_max?: number | null
           cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
           charges_extraordinaires?: boolean | null
           charges_mensuelles?: number | null
           commission_split?: number | null
@@ -2752,6 +2754,7 @@ export type Database = {
           autres_credits?: boolean | null
           budget_max?: number | null
           cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
           charges_extraordinaires?: boolean | null
           charges_mensuelles?: number | null
           commission_split?: number | null
