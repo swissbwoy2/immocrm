@@ -337,7 +337,7 @@ serve(async (req) => {
     await supabase.from("mandate_renewal_actions").insert({
       client_id: client.id,
       action: dbAction,
-      triggered_by: "client",
+      triggered_by: staffTrust ? staffTrust.role : "client",
       previous_signature_date: previousSignatureDate,
       cancellation_reason: cancellationReason,
       refund_eligible: refundEligible,
