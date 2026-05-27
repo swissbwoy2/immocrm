@@ -186,6 +186,8 @@ export default function ClientDetail() {
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [regeneratingContract, setRegeneratingContract] = useState(false);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
