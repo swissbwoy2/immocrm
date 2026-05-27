@@ -531,13 +531,19 @@ export default function MonContrat() {
                     </Button>
                   )}
 
-                  {/* Annuler + Remboursement — visible toujours, désactivé avant J82 */}
+                  {/* Annuler + Remboursement — visible toujours, désactivé hors fenêtre J80→J90 */}
                   <Button
                     variant={refundEligibleNow ? 'default' : 'outline'}
                     onClick={() => openCancelDialog(true)}
                     disabled={!refundEligibleNow || actionLoading !== null}
                     className="w-full"
-                    title={!refundEligibleNow ? `Disponible à partir du ${REFUND_ELIGIBILITY_DAY}ème jour` : undefined}
+                    title={
+                      !refundEligibleNow
+                        ? refundWindowClosed
+                          ? `Fenêtre close (jours ${REFUND_ELIGIBILITY_DAY}–${MANDAT_DURATION_DAYS}). Mandat renouvelé automatiquement.`
+                          : `Disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour`
+                        : undefined
+                    }
                   >
                     <DollarSign className="w-4 h-4 mr-2" />
                     Annuler + Remboursement
