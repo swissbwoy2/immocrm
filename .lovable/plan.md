@@ -1,45 +1,32 @@
-## Problème
+## Objectif
+Faire en sorte que l’email de test d’annulation/remboursement arrive bien sur `info@immo-rama.ch` (et sur l’email de l’agent assigné), au lieu de partir vers l’email du profil de l’admin connecté.
 
-Quand une demande de remboursement / annulation est déclenchée, le client reçoit bien sa notification + email, mais l'admin (`info@immo-rama.ch`) et l'agent en charge ne reçoivent pas l'email. La fonction `mandate-renewal-action` insère bien des notifications in-app pour les admins/agent et appelle `send-notification-email`, mais celle-ci envoie uniquement à `profiles.email` du `user_id` cible. Résultat :
-- Si l'utilisateur admin connecté n'a pas `info@immo-rama.ch` comme email dans `profiles`, l'adresse n'est jamais touchée.
-- Idem pour l'agent si son email profil n'est pas celui attendu.
+## Constat
+- Le bouton de test actuel crée une notification pour l’utilisateur connecté puis appelle le service d’email standard.
+- Ce service envoie à l’email du profil cible, et les logs montrent actuellement un envoi vers `admin@immo-rama.ch`.
+- Donc le test ne vérifie pas le vrai circuit staff que vous voulez contrôler.
 
-## Solution — envoi direct ciblé en plus des notifs in-app
+## Plan
+1. **Corriger le bouton de test dans la fiche admin**
+   - Remplacer le flux actuel basé sur la notification standard.
+   - Faire appeler un envoi de test dédié, non destructif, qui utilise les vraies adresses staff attendues.
 
-Dans `supabase/functions/mandate-renewal-action/index.ts`, pour les actions `cancel` / `cancel_with_refund` uniquement, **ajouter un envoi email direct via Resend** (en plus du flux notifications existant) vers :
+2. **Ajouter un mode de test côté backend pour l’email staff**
+   - Réutiliser le template d’email staff déjà en place.
+   - Envoyer explicitement à `info@immo-rama.ch` et à l’email de l’agent assigné si disponible.
+   - Ne modifier aucun statut client et ne créer aucune annulation réelle pendant le test.
 
-1. **`info@immo-rama.ch`** (constante en dur, adresse admin officielle Logisorama).
-2. **L'email du profil de l'agent assigné** au client (lookup `agents.user_id` → `profiles.email`).
+3. **Améliorer la traçabilité de l’envoi**
+   - Ajouter des logs clairs sur les destinataires calculés et sur le résultat du provider email.
+   - Faire remonter une erreur lisible si l’envoi est refusé par le provider ou si un destinataire manque.
 
-Les notifications in-app pour l'agent et les admins restent inchangées (toujours créées via `notifyAgent` / `notifyAdmins`).
+4. **Déployer et valider**
+   - Redéployer la fonction backend concernée.
+   - Vérifier dans les logs que le test part bien vers `info@immo-rama.ch` et, si présent, vers l’agent assigné.
 
-### Contenu de l'email staff
-
-Un email unique, sobre, récapitulant :
-- Nom complet du client + email
-- Type d'action : `Remboursement demandé` ou `Mandat annulé`
-- Raison (`reasonLabel`)
-- Si remboursement éligible : date de fin officielle du mandat + date limite de traitement du virement
-- Origine : `Demande client`, `Initiée par administrateur`, ou `Initiée par agent` (basé sur `staffTrust`)
-- Lien vers la fiche client admin
-
-Sujet : `💰 Remboursement à traiter — {Nom Prénom}` ou `❌ Mandat annulé — {Nom Prénom}`.
-
-### Implémentation technique
-
-- Importer `Resend` depuis `https://esm.sh/resend@2.0.0` en tête du fichier.
-- Lire `RESEND_API_KEY` depuis `Deno.env`. Si absent, log + skip silencieux (ne bloque pas l'action).
-- Ajouter une helper `sendStaffEmail(subject, html, recipients: string[])` qui dédoublonne les destinataires et envoie via `resend.emails.send` avec `from: "Logisorama <support@logisorama.ch>"` (même expéditeur que le reste du système).
-- Dans le bloc `cancel`, après les `notifyAgent` / `notifyAdmins` existants, construire `recipients = ["info@immo-rama.ch"]` + l'email de l'agent (récupéré via `agents.user_id` → `profiles.email`) puis appeler le helper.
-- Pas de migration DB, pas de changement côté UI, pas de changement de `send-notification-email`.
-
-## Hors scope
-
-- Pas de modification du contenu email client (déjà OK).
-- Pas de changement pour les actions `renew`, `pause`, `resume`.
-- Pas de nouveau secret à demander : `RESEND_API_KEY` est déjà configuré (utilisé par `send-notification-email`).
-- Pas de désactivation du flux notification existant (admins gardent leur notif in-app + email profil si activé).
-
-## Déploiement
-
-Redéploiement de `mandate-renewal-action` après modification.
+## Détails techniques
+- **Fichiers concernés**
+  - `src/pages/admin/ClientDetail.tsx`
+  - `supabase/functions/mandate-renewal-action/index.ts`
+- **Aucun changement de base de données**
+- **Aucun impact sur les vraies demandes d’annulation/remboursement**, en dehors d’une meilleure visibilité dans les logs
