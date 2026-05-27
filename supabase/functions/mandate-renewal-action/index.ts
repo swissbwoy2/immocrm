@@ -225,22 +225,36 @@ serve(async (req) => {
 
       await supabase.from("clients").update(updates).eq("id", client.id);
 
+      // Récupérer nom du client pour les messages
+      const { data: clientProfile } = await supabase
+        .from("profiles").select("prenom, nom, email").eq("id", client.user_id).maybeSingle();
+      const clientFullName = clientProfile ? `${clientProfile.prenom ?? ""} ${clientProfile.nom ?? ""}`.trim() : "Un client";
+      const officialEnd = client.mandate_official_end_date ?? "le jour 90";
+      const refundProcessDate = client.mandate_official_end_date
+        ? (() => { const d = new Date(client.mandate_official_end_date); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0]; })()
+        : "30 jours après la fin du mandat";
+
       dbAction = refundEligible ? "cancelled_with_refund" : "cancelled";
 
       // Notifications client
       const clientMsg = refundEligible
-        ? `Votre demande de remboursement a été enregistrée. Votre mandat reste actif jusqu'au ${client.mandate_official_end_date ?? "jour 90"}. Le remboursement sera traité sous 30 jours après cette date.`
+        ? `Votre demande de remboursement a été validée automatiquement (jour ${daysSinceSignature} du mandat, seuil ≥ ${REFUND_ELIGIBILITY_DAY}). Votre mandat reste actif jusqu'au ${officialEnd} et nous continuons à vous envoyer des offres. Le remboursement sera traité sous 30 jours après cette date (au plus tard le ${refundProcessDate}). Vous recevrez un email de confirmation dès que le virement sera émis.`
         : reason === "found_alone"
           ? "Félicitations pour votre nouveau logement ! Votre mandat est annulé. (Non éligible au remboursement selon nos CGV)"
           : "Votre mandat de recherche a été annulé. Merci de votre confiance.";
-      await notify(supabase, client, "mandate_cancelled", refundEligible ? "💰 Remboursement demandé" : "Mandat annulé", clientMsg);
+      await notify(supabase, client, "mandate_cancelled", refundEligible ? "✅ Remboursement confirmé" : "Mandat annulé", clientMsg);
 
       // Notifications agent + admins
-      await notifyAgent(supabase, client, "client_mandate_cancelled", "❌ Client annule son mandat", `Raison : ${reasonLabel(reason)}${refundEligible ? " — remboursement à traiter" : ""}.`);
+      await notifyAgent(supabase, client, "client_mandate_cancelled", "❌ Client annule son mandat", `${clientFullName} — Raison : ${reasonLabel(reason)}${refundEligible ? " — remboursement à traiter" : ""}.`);
       if (refundEligible) {
-        await notifyAdmins(supabase, "💰 Demande de remboursement", `Un client a demandé son remboursement. À traiter après le ${client.mandate_official_end_date ?? "jour 90"} (+ 30 jours).`, client.id);
+        await notifyAdmins(
+          supabase,
+          `💰 Demande de remboursement — ${clientFullName}`,
+          `${clientFullName} (${clientProfile?.email ?? "email inconnu"}) a demandé son remboursement et a été automatiquement validé (jour ${daysSinceSignature} du mandat, raison : ${reasonLabel(reason)}). Le mandat se termine le ${officialEnd}. À traiter (virement) au plus tard le ${refundProcessDate}.`,
+          client.id,
+        );
       } else {
-        await notifyAdmins(supabase, "❌ Mandat annulé", `Un client a annulé son mandat. Raison : ${reasonLabel(reason)}.`, client.id);
+        await notifyAdmins(supabase, `❌ Mandat annulé — ${clientFullName}`, `${clientFullName} a annulé son mandat. Raison : ${reasonLabel(reason)}.`, client.id);
       }
     } else if (typedAction === "pause") {
       if (client.mandate_paused_at) {
@@ -322,16 +336,27 @@ function reasonLabel(reason: CancellationReason): string {
   }
 }
 
+async function sendEmail(supabase: any, notificationId: string) {
+  try {
+    await supabase.functions.invoke("send-notification-email", {
+      body: { notification_id: notificationId },
+    });
+  } catch (e) {
+    console.error("send-notification-email failed:", e);
+  }
+}
+
 async function notify(supabase: any, client: any, type: string, title: string, message: string) {
   if (!client.user_id) return;
-  await supabase.from("notifications").insert({
+  const { data } = await supabase.from("notifications").insert({
     user_id: client.user_id,
     type,
     title,
     message,
     link: "/client/mon-contrat",
     metadata: { client_id: client.id },
-  });
+  }).select("id").single();
+  if (data?.id) await sendEmail(supabase, data.id);
 }
 
 async function notifyAgent(supabase: any, client: any, type: string, title: string, message: string) {
@@ -339,14 +364,15 @@ async function notifyAgent(supabase: any, client: any, type: string, title: stri
   const { data: agent } = await supabase
     .from("agents").select("user_id").eq("id", client.agent_id).maybeSingle();
   if (agent?.user_id) {
-    await supabase.from("notifications").insert({
+    const { data } = await supabase.from("notifications").insert({
       user_id: agent.user_id,
       type,
       title,
       message,
       link: "/agent/mes-clients",
       metadata: { client_id: client.id },
-    });
+    }).select("id").single();
+    if (data?.id) await sendEmail(supabase, data.id);
   }
 }
 
@@ -354,13 +380,15 @@ async function notifyAdmins(supabase: any, title: string, message: string, clien
   const { data: admins } = await supabase
     .from("user_roles").select("user_id").eq("role", "admin");
   for (const admin of admins ?? []) {
-    await supabase.from("notifications").insert({
+    const { data } = await supabase.from("notifications").insert({
       user_id: admin.user_id,
       type: "admin_mandate_update",
       title,
       message,
       link: "/admin/clients",
       metadata: { client_id: clientId },
-    });
+    }).select("id").single();
+    if (data?.id) await sendEmail(supabase, data.id);
   }
 }
+
