@@ -563,21 +563,26 @@ async function notifyAdmins(supabase: any, title: string, message: string, clien
 }
 
 
-async function sendStaffEmail(subject: string, html: string, recipients: string[]) {
+async function sendStaffEmailResult(subject: string, html: string, recipients: string[]): Promise<{ ok: boolean; error?: string }> {
   const apiKey = Deno.env.get("RESEND_API_KEY");
   if (!apiKey) {
-    console.warn("RESEND_API_KEY missing — skipping staff email");
-    return;
+    const msg = "RESEND_API_KEY missing";
+    console.warn(msg);
+    return { ok: false, error: msg };
   }
   const uniq = Array.from(new Set(recipients.filter(Boolean)));
-  if (uniq.length === 0) return;
+  if (uniq.length === 0) return { ok: false, error: "Aucun destinataire" };
   const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
-    from: STAFF_FROM,
-    to: uniq,
-    subject,
-    html,
-  });
-  if (error) console.error("Resend staff email error:", error);
-  else console.log("Staff email sent to:", uniq.join(", "));
+  const { data, error } = await resend.emails.send({ from: STAFF_FROM, to: uniq, subject, html });
+  if (error) {
+    console.error("Resend staff email error:", error);
+    return { ok: false, error: typeof error === "string" ? error : JSON.stringify(error) };
+  }
+  console.log("Staff email sent to:", uniq.join(", "), "id:", (data as any)?.id);
+  return { ok: true };
 }
+
+async function sendStaffEmail(subject: string, html: string, recipients: string[]) {
+  await sendStaffEmailResult(subject, html, recipients);
+}
+
