@@ -54,7 +54,7 @@ serve(async (req) => {
       action = body.action ?? null;
       cancellationReason = body.cancellation_reason ?? null;
 
-      // === Mode TEST email staff (non destructif) ===
+      // === Mode TEST email (aperçu de l'email réellement envoyé au client) ===
       if (body.action === "test_staff_email" && body.client_id) {
         const authHeader = req.headers.get("Authorization");
         if (!authHeader) return jsonResponse({ ok: false, error: "Auth requise" }, 401);
@@ -76,7 +76,7 @@ serve(async (req) => {
         if (!cli) return jsonResponse({ ok: false, error: "Client introuvable" }, 404);
         const { data: cliProfile } = await supabase
           .from("profiles").select("prenom, nom, email").eq("id", cli.user_id).maybeSingle();
-        const clientFullName = cliProfile ? `${cliProfile.prenom ?? ""} ${cliProfile.nom ?? ""}`.trim() : "Client test";
+        const firstName = cliProfile?.prenom ?? "Client";
 
         const recipients: string[] = [ADMIN_EMAIL];
         let agentEmail: string | null = null;
@@ -95,24 +95,19 @@ serve(async (req) => {
 
         const officialEnd = cli.mandate_official_end_date ?? new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
         const refundProcessDate = (() => { const d = new Date(officialEnd); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0]; })();
-        const subject = `[TEST] 💰 Remboursement à traiter — ${clientFullName}`;
-        const html = `
-          <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#111">
-            <div style="background:#fef3c7;border:1px solid #f59e0b;padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px">
-              ⚠️ <strong>Ceci est un email de TEST</strong> — aucun mandat n'a été modifié.
-            </div>
-            <h2 style="margin:0 0 16px">${subject}</h2>
-            <p><strong>Client :</strong> ${clientFullName}${cliProfile?.email ? ` (${cliProfile.email})` : ""}</p>
-            <p><strong>Action :</strong> Remboursement demandé</p>
-            <p><strong>Raison :</strong> Je continue mes recherches seul</p>
-            <p><strong>Origine :</strong> Initiée par un administrateur</p>
-            <p><strong>Jour du mandat :</strong> 82</p>
-            <p><strong>Fin officielle du mandat :</strong> ${officialEnd}<br/><strong>Virement à traiter au plus tard le :</strong> ${refundProcessDate}</p>
-            <p style="margin-top:24px"><a href="https://logisorama.ch/admin/clients" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Voir la fiche client</a></p>
-          </div>`;
 
-        console.log("[TEST staff email] recipients calculés:", recipients);
-        const result = await sendStaffEmailResult(subject, html, recipients);
+        const { subject, html } = buildClientEmail({
+          variant: "refund",
+          initiator: "admin",
+          firstName,
+          officialEnd,
+          refundProcessDate,
+          daysSinceSignature: 82,
+          isTest: true,
+        });
+
+        console.log("[TEST client email preview] recipients:", recipients);
+        const result = await sendBrandedEmailResult(subject, html, recipients, []);
         return jsonResponse({
           ok: result.ok,
           recipients,
