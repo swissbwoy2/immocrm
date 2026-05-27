@@ -217,7 +217,9 @@ export default function MonContrat() {
   const hasPdf = !!client?.id;
   const isPaused = !!client?.mandate_paused_at;
   const isInactif = client?.statut === 'inactif';
-  const refundEligibleNow = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY;
+  const refundWindowOpen = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY && (daysSinceSignature ?? 0) <= MANDAT_DURATION_DAYS;
+  const refundWindowClosed = (daysSinceSignature ?? 0) > MANDAT_DURATION_DAYS;
+  const refundEligibleNow = refundWindowOpen;
   const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
   const showRefundRequested = client?.refund_status === 'pending';
 
