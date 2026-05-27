@@ -281,13 +281,27 @@ serve(async (req) => {
 
       dbAction = refundEligible ? "cancelled_with_refund" : "cancelled";
 
-      // Notifications client
-      const clientMsg = refundEligible
-        ? `Votre demande de remboursement a été validée automatiquement (jour ${daysSinceSignature} du mandat, seuil ≥ ${REFUND_ELIGIBILITY_DAY}). Votre mandat reste actif jusqu'au ${officialEnd} et nous continuons à vous envoyer des offres. Le remboursement sera traité sous 30 jours après cette date (au plus tard le ${refundProcessDate}). Vous recevrez un email de confirmation dès que le virement sera émis.`
-        : reason === "found_alone"
-          ? "Félicitations pour votre nouveau logement ! Votre mandat est annulé. (Non éligible au remboursement selon nos CGV)"
-          : "Votre mandat de recherche a été annulé. Merci de votre confiance.";
-      await notify(supabase, client, "mandate_cancelled", refundEligible ? "✅ Remboursement confirmé" : "Mandat annulé", clientMsg);
+      // Notifications client — message différent selon qui déclenche (client lui-même vs staff)
+      const staffLabel = staffTrust?.role === "admin" ? "Un administrateur" : "Votre agent";
+      let clientTitle: string;
+      let clientMsg: string;
+      if (staffTrust) {
+        if (refundEligible) {
+          clientTitle = "💰 Remboursement initié pour vous";
+          clientMsg = `${staffLabel} a effectué une demande de remboursement pour votre compte suite à votre demande (par téléphone ou email). Votre mandat reste actif jusqu'au ${officialEnd} et nous continuons à vous envoyer des offres. Le remboursement sera traité sous un délai de 30 jours après cette date (au plus tard le ${refundProcessDate}). Vous recevrez un email de confirmation dès que le virement sera émis.`;
+        } else {
+          clientTitle = "Mandat annulé";
+          clientMsg = `${staffLabel} a annulé votre mandat de recherche pour votre compte (raison : ${reasonLabel(reason)}). Merci de votre confiance.`;
+        }
+      } else {
+        clientTitle = refundEligible ? "✅ Remboursement confirmé" : "Mandat annulé";
+        clientMsg = refundEligible
+          ? `Nous avons bien reçu votre demande de remboursement. Elle a été validée automatiquement (jour ${daysSinceSignature} du mandat, seuil ≥ ${REFUND_ELIGIBILITY_DAY}). Votre mandat reste actif jusqu'au ${officialEnd} et nous continuons à vous envoyer des offres. Le remboursement sera traité sous un délai de 30 jours après cette date (au plus tard le ${refundProcessDate}). Vous recevrez un email de confirmation dès que le virement sera émis.`
+          : reason === "found_alone"
+            ? "Félicitations pour votre nouveau logement ! Votre mandat est annulé. (Non éligible au remboursement selon nos CGV)"
+            : "Votre mandat de recherche a été annulé. Merci de votre confiance.";
+      }
+      await notify(supabase, client, "mandate_cancelled", clientTitle, clientMsg);
 
       // Notifications agent + admins
       await notifyAgent(supabase, client, "client_mandate_cancelled", "❌ Client annule son mandat", `${clientFullName} — Raison : ${reasonLabel(reason)}${refundEligible ? " — remboursement à traiter" : ""}.`);
