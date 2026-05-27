@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare, FileDown
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare, FileDown, Wallet, Ban
 } from 'lucide-react';
+import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
