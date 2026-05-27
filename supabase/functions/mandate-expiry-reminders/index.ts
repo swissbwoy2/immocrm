@@ -456,6 +456,7 @@ serve(async (req) => {
         processed: clients.length,
         reminders_sent: remindersSent,
         auto_renewed: autoRenewed,
+        auto_stopped: autoStopped,
         errors,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
