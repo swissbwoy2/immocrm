@@ -1,77 +1,43 @@
+
 ## Objectif
 
-Refondre **/rendez-vous** (page `RendezVousBureau.tsx`) avec exactement la même direction visuelle que **/rendez-vous-propriétaire** (fond `#0e0c0a`, or `#d4a857`, serif élégant, badges, CTA doré), tout en gardant **intacte** la mécanique de réservation ferme déjà en place (créneaux 30 min temps réel, ICS, notif admin, anti-doublon).
+Générer **un flyer A4 portrait** (1280×1810, PNG haute résolution) qui reprend **exactement** le contenu de l'infographie jointe, mais habillé avec **la direction visuelle de la landing page Logisorama** (palette luxury noir/or, typographie serif élégante) — pas le style bleu marine / vert / sans-serif de l'original.
 
-L'objectif unique de la page : **faire prendre un RDV gratuit au bureau de Crissier** pour discuter d'un projet — location, achat, rénovation ou vente.
+## Direction visuelle (issue de la landing page)
 
-## Ce qui change (UI / contenu)
+- **Fond** : noir profond `#0e0c0a` avec subtil mesh doré
+- **Or principal** : `#d4a857` (titres, accents, montants, icônes ✓)
+- **Or foncé** : `#b8893d` (dégradés CTA)
+- **Texte clair** : `#f5f0e0` (corps), `#a89878` (secondaire)
+- **Cartes** : noir translucide `#1a1612` avec bordure or 1px à 30 % d'opacité, coins arrondis 16 px
+- **Typographie** :
+  - Titres → **Playfair Display** (serif, comme la landing)
+  - Corps → **Inter** (sans-serif, comme la landing)
+- **Icônes** : cercles dorés avec ✓ noir, style identique aux cartes de la landing (Activation / Succès / Garantie)
 
-1. **Hero noir/or plein écran**
-   - Badge `🎯 RDV GRATUIT · BUREAU CRISSIER · SANS ENGAGEMENT`
-   - H1 serif : *« Discutons de votre projet — au bureau, autour d'un café »*
-   - Sous-titre : 30 min en tête-à-tête avec un conseiller Logisorama. Location, achat, rénovation ou vente — on vous oriente clairement, sans blabla.
-   - 3 chips de réassurance : `✓ 100% gratuit` · `✓ Sans engagement` · `✓ Réponse immédiate`
+## Contenu (repris à l'identique de l'image)
 
-2. **Sélecteur de type de projet (nouveau, obligatoire)**
-   - 4 grosses cartes cliquables avec icône + libellé :
-     - 🔑 **Louer** un logement
-     - 🏡 **Acheter** un bien
-     - 🛠 **Rénover** mon bien
-     - 💰 **Vendre** mon bien
-   - La carte sélectionnée passe en or (`#d4a857`), comme les jours/horaires de la page propriétaire.
-   - Valeur stockée dans le state et envoyée dans `notes_admin`, le lead, et la notif admin.
+1. **En-tête** : `Logisorama.ch` + titre « Grille tarifaire claire et simple » + sous-titre « Comprenez en 30 secondes comment fonctionne notre tarification »
+2. **3 cartes principales** :
+   - **1. Activation de la recherche** — CHF 300.– / paiement unique / active 90 jours / sans activation pas de recherche
+   - **2. Si vous signez un bail** — commission 1 mois de loyer brut / CHF 300 déduits / solde restant + encadré exemple (Loyer 1'800 / Commission 1'800 / Acompte 300 / Solde 1'500)
+   - **3. Si aucun logement trouvé après 90 jours** — remboursement 100 % / vous récupérez CHF 300.– / garantie résultat
+3. **Schéma ultra simple** : Étape 1 (activez · CHF 300) → Étape 2 (recherche · 90 jours) → Résultat ? → 2 issues (Bail signé / Aucun bail après 90 jours)
+4. **Encart « Important »** : si annulation avant 90 jours, acompte non remboursé (avec icône ⚠ dorée)
+5. **« À retenir »** : 3 points clés (300 pour démarrer, 1 mois loyer si bail, remboursement après 90 jours)
+6. **Bandeau bas CTA** : « Activez votre recherche sur Logisorama.ch » + « Service premium de recherche de logement en Suisse romande »
 
-3. **Picker jour + matin/après-midi + créneaux 30 min**
-   - Même logique que l'actuel `RendezVousBureau` (`generateSlotsForDay`, `getAvailableDays`, `getDayPart`, slots pris en realtime via `get_available_phone_slots`).
-   - Restylé en cartes noir/or (jours scrollables horizontalement, onglets Matin/Après-midi dorés, grille de créneaux avec créneaux pris barrés et opacité réduite).
+## Méthode technique
 
-4. **Formulaire coordonnées**
-   - Prénom, Nom, Email, Téléphone, Message (facultatif).
-   - Inputs `dark-input` (mêmes styles CSS injectés que sur la page propriétaire).
-   - Bouton CTA : gradient or `from-[#d4a857] to-[#b8893d]`, gros, plein largeur :
-     *« 📍 Confirmer mon RDV gratuit au bureau »*
-   - Sous le bouton, ligne de réassurance : `Clock` Réponse immédiate · `Lock` Données sécurisées · `ShieldCheck` Sans engagement.
-
-5. **Écran de confirmation**
-   - Carte centrée noir/or avec `CheckCircle2` doré.
-   - *« Votre RDV est confirmé »* + date/heure + adresse bureau + bouton itinéraire Google Maps.
-   - Mention de l'email de confirmation + invitation calendrier (ICS) envoyé automatiquement.
-
-6. **SEO / `<title>`**
-   - `Réservez votre RDV gratuit au bureau Logisorama Crissier — Location, achat, rénovation, vente`
-   - Meta description orientée conversion.
-
-## Ce qui NE change PAS (backend)
-
-- Table `lead_phone_appointments` + RPC `get_available_phone_slots`.
-- Insertion lead dans `leads` (UTM trackés via `useUTMParams`).
-- Edge functions `send-calendar-invite` (ICS au prospect + agenda interne) et `notify-admin-new-phone-appointment`.
-- Anti-doublon créneau (code 23505).
-- Realtime channel sur `lead_phone_appointments`.
-
-## Ce qui est ajouté côté data
-
-- Nouveau champ `type_projet` (`location` | `achat` | `renovation` | `vente`) :
-  - injecté dans `notes_admin` du RDV (ligne `Type de projet: …`)
-  - mappé sur `leads.type_recherche` quand pertinent (`location`, `achat`/`vente`) et copié dans `leads.notes`
-  - passé dans le body de `notify-admin-new-phone-appointment` (en tant que metadata, l'edge function l'affichera si présent — sinon ignoré, pas de breaking change requis sur l'edge function existante)
-
-Pas de migration de schéma, pas de nouvelle table, pas de nouveau secret.
-
-## Fichiers touchés
-
-- `src/pages/RendezVousBureau.tsx` — refonte complète (UI + ajout `type_projet`)
-- Aucun autre fichier modifié.
-
-## Détails techniques
-
-- On garde `phoneSlots.ts`, `useUTMParams`, et toutes les invocations edge functions à l'identique.
-- Bouton de soumission désactivé tant que `type_projet` + créneau + champs requis ne sont pas remplis.
-- Tokens couleur en dur (hex) assumés ici car la page partage volontairement la palette « luxury » isolée de `/rendez-vous-propriétaire` (cf. mémoire *Seller Landing Page Isolation*), pas le design system principal.
-- Style `dark-input` réinjecté localement comme sur la page propriétaire pour conserver l'isolation.
+- Génération via `imagegen--generate_image` modèle **`premium`** (texte légible obligatoire pour un flyer)
+- Format : **1280 × 1810** (ratio A4 portrait)
+- Sortie : `/mnt/documents/flyer-tarification-logisorama.png`
+- Prompt détaillé encodant : palette exacte (hex), typographie (Playfair + Inter), structure 3 colonnes + schéma + encart + CTA, tout le texte FR à l'identique
+- **QA obligatoire** : relecture visuelle du PNG généré (texte coupé, alignements, fautes, contraste). Si défaut → 2e itération `flyer-tarification-logisorama_v2.png`
+- Livraison via `<presentation-artifact>` pour téléchargement direct
 
 ## Hors scope
 
-- Pas de modification de `/rendez-vous-propriétaire`.
-- Pas de modification des edge functions ni de la table.
-- Pas de changement du widget WhatsApp, ni de la nav publique.
+- Pas de modification du code de la landing page
+- Pas de nouvelle page web : c'est un **fichier PNG téléchargeable**, pas un composant React
+- Pas de version multilingue (FR uniquement, comme l'original)
