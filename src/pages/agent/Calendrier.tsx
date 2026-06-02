@@ -112,6 +112,8 @@ export default function AgentCalendrier() {
 
   // Filter
   const [filterClient, setFilterClient] = useState('all');
+  // Scope: 'mine' (default, performant) | 'co' | 'all'
+  const [scope, setScope] = useState<'mine' | 'co' | 'all'>('mine');
 
   // Dialogs
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
