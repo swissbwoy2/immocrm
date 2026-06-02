@@ -112,6 +112,8 @@ export default function AgentCalendrier() {
 
   // Filter
   const [filterClient, setFilterClient] = useState('all');
+  // Scope: 'mine' (default, performant) | 'co' | 'all'
+  const [scope, setScope] = useState<'mine' | 'co' | 'all'>('mine');
 
   // Dialogs
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -128,7 +130,7 @@ export default function AgentCalendrier() {
     loadData();
     markTypeAsRead('new_visit');
     markTypeAsRead('visit_reminder');
-  }, [user?.id, showFullHistory]);
+  }, [user?.id, showFullHistory, scope]);
 
   const loadData = async () => {
     if (!user) return;
@@ -159,16 +161,24 @@ export default function AgentCalendrier() {
 
       const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
 
-      // Build OR filter: my own items OR items on a co-assigned client
-      const clientIdsFilter = clientIds.length > 0 ? `,client_id.in.(${clientIds.join(',')})` : '';
-      const visitesFilter = `agent_id.eq.${agentData.id}${clientIdsFilter}`;
-      const eventsFilter = `agent_id.eq.${agentData.id}${clientIdsFilter}`;
+      // Build filter according to scope
+      // - 'mine' : strictly the agent's own items (fastest, default)
+      // - 'co'   : only items on co-assigned clients (excluding mine)
+      // - 'all'  : both (legacy behavior)
+      const includeCo = (scope === 'co' || scope === 'all') && clientIds.length > 0;
+      const includeMine = scope === 'mine' || scope === 'all';
+      const clientIdsFilter = includeCo ? `,client_id.in.(${clientIds.join(',')})` : '';
 
-      // Fenêtre glissante : 60 jours dans le passé → 365 jours dans le futur.
-      // Évite de charger des milliers de visites historiques (Carina : 832 visites).
+      const visitesFilter = includeMine
+        ? `agent_id.eq.${agentData.id}${clientIdsFilter}`
+        : (includeCo ? `client_id.in.(${clientIds.join(',')})` : `agent_id.eq.${agentData.id}`);
+      const eventsFilter = visitesFilter;
+
+      // Fenêtre glissante par défaut RESTREINTE pour les gros volumes (ex. Carina, 800+ visites)
+      // J-14 → J+90 couvre largement l'usage quotidien. Le toggle "historique complet" garde l'ancien comportement.
       const today = new Date();
-      const pastCutoff = new Date(today); pastCutoff.setDate(pastCutoff.getDate() - 60);
-      const futureCutoff = new Date(today); futureCutoff.setDate(futureCutoff.getDate() + 365);
+      const pastCutoff = new Date(today); pastCutoff.setDate(pastCutoff.getDate() - 14);
+      const futureCutoff = new Date(today); futureCutoff.setDate(futureCutoff.getDate() + 90);
       const pastIso = pastCutoff.toISOString();
       const futureIso = futureCutoff.toISOString();
 
@@ -180,7 +190,7 @@ export default function AgentCalendrier() {
         .limit(15000);
       let visitesQuery = supabase
         .from('visites')
-        .select('*, offres(id, adresse, prix, pieces, surface, photos), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
+        .select('*, offres(id, adresse, prix, pieces, surface), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
         .or(visitesFilter)
         .order('date_visite', { ascending: true })
         .limit(15000);
@@ -887,7 +897,7 @@ export default function AgentCalendrier() {
       )}
 
       {/* Filter */}
-      <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
+      <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Filter className="h-4 w-4" />
           <Label className="text-sm font-medium">Filtrer par client</Label>
@@ -905,7 +915,28 @@ export default function AgentCalendrier() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select value={scope} onValueChange={(v) => setScope(v as 'mine' | 'co' | 'all')}>
+          <SelectTrigger className="w-[200px] bg-background border-muted-foreground/20">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="mine">Mes visites uniquement</SelectItem>
+            <SelectItem value="co">Co-assignées uniquement</SelectItem>
+            <SelectItem value="all">Toutes (mes + co-assignées)</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant={showFullHistory ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setShowFullHistory((v) => !v)}
+          title={showFullHistory ? 'Limiter à J-14 → J+90' : 'Afficher tout l\'historique'}
+        >
+          {showFullHistory ? 'Historique complet activé' : 'Afficher tout l\'historique'}
+        </Button>
       </div>
+
 
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
