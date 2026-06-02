@@ -897,7 +897,7 @@ export default function AgentCalendrier() {
       )}
 
       {/* Filter */}
-      <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
+      <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Filter className="h-4 w-4" />
           <Label className="text-sm font-medium">Filtrer par client</Label>
@@ -915,7 +915,28 @@ export default function AgentCalendrier() {
             ))}
           </SelectContent>
         </Select>
+
+        <Select value={scope} onValueChange={(v) => setScope(v as 'mine' | 'co' | 'all')}>
+          <SelectTrigger className="w-[200px] bg-background border-muted-foreground/20">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="mine">Mes visites uniquement</SelectItem>
+            <SelectItem value="co">Co-assignées uniquement</SelectItem>
+            <SelectItem value="all">Toutes (mes + co-assignées)</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant={showFullHistory ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setShowFullHistory((v) => !v)}
+          title={showFullHistory ? 'Limiter à J-14 → J+90' : 'Afficher tout l\'historique'}
+        >
+          {showFullHistory ? 'Historique complet activé' : 'Afficher tout l\'historique'}
+        </Button>
       </div>
+
 
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
