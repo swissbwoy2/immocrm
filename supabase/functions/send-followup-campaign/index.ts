@@ -204,8 +204,8 @@ function renderLocationEmail(_campaign: Campaign, lead: LeadData, unsubscribeTok
       </td></tr>
 
       <!-- SIGNATURE -->
-      <tr><td class="px-mobile" style="padding:28px 32px 22px;color:#c9bfac;font-size:14px;line-height:1.7;font-family:Georgia,serif;font-style:italic;text-align:center;">
-        Logisorama.ch By Immo-rama.ch
+      <tr><td class="px-mobile" style="padding:22px 32px 22px;color:#c9bfac;font-size:14px;line-height:1.7;font-family:Georgia,serif;font-style:italic;text-align:center;">
+        Cordialement,<br>L'équipe Immo-rama.ch
       </td></tr>
 
       <!-- FOOTER -->
