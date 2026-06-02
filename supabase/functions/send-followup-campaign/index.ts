@@ -169,35 +169,38 @@ function renderLocationEmail(_campaign: Campaign, lead: LeadData, unsubscribeTok
         <h1 class="h1-mobile" style="margin:0 0 8px;font-size:28px;line-height:1.25;color:#f4ecd8;font-weight:700;font-family:Georgia,'Times New Roman',serif;">Ton futur appartement t'attend !!!</h1>
       </td></tr>
 
-      <!-- GREETING + INTRO -->
+      <!-- GREETING + MERCI -->
       <tr><td class="px-mobile" style="padding:8px 32px 6px;">
-        <p style="margin:0 0 18px;font-size:15px;line-height:1.65;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
-        <p style="margin:0 0 18px;font-size:16px;line-height:1.6;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">🏠 Tu cherches un appartement en Suisse romande ?</p>
-        <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Bonne nouvelle : notre équipe peut analyser <strong style="color:#E8C77E;">gratuitement</strong> ta recherche et ton dossier à nos bureaux de Crissier.</p>
-        <p style="margin:0 0 8px;font-size:15px;line-height:1.65;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">En 30 minutes, un expert Logisorama t'aide à :</p>
+        <p style="margin:0 0 18px;font-size:16px;line-height:1.65;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">${greeting} 👋</p>
+        <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">Merci infiniment pour l'intérêt que tu portes à nos services — c'est déjà un excellent premier pas vers <strong style="color:#E8C77E;">ton futur appartement</strong>.</p>
       </td></tr>
 
-      <!-- BULLETS -->
-      <tr><td class="px-mobile" style="padding:0 32px 8px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${bullets}</table>
+      <!-- CTA PRINCIPAL -->
+      <tr><td class="px-mobile" style="padding:8px 32px 4px;">
+        <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#e8dfce;font-family:Arial,Helvetica,sans-serif;">👉 Pour profiter pleinement de notre accompagnement premium et activer ta recherche <strong style="color:#E8C77E;">dès aujourd'hui</strong>, une seule étape : rends-toi sur <a href="${LOCATION_CTA_ACTIVATION_URL}" target="_blank" style="color:#D4A853;text-decoration:underline;font-weight:700;">logisorama.ch</a>. En moins de 2 minutes, ton dossier est lancé et notre équipe se met immédiatement en chasse pour toi.</p>
+        ${ctaPrimary(LOCATION_CTA_ACTIVATION_URL, 'Activer ma recherche maintenant')}
       </td></tr>
 
-      <!-- SOCIAL PROOF -->
+      <!-- MODALITÉS + PREUVE -->
+      <tr><td class="px-mobile" style="padding:24px 32px 6px;">
+        <p style="margin:0;font-size:15px;line-height:1.7;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Sur le site, tu trouveras également toutes nos <strong style="color:#f4ecd8;">modalités</strong>, nos tarifs transparents et les témoignages de <strong style="color:#E8C77E;">centaines de locataires</strong> que nous avons déjà relogés en Suisse romande.</p>
+      </td></tr>
+
+      <!-- URGENCE -->
       <tr><td class="px-mobile" style="padding:18px 32px 6px;">
-        <p style="margin:0;font-size:15px;line-height:1.6;color:#E8C77E;font-family:Arial,Helvetica,sans-serif;font-weight:600;">⭐ Plus de 500 locataires ont déjà trouvé leur appartement grâce à notre accompagnement . ⭐</p>
+        <div style="background:rgba(212,168,83,0.08);border-left:3px solid #D4A853;border-radius:6px;padding:14px 16px;">
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;">⏰ <strong>Chaque jour compte</strong> sur le marché locatif romand — les meilleurs biens partent en quelques heures. Plus tôt ton dossier est activé, plus vite nous pouvons agir.</p>
+        </div>
       </td></tr>
 
-      <!-- OPTION RECOMMANDÉE -->
-      <tr><td class="px-mobile" style="padding:24px 32px 8px;">
-        <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;font-weight:700;">📍 Option recommandée :</p>
-        <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">réserve ton rendez-vous gratuit à nos bureaux de Crissier (VD).</p>
-        ${ctaPrimary(LOCATION_CTA_RDV_HERO_URL, 'Prendre rendez-vous gratuitement')}
+      <!-- DISPO -->
+      <tr><td class="px-mobile" style="padding:22px 32px 4px;">
+        <p style="margin:0;font-size:15px;line-height:1.7;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">Et bien évidemment, si tu as la moindre question, notre équipe reste entièrement à ta disposition — réponds simplement à cet email, nous te répondrons personnellement.</p>
       </td></tr>
 
-      <!-- ALT ONLINE -->
-      <tr><td class="px-mobile" style="padding:26px 32px 8px;">
-        <p style="margin:0 0 6px;font-size:15px;line-height:1.6;color:#f4ecd8;font-family:Arial,Helvetica,sans-serif;font-weight:700;">💻 Tu préfères aller plus vite ?</p>
-        <p style="margin:0;font-size:15px;line-height:1.65;color:#c9bfac;font-family:Arial,Helvetica,sans-serif;">tu peux aussi activer ta recherche en ligne en 2 minutes ! <a href="${LOCATION_CTA_NOUVEAU_MANDAT_URL}" target="_blank" style="color:#D4A853;text-decoration:underline;font-weight:700;">Clique ICI 👉 logisorama.ch/nouveau-mandat</a></p>
+      <!-- CLOSING -->
+      <tr><td class="px-mobile" style="padding:18px 32px 6px;">
+        <p style="margin:0;font-size:15px;line-height:1.7;color:#E8C77E;font-family:Georgia,'Times New Roman',serif;font-style:italic;">Au plaisir de te faire visiter ton prochain chez-toi très bientôt 🔑</p>
       </td></tr>
 
       <!-- SIGNATURE -->

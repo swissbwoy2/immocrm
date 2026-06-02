@@ -1,48 +1,62 @@
-## Diagnostic
-- Les données de Carina existent bien en base : son compte agent est correct et son calendrier n’est pas vide.
-- Le backend est sain ; je n’ai pas trouvé de panne backend générale ni d’erreur runtime bloquante.
-- Le vrai problème semble être une **surcharge de chargement côté calendrier agent**.
-- Aujourd’hui, pour Carina, la page charge encore environ :
-  - **499** de ses visites récentes
-  - **345** visites récentes supplémentaires via co-assignations
-  - **845** visites visibles au total sur la fenêtre récente
-  - **48** clients co-assignés
-- Donc même après l’optimisation précédente, la page agent reste trop lourde et peut finir par afficher un calendrier vide, incomplet ou très lent.
+## Objectif
+Remplacer le contenu texte de l'email de la **campagne de suivi recherche location** (fonction `send-followup-campaign`, renderer `renderLocationEmail`) par une version ultra orientée conversion du message fourni — tout en gardant le design premium actuel (hero doré, CTAs, footer, preheader, tracking, désinscription).
 
-## Plan
-1. **Réduire le volume chargé par défaut dans `/agent/calendrier`**
-   - Ne plus charger d’un coup tout le stock récent visible.
-   - Charger d’abord une fenêtre centrée sur la vue active du calendrier (mois/semaine/jour), pas tout l’historique récent en une seule requête.
+## Fichier touché
+- `supabase/functions/send-followup-campaign/index.ts` → bloc `renderLocationEmail` (lignes ~172-201) : greeting + intro + bullets + section "Option recommandée" + section "Alt online".
 
-2. **Passer les détails journaliers en chargement à la demande**
-   - Le panneau du jour ne doit récupérer que les événements/visites de la date sélectionnée.
-   - On évite ainsi de transporter et transformer des centaines d’objets inutiles au premier rendu.
+Le hero, le bandeau social proof ★, le logo, la signature, le footer et les CTAs (boutons "Prendre RDV" + lien `nouveau-mandat`) restent inchangés. Aucune autre fonction, aucun autre fichier, aucune migration.
 
-3. **Séparer “mes visites” et “co-assignées” dès le fetch**
-   - Garder les co-assignations accessibles, mais ne pas les fusionner massivement au chargement initial.
-   - Ajouter un filtre clair pour afficher :
-     - Mes visites
-     - Co-assignées
-     - Toutes
+## Nouveau contenu (version conversion)
 
-4. **Alléger encore les requêtes et transformations**
-   - Réduire les jointures au strict nécessaire pour la grille calendrier.
-   - Conserver les données détaillées seulement au clic ou à l’ouverture du détail.
-   - Éviter les enrichissements lourds sur l’ensemble du dataset tant qu’ils ne sont pas nécessaires.
+Texte de base utilisateur :
+> Bonjour 👋 / Merci pour l'intérêt… / il vous suffit de vous rendre sur logisorama.ch / vous y trouverez toutes les modalités / nous restons à disposition / Cordialement, L'équipe Immo-rama.ch
 
-5. **Valider avec le cas Carina**
-   - Vérifier que la page calendrier charge normalement avec un gros volume.
-   - Contrôler que Carina voit à nouveau ses rendez-vous, ses visites programmées et l’historique accessible via filtres/toggles.
+Version réécrite ultra-conversion (gardera le tutoiement de la campagne actuelle pour cohérence avec le reste de l'email — confirme si tu veux du vouvoiement) :
 
-## Détails techniques
-- Fichier principal ciblé : `src/pages/agent/Calendrier.tsx`
-- Composants à vérifier après refactor :
-  - `src/components/calendar/EventManagerCalendar.tsx`
-  - `src/components/calendar/PremiumAgentDayEvents.tsx`
-- A priori, **pas de migration base de données nécessaire**.
-- Le sujet ressemble à un problème de **stratégie de chargement frontend**, pas à un problème de droits d’accès.
+```
+Bonjour {prenom} 👋
 
-## Résultat attendu
-- Carina retrouve un calendrier qui s’ouvre normalement.
-- Les données restent complètes, mais sont chargées intelligemment.
-- La solution profite aussi aux autres agents à gros volume.
+Merci infiniment pour l'intérêt que tu portes à nos services — c'est déjà 
+un excellent premier pas vers ton futur appartement.
+
+👉 Pour profiter pleinement de notre accompagnement premium et activer 
+ta recherche dès aujourd'hui, une seule étape : rends-toi sur 
+logisorama.ch. En moins de 2 minutes, ton dossier est lancé et 
+notre équipe se met immédiatement en chasse pour toi.
+
+Sur le site, tu trouveras également toutes nos modalités, nos tarifs 
+transparents et les témoignages de centaines de locataires que nous 
+avons déjà relogés en Suisse romande.
+
+⏰ Chaque jour compte sur le marché locatif romand — les meilleurs 
+biens partent en quelques heures. Plus tôt ton dossier est activé, 
+plus vite nous pouvons agir.
+
+Et bien évidemment, si tu as la moindre question, notre équipe reste 
+entièrement à ta disposition — réponds simplement à cet email, 
+nous te répondrons personnellement.
+
+Au plaisir de te faire visiter ton prochain chez-toi très bientôt 🔑
+
+Cordialement,
+L'équipe Immo-rama.ch
+```
+
+## Structure du nouveau bloc HTML (remplace lignes ~172-201)
+1. **Greeting** : `Bonjour {prenom} 👋` (fallback `Bonjour 👋`).
+2. **Paragraphe remerciement** ton chaleureux + accroche conversion.
+3. **Bloc CTA mis en avant** : paragraphe "👉 une seule étape" + bouton `ctaPrimary(LOCATION_CTA_RDV_HERO_URL, 'Activer ma recherche maintenant')`.
+4. **Paragraphe modalités/preuve sociale** : renvoi au site + ton "centaines de locataires relogés".
+5. **Bloc urgence** ⏰ (déclencheur de conversion clé sur le marché romand).
+6. **Paragraphe disponibilité** "réponds à cet email".
+7. **Closing line** : "Au plaisir de te faire visiter ton prochain chez-toi 🔑".
+8. **Signature** : `Cordialement, L'équipe Immo-rama.ch`.
+
+On supprime les bullets ✅, la section "Option recommandée" et "Tu préfères aller plus vite" pour coller strictement au message demandé. Le second CTA inline vers `nouveau-mandat` est conservé sous la signature (ou retiré si tu préfères un seul CTA — à confirmer).
+
+## Points à confirmer
+1. **Tutoiement vs vouvoiement** : ton message d'origine est en "vous", la campagne actuelle tutoie. Je garde le **tu** (plus convertissant + cohérent avec le reste de l'email) sauf si tu veux du "vous".
+2. **Un seul CTA ou deux** : je propose **1 CTA principal** "Activer ma recherche maintenant" + garder le lien texte vers `nouveau-mandat` en bas. Dis si tu veux uniquement le bouton.
+3. **Label du bouton** : "Activer ma recherche maintenant" — OK ou tu préfères "Lancer ma recherche en 2 min" / autre ?
+
+Dès validation, j'applique l'édit dans le seul fichier `send-followup-campaign/index.ts` et je redéploie la fonction.
