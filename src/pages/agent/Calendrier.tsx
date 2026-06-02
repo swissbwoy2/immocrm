@@ -130,7 +130,7 @@ export default function AgentCalendrier() {
     loadData();
     markTypeAsRead('new_visit');
     markTypeAsRead('visit_reminder');
-  }, [user?.id, showFullHistory]);
+  }, [user?.id, showFullHistory, scope]);
 
   const loadData = async () => {
     if (!user) return;
@@ -161,16 +161,24 @@ export default function AgentCalendrier() {
 
       const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
 
-      // Build OR filter: my own items OR items on a co-assigned client
-      const clientIdsFilter = clientIds.length > 0 ? `,client_id.in.(${clientIds.join(',')})` : '';
-      const visitesFilter = `agent_id.eq.${agentData.id}${clientIdsFilter}`;
-      const eventsFilter = `agent_id.eq.${agentData.id}${clientIdsFilter}`;
+      // Build filter according to scope
+      // - 'mine' : strictly the agent's own items (fastest, default)
+      // - 'co'   : only items on co-assigned clients (excluding mine)
+      // - 'all'  : both (legacy behavior)
+      const includeCo = (scope === 'co' || scope === 'all') && clientIds.length > 0;
+      const includeMine = scope === 'mine' || scope === 'all';
+      const clientIdsFilter = includeCo ? `,client_id.in.(${clientIds.join(',')})` : '';
 
-      // Fenêtre glissante : 60 jours dans le passé → 365 jours dans le futur.
-      // Évite de charger des milliers de visites historiques (Carina : 832 visites).
+      const visitesFilter = includeMine
+        ? `agent_id.eq.${agentData.id}${clientIdsFilter}`
+        : (includeCo ? `client_id.in.(${clientIds.join(',')})` : `agent_id.eq.${agentData.id}`);
+      const eventsFilter = visitesFilter;
+
+      // Fenêtre glissante par défaut RESTREINTE pour les gros volumes (ex. Carina, 800+ visites)
+      // J-14 → J+90 couvre largement l'usage quotidien. Le toggle "historique complet" garde l'ancien comportement.
       const today = new Date();
-      const pastCutoff = new Date(today); pastCutoff.setDate(pastCutoff.getDate() - 60);
-      const futureCutoff = new Date(today); futureCutoff.setDate(futureCutoff.getDate() + 365);
+      const pastCutoff = new Date(today); pastCutoff.setDate(pastCutoff.getDate() - 14);
+      const futureCutoff = new Date(today); futureCutoff.setDate(futureCutoff.getDate() + 90);
       const pastIso = pastCutoff.toISOString();
       const futureIso = futureCutoff.toISOString();
 
@@ -182,7 +190,7 @@ export default function AgentCalendrier() {
         .limit(15000);
       let visitesQuery = supabase
         .from('visites')
-        .select('*, offres(id, adresse, prix, pieces, surface, photos), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
+        .select('*, offres(id, adresse, prix, pieces, surface), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
         .or(visitesFilter)
         .order('date_visite', { ascending: true })
         .limit(15000);
