@@ -139,12 +139,18 @@ export default function AgentCalendrier() {
       setLoading(true);
 
       // Get agent ID
-      const { data: agentData } = await supabase
+      const { data: agentData, error: agentErr } = await supabase
         .from('agents')
         .select('id')
         .eq('user_id', user.id)
         .single();
 
+      if (agentErr) {
+        console.error('[Calendrier] agent lookup failed:', agentErr);
+        toast.error('Impossible de charger votre profil agent');
+        setLoading(false);
+        return;
+      }
       if (!agentData) {
         setLoading(false);
         return;
@@ -152,92 +158,115 @@ export default function AgentCalendrier() {
 
       setAgentId(agentData.id);
 
-      // Load data in parallel
-      // Get client IDs via client_agents (co-assignations)
-      const { data: clientAgentsData } = await supabase
+      // Co-assigned client IDs
+      const { data: clientAgentsData, error: caErr } = await supabase
         .from('client_agents')
         .select('client_id')
         .eq('agent_id', agentData.id);
+      if (caErr) console.warn('[Calendrier] client_agents query error:', caErr);
+      const coClientIds = clientAgentsData?.map(ca => ca.client_id) || [];
 
-      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
-
-      // Build filter according to scope
-      // - 'mine' : strictly the agent's own items (fastest, default)
-      // - 'co'   : only items on co-assigned clients (excluding mine)
-      // - 'all'  : both (legacy behavior)
-      const includeCo = (scope === 'co' || scope === 'all') && clientIds.length > 0;
-      const includeMine = scope === 'mine' || scope === 'all';
-      const clientIdsFilter = includeCo ? `,client_id.in.(${clientIds.join(',')})` : '';
-
-      const visitesFilter = includeMine
-        ? `agent_id.eq.${agentData.id}${clientIdsFilter}`
-        : (includeCo ? `client_id.in.(${clientIds.join(',')})` : `agent_id.eq.${agentData.id}`);
-      const eventsFilter = visitesFilter;
-
-      // Fenêtre glissante par défaut RESTREINTE pour les gros volumes (ex. Carina, 800+ visites)
-      // J-14 → J+90 couvre largement l'usage quotidien. Le toggle "historique complet" garde l'ancien comportement.
+      // Sliding window
       const today = new Date();
       const pastCutoff = new Date(today); pastCutoff.setDate(pastCutoff.getDate() - 14);
       const futureCutoff = new Date(today); futureCutoff.setDate(futureCutoff.getDate() + 90);
       const pastIso = pastCutoff.toISOString();
       const futureIso = futureCutoff.toISOString();
 
-      let eventsQuery = supabase
-        .from('calendar_events')
-        .select('*, agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
-        .or(eventsFilter)
-        .order('event_date', { ascending: true })
-        .limit(15000);
-      let visitesQuery = supabase
-        .from('visites')
-        .select('*, offres(id, adresse, prix, pieces, surface), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))')
-        .or(visitesFilter)
-        .order('date_visite', { ascending: true })
-        .limit(15000);
-      if (!showFullHistory) {
-        eventsQuery = eventsQuery.gte('event_date', pastIso).lte('event_date', futureIso);
-        visitesQuery = visitesQuery.gte('date_visite', pastIso).lte('date_visite', futureIso);
-      }
+      const includeMine = scope === 'mine' || scope === 'all';
+      const includeCo = (scope === 'co' || scope === 'all') && coClientIds.length > 0;
 
-      const [eventsRes, visitesRes, clientsRes] = await Promise.all([
-        eventsQuery,
-        visitesQuery,
-        clientIds.length > 0 
+      // --- VISITES : split queries (own + co-assigned) — same pattern as Visites.tsx ---
+      const visitesSelect = '*, offres(id, adresse, prix, pieces, surface), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))';
+      const eventsSelect = '*, agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))';
+
+      const buildVisiteQuery = (filter: 'mine' | 'co') => {
+        let q = supabase.from('visites').select(visitesSelect).order('date_visite', { ascending: true }).limit(15000);
+        if (filter === 'mine') q = q.eq('agent_id', agentData.id);
+        else q = q.in('client_id', coClientIds).neq('agent_id', agentData.id);
+        if (!showFullHistory) q = q.gte('date_visite', pastIso).lte('date_visite', futureIso);
+        return q;
+      };
+      const buildEventsQuery = (filter: 'mine' | 'co') => {
+        let q = supabase.from('calendar_events').select(eventsSelect).order('event_date', { ascending: true }).limit(15000);
+        if (filter === 'mine') q = q.eq('agent_id', agentData.id);
+        else q = q.in('client_id', coClientIds).neq('agent_id', agentData.id);
+        if (!showFullHistory) q = q.gte('event_date', pastIso).lte('event_date', futureIso);
+        return q;
+      };
+
+      const visitePromises: Promise<any>[] = [];
+      const eventPromises: Promise<any>[] = [];
+      if (includeMine) { visitePromises.push(buildVisiteQuery('mine')); eventPromises.push(buildEventsQuery('mine')); }
+      if (includeCo)   { visitePromises.push(buildVisiteQuery('co'));   eventPromises.push(buildEventsQuery('co')); }
+
+      const [visitesResults, eventsResults, clientsRes] = await Promise.all([
+        Promise.all(visitePromises),
+        Promise.all(eventPromises),
+        coClientIds.length > 0
           ? supabase
               .from('clients')
               .select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)')
-              .in('id', clientIds)
-          : Promise.resolve({ data: [] }),
+              .in('id', coClientIds)
+          : Promise.resolve({ data: [], error: null } as any),
       ]);
 
-      // Get candidatures for visites with offre_id
-      const offreIds = visitesRes.data?.map(v => v.offre_id).filter(Boolean) || [];
-      const clientIdsFromVisites = visitesRes.data?.map(v => v.client_id).filter(Boolean) || [];
-      
-      let candidaturesMap = new Map();
-      if (offreIds.length > 0) {
-        const { data: candidatures } = await supabase
+      // Surface query errors instead of silently showing an empty calendar
+      const queryErrors: string[] = [];
+      visitesResults.forEach((r, i) => { if (r.error) { console.error('[Calendrier] visites query error', i, r.error); queryErrors.push(`visites: ${r.error.message}`); } });
+      eventsResults.forEach((r, i) => { if (r.error) { console.error('[Calendrier] events query error', i, r.error); queryErrors.push(`events: ${r.error.message}`); } });
+      if ((clientsRes as any).error) { console.error('[Calendrier] clients error:', (clientsRes as any).error); queryErrors.push(`clients: ${(clientsRes as any).error.message}`); }
+
+      // Merge + dedupe
+      const visiteMap = new Map<string, any>();
+      visitesResults.forEach(r => (r.data || []).forEach((v: any) => { if (!visiteMap.has(v.id)) visiteMap.set(v.id, v); }));
+      const visitesRaw = Array.from(visiteMap.values());
+
+      const eventMap = new Map<string, any>();
+      eventsResults.forEach(r => (r.data || []).forEach((e: any) => { if (!eventMap.has(e.id)) eventMap.set(e.id, e); }));
+      const eventsRaw = Array.from(eventMap.values());
+
+      console.log('[Calendrier] loaded', {
+        agentId: agentData.id,
+        scope,
+        showFullHistory,
+        coClientIds: coClientIds.length,
+        visites: visitesRaw.length,
+        events: eventsRaw.length,
+        errors: queryErrors,
+      });
+
+      if (queryErrors.length > 0) {
+        toast.error(`Chargement partiel du calendrier (${queryErrors.length} erreur${queryErrors.length > 1 ? 's' : ''}). Voir la console.`);
+      }
+
+      // Candidatures
+      const offreIds = visitesRaw.map(v => v.offre_id).filter(Boolean);
+      const clientIdsFromVisites = visitesRaw.map(v => v.client_id).filter(Boolean);
+      const candidaturesMap = new Map();
+      if (offreIds.length > 0 && clientIdsFromVisites.length > 0) {
+        const { data: candidatures, error: candErr } = await supabase
           .from('candidatures')
           .select('*')
           .in('offre_id', offreIds)
           .in('client_id', clientIdsFromVisites);
-        
-        candidatures?.forEach(c => {
-          const key = `${c.offre_id}-${c.client_id}`;
-          candidaturesMap.set(key, c);
-        });
+        if (candErr) console.warn('[Calendrier] candidatures error:', candErr);
+        candidatures?.forEach(c => candidaturesMap.set(`${c.offre_id}-${c.client_id}`, c));
       }
 
-      // Get client profiles
-      const clientUserIds = visitesRes.data?.map(v => v.clients?.user_id).filter(Boolean) || [];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', clientUserIds);
+      // Profiles
+      const clientUserIds = visitesRaw.map(v => v.clients?.user_id).filter(Boolean);
+      let profilesMap = new Map<string, any>();
+      if (clientUserIds.length > 0) {
+        const { data: profiles, error: profErr } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', clientUserIds);
+        if (profErr) console.warn('[Calendrier] profiles error:', profErr);
+        profilesMap = new Map((profiles || []).map(p => [p.id, p]));
+      }
 
-      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
-      const visitesWithProfiles = visitesRes.data?.map(v => {
+      const visitesWithProfiles = visitesRaw.map(v => {
         const sharedAgent = v.agents as any;
         const isShared = v.agent_id !== agentData.id;
         return {
@@ -249,9 +278,9 @@ export default function AgentCalendrier() {
             ? `${sharedAgent.profiles.prenom ?? ''} ${(sharedAgent.profiles.nom ?? '').charAt(0)}.`.trim()
             : null,
         };
-      }) || [];
+      });
 
-      const eventsWithSharedFlag = (eventsRes.data || []).map((e: any) => {
+      const eventsWithSharedFlag = eventsRaw.map((e: any) => {
         const sharedAgent = e.agents;
         const isShared = e.agent_id !== agentData.id;
         return {
@@ -267,12 +296,13 @@ export default function AgentCalendrier() {
       setVisites(visitesWithProfiles);
       setClients((clientsRes.data as any) || []);
     } catch (error: any) {
-      console.error('Error loading data:', error);
-      toast.error('Erreur lors du chargement');
+      console.error('[Calendrier] fatal load error:', error);
+      toast.error(`Erreur lors du chargement: ${error?.message || 'inconnue'}`);
     } finally {
       setLoading(false);
     }
   };
+
 
   // Update candidature status with invoice generation for bail_conclu → attente_bail
   const handleUpdateCandidatureStatus = async (candidatureId: string, newStatus: string, candidatureData?: { currentStatut: string; clientId: string; offrePrix: number; offreAdresse: string }) => {

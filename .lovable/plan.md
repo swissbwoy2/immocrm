@@ -1,62 +1,60 @@
-## Objectif
-Remplacer le contenu texte de l'email de la **campagne de suivi recherche location** (fonction `send-followup-campaign`, renderer `renderLocationEmail`) par une version ultra orientée conversion du message fourni — tout en gardant le design premium actuel (hero doré, CTAs, footer, preheader, tracking, désinscription).
+# Cause exacte la plus probable
 
-## Fichier touché
-- `supabase/functions/send-followup-campaign/index.ts` → bloc `renderLocationEmail` (lignes ~172-201) : greeting + intro + bullets + section "Option recommandée" + section "Alt online".
+Le vide dans l’agenda agent ne vient pas des données.
 
-Le hero, le bandeau social proof ★, le logo, la signature, le footer et les CTAs (boutons "Prendre RDV" + lien `nouveau-mandat`) restent inchangés. Aucune autre fonction, aucun autre fichier, aucune migration.
+- **Carina a bien des données en juin** : 77 visites `proposee` ce mois-ci, regroupées en 22 créneaux visibles.
+- **Victoria aussi** : 80 visites ce mois-ci (79 `proposee`, 1 `planifiee`), regroupées en 27 créneaux.
+- **Aucune erreur DB/RLS détectée** sur `visites`, `calendar_events` ou `get_my_agent_id()`.
 
-## Nouveau contenu (version conversion)
+Le point faible exact est dans **`src/pages/agent/Calendrier.tsx`** :
 
-Texte de base utilisateur :
-> Bonjour 👋 / Merci pour l'intérêt… / il vous suffit de vous rendre sur logisorama.ch / vous y trouverez toutes les modalités / nous restons à disposition / Cordialement, L'équipe Immo-rama.ch
+- la page charge les visites via une requête compacte avec **`.or(...)`** ;
+- puis elle **n’inspecte jamais `eventsRes.error` / `visitesRes.error` / `profiles.error` / `clientsRes.error`** ;
+- si une requête échoue côté client, la page continue avec `data ?? []` et affiche simplement **un calendrier vide sans vrai signal**.
 
-Version réécrite ultra-conversion (gardera le tutoiement de la campagne actuelle pour cohérence avec le reste de l'email — confirme si tu veux du vouvoiement) :
+En parallèle, la prod a un vrai second problème confirmé :
 
-```
-Bonjour {prenom} 👋
+- les logs applicatifs contiennent plusieurs **`Importing a module script failed`** / **`Failed to fetch dynamically imported module`** sur le domaine publié ;
+- comme `/agent/calendrier` est une **route lazy-loaded**, un bundle obsolète peut casser le chargement chez certains appareils installés / en cache.
 
-Merci infiniment pour l'intérêt que tu portes à nos services — c'est déjà 
-un excellent premier pas vers ton futur appartement.
+## Conclusion
 
-👉 Pour profiter pleinement de notre accompagnement premium et activer 
-ta recherche dès aujourd'hui, une seule étape : rends-toi sur 
-logisorama.ch. En moins de 2 minutes, ton dossier est lancé et 
-notre équipe se met immédiatement en chasse pour toi.
+Le problème le plus précis est donc :
 
-Sur le site, tu trouveras également toutes nos modalités, nos tarifs 
-transparents et les témoignages de centaines de locataires que nous 
-avons déjà relogés en Suisse romande.
+**le calendrier agent a un bug de “silent failure” côté front, et le contexte de bundles obsolètes en production peut l’aggraver pour certains utilisateurs.**
 
-⏰ Chaque jour compte sur le marché locatif romand — les meilleurs 
-biens partent en quelques heures. Plus tôt ton dossier est activé, 
-plus vite nous pouvons agir.
+# Plan de correction
 
-Et bien évidemment, si tu as la moindre question, notre équipe reste 
-entièrement à ta disposition — réponds simplement à cet email, 
-nous te répondrons personnellement.
+## 1. Rendre le chargement calendrier robuste
+- Remplacer la logique fragile du calendrier par le même schéma que `src/pages/agent/Visites.tsx` :
+  - requête séparée pour les visites propres à l’agent ;
+  - requête séparée pour les visites co-assignées ;
+  - fusion + déduplication ensuite.
+- Garder la fenêtre J-14 / J+90, mais l’appliquer sur des requêtes simples plutôt que sur un gros `.or(...)`.
 
-Au plaisir de te faire visiter ton prochain chez-toi très bientôt 🔑
+## 2. Supprimer le faux “agenda vide”
+- Vérifier explicitement toutes les erreurs Supabase dans `loadData()`.
+- En cas d’échec :
+  - logger la cause exacte ;
+  - afficher un toast utile ;
+  - éviter de présenter un vide comme si aucune visite n’existait.
 
-Cordialement,
-L'équipe Immo-rama.ch
-```
+## 3. Ajouter un diagnostic front minimal
+- Journaliser les compteurs réellement reçus (`events`, `visites`, `clients`) et l’agent courant.
+- Journaliser aussi les erreurs réseau/query pour identifier immédiatement les comptes touchés si le problème revient.
 
-## Structure du nouveau bloc HTML (remplace lignes ~172-201)
-1. **Greeting** : `Bonjour {prenom} 👋` (fallback `Bonjour 👋`).
-2. **Paragraphe remerciement** ton chaleureux + accroche conversion.
-3. **Bloc CTA mis en avant** : paragraphe "👉 une seule étape" + bouton `ctaPrimary(LOCATION_CTA_RDV_HERO_URL, 'Activer ma recherche maintenant')`.
-4. **Paragraphe modalités/preuve sociale** : renvoi au site + ton "centaines de locataires relogés".
-5. **Bloc urgence** ⏰ (déclencheur de conversion clé sur le marché romand).
-6. **Paragraphe disponibilité** "réponds à cet email".
-7. **Closing line** : "Au plaisir de te faire visiter ton prochain chez-toi 🔑".
-8. **Signature** : `Cordialement, L'équipe Immo-rama.ch`.
+## 4. Sécuriser le chargement contre les bundles obsolètes
+- Ajouter un garde-fou global pour les erreurs de lazy import (`Importing a module script failed`, `Failed to fetch dynamically imported module`, `ChunkLoadError`).
+- En cas de détection : nettoyage léger + rechargement propre de l’application.
 
-On supprime les bullets ✅, la section "Option recommandée" et "Tu préfères aller plus vite" pour coller strictement au message demandé. Le second CTA inline vers `nouveau-mandat` est conservé sous la signature (ou retiré si tu préfères un seul CTA — à confirmer).
+# Détails techniques
 
-## Points à confirmer
-1. **Tutoiement vs vouvoiement** : ton message d'origine est en "vous", la campagne actuelle tutoie. Je garde le **tu** (plus convertissant + cohérent avec le reste de l'email) sauf si tu veux du "vous".
-2. **Un seul CTA ou deux** : je propose **1 CTA principal** "Activer ma recherche maintenant" + garder le lien texte vers `nouveau-mandat` en bas. Dis si tu veux uniquement le bouton.
-3. **Label du bouton** : "Activer ma recherche maintenant" — OK ou tu préfères "Lancer ma recherche en 2 min" / autre ?
+## Fichiers concernés
+- `src/pages/agent/Calendrier.tsx`
+- `src/main.tsx`
+- éventuellement `src/hooks/useAppVersionCheck.ts` si le garde-fou est centralisé là
 
-Dès validation, j'applique l'édit dans le seul fichier `send-followup-campaign/index.ts` et je redéploie la fonction.
+## Résultat attendu
+- Victoria et Carina voient immédiatement leurs créneaux réels dans `/agent/calendrier`.
+- Si une requête échoue, on obtient enfin **une erreur visible et exploitable**, pas un agenda artificiellement vide.
+- Les appareils avec ancien cache récupèrent automatiquement le bon bundle au prochain chargement.
