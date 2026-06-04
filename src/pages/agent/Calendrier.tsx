@@ -197,8 +197,8 @@ export default function AgentCalendrier() {
 
       const visitePromises: Promise<any>[] = [];
       const eventPromises: Promise<any>[] = [];
-      if (includeMine) { visitePromises.push(buildVisiteQuery('mine')); eventPromises.push(buildEventsQuery('mine')); }
-      if (includeCo)   { visitePromises.push(buildVisiteQuery('co'));   eventPromises.push(buildEventsQuery('co')); }
+      if (includeMine) { visitePromises.push(Promise.resolve(buildVisiteQuery('mine'))); eventPromises.push(Promise.resolve(buildEventsQuery('mine'))); }
+      if (includeCo)   { visitePromises.push(Promise.resolve(buildVisiteQuery('co')));   eventPromises.push(Promise.resolve(buildEventsQuery('co'))); }
 
       const [visitesResults, eventsResults, clientsRes] = await Promise.all([
         Promise.all(visitePromises),
