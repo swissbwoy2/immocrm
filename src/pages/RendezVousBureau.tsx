@@ -205,45 +205,16 @@ export default function RendezVousBureau() {
         .eq('id', apptId);
 
       const isBureau = appointmentType === 'bureau';
-      const titleProspect = isBureau
-        ? 'RDV Logisorama — Bureau Crissier'
-        : 'RDV Logisorama — Appel téléphonique';
-      const descProspect = isBureau
-        ? `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`
-        : `Appel téléphonique confirmé avec ${fullName}.\nProjet : ${projetLabel}\nNous vous appellerons au : ${telephone.trim()}`;
+      const projetLabelForAdmin = projetLabel;
       const locationProspect = isBureau ? OFFICE_ADDRESS : `Téléphone : ${telephone.trim()}`;
 
-      // ICS prospect
-      supabase.functions
-        .invoke('send-calendar-invite', {
-          body: {
-            title: titleProspect,
-            description: descProspect,
-            location: locationProspect,
-            start_date: selected.start.toISOString(),
-            end_date: selected.end.toISOString(),
-            all_day: false,
-            recipient_email: email.trim(),
-          },
-        })
-        .then(
-          () => {
-            supabase
-              .from('lead_phone_appointments')
-              .update({ ics_sent_at: new Date().toISOString() })
-              .eq('id', apptId)
-              .then(() => {});
-          },
-          () => {},
-        );
-
-      // Notif admin
+      // Notif admin (le prospect ne reçoit l'ICS qu'après validation manuelle de l'admin)
       supabase.functions
         .invoke('notify-admin-new-phone-appointment', {
           body: {
             appointment_id: apptId,
             type_projet: projet,
-            type_projet_label: projetLabel,
+            type_projet_label: projetLabelForAdmin,
             appointment_type: appointmentType,
           },
         })
@@ -252,14 +223,14 @@ export default function RendezVousBureau() {
           () => {},
         );
 
-      // ICS calendrier interne
+      // ICS calendrier interne (équipe seulement)
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
             title: isBureau
-              ? `Nouveau RDV bureau (${projetLabel}) — ${fullName}`
-              : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName}`,
-            description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
+              ? `Nouveau RDV bureau (${projetLabel}) — ${fullName} [À CONFIRMER]`
+              : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName} [À CONFIRMER]`,
+            description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nStatut: EN ATTENTE — à confirmer dans le calendrier admin\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
             location: locationProspect,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
@@ -273,7 +244,7 @@ export default function RendezVousBureau() {
         );
 
       setDone(true);
-      toast.success('RDV confirmé. Tu vas recevoir un email de confirmation.');
+      toast.success('Demande de RDV enregistrée. Vous recevrez la confirmation par email.');
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Erreur lors de la réservation.');
