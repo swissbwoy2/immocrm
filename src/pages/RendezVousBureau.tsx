@@ -259,37 +259,32 @@ export default function RendezVousBureau() {
         <div className="max-w-lg w-full rounded-2xl border border-[#b8893d]/40 bg-[#1c1814] p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <CheckCircle2 className="mx-auto h-14 w-14 text-[#d4a857]" />
           <h1 className="mt-4 font-serif text-2xl text-[#f4ecd8]">
-            Votre RDV est confirmé
+            Demande de RDV enregistrée
           </h1>
           <p className="mt-3 text-[#c9bfac]">
-            {formatDayLabel(selected.start)} à{' '}
+            Créneau demandé : {formatDayLabel(selected.start)} à{' '}
             <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
           </p>
-          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2">
+          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
+            <p className="text-[#c9bfac]">
+              Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
+              <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
+              dès la validation.
+            </p>
             {appointmentType === 'bureau' ? (
-              <>
-                <div className="flex items-start justify-center gap-2">
-                  <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                  <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
-                </div>
-                <a
-                  href={OFFICE_MAPS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
-                >
-                  Itinéraire <ExternalLink className="h-3 w-3" />
-                </a>
-              </>
+              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
+                <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
+              </div>
             ) : (
-              <div className="flex items-start justify-center gap-2">
+              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
                 <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
                 <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
               </div>
             )}
           </div>
           <p className="mt-4 text-xs text-[#8a7f6e]">
-            Email de confirmation + invitation calendrier (.ics) envoyés. Rappels automatiques 24h, 3h, 1h et 30 min avant.
+            En attente de validation par notre équipe.
           </p>
         </div>
       </main>
