@@ -99,7 +99,7 @@ export default function MandatV3Suivi() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-foreground">Suivi de votre mandat</h1>
-          <p className="text-muted-foreground mt-2">ImmoRésidence Sàrl</p>
+          <p className="text-muted-foreground mt-2">Immo-rama.ch</p>
         </div>
 
         {/* Status card */}

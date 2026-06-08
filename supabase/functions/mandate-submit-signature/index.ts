@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
                 </p>
                 <p style="color: #666; font-size: 12px;">Ce lien est personnel et confidentiel. Ne le partagez pas.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-                <p style="color: #999; font-size: 11px;">ImmoRésidence Sàrl – Mandat de recherche immobilière</p>
+                <p style="color: #999; font-size: 11px;">Immo-rama.ch — Mandat de recherche immobilière</p>
               </div>
             `,
           }),
