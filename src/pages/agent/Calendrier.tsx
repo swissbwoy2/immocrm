@@ -295,7 +295,42 @@ export default function AgentCalendrier() {
         };
       });
 
-      setEvents(eventsWithSharedFlag);
+      // Phone/office appointments assigned to this agent
+      const { data: phoneApptsData, error: phoneErr } = await supabase
+        .from('lead_phone_appointments')
+        .select('id, lead_id, slot_start, slot_end, status, appointment_type, prospect_name, prospect_email, prospect_phone, assigned_agent_id, leads(prenom, nom, email, telephone)')
+        .eq('assigned_agent_id', user.id)
+        .in('status', ['confirme', 'en_attente'])
+        .order('slot_start', { ascending: true })
+        .limit(2000);
+      if (phoneErr) console.warn('[Calendrier] phone appts error:', phoneErr);
+
+      const phoneApptEvents: CalendarEvent[] = (phoneApptsData || []).map((appt: any) => {
+        const lead = appt.leads;
+        const prospectName = appt.prospect_name
+          || (lead ? `${lead.prenom || ''} ${lead.nom || ''}`.trim() : '')
+          || 'Prospect';
+        const phone = appt.prospect_phone || lead?.telephone || '';
+        const email = appt.prospect_email || lead?.email || '';
+        const isBureau = appt.appointment_type === 'bureau';
+        return {
+          id: `phone-rdv-${appt.id}`,
+          title: isBureau
+            ? `🏢 RDV bureau — ${prospectName}`
+            : `📞 RDV téléphonique — ${prospectName}`,
+          event_date: appt.slot_start,
+          end_date: appt.slot_end || undefined,
+          event_type: isBureau ? 'rendez_vous' : 'rdv_telephonique',
+          status: appt.status === 'confirme' ? 'planifie' : 'planifie',
+          description: isBureau
+            ? `Au bureau Crissier\nTéléphone : ${phone}\nEmail : ${email}`
+            : `Téléphone : ${phone}\nEmail : ${email}`,
+          all_day: false,
+        } as CalendarEvent;
+      });
+
+      setPhoneAppts((phoneApptsData as any) || []);
+      setEvents([...eventsWithSharedFlag, ...phoneApptEvents]);
       setVisites(visitesWithProfiles);
       setClients((clientsRes.data as any) || []);
     } catch (error: any) {
