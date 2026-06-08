@@ -22,7 +22,7 @@ export function StickyMobileCTA() {
       <Button asChild size="lg" className="w-full shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90 font-semibold">
         <Link to="/rendez-vous">
           <Calendar className="h-5 w-5 mr-2" />
-          Réserver mon RDV gratuit
+          Réserver mon RDV au bureau gratuitement
         </Link>
       </Button>
       <Link to="/nouveau-mandat" className="text-xs text-center text-muted-foreground hover:text-primary underline-offset-2 hover:underline">
