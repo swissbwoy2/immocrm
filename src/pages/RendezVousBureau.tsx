@@ -944,11 +944,19 @@ export default function RendezVousBureau() {
           </form>
         )}
 
-        {(!selected || !projet) && (
+        {!projet && (
           <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
-            {!projet
-              ? '👆 Sélectionnez d\'abord votre type de projet'
-              : '👆 Choisissez un créneau pour continuer'}
+            👆 Sélectionnez d'abord votre type de projet
+          </div>
+        )}
+        {projet && isLocation && !isQualificationValid && (
+          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
+            👆 Complétez la préqualification pour continuer
+          </div>
+        )}
+        {projet && (!isLocation || isQualificationValid) && !isNonQualifie && !selected && (
+          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
+            👆 Choisissez un créneau pour continuer
           </div>
         )}
       </section>
