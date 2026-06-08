@@ -212,6 +212,76 @@ export function LeadDetailSheet({
             </section>
           )}
 
+          {/* Fiche prospect — Préqualification automatique (location /rendez-vous) */}
+          {lead.statut_qualification && (
+            <section>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+                <ShieldCheck className="h-3 w-3" /> Fiche prospect
+              </h4>
+              <div
+                className={cn(
+                  "rounded-md border p-3 text-xs space-y-2",
+                  lead.statut_qualification === 'qualifie' && 'border-emerald-500/40 bg-emerald-500/5',
+                  lead.statut_qualification === 'a_verifier' && 'border-amber-500/40 bg-amber-500/5',
+                  lead.statut_qualification === 'a_reorienter' && 'border-sky-500/40 bg-sky-500/5',
+                  lead.statut_qualification === 'non_qualifie' && 'border-rose-500/40 bg-rose-500/5',
+                )}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    className={cn(
+                      'gap-1 border',
+                      lead.statut_qualification === 'qualifie' && 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40',
+                      lead.statut_qualification === 'a_verifier' && 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40',
+                      lead.statut_qualification === 'a_reorienter' && 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/40',
+                      lead.statut_qualification === 'non_qualifie' && 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40',
+                    )}
+                  >
+                    {lead.statut_qualification === 'qualifie' && 'Qualifié'}
+                    {lead.statut_qualification === 'a_verifier' && 'À vérifier'}
+                    {lead.statut_qualification === 'a_reorienter' && 'À réorienter'}
+                    {lead.statut_qualification === 'non_qualifie' && 'Non qualifié'}
+                  </Badge>
+                  {lead.ratio_revenu_loyer != null && (
+                    <Badge variant="outline" className="gap-1">
+                      Ratio {lead.ratio_revenu_loyer}x
+                    </Badge>
+                  )}
+                  {lead.risque_niveau && (
+                    <Badge variant="outline" className="gap-1">
+                      Risque {lead.risque_niveau}
+                    </Badge>
+                  )}
+                  {lead.requires_manual_validation && (
+                    <Badge variant="destructive" className="gap-1">
+                      Validation manuelle requise
+                    </Badge>
+                  )}
+                </div>
+                {lead.resume_profil && (
+                  <p className="pt-2 border-t border-border/40 text-foreground/90 leading-relaxed">
+                    {lead.resume_profil}
+                  </p>
+                )}
+                {lead.motif_qualification && (
+                  <p className="text-muted-foreground"><strong className="text-foreground">Motif :</strong> {lead.motif_qualification}</p>
+                )}
+                {lead.recommandation_agent && (
+                  <p className="text-muted-foreground"><strong className="text-foreground">Recommandation :</strong> {lead.recommandation_agent}</p>
+                )}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2 border-t border-border/40 text-[11px]">
+                  {lead.statut_suisse && <div><span className="text-muted-foreground">Statut CH :</span> {lead.statut_suisse}</div>}
+                  {lead.situation_pro && <div><span className="text-muted-foreground">Situation pro :</span> {lead.situation_pro}</div>}
+                  {lead.poursuites_statut && <div><span className="text-muted-foreground">Poursuites :</span> {lead.poursuites_statut}</div>}
+                  {lead.nb_pieces && <div><span className="text-muted-foreground">Logement :</span> {lead.nb_pieces}</div>}
+                  {lead.localite_recherche && <div><span className="text-muted-foreground">Localité :</span> {lead.localite_recherche}</div>}
+                  {lead.budget_max_chf != null && <div><span className="text-muted-foreground">Budget :</span> CHF {Number(lead.budget_max_chf).toLocaleString('fr-CH')}.-</div>}
+                  {lead.revenu_net_mensuel_chf != null && <div><span className="text-muted-foreground">Revenu net :</span> CHF {Number(lead.revenu_net_mensuel_chf).toLocaleString('fr-CH')}.-</div>}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Réponses du formulaire */}
           {lead.type_recherche !== "Vendre" && (
             <section>
