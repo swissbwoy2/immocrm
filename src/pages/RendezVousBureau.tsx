@@ -821,9 +821,10 @@ export default function RendezVousBureau() {
             })}
           </div>
         </div>
+        )}
 
-        {/* 3. Coordonnées + CTA */}
-        {selected && projet && (
+        {/* 4. Coordonnées + CTA */}
+        {projet && (isNonQualifie || selected) && (
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-4"
