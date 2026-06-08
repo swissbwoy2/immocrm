@@ -267,6 +267,17 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
+          {isPending && (
+            <Button
+              size="sm"
+              onClick={handleConfirm}
+              disabled={confirming}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {confirming ? 'Envoi…' : 'Confirmer et envoyer l\'invitation'}
+            </Button>
+          )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" disabled={cancelling}>
