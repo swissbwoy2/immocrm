@@ -24,11 +24,16 @@ export default function MentionsLegales() {
       <div className="container mx-auto max-w-3xl px-4 py-12">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           Retour à l'accueil
         </Link>
+        <div className="text-xs text-muted-foreground mb-6 flex gap-3">
+          <span className="text-primary font-semibold">FR</span>
+          <Link to="/en/legal-notice" className="hover:text-primary">EN</Link>
+          <Link to="/de/impressum" className="hover:text-primary">DE</Link>
+        </div>
 
         <h1 className="text-4xl font-bold mb-2">Mentions légales</h1>
         <p className="text-sm text-muted-foreground mb-10">

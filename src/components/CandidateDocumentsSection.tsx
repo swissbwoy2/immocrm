@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
 import { RequestDocumentsDialog } from './RequestDocumentsDialog';
 import { getStoragePath } from '@/lib/documentUtils';
+import { SensitiveDocConsentCheckbox } from '@/components/legal/SensitiveDocConsentCheckbox';
 interface Document {
   id: string;
   nom: string;
@@ -61,6 +62,7 @@ export function CandidateDocumentsSection({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>('autre');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadConsent, setUploadConsent] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
@@ -95,6 +97,12 @@ export function CandidateDocumentsSection({
 
   const handleUpload = async () => {
     if (!selectedFile) return;
+
+    const sensitiveTypes = ['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'contrat_travail'];
+    if (sensitiveTypes.includes(documentType) && !uploadConsent) {
+      toast.error('Merci de cocher la case de consentement avant l\'upload');
+      return;
+    }
 
     const maxSize = 1024 * 1024 * 1024; // 1GB
     if (selectedFile.size > maxSize) {
@@ -502,10 +510,24 @@ export function CandidateDocumentsSection({
               />
               <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG (max 1GB)</p>
             </div>
+            {['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'contrat_travail'].includes(documentType) && (
+              <SensitiveDocConsentCheckbox
+                checked={uploadConsent}
+                onCheckedChange={setUploadConsent}
+                id="candidate-doc-consent"
+              />
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>Annuler</Button>
-            <Button onClick={handleUpload} disabled={!selectedFile || isUploading}>
+            <Button
+              onClick={handleUpload}
+              disabled={
+                !selectedFile ||
+                isUploading ||
+                (['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'contrat_travail'].includes(documentType) && !uploadConsent)
+              }
+            >
               {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
               Ajouter
             </Button>

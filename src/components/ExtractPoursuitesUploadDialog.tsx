@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { SensitiveDocConsentCheckbox } from '@/components/legal/SensitiveDocConsentCheckbox';
 
 interface Props {
   open: boolean;
@@ -24,6 +25,7 @@ export function ExtractPoursuitesUploadDialog({ open, onOpenChange, clientId, on
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
+  const [consent, setConsent] = useState(false);
   const [aiResult, setAiResult] = useState<{ date_emission: string; confidence: number } | null>(null);
   const [manualDate, setManualDate] = useState<Date | undefined>();
   const [saving, setSaving] = useState(false);
@@ -31,6 +33,7 @@ export function ExtractPoursuitesUploadDialog({ open, onOpenChange, clientId, on
   const reset = () => {
     setStep('upload');
     setFile(null);
+    setConsent(false);
     setAiResult(null);
     setManualDate(undefined);
     setSaving(false);
@@ -55,6 +58,10 @@ export function ExtractPoursuitesUploadDialog({ open, onOpenChange, clientId, on
 
   const uploadAndAnalyze = async () => {
     if (!file || !user) return;
+    if (!consent) {
+      toast.error('Merci de cocher la case de consentement avant l\'upload');
+      return;
+    }
     setStep('analyzing');
     try {
       // 1. Upload
@@ -160,11 +167,13 @@ export function ExtractPoursuitesUploadDialog({ open, onOpenChange, clientId, on
               />
             </label>
 
+            <SensitiveDocConsentCheckbox checked={consent} onCheckedChange={setConsent} id="poursuites-consent" />
+
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setStep('manual')}>
                 Saisir manuellement
               </Button>
-              <Button className="flex-1" disabled={!file} onClick={uploadAndAnalyze}>
+              <Button className="flex-1" disabled={!file || !consent} onClick={uploadAndAnalyze}>
                 <Sparkles className="w-4 h-4 mr-1" />
                 Analyser avec l'IA
               </Button>

@@ -152,7 +152,7 @@ export function VendeurFooter() {
               <span className="hidden sm:inline">en Suisse</span>
             </p>
 
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               {[
                 { label: "Mentions légales", to: "/mentions-legales" },
                 { label: "Politique de confidentialité", to: "/politique-confidentialite" },
@@ -168,6 +168,13 @@ export function VendeurFooter() {
                   </span>
                 </a>
               ))}
+              <button
+                type="button"
+                onClick={() => import('@/components/CookieConsentBanner').then(m => m.openCookiePreferences())}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Gérer mes cookies
+              </button>
             </div>
           </div>
         </div>

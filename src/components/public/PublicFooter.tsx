@@ -112,13 +112,20 @@ export function PublicFooter() {
         {/* Bottom bar */}
         <div className="border-t border-sidebar-border mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-sidebar-foreground/60">
           <p>© {currentYear} Immo-Rama. Tous droits réservés.</p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Link to="/mentions-legales" className="hover:text-sidebar-foreground transition-colors">
               Mentions légales
             </Link>
             <Link to="/politique-confidentialite" className="hover:text-sidebar-foreground transition-colors">
               Politique de confidentialité
             </Link>
+            <button
+              type="button"
+              onClick={() => import('@/components/CookieConsentBanner').then(m => m.openCookiePreferences())}
+              className="hover:text-sidebar-foreground transition-colors"
+            >
+              Gérer mes cookies
+            </button>
           </div>
         </div>
       </div>

@@ -128,7 +128,7 @@ export function PublicSiteFooter() {
               <Heart className="h-3 w-3 text-primary hidden sm:inline-block" />
               <span className="hidden sm:inline">en Suisse 🇨🇭</span>
             </p>
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
               {[
                 { label: 'Mentions légales', to: '/mentions-legales' },
                 { label: 'Politique de confidentialité', to: '/politique-confidentialite' },
@@ -137,6 +137,13 @@ export function PublicSiteFooter() {
                   <span className="relative">{item.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
                 </a>
               ))}
+              <button
+                type="button"
+                onClick={() => import('@/components/CookieConsentBanner').then(m => m.openCookiePreferences())}
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Gérer mes cookies
+              </button>
             </div>
           </div>
         </div>
