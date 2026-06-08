@@ -176,14 +176,19 @@ export default function AdminCalendrier() {
           || 'Prospect';
         const phone = appt.prospect_phone || lead?.telephone || '';
         const email = appt.prospect_email || lead?.email || '';
+        const isBureau = appt.appointment_type === 'bureau';
         phoneApptEvents.push({
           id: `phone-rdv-${appt.id}`,
-          title: `📞 RDV téléphonique — ${prospectName}`,
+          title: isBureau
+            ? `🏢 RDV bureau — ${prospectName}`
+            : `📞 RDV téléphonique — ${prospectName}`,
           event_date: appt.slot_start,
           end_date: appt.slot_end || undefined,
-          event_type: 'rdv_telephonique',
+          event_type: isBureau ? 'rendez_vous' : 'rdv_telephonique',
           status: appt.status === 'confirme' ? 'effectue' : 'planifie',
-          description: `Téléphone : ${phone}\nEmail : ${email}`,
+          description: isBureau
+            ? `Au bureau Crissier\nTéléphone : ${phone}\nEmail : ${email}`
+            : `Téléphone : ${phone}\nEmail : ${email}`,
           all_day: false,
         });
       });
