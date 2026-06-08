@@ -91,11 +91,25 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-500/10">
-              <Phone className="h-5 w-5 text-indigo-500" />
+            <div className={`p-2 rounded-lg ${isBureau ? 'bg-emerald-500/10' : 'bg-indigo-500/10'}`}>
+              {isBureau ? (
+                <Building2 className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <Phone className="h-5 w-5 text-indigo-500" />
+              )}
             </div>
             <div className="flex-1">
-              <div>RDV téléphonique</div>
+              <div className="flex items-center gap-2">
+                <span>{isBureau ? 'RDV au bureau' : 'RDV téléphonique'}</span>
+                <Badge
+                  variant="outline"
+                  className={isBureau
+                    ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px]'
+                    : 'bg-indigo-500/10 text-indigo-700 border-indigo-500/30 text-[10px]'}
+                >
+                  {isBureau ? '🏢 Bureau' : '📞 Téléphone'}
+                </Badge>
+              </div>
               <div className="text-sm font-normal text-muted-foreground mt-0.5">
                 {prospectName}
               </div>
