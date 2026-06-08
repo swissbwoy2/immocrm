@@ -156,6 +156,47 @@ serve(async (req) => {
       }
     );
 
+    // --- AuthZ: allow if caller is admin, OR if invocation is tied to a
+    // pre-existing demandes_mandat row matching this email (public mandate flow).
+    // Otherwise reject — prevents anonymous email spam / account-creation abuse.
+    let isAuthorized = false;
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (authHeader) {
+      const token = authHeader.replace(/^Bearer\s+/i, '');
+      const userClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+      const { data: u } = await userClient.auth.getUser(token);
+      if (u?.user) {
+        const { data: roles } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', u.user.id);
+        const role = (roles ?? []).map((r: { role: string }) => r.role);
+        if (role.includes('admin') || role.includes('agent')) {
+          isAuthorized = true;
+        }
+      }
+    }
+    if (!isAuthorized && demandeMandat?.id && email) {
+      const { data: dm } = await supabaseAdmin
+        .from('demandes_mandat')
+        .select('id,email')
+        .eq('id', demandeMandat.id)
+        .maybeSingle();
+      if (dm && (dm.email || '').toLowerCase() === email.trim().toLowerCase()) {
+        isAuthorized = true;
+      }
+    }
+    if (!isAuthorized) {
+      return new Response(
+        JSON.stringify({ error: 'Non autorisé' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+
     // Check if user already exists in auth.users (case-insensitive)
     const normalizedEmail = (email || '').trim().toLowerCase();
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 10000 });
