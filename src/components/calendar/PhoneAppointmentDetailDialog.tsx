@@ -260,6 +260,53 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
             </div>
           </div>
 
+          {/* Assignation agent (admin) */}
+          {assignableAgents && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <UserCog className="h-3.5 w-3.5" /> Agent assigné
+              </Label>
+              <Select
+                value={appt.assigned_agent_id ?? 'none'}
+                disabled={assigning}
+                onValueChange={async (val) => {
+                  try {
+                    setAssigning(true);
+                    const newId = val === 'none' ? null : val;
+                    const { error } = await supabase
+                      .from('lead_phone_appointments')
+                      .update({ assigned_agent_id: newId })
+                      .eq('id', appt.id);
+                    if (error) throw error;
+                    toast.success(newId ? 'Agent assigné' : 'Assignation retirée');
+                    onCancelled?.();
+                  } catch (e: any) {
+                    toast.error("Erreur d'assignation : " + (e?.message || e));
+                  } finally {
+                    setAssigning(false);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Non assigné" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non assigné</SelectItem>
+                  {assignableAgents.map((a) => (
+                    <SelectItem key={a.user_id} value={a.user_id}>
+                      {a.profiles?.prenom || ''} {a.profiles?.nom || ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Le RDV apparaîtra dans le calendrier de l'agent sélectionné.
+              </p>
+            </div>
+          )}
+
+
+
           {/* Lead link */}
           {appt.lead_id && (
             <Button
