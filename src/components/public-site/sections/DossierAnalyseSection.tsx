@@ -225,7 +225,7 @@ export function DossierAnalyseSection() {
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
                   <p className="text-white text-lg font-semibold">1 mois de loyer brut</p>
-                  <p className="text-white/70 text-xs mt-1">Acompte 300.- remboursé 100% si échec après 3 mois</p>
+                  <p className="text-white/70 text-xs mt-1">Acompte 300.- remboursé à 100% si échec après 3 mois</p>
                 </div>
                 <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
