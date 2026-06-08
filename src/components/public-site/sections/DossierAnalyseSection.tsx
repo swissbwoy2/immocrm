@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Key, Home, Sparkles } from 'lucide-react';
 import { useSearchType } from '@/contexts/SearchTypeContext';
-import heroCoupleKeys from '@/assets/hero-couple-keys.jpg';
+
 
 export function DossierAnalyseSection() {
   const { setSearchType } = useSearchType();
