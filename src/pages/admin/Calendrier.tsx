@@ -168,6 +168,8 @@ export default function AdminCalendrier() {
 
       // Transform phone appointments into virtual calendar events
       const phoneApptEvents: CalendarEvent[] = [];
+      const agentsByUserId = new Map<string, any>();
+      (agentsRes.data || []).forEach((a: any) => agentsByUserId.set(a.user_id, a));
       (phoneApptsRes.data || []).forEach((appt: any) => {
         if (!appt?.slot_start) return;
         const lead = appt.leads;
@@ -177,21 +179,27 @@ export default function AdminCalendrier() {
         const phone = appt.prospect_phone || lead?.telephone || '';
         const email = appt.prospect_email || lead?.email || '';
         const isBureau = appt.appointment_type === 'bureau';
+        const assignedAgent = appt.assigned_agent_id ? agentsByUserId.get(appt.assigned_agent_id) : null;
+        const agentSuffix = assignedAgent?.profiles
+          ? ` · 👤 ${assignedAgent.profiles.prenom || ''} ${(assignedAgent.profiles.nom || '').charAt(0)}.`.trim()
+          : '';
         phoneApptEvents.push({
           id: `phone-rdv-${appt.id}`,
-          title: isBureau
+          title: (isBureau
             ? `🏢 RDV bureau — ${prospectName}`
-            : `📞 RDV téléphonique — ${prospectName}`,
+            : `📞 RDV téléphonique — ${prospectName}`) + agentSuffix,
           event_date: appt.slot_start,
           end_date: appt.slot_end || undefined,
           event_type: isBureau ? 'rendez_vous' : 'rdv_telephonique',
           status: appt.status === 'confirme' ? 'effectue' : 'planifie',
+          agent_id: assignedAgent?.id,
           description: isBureau
             ? `Au bureau Crissier\nTéléphone : ${phone}\nEmail : ${email}`
             : `Téléphone : ${phone}\nEmail : ${email}`,
           all_day: false,
         });
       });
+
 
       setEvents([...(eventsRes.data || []), ...candidatureEvents, ...phoneApptEvents]);
       setVisites(visitesRes.data || []);
