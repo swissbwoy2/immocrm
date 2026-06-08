@@ -3193,6 +3193,42 @@ export type Database = {
           },
         ]
       }
+      cookie_consent_logs: {
+        Row: {
+          anonymous_id: string | null
+          categories: Json
+          created_at: string
+          id: string
+          ip_hash: string | null
+          policy_version: string
+          source: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          anonymous_id?: string | null
+          categories: Json
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          policy_version: string
+          source?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          anonymous_id?: string | null
+          categories?: Json
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          policy_version?: string
+          source?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       coursiers: {
         Row: {
           created_at: string

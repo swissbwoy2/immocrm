@@ -1,108 +1,107 @@
-# Renforcement juridique nLPD + RGPD — v2 (verrouillée)
+# Conformité nLPD/RGPD — Lot 3 : bandeau cookies granulaire, consentement upload, i18n légal, audit textuel
 
 ## Objectif
-Aligner fortement la Politique de confidentialité et les Mentions légales sur la LPD révisée (01.09.2023) et le RGPD lorsque applicable. **Aucune mention "100 % conforme"** dans le contenu public.
-
-## Fichiers modifiés (2 — strictement)
-- `src/pages/legal/PolitiqueConfidentialite.tsx`
-- `src/pages/legal/MentionsLegales.tsx`
-
-Aucun autre fichier touché : pas de backend, route, footer, formulaire, dépendance.
+Étendre la conformité par 4 livrables indépendants :
+1. Nouveau bandeau cookies à 4 catégories + journalisation DB.
+2. Checkbox consentement explicite sur les formulaires d'upload de documents sensibles.
+3. Versions EN + DE des deux pages légales (mêmes clauses, mêmes numéros).
+4. Audit textuel global + corrections (adresses, Sàrl, reCAPTCHA, "100 % conforme").
 
 ---
 
-## 1. `PolitiqueConfidentialite.tsx`
+## 1. Bandeau cookies granulaire (4 catégories)
 
-`LAST_UPDATE = '8 juin 2026'`. Structure : **14 sections** (ajout §8 "Violation de données" + renumérotation).
+### Backend (migration)
+Nouvelle table `cookie_consent_logs` :
+- `id`, `user_id` (nullable, lié à auth.users si connecté), `anonymous_id` (uuid client localStorage), `ip_hash` (sha256), `user_agent`, `categories` (jsonb : `{necessary:true, analytics:bool, marketing:bool, personalization:bool}`), `policy_version` (text), `created_at`.
+- GRANT INSERT à `anon` + `authenticated` ; GRANT ALL à `service_role`.
+- RLS : INSERT ouvert (avec rate-limit côté Edge Function), SELECT réservé admin via `has_role`.
 
-### §2 — Catégories de données
-Remplacer "Données sensibles au sens art. 5 let. c nLPD" par :
-> **Documents confidentiels à haut niveau de protection** : fiches de salaire, extrait du registre des poursuites, pièce d'identité, permis de séjour, contrat de travail, coordonnées bancaires, informations relatives au ménage.
+Edge function `log-cookie-consent` (verify_jwt=false) : hash IP côté serveur, insère la ligne. Validation Zod.
 
-Paragraphe ajouté : *« Certains de ces documents peuvent contenir ou révéler des données sensibles au sens de l'art. 5 let. c nLPD… niveau de sécurité renforcé. »*
+### Frontend
+Remplacer `src/components/CookieConsentBanner.tsx` par une version 2 niveaux :
+- **Bannière** : texte court + 3 boutons équivalents visuellement : "Tout refuser", "Personnaliser", "Tout accepter".
+- **Modal "Personnaliser"** (nouveau `CookiePreferencesModal.tsx`) : 4 switches.
+  - Nécessaires (lock ON, désactivé)
+  - Analytiques
+  - Marketing
+  - Personnalisation
+- À la confirmation : localStorage (`cookie-consent-v2` = objet JSON + version + date), appel `log-cookie-consent`, déclenche `grantTikTokConsent` / `grantGoogleAdsConsent` uniquement si la catégorie correspondante est ON (Analytics → granted ; Marketing → granted ; sinon denied).
+- Lien permanent **"Gérer mes cookies"** dans le footer (`PublicFooter`, `LandingFooter`, `VendeurFooter`, `PublicSiteFooter`) ouvrant le modal.
+- Refus par défaut maintenu (Consent Mode v2).
 
-### §3 — Tableau finalités
-3ᵉ colonne renommée **"Justification / base RGPD si applicable"**. Reformulation des 5 lignes. **Suppression** de "condition légale à la conclusion d'un bail" (ID/permis). Paragraphe final adouci.
-
-### §4 — Destinataires + tableau sous-traitants
-Tableau à 7 lignes (Supabase, Resend, AbaNinja, Meta, Google, TikTok, WhatsApp Business) — colonnes Prestataire / Fonction / Pays / Données. Dans `overflow-x-auto`.
-
-### §5 — Transferts internationaux
-Mention explicite **Swiss-U.S. Data Privacy Framework** + EU-U.S. DPF si RGPD + CCT PFPDT à défaut + clause pays sans niveau adéquat.
-
-### §6 — Conservation
-Reformulation documents justificatifs (énumération + clauses légales/litige/preuve/demande), sauvegardes techniques, principe de minimisation.
-
-### §7 — Sécurité
-Base art. 8 nLPD + accès par rôle journalisé, transmission régies via lien sécurisé, non-transmission WhatsApp/messagerie non sécurisée, "aucune mesure ne garantit un risque zéro".
-
-### Nouveau §8 — Violation de données
-Art. 24 nLPD : notification PFPDT si risque élevé, information personnes concernées si nécessaire, documentation interne.
-
-### §9 — Vos droits
-Liste droits + paragraphe RGPD UE (accès, rectification, effacement, opposition, limitation, portabilité, décision automatisée).
-
-### §10 — AI-Relocation
-*« aide à l'organisation, au matching, au pré-tri interne… ne refuse pas automatiquement, ne décide pas seul, ne remplace pas l'analyse humaine »* + droit revue manuelle.
-
-### §11 — Cookies
-Consent Mode v2, refus par défaut, "Refuser tout" aussi visible qu'"Accepter tout", annonce future Politique cookies détaillée, **mention explicite "le site n'utilise pas Google reCAPTCHA ni Typo3"** (seule occurrence autorisée de ces termes).
-
-### §12 — Profilage
-Statuts (recherche en cours, dossier incomplet, candidature soumise, mandat actif, clôturé) + "aucun effet juridique, n'exclut pas automatiquement".
-
-### §13 — PFPDT
-Inchangé.
-
-### §14 — Modifications
-+ information possible par email/notification/affichage si changement important.
+### Mise à jour Politique §11
+Mentionner les 4 catégories et le lien "Gérer mes cookies".
 
 ---
 
-## 2. `MentionsLegales.tsx`
-Adresse unique :
-- Immo-rama.ch — entreprise individuelle
-- Christ Ramazani
-- Chemin de l'Esparcette 5, 1023 Crissier, Suisse
-- IDE : CHE-442.303.796
-- info@immo-rama.ch
+## 2. Consentement upload documents sensibles
 
-Aucune occurrence "Allée des Cèdres / 1022 Chavannes-près-Renens".
+### Composant partagé
+Nouveau `src/components/legal/SensitiveDocConsentCheckbox.tsx` :
+- Checkbox shadcn obligatoire (validation Zod côté soumission).
+- Texte : *« J'accepte que les documents transmis (fiche de salaire, extrait de poursuites, pièce d'identité, permis de séjour, contrat de travail) soient traités par Immo-rama.ch (Christ Ramazani) pour la constitution de mon dossier locataire et leur transmission aux régies, conformément à la [politique de confidentialité](/politique-confidentialite) — base : exécution du mandat (art. 31 al. 2 let. a nLPD) + consentement explicite (art. 6 al. 7 nLPD). »*
+- Props : `value`, `onChange`, `required`, `name`.
+- État du consentement transmis dans le `metadata` lors de l'upload Storage + persistance dans `documents.metadata` (champ jsonb existant) avec `{ consent: true, consent_at, policy_version }`.
+
+### Intégration (3 lots)
+- **Espace client** : `CandidateDocumentsSection`, `DocumentUpdateReminder`, `ExtractPoursuitesUploadDialog`, `RequestDocumentsDialog` (modal upload).
+- **Formulaires publics mandat** : `RelouerMonAppartement` (formulaire), `pages/staff/MandatPrefill`, `NouveauMandat` (chercher), `MandatV3` parcours public.
+- **Tous formulaires publics avec upload** : scan complet pour repérer les inputs `type="file"` côté public et brancher la checkbox.
+
+### Stockage
+Pas de nouvelle table. Le consentement est stocké :
+- dans le champ `metadata` jsonb de la table `documents` lors de l'INSERT (pas de migration nécessaire) ;
+- dans `cookie_consent_logs` n'est PAS utilisé pour les uploads (table séparée si demandé en v2).
 
 ---
 
-## Contraintes techniques
-- JSX statique pur, design system, tokens sémantiques.
-- Tableaux dans `overflow-x-auto` pour mobile.
-- Pas de composant nouveau (HTML standard).
-- Pas d'extrapolation, pas d'ajout de contenu juridique non demandé.
+## 3. Traductions EN + DE des pages légales
+
+Créer :
+- `src/pages/legal/MentionsLegales.en.tsx`, `.de.tsx`
+- `src/pages/legal/PolitiqueConfidentialite.en.tsx`, `.de.tsx`
+
+Traduction strictement clause à clause, **mêmes numéros 1→14**, mêmes tableaux, mêmes mentions Swiss-U.S. DPF / art. nLPD / clause reCAPTCHA-Typo3.
+
+Routes :
+- `/en/legal-notice`, `/en/privacy-policy`
+- `/de/impressum`, `/de/datenschutz`
+
+Sélecteur de langue (FR / EN / DE) en haut de chaque page légale, conservant la version cible.
+
+Le footer reste en FR ; ajout discret de 3 chips langue à côté des liens légaux.
 
 ---
 
-## Vérification finale (checklist obligatoire avant livraison)
-1. `PolitiqueConfidentialite.tsx` contient 14 sections numérotées 1→14.
-2. `LAST_UPDATE` = `8 juin 2026`.
-3. L'expression "Données sensibles au sens de l'art. 5 let. c nLPD" n'est plus utilisée comme catégorie générale.
-4. La catégorie utilisée est bien "Documents confidentiels à haut niveau de protection".
-5. La 3ᵉ colonne du tableau §3 est "Justification / base RGPD si applicable".
-6. La phrase "condition légale à la conclusion d'un bail" est supprimée.
-7. §4 contient le tableau sous-traitants avec 7 lignes.
-8. §5 mentionne le Swiss-U.S. Data Privacy Framework.
-9. §8 "Violation de données" est présent.
-10. Anciennes sections correctement renumérotées.
-11. §11 mentionne que le site n'utilise pas reCAPTCHA ni Typo3.
-12. "reCAPTCHA" et "Typo3" n'apparaissent nulle part ailleurs.
-13. `MentionsLegales.tsx` contient uniquement l'adresse Chemin de l'Esparcette 5, 1023 Crissier.
-14. Aucune mention "Allée des Cèdres / Chavannes" résiduelle.
-15. Aucun autre fichier modifié.
-16. Aucun changement backend, route, footer, formulaire, dépendance.
-17. Tableaux dans `overflow-x-auto`.
-18. Aucune promesse "100 % conforme" dans le texte public.
+## 4. Audit textuel global
 
-## Résumé final attendu après livraison
-- 2 fichiers modifiés ;
-- principales sections renforcées (§2, §3, §4, §5, §6, §7, §8 nouveau, §9, §10, §11) ;
-- confirmation qu'aucun autre fichier n'a été touché.
+Corrections identifiées par scan :
 
-## Hors périmètre (itération suivante)
-Politique cookies détaillée, registre des traitements, AIPD, DPA sous-traitants, procédure suppression interne, audit emails/factures/legacy, vérification certification DPF cas par cas.
+| Fichier | Texte | Action |
+|---|---|---|
+| `supabase/functions/mandate-submit-signature/index.ts:182` | `ImmoRésidence Sàrl – Mandat de recherche immobilière` | → `Immo-rama.ch — Mandat de recherche immobilière` |
+| `src/pages/MandatV3Suivi.tsx:102` | `ImmoRésidence Sàrl` | → `Immo-rama.ch` |
+
+Vérifications supplémentaires (déjà clean au scan, à confirmer par grep final) :
+- `Allée des Cèdres / Chavannes-près-Renens` : 0 occurrence.
+- `reCAPTCHA / Typo3` : uniquement dans §11 (clause de non-utilisation).
+- `100 % conforme / garanti conforme` : 0 occurrence dans le contenu public.
+
+Re-scan final dans `src/`, `supabase/functions/`, `index.html`, templates email.
+
+---
+
+## Détails techniques
+- Aucune dépendance nouvelle (shadcn Checkbox/Switch/Dialog déjà présents).
+- Edge function `log-cookie-consent` : `verify_jwt=false`, CORS standard, hash IP côté serveur.
+- Versioning policy : constante `POLICY_VERSION = '2026-06-08'` partagée (`src/lib/legal-version.ts`).
+- Pas de modification des autres flux existants (mandat, billing, etc.).
+- Tests visuels : bannière + modal sur mobile (safe-area), checkbox sur chaque formulaire ciblé.
+
+## Hors périmètre
+- Page Politique cookies "tableau cookie par cookie" : la modal granulaire couvre l'essentiel ; un tableau exhaustif reste optionnel pour une itération suivante.
+- Registre des traitements, AIPD, DPA sous-traitants (organisationnel).
+- Refonte du Consent Mode TikTok côté serveur (déjà géré client).
+- Vérification du certificat DPF de chaque sous-traitant cas par cas.
