@@ -242,14 +242,19 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
           <AddToCalendarButton
             event={{
               uid: `phone-appt-${appt.id}@logisorama.ch`,
-              title: `RDV téléphonique — ${prospectName}`,
+              title: isBureau
+                ? `RDV bureau — ${prospectName}`
+                : `RDV téléphonique — ${prospectName}`,
               description: [
-                `Appel à passer au ${phone || '—'}`,
+                isBureau
+                  ? `Rendez-vous au bureau avec ${prospectName}`
+                  : `Appel à passer au ${phone || '—'}`,
+                phone ? `Téléphone : ${phone}` : null,
                 email ? `Email : ${email}` : null,
               ]
                 .filter(Boolean)
                 .join('\n'),
-              location: phone ? `Téléphone : ${phone}` : '',
+              location: isBureau ? OFFICE_ADDRESS : (phone ? `Téléphone : ${phone}` : ''),
               startDate: start,
               endDate: end,
             }}
