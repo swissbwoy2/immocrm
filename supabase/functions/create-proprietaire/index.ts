@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireAuth } from '../_shared/require-admin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +19,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req, { requireAdmin: true });
+  if (!auth.ok) return auth.response!;
+  const supabaseAdmin = auth.admin!;
+
   try {
     const { email, password, prenom, nom, telephone } = await req.json() as CreateProprietaireRequest;
 
@@ -30,18 +34,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('Creating proprietaire account for:', email);
-
-    // Create Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
 
     // Step 1: Create user in auth.users with password
     const { data: userData, error: createUserError } = await supabaseAdmin.auth.admin.createUser({

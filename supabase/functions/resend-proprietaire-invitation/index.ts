@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { requireAuth } from "../_shared/require-admin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +17,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req, { requireAdmin: true });
+  if (!auth.ok) return auth.response!;
+  const supabaseAdmin = auth.admin!;
+
   try {
     const { userId, email }: ResendInvitationRequest = await req.json();
 
@@ -25,18 +29,6 @@ serve(async (req) => {
     if (!userId || !email) {
       throw new Error('userId et email sont requis');
     }
-
-    // Initialize Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
 
     // Send password reset email
     const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
