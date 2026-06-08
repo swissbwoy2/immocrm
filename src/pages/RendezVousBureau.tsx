@@ -295,18 +295,27 @@ export default function RendezVousBureau() {
             <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
           </p>
           <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2">
-            <div className="flex items-start justify-center gap-2">
-              <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-              <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
-            </div>
-            <a
-              href={OFFICE_MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
-            >
-              Itinéraire <ExternalLink className="h-3 w-3" />
-            </a>
+            {appointmentType === 'bureau' ? (
+              <>
+                <div className="flex items-start justify-center gap-2">
+                  <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                  <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
+                </div>
+                <a
+                  href={OFFICE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
+                >
+                  Itinéraire <ExternalLink className="h-3 w-3" />
+                </a>
+              </>
+            ) : (
+              <div className="flex items-start justify-center gap-2">
+                <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
+              </div>
+            )}
           </div>
           <p className="mt-4 text-xs text-[#8a7f6e]">
             Email de confirmation + invitation calendrier (.ics) envoyés. Rappels automatiques 24h, 3h, 1h et 30 min avant.
