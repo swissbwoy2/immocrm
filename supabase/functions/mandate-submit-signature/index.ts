@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
 
     // Send confirmation email via Resend
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@immoresidence.ch";
+    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@notify.logisorama.ch";
 
     if (resendApiKey) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

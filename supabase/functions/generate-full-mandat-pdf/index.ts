@@ -697,7 +697,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('11.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "La juridiction competente est Berne (Suisse). Sauf indication contraire contenue dans le present contrat, c'est le Code des obligations suisse (CO) qui fait foi.",
+        "Le present mandat est soumis au droit suisse. Sous reserve des fors imperatifs prevus par la loi, les tribunaux ordinaires du canton de Vaud sont competents, le for etant fixe a Lausanne. Sauf indication contraire contenue dans le present contrat, c'est le Code des obligations suisse (CO) qui fait foi.",
         margin + 25, maxTextWidth - 25, 9
       );
       yPosition -= 15;
