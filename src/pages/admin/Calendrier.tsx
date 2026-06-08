@@ -94,7 +94,7 @@ export default function AdminCalendrier() {
             .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
         ),
         supabase.from('lead_phone_appointments')
-          .select('id, lead_id, slot_start, slot_end, status, appointment_type, prospect_name, prospect_email, prospect_phone, leads(prenom, nom, email, telephone)')
+          .select('id, lead_id, slot_start, slot_end, status, appointment_type, prospect_name, prospect_email, prospect_phone, assigned_agent_id, leads(prenom, nom, email, telephone)')
           .in('status', ['confirme', 'en_attente'])
           .order('slot_start', { ascending: true })
           .limit(5000),
