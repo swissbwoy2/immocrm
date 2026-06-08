@@ -212,10 +212,10 @@ export function DossierAnalyseSection() {
               {/* Headline */}
               <div className="space-y-4">
                 <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-[hsl(40_30%_96%)] leading-[1.1]">
-                  Nous aidons les <span className="text-primary italic">profils solvables</span> à trouver leur futur appartement en Suisse romande
+                  Nous aidons <span className="text-primary italic">nos clients</span> à trouver rapidement leur futur appartement en Suisse romande
                 </h1>
                 <p className="text-white/70 text-base md:text-lg max-w-xl leading-relaxed">
-                  L'expertise Logisorama pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.
+                  L'expertise Immo-rama.ch pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.
                 </p>
               </div>
 
