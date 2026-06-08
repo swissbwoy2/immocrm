@@ -1,105 +1,63 @@
-# Correction P0 — Mandat de recherche (Logisorama / Immo-rama.ch)
+# Vérifications finales P0 — Mandat Logisorama
 
-Périmètre strictement P0. Les clauses sensibles (acompte non-remboursable, non-contournement 12 mois, exclusivité, résiliation asymétrique, art. 404 CO) sont volontairement **exclues** et listées pour validation juriste en P1.
+Aucune nouvelle modification structurelle n'est nécessaire : les corrections P0 précédentes sont en place. Ce plan documente les vérifications demandées et un seul ajustement de formulation interne.
 
-## Principes
+## 1. État vérifié côté base de données
 
-- **Aucune réécriture des mandats signés** : la v3.1 (id `2c3a6689-…`) est liée à 7 mandats existants → on ne la touche pas, on crée une nouvelle version active.
-- **Aucune migration SQL historique modifiée**.
-- **Aucune modification** du schéma `mandates` ou des colonnes existantes dans ce P0.
-- Formulations prudentes — jamais « 100 % conforme ».
-
-## 1. Nouvelle version contractuelle `v3.2_2026-06-08`
-
-Insertion dans `mandate_contract_texts` (data only, via insert tool) :
-- `version = 'v3.2_2026-06-08'`, `is_active = true`
-- Bascule de la v3.1 à `is_active = false` (les 7 mandats existants restent liés via `contract_version_id`, ils ne sont pas réécrits).
-
-Contenu nouveau contrat (extraits clés modifiés ; le reste de la trame v3.1 conservé tel quel pour les clauses non-P0) :
-
-### Article 1 — Parties et objet (réécrit)
-Remplace toutes mentions « ImmoRésidence Sàrl » / « Sàrl » par :
-> Le Client confie à **Immo-rama.ch**, entreprise individuelle exploitée par **M. Christ Ramazani**, siège **Chemin de l'Esparcette 5, 1023 Crissier (VD), Suisse**, IDE **CHE-442.303.796**, tél. **021 625 95 05**, email **info@immo-rama.ch** (ci-après « l'Agence »), un mandat de recherche immobilière selon les critères définis. L'Agence est tenue à une obligation de moyens et non de résultat.
-
-### Article 9 — Protection des données (renforcé LPD)
-Version complète conforme à l'audit : finalités explicites, catégories de données (incl. documents à haut niveau de protection : fiches salaire, extrait poursuites, permis, garants/co-candidats), destinataires (régies, propriétaires, sous-traitants techniques), durée de conservation, droits LPD (accès, rectification, suppression, opposition, retrait), contact `info@immo-rama.ch`, renvoi `/politique-confidentialite`, mention WhatsApp, consentement pour tiers.
-
-### Article 12 — Droit applicable et for (corrigé)
-> Droit suisse. Sous réserve des fors impératifs, **for à Lausanne (canton de Vaud)**, recours au Tribunal fédéral réservé.
-
-### Clauses non touchées en P0
-Art. 2 (exclusivité), 3 (durée/reconduction), 4 (commission), 5 (acompte CHF 300), 6 (résiliation), 11 (non-contournement) → **conservées texto** de v3.1, flaggées pour P1.
-
-## 2. Fallback email — edge function active
-
-`supabase/functions/mandate-submit-signature/index.ts` ligne 149 :
 ```
-"noreply@immoresidence.ch"  →  "noreply@notify.logisorama.ch"
+version           is_active   created_at
+v3.2_2026-06-08   true        2026-06-08
+v3.1              false       2026-03-06
 ```
-(domaine d'envoi déjà actif selon mémoire projet)
 
-## 3. For legacy — parcours `mandat/`
+Contenu de la version active :
+- `ImmoRésidence` / `Immo-Rama Sàrl` / `ImmoRésidence Sàrl` → **absents**
+- `Berne` comme for → **absent**
+- IDE `CHE-442.303.796` → **présent**
+- Adresse Crissier → **présente**
 
-`src/components/mandat/CGVContent.tsx` ligne 180 :
-> « La juridiction compétente est Berne (Suisse)… »
-→ « Le présent mandat est soumis au droit suisse. Sous réserve des fors impératifs, les tribunaux ordinaires du canton de Vaud sont compétents, for à Lausanne. »
+7 mandats déjà signés restent liés à `v3.1` (intacts, non réécrits).
 
-## 4. Edge functions PDF — for Berne hardcodé
+## 2. État vérifié côté code actif (parcours mandat / emails / PDF)
 
-Deux fichiers contiennent encore « juridiction competente est Berne » dans le PDF généré :
-- `supabase/functions/generate-full-mandat-pdf/index.ts:700`
-- `supabase/functions/send-mandat-pdf/index.ts:648`
+- `noreply@immoresidence.ch` → **0 occurrence** dans `src/` et `supabase/functions/`
+- `Berne` comme for / juridiction → **0 occurrence** dans `supabase/functions/`
+- Mentions de `Berne` restantes dans `src/` sont **légitimes** et conservées :
+  - `PolitiqueConfidentialite.tsx` → adresse officielle du PFPDT (Feldeggweg 1, 3003 Berne)
+  - `swissRealEstateTax.ts`, `SwissGlobe3D.tsx`, listes cantons (`AddProprietaireDialog`, `AddImmeubleDialog`, `StepLocalisation`) → canton de Berne dans une liste de cantons suisses
+  - `swissRomandeLocations.ts` → commune de Bernex (GE)
 
-→ Remplacer par la formulation Vaud/Lausanne.
+## 3. Domaine d'envoi email — confirmé
 
-## 5. Bouton final — transparence acompte
+`notify.logisorama.ch` est **vérifié en production** (statut ✅ Verified, NS délégués à Lovable). Le fallback `noreply@notify.logisorama.ch` déjà en place dans `mandate-submit-signature/index.ts` est donc valide. **Aucun changement requis.**
 
-`MandatV3Step7Signature` (parcours v3) : le CTA de soumission devient :
-> **« Signer le mandat et confirmer l'acompte de CHF 300.– »**
+## 4. Ajustement unique de formulation interne — `.lovable/plan.md`
 
-Modification texte uniquement, pas de logique ni de design.
+Le plan interne mentionne actuellement « consentement implicite ». Cette formulation est juridiquement imprudente.
 
-## 6. Bouton « Tout accepter » — P0 safe
+Remplacer dans la section 7 du fichier `.lovable/plan.md` :
 
-Dans `MandatV3Step6Legal.tsx`, renommer le bouton **« Tout accepter »** → **« J'ai lu et j'accepte toutes les clauses »**. Conservé pour ne pas casser l'UX ; pas d'ajout de logique de scroll-tracking (hors périmètre P0).
+> « le consentement implicite est tracé par l'acceptation globale + signature_hash »
 
-## 7. Consentements séparés — **NON appliqués en P0**
+par :
 
-L'ajout de checkboxes séparées (Politique de confidentialité, transmission régies, WhatsApp opt-in, marketing opt-in, confirmation tiers informés) nécessite :
-- nouvelles colonnes booléennes sur `mandates` + `MandatV3FormData`,
-- mise à jour edge functions `mandate-update-draft` et `mandate-submit-signature`,
-- nouvelle entrée registry `LEGAL_CHECKBOXES`.
+> « En P0, l'acceptation globale du mandat informe le client des traitements nécessaires à l'exécution du mandat et trace la version acceptée via `signature_hash`, `contract_version_id`, `signed_at`, IP et user-agent lorsque disponibles. Les consentements optionnels ou séparés (WhatsApp non indispensable, marketing, transmission tiers / co-candidats) restent à traiter dans une migration P1 dédiée. »
 
-→ **Signalé** comme migration séparée à valider. Pas exécuté dans ce P0 pour respecter la règle « ne pas casser le schéma ».
+Aucun autre fichier n'est modifié. Aucune migration SQL. Aucune logique d'envoi email touchée. Aucun mandat signé impacté.
 
-En revanche, l'article 9 LPD du contrat v3.2 documente déjà explicitement ces traitements et le consentement implicite est tracé par l'acceptation globale + `signature_hash`.
+## 5. Résumé de conformité P0 (à confirmer après application)
 
-## 8. Hors périmètre P0 (P1 — juriste requis)
+- v3.1 intacte, conservée pour les 7 mandats déjà signés
+- v3.1 désactivée uniquement pour les nouvelles signatures
+- v3.2_2026-06-08 active pour les nouveaux mandats
+- Identité complète Immo-rama.ch (IDE + Crissier + contacts) présente
+- Article 9 LPD renforcé (finalités, catégories, durée, droits, contact, PFPDT)
+- For Vaud / Lausanne utilisé partout (contrat actif, CGV legacy, PDFs, edge functions)
+- Fallback email pointe vers `notify.logisorama.ch` (domaine vérifié)
+- Consentements séparés explicitement listés P1 avec migration schéma requise
+- Aucune migration SQL historique modifiée
+- Aucune réécriture des clauses sensibles (acompte, non-contournement, exclusivité, résiliation, art. 404 CO) — réservées P1 avec validation juriste
 
-- Acompte CHF 300 non-remboursable (LCD / équilibre contractuel)
-- Non-contournement 12 mois (durée à challenger)
-- Exclusivité + reconduction tacite (art. 404 CO impératif)
-- Résiliation asymétrique
-- Refonte des consentements séparés (schéma DB)
+## Hors périmètre
 
-## Fichiers touchés
-
-| Fichier | Type |
-|---|---|
-| `mandate_contract_texts` (DB row v3.2) | INSERT + UPDATE v3.1.is_active=false |
-| `supabase/functions/mandate-submit-signature/index.ts` | edit fallback email |
-| `supabase/functions/generate-full-mandat-pdf/index.ts` | edit for Berne→Vaud |
-| `supabase/functions/send-mandat-pdf/index.ts` | edit for Berne→Vaud |
-| `src/components/mandat/CGVContent.tsx` | edit for legacy |
-| `src/components/mandat-v3/MandatV3Step6Legal.tsx` | renommage bouton |
-| `src/components/mandat-v3/MandatV3Step7Signature.tsx` | texte CTA acompte 300.– |
-
-## Vérifications finales
-
-1. v3.1 conservée, `is_active=false`, 7 mandats signés inchangés.
-2. v3.2 active, contient identité complète Immo-rama.ch + IDE + adresse Crissier.
-3. Plus aucune occurrence active de « ImmoRésidence », « Sàrl », `noreply@immoresidence.ch`, « Berne » comme for.
-4. Edge functions PDF régénèrent désormais le for Vaud.
-5. CTA mentionne explicitement CHF 300.–.
-6. Aucune migration de schéma exécutée.
-7. Aucun ancien mandat signé modifié (vérif `SELECT count` inchangé).
+Tout reste hors P0 jusqu'à validation juriste : refonte clauses sensibles, ajout colonnes booléennes consentements séparés, mise à jour `mandate-update-draft` / `mandate-submit-signature` pour granularité, nouvelles entrées `LEGAL_CHECKBOXES`.
