@@ -59,7 +59,6 @@ export default function HomePage() {
       </WebGLErrorBoundary>
 
       {/* Eager sections */}
-      <DossierAnalyseSection />
       <HeroSection />
 
       {/* Lazy sections */}
@@ -81,6 +80,7 @@ export default function HomePage() {
         <DifferentiatorSection />
         <ServicesFullSection />
         <BudgetCalcSection />
+        <DossierAnalyseSection />
         <GuaranteeSection />
         <CoverageSection />
         <StatsSection />
