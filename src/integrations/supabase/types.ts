@@ -5256,6 +5256,7 @@ export type Database = {
       lead_phone_appointments: {
         Row: {
           appointment_type: string
+          assigned_agent_id: string | null
           confirmed_at: string | null
           confirmed_by: string | null
           created_at: string
@@ -5282,6 +5283,7 @@ export type Database = {
         }
         Insert: {
           appointment_type?: string
+          assigned_agent_id?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
@@ -5308,6 +5310,7 @@ export type Database = {
         }
         Update: {
           appointment_type?: string
+          assigned_agent_id?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
           created_at?: string
