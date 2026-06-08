@@ -2,26 +2,46 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
-const faqs = [
+export const HOME_FAQ: { q: string; a: string }[] = [
   {
-    q: "Que se passe-t-il si vous ne trouvez rien en 90 jours ?",
-    a: "Vous êtes remboursé intégralement. Notre garantie est claire : si nous ne trouvons pas de logement correspondant à vos critères dans les 90 jours, votre acompte de 300 CHF vous est restitué.",
+    q: "Qu'est-ce qu'une agence de relocation ?",
+    a: "Une agence de relocation accompagne les personnes solvables dans leur recherche de logement, de la définition des critères jusqu'à la signature du bail. Chez Logisorama, votre agent dédié contacte les régies, active son réseau professionnel, sélectionne les biens pertinents et vous aide à présenter un dossier locataire solide. L'objectif est de gagner du temps et de maximiser vos chances d'obtenir un appartement à Lausanne, Genève ou ailleurs en Suisse romande.",
   },
   {
-    q: "Combien coûte le service ?",
-    a: "Un acompte de 300 CHF à l'inscription (déduit de la commission finale), puis une commission d'un mois de loyer uniquement en cas de succès. Aucun frais caché.",
+    q: "Comment fonctionne une recherche d'appartement avec Logisorama ?",
+    a: "Tout commence par une analyse gratuite de votre dossier à notre bureau de Crissier. Nous définissons ensemble votre projet, vos critères et votre budget. Votre agent personnel scrute ensuite les annonces, contacte les régies, organise les visites et dépose vos candidatures. Vous suivez chaque étape dans votre espace client, avec un point régulier sur les réponses obtenues et les pistes en cours.",
   },
   {
-    q: "Comment fonctionne la recherche ?",
-    a: "Votre agent dédié contacte les régies, scrute les annonces en ligne et active son réseau professionnel chaque jour. Vous recevez uniquement les biens correspondant à vos critères, avec un suivi en temps réel.",
+    q: "Logisorama est-il un chasseur d'appartement à Lausanne ?",
+    a: "Oui. Nous intervenons comme chasseur d'appartement à Lausanne, Crissier, Renens, Prilly, Ecublens, Pully, Lutry et plus largement sur l'Arc lémanique. Notre rôle est d'agir comme votre agent immobilier personnel : trouver les biens correspondant à vos critères, y compris ceux non publiés en ligne, et vous accompagner jusqu'à l'obtention du logement. Le service s'adresse aux locataires solvables qui souhaitent gagner du temps et de l'efficacité.",
   },
   {
-    q: "Puis-je annuler à tout moment ?",
-    a: "Le mandat est de 90 jours. Vous pouvez interrompre la recherche à tout moment. Si aucun bien n'a été trouvé à l'issue des 90 jours, vous êtes remboursé.",
+    q: "Dans quelles villes Logisorama accompagne-t-il ses clients ?",
+    a: "Nous couvrons toute la Suisse romande : Lausanne, Genève, Crissier, Renens, Prilly, Ecublens, Bussigny, Morges, Nyon, Rolle, Gland, Vevey, Montreux, Pully, Lutry, ainsi que Fribourg, Bulle, Neuchâtel, Sion, Martigny et les communes voisines. Notre réseau est particulièrement dense dans l'Ouest lausannois, sur la Riviera, sur La Côte et autour de Genève. Pour les zones étudiantes, nous accompagnons aussi les recherches autour de l'UNIL et de l'EPFL.",
   },
   {
-    q: "Est-ce que le service fonctionne dans toute la Suisse ?",
-    a: "Nous couvrons toute la Suisse romande : Genève, Vaud, Fribourg, Neuchâtel, Valais et Jura. Notre réseau de régies et de contacts est particulièrement dense à Genève et Lausanne.",
+    q: "Pouvez-vous aider pour un appartement à louer ou une maison à louer ?",
+    a: "Oui. Nous accompagnons la recherche d'un appartement à louer, d'une maison à louer ou d'un logement plus spécifique (loft, attique, colocation, logement meublé). Selon votre projet, nous activons les bons canaux : régies partenaires, propriétaires privés, annonces en ligne et réseau interne. Vous recevez uniquement les biens qui correspondent réellement à votre cahier des charges, avec un suivi clair des candidatures envoyées.",
+  },
+  {
+    q: "Logisorama accompagne-t-il les étudiants UNIL et EPFL ?",
+    a: "Oui. Nous aidons régulièrement des étudiants UNIL, EPFL ou d'autres hautes écoles à trouver un logement à Lausanne, Ecublens, Chavannes-près-Renens, Saint-Sulpice ou Renens. Nous tenons compte du budget étudiant, du calendrier académique et de la nécessité d'un dossier rassurant (garant, attestation, caution). L'objectif est d'éviter les pièges classiques et de sécuriser un logement avant la rentrée.",
+  },
+  {
+    q: "Proposez-vous un service de relocation pour expatriés ?",
+    a: "Oui. Pour les expatriés et cadres en mobilité professionnelle, nous proposons un accompagnement complet : recherche de logement à Lausanne ou Genève, visites (sur place ou à distance), constitution du dossier locataire suisse, signature du bail et orientation administrative. Vous bénéficiez d'un interlocuteur unique, francophone et anglophone, qui connaît les attentes des régies locales et facilite l'installation en Suisse romande.",
+  },
+  {
+    q: "Les entreprises peuvent-elles mandater Logisorama pour reloger un collaborateur ?",
+    a: "Oui. Nous travaillons avec des entreprises et des responsables RH qui doivent reloger un collaborateur arrivant à Lausanne, Genève ou Crissier. Nous proposons un mandat d'entreprise avec un cahier des charges précis, un reporting régulier et un délai cible. Le collaborateur bénéficie d'un accompagnement humain et professionnel, ce qui sécurise sa prise de poste et libère vos équipes RH des démarches immobilières.",
+  },
+  {
+    q: "Proposez-vous aussi un accompagnement pour la vente ou l'achat immobilier ?",
+    a: "Oui. En plus de la relocation, Logisorama accompagne l'achat et la vente immobilière : appartement à vendre, maison à vendre, immeuble à vendre ou recherche d'un bien off-market en Suisse romande. Nous vous orientons vers nos partenaires bancaires pour le financement hypothécaire et nous coordonnons les étapes jusqu'à la signature notariale. L'approche reste la même : transparente, humaine et orientée résultat.",
+  },
+  {
+    q: "Le service garantit-il l'obtention d'un logement ?",
+    a: "Non, aucun service sérieux ne peut garantir automatiquement l'obtention d'un logement, car la décision finale appartient toujours à la régie ou au propriétaire. En revanche, nous maximisons vos chances grâce à un dossier soigné, un ciblage précis et une réactivité quotidienne. Si aucun bien n'a été trouvé au terme du mandat de 90 jours, votre acompte de 300 CHF vous est intégralement remboursé.",
   },
 ];
 
@@ -41,7 +61,7 @@ export function PremiumFAQ() {
         </div>
 
         <div className="max-w-2xl mx-auto space-y-3">
-          {faqs.map((faq, i) => (
+          {HOME_FAQ.map((faq, i) => (
             <Collapsible
               key={i}
               open={openIndex === i}

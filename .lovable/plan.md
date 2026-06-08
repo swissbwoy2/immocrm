@@ -1,52 +1,77 @@
 ## Objectif
+SEO local premium sur `/` (Lausanne, Crissier, Genève, Suisse romande) sans toucher backend, routes, footer, formulaires, dépendances. Pas de promesse de 1ère position Google.
 
-Remplacer le contenu de la page **Mentions légales FR** par les 12 nouvelles sections datées du **8 juin 2026** et corriger le sujet d'email contenant encore « ImmoRésidence » dans l'Edge Function `mandate-submit-signature`.
+## Principe technique clé
+`index.html` étant partagé par toutes les routes SPA, **on n'y met QUE le sitewide**. Tout ce qui est spécifique à `/` (canonical, FAQPage, title/description home) est injecté dynamiquement depuis `Landing.tsx` via un hook DOM natif — **zéro dépendance**.
 
-## Fichiers modifiés (2 uniquement)
+---
 
-### 1. `src/pages/legal/MentionsLegales.tsx`
+## Fichiers modifiés (7)
 
-Réécriture complète du contenu en conservant :
-- wrapper, layout, bouton retour, switcher FR/EN/DE
-- `LAST_UPDATE = '8 juin 2026'`
-- `useEffect` pour `title` + `meta description`
-- typographie (`h2 text-2xl font-semibold mb-3`, `section space-y-8`, etc.)
+### 1. `index.html` — sitewide uniquement
+- `<title>` par défaut : `Agence de relocation à Lausanne | Logisorama by Immo-rama.ch`
+- `<meta name="description">` générique (~155 car.)
+- **❌ Aucun `<link rel="canonical">` global** (évite que `/mentions-legales`, `/nouveau-mandat`… soient canonicalisées vers `/`)
+- OG / Twitter sitewide conservés (fallback social crawlers qui n'exécutent pas le JS)
+- **JSON-LD sitewide seulement** (2 blocs) :
+  - `Organization` (Immo-rama.ch, IDE CHE-442.303.796, Crissier)
+  - `RealEstateAgent` + `LocalBusiness` (Chemin de l'Esparcette 5 / 1023 Crissier, 021 625 95 05, info@immo-rama.ch, geo, areaServed Vaud/Genève/Fribourg/Valais/Neuchâtel/Jura, services relocation/recherche/chasseur)
+- **❌ Pas de `WebSite` + `SearchAction`** (pas de moteur interne, et Google a retiré le sitelinks searchbox en 11/2024)
+- **❌ Pas de `FAQPage` global**
 
-Meta description mise à jour :
-> Mentions légales de Logisorama, service exploité par Immo-rama.ch — entreprise individuelle Christ Ramazani, IDE CHE-442.303.796, siège à Crissier.
+### 2. `src/hooks/useHomeHead.ts` (nouveau)
+Hook natif, monté uniquement par `Landing.tsx` :
+- Crée `<link rel="canonical" href="https://logisorama.ch/" data-home-head="true" id="home-canonical">` au mount
+- Crée `<script type="application/ld+json" data-home-head="true" id="home-faq-jsonld">` contenant le FAQPage **généré automatiquement à partir de `HOME_FAQ`** importé de `PremiumFAQ`
+- Met à jour `document.title` (home) + `<meta name="description">` (home), restaure les valeurs précédentes au unmount
+- **Idempotent** : avant insertion, supprime tout élément existant avec le même `id` / `data-home-head` pour éviter les doublons en cas de remount React
+- Nettoyage au unmount : retire uniquement les éléments portant `data-home-head="true"`
 
-**12 sections intégrées** :
-1. Éditeur du site (Immo-rama.ch entreprise individuelle, Christ Ramazani, Chemin de l'Esparcette 5 / 1023 Crissier, IDE CHE-442.303.796, info@immo-rama.ch, 021 625 95 05)
-2. Responsable de la publication
-3. Hébergement (Lovable Cloud + Supabase, UE quand techniquement disponible)
-4. Nature du service (relocation, pas de garantie, renvoi aux documents contractuels)
-5. Propriété intellectuelle (signes distinctifs Logisorama / Immo-rama.ch)
-6. Données personnelles — `Link` vers `/politique-confidentialite`, nLPD + RGPD
-7. Cookies et traceurs — Google Ads / Meta Pixel / TikTok Pixel, consentement par défaut refusé
-8. Liens externes
-9. Limitation de responsabilité
-10. Sécurité du site
-11. Droit applicable et for — Crissier, VD
-12. Contact — `mailto:info@immo-rama.ch`
+### 3. `src/pages/Landing.tsx`
+- Appel `useHomeHead()` en tête
+- Import lazy `SeoLocalSection` + insertion dans le `<Suspense>` avant `LandingFooter`
 
-### 2. `supabase/functions/mandate-submit-signature/index.ts` (ligne 167)
+### 4. `src/components/landing/premium/PremiumHero.tsx`
+- H1 unique : « Votre agence de relocation et chasseur d'appartement à Lausanne »
+- Sous-titre enrichi (Lausanne, Genève, Suisse romande), ton premium conservé
+- Les deux `<h2>` internes des cartes rétrogradés en `<p>` bold pour préserver la hiérarchie
+- Aucun changement visuel, aucun CTA touché
 
-- Avant : `subject: "Confirmation de votre mandat de recherche – ImmoRésidence"`
-- Après : `subject: "Confirmation de votre mandat de recherche – Immo-rama.ch"`
+### 5. `src/components/landing/premium/PremiumFAQ.tsx`
+- **Export `HOME_FAQ`** : source unique de vérité (10 Q/R, 60–120 mots) → réutilisée par le DOM **et** par `useHomeHead` pour générer le JSON-LD FAQPage (zéro divergence)
+- 10 questions SEO demandées, reformulant prix/garantie pour ne rien perdre côté conversion
+- UX/visuel inchangé
+- Note : le FAQPage reste utile pour la sémantique ; ne pas le vendre comme un levier garanti de rich snippet (Google a retiré l'affichage enrichi FAQ le 07/05/2026)
 
-Aucun autre contenu de la fonction n'est modifié.
+### 6. `src/components/landing/CoverageSection.tsx`
+- Sous-titre enrichi avec communes (Crissier, Renens, Prilly, Ecublens, Morges, Nyon, Vevey, Montreux, Pully, Lutry) + mention UNIL · EPFL
+- Layout inchangé, pas de liste brute
 
-## Hors scope
+### 7. `src/components/landing/SeoLocalSection.tsx` (nouveau)
+Section premium insérée avant le footer :
+- H2 : « Recherche d'appartement à Lausanne, Genève et en Suisse romande »
+- Texte 700–900 mots, H3 :
+  - Un agent immobilier personnel pour trouver votre logement
+  - Appartement à louer, maison à louer ou bien immobilier à vendre
+  - Relocation pour étudiants UNIL & EPFL, expatriés et entreprises
+  - Une agence immobilière basée à Crissier, proche de Lausanne
+  - Pourquoi choisir Logisorama by Immo-rama.ch
+- Bloc « Nous accompagnons votre recherche en Suisse romande » : 6 cartes (Ouest lausannois / zones étudiantes UNIL-EPFL / Riviera / La Côte / Genève / autres cantons romands)
+- Maillage interne naturel vers `/nouveau-mandat`, `/vendre-mon-bien`, `/relouer-mon-appartement`, `/mentions-legales`, `/politique-confidentialite`
+- Tokens design existants, mobile-first
 
-Pas de modification de : pages EN/DE, anciennes migrations SQL, routes, footers, formulaires, schéma DB, dépendances, autres Edge Functions.
+---
 
-Les occurrences résiduelles de « Immo-Rama Sàrl » / « ImmoRésidence Sàrl » présentes uniquement dans d'anciennes migrations SQL (`20260501151209_*`, `20260306211757_*`) **restent intactes** et **ne sont pas comptées dans l'audit final**.
+## Non touché
+Backend, routes, footer, formulaires, migrations SQL, dépendances, `robots.txt`, `sitemap.xml`, pages EN/DE des mentions légales, autres routes.
 
-## Audit final (code actif uniquement, hors migrations historiques)
+## Garanties après livraison
+- `/` : title + description + canonical + JSON-LD FAQPage spécifiques home, injectés/nettoyés proprement
+- Autres routes : aucun canonical erroné vers `/`, seulement `Organization` + `RealEstateAgent` sitewide (cohérent avec leur contenu)
+- Aucun `SearchAction`, aucun doublon DOM (hook idempotent via `data-home-head`)
+- FAQ visible et JSON-LD FAQPage strictement alignés via `HOME_FAQ`
+- Aucune promesse de 1ère position Google
+- Zéro dépendance ajoutée
 
-- 12 sections présentes dans `MentionsLegales.tsx`, `LAST_UPDATE = '8 juin 2026'`
-- Meta description contient « entreprise individuelle Christ Ramazani, IDE CHE-442.303.796, siège à Crissier »
-- Lien vers `/politique-confidentialite` présent en §6, `mailto:info@immo-rama.ch` en §12
-- Sujet email = `Confirmation de votre mandat de recherche – Immo-rama.ch`
-- 0 occurrence active de « ImmoRésidence », « Sàrl », « SARL » dans `src/`, `index.html`, Edge Functions actives
-- Pages EN/DE inchangées, migrations historiques non modifiées
+## Stratégie future (hors scope)
+Pages locales dédiées à créer plus tard : `/agence-relocation-lausanne`, `/chasseur-appartement-geneve`, `/logement-etudiant-unil-epfl`, `/recherche-appartement-montreux`, `/agence-immobiliere-crissier`…

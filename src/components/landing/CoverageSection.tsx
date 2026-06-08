@@ -33,9 +33,12 @@ export function CoverageSection() {
             ))}
           </div>
           
-          {/* CTA */}
-          <p className="text-muted-foreground mb-4">
-            +50 agences partenaires • Accès aux offres exclusives
+          {/* Communes représentatives */}
+          <p className="text-muted-foreground mb-2 text-sm md:text-base">
+            Lausanne · Crissier · Renens · Prilly · Ecublens · Morges · Nyon · Genève · Vevey · Montreux · Pully · Lutry
+          </p>
+          <p className="text-muted-foreground mb-4 text-sm">
+            +50 agences partenaires • Accompagnement UNIL · EPFL • Accès aux offres exclusives
           </p>
           
           <Button asChild variant="outline" className="group">

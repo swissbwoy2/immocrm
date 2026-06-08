@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { SearchTypeProvider } from '@/contexts/SearchTypeContext';
 import { useWhatsAppTracking } from '@/hooks/useWhatsAppTracking';
+import { useHomeHead } from '@/hooks/useHomeHead';
 
 // Above the fold - eager load
 import { PremiumHero } from '@/components/landing/premium/PremiumHero';
@@ -24,6 +25,7 @@ const BudgetCalculatorSection = lazy(() => import('@/components/landing/BudgetCa
 const DifferentiationSection = lazy(() => import('@/components/landing/DifferentiationSection').then(m => ({ default: m.DifferentiationSection })));
 const PremiumFAQ = lazy(() => import('@/components/landing/premium/PremiumFAQ').then(m => ({ default: m.PremiumFAQ })));
 const CoverageSection = lazy(() => import('@/components/landing/CoverageSection').then(m => ({ default: m.CoverageSection })));
+const SeoLocalSection = lazy(() => import('@/components/landing/SeoLocalSection').then(m => ({ default: m.SeoLocalSection })));
 const StatsSection = lazy(() => import('@/components/landing/StatsSection').then(m => ({ default: m.StatsSection })));
 const PartnersSection = lazy(() => import('@/components/landing/PartnersSection').then(m => ({ default: m.PartnersSection })));
 const ProptechSection = lazy(() => import('@/components/landing/ProptechSection').then(m => ({ default: m.ProptechSection })));
@@ -36,6 +38,7 @@ export default function Landing() {
   const { user, userRole, loading } = useAuth();
   const navigate = useNavigate();
   useWhatsAppTracking();
+  useHomeHead();
 
   useEffect(() => {
     if (!loading && user && userRole) {
@@ -127,6 +130,7 @@ export default function Landing() {
           <ProptechSection />
           <CloserSection />
           <ApporteurSection />
+          <SeoLocalSection />
           <LandingFooter />
         </Suspense>
 

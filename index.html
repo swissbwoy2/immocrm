@@ -15,19 +15,91 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Logisorama" />
     <meta name="theme-color" content="#A8C9A5" />
-    <title>Logisorama - By Immo-Rama.ch</title>
-    <meta name="description" content="Logisorama by Immo-Rama.ch - Application de recherche de logement en Suisse romande. Trouvez votre appartement ou maison idéal.">
-    <meta name="author" content="Immo-Rama.ch" />
+    <title>Agence de relocation à Lausanne | Logisorama by Immo-rama.ch</title>
+    <meta name="description" content="Logisorama accompagne votre recherche d'appartement à Lausanne, Genève, Crissier et en Suisse romande. Agence de relocation et chasseur d'appartement.">
+    <meta name="author" content="Immo-rama.ch" />
 
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://logisorama.ch" />
     <meta property="og:image" content="/app-icon.png">
-    <meta property="og:title" content="Logisorama - By Immo-Rama.ch">
-    <meta property="og:description" content="Application de recherche de logement en Suisse romande. Trouvez votre appartement ou maison idéal.">
+    <meta property="og:title" content="Agence de relocation à Lausanne | Logisorama">
+    <meta property="og:description" content="Recherche d'appartement à Lausanne, Genève et en Suisse romande avec un agent immobilier personnel. Logisorama accompagne étudiants, expatriés, familles et entreprises.">
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="/app-icon.png">
-    <meta name="twitter:title" content="Logisorama - By Immo-Rama.ch">
-    <meta name="twitter:description" content="Application de recherche de logement en Suisse romande. Trouvez votre appartement ou maison idéal.">
+    <meta name="twitter:title" content="Agence de relocation à Lausanne | Logisorama">
+    <meta name="twitter:description" content="Recherche d'appartement à Lausanne, Genève et en Suisse romande avec un agent immobilier personnel.">
+
+    <!-- JSON-LD sitewide : Organization + RealEstateAgent/LocalBusiness -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Immo-rama.ch",
+      "legalName": "Immo-rama.ch — entreprise individuelle",
+      "alternateName": "Logisorama",
+      "url": "https://logisorama.ch",
+      "logo": "https://logisorama.ch/app-icon.png",
+      "email": "info@immo-rama.ch",
+      "telephone": "+41216259505",
+      "taxID": "CHE-442.303.796",
+      "founder": { "@type": "Person", "name": "Christ Ramazani" },
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Chemin de l'Esparcette 5",
+        "postalCode": "1023",
+        "addressLocality": "Crissier",
+        "addressRegion": "VD",
+        "addressCountry": "CH"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": ["RealEstateAgent", "LocalBusiness"],
+      "name": "Logisorama by Immo-rama.ch",
+      "image": "https://logisorama.ch/app-icon.png",
+      "url": "https://logisorama.ch",
+      "email": "info@immo-rama.ch",
+      "telephone": "+41216259505",
+      "priceRange": "$$",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Chemin de l'Esparcette 5",
+        "postalCode": "1023",
+        "addressLocality": "Crissier",
+        "addressRegion": "VD",
+        "addressCountry": "CH"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 46.5436,
+        "longitude": 6.5773
+      },
+      "areaServed": [
+        { "@type": "AdministrativeArea", "name": "Vaud" },
+        { "@type": "AdministrativeArea", "name": "Genève" },
+        { "@type": "AdministrativeArea", "name": "Fribourg" },
+        { "@type": "AdministrativeArea", "name": "Valais" },
+        { "@type": "AdministrativeArea", "name": "Neuchâtel" },
+        { "@type": "AdministrativeArea", "name": "Jura" },
+        { "@type": "City", "name": "Lausanne" },
+        { "@type": "City", "name": "Genève" },
+        { "@type": "City", "name": "Crissier" }
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Services Logisorama",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Agence de relocation" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Recherche d'appartement" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Chasseur d'appartement" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Accompagnement achat et vente immobilière" } }
+        ]
+      }
+    }
+    </script>
 
     <!-- Google Ads gtag.js with Consent Mode v2 -->
     <script>
