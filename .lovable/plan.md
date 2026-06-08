@@ -1,60 +1,43 @@
-# Cause exacte la plus probable
+## Problème identifié
 
-Le vide dans l’agenda agent ne vient pas des données.
+Le formulaire `/rendez-vous` (`src/pages/RendezVousBureau.tsx`) force tous les RDV en "bureau Crissier" via `source_form: 'rdv_bureau_crissier'`. Mais le calendrier admin (`src/pages/admin/Calendrier.tsx` ligne 181) affiche **systématiquement** tous les `lead_phone_appointments` comme `📞 RDV téléphonique` (event_type `rdv_telephonique`), peu importe la source. D'où le bug : chaque RDV au bureau apparaît comme téléphonique côté admin.
 
-- **Carina a bien des données en juin** : 77 visites `proposee` ce mois-ci, regroupées en 22 créneaux visibles.
-- **Victoria aussi** : 80 visites ce mois-ci (79 `proposee`, 1 `planifiee`), regroupées en 27 créneaux.
-- **Aucune erreur DB/RLS détectée** sur `visites`, `calendar_events` ou `get_my_agent_id()`.
+## Solution
 
-Le point faible exact est dans **`src/pages/agent/Calendrier.tsx`** :
+### 1. Base de données
+Ajouter une colonne `appointment_type` à `lead_phone_appointments` :
+- valeurs : `'bureau'` | `'telephonique'`
+- défaut : `'telephonique'` (rétrocompat avec analyse_dossier existants)
+- backfill : tous les enregistrements `source_form = 'rdv_bureau_crissier'` → `'bureau'`, le reste → `'telephonique'`
 
-- la page charge les visites via une requête compacte avec **`.or(...)`** ;
-- puis elle **n’inspecte jamais `eventsRes.error` / `visitesRes.error` / `profiles.error` / `clientsRes.error`** ;
-- si une requête échoue côté client, la page continue avec `data ?? []` et affiche simplement **un calendrier vide sans vrai signal**.
+### 2. Formulaire `/rendez-vous` (`src/pages/RendezVousBureau.tsx`)
+Ajouter un sélecteur (2 cartes/boutons) **Type de rendez-vous** :
+- 📍 **Au bureau** (Crissier) — affichage actuel avec adresse + plan
+- 📞 **Téléphonique** — masquer le bloc adresse, adapter texte de confirmation
 
-En parallèle, la prod a un vrai second problème confirmé :
+Logique :
+- Insérer `appointment_type` dans `lead_phone_appointments`
+- Pour téléphonique : titre ICS = "RDV téléphonique Logisorama", description sans adresse bureau, `location` vide
+- Pour bureau : comportement actuel inchangé
 
-- les logs applicatifs contiennent plusieurs **`Importing a module script failed`** / **`Failed to fetch dynamically imported module`** sur le domaine publié ;
-- comme `/agent/calendrier` est une **route lazy-loaded**, un bundle obsolète peut casser le chargement chez certains appareils installés / en cache.
+### 3. Calendrier admin (`src/pages/admin/Calendrier.tsx` ligne 179-189)
+Discriminer selon `appt.appointment_type` :
+- `bureau` → titre `🏢 RDV bureau — {nom}`, event_type `rendez_vous` (vert), description avec adresse bureau
+- `telephonique` → titre `📞 RDV téléphonique — {nom}`, event_type `rdv_telephonique` (actuel)
 
-## Conclusion
+### 4. Détail RDV admin (`src/components/calendar/PhoneAppointmentDetailDialog.tsx`)
+Adapter le titre et les labels selon `appointment_type` (badge "Au bureau" vs "Téléphonique").
 
-Le problème le plus précis est donc :
+### 5. Notification admin
+Passer `appointment_type` au edge function `notify-admin-new-phone-appointment` pour que l'email/WhatsApp indique le bon type (changement minimal côté payload uniquement, l'edge function affichera la valeur reçue).
 
-**le calendrier agent a un bug de “silent failure” côté front, et le contexte de bundles obsolètes en production peut l’aggraver pour certains utilisateurs.**
+## Fichiers touchés
+- migration : `lead_phone_appointments.appointment_type` + backfill
+- `src/pages/RendezVousBureau.tsx` — sélecteur + insert + UI conditionnelle
+- `src/pages/admin/Calendrier.tsx` — discrimination event_type/titre
+- `src/components/calendar/PhoneAppointmentDetailDialog.tsx` — affichage badge type
+- (option) edge function `notify-admin-new-phone-appointment` — afficher type dans notif
 
-# Plan de correction
-
-## 1. Rendre le chargement calendrier robuste
-- Remplacer la logique fragile du calendrier par le même schéma que `src/pages/agent/Visites.tsx` :
-  - requête séparée pour les visites propres à l’agent ;
-  - requête séparée pour les visites co-assignées ;
-  - fusion + déduplication ensuite.
-- Garder la fenêtre J-14 / J+90, mais l’appliquer sur des requêtes simples plutôt que sur un gros `.or(...)`.
-
-## 2. Supprimer le faux “agenda vide”
-- Vérifier explicitement toutes les erreurs Supabase dans `loadData()`.
-- En cas d’échec :
-  - logger la cause exacte ;
-  - afficher un toast utile ;
-  - éviter de présenter un vide comme si aucune visite n’existait.
-
-## 3. Ajouter un diagnostic front minimal
-- Journaliser les compteurs réellement reçus (`events`, `visites`, `clients`) et l’agent courant.
-- Journaliser aussi les erreurs réseau/query pour identifier immédiatement les comptes touchés si le problème revient.
-
-## 4. Sécuriser le chargement contre les bundles obsolètes
-- Ajouter un garde-fou global pour les erreurs de lazy import (`Importing a module script failed`, `Failed to fetch dynamically imported module`, `ChunkLoadError`).
-- En cas de détection : nettoyage léger + rechargement propre de l’application.
-
-# Détails techniques
-
-## Fichiers concernés
-- `src/pages/agent/Calendrier.tsx`
-- `src/main.tsx`
-- éventuellement `src/hooks/useAppVersionCheck.ts` si le garde-fou est centralisé là
-
-## Résultat attendu
-- Victoria et Carina voient immédiatement leurs créneaux réels dans `/agent/calendrier`.
-- Si une requête échoue, on obtient enfin **une erreur visible et exploitable**, pas un agenda artificiellement vide.
-- Les appareils avec ancien cache récupèrent automatiquement le bon bundle au prochain chargement.
+## Hors scope
+- Pas de changement au flow `/analyse-dossier` (reste téléphonique par défaut)
+- Pas de modif des autres event_types du calendrier
