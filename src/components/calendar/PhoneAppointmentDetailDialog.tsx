@@ -28,6 +28,7 @@ export interface PhoneAppointmentRaw {
   slot_start: string;
   slot_end?: string | null;
   status: string;
+  appointment_type?: 'bureau' | 'telephonique' | string | null;
   prospect_name?: string | null;
   prospect_email?: string | null;
   prospect_phone?: string | null;
