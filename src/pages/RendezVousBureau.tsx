@@ -691,6 +691,7 @@ export default function RendezVousBureau() {
 
         {/* 2. Type de RDV (masqué si dossier non qualifié) */}
         {!isNonQualifie && (
+        <>
         <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
             2. Comment souhaitez-vous échanger ?
