@@ -1,43 +1,32 @@
-## Problème identifié
+## Objectif
 
-Le formulaire `/rendez-vous` (`src/pages/RendezVousBureau.tsx`) force tous les RDV en "bureau Crissier" via `source_form: 'rdv_bureau_crissier'`. Mais le calendrier admin (`src/pages/admin/Calendrier.tsx` ligne 181) affiche **systématiquement** tous les `lead_phone_appointments` comme `📞 RDV téléphonique` (event_type `rdv_telephonique`), peu importe la source. D'où le bug : chaque RDV au bureau apparaît comme téléphonique côté admin.
+Arrêter l'auto-confirmation des RDV créés via `/rendez-vous`. Tout nouveau RDV (bureau ou téléphonique) arrive en `en_attente`, et c'est l'admin qui déclenche manuellement la confirmation + l'envoi de l'invitation ICS au prospect.
 
-## Solution
+## Changements
 
-### 1. Base de données
-Ajouter une colonne `appointment_type` à `lead_phone_appointments` :
-- valeurs : `'bureau'` | `'telephonique'`
-- défaut : `'telephonique'` (rétrocompat avec analyse_dossier existants)
-- backfill : tous les enregistrements `source_form = 'rdv_bureau_crissier'` → `'bureau'`, le reste → `'telephonique'`
+### 1. Formulaire public `/rendez-vous` (`src/pages/RendezVousBureau.tsx`)
+- Insert : remplacer `status: 'confirme'` par `status: 'en_attente'`.
+- Ne plus envoyer l'ICS au prospect à la soumission (supprimer/skipper l'appel `send-calendar-invite` côté public).
+- Adapter l'écran de confirmation : "Votre demande a bien été enregistrée. Vous recevrez un email de confirmation avec l'invitation calendrier dès que notre équipe aura validé le créneau."
+- Garder l'appel à `notify-admin-new-phone-appointment` (l'admin doit être notifié immédiatement).
 
-### 2. Formulaire `/rendez-vous` (`src/pages/RendezVousBureau.tsx`)
-Ajouter un sélecteur (2 cartes/boutons) **Type de rendez-vous** :
-- 📍 **Au bureau** (Crissier) — affichage actuel avec adresse + plan
-- 📞 **Téléphonique** — masquer le bloc adresse, adapter texte de confirmation
+### 2. Détail RDV admin (`src/components/calendar/PhoneAppointmentDetailDialog.tsx`)
+- Ajouter un bouton **"Confirmer le RDV et envoyer l'invitation"** visible uniquement si `status === 'en_attente'`.
+- Action du bouton :
+  1. `UPDATE lead_phone_appointments SET status='confirme', confirmed_at=now(), confirmed_by=auth.uid(), ics_sent_at=now() WHERE id=...`
+  2. Appel `send-calendar-invite` avec titre/description/location adaptés selon `appointment_type` (bureau → adresse Crissier, téléphonique → numéro du prospect).
+  3. Toast succès + refresh.
+- Garder le bouton "Annuler le RDV" existant.
+- Badge "En attente" déjà présent reste tel quel.
 
-Logique :
-- Insérer `appointment_type` dans `lead_phone_appointments`
-- Pour téléphonique : titre ICS = "RDV téléphonique Logisorama", description sans adresse bureau, `location` vide
-- Pour bureau : comportement actuel inchangé
-
-### 3. Calendrier admin (`src/pages/admin/Calendrier.tsx` ligne 179-189)
-Discriminer selon `appt.appointment_type` :
-- `bureau` → titre `🏢 RDV bureau — {nom}`, event_type `rendez_vous` (vert), description avec adresse bureau
-- `telephonique` → titre `📞 RDV téléphonique — {nom}`, event_type `rdv_telephonique` (actuel)
-
-### 4. Détail RDV admin (`src/components/calendar/PhoneAppointmentDetailDialog.tsx`)
-Adapter le titre et les labels selon `appointment_type` (badge "Au bureau" vs "Téléphonique").
-
-### 5. Notification admin
-Passer `appointment_type` au edge function `notify-admin-new-phone-appointment` pour que l'email/WhatsApp indique le bon type (changement minimal côté payload uniquement, l'edge function affichera la valeur reçue).
-
-## Fichiers touchés
-- migration : `lead_phone_appointments.appointment_type` + backfill
-- `src/pages/RendezVousBureau.tsx` — sélecteur + insert + UI conditionnelle
-- `src/pages/admin/Calendrier.tsx` — discrimination event_type/titre
-- `src/components/calendar/PhoneAppointmentDetailDialog.tsx` — affichage badge type
-- (option) edge function `notify-admin-new-phone-appointment` — afficher type dans notif
+### 3. Calendrier admin (`src/pages/admin/Calendrier.tsx`)
+- Aucun changement de logique. Les RDV `en_attente` apparaîtront déjà avec leur badge "En attente" via le dialog. Optionnel : style visuel légèrement atténué (opacité) pour les `en_attente` — à confirmer si souhaité.
 
 ## Hors scope
-- Pas de changement au flow `/analyse-dossier` (reste téléphonique par défaut)
-- Pas de modif des autres event_types du calendrier
+- Pas de changement à `/analyse-dossier` (déjà en `en_attente`).
+- Pas de modification du flow `confirmed_by` / colonnes existantes (déjà présentes dans la table).
+- Pas de notification automatique au prospect en cas d'annulation (comportement actuel conservé).
+
+## Fichiers touchés
+- `src/pages/RendezVousBureau.tsx`
+- `src/components/calendar/PhoneAppointmentDetailDialog.tsx`

@@ -163,7 +163,7 @@ export default function RendezVousBureau() {
         slot_end: selected.end.toISOString(),
         source_form: appointmentType === 'bureau' ? 'rdv_bureau_crissier' : 'rdv_telephonique',
         appointment_type: appointmentType,
-        status: 'confirme',
+        status: 'en_attente',
         notes_admin: notes,
       });
 
@@ -205,45 +205,16 @@ export default function RendezVousBureau() {
         .eq('id', apptId);
 
       const isBureau = appointmentType === 'bureau';
-      const titleProspect = isBureau
-        ? 'RDV Logisorama — Bureau Crissier'
-        : 'RDV Logisorama — Appel téléphonique';
-      const descProspect = isBureau
-        ? `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`
-        : `Appel téléphonique confirmé avec ${fullName}.\nProjet : ${projetLabel}\nNous vous appellerons au : ${telephone.trim()}`;
+      const projetLabelForAdmin = projetLabel;
       const locationProspect = isBureau ? OFFICE_ADDRESS : `Téléphone : ${telephone.trim()}`;
 
-      // ICS prospect
-      supabase.functions
-        .invoke('send-calendar-invite', {
-          body: {
-            title: titleProspect,
-            description: descProspect,
-            location: locationProspect,
-            start_date: selected.start.toISOString(),
-            end_date: selected.end.toISOString(),
-            all_day: false,
-            recipient_email: email.trim(),
-          },
-        })
-        .then(
-          () => {
-            supabase
-              .from('lead_phone_appointments')
-              .update({ ics_sent_at: new Date().toISOString() })
-              .eq('id', apptId)
-              .then(() => {});
-          },
-          () => {},
-        );
-
-      // Notif admin
+      // Notif admin (le prospect ne reçoit l'ICS qu'après validation manuelle de l'admin)
       supabase.functions
         .invoke('notify-admin-new-phone-appointment', {
           body: {
             appointment_id: apptId,
             type_projet: projet,
-            type_projet_label: projetLabel,
+            type_projet_label: projetLabelForAdmin,
             appointment_type: appointmentType,
           },
         })
@@ -252,14 +223,14 @@ export default function RendezVousBureau() {
           () => {},
         );
 
-      // ICS calendrier interne
+      // ICS calendrier interne (équipe seulement)
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
             title: isBureau
-              ? `Nouveau RDV bureau (${projetLabel}) — ${fullName}`
-              : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName}`,
-            description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
+              ? `Nouveau RDV bureau (${projetLabel}) — ${fullName} [À CONFIRMER]`
+              : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName} [À CONFIRMER]`,
+            description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nStatut: EN ATTENTE — à confirmer dans le calendrier admin\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
             location: locationProspect,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
@@ -273,7 +244,7 @@ export default function RendezVousBureau() {
         );
 
       setDone(true);
-      toast.success('RDV confirmé. Tu vas recevoir un email de confirmation.');
+      toast.success('Demande de RDV enregistrée. Vous recevrez la confirmation par email.');
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Erreur lors de la réservation.');
@@ -288,37 +259,32 @@ export default function RendezVousBureau() {
         <div className="max-w-lg w-full rounded-2xl border border-[#b8893d]/40 bg-[#1c1814] p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <CheckCircle2 className="mx-auto h-14 w-14 text-[#d4a857]" />
           <h1 className="mt-4 font-serif text-2xl text-[#f4ecd8]">
-            Votre RDV est confirmé
+            Demande de RDV enregistrée
           </h1>
           <p className="mt-3 text-[#c9bfac]">
-            {formatDayLabel(selected.start)} à{' '}
+            Créneau demandé : {formatDayLabel(selected.start)} à{' '}
             <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
           </p>
-          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2">
+          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
+            <p className="text-[#c9bfac]">
+              Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
+              <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
+              dès la validation.
+            </p>
             {appointmentType === 'bureau' ? (
-              <>
-                <div className="flex items-start justify-center gap-2">
-                  <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                  <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
-                </div>
-                <a
-                  href={OFFICE_MAPS_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
-                >
-                  Itinéraire <ExternalLink className="h-3 w-3" />
-                </a>
-              </>
+              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
+                <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
+              </div>
             ) : (
-              <div className="flex items-start justify-center gap-2">
+              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
                 <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
                 <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
               </div>
             )}
           </div>
           <p className="mt-4 text-xs text-[#8a7f6e]">
-            Email de confirmation + invitation calendrier (.ics) envoyés. Rappels automatiques 24h, 3h, 1h et 30 min avant.
+            En attente de validation par notre équipe.
           </p>
         </div>
       </main>
@@ -344,7 +310,7 @@ export default function RendezVousBureau() {
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {['✓ 100% gratuit', '✓ Sans engagement', '✓ Confirmation immédiate'].map((t) => (
+            {['✓ 100% gratuit', '✓ Sans engagement', '✓ Validation par notre équipe'].map((t) => (
               <span
                 key={t}
                 className="rounded-full border border-[#b8893d]/40 bg-[#b8893d]/10 px-3 py-1.5 text-xs font-bold text-[#d4a857]"

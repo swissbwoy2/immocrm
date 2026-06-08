@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock, MapPin, Building2 } from 'lucide-react';
+import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock, MapPin, Building2, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,7 @@ interface Props {
 export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled }: Props) {
   const navigate = useNavigate();
   const [cancelling, setCancelling] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
   if (!appt) return null;
 
@@ -65,6 +66,7 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
   const end = appt.slot_end ? new Date(appt.slot_end) : new Date(start.getTime() + 30 * 60 * 1000);
 
   const isConfirmed = appt.status === 'confirme';
+  const isPending = appt.status === 'en_attente';
   const isBureau = appt.appointment_type === 'bureau';
   const OFFICE_ADDRESS = 'Ch. de la Verseuse 1, 1023 Crissier';
 
@@ -83,6 +85,58 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
       toast.error('Erreur lors de l\'annulation : ' + e.message);
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!email) {
+      toast.error('Email du prospect manquant — impossible d\'envoyer l\'invitation.');
+      return;
+    }
+    try {
+      setConfirming(true);
+      const { data: userData } = await supabase.auth.getUser();
+      const nowIso = new Date().toISOString();
+
+      const title = isBureau
+        ? 'RDV Logisorama — Bureau Crissier'
+        : 'RDV Logisorama — Appel téléphonique';
+      const description = isBureau
+        ? `Rendez-vous confirmé avec ${prospectName}.\nAdresse : ${OFFICE_ADDRESS}\nMerci d'arriver 5 minutes en avance.`
+        : `Appel téléphonique confirmé avec ${prospectName}.\nNous vous appellerons au : ${phone || '—'}`;
+      const location = isBureau ? OFFICE_ADDRESS : (phone ? `Téléphone : ${phone}` : '');
+
+      const { error: invErr } = await supabase.functions.invoke('send-calendar-invite', {
+        body: {
+          title,
+          description,
+          location,
+          start_date: start.toISOString(),
+          end_date: end.toISOString(),
+          all_day: false,
+          recipient_email: email,
+        },
+      });
+      if (invErr) throw invErr;
+
+      const { error: updErr } = await supabase
+        .from('lead_phone_appointments')
+        .update({
+          status: 'confirme',
+          confirmed_at: nowIso,
+          confirmed_by: userData.user?.id ?? null,
+          ics_sent_at: nowIso,
+        })
+        .eq('id', appt.id);
+      if (updErr) throw updErr;
+
+      toast.success('RDV confirmé. Invitation envoyée au prospect.');
+      onCancelled?.();
+      onClose();
+    } catch (e: any) {
+      toast.error('Erreur lors de la confirmation : ' + (e?.message || e));
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -213,6 +267,17 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
+          {isPending && (
+            <Button
+              size="sm"
+              onClick={handleConfirm}
+              disabled={confirming}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {confirming ? 'Envoi…' : 'Confirmer et envoyer l\'invitation'}
+            </Button>
+          )}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" disabled={cancelling}>
