@@ -8,7 +8,7 @@ import { useSearchType } from "@/contexts/SearchTypeContext";
 // Short comparison data - LOCATION (4 key points)
 const shortComparisonDataLocation = [{
   aspect: "Tu visites moins, mais mieux",
-  logisorama: "On identifie les opportunités réalistes selon ton profil. Chaque proposition est ciblée.",
+  logisorama: "L'expertise Immo-rama.ch pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.",
   solo: "Tu postules sans savoir si tu as une chance.",
   icon: Filter
 }, {
