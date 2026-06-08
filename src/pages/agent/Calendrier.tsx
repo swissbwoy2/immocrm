@@ -1140,6 +1140,16 @@ export default function AgentCalendrier() {
         </DialogContent>
       </Dialog>
 
+      {/* Phone / office appointment detail */}
+      <PhoneAppointmentDetailDialog
+        appt={phoneAppts.find((a) => a.id === selectedPhoneApptId) || null}
+        open={!!selectedPhoneApptId}
+        onClose={() => setSelectedPhoneApptId(null)}
+        onCancelled={() => loadData()}
+      />
+
+
+
       {/* Feedback dialog */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
         <DialogContent className="max-w-2xl">
