@@ -423,43 +423,64 @@ export default function RendezVousBureau() {
     }
   };
 
-  if (done && selected) {
+  if (done) {
+    const isManual = doneStatus === 'manual';
     return (
       <main className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8] flex items-center justify-center p-6">
         <div className="max-w-lg w-full rounded-2xl border border-[#b8893d]/40 bg-[#1c1814] p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <CheckCircle2 className="mx-auto h-14 w-14 text-[#d4a857]" />
           <h1 className="mt-4 font-serif text-2xl text-[#f4ecd8]">
-            Demande de RDV enregistrée
+            {isManual ? 'Demande reçue' : 'Demande de RDV enregistrée'}
           </h1>
-          <p className="mt-3 text-[#c9bfac]">
-            Créneau demandé : {formatDayLabel(selected.start)} à{' '}
-            <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
-          </p>
-          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
-            <p className="text-[#c9bfac]">
-              Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
-              <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
-              dès la validation.
+          {isManual ? (
+            <p className="mt-3 text-[#c9bfac]">
+              Merci {prenom || ''}, notre équipe va analyser votre dossier et vous{' '}
+              <strong className="text-[#d4a857]">recontacter sous 24h</strong> pour vous aider à
+              structurer votre recherche (garant, ajustement du budget ou des localités…).
             </p>
-            {appointmentType === 'bureau' ? (
-              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
-                <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
-              </div>
+          ) : (
+            selected && (
+              <p className="mt-3 text-[#c9bfac]">
+                Créneau demandé : {formatDayLabel(selected.start)} à{' '}
+                <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
+              </p>
+            )
+          )}
+          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
+            {isManual ? (
+              <p className="text-[#c9bfac]">
+                Vous recevrez un appel ou un email pour organiser un échange adapté à votre
+                situation. Aucun créneau n'a été pré-réservé pour l'instant.
+              </p>
             ) : (
-              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
-                <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
-              </div>
+              <>
+                <p className="text-[#c9bfac]">
+                  Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
+                  <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
+                  dès la validation.
+                </p>
+                {appointmentType === 'bureau' ? (
+                  <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
+                    <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                    <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
+                    <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                    <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <p className="mt-4 text-xs text-[#8a7f6e]">
-            En attente de validation par notre équipe.
+            {isManual ? 'Dossier transmis à notre équipe.' : 'En attente de validation par notre équipe.'}
           </p>
         </div>
       </main>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8]">
