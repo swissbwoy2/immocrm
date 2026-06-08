@@ -138,7 +138,17 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
                   <Clock className="h-3.5 w-3.5" />
                   {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
                 </p>
+          </div>
+
+          {isBureau && (
+            <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-start gap-3">
+              <MapPin className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <div className="font-medium">Lieu du rendez-vous</div>
+                <div className="text-muted-foreground">{OFFICE_ADDRESS}</div>
               </div>
+            </div>
+          )}
             </div>
           </div>
 
