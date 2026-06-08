@@ -100,6 +100,8 @@ export default function AgentCalendrier() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [phoneAppts, setPhoneAppts] = useState<PhoneAppointmentRaw[]>([]);
+  const [selectedPhoneApptId, setSelectedPhoneApptId] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFullHistory, setShowFullHistory] = useState(false);
