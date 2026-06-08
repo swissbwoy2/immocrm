@@ -236,27 +236,98 @@ export default function RendezVousBureau() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || !selected || !projet) return;
+    if (!isFormValid || !projet) return;
+    if (!isNonQualifie && !selected) return;
     setSubmitting(true);
 
     try {
-      const apptId = crypto.randomUUID();
       const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
       const projetLabel = PROJECT_LABELS[projet];
+
+      // Champs préqualification (uniquement pour location)
+      const quali = qualification;
+      const qualifFields: Record<string, any> = isLocation && quali
+        ? {
+            statut_suisse: statutSuisse,
+            situation_pro: situationPro,
+            poursuites_statut: poursuites,
+            nb_pieces: nbPieces,
+            localite_recherche: localiteRecherche.trim(),
+            budget_max_chf: parseFloat(budgetMax) || null,
+            revenu_net_mensuel_chf: parseFloat(revenuNet) || null,
+            ratio_revenu_loyer: quali.ratio,
+            statut_qualification: quali.statut,
+            risque_niveau: quali.risque,
+            motif_qualification: quali.motif,
+            resume_profil: quali.resume,
+            recommandation_agent: quali.recommandation,
+            poursuites: poursuites === 'En cours' || poursuites === 'Actes de défaut de biens',
+            requires_manual_validation: quali.statut === 'non_qualifie',
+          }
+        : {};
+
       const notesParts = [
         `Type de RDV: ${appointmentType === 'bureau' ? 'Au bureau (Crissier)' : 'Téléphonique'}`,
         `Type de projet: ${projetLabel}`,
+        quali ? `Préqualification: ${STATUT_LABELS[quali.statut]} (ratio ${quali.ratio}x — risque ${quali.risque})` : '',
+        quali ? `Résumé: ${quali.resume}` : '',
+        quali ? `Recommandation: ${quali.recommandation}` : '',
         message.trim() ? `Message client: ${message.trim()}` : '',
       ].filter(Boolean);
       const notes = notesParts.join('\n');
 
+      // ---- Cas 1 : Non qualifié → AUCUN créneau réservé, validation manuelle ----
+      if (isNonQualifie) {
+        const leadId = crypto.randomUUID();
+        const { error: leadErr } = await supabase.from('leads').insert({
+          id: leadId,
+          email: email.trim(),
+          prenom: prenom.trim(),
+          nom: nom.trim(),
+          telephone: telephone.trim(),
+          source: 'rdv_bureau_crissier',
+          formulaire: 'rdv_bureau',
+          type_recherche: 'location',
+          is_qualified: false,
+          notes,
+          utm_source: utm.utm_source || 'direct',
+          utm_medium: utm.utm_medium || 'rdv_bureau',
+          utm_campaign: utm.utm_campaign || projet,
+          utm_content: utm.utm_content,
+          utm_term: utm.utm_term,
+          ...qualifFields,
+        } as any);
+        if (leadErr) throw leadErr;
+
+        supabase.functions
+          .invoke('notify-admin-new-phone-appointment', {
+            body: {
+              appointment_id: null,
+              lead_id: leadId,
+              type_projet: projet,
+              type_projet_label: projetLabel,
+              appointment_type: 'manual_validation',
+              qualification_statut: quali?.statut,
+              qualification_motif: quali?.motif,
+            },
+          })
+          .then(() => {}, () => {});
+
+        setDoneStatus('manual');
+        setDone(true);
+        toast.success('Demande enregistrée. Notre équipe vous recontacte.');
+        return;
+      }
+
+      // ---- Cas 2 : Qualifié / À vérifier / À réorienter → flux normal ----
+      const apptId = crypto.randomUUID();
       const { error: apptErr } = await supabase.from('lead_phone_appointments').insert({
         id: apptId,
         prospect_email: email.trim(),
         prospect_phone: telephone.trim(),
         prospect_name: fullName,
-        slot_start: selected.start.toISOString(),
-        slot_end: selected.end.toISOString(),
+        slot_start: selected!.start.toISOString(),
+        slot_end: selected!.end.toISOString(),
         source_form: appointmentType === 'bureau' ? 'rdv_bureau_crissier' : 'rdv_telephonique',
         appointment_type: appointmentType,
         status: 'en_attente',
@@ -294,7 +365,8 @@ export default function RendezVousBureau() {
         utm_campaign: utm.utm_campaign || projet,
         utm_content: utm.utm_content,
         utm_term: utm.utm_term,
-      });
+        ...qualifFields,
+      } as any);
       await supabase
         .from('lead_phone_appointments')
         .update({ lead_id: leadId })
@@ -312,6 +384,7 @@ export default function RendezVousBureau() {
             type_projet: projet,
             type_projet_label: projetLabelForAdmin,
             appointment_type: appointmentType,
+            qualification_statut: quali?.statut,
           },
         })
         .then(
@@ -328,8 +401,8 @@ export default function RendezVousBureau() {
               : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName} [À CONFIRMER]`,
             description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nStatut: EN ATTENTE — à confirmer dans le calendrier admin\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
             location: locationProspect,
-            start_date: selected.start.toISOString(),
-            end_date: selected.end.toISOString(),
+            start_date: selected!.start.toISOString(),
+            end_date: selected!.end.toISOString(),
             all_day: false,
             recipient_email: 'info@immo-rama.ch',
           },
@@ -339,6 +412,7 @@ export default function RendezVousBureau() {
           () => {},
         );
 
+      setDoneStatus('reserved');
       setDone(true);
       toast.success('Demande de RDV enregistrée. Vous recevrez la confirmation par email.');
     } catch (err: any) {
