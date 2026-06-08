@@ -20,7 +20,8 @@ export function DossierAnalyseSection() {
       <div className="relative">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(38_45%_48%/0.12),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(38_45%_48%/0.08),transparent_50%)]" />
         <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center max-w-7xl mx-auto">
+          <div className="max-w-3xl mx-auto">
+
 
             {/* Colonne texte */}
             <div className="flex flex-col gap-7 text-left animate-fade-in">
