@@ -82,6 +82,7 @@ export default function HomePage() {
         <DifferentiatorSection />
         <ServicesFullSection />
         <BudgetCalcSection />
+        <DossierAnalyseForm />
         <GuaranteeSection />
         <CoverageSection />
         <StatsSection />
