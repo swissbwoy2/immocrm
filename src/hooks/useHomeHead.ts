@@ -2,9 +2,10 @@ import { useEffect } from 'react';
 import { HOME_FAQ } from '@/components/landing/premium/PremiumFAQ';
 
 const CANONICAL_URL = 'https://logisorama.ch/';
-const HOME_TITLE = 'Agence de relocation à Lausanne | Logisorama by Immo-rama.ch';
+const HOME_TITLE = "Relocation & recherche d'appartement en Suisse romande | Logisorama";
 const HOME_DESCRIPTION =
-  "Logisorama accompagne votre recherche d'appartement à Lausanne, Genève, Crissier et en Suisse romande. Agence de relocation et chasseur d'appartement.";
+  "Logisorama by Immo-Rama.ch vous aide à trouver un appartement en Suisse romande grâce à une recherche personnalisée, l'organisation des visites et l'envoi de votre dossier aux régies.";
+
 
 const MARK_ATTR = 'data-home-head';
 const CANONICAL_ID = 'home-canonical';
