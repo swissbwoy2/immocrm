@@ -557,6 +557,138 @@ export default function RendezVousBureau() {
           </div>
         </div>
 
+        {/* 1bis. Préqualification express (uniquement location) */}
+        {isLocation && (
+          <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-5">
+            <div>
+              <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+                Préqualification express
+              </Label>
+              <p className="text-xs text-[#8a7f6e]">
+                6 questions rapides pour qu'on prépare votre rendez-vous avec les bonnes infos.
+              </p>
+            </div>
+
+            {/* Partie 1 — Situation */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+                Partie 1 — Votre situation
+              </p>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">1. Statut en Suisse *</Label>
+                <Select value={statutSuisse} onValueChange={(v) => setStatutSuisse(v as StatutSuisse)}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {STATUT_SUISSE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">2. Situation professionnelle *</Label>
+                <Select value={situationPro} onValueChange={(v) => setSituationPro(v as SituationPro)}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {SITUATION_PRO_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">3. Poursuites / dettes *</Label>
+                <Select value={poursuites} onValueChange={(v) => setPoursuites(v as PoursuitesStatut)}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {POURSUITES_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Partie 2 — Recherche */}
+            <div className="space-y-3 pt-3 border-t border-[#b8893d]/15">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+                Partie 2 — Votre recherche
+              </p>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">4. Type de logement *</Label>
+                <Select value={nbPieces} onValueChange={setNbPieces}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {NB_PIECES_OPTIONS.map((o) => (
+                      <SelectItem key={o} value={o}>{o === 'Studio' || o === '4.5+' ? o : `${o} pièces`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">5. Localité ou région *</Label>
+                <Input
+                  value={localiteRecherche}
+                  onChange={(e) => setLocaliteRecherche(e.target.value)}
+                  placeholder="Lausanne, Renens, Morges, Nyon, Genève…"
+                  className="dark-input-rdv"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="mb-1.5 block text-xs text-[#c9bfac]">6a. Budget max charges comprises (CHF) *</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={budgetMax}
+                    onChange={(e) => setBudgetMax(e.target.value)}
+                    placeholder="2000"
+                    className="dark-input-rdv"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block text-xs text-[#c9bfac]">6b. Revenu net mensuel ménage (CHF) *</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={revenuNet}
+                    onChange={(e) => setRevenuNet(e.target.value)}
+                    placeholder="6000"
+                    className="dark-input-rdv"
+                  />
+                </div>
+              </div>
+
+              {liveRatio !== null && (
+                <div
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-xs flex items-center justify-between',
+                    liveRatio >= 3 && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+                    liveRatio >= 2.5 && liveRatio < 3 && 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+                    liveRatio < 2.5 && 'border-rose-500/40 bg-rose-500/10 text-rose-200',
+                  )}
+                >
+                  <span>Ratio revenu / loyer</span>
+                  <strong>{liveRatio}x {liveRatio >= 3 ? '✓' : liveRatio >= 2.5 ? '~' : '⚠'}</strong>
+                </div>
+              )}
+            </div>
+
+            {qualification && isNonQualifie && (
+              <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-3 text-xs text-rose-100">
+                <p className="font-semibold">Dossier à analyser par notre équipe</p>
+                <p className="mt-1 text-rose-200/90">
+                  Vos informations seront transmises à un conseiller. Nous vous recontactons sous
+                  24h pour vous proposer une stratégie adaptée (garant, ajustement du budget…).
+                  Aucun créneau ne sera pré-réservé.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 2. Type de RDV */}
         <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
