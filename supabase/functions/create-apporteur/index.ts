@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { requireAuth } from '../_shared/require-admin.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,10 +10,12 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req, { requireAdmin: true });
+  if (!auth.ok) return auth.response!;
+  const supabase = auth.admin!;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { email, nom, prenom } = await req.json();
 

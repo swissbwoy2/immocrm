@@ -28,20 +28,20 @@ const getAppBaseUrl = (req: Request) => {
 
 const getRedirectTo = (req: Request) => `${getAppBaseUrl(req)}/first-login`;
 
+import { requireAuth } from "../_shared/require-admin.ts";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req, { requireAdmin: true });
+  if (!auth.ok) return auth.response!;
+  const supabaseAdmin = auth.admin!;
+
   try {
     const { email, userId } = await req.json();
     const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
 
     const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
       page: 1,

@@ -6,9 +6,56 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Block private/loopback/link-local/multicast/metadata ranges to prevent SSRF
+function isPrivateHost(host: string): boolean {
+  const h = host.toLowerCase();
+  if (h === 'localhost' || h === 'ip6-localhost' || h === 'ip6-loopback') return true;
+  // IPv4 literal
+  const m = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b] = [parseInt(m[1]), parseInt(m[2])];
+    if (a === 10) return true;
+    if (a === 127) return true;
+    if (a === 0) return true;
+    if (a === 169 && b === 254) return true; // link-local / metadata 169.254.169.254
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a >= 224) return true; // multicast / reserved
+    return false;
+  }
+  // IPv6 literal — block all literal forms defensively
+  if (h.includes(':')) return true;
+  // *.internal / *.local / metadata-style hosts
+  if (h.endsWith('.internal') || h.endsWith('.local') || h.endsWith('.localhost')) return true;
+  if (h === 'metadata.google.internal') return true;
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Require an authenticated caller — link previews are only meaningful for logged-in users
+  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: 'Authentification requise' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+  {
+    const userClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+    const { data: u, error: uErr } = await userClient.auth.getUser(authHeader.replace(/^Bearer\s+/i, ''));
+    if (uErr || !u?.user) {
+      return new Response(JSON.stringify({ error: 'Session invalide' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   try {
@@ -26,10 +73,25 @@ serve(async (req) => {
     if (!/^https?:\/\//i.test(url)) {
       url = `https://${url}`;
     }
+    let parsed: URL;
     try {
-      new URL(url);
+      parsed = new URL(url);
     } catch {
       return new Response(JSON.stringify({ error: `Invalid URL: '${rawUrl}'` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    // Only allow http(s)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return new Response(JSON.stringify({ error: 'Unsupported URL scheme' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    // Reject SSRF targets
+    if (isPrivateHost(parsed.hostname)) {
+      return new Response(JSON.stringify({ error: 'Host not allowed' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -59,7 +121,7 @@ serve(async (req) => {
     
     // Fetch the page
     console.log('Fetching page...');
-    const hostname = new URL(url).hostname;
+    const hostname = parsed.hostname;
     
     let html = '';
     try {
