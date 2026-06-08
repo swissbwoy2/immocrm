@@ -69,6 +69,7 @@ export default function RendezVousBureau() {
   const [selected, setSelected] = useState<Slot | null>(null);
   const [taken, setTaken] = useState<Set<string>>(new Set());
   const [projet, setProjet] = useState<ProjectType | ''>('');
+  const [appointmentType, setAppointmentType] = useState<'bureau' | 'telephonique'>('bureau');
 
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
