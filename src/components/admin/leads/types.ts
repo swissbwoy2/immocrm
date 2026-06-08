@@ -25,6 +25,21 @@ export type Lead = {
   accord_bancaire: boolean | null;
   apport_personnel: string | null;
   type_bien: string | null;
+  // --- Préqualification courte (formulaire /rendez-vous, location uniquement) ---
+  statut_suisse?: string | null;
+  situation_pro?: string | null;
+  poursuites_statut?: string | null;
+  nb_pieces?: string | null;
+  localite_recherche?: string | null;
+  budget_max_chf?: number | null;
+  revenu_net_mensuel_chf?: number | null;
+  ratio_revenu_loyer?: number | null;
+  statut_qualification?: 'qualifie' | 'a_verifier' | 'a_reorienter' | 'non_qualifie' | null;
+  risque_niveau?: 'faible' | 'moyen' | 'eleve' | null;
+  motif_qualification?: string | null;
+  resume_profil?: string | null;
+  recommandation_agent?: string | null;
+  requires_manual_validation?: boolean | null;
 };
 
 export type PhoneAppointment = {
