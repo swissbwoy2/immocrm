@@ -206,13 +206,33 @@ export default function RendezVousBureau() {
     [slots, activeDayPart],
   );
 
-  const isFormValid =
-    !!projet &&
-    !!selected &&
+  const isCoordValid =
     prenom.trim().length >= 2 &&
     nom.trim().length >= 2 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     telephone.trim().length >= 8;
+
+  const qualification: QualificationResult | null = useMemo(() => {
+    if (!isLocation || !isQualificationValid) return null;
+    return qualifyLead({
+      statutSuisse: statutSuisse as StatutSuisse,
+      situationPro: situationPro as SituationPro,
+      poursuites: poursuites as PoursuitesStatut,
+      nbPieces,
+      localite: localiteRecherche,
+      budgetChf: parseFloat(budgetMax) || 0,
+      revenuChf: parseFloat(revenuNet) || 0,
+    });
+  }, [isLocation, isQualificationValid, statutSuisse, situationPro, poursuites, nbPieces, localiteRecherche, budgetMax, revenuNet]);
+
+  const isNonQualifie = qualification?.statut === 'non_qualifie';
+
+  // Pour les non-qualifiés, on n'exige PAS de créneau (réservation manuelle)
+  const isFormValid =
+    !!projet &&
+    isCoordValid &&
+    isQualificationValid &&
+    (isNonQualifie || !!selected);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
