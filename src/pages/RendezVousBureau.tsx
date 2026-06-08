@@ -927,12 +927,15 @@ export default function RendezVousBureau() {
             >
               {submitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Réservation...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
+                  {isNonQualifie ? 'Envoi…' : 'Réservation...'}
                 </>
+              ) : isNonQualifie ? (
+                '📩 Envoyer ma demande pour analyse manuelle'
+              ) : appointmentType === 'bureau' ? (
+                '🏢 Confirmer mon RDV gratuit au bureau'
               ) : (
-                appointmentType === 'bureau'
-                  ? '🏢 Confirmer mon RDV gratuit au bureau'
-                  : '📞 Confirmer mon RDV téléphonique gratuit'
+                '📞 Confirmer mon RDV téléphonique gratuit'
               )}
             </Button>
 
