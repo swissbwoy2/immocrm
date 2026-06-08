@@ -148,6 +148,7 @@ export default function RendezVousBureau() {
       const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
       const projetLabel = PROJECT_LABELS[projet];
       const notesParts = [
+        `Type de RDV: ${appointmentType === 'bureau' ? 'Au bureau (Crissier)' : 'Téléphonique'}`,
         `Type de projet: ${projetLabel}`,
         message.trim() ? `Message client: ${message.trim()}` : '',
       ].filter(Boolean);
@@ -160,7 +161,8 @@ export default function RendezVousBureau() {
         prospect_name: fullName,
         slot_start: selected.start.toISOString(),
         slot_end: selected.end.toISOString(),
-        source_form: 'rdv_bureau_crissier',
+        source_form: appointmentType === 'bureau' ? 'rdv_bureau_crissier' : 'rdv_telephonique',
+        appointment_type: appointmentType,
         status: 'confirme',
         notes_admin: notes,
       });
