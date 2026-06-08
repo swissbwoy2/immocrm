@@ -836,6 +836,10 @@ export default function AgentCalendrier() {
   };
 
   const handleOpenEventDetail = (event: CalendarEvent) => {
+    if (event.id?.startsWith('phone-rdv-')) {
+      setSelectedPhoneApptId(event.id.replace('phone-rdv-', ''));
+      return;
+    }
     setSelectedEvent(event);
     setEventDetailDialogOpen(true);
   };
