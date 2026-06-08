@@ -836,10 +836,16 @@ export default function RendezVousBureau() {
                 4. Vos coordonnées
               </Label>
               <p className="text-xs text-[#8a7f6e]">
-                {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
-                <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
-                à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
-                {PROJECT_LABELS[projet]}
+                {selected ? (
+                  <>
+                    {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
+                    <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
+                    à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
+                    {PROJECT_LABELS[projet]}
+                  </>
+                ) : (
+                  <>Analyse personnalisée de votre dossier — {PROJECT_LABELS[projet]}</>
+                )}
               </p>
             </div>
 
