@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
 import { RequestDocumentsDialog } from './RequestDocumentsDialog';
 import { getStoragePath } from '@/lib/documentUtils';
+import { SensitiveDocConsentCheckbox } from '@/components/legal/SensitiveDocConsentCheckbox';
 interface Document {
   id: string;
   nom: string;
