@@ -111,7 +111,7 @@ export function PublicSiteHeader() {
                   >
                     <Link to="/rendez-vous">
                       <Calendar className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Réserver mon RDV gratuit</span>
+                      <span className="hidden sm:inline">Réserver mon RDV au bureau gratuitement</span>
                     </Link>
                   </Button>
                 </motion.div>
