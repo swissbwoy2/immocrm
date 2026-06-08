@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Key, Home, Sparkles } from 'lucide-react';
 import { useSearchType } from '@/contexts/SearchTypeContext';
-import heroCoupleKeys from '@/assets/hero-couple-keys.jpg';
+
 
 export function DossierAnalyseSection() {
   const { setSearchType } = useSearchType();
@@ -20,7 +20,8 @@ export function DossierAnalyseSection() {
       <div className="relative">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(38_45%_48%/0.12),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(38_45%_48%/0.08),transparent_50%)]" />
         <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center max-w-7xl mx-auto">
+          <div className="max-w-3xl mx-auto">
+
 
             {/* Colonne texte */}
             <div className="flex flex-col gap-7 text-left animate-fade-in">
@@ -105,40 +106,6 @@ export function DossierAnalyseSection() {
               </a>
             </div>
 
-            {/* Colonne image */}
-            <div className="relative animate-fade-in" style={{ animationDelay: '120ms' }}>
-              <div className="absolute -inset-6 bg-primary/15 blur-3xl rounded-full pointer-events-none" />
-              <div className="relative overflow-hidden rounded-3xl border border-primary/20 shadow-2xl bg-card">
-                <img
-                  src={heroCoupleKeys}
-                  alt="Couple heureux recevant les clés de leur appartement en Suisse romande grâce à Logisorama"
-                  width={1024}
-                  height={1024}
-                  className="w-full aspect-[4/5] md:aspect-square object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[hsl(30_15%_5%)] via-transparent to-transparent opacity-70" />
-
-                {/* Floating card overlay */}
-                <div className="absolute bottom-5 left-5 right-5 p-4 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl flex items-center gap-4 shadow-xl">
-                  <div className="flex -space-x-2">
-                    <div className="w-9 h-9 rounded-full border-2 border-black bg-gradient-to-br from-primary/60 to-primary/30" />
-                    <div className="w-9 h-9 rounded-full border-2 border-black bg-gradient-to-br from-primary/40 to-primary/20" />
-                    <div className="w-9 h-9 rounded-full border-2 border-black bg-gradient-to-br from-primary/30 to-primary/10" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[10px] uppercase tracking-widest text-primary font-bold mb-0.5">RDV gratuit</p>
-                    <p className="text-xs md:text-sm text-white/90 font-medium leading-tight">
-                      Réserve ton rendez-vous avec nos experts
-                    </p>
-                  </div>
-                </div>
-
-                {/* Decorative gold line */}
-                <div className="absolute top-6 left-6 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-primary/30">
-                  <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Bureau de Crissier</span>
-                </div>
-              </div>
-            </div>
 
           </div>
         </div>
