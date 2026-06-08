@@ -34,6 +34,53 @@ import {
   OFFICE_ADDRESS,
   OFFICE_MAPS_URL,
 } from '@/lib/phoneSlots';
+import {
+  qualifyLead,
+  STATUT_LABELS,
+  type StatutSuisse,
+  type SituationPro,
+  type PoursuitesStatut,
+  type QualificationResult,
+} from '@/utils/leadQualification';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const STATUT_SUISSE_OPTIONS: StatutSuisse[] = [
+  'Suisse',
+  'Permis C',
+  'Permis B',
+  'Permis L',
+  'Permis F',
+  'Permis N',
+  'Permis G',
+  'Sans permis valable',
+  'Autre',
+];
+const SITUATION_PRO_OPTIONS: SituationPro[] = [
+  'CDI',
+  'CDD',
+  'Indépendant',
+  'Apprenti / Étudiant',
+  'Retraité',
+  'Sans emploi',
+  'Aide sociale',
+  'AI',
+  'Chômage',
+  'Autre',
+];
+const POURSUITES_OPTIONS: PoursuitesStatut[] = [
+  'Aucune',
+  'En cours',
+  'Actes de défaut de biens',
+  'Je ne sais pas',
+  "Pas encore d'extrait",
+];
+const NB_PIECES_OPTIONS = ['Studio', '1.5', '2', '2.5', '3', '3.5', '4', '4.5+'];
 
 type ProjectType = 'location' | 'achat' | 'renovation' | 'vente';
 
