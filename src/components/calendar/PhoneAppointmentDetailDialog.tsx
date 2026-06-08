@@ -65,6 +65,8 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
   const end = appt.slot_end ? new Date(appt.slot_end) : new Date(start.getTime() + 30 * 60 * 1000);
 
   const isConfirmed = appt.status === 'confirme';
+  const isBureau = appt.appointment_type === 'bureau';
+  const OFFICE_ADDRESS = 'Ch. de la Verseuse 1, 1023 Crissier';
 
   const handleCancel = async () => {
     try {
