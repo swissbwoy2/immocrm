@@ -204,13 +204,22 @@ export default function RendezVousBureau() {
         .update({ lead_id: leadId })
         .eq('id', apptId);
 
+      const isBureau = appointmentType === 'bureau';
+      const titleProspect = isBureau
+        ? 'RDV Logisorama — Bureau Crissier'
+        : 'RDV Logisorama — Appel téléphonique';
+      const descProspect = isBureau
+        ? `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`
+        : `Appel téléphonique confirmé avec ${fullName}.\nProjet : ${projetLabel}\nNous vous appellerons au : ${telephone.trim()}`;
+      const locationProspect = isBureau ? OFFICE_ADDRESS : `Téléphone : ${telephone.trim()}`;
+
       // ICS prospect
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
-            title: 'RDV Logisorama — Bureau Crissier',
-            description: `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`,
-            location: OFFICE_ADDRESS,
+            title: titleProspect,
+            description: descProspect,
+            location: locationProspect,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
             all_day: false,
@@ -231,7 +240,12 @@ export default function RendezVousBureau() {
       // Notif admin
       supabase.functions
         .invoke('notify-admin-new-phone-appointment', {
-          body: { appointment_id: apptId, type_projet: projet, type_projet_label: projetLabel },
+          body: {
+            appointment_id: apptId,
+            type_projet: projet,
+            type_projet_label: projetLabel,
+            appointment_type: appointmentType,
+          },
         })
         .then(
           () => {},
@@ -242,9 +256,11 @@ export default function RendezVousBureau() {
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
-            title: `Nouveau RDV bureau (${projetLabel}) — ${fullName}`,
-            description: `Projet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
-            location: OFFICE_ADDRESS,
+            title: isBureau
+              ? `Nouveau RDV bureau (${projetLabel}) — ${fullName}`
+              : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName}`,
+            description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
+            location: locationProspect,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
             all_day: false,
