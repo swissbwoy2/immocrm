@@ -46,9 +46,8 @@ const menuGroups = [
   {
     title: 'Légal',
     items: [
-      { to: '#', label: 'Mentions légales', icon: FileText },
-      { to: '#', label: 'Confidentialité', icon: Shield },
-      { to: '#', label: 'CGV', icon: Lock },
+      { to: '/mentions-legales', label: 'Mentions légales', icon: FileText },
+      { to: '/politique-confidentialite', label: 'Confidentialité', icon: Shield },
     ],
   },
 ];

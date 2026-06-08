@@ -1,39 +1,79 @@
-## Objectif
+# Mentions légales & Politique de confidentialité (nLPD)
 
-Permettre à l'admin d'assigner un rendez-vous (bureau ou téléphonique) à un agent depuis la fiche du RDV, et faire apparaître ce RDV dans le calendrier de l'agent assigné.
+## Contexte
 
-## Changements
+Aucune page légale n'existe actuellement (vérifié : pas de route `/mentions-legales` ni `/politique-confidentialite`, aucun composant correspondant). Le site collecte pourtant des données sensibles au sens de l'**art. 5 let. c nLPD** (extrait de poursuites, fiches de salaire, copie ID/permis, données financières) qui exigent une information explicite, une finalité claire et une base légale documentée.
 
-### 1. Base de données (`lead_phone_appointments`)
-Migration : ajouter une colonne `assigned_agent_id uuid references auth.users(id) on delete set null`, index sur `assigned_agent_id`.
-RLS : ajouter une policy SELECT permettant à un agent de voir les RDV où `assigned_agent_id = auth.uid()` (en plus des admins déjà autorisés). Idem pour UPDATE limité (au moins lecture + capacité de confirmer/annuler son propre RDV — à confirmer plus bas).
+**Forme juridique** : Immo-rama.ch est une **entreprise individuelle** (raison individuelle), IDE **CHE-442.303.796**, exploitée par **Christ Ramazani** — pas une Sàrl.
 
-### 2. Dialog admin (`PhoneAppointmentDetailDialog.tsx`)
-- Charger la liste des agents actifs (table `agents` / `profiles` avec rôle `agent`).
-- Ajouter un `Select` "Agent assigné" affichant l'agent courant, avec option "Non assigné".
-- Au changement : `UPDATE lead_phone_appointments SET assigned_agent_id = ...`.
-- Afficher le nom de l'agent assigné dans l'en-tête / badge.
-- Indication visuelle (badge) si non assigné.
+## Livrables
 
-### 3. Calendrier agent (`src/pages/agent/Calendrier.tsx` + hook de normalisation des events)
-- Ajouter une source de données : `lead_phone_appointments` où `assigned_agent_id = current_user` et `status in ('en_attente','confirme')`.
-- Normaliser comme un évent calendrier (couleur indigo téléphonique / emerald bureau, badge type, titre "RDV bureau — Prénom Nom" ou "RDV tel — ...").
-- Au clic : ouvrir `PhoneAppointmentDetailDialog` en mode lecture+actions limitées (voir question ci-dessous).
+### 1. Page `/mentions-legales` — `src/pages/legal/MentionsLegales.tsx`
+Conforme aux usages suisses (LCD art. 3 al. 1 let. s) :
+- Éditeur : **Immo-rama.ch**, entreprise individuelle, titulaire **Christ Ramazani**
+- IDE : **CHE-442.303.796**
+- Adresse du siège
+- Responsable de publication : Christ Ramazani
+- Contact : email + téléphone
+- Hébergement : Lovable Cloud (Supabase)
+- Propriété intellectuelle, marques Logisorama / Immo-rama.ch
+- Droit applicable : droit suisse, for au siège du titulaire
 
-### 4. Notification (optionnel, à confirmer)
-- Lorsque l'admin assigne un RDV à un agent : envoyer une notification in-app (`notifications` table) + éventuellement push à l'agent.
+### 2. Page `/politique-confidentialite` — `src/pages/legal/PolitiqueConfidentialite.tsx`
+Structure alignée nLPD (en vigueur 01.09.2023) + RGPD :
 
-## Questions ouvertes
+1. **Responsable du traitement** (art. 5 let. j nLPD) — Christ Ramazani, titulaire de l'entreprise individuelle Immo-rama.ch ; contact unique
+2. **Catégories de données collectées**
+   - Identité, coordonnées, données de connexion
+   - **Données sensibles (art. 5 let. c nLPD)** : extrait de poursuites, fiches de salaire, contrat de travail, copie pièce d'identité / permis de séjour, état civil, situation familiale
+   - Données de navigation (cookies, pixels Meta/Google/TikTok)
+3. **Finalités et bases légales** — tableau explicite :
+   | Donnée | Finalité | Base légale |
+   |---|---|---|
+   | Fiche de salaire | Vérifier la solvabilité exigée par les régies (loyer ≤ 1/3 revenu) | Exécution du mandat + consentement explicite |
+   | Extrait de poursuites | Dossier de candidature recevable par les régies | Exécution contractuelle + intérêt légitime |
+   | Copie ID / permis séjour | Identification, vérification du droit de séjour | Obligation contractuelle + consentement |
+   | Contrat de travail | Justifier la stabilité de l'emploi | Exécution contractuelle |
+   | Coordonnées bancaires | Acompte 300 CHF, remboursement | Exécution contractuelle |
+4. **Destinataires** : régies immobilières, propriétaires, sous-traitants techniques (Supabase, Resend, AbaNinja, Meta, Google, TikTok, WhatsApp Business)
+5. **Transferts hors Suisse** (art. 16-17 nLPD) — UE adéquate, USA via DPF/CCT
+6. **Durée de conservation** : mandat actif + 10 ans (art. 962 CO) ; documents sensibles supprimés à la clôture sauf obligation comptable
+7. **Sécurité** (art. 8 nLPD) : RLS Supabase, buckets privés, chiffrement, accès restreint
+8. **Droits des personnes concernées** (art. 25-32 nLPD) : accès, rectification, suppression, opposition, portabilité, retrait du consentement — email à Christ Ramazani
+9. **Décisions individuelles automatisées** (art. 21 nLPD) : matching IA AI-Relocation — droit à intervention humaine
+10. **Cookies & traceurs** : renvoi vers le bandeau Consent Mode v2 (Google Ads / Meta / TikTok)
+11. **Profilage** (art. 5 let. f nLPD) : segmentation marketing leads
+12. **Autorité de contrôle** : PFPDT, Berne
+13. **Date de dernière mise à jour**
 
-1. **Agent peut-il confirmer / annuler le RDV qui lui est assigné**, ou seul l'admin garde ces actions ? (par défaut : lecture seule côté agent, admin reste seul à confirmer/annuler).
-2. **Notification à l'agent** lors de l'assignation : oui/non ?
+### 3. Footer public — composant partagé
+Créer `src/components/public/PublicFooter.tsx` avec deux `<Link>` discrets vers les pages légales, puis l'inclure dans :
+- `HomePage`, `VendreMonBien`, `RelouerMonAppartement`, `ConstruireRenover`
+- `PublicAnnonces` et détail annonces
+- Pages mandat public (`MandatV3`, `NouveauMandat`)
 
-## Hors scope
-- Pas de changement aux formulaires publics `/rendez-vous` et `/analyse-dossier` (pas d'auto-assignation).
-- Pas de réassignation automatique en fonction du lead/agent du lead.
+### 4. Routes
+Ajouter dans `src/App.tsx` :
+```tsx
+<Route path="/mentions-legales" element={<MentionsLegales />} />
+<Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
+```
 
-## Fichiers touchés
-- Migration SQL (nouvelle)
-- `src/components/calendar/PhoneAppointmentDetailDialog.tsx`
-- `src/pages/agent/Calendrier.tsx` (+ hook `useNormalizedEvents` ou équivalent)
-- Éventuellement `src/pages/admin/Calendrier.tsx` (afficher nom agent dans l'évent)
+### 5. Consentement explicite dans les formulaires sensibles
+Ajouter une mention courte avec lien vers la politique sur :
+- `FormulaireRelouer`, `NouveauMandat`, `MandatV3`, upload de documents espace client
+- Texte type : *« J'accepte que mes documents (fiche de salaire, extrait de poursuites, ID) soient traités par Immo-rama.ch (Christ Ramazani, entreprise individuelle) pour constituer mon dossier locataire, conformément à la [politique de confidentialité](/politique-confidentialite). »*
+
+## Détails techniques
+
+- Pages 100 % statiques (JSX), SEO friendly : `<title>`, meta description, H1 unique, balisage sémantique
+- Aucune migration backend, aucune nouvelle dépendance
+- Design system (tokens, pas de couleurs hardcodées)
+- Date de mise à jour en constante en haut de fichier
+- Mise à jour de `mem://style/brand-identity-guidelines` pour figer la forme juridique « entreprise individuelle »
+
+## Hors périmètre
+
+- Revue du bandeau cookies
+- Traductions EN/DE (FR uniquement)
+- Génération PDF téléchargeable de la politique

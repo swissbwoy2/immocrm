@@ -153,14 +153,17 @@ export function VendeurFooter() {
             </p>
 
             <div className="flex items-center gap-6 text-sm">
-              {["Mentions légales", "Politique de confidentialité"].map((label) => (
+              {[
+                { label: "Mentions légales", to: "/mentions-legales" },
+                { label: "Politique de confidentialité", to: "/politique-confidentialite" },
+              ].map((item) => (
                 <a
-                  key={label}
-                  href="#"
+                  key={item.label}
+                  href={item.to}
                   className="text-muted-foreground hover:text-primary transition-colors relative group"
                 >
                   <span className="relative">
-                    {label}
+                    {item.label}
                     <span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
                   </span>
                 </a>
