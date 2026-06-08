@@ -540,10 +540,11 @@ export default function RendezVousBureau() {
           >
             <div>
               <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-                3. Vos coordonnées
+                4. Vos coordonnées
               </Label>
               <p className="text-xs text-[#8a7f6e]">
-                RDV le <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
+                {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
+                <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
                 à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
                 {PROJECT_LABELS[projet]}
               </p>
