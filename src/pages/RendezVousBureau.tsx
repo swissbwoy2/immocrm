@@ -34,6 +34,53 @@ import {
   OFFICE_ADDRESS,
   OFFICE_MAPS_URL,
 } from '@/lib/phoneSlots';
+import {
+  qualifyLead,
+  STATUT_LABELS,
+  type StatutSuisse,
+  type SituationPro,
+  type PoursuitesStatut,
+  type QualificationResult,
+} from '@/utils/leadQualification';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const STATUT_SUISSE_OPTIONS: StatutSuisse[] = [
+  'Suisse',
+  'Permis C',
+  'Permis B',
+  'Permis L',
+  'Permis F',
+  'Permis N',
+  'Permis G',
+  'Sans permis valable',
+  'Autre',
+];
+const SITUATION_PRO_OPTIONS: SituationPro[] = [
+  'CDI',
+  'CDD',
+  'Indépendant',
+  'Apprenti / Étudiant',
+  'Retraité',
+  'Sans emploi',
+  'Aide sociale',
+  'AI',
+  'Chômage',
+  'Autre',
+];
+const POURSUITES_OPTIONS: PoursuitesStatut[] = [
+  'Aucune',
+  'En cours',
+  'Actes de défaut de biens',
+  'Je ne sais pas',
+  "Pas encore d'extrait",
+];
+const NB_PIECES_OPTIONS = ['Studio', '1.5', '2', '2.5', '3', '3.5', '4', '4.5+'];
 
 type ProjectType = 'location' | 'achat' | 'renovation' | 'vente';
 
@@ -78,6 +125,35 @@ export default function RendezVousBureau() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [doneStatus, setDoneStatus] = useState<'reserved' | 'manual'>('reserved');
+
+  // --- Préqualification location (6 questions) ---
+  const [statutSuisse, setStatutSuisse] = useState<StatutSuisse | ''>('');
+  const [situationPro, setSituationPro] = useState<SituationPro | ''>('');
+  const [poursuites, setPoursuites] = useState<PoursuitesStatut | ''>('');
+  const [nbPieces, setNbPieces] = useState('');
+  const [localiteRecherche, setLocaliteRecherche] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
+  const [revenuNet, setRevenuNet] = useState('');
+
+  const isLocation = projet === 'location';
+
+  const liveRatio = useMemo(() => {
+    const b = parseFloat(budgetMax);
+    const r = parseFloat(revenuNet);
+    if (!b || !r || b <= 0) return null;
+    return Math.round((r / b) * 10) / 10;
+  }, [budgetMax, revenuNet]);
+
+  const isQualificationValid =
+    !isLocation ||
+    (!!statutSuisse &&
+      !!situationPro &&
+      !!poursuites &&
+      !!nbPieces &&
+      localiteRecherche.trim().length >= 2 &&
+      parseFloat(budgetMax) > 0 &&
+      parseFloat(revenuNet) > 0);
 
   useEffect(() => {
     document.title =
@@ -130,37 +206,128 @@ export default function RendezVousBureau() {
     [slots, activeDayPart],
   );
 
-  const isFormValid =
-    !!projet &&
-    !!selected &&
+  const isCoordValid =
     prenom.trim().length >= 2 &&
     nom.trim().length >= 2 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     telephone.trim().length >= 8;
 
+  const qualification: QualificationResult | null = useMemo(() => {
+    if (!isLocation || !isQualificationValid) return null;
+    return qualifyLead({
+      statutSuisse: statutSuisse as StatutSuisse,
+      situationPro: situationPro as SituationPro,
+      poursuites: poursuites as PoursuitesStatut,
+      nbPieces,
+      localite: localiteRecherche,
+      budgetChf: parseFloat(budgetMax) || 0,
+      revenuChf: parseFloat(revenuNet) || 0,
+    });
+  }, [isLocation, isQualificationValid, statutSuisse, situationPro, poursuites, nbPieces, localiteRecherche, budgetMax, revenuNet]);
+
+  const isNonQualifie = qualification?.statut === 'non_qualifie';
+
+  // Pour les non-qualifiés, on n'exige PAS de créneau (réservation manuelle)
+  const isFormValid =
+    !!projet &&
+    isCoordValid &&
+    isQualificationValid &&
+    (isNonQualifie || !!selected);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || !selected || !projet) return;
+    if (!isFormValid || !projet) return;
+    if (!isNonQualifie && !selected) return;
     setSubmitting(true);
 
     try {
-      const apptId = crypto.randomUUID();
       const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
       const projetLabel = PROJECT_LABELS[projet];
+
+      // Champs préqualification (uniquement pour location)
+      const quali = qualification;
+      const qualifFields: Record<string, any> = isLocation && quali
+        ? {
+            statut_suisse: statutSuisse,
+            situation_pro: situationPro,
+            poursuites_statut: poursuites,
+            nb_pieces: nbPieces,
+            localite_recherche: localiteRecherche.trim(),
+            budget_max_chf: parseFloat(budgetMax) || null,
+            revenu_net_mensuel_chf: parseFloat(revenuNet) || null,
+            ratio_revenu_loyer: quali.ratio,
+            statut_qualification: quali.statut,
+            risque_niveau: quali.risque,
+            motif_qualification: quali.motif,
+            resume_profil: quali.resume,
+            recommandation_agent: quali.recommandation,
+            poursuites: poursuites === 'En cours' || poursuites === 'Actes de défaut de biens',
+            requires_manual_validation: quali.statut === 'non_qualifie',
+          }
+        : {};
+
       const notesParts = [
         `Type de RDV: ${appointmentType === 'bureau' ? 'Au bureau (Crissier)' : 'Téléphonique'}`,
         `Type de projet: ${projetLabel}`,
+        quali ? `Préqualification: ${STATUT_LABELS[quali.statut]} (ratio ${quali.ratio}x — risque ${quali.risque})` : '',
+        quali ? `Résumé: ${quali.resume}` : '',
+        quali ? `Recommandation: ${quali.recommandation}` : '',
         message.trim() ? `Message client: ${message.trim()}` : '',
       ].filter(Boolean);
       const notes = notesParts.join('\n');
 
+      // ---- Cas 1 : Non qualifié → AUCUN créneau réservé, validation manuelle ----
+      if (isNonQualifie) {
+        const leadId = crypto.randomUUID();
+        const { error: leadErr } = await supabase.from('leads').insert({
+          id: leadId,
+          email: email.trim(),
+          prenom: prenom.trim(),
+          nom: nom.trim(),
+          telephone: telephone.trim(),
+          source: 'rdv_bureau_crissier',
+          formulaire: 'rdv_bureau',
+          type_recherche: 'location',
+          is_qualified: false,
+          notes,
+          utm_source: utm.utm_source || 'direct',
+          utm_medium: utm.utm_medium || 'rdv_bureau',
+          utm_campaign: utm.utm_campaign || projet,
+          utm_content: utm.utm_content,
+          utm_term: utm.utm_term,
+          ...qualifFields,
+        } as any);
+        if (leadErr) throw leadErr;
+
+        supabase.functions
+          .invoke('notify-admin-new-phone-appointment', {
+            body: {
+              appointment_id: null,
+              lead_id: leadId,
+              type_projet: projet,
+              type_projet_label: projetLabel,
+              appointment_type: 'manual_validation',
+              qualification_statut: quali?.statut,
+              qualification_motif: quali?.motif,
+            },
+          })
+          .then(() => {}, () => {});
+
+        setDoneStatus('manual');
+        setDone(true);
+        toast.success('Demande enregistrée. Notre équipe vous recontacte.');
+        return;
+      }
+
+      // ---- Cas 2 : Qualifié / À vérifier / À réorienter → flux normal ----
+      const apptId = crypto.randomUUID();
       const { error: apptErr } = await supabase.from('lead_phone_appointments').insert({
         id: apptId,
         prospect_email: email.trim(),
         prospect_phone: telephone.trim(),
         prospect_name: fullName,
-        slot_start: selected.start.toISOString(),
-        slot_end: selected.end.toISOString(),
+        slot_start: selected!.start.toISOString(),
+        slot_end: selected!.end.toISOString(),
         source_form: appointmentType === 'bureau' ? 'rdv_bureau_crissier' : 'rdv_telephonique',
         appointment_type: appointmentType,
         status: 'en_attente',
@@ -198,7 +365,8 @@ export default function RendezVousBureau() {
         utm_campaign: utm.utm_campaign || projet,
         utm_content: utm.utm_content,
         utm_term: utm.utm_term,
-      });
+        ...qualifFields,
+      } as any);
       await supabase
         .from('lead_phone_appointments')
         .update({ lead_id: leadId })
@@ -216,6 +384,7 @@ export default function RendezVousBureau() {
             type_projet: projet,
             type_projet_label: projetLabelForAdmin,
             appointment_type: appointmentType,
+            qualification_statut: quali?.statut,
           },
         })
         .then(
@@ -232,8 +401,8 @@ export default function RendezVousBureau() {
               : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName} [À CONFIRMER]`,
             description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nStatut: EN ATTENTE — à confirmer dans le calendrier admin\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
             location: locationProspect,
-            start_date: selected.start.toISOString(),
-            end_date: selected.end.toISOString(),
+            start_date: selected!.start.toISOString(),
+            end_date: selected!.end.toISOString(),
             all_day: false,
             recipient_email: 'info@immo-rama.ch',
           },
@@ -243,6 +412,7 @@ export default function RendezVousBureau() {
           () => {},
         );
 
+      setDoneStatus('reserved');
       setDone(true);
       toast.success('Demande de RDV enregistrée. Vous recevrez la confirmation par email.');
     } catch (err: any) {
@@ -253,43 +423,64 @@ export default function RendezVousBureau() {
     }
   };
 
-  if (done && selected) {
+  if (done) {
+    const isManual = doneStatus === 'manual';
     return (
       <main className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8] flex items-center justify-center p-6">
         <div className="max-w-lg w-full rounded-2xl border border-[#b8893d]/40 bg-[#1c1814] p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <CheckCircle2 className="mx-auto h-14 w-14 text-[#d4a857]" />
           <h1 className="mt-4 font-serif text-2xl text-[#f4ecd8]">
-            Demande de RDV enregistrée
+            {isManual ? 'Demande reçue' : 'Demande de RDV enregistrée'}
           </h1>
-          <p className="mt-3 text-[#c9bfac]">
-            Créneau demandé : {formatDayLabel(selected.start)} à{' '}
-            <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
-          </p>
-          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
-            <p className="text-[#c9bfac]">
-              Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
-              <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
-              dès la validation.
+          {isManual ? (
+            <p className="mt-3 text-[#c9bfac]">
+              Merci {prenom || ''}, notre équipe va analyser votre dossier et vous{' '}
+              <strong className="text-[#d4a857]">recontacter sous 24h</strong> pour vous aider à
+              structurer votre recherche (garant, ajustement du budget ou des localités…).
             </p>
-            {appointmentType === 'bureau' ? (
-              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
-                <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
-              </div>
+          ) : (
+            selected && (
+              <p className="mt-3 text-[#c9bfac]">
+                Créneau demandé : {formatDayLabel(selected.start)} à{' '}
+                <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
+              </p>
+            )
+          )}
+          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
+            {isManual ? (
+              <p className="text-[#c9bfac]">
+                Vous recevrez un appel ou un email pour organiser un échange adapté à votre
+                situation. Aucun créneau n'a été pré-réservé pour l'instant.
+              </p>
             ) : (
-              <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
-                <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
-              </div>
+              <>
+                <p className="text-[#c9bfac]">
+                  Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
+                  <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
+                  dès la validation.
+                </p>
+                {appointmentType === 'bureau' ? (
+                  <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
+                    <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                    <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
+                    <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                    <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <p className="mt-4 text-xs text-[#8a7f6e]">
-            En attente de validation par notre équipe.
+            {isManual ? 'Dossier transmis à notre équipe.' : 'En attente de validation par notre équipe.'}
           </p>
         </div>
       </main>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8]">
@@ -366,7 +557,141 @@ export default function RendezVousBureau() {
           </div>
         </div>
 
-        {/* 2. Type de RDV */}
+        {/* 1bis. Préqualification express (uniquement location) */}
+        {isLocation && (
+          <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-5">
+            <div>
+              <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+                Préqualification express
+              </Label>
+              <p className="text-xs text-[#8a7f6e]">
+                6 questions rapides pour qu'on prépare votre rendez-vous avec les bonnes infos.
+              </p>
+            </div>
+
+            {/* Partie 1 — Situation */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+                Partie 1 — Votre situation
+              </p>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">1. Statut en Suisse *</Label>
+                <Select value={statutSuisse} onValueChange={(v) => setStatutSuisse(v as StatutSuisse)}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {STATUT_SUISSE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">2. Situation professionnelle *</Label>
+                <Select value={situationPro} onValueChange={(v) => setSituationPro(v as SituationPro)}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {SITUATION_PRO_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">3. Poursuites / dettes *</Label>
+                <Select value={poursuites} onValueChange={(v) => setPoursuites(v as PoursuitesStatut)}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {POURSUITES_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Partie 2 — Recherche */}
+            <div className="space-y-3 pt-3 border-t border-[#b8893d]/15">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
+                Partie 2 — Votre recherche
+              </p>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">4. Type de logement *</Label>
+                <Select value={nbPieces} onValueChange={setNbPieces}>
+                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+                  <SelectContent>
+                    {NB_PIECES_OPTIONS.map((o) => (
+                      <SelectItem key={o} value={o}>{o === 'Studio' || o === '4.5+' ? o : `${o} pièces`}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-1.5 block text-xs text-[#c9bfac]">5. Localité ou région *</Label>
+                <Input
+                  value={localiteRecherche}
+                  onChange={(e) => setLocaliteRecherche(e.target.value)}
+                  placeholder="Lausanne, Renens, Morges, Nyon, Genève…"
+                  className="dark-input-rdv"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="mb-1.5 block text-xs text-[#c9bfac]">6a. Budget max charges comprises (CHF) *</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={budgetMax}
+                    onChange={(e) => setBudgetMax(e.target.value)}
+                    placeholder="2000"
+                    className="dark-input-rdv"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block text-xs text-[#c9bfac]">6b. Revenu net mensuel ménage (CHF) *</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={revenuNet}
+                    onChange={(e) => setRevenuNet(e.target.value)}
+                    placeholder="6000"
+                    className="dark-input-rdv"
+                  />
+                </div>
+              </div>
+
+              {liveRatio !== null && (
+                <div
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-xs flex items-center justify-between',
+                    liveRatio >= 3 && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+                    liveRatio >= 2.5 && liveRatio < 3 && 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+                    liveRatio < 2.5 && 'border-rose-500/40 bg-rose-500/10 text-rose-200',
+                  )}
+                >
+                  <span>Ratio revenu / loyer</span>
+                  <strong>{liveRatio}x {liveRatio >= 3 ? '✓' : liveRatio >= 2.5 ? '~' : '⚠'}</strong>
+                </div>
+              )}
+            </div>
+
+            {qualification && isNonQualifie && (
+              <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-3 text-xs text-rose-100">
+                <p className="font-semibold">Dossier à analyser par notre équipe</p>
+                <p className="mt-1 text-rose-200/90">
+                  Vos informations seront transmises à un conseiller. Nous vous recontactons sous
+                  24h pour vous proposer une stratégie adaptée (garant, ajustement du budget…).
+                  Aucun créneau ne sera pré-réservé.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 2. Type de RDV (masqué si dossier non qualifié) */}
+        {!isNonQualifie && (
+        <>
         <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
             2. Comment souhaitez-vous échanger ?
@@ -497,9 +822,11 @@ export default function RendezVousBureau() {
             })}
           </div>
         </div>
+        </>
+        )}
 
-        {/* 3. Coordonnées + CTA */}
-        {selected && projet && (
+        {/* 4. Coordonnées + CTA */}
+        {projet && (isNonQualifie || selected) && (
           <form
             onSubmit={handleSubmit}
             className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-4"
@@ -509,10 +836,16 @@ export default function RendezVousBureau() {
                 4. Vos coordonnées
               </Label>
               <p className="text-xs text-[#8a7f6e]">
-                {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
-                <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
-                à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
-                {PROJECT_LABELS[projet]}
+                {selected ? (
+                  <>
+                    {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
+                    <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
+                    à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
+                    {PROJECT_LABELS[projet]}
+                  </>
+                ) : (
+                  <>Analyse personnalisée de votre dossier — {PROJECT_LABELS[projet]}</>
+                )}
               </p>
             </div>
 
@@ -594,12 +927,15 @@ export default function RendezVousBureau() {
             >
               {submitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Réservation...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
+                  {isNonQualifie ? 'Envoi…' : 'Réservation...'}
                 </>
+              ) : isNonQualifie ? (
+                '📩 Envoyer ma demande pour analyse manuelle'
+              ) : appointmentType === 'bureau' ? (
+                '🏢 Confirmer mon RDV gratuit au bureau'
               ) : (
-                appointmentType === 'bureau'
-                  ? '🏢 Confirmer mon RDV gratuit au bureau'
-                  : '📞 Confirmer mon RDV téléphonique gratuit'
+                '📞 Confirmer mon RDV téléphonique gratuit'
               )}
             </Button>
 
@@ -617,11 +953,19 @@ export default function RendezVousBureau() {
           </form>
         )}
 
-        {(!selected || !projet) && (
+        {!projet && (
           <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
-            {!projet
-              ? '👆 Sélectionnez d\'abord votre type de projet'
-              : '👆 Choisissez un créneau pour continuer'}
+            👆 Sélectionnez d'abord votre type de projet
+          </div>
+        )}
+        {projet && isLocation && !isQualificationValid && (
+          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
+            👆 Complétez la préqualification pour continuer
+          </div>
+        )}
+        {projet && (!isLocation || isQualificationValid) && !isNonQualifie && !selected && (
+          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
+            👆 Choisissez un créneau pour continuer
           </div>
         )}
       </section>
