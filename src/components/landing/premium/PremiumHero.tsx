@@ -37,13 +37,13 @@ export function PremiumHero() {
 
           {/* H1 */}
           <h1 className="animate-fade-in text-2xl sm:text-3xl md:text-5xl font-bold text-foreground leading-tight max-w-4xl mb-4 md:mb-6" style={{ animationDelay: '100ms' }}>
-            Fais analyser ton dossier <span className="text-primary">gratuitement</span> avant d'envoyer tes candidatures
+            Votre agence de relocation et <span className="text-primary">chasseur d'appartement</span> à Lausanne
           </h1>
 
           {/* Sous-titre */}
           <p className="animate-fade-in text-base md:text-lg text-muted-foreground max-w-3xl mb-8 md:mb-10 leading-relaxed" style={{ animationDelay: '150ms' }}>
-            Tu cherches un logement en Suisse romande ?<br className="hidden sm:inline" />
-            En 30 minutes, un expert Logisorama vérifie ton dossier, tes critères et tes chances réelles auprès des régies.
+            Recherche d'appartement à Lausanne, Genève, Crissier et en Suisse romande.<br className="hidden sm:inline" />
+            En 30 minutes, un expert Logisorama analyse gratuitement votre dossier, vos critères et vos chances réelles auprès des régies.
           </p>
 
           {/* Deux blocs */}
@@ -52,7 +52,7 @@ export function PremiumHero() {
             <div className="bg-card/60 backdrop-blur-sm border border-border/50 rounded-2xl p-5 md:p-6 text-left">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="h-5 w-5 text-primary" />
-                <h2 className="text-base md:text-lg font-bold text-foreground">Analyse personnalisée de ton dossier</h2>
+                <p className="text-base md:text-lg font-bold text-foreground">Analyse personnalisée de ton dossier</p>
               </div>
               <p className="text-sm text-muted-foreground mb-3">Nos experts te disent clairement :</p>
               <ul className="space-y-2 text-sm text-foreground/90">
@@ -68,9 +68,9 @@ export function PremiumHero() {
 
             {/* Droite */}
             <div className="bg-card/60 backdrop-blur-sm border border-border/50 rounded-2xl p-5 md:p-6 text-left">
-              <h2 className="text-base md:text-lg font-bold text-foreground mb-3">
+              <p className="text-base md:text-lg font-bold text-foreground mb-3">
                 500+ familles accompagnées avec succès
-              </h2>
+              </p>
               <ul className="space-y-2 text-sm text-foreground/90">
                 <li>⭐ Dossiers analysés</li>
                 <li>🏠 Recherches ciblées</li>
