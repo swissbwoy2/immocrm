@@ -14,6 +14,8 @@ import {
   Home,
   Hammer,
   Banknote,
+  Building2,
+  PhoneCall,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
