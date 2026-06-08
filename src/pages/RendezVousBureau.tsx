@@ -822,6 +822,7 @@ export default function RendezVousBureau() {
             })}
           </div>
         </div>
+        </>
         )}
 
         {/* 4. Coordonnées + CTA */}
