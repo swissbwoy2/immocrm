@@ -391,10 +391,46 @@ export default function RendezVousBureau() {
           </div>
         </div>
 
-        {/* 2. Jour + créneau */}
+        {/* 2. Type de RDV */}
         <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-            2. Choisissez votre créneau
+            2. Comment souhaitez-vous échanger ?
+          </Label>
+          <p className="mb-4 text-xs text-[#8a7f6e]">
+            En personne dans nos bureaux ou par téléphone, au choix.
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {([
+              { key: 'bureau', label: 'Au bureau', sub: 'Crissier · café offert', Icon: Building2 },
+              { key: 'telephonique', label: 'Téléphonique', sub: 'On vous appelle', Icon: PhoneCall },
+            ] as const).map((opt) => {
+              const Icon = opt.Icon;
+              const active = appointmentType === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setAppointmentType(opt.key)}
+                  className={cn(
+                    'rounded-xl border px-3 py-4 text-center transition',
+                    active
+                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
+                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
+                  )}
+                >
+                  <Icon className={cn('mx-auto h-6 w-6 mb-2', active ? 'text-[#d4a857]' : 'text-[#b8893d]')} />
+                  <div className="text-sm font-semibold">{opt.label}</div>
+                  <div className="text-[11px] opacity-80">{opt.sub}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. Jour + créneau */}
+        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+            3. Choisissez votre créneau
           </Label>
           <p className="mb-4 text-xs text-[#8a7f6e]">
             Réservation ferme en temps réel. Les créneaux pris sont barrés.
