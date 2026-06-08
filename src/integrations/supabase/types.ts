@@ -5387,6 +5387,7 @@ export type Database = {
           accord_bancaire: boolean | null
           apport_personnel: string | null
           budget: string | null
+          budget_max_chf: number | null
           contacted: boolean | null
           created_at: string | null
           email: string
@@ -5394,14 +5395,27 @@ export type Database = {
           id: string
           is_qualified: boolean | null
           localite: string | null
+          localite_recherche: string | null
+          motif_qualification: string | null
+          nb_pieces: string | null
           nom: string | null
           notes: string | null
           permis_nationalite: string | null
           phone_e164: string | null
           poursuites: boolean | null
+          poursuites_statut: string | null
           prenom: string | null
+          ratio_revenu_loyer: number | null
+          recommandation_agent: string | null
+          requires_manual_validation: boolean
+          resume_profil: string | null
+          revenu_net_mensuel_chf: number | null
+          risque_niveau: string | null
+          situation_pro: string | null
           source: string | null
           statut_emploi: string | null
+          statut_qualification: string | null
+          statut_suisse: string | null
           telephone: string | null
           type_bien: string | null
           type_recherche: string | null
@@ -5418,6 +5432,7 @@ export type Database = {
           accord_bancaire?: boolean | null
           apport_personnel?: string | null
           budget?: string | null
+          budget_max_chf?: number | null
           contacted?: boolean | null
           created_at?: string | null
           email: string
@@ -5425,14 +5440,27 @@ export type Database = {
           id?: string
           is_qualified?: boolean | null
           localite?: string | null
+          localite_recherche?: string | null
+          motif_qualification?: string | null
+          nb_pieces?: string | null
           nom?: string | null
           notes?: string | null
           permis_nationalite?: string | null
           phone_e164?: string | null
           poursuites?: boolean | null
+          poursuites_statut?: string | null
           prenom?: string | null
+          ratio_revenu_loyer?: number | null
+          recommandation_agent?: string | null
+          requires_manual_validation?: boolean
+          resume_profil?: string | null
+          revenu_net_mensuel_chf?: number | null
+          risque_niveau?: string | null
+          situation_pro?: string | null
           source?: string | null
           statut_emploi?: string | null
+          statut_qualification?: string | null
+          statut_suisse?: string | null
           telephone?: string | null
           type_bien?: string | null
           type_recherche?: string | null
@@ -5449,6 +5477,7 @@ export type Database = {
           accord_bancaire?: boolean | null
           apport_personnel?: string | null
           budget?: string | null
+          budget_max_chf?: number | null
           contacted?: boolean | null
           created_at?: string | null
           email?: string
@@ -5456,14 +5485,27 @@ export type Database = {
           id?: string
           is_qualified?: boolean | null
           localite?: string | null
+          localite_recherche?: string | null
+          motif_qualification?: string | null
+          nb_pieces?: string | null
           nom?: string | null
           notes?: string | null
           permis_nationalite?: string | null
           phone_e164?: string | null
           poursuites?: boolean | null
+          poursuites_statut?: string | null
           prenom?: string | null
+          ratio_revenu_loyer?: number | null
+          recommandation_agent?: string | null
+          requires_manual_validation?: boolean
+          resume_profil?: string | null
+          revenu_net_mensuel_chf?: number | null
+          risque_niveau?: string | null
+          situation_pro?: string | null
           source?: string | null
           statut_emploi?: string | null
+          statut_qualification?: string | null
+          statut_suisse?: string | null
           telephone?: string | null
           type_bien?: string | null
           type_recherche?: string | null
