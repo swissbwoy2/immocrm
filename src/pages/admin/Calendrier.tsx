@@ -626,6 +626,7 @@ export default function AdminCalendrier() {
         open={!!selectedPhoneApptId}
         onClose={() => setSelectedPhoneApptId(null)}
         onCancelled={() => loadData(true)}
+        assignableAgents={agents}
       />
 
       {/* Event form modal */}
