@@ -232,7 +232,7 @@ export function DossierAnalyseSection() {
                 <MapPin className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <p className="text-xs font-semibold text-primary uppercase tracking-wide">Bureau Logisorama</p>
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide">Bureau Immo-rama.ch</p>
                 <p className="text-sm font-medium text-foreground">{OFFICE_ADDRESS}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Lun→Sam · 08h30→12h00 · 13h30→16h30</p>
               </div>

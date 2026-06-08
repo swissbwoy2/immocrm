@@ -28,7 +28,7 @@ const advantages = [
   {
     icon: Shield,
     title: '100% remboursé si échec',
-    description: '300 CHF remboursés intégralement après 3 mois sans résultat. Promis, signé.',
+    description: 'Acompte 300.- remboursé à 100% en cas d\'échec après 3 mois de recherche',
     gradient: 'from-indigo-500 to-violet-500',
   },
   {

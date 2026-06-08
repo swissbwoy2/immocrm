@@ -111,7 +111,7 @@ export function HeroSection() {
             className="text-xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-3 animate-fade-in text-foreground" 
             style={{ animationDelay: "100ms" }}
           >
-            {c.headline} <span className="text-primary">{c.headlineAccent}</span>
+            Nous aidons nos <span className="text-primary italic">clients</span> à trouver leur futur appartement en Suisse romande
           </h1>
 
           {/* Subheadline */}
