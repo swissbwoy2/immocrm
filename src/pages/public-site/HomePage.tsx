@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
@@ -32,24 +32,23 @@ const DossierAnalyseForm = lazy(() => import('@/components/public-site/sections/
 export default function HomePage() {
   const { user, userRole, loading } = useAuth();
   const navigate = useNavigate();
+  const hasRedirected = useRef(false);
 
-  // Auth redirect — strictly identical to Landing.tsx
+  // Auth redirect — fires once per mount to avoid bouncing on token refresh
   useEffect(() => {
-    if (!loading && user && userRole) {
-      switch (userRole) {
-        case 'admin':
-          navigate('/admin', { replace: true });
-          break;
-        case 'agent':
-          navigate('/agent', { replace: true });
-          break;
-        case 'client':
-          navigate('/client', { replace: true });
-          break;
-        case 'apporteur':
-          navigate('/apporteur', { replace: true });
-          break;
-      }
+    if (hasRedirected.current) return;
+    if (loading || !user || !userRole) return;
+
+    const target =
+      userRole === 'admin' ? '/admin' :
+      userRole === 'agent' ? '/agent' :
+      userRole === 'client' ? '/client' :
+      userRole === 'apporteur' ? '/apporteur' :
+      null;
+
+    if (target) {
+      hasRedirected.current = true;
+      navigate(target, { replace: true });
     }
   }, [user, userRole, loading, navigate]);
 

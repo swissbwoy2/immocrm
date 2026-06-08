@@ -61,10 +61,10 @@ const handleStaleChunk = (msg: string) => {
   if (!isChunkLoadError(msg)) return;
   try {
     const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0');
-    if (Date.now() - last < 30_000) return; // avoid reload loop
+    if (Date.now() - last < 5 * 60_000) return; // 5 min throttle to avoid reload loops
     sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
   } catch {}
-  console.warn('[App] Stale lazy chunk detected, reloading…', msg);
+  console.warn('[App] Stale lazy chunk detected, reloading…', { url: window.location.href, msg });
   window.location.reload();
 };
 
