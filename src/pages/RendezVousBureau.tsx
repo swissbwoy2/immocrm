@@ -14,6 +14,8 @@ import {
   Home,
   Hammer,
   Banknote,
+  Building2,
+  PhoneCall,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,6 +69,7 @@ export default function RendezVousBureau() {
   const [selected, setSelected] = useState<Slot | null>(null);
   const [taken, setTaken] = useState<Set<string>>(new Set());
   const [projet, setProjet] = useState<ProjectType | ''>('');
+  const [appointmentType, setAppointmentType] = useState<'bureau' | 'telephonique'>('bureau');
 
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
@@ -145,6 +148,7 @@ export default function RendezVousBureau() {
       const fullName = `${prenom.trim()} ${nom.trim()}`.trim();
       const projetLabel = PROJECT_LABELS[projet];
       const notesParts = [
+        `Type de RDV: ${appointmentType === 'bureau' ? 'Au bureau (Crissier)' : 'Téléphonique'}`,
         `Type de projet: ${projetLabel}`,
         message.trim() ? `Message client: ${message.trim()}` : '',
       ].filter(Boolean);
@@ -157,7 +161,8 @@ export default function RendezVousBureau() {
         prospect_name: fullName,
         slot_start: selected.start.toISOString(),
         slot_end: selected.end.toISOString(),
-        source_form: 'rdv_bureau_crissier',
+        source_form: appointmentType === 'bureau' ? 'rdv_bureau_crissier' : 'rdv_telephonique',
+        appointment_type: appointmentType,
         status: 'confirme',
         notes_admin: notes,
       });
@@ -199,13 +204,22 @@ export default function RendezVousBureau() {
         .update({ lead_id: leadId })
         .eq('id', apptId);
 
+      const isBureau = appointmentType === 'bureau';
+      const titleProspect = isBureau
+        ? 'RDV Logisorama — Bureau Crissier'
+        : 'RDV Logisorama — Appel téléphonique';
+      const descProspect = isBureau
+        ? `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`
+        : `Appel téléphonique confirmé avec ${fullName}.\nProjet : ${projetLabel}\nNous vous appellerons au : ${telephone.trim()}`;
+      const locationProspect = isBureau ? OFFICE_ADDRESS : `Téléphone : ${telephone.trim()}`;
+
       // ICS prospect
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
-            title: 'RDV Logisorama — Bureau Crissier',
-            description: `Rendez-vous confirmé avec ${fullName}.\nProjet : ${projetLabel}\nTéléphone : ${telephone.trim()}\nAdresse : ${OFFICE_ADDRESS}\nItinéraire : ${OFFICE_MAPS_URL}`,
-            location: OFFICE_ADDRESS,
+            title: titleProspect,
+            description: descProspect,
+            location: locationProspect,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
             all_day: false,
@@ -226,7 +240,12 @@ export default function RendezVousBureau() {
       // Notif admin
       supabase.functions
         .invoke('notify-admin-new-phone-appointment', {
-          body: { appointment_id: apptId, type_projet: projet, type_projet_label: projetLabel },
+          body: {
+            appointment_id: apptId,
+            type_projet: projet,
+            type_projet_label: projetLabel,
+            appointment_type: appointmentType,
+          },
         })
         .then(
           () => {},
@@ -237,9 +256,11 @@ export default function RendezVousBureau() {
       supabase.functions
         .invoke('send-calendar-invite', {
           body: {
-            title: `Nouveau RDV bureau (${projetLabel}) — ${fullName}`,
-            description: `Projet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
-            location: OFFICE_ADDRESS,
+            title: isBureau
+              ? `Nouveau RDV bureau (${projetLabel}) — ${fullName}`
+              : `Nouveau RDV téléphonique (${projetLabel}) — ${fullName}`,
+            description: `Type: ${isBureau ? 'Au bureau' : 'Téléphonique'}\nProjet: ${projetLabel}\nEmail: ${email.trim()}\nTél: ${telephone.trim()}\nMessage: ${message.trim() || '—'}`,
+            location: locationProspect,
             start_date: selected.start.toISOString(),
             end_date: selected.end.toISOString(),
             all_day: false,
@@ -274,18 +295,27 @@ export default function RendezVousBureau() {
             <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
           </p>
           <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2">
-            <div className="flex items-start justify-center gap-2">
-              <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-              <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
-            </div>
-            <a
-              href={OFFICE_MAPS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
-            >
-              Itinéraire <ExternalLink className="h-3 w-3" />
-            </a>
+            {appointmentType === 'bureau' ? (
+              <>
+                <div className="flex items-start justify-center gap-2">
+                  <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                  <span className="text-[#c9bfac]">{OFFICE_ADDRESS}</span>
+                </div>
+                <a
+                  href={OFFICE_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#d4a857] hover:text-[#e8c089] text-sm font-semibold"
+                >
+                  Itinéraire <ExternalLink className="h-3 w-3" />
+                </a>
+              </>
+            ) : (
+              <div className="flex items-start justify-center gap-2">
+                <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
+                <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
+              </div>
+            )}
           </div>
           <p className="mt-4 text-xs text-[#8a7f6e]">
             Email de confirmation + invitation calendrier (.ics) envoyés. Rappels automatiques 24h, 3h, 1h et 30 min avant.
@@ -370,10 +400,46 @@ export default function RendezVousBureau() {
           </div>
         </div>
 
-        {/* 2. Jour + créneau */}
+        {/* 2. Type de RDV */}
         <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-            2. Choisissez votre créneau
+            2. Comment souhaitez-vous échanger ?
+          </Label>
+          <p className="mb-4 text-xs text-[#8a7f6e]">
+            En personne dans nos bureaux ou par téléphone, au choix.
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {([
+              { key: 'bureau', label: 'Au bureau', sub: 'Crissier · café offert', Icon: Building2 },
+              { key: 'telephonique', label: 'Téléphonique', sub: 'On vous appelle', Icon: PhoneCall },
+            ] as const).map((opt) => {
+              const Icon = opt.Icon;
+              const active = appointmentType === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setAppointmentType(opt.key)}
+                  className={cn(
+                    'rounded-xl border px-3 py-4 text-center transition',
+                    active
+                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
+                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
+                  )}
+                >
+                  <Icon className={cn('mx-auto h-6 w-6 mb-2', active ? 'text-[#d4a857]' : 'text-[#b8893d]')} />
+                  <div className="text-sm font-semibold">{opt.label}</div>
+                  <div className="text-[11px] opacity-80">{opt.sub}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. Jour + créneau */}
+        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
+            3. Choisissez votre créneau
           </Label>
           <p className="mb-4 text-xs text-[#8a7f6e]">
             Réservation ferme en temps réel. Les créneaux pris sont barrés.
@@ -474,10 +540,11 @@ export default function RendezVousBureau() {
           >
             <div>
               <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-                3. Vos coordonnées
+                4. Vos coordonnées
               </Label>
               <p className="text-xs text-[#8a7f6e]">
-                RDV le <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
+                {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
+                <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
                 à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
                 {PROJECT_LABELS[projet]}
               </p>
@@ -564,7 +631,9 @@ export default function RendezVousBureau() {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Réservation...
                 </>
               ) : (
-                '📍 Confirmer mon RDV gratuit au bureau'
+                appointmentType === 'bureau'
+                  ? '🏢 Confirmer mon RDV gratuit au bureau'
+                  : '📞 Confirmer mon RDV téléphonique gratuit'
               )}
             </Button>
 

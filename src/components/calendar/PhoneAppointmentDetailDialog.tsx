@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock } from 'lucide-react';
+import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock, MapPin, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export interface PhoneAppointmentRaw {
   slot_start: string;
   slot_end?: string | null;
   status: string;
+  appointment_type?: 'bureau' | 'telephonique' | string | null;
   prospect_name?: string | null;
   prospect_email?: string | null;
   prospect_phone?: string | null;
@@ -64,6 +65,8 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
   const end = appt.slot_end ? new Date(appt.slot_end) : new Date(start.getTime() + 30 * 60 * 1000);
 
   const isConfirmed = appt.status === 'confirme';
+  const isBureau = appt.appointment_type === 'bureau';
+  const OFFICE_ADDRESS = 'Ch. de la Verseuse 1, 1023 Crissier';
 
   const handleCancel = async () => {
     try {
@@ -88,11 +91,25 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-500/10">
-              <Phone className="h-5 w-5 text-indigo-500" />
+            <div className={`p-2 rounded-lg ${isBureau ? 'bg-emerald-500/10' : 'bg-indigo-500/10'}`}>
+              {isBureau ? (
+                <Building2 className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <Phone className="h-5 w-5 text-indigo-500" />
+              )}
             </div>
             <div className="flex-1">
-              <div>RDV téléphonique</div>
+              <div className="flex items-center gap-2">
+                <span>{isBureau ? 'RDV au bureau' : 'RDV téléphonique'}</span>
+                <Badge
+                  variant="outline"
+                  className={isBureau
+                    ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px]'
+                    : 'bg-indigo-500/10 text-indigo-700 border-indigo-500/30 text-[10px]'}
+                >
+                  {isBureau ? '🏢 Bureau' : '📞 Téléphone'}
+                </Badge>
+              </div>
               <div className="text-sm font-normal text-muted-foreground mt-0.5">
                 {prospectName}
               </div>
@@ -121,7 +138,17 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
                   <Clock className="h-3.5 w-3.5" />
                   {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
                 </p>
+          </div>
+
+          {isBureau && (
+            <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-start gap-3">
+              <MapPin className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <div className="font-medium">Lieu du rendez-vous</div>
+                <div className="text-muted-foreground">{OFFICE_ADDRESS}</div>
               </div>
+            </div>
+          )}
             </div>
           </div>
 
@@ -215,14 +242,19 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
           <AddToCalendarButton
             event={{
               uid: `phone-appt-${appt.id}@logisorama.ch`,
-              title: `RDV téléphonique — ${prospectName}`,
+              title: isBureau
+                ? `RDV bureau — ${prospectName}`
+                : `RDV téléphonique — ${prospectName}`,
               description: [
-                `Appel à passer au ${phone || '—'}`,
+                isBureau
+                  ? `Rendez-vous au bureau avec ${prospectName}`
+                  : `Appel à passer au ${phone || '—'}`,
+                phone ? `Téléphone : ${phone}` : null,
                 email ? `Email : ${email}` : null,
               ]
                 .filter(Boolean)
                 .join('\n'),
-              location: phone ? `Téléphone : ${phone}` : '',
+              location: isBureau ? OFFICE_ADDRESS : (phone ? `Téléphone : ${phone}` : ''),
               startDate: start,
               endDate: end,
             }}
