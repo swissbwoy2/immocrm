@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock, MapPin, Building2, CheckCircle2 } from 'lucide-react';
+import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock, MapPin, Building2, CheckCircle2, UserCog } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ export interface PhoneAppointmentRaw {
   prospect_name?: string | null;
   prospect_email?: string | null;
   prospect_phone?: string | null;
+  assigned_agent_id?: string | null;
   leads?: {
     prenom?: string | null;
     nom?: string | null;
@@ -40,17 +42,26 @@ export interface PhoneAppointmentRaw {
   } | null;
 }
 
+interface AssignableAgent {
+  id: string;
+  user_id: string;
+  profiles?: { prenom?: string | null; nom?: string | null } | null;
+}
+
 interface Props {
   appt: PhoneAppointmentRaw | null;
   open: boolean;
   onClose: () => void;
   onCancelled?: () => void;
+  assignableAgents?: AssignableAgent[];
 }
 
-export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled }: Props) {
+export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled, assignableAgents }: Props) {
   const navigate = useNavigate();
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
 
   if (!appt) return null;
 
@@ -248,6 +259,53 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled 
               )}
             </div>
           </div>
+
+          {/* Assignation agent (admin) */}
+          {assignableAgents && (
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <UserCog className="h-3.5 w-3.5" /> Agent assigné
+              </Label>
+              <Select
+                value={appt.assigned_agent_id ?? 'none'}
+                disabled={assigning}
+                onValueChange={async (val) => {
+                  try {
+                    setAssigning(true);
+                    const newId = val === 'none' ? null : val;
+                    const { error } = await supabase
+                      .from('lead_phone_appointments')
+                      .update({ assigned_agent_id: newId })
+                      .eq('id', appt.id);
+                    if (error) throw error;
+                    toast.success(newId ? 'Agent assigné' : 'Assignation retirée');
+                    onCancelled?.();
+                  } catch (e: any) {
+                    toast.error("Erreur d'assignation : " + (e?.message || e));
+                  } finally {
+                    setAssigning(false);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Non assigné" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Non assigné</SelectItem>
+                  {assignableAgents.map((a) => (
+                    <SelectItem key={a.user_id} value={a.user_id}>
+                      {a.profiles?.prenom || ''} {a.profiles?.nom || ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Le RDV apparaîtra dans le calendrier de l'agent sélectionné.
+              </p>
+            </div>
+          )}
+
+
 
           {/* Lead link */}
           {appt.lead_id && (

@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
+import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -99,6 +100,8 @@ export default function AgentCalendrier() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [phoneAppts, setPhoneAppts] = useState<PhoneAppointmentRaw[]>([]);
+  const [selectedPhoneApptId, setSelectedPhoneApptId] = useState<string | null>(null);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFullHistory, setShowFullHistory] = useState(false);
@@ -292,7 +295,42 @@ export default function AgentCalendrier() {
         };
       });
 
-      setEvents(eventsWithSharedFlag);
+      // Phone/office appointments assigned to this agent
+      const { data: phoneApptsData, error: phoneErr } = await supabase
+        .from('lead_phone_appointments')
+        .select('id, lead_id, slot_start, slot_end, status, appointment_type, prospect_name, prospect_email, prospect_phone, assigned_agent_id, leads(prenom, nom, email, telephone)')
+        .eq('assigned_agent_id', user.id)
+        .in('status', ['confirme', 'en_attente'])
+        .order('slot_start', { ascending: true })
+        .limit(2000);
+      if (phoneErr) console.warn('[Calendrier] phone appts error:', phoneErr);
+
+      const phoneApptEvents: CalendarEvent[] = (phoneApptsData || []).map((appt: any) => {
+        const lead = appt.leads;
+        const prospectName = appt.prospect_name
+          || (lead ? `${lead.prenom || ''} ${lead.nom || ''}`.trim() : '')
+          || 'Prospect';
+        const phone = appt.prospect_phone || lead?.telephone || '';
+        const email = appt.prospect_email || lead?.email || '';
+        const isBureau = appt.appointment_type === 'bureau';
+        return {
+          id: `phone-rdv-${appt.id}`,
+          title: isBureau
+            ? `🏢 RDV bureau — ${prospectName}`
+            : `📞 RDV téléphonique — ${prospectName}`,
+          event_date: appt.slot_start,
+          end_date: appt.slot_end || undefined,
+          event_type: isBureau ? 'rendez_vous' : 'rdv_telephonique',
+          status: appt.status === 'confirme' ? 'planifie' : 'planifie',
+          description: isBureau
+            ? `Au bureau Crissier\nTéléphone : ${phone}\nEmail : ${email}`
+            : `Téléphone : ${phone}\nEmail : ${email}`,
+          all_day: false,
+        } as CalendarEvent;
+      });
+
+      setPhoneAppts((phoneApptsData as any) || []);
+      setEvents([...eventsWithSharedFlag, ...phoneApptEvents]);
       setVisites(visitesWithProfiles);
       setClients((clientsRes.data as any) || []);
     } catch (error: any) {
@@ -798,6 +836,10 @@ export default function AgentCalendrier() {
   };
 
   const handleOpenEventDetail = (event: CalendarEvent) => {
+    if (event.id?.startsWith('phone-rdv-')) {
+      setSelectedPhoneApptId(event.id.replace('phone-rdv-', ''));
+      return;
+    }
     setSelectedEvent(event);
     setEventDetailDialogOpen(true);
   };
@@ -1097,6 +1139,16 @@ export default function AgentCalendrier() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phone / office appointment detail */}
+      <PhoneAppointmentDetailDialog
+        appt={phoneAppts.find((a) => a.id === selectedPhoneApptId) || null}
+        open={!!selectedPhoneApptId}
+        onClose={() => setSelectedPhoneApptId(null)}
+        onCancelled={() => loadData()}
+      />
+
+
 
       {/* Feedback dialog */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
