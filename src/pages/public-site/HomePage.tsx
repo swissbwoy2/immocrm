@@ -27,6 +27,7 @@ const TechSection = lazy(() => import('@/components/public-site/sections/TechSec
 const FAQSection = lazy(() => import('@/components/public-site/sections/FAQSection').then(m => ({ default: m.FAQSection })));
 const CloserSection = lazy(() => import('@/components/public-site/sections/CloserSection').then(m => ({ default: m.CloserSection })));
 const AppShowcaseSection = lazy(() => import('@/components/public-site/sections/AppShowcaseSection').then(m => ({ default: m.AppShowcaseSection })));
+const DossierAnalyseForm = lazy(() => import('@/components/public-site/sections/DossierAnalyseForm').then(m => ({ default: m.DossierAnalyseForm })));
 
 export default function HomePage() {
   const { user, userRole, loading } = useAuth();
