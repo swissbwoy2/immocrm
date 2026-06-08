@@ -87,7 +87,7 @@ export default function MandatV3Step6Legal({ data, mandateId, onChange }: Props)
           </h3>
           {!allChecked && (
             <Button type="button" variant="outline" size="sm" onClick={handleAcceptAll} className="text-xs min-h-[36px]">
-              Tout accepter
+              J'ai lu et j'accepte toutes les clauses
             </Button>
           )}
         </div>

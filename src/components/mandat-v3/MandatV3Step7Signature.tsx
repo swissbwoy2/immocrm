@@ -96,7 +96,7 @@ export default function MandatV3Step7Signature({ data, mandateId, onChange, onSu
         {isSubmitting ? (
           <><Loader2 className="h-5 w-5 animate-spin mr-2" /> Signature en cours...</>
         ) : (
-          'Signer le mandat'
+          'Signer le mandat et confirmer l\'acompte de CHF 300.–'
         )}
       </Button>
 

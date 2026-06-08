@@ -177,7 +177,7 @@ export default function CGVContent({ typeRecherche }: Props) {
           </p>
 
           <p>
-            <strong className="text-primary">11.</strong> La juridiction compétente est Berne (Suisse). Sauf indication contraire contenue dans le présent contrat, c'est le Code des obligations suisse (CO) qui fait foi.
+            <strong className="text-primary">11.</strong> Le présent mandat est soumis au droit suisse. Sous réserve des fors impératifs prévus par la loi, les tribunaux ordinaires du canton de Vaud sont compétents, le for étant fixé à Lausanne. Sauf indication contraire contenue dans le présent contrat, c'est le Code des obligations suisse (CO) qui fait foi.
           </p>
         </div>
 
