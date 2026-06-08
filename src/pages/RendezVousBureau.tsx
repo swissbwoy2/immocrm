@@ -310,7 +310,7 @@ export default function RendezVousBureau() {
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {['✓ 100% gratuit', '✓ Sans engagement', '✓ Confirmation immédiate'].map((t) => (
+            {['✓ 100% gratuit', '✓ Sans engagement', '✓ Validation par notre équipe'].map((t) => (
               <span
                 key={t}
                 className="rounded-full border border-[#b8893d]/40 bg-[#b8893d]/10 px-3 py-1.5 text-xs font-bold text-[#d4a857]"
