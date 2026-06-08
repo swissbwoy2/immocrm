@@ -125,6 +125,35 @@ export default function RendezVousBureau() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [doneStatus, setDoneStatus] = useState<'reserved' | 'manual'>('reserved');
+
+  // --- Préqualification location (6 questions) ---
+  const [statutSuisse, setStatutSuisse] = useState<StatutSuisse | ''>('');
+  const [situationPro, setSituationPro] = useState<SituationPro | ''>('');
+  const [poursuites, setPoursuites] = useState<PoursuitesStatut | ''>('');
+  const [nbPieces, setNbPieces] = useState('');
+  const [localiteRecherche, setLocaliteRecherche] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
+  const [revenuNet, setRevenuNet] = useState('');
+
+  const isLocation = projet === 'location';
+
+  const liveRatio = useMemo(() => {
+    const b = parseFloat(budgetMax);
+    const r = parseFloat(revenuNet);
+    if (!b || !r || b <= 0) return null;
+    return Math.round((r / b) * 10) / 10;
+  }, [budgetMax, revenuNet]);
+
+  const isQualificationValid =
+    !isLocation ||
+    (!!statutSuisse &&
+      !!situationPro &&
+      !!poursuites &&
+      !!nbPieces &&
+      localiteRecherche.trim().length >= 2 &&
+      parseFloat(budgetMax) > 0 &&
+      parseFloat(revenuNet) > 0);
 
   useEffect(() => {
     document.title =
