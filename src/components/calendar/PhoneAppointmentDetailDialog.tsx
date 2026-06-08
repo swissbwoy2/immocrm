@@ -33,6 +33,7 @@ export interface PhoneAppointmentRaw {
   prospect_name?: string | null;
   prospect_email?: string | null;
   prospect_phone?: string | null;
+  assigned_agent_id?: string | null;
   leads?: {
     prenom?: string | null;
     nom?: string | null;
@@ -41,17 +42,26 @@ export interface PhoneAppointmentRaw {
   } | null;
 }
 
+interface AssignableAgent {
+  id: string;
+  user_id: string;
+  profiles?: { prenom?: string | null; nom?: string | null } | null;
+}
+
 interface Props {
   appt: PhoneAppointmentRaw | null;
   open: boolean;
   onClose: () => void;
   onCancelled?: () => void;
+  assignableAgents?: AssignableAgent[];
 }
 
-export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled }: Props) {
+export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled, assignableAgents }: Props) {
   const navigate = useNavigate();
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
 
   if (!appt) return null;
 
