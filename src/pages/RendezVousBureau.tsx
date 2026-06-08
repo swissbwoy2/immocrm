@@ -163,7 +163,7 @@ export default function RendezVousBureau() {
         slot_end: selected.end.toISOString(),
         source_form: appointmentType === 'bureau' ? 'rdv_bureau_crissier' : 'rdv_telephonique',
         appointment_type: appointmentType,
-        status: 'confirme',
+        status: 'en_attente',
         notes_admin: notes,
       });
 
