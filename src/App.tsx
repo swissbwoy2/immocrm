@@ -32,6 +32,8 @@ const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
 const ConstruireRenover = lazy(() => import("./pages/ConstruireRenover"));
 const FormulaireConstruireRenover = lazy(() => import("./pages/FormulaireConstruireRenover"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
+const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
+const PolitiqueConfidentialite = lazy(() => import("./pages/legal/PolitiqueConfidentialite"));
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
@@ -280,6 +282,10 @@ const App = () => (
               <Route path="/formulaire-construire-renover" element={<FormulaireConstruireRenover />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+
+              {/* Legal Routes */}
+              <Route path="/mentions-legales" element={<MentionsLegales />} />
+              <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
 
               {/* Public Portal Routes */}
               <Route path="/annonces" element={<PublicAnnonces />} />
