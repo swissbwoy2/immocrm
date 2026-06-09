@@ -119,6 +119,8 @@ export default function AgentCalendrier() {
   const [filterClient, setFilterClient] = useState('all');
   // Scope: 'mine' (default, performant) | 'co' | 'all'
   const [scope, setScope] = useState<'mine' | 'co' | 'all'>('mine');
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const { sharedAgentIds, incoming: incomingShares } = useAgentCalendarShares();
 
   // Dialogs
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
