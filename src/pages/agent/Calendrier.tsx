@@ -207,6 +207,19 @@ export default function AgentCalendrier() {
       if (includeMine) { visitePromises.push(Promise.resolve(buildVisiteQuery('mine'))); eventPromises.push(Promise.resolve(buildEventsQuery('mine'))); }
       if (includeCo)   { visitePromises.push(Promise.resolve(buildVisiteQuery('co')));   eventPromises.push(Promise.resolve(buildEventsQuery('co'))); }
 
+      // Shared agents (calendar sharing feature) — always included when partages actifs
+      if (sharedAgentIds.length > 0) {
+        let qv = supabase.from('visites').select(visitesSelect).order('date_visite', { ascending: true }).limit(15000)
+          .in('agent_id', sharedAgentIds);
+        if (!showFullHistory) qv = qv.gte('date_visite', pastIso).lte('date_visite', futureIso);
+        visitePromises.push(Promise.resolve(qv));
+
+        let qe = supabase.from('calendar_events').select(eventsSelect).order('event_date', { ascending: true }).limit(15000)
+          .in('agent_id', sharedAgentIds);
+        if (!showFullHistory) qe = qe.gte('event_date', pastIso).lte('event_date', futureIso);
+        eventPromises.push(Promise.resolve(qe));
+      }
+
       const [visitesResults, eventsResults, clientsRes] = await Promise.all([
         Promise.all(visitePromises),
         Promise.all(eventPromises),
