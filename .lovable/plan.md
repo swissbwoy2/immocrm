@@ -1,65 +1,74 @@
-## Diagnostic
+# Partage d'agenda entre agents
 
-Le site recharge ou « change d'URL tout seul » sur plusieurs pages à cause de **trois mécanismes globaux** qui se déclenchent en arrière-plan, indépendamment du clic utilisateur :
+## Objectif
 
-### 1. `useAppVersionCheck` (cause principale — `src/hooks/useAppVersionCheck.ts`)
-Monté dans `AppContent` → tourne sur **toutes les pages**. Il fait :
-- Toutes les **2 minutes**, lit `app_config.app_version` dans la base.
-- Écoute aussi un canal realtime `app-updates` (broadcast `force-refresh`).
-- Compare avec `localStorage` et **`VITE_APP_BUILD_ID`**.
-- Si différent → `caches.delete(...)`, `serviceWorker.unregister(...)`, puis **`window.location.reload()`**.
+Permettre à deux agents (ex: Carina ↔ Victoria) de partager mutuellement leur agenda :
+1. Carina envoie une **demande de partage** à Victoria depuis son calendrier
+2. Victoria reçoit la demande et peut **accepter ou refuser**
+3. Une fois acceptée, **chaque agent voit l'agenda de l'autre** dans son propre `/agent/calendrier` (visites, RDV, événements, comptes-rendus)
+4. **Accès lecture + écriture complète** : un agent peut créer/modifier/supprimer dans l'agenda partagé comme s'il était le propriétaire
+5. Périmètre : **agents uniquement** (pas admin, pas coursier, pas propriétaire)
 
-Problèmes concrets :
-- En dev/preview, `VITE_APP_BUILD_ID` vaut `'dev'` ou change à chaque build → recharge en boucle.
-- Le garde `hasRefreshed` se ré-initialise après chaque reload → pas de protection cross-reload.
-- Aucun throttle de sécurité (contrairement à `handleStaleChunk` qui a 30 s).
-- Toute mise à jour de `app_config.app_version` (même mineure) force le reload de **tous les utilisateurs connectés** en pleine saisie.
+## Modèle de données
 
-Symptôme côté utilisateur : la page « saute », l'URL repart à la racine si on était dans un état non-URL, ou un formulaire à moitié rempli disparaît.
+Nouvelle table `public.agent_calendar_shares` :
 
-### 2. `HomePage` — redirection auth (`src/pages/public-site/HomePage.tsx` l.37-54)
-Si tu es connecté et que tu visites `/` (par ex. via le logo header), le `useEffect` redirige immédiatement vers `/admin`, `/agent`, `/client` ou `/apporteur`. C'est volontaire mais le `useEffect` se redéclenche à chaque refresh de token (toutes les heures), à chaque changement d'objet `user` ou `userRole` retourné par Supabase. Tant qu'on est sur `/`, ça « repart » sans cesse.
+```text
+id (uuid)
+requester_agent_id  → agents.id  (celui qui envoie la demande)
+recipient_agent_id  → agents.id  (celui qui reçoit)
+status              ('pending' | 'accepted' | 'declined' | 'revoked')
+created_at, updated_at, accepted_at
+UNIQUE (requester_agent_id, recipient_agent_id)
+```
 
-### 3. `handleStaleChunk` (`src/main.tsx` l.60-74)
-Sur erreur de chargement de chunk lazy (ils sont nombreux sur HomePage : `DossierAnalyseForm`, `PricingSection`, etc.), il déclenche aussi `window.location.reload()`. Throttle 30 s, donc moins probable, mais s'ajoute au bruit si le réseau est instable.
+Helper SQL `public.get_my_shared_agent_ids()` (SECURITY DEFINER, LANGUAGE plpgsql) qui retourne tous les `agents.id` avec qui l'agent courant a un partage `accepted` (dans les deux sens). Utilisé par les nouvelles RLS pour éviter récursion.
 
-### Ce qui n'est PAS la cause
-- Les `scrollIntoView` du Hero (action utilisateur uniquement).
-- Les animations framer-motion vues dans le replay (visuel, pas de navigation).
-- Les `<Navigate>` de `ProtectedRoute` (uniquement sur routes privées + déclenchent une fois).
+## RLS mises à jour (ajout uniquement, jamais retrait)
 
----
+Tables impactées : `visites`, `calendar_events`, `visite_comptes_rendus`, `lead_phone_appointments`.
 
-## Plan de correction
+Ajout de policies **SELECT + INSERT + UPDATE + DELETE** pour les agents dont l'`agent_id` (ou owner équivalent) figure dans `get_my_shared_agent_ids()`. Les policies existantes (mine, co-assigné, admin) restent intactes.
 
-### A. Durcir `useAppVersionCheck` (cible n°1)
-Fichier : `src/hooks/useAppVersionCheck.ts`
-1. **Bypass complet en dev** : si `BUILD_VERSION === 'dev'` ou `import.meta.env.DEV`, ne rien faire (`return` au début du `useEffect`).
-2. **Throttle global cross-reload** via `sessionStorage` (clé `__app_version_reload_at`) : refuser tout reload si < 5 min depuis le dernier.
-3. **Confirmation utilisateur au lieu d'un reload brutal** : remplacer le `window.location.reload()` automatique par un toast Sonner non-bloquant « Nouvelle version disponible — recharger » avec un bouton. Le polling continue, mais l'utilisateur garde la main (recommandation déjà alignée avec la règle PWA mémorisée « Avoid SKIP_WAITING to prevent background session loss »).
-4. **Ne pas reload pendant saisie** : si `document.activeElement` est un `INPUT/TEXTAREA/SELECT/[contenteditable]`, différer (reprogrammer dans 60 s).
-5. Garder le broadcast realtime mais le passer aussi par le toast (pas de reload silencieux).
+Table `agent_calendar_shares` :
+- SELECT : si l'agent courant est requester OU recipient
+- INSERT : seulement si requester_agent_id = `get_my_agent_id()` et status='pending'
+- UPDATE : seulement le recipient peut passer pending→accepted/declined ; les deux peuvent passer accepted→revoked
 
-### B. Stabiliser la redirection HomePage
-Fichier : `src/pages/public-site/HomePage.tsx`
-- Ajouter un `useRef` `hasRedirected` pour ne déclencher `navigate(...)` qu'une seule fois par montage, même si l'objet `user` change (token refresh).
-- Garder `replace: true`.
+## Interface utilisateur
 
-### C. Renforcer `handleStaleChunk`
-Fichier : `src/main.tsx`
-- Passer le throttle de 30 s → 5 min via `sessionStorage`.
-- Logguer en `console.warn` l'URL avant reload pour faciliter le diagnostic.
+**1. Bouton "Partage d'agenda" dans `/agent/calendrier`** (header, à côté des filtres existants) :
+- Ouvre un dialog `AgentCalendarShareDialog`
+- Liste les partages actifs (avec bouton "Révoquer")
+- Liste les demandes reçues en attente (boutons Accepter / Refuser)
+- Liste les demandes envoyées en attente
+- Champ "Envoyer une demande à…" → Select cherchant parmi les autres agents actifs
 
-### D. Vérification
-1. Ouvrir `/` connecté → redirection unique vers le dashboard, plus de re-déclenchement après refresh de token.
-2. Rester 5 min sur n'importe quelle page → aucun reload involontaire (toast si nouvelle version).
-3. Mettre à jour `app_config.app_version` manuellement → un toast apparaît, pas de reload imposé.
-4. Vérifier que la console n'affiche plus de boucle « New build detected ».
+**2. Affichage des événements partagés dans le calendrier existant :**
+- La fonction `loadData` charge en plus les visites/events/CR/RDV téléphoniques des `shared_agent_ids`
+- Chaque événement partagé est marqué `sharedFromAgent: { id, prenom, nom }` et affiché avec un **badge couleur distinct** (ex: liseré violet + tag "Partagé · Victoria")
+- Le filtre client existant continue de fonctionner
+- Ajout d'un nouveau filtre "Agent : Moi / Tous (partagés inclus) / Victoria / …"
 
-## Hors périmètre
-- Aucun changement de design ou de UI sections.
-- Pas de modification du système d'auth / RLS / Supabase.
-- Le composant `ProtectedRoute` n'est pas touché (comportement correct).
-- La logique de scroll des CTA Hero/CTA mobile n'est pas modifiée.
+**3. Notification** : un toast + ligne dans la cloche notifications quand une demande arrive ou est acceptée (réutilise `notifications` existante, pas de nouvelle infra).
 
-Confirme et je passe en build pour appliquer A → B → C.
+## Périmètre exclu
+
+- Pas de partage avec admin/coursier/propriétaire
+- Pas de granularité (tout ou rien, lecture+écriture)
+- Pas de modification du calendrier client (`/client/calendrier`), propriétaire, coursier
+- Pas de synchro Google Calendar additionnelle (le partage reste interne Logisorama)
+- Pas de migration de données existantes
+
+## Détails techniques
+
+- **Fichiers créés** :
+  - `supabase/migrations/<timestamp>_agent_calendar_sharing.sql` (table + GRANTs + RLS + helper)
+  - `src/components/agent/calendar/AgentCalendarShareDialog.tsx`
+  - `src/hooks/useAgentCalendarShares.ts`
+- **Fichiers modifiés** :
+  - `src/pages/agent/Calendrier.tsx` : bouton header, chargement étendu, badge "Partagé"
+  - `src/components/admin/leads/types.ts` ou équivalent si besoin pour types — non requis a priori
+- Le helper `get_my_shared_agent_ids()` est `LANGUAGE plpgsql STABLE SECURITY DEFINER` avec `SET search_path = public` (conforme à la règle anti-récursion du projet)
+- Realtime activé sur `agent_calendar_shares` pour rafraîchir le dialog en temps réel
+- Aucune dépendance npm ajoutée
