@@ -1,74 +1,43 @@
-# Partage d'agenda entre agents
+## Problème
 
-## Objectif
+Dans `/agent/calendrier` → bouton « Partager », la liste « Choisir un agent » est vide.
 
-Permettre à deux agents (ex: Carina ↔ Victoria) de partager mutuellement leur agenda :
-1. Carina envoie une **demande de partage** à Victoria depuis son calendrier
-2. Victoria reçoit la demande et peut **accepter ou refuser**
-3. Une fois acceptée, **chaque agent voit l'agenda de l'autre** dans son propre `/agent/calendrier` (visites, RDV, événements, comptes-rendus)
-4. **Accès lecture + écriture complète** : un agent peut créer/modifier/supprimer dans l'agenda partagé comme s'il était le propriétaire
-5. Périmètre : **agents uniquement** (pas admin, pas coursier, pas propriétaire)
+Cause : les règles d’accès actuelles limitent ce qu’un agent peut lire :
+- `agents` : un agent ne voit que sa propre ligne (`auth.uid() = user_id`) → la requête `select id, user_id, profiles(...)` ne retourne que lui-même, donc `agents.filter(a => a.id !== moi)` = `[]`.
+- `profiles` : un agent ne peut pas lire les profils des autres agents (uniquement le sien + clients qui lui sont assignés).
 
-## Modèle de données
+Résultat : le `Select` affiche systématiquement « Aucun agent disponible ».
 
-Nouvelle table `public.agent_calendar_shares` :
+## Solution
 
-```text
-id (uuid)
-requester_agent_id  → agents.id  (celui qui envoie la demande)
-recipient_agent_id  → agents.id  (celui qui reçoit)
-status              ('pending' | 'accepted' | 'declined' | 'revoked')
-created_at, updated_at, accepted_at
-UNIQUE (requester_agent_id, recipient_agent_id)
-```
+### 1. Migration SQL — ouvrir la lecture inter-agents (strictement minimale)
 
-Helper SQL `public.get_my_shared_agent_ids()` (SECURITY DEFINER, LANGUAGE plpgsql) qui retourne tous les `agents.id` avec qui l'agent courant a un partage `accepted` (dans les deux sens). Utilisé par les nouvelles RLS pour éviter récursion.
+Ajouter deux policies SELECT ciblées :
 
-## RLS mises à jour (ajout uniquement, jamais retrait)
+- `public.agents` : un utilisateur authentifié qui est lui-même un agent peut lire la ligne des autres agents.
+  ```sql
+  CREATE POLICY "Agents can view other agents (directory)"
+  ON public.agents FOR SELECT TO authenticated
+  USING (public.get_my_agent_id() IS NOT NULL);
+  ```
 
-Tables impactées : `visites`, `calendar_events`, `visite_comptes_rendus`, `lead_phone_appointments`.
+- `public.profiles` : un utilisateur authentifié qui est un agent peut lire le profil (prénom/nom) d’un autre agent.
+  ```sql
+  CREATE POLICY "Agents can view other agents profiles"
+  ON public.profiles FOR SELECT TO authenticated
+  USING (
+    public.get_my_agent_id() IS NOT NULL
+    AND EXISTS (SELECT 1 FROM public.agents a WHERE a.user_id = profiles.id)
+  );
+  ```
 
-Ajout de policies **SELECT + INSERT + UPDATE + DELETE** pour les agents dont l'`agent_id` (ou owner équivalent) figure dans `get_my_shared_agent_ids()`. Les policies existantes (mine, co-assigné, admin) restent intactes.
+Portée : lecture seule, restreinte aux utilisateurs ayant déjà un `agents.id` (équipe interne). Aucune autre policy n’est touchée, aucune donnée sensible exposée (on n’ajoute pas l’accès aux profils clients).
 
-Table `agent_calendar_shares` :
-- SELECT : si l'agent courant est requester OU recipient
-- INSERT : seulement si requester_agent_id = `get_my_agent_id()` et status='pending'
-- UPDATE : seulement le recipient peut passer pending→accepted/declined ; les deux peuvent passer accepted→revoked
+### 2. Aucun changement front
 
-## Interface utilisateur
+Le hook `useAgentCalendarShares` charge déjà `agents` + `profiles!agents_user_id_fkey(prenom, nom)`. Une fois les policies en place, la liste se remplit automatiquement.
 
-**1. Bouton "Partage d'agenda" dans `/agent/calendrier`** (header, à côté des filtres existants) :
-- Ouvre un dialog `AgentCalendarShareDialog`
-- Liste les partages actifs (avec bouton "Révoquer")
-- Liste les demandes reçues en attente (boutons Accepter / Refuser)
-- Liste les demandes envoyées en attente
-- Champ "Envoyer une demande à…" → Select cherchant parmi les autres agents actifs
+## Vérification
 
-**2. Affichage des événements partagés dans le calendrier existant :**
-- La fonction `loadData` charge en plus les visites/events/CR/RDV téléphoniques des `shared_agent_ids`
-- Chaque événement partagé est marqué `sharedFromAgent: { id, prenom, nom }` et affiché avec un **badge couleur distinct** (ex: liseré violet + tag "Partagé · Victoria")
-- Le filtre client existant continue de fonctionner
-- Ajout d'un nouveau filtre "Agent : Moi / Tous (partagés inclus) / Victoria / …"
-
-**3. Notification** : un toast + ligne dans la cloche notifications quand une demande arrive ou est acceptée (réutilise `notifications` existante, pas de nouvelle infra).
-
-## Périmètre exclu
-
-- Pas de partage avec admin/coursier/propriétaire
-- Pas de granularité (tout ou rien, lecture+écriture)
-- Pas de modification du calendrier client (`/client/calendrier`), propriétaire, coursier
-- Pas de synchro Google Calendar additionnelle (le partage reste interne Logisorama)
-- Pas de migration de données existantes
-
-## Détails techniques
-
-- **Fichiers créés** :
-  - `supabase/migrations/<timestamp>_agent_calendar_sharing.sql` (table + GRANTs + RLS + helper)
-  - `src/components/agent/calendar/AgentCalendarShareDialog.tsx`
-  - `src/hooks/useAgentCalendarShares.ts`
-- **Fichiers modifiés** :
-  - `src/pages/agent/Calendrier.tsx` : bouton header, chargement étendu, badge "Partagé"
-  - `src/components/admin/leads/types.ts` ou équivalent si besoin pour types — non requis a priori
-- Le helper `get_my_shared_agent_ids()` est `LANGUAGE plpgsql STABLE SECURITY DEFINER` avec `SET search_path = public` (conforme à la règle anti-récursion du projet)
-- Realtime activé sur `agent_calendar_shares` pour rafraîchir le dialog en temps réel
-- Aucune dépendance npm ajoutée
+- Recharger `/agent/calendrier`, ouvrir « Partager » → la liste affiche les autres agents internes.
+- Les rôles non-agent (clients, coursiers, annonceurs) restent inchangés : `get_my_agent_id()` renvoie `NULL` pour eux, la nouvelle policy ne s’applique pas.
