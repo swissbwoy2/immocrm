@@ -117,8 +117,9 @@ export function useAgentCalendarShares() {
   // Realtime
   useEffect(() => {
     if (!myAgentId) return;
+    const channelName = `agent_calendar_shares_${myAgentId}_${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel('agent_calendar_shares_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'agent_calendar_shares' },
@@ -128,7 +129,8 @@ export function useAgentCalendarShares() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [myAgentId, reload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myAgentId]);
 
   const sendRequest = useCallback(
     async (recipientAgentId: string) => {
