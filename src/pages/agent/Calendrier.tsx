@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { AddressLink } from '@/components/AddressLink';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter, Share2 } from 'lucide-react';
+import { AgentCalendarShareDialog } from '@/components/agent/calendar/AgentCalendarShareDialog';
+import { useAgentCalendarShares } from '@/hooks/useAgentCalendarShares';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -117,6 +119,8 @@ export default function AgentCalendrier() {
   const [filterClient, setFilterClient] = useState('all');
   // Scope: 'mine' (default, performant) | 'co' | 'all'
   const [scope, setScope] = useState<'mine' | 'co' | 'all'>('mine');
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const { sharedAgentIds, incoming: incomingShares } = useAgentCalendarShares();
 
   // Dialogs
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -133,7 +137,7 @@ export default function AgentCalendrier() {
     loadData();
     markTypeAsRead('new_visit');
     markTypeAsRead('visit_reminder');
-  }, [user?.id, showFullHistory, scope]);
+  }, [user?.id, showFullHistory, scope, sharedAgentIds.join(',')]);
 
   const loadData = async () => {
     if (!user) return;
@@ -202,6 +206,19 @@ export default function AgentCalendrier() {
       const eventPromises: Promise<any>[] = [];
       if (includeMine) { visitePromises.push(Promise.resolve(buildVisiteQuery('mine'))); eventPromises.push(Promise.resolve(buildEventsQuery('mine'))); }
       if (includeCo)   { visitePromises.push(Promise.resolve(buildVisiteQuery('co')));   eventPromises.push(Promise.resolve(buildEventsQuery('co'))); }
+
+      // Shared agents (calendar sharing feature) — always included when partages actifs
+      if (sharedAgentIds.length > 0) {
+        let qv = supabase.from('visites').select(visitesSelect).order('date_visite', { ascending: true }).limit(15000)
+          .in('agent_id', sharedAgentIds);
+        if (!showFullHistory) qv = qv.gte('date_visite', pastIso).lte('date_visite', futureIso);
+        visitePromises.push(Promise.resolve(qv));
+
+        let qe = supabase.from('calendar_events').select(eventsSelect).order('event_date', { ascending: true }).limit(15000)
+          .in('agent_id', sharedAgentIds);
+        if (!showFullHistory) qe = qe.gte('event_date', pastIso).lte('event_date', futureIso);
+        eventPromises.push(Promise.resolve(qe));
+      }
 
       const [visitesResults, eventsResults, clientsRes] = await Promise.all([
         Promise.all(visitePromises),
@@ -909,18 +926,35 @@ export default function AgentCalendrier() {
             <span className="font-medium">{events.length}</span> événements
           </p>
         </div>
-        <Button 
-          onClick={() => {
-            setFormMode('create');
-            setEditingEvent(null);
-            setShowEventForm(true);
-          }}
-          className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel événement
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowShareDialog(true)}
+            className="animate-fade-in animate-delay-100 relative"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Partage d'agenda
+            {incomingShares.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                {incomingShares.length}
+              </span>
+            )}
+          </Button>
+          <Button
+            onClick={() => {
+              setFormMode('create');
+              setEditingEvent(null);
+              setShowEventForm(true);
+            }}
+            className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvel événement
+          </Button>
+        </div>
       </div>
+
+      <AgentCalendarShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} />
 
       {/* Urgent visits alert */}
       {visitesUrgentes.length > 0 && (
