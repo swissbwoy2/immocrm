@@ -260,6 +260,51 @@ export type Database = {
           },
         ]
       }
+      agent_calendar_shares: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          id: string
+          recipient_agent_id: string
+          requester_agent_id: string
+          status: Database["public"]["Enums"]["agent_share_status"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          recipient_agent_id: string
+          requester_agent_id: string
+          status?: Database["public"]["Enums"]["agent_share_status"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          recipient_agent_id?: string
+          requester_agent_id?: string
+          status?: Database["public"]["Enums"]["agent_share_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_calendar_shares_recipient_agent_id_fkey"
+            columns: ["recipient_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_calendar_shares_requester_agent_id_fkey"
+            columns: ["requester_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_goals: {
         Row: {
           agent_id: string
@@ -11149,6 +11194,7 @@ export type Database = {
       get_current_user_id: { Args: never; Returns: string }
       get_my_agent_id: { Args: never; Returns: string }
       get_my_co_agent_client_ids: { Args: never; Returns: string[] }
+      get_my_shared_agent_ids: { Args: never; Returns: string[] }
       get_next_abaninja_client_number: { Args: never; Returns: string }
       get_public_annonceurs: {
         Args: never
@@ -11434,6 +11480,7 @@ export type Database = {
       update_user_presence: { Args: never; Returns: undefined }
     }
     Enums: {
+      agent_share_status: "pending" | "accepted" | "declined" | "revoked"
       app_role:
         | "admin"
         | "agent"
@@ -11696,6 +11743,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agent_share_status: ["pending", "accepted", "declined", "revoked"],
       app_role: [
         "admin",
         "agent",
