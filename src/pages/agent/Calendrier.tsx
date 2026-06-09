@@ -926,18 +926,35 @@ export default function AgentCalendrier() {
             <span className="font-medium">{events.length}</span> événements
           </p>
         </div>
-        <Button 
-          onClick={() => {
-            setFormMode('create');
-            setEditingEvent(null);
-            setShowEventForm(true);
-          }}
-          className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel événement
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowShareDialog(true)}
+            className="animate-fade-in animate-delay-100 relative"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Partage d'agenda
+            {incomingShares.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                {incomingShares.length}
+              </span>
+            )}
+          </Button>
+          <Button
+            onClick={() => {
+              setFormMode('create');
+              setEditingEvent(null);
+              setShowEventForm(true);
+            }}
+            className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvel événement
+          </Button>
+        </div>
       </div>
+
+      <AgentCalendarShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} />
 
       {/* Urgent visits alert */}
       {visitesUrgentes.length > 0 && (
