@@ -195,6 +195,8 @@ const MesClients = () => {
         const clientAgentsList = clientAgentsMap.get(client.id) || [];
         const coAgents = clientAgentsList.filter(ca => ca.agent_id !== currentAgentId);
         const isPrimaryAgent = clientAgentsList.find(ca => ca.agent_id === currentAgentId)?.is_primary || false;
+        const primaryAgentEntry = clientAgentsList.find(ca => ca.is_primary && ca.agent_id !== currentAgentId);
+        const primaryAgentName = !isPrimaryAgent ? (primaryAgentEntry?.profile?.prenom || null) : null;
         
         // Check client's stable status
         const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
