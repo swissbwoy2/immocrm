@@ -231,6 +231,21 @@ const Clients = () => {
 
       setAgents(transformedAgents);
 
+      // Load client_agents (lecture seule, non bloquant — vue "Clients par agent")
+      try {
+        const { data: caData, error: caError } = await supabase
+          .from('client_agents')
+          .select('client_id, agent_id, is_primary, created_at')
+          .limit(15000);
+        if (caError) console.error('client_agents fetch failed', caError);
+        setClientAgents((caData as ClientAgent[] | null) ?? []);
+      } catch (caErr) {
+        console.error('client_agents fetch threw', caErr);
+        setClientAgents([]);
+      }
+
+
+
       // Load today's offers count per client
       const today = new Date().toISOString().split('T')[0];
       const { data: offresData } = await supabase
