@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   Mail, Phone, MapPin, Calendar, Users, DollarSign, AlertTriangle, 
-  Edit, Shield, CheckCircle, FileWarning, Bell, ChevronRight, Sparkles, Send
+  Edit, Shield, CheckCircle, FileWarning, Bell, ChevronRight, Sparkles, Send, Crown
 } from 'lucide-react';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { cn } from '@/lib/utils';
