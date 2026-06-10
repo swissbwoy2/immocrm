@@ -41,6 +41,7 @@ const MesClients = () => {
   const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedScope, setSelectedScope] = useState<'primary' | 'co' | 'all'>('primary');
 
   useEffect(() => {
     loadAgentAndClients();
