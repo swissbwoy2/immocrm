@@ -811,20 +811,37 @@ const MesClients = () => {
             })}
           </div>
 
-          {filteredClients.length === 0 && (
-            <div className="relative text-center py-16">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-              </div>
-              <div className="relative">
-                <div className="inline-flex p-6 rounded-2xl bg-muted/30 border border-border/50 mb-6">
-                  <Users className="h-12 w-12 text-muted-foreground/50" />
+          {filteredClients.length === 0 && (() => {
+            const emptyStates = {
+              primary: {
+                title: 'Aucun client principal assigné pour le moment.',
+                subtitle: 'Les clients dont vous êtes responsable apparaîtront ici en priorité.',
+              },
+              co: {
+                title: 'Aucune co-assignation active.',
+                subtitle: 'Les clients partagés avec votre équipe apparaîtront ici.',
+              },
+              all: {
+                title: 'Aucun client actif trouvé.',
+                subtitle: 'Votre portefeuille client apparaîtra ici dès qu\'un client vous sera assigné.',
+              },
+            } as const;
+            const { title, subtitle } = emptyStates[selectedScope];
+            return (
+              <div className="relative text-center py-16">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
                 </div>
-                <p className="text-xl font-medium text-muted-foreground mb-2">Aucun client trouvé</p>
-                <p className="text-sm text-muted-foreground/60">Essayez de modifier vos filtres de recherche</p>
+                <div className="relative">
+                  <div className="inline-flex p-6 rounded-2xl bg-muted/30 border border-border/50 mb-6">
+                    <Users className="h-12 w-12 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-xl font-medium text-muted-foreground mb-2">{title}</p>
+                  <p className="text-sm text-muted-foreground/60">{subtitle}</p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
   );
