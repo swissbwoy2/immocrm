@@ -1512,7 +1512,9 @@ const Clients = () => {
             <p className="text-sm md:text-base text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
           </div>
         )}
+        </>)}
       </div>
+
 
       <CSVImportDialog
         open={showImportDialog}
