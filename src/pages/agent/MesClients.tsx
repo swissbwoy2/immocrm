@@ -802,6 +802,8 @@ const MesClients = () => {
                   daysElapsed={daysElapsed}
                   hasReminders={reminderCount}
                   offresToday={offresToday.get(client.id) || 0}
+                  isPrimaryAgent={client.isPrimaryAgent}
+                  primaryAgentName={client.primaryAgentName}
                   onEdit={(id) => navigate(`/agent/clients/${id}`)}
                   onClick={(id) => navigate(`/agent/clients/${id}`)}
                 />
