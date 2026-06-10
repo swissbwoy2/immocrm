@@ -331,6 +331,8 @@ const MesClients = () => {
           unstableGarants,
           lastSeenAt: profile?.last_seen_at,
           isOnline: profile?.is_online,
+          isPrimaryAgent,
+          primaryAgentName,
         };
       }) || [];
 
