@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell, ChevronRight, Wallet, TrendingUp, Sparkles, Filter } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell, ChevronRight, Wallet, TrendingUp, Sparkles, Filter, Crown, Handshake, Briefcase } from "lucide-react";
 import { PremiumClientCard } from "@/components/premium/PremiumClientCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +41,7 @@ const MesClients = () => {
   const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedScope, setSelectedScope] = useState<'primary' | 'co' | 'all'>('primary');
 
   useEffect(() => {
     loadAgentAndClients();
@@ -194,6 +195,8 @@ const MesClients = () => {
         const clientAgentsList = clientAgentsMap.get(client.id) || [];
         const coAgents = clientAgentsList.filter(ca => ca.agent_id !== currentAgentId);
         const isPrimaryAgent = clientAgentsList.find(ca => ca.agent_id === currentAgentId)?.is_primary || false;
+        const primaryAgentEntry = clientAgentsList.find(ca => ca.is_primary && ca.agent_id !== currentAgentId);
+        const primaryAgentName = !isPrimaryAgent ? (primaryAgentEntry?.profile?.prenom || null) : null;
         
         // Check client's stable status
         const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
@@ -328,6 +331,8 @@ const MesClients = () => {
           unstableGarants,
           lastSeenAt: profile?.last_seen_at,
           isOnline: profile?.is_online,
+          isPrimaryAgent,
+          primaryAgentName,
         };
       }) || [];
 
@@ -364,6 +369,13 @@ const MesClients = () => {
   };
 
   const filteredClients = allClients.filter(client => {
+    // Périmètre (avant les autres filtres)
+    const matchScope =
+      selectedScope === 'all' ||
+      (selectedScope === 'primary' && client.isPrimaryAgent === true) ||
+      (selectedScope === 'co' && client.isPrimaryAgent !== true);
+    if (!matchScope) return false;
+
     const matchSearch = searchTerm === "" || 
       client.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -403,11 +415,24 @@ const MesClients = () => {
   const clientsLocation = clientsActifsOnly.filter(c => c.typeRecherche !== 'Acheter').length;
   const clientsAchat = clientsActifsOnly.filter(c => c.typeRecherche === 'Acheter').length;
 
+  // Compteurs périmètre (stables, basés sur le portefeuille actif)
+  const primaryClients = clientsActifsOnly.filter(c => c.isPrimaryAgent === true);
+  const coAssignedClients = clientsActifsOnly.filter(c => c.isPrimaryAgent !== true);
+  const primaryCount = primaryClients.length;
+  const coCount = coAssignedClients.length;
+  const totalCount = primaryCount + coCount;
+
   const sortedClients = [...filteredClients].sort((a, b) => {
+    if (selectedScope === 'all') {
+      const aPrimary = a.isPrimaryAgent ? 1 : 0;
+      const bPrimary = b.isPrimaryAgent ? 1 : 0;
+      if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+    }
     const dateA = new Date(a.dateInscription || 0).getTime();
     const dateB = new Date(b.dateInscription || 0).getTime();
     return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
   });
+
 
 
   const getProgressColor = (days: number) => {
@@ -470,6 +495,120 @@ const MesClients = () => {
             agentId={agentId}
             onCreated={() => loadAgentAndClients()}
           />
+
+          {/* Bloc KPI Périmètre - Focus agent */}
+          {(() => {
+            const scopes = [
+              {
+                key: 'primary' as const,
+                title: 'Principaux',
+                value: primaryCount,
+                subtitle: 'Priorité de suivi',
+                Icon: Crown,
+                accent: 'from-primary/20 via-primary/10 to-primary/5',
+                iconBg: 'bg-primary/15 text-primary',
+                ringColor: 'ring-primary/60 shadow-primary/30',
+              },
+              {
+                key: 'co' as const,
+                title: 'Co-assignations',
+                value: coCount,
+                subtitle: 'Support équipe',
+                Icon: Handshake,
+                accent: 'from-muted/40 via-muted/20 to-transparent',
+                iconBg: 'bg-muted text-muted-foreground',
+                ringColor: 'ring-muted-foreground/40 shadow-muted-foreground/20',
+              },
+              {
+                key: 'all' as const,
+                title: 'Portfolio total',
+                value: totalCount,
+                subtitle: 'Vue globale',
+                Icon: Briefcase,
+                accent: 'from-secondary/30 via-secondary/15 to-transparent',
+                iconBg: 'bg-secondary text-secondary-foreground',
+                ringColor: 'ring-secondary-foreground/40 shadow-secondary/30',
+              },
+            ];
+            return (
+              <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                {scopes.map(({ key, title, value, subtitle, Icon, accent, iconBg, ringColor }) => {
+                  const isActive = selectedScope === key;
+                  const isPrimary = key === 'primary';
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedScope(key)}
+                      className={cn(
+                        "group relative overflow-hidden text-left rounded-2xl border p-4 md:p-5 transition-all duration-300",
+                        "bg-gradient-to-br", accent,
+                        "border-border/50 hover:border-primary/40 hover:-translate-y-0.5",
+                        isActive && cn("ring-2 shadow-xl", ringColor),
+                        isPrimary && "md:scale-[1.02]"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className={cn(
+                            "text-xs uppercase tracking-wide font-semibold mb-1",
+                            isPrimary ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {title}
+                          </p>
+                          <p className={cn(
+                            "text-3xl md:text-4xl font-bold leading-none",
+                            isPrimary ? "text-primary" : "text-foreground"
+                          )}>
+                            {value}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1.5">{subtitle}</p>
+                        </div>
+                        <div className={cn("p-2.5 rounded-xl shrink-0", iconBg)}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Pills de périmètre */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Périmètre :</span>
+            <Button
+              size="sm"
+              variant={selectedScope === 'primary' ? 'default' : 'outline'}
+              onClick={() => setSelectedScope('primary')}
+              className={cn(
+                "text-xs transition-all",
+                selectedScope === 'primary' && "shadow-lg shadow-primary/20"
+              )}
+            >
+              <Crown className="w-3 h-3 mr-1.5" />
+              Principaux ({primaryCount})
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedScope === 'co' ? 'default' : 'outline'}
+              onClick={() => setSelectedScope('co')}
+              className="text-xs transition-all"
+            >
+              <Handshake className="w-3 h-3 mr-1.5" />
+              Co-assignés ({coCount})
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedScope === 'all' ? 'default' : 'outline'}
+              onClick={() => setSelectedScope('all')}
+              className="text-xs transition-all"
+            >
+              <Briefcase className="w-3 h-3 mr-1.5" />
+              Tous ({totalCount})
+            </Button>
+          </div>
 
           {/* Filtres Section - Premium */}
           <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-card via-card/95 to-muted/30 border border-border/50 space-y-4">
@@ -663,6 +802,8 @@ const MesClients = () => {
                   daysElapsed={daysElapsed}
                   hasReminders={reminderCount}
                   offresToday={offresToday.get(client.id) || 0}
+                  isPrimaryAgent={client.isPrimaryAgent}
+                  primaryAgentName={client.primaryAgentName}
                   onEdit={(id) => navigate(`/agent/clients/${id}`)}
                   onClick={(id) => navigate(`/agent/clients/${id}`)}
                 />
@@ -670,20 +811,37 @@ const MesClients = () => {
             })}
           </div>
 
-          {filteredClients.length === 0 && (
-            <div className="relative text-center py-16">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-              </div>
-              <div className="relative">
-                <div className="inline-flex p-6 rounded-2xl bg-muted/30 border border-border/50 mb-6">
-                  <Users className="h-12 w-12 text-muted-foreground/50" />
+          {filteredClients.length === 0 && (() => {
+            const emptyStates = {
+              primary: {
+                title: 'Aucun client principal assigné pour le moment.',
+                subtitle: 'Les clients dont vous êtes responsable apparaîtront ici en priorité.',
+              },
+              co: {
+                title: 'Aucune co-assignation active.',
+                subtitle: 'Les clients partagés avec votre équipe apparaîtront ici.',
+              },
+              all: {
+                title: 'Aucun client actif trouvé.',
+                subtitle: 'Votre portefeuille client apparaîtra ici dès qu\'un client vous sera assigné.',
+              },
+            } as const;
+            const { title, subtitle } = emptyStates[selectedScope];
+            return (
+              <div className="relative text-center py-16">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
                 </div>
-                <p className="text-xl font-medium text-muted-foreground mb-2">Aucun client trouvé</p>
-                <p className="text-sm text-muted-foreground/60">Essayez de modifier vos filtres de recherche</p>
+                <div className="relative">
+                  <div className="inline-flex p-6 rounded-2xl bg-muted/30 border border-border/50 mb-6">
+                    <Users className="h-12 w-12 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-xl font-medium text-muted-foreground mb-2">{title}</p>
+                  <p className="text-sm text-muted-foreground/60">{subtitle}</p>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
   );

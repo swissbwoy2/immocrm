@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   Mail, Phone, MapPin, Calendar, Users, DollarSign, AlertTriangle, 
-  Edit, Shield, CheckCircle, FileWarning, Bell, ChevronRight, Sparkles, Send
+  Edit, Shield, CheckCircle, FileWarning, Bell, ChevronRight, Sparkles, Send, Crown
 } from 'lucide-react';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,8 @@ interface PremiumClientCardProps {
   daysElapsed: number;
   hasReminders: number;
   offresToday?: number;
+  isPrimaryAgent?: boolean;
+  primaryAgentName?: string | null;
   onEdit: (id: string) => void;
   onClick: (id: string) => void;
 }
@@ -76,6 +78,8 @@ export function PremiumClientCard({
   daysElapsed, 
   hasReminders,
   offresToday = 0,
+  isPrimaryAgent,
+  primaryAgentName,
   onEdit, 
   onClick 
 }: PremiumClientCardProps) {
@@ -138,6 +142,18 @@ export function PremiumClientCard({
         {/* Header with actions */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex gap-2 flex-wrap">
+            {isPrimaryAgent === true && (
+              <Badge className="bg-primary/15 text-primary border border-primary/40 hover:bg-primary/25">
+                <Crown className="h-3 w-3 mr-1" />
+                Principal
+              </Badge>
+            )}
+            {isPrimaryAgent === false && (
+              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/60">
+                <Users className="h-3 w-3 mr-1" />
+                {primaryAgentName ? `Co-assigné avec ${primaryAgentName}` : 'Co-assigné'}
+              </Badge>
+            )}
             {client.isSolvable ? (
               <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20">
                 <CheckCircle className="h-3 w-3 mr-1" />
