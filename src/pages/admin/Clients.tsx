@@ -18,7 +18,15 @@ import { CSVImportDialog } from "@/components/CSVImportDialog";
 import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentView";
 import { cn } from "@/lib/utils";
+
+type ClientAgent = {
+  client_id: string;
+  agent_id: string;
+  is_primary: boolean;
+  created_at: string | null;
+};
 
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 
