@@ -78,6 +78,8 @@ export function PremiumClientCard({
   daysElapsed, 
   hasReminders,
   offresToday = 0,
+  isPrimaryAgent,
+  primaryAgentName,
   onEdit, 
   onClick 
 }: PremiumClientCardProps) {
