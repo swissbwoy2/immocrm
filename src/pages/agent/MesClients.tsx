@@ -369,6 +369,13 @@ const MesClients = () => {
   };
 
   const filteredClients = allClients.filter(client => {
+    // Périmètre (avant les autres filtres)
+    const matchScope =
+      selectedScope === 'all' ||
+      (selectedScope === 'primary' && client.isPrimaryAgent === true) ||
+      (selectedScope === 'co' && client.isPrimaryAgent !== true);
+    if (!matchScope) return false;
+
     const matchSearch = searchTerm === "" || 
       client.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -408,11 +415,24 @@ const MesClients = () => {
   const clientsLocation = clientsActifsOnly.filter(c => c.typeRecherche !== 'Acheter').length;
   const clientsAchat = clientsActifsOnly.filter(c => c.typeRecherche === 'Acheter').length;
 
+  // Compteurs périmètre (stables, basés sur le portefeuille actif)
+  const primaryClients = clientsActifsOnly.filter(c => c.isPrimaryAgent === true);
+  const coAssignedClients = clientsActifsOnly.filter(c => c.isPrimaryAgent !== true);
+  const primaryCount = primaryClients.length;
+  const coCount = coAssignedClients.length;
+  const totalCount = primaryCount + coCount;
+
   const sortedClients = [...filteredClients].sort((a, b) => {
+    if (selectedScope === 'all') {
+      const aPrimary = a.isPrimaryAgent ? 1 : 0;
+      const bPrimary = b.isPrimaryAgent ? 1 : 0;
+      if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+    }
     const dateA = new Date(a.dateInscription || 0).getTime();
     const dateB = new Date(b.dateInscription || 0).getTime();
     return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
   });
+
 
 
   const getProgressColor = (days: number) => {
