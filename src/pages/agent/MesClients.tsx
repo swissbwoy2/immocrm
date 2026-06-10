@@ -496,6 +496,120 @@ const MesClients = () => {
             onCreated={() => loadAgentAndClients()}
           />
 
+          {/* Bloc KPI Périmètre - Focus agent */}
+          {(() => {
+            const scopes = [
+              {
+                key: 'primary' as const,
+                title: 'Principaux',
+                value: primaryCount,
+                subtitle: 'Priorité de suivi',
+                Icon: Crown,
+                accent: 'from-primary/20 via-primary/10 to-primary/5',
+                iconBg: 'bg-primary/15 text-primary',
+                ringColor: 'ring-primary/60 shadow-primary/30',
+              },
+              {
+                key: 'co' as const,
+                title: 'Co-assignations',
+                value: coCount,
+                subtitle: 'Support équipe',
+                Icon: Handshake,
+                accent: 'from-muted/40 via-muted/20 to-transparent',
+                iconBg: 'bg-muted text-muted-foreground',
+                ringColor: 'ring-muted-foreground/40 shadow-muted-foreground/20',
+              },
+              {
+                key: 'all' as const,
+                title: 'Portfolio total',
+                value: totalCount,
+                subtitle: 'Vue globale',
+                Icon: Briefcase,
+                accent: 'from-secondary/30 via-secondary/15 to-transparent',
+                iconBg: 'bg-secondary text-secondary-foreground',
+                ringColor: 'ring-secondary-foreground/40 shadow-secondary/30',
+              },
+            ];
+            return (
+              <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+                {scopes.map(({ key, title, value, subtitle, Icon, accent, iconBg, ringColor }) => {
+                  const isActive = selectedScope === key;
+                  const isPrimary = key === 'primary';
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedScope(key)}
+                      className={cn(
+                        "group relative overflow-hidden text-left rounded-2xl border p-4 md:p-5 transition-all duration-300",
+                        "bg-gradient-to-br", accent,
+                        "border-border/50 hover:border-primary/40 hover:-translate-y-0.5",
+                        isActive && cn("ring-2 shadow-xl", ringColor),
+                        isPrimary && "md:scale-[1.02]"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className={cn(
+                            "text-xs uppercase tracking-wide font-semibold mb-1",
+                            isPrimary ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {title}
+                          </p>
+                          <p className={cn(
+                            "text-3xl md:text-4xl font-bold leading-none",
+                            isPrimary ? "text-primary" : "text-foreground"
+                          )}>
+                            {value}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1.5">{subtitle}</p>
+                        </div>
+                        <div className={cn("p-2.5 rounded-xl shrink-0", iconBg)}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Pills de périmètre */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Périmètre :</span>
+            <Button
+              size="sm"
+              variant={selectedScope === 'primary' ? 'default' : 'outline'}
+              onClick={() => setSelectedScope('primary')}
+              className={cn(
+                "text-xs transition-all",
+                selectedScope === 'primary' && "shadow-lg shadow-primary/20"
+              )}
+            >
+              <Crown className="w-3 h-3 mr-1.5" />
+              Principaux ({primaryCount})
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedScope === 'co' ? 'default' : 'outline'}
+              onClick={() => setSelectedScope('co')}
+              className="text-xs transition-all"
+            >
+              <Handshake className="w-3 h-3 mr-1.5" />
+              Co-assignés ({coCount})
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedScope === 'all' ? 'default' : 'outline'}
+              onClick={() => setSelectedScope('all')}
+              className="text-xs transition-all"
+            >
+              <Briefcase className="w-3 h-3 mr-1.5" />
+              Tous ({totalCount})
+            </Button>
+          </div>
+
           {/* Filtres Section - Premium */}
           <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-card via-card/95 to-muted/30 border border-border/50 space-y-4">
             {/* Barre de recherche */}
