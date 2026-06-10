@@ -694,7 +694,40 @@ const Clients = () => {
           }
         />
 
+        {/* Toggle mode d'affichage */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          {([
+            { key: 'list', label: 'Liste clients' },
+            { key: 'byAgent', label: 'Clients par agent' },
+          ] as { key: 'list' | 'byAgent'; label: string }[]).map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setViewMode(opt.key)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium border transition-colors",
+                viewMode === opt.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {viewMode === 'byAgent' && (
+          <ClientsByAgentView
+            clients={clients}
+            clientProfiles={clientProfiles}
+            agents={agents}
+            clientAgents={clientAgents}
+          />
+        )}
+
+        {viewMode === 'list' && (<>
         {/* Premium Filter Section */}
+
         <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-6 mb-6 animate-fade-in">
           {/* Subtle background particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
