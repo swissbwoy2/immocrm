@@ -18,7 +18,15 @@ import { CSVImportDialog } from "@/components/CSVImportDialog";
 import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentView";
 import { cn } from "@/lib/utils";
+
+type ClientAgent = {
+  client_id: string;
+  agent_id: string;
+  is_primary: boolean;
+  created_at: string | null;
+};
 
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 
@@ -113,6 +121,9 @@ const Clients = () => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ prenom: '', nom: '', email: '', telephone: '', typeRecherche: 'Acheter' });
   const [sendingInvite, setSendingInvite] = useState(false);
+
+  const [clientAgents, setClientAgents] = useState<ClientAgent[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'byAgent'>('list');
 
 
   useEffect(() => {
@@ -219,6 +230,21 @@ const Clients = () => {
         })) || [];
 
       setAgents(transformedAgents);
+
+      // Load client_agents (lecture seule, non bloquant — vue "Clients par agent")
+      try {
+        const { data: caData, error: caError } = await supabase
+          .from('client_agents')
+          .select('client_id, agent_id, is_primary, created_at')
+          .limit(15000);
+        if (caError) console.error('client_agents fetch failed', caError);
+        setClientAgents((caData as ClientAgent[] | null) ?? []);
+      } catch (caErr) {
+        console.error('client_agents fetch threw', caErr);
+        setClientAgents([]);
+      }
+
+
 
       // Load today's offers count per client
       const today = new Date().toISOString().split('T')[0];
@@ -668,7 +694,40 @@ const Clients = () => {
           }
         />
 
+        {/* Toggle mode d'affichage */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          {([
+            { key: 'list', label: 'Liste clients' },
+            { key: 'byAgent', label: 'Clients par agent' },
+          ] as { key: 'list' | 'byAgent'; label: string }[]).map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setViewMode(opt.key)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium border transition-colors",
+                viewMode === opt.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {viewMode === 'byAgent' && (
+          <ClientsByAgentView
+            clients={clients}
+            clientProfiles={clientProfiles}
+            agents={agents}
+            clientAgents={clientAgents}
+          />
+        )}
+
+        {viewMode === 'list' && (<>
         {/* Premium Filter Section */}
+
         <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-6 mb-6 animate-fade-in">
           {/* Subtle background particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -1453,7 +1512,9 @@ const Clients = () => {
             <p className="text-sm md:text-base text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
           </div>
         )}
+        </>)}
       </div>
+
 
       <CSVImportDialog
         open={showImportDialog}

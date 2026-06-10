@@ -1,99 +1,269 @@
 ## Objectif
 
-Sur `/agent/clients`, distinguer instantanément clients **principaux**, **co-assignés** et **portfolio total**, avec focus par défaut sur les principaux. 100% UI/front, aucune migration, aucun changement RLS ni backend.
+Sur `/admin/clients`, ajouter un mode d'affichage **"Clients par agent"** pour piloter la charge de travail (assignations principales, co-assignations, total portfolio, clients récents en priorité, clients sans agent). 100% UI/front. Mode `Liste clients` actuel **strictement intact**.
 
-## Fichiers modifiés
+## Périmètre
 
-- `src/pages/agent/MesClients.tsx`
-- `src/components/premium/PremiumClientCard.tsx` (2 props optionnelles + badge)
+- **Modifier** : `src/pages/admin/Clients.tsx`
+- **Créer** : `src/components/admin/clients/ClientsByAgentView.tsx`
+- **Ne pas modifier** : DB, RLS, Edge Functions, `AdminClientDetail`, dashboard, système d'assignation, page agent, `PremiumClientCard`, types globaux.
 
-## 1. Exposer la responsabilité dans la donnée client
+## 1. Chargement front enrichi (non bloquant)
 
-Dans la boucle `transformedClients` de `MesClients.tsx`, ajouter au objet retourné :
-- `isPrimaryAgent: boolean` — déjà calculé localement, à exposer
-- `primaryAgentName: string | null` — prénom de l'agent principal **uniquement si** l'agent connecté est co-assigné ; sinon `null`
-
-Source : entrée `client_agents` où `is_primary === true`, via le profil joint déjà chargé.
-
-## 2. State scope (focus par défaut)
+Dans `loadData()` de `Clients.tsx` :
 
 ```ts
-const [selectedScope, setSelectedScope] = useState<'primary' | 'co' | 'all'>('primary');
+type ClientAgent = { client_id: string; agent_id: string; is_primary: boolean; created_at: string | null };
+const [clientAgents, setClientAgents] = useState<ClientAgent[]>([]);
+
+const { data: caData, error: caError } = await supabase
+  .from('client_agents')
+  .select('client_id, agent_id, is_primary, created_at')
+  .limit(15000);
+
+if (caError) console.error('client_agents fetch failed', caError);
+setClientAgents(caData ?? []);
 ```
 
-Pas de `localStorage` — l'agent revient toujours sur ses principaux à l'ouverture.
+**Non bloquant** : erreur ou null → `setClientAgents([])`. La page et le mode `Liste clients` restent 100% fonctionnels.
 
-## 3. Bloc KPI premium (3 cartes cliquables)
+## 2. Toggle de mode d'affichage
 
-Inséré juste sous `PremiumPageHeader`, au-dessus des filtres existants.
+À côté de `PremiumPageHeader`, 2 pills :
+
+```ts
+const [viewMode, setViewMode] = useState<'list' | 'byAgent'>('list');
+```
+
+- `list` = défaut, **strictement inchangé**. Pas de localStorage.
+- `byAgent` → `<ClientsByAgentView clients={clients} clientProfiles={clientProfiles} agents={agents} clientAgents={clientAgents} />`.
+
+## 3. Composant `ClientsByAgentView`
+
+### 3.1 Types locaux légers
+
+```ts
+type ClientLite = { id: string; user_id?: string | null; agent_id?: string | null; created_at?: string | null; updated_at?: string | null; [k: string]: any };
+type ProfileLite = { nom?: string | null; prenom?: string | null; email?: string | null; telephone?: string | null; [k: string]: any };
+type AgentLite = { id: string; profile?: ProfileLite; [k: string]: any };
+
+type ClientsByAgentViewProps = {
+  clients: ClientLite[];
+  clientProfiles: Map<string, ProfileLite>; // keyed by client.user_id (structure existante)
+  agents: AgentLite[];
+  clientAgents: ClientAgent[];
+};
+```
+
+Aucun type global du projet n'est modifié.
+
+### 3.2 States internes (valeurs techniques stables)
+
+```ts
+const [selectedAgent, setSelectedAgent] = useState<'all' | string>('all');
+const [responsibilityFilter, setResponsibilityFilter] = useState<'all' | 'primary' | 'co'>('all');
+const [clientSortOrder, setClientSortOrder] = useState<'desc' | 'asc'>('desc');
+const [searchTerm, setSearchTerm] = useState('');
+```
+
+Logique = valeurs techniques uniquement. Labels UI séparés.
+
+### 3.3 Helpers profil client (fallbacks sécurisés)
+
+`clientProfiles` est une `Map<user_id, Profile>` (clés = `client.user_id`), champs `nom`/`prenom`/`email`/`telephone`.
+
+```ts
+const getClientProfile = (c: ClientLite): ProfileLite | undefined =>
+  c.user_id ? clientProfiles.get(c.user_id) : undefined;
+
+const getClientDisplayName = (c: ClientLite): string => {
+  const p = getClientProfile(c);
+  const full = [p?.prenom ?? (c as any).prenom, p?.nom ?? (c as any).nom]
+    .filter(Boolean).join(' ').trim();
+  return full || 'Client sans profil';
+};
+
+const getClientDisplayEmail = (c: ClientLite): string | null => {
+  const p = getClientProfile(c);
+  return p?.email ?? (c as any).email ?? null;
+};
+
+const getClientDisplayPhone = (c: ClientLite): string | null => {
+  const p = getClientProfile(c);
+  return p?.telephone ?? (c as any).telephone ?? null;
+};
+```
+
+**Jamais** d'erreur runtime si `user_id` absent ou profil manquant : le client reste visible avec `Client sans profil`.
+
+### 3.4 Helpers recherche
+
+```ts
+const matchesClientSearch = (c: ClientLite, term: string): boolean => {
+  const n = term.trim().toLowerCase();
+  if (!n) return true;
+  const p = getClientProfile(c);
+  const values = [
+    p?.prenom, p?.nom, p?.email, p?.telephone,
+    (c as any).prenom, (c as any).nom, (c as any).email, (c as any).telephone,
+  ].filter(Boolean).join(' ').toLowerCase();
+  return values.includes(n);
+};
+
+const matchesAgentSearch = (a: AgentLite, term: string): boolean => {
+  const n = term.trim().toLowerCase();
+  if (!n) return true;
+  const values = [a.profile?.prenom, a.profile?.nom, a.profile?.email]
+    .filter(Boolean).join(' ').toLowerCase();
+  return values.includes(n);
+};
+```
+
+Recherche combinée : un client matche si `matchesClientSearch(c)` OU si son agent matche.
+
+Données dérivées via `useMemo`.
+
+## 4. Assignments (anti-doublons)
+
+```ts
+type Assignment = { clientId: string; agentId: string; isPrimary: boolean; assignedAt: string | null };
+```
+
+1. Indexer `clientAgents` par `client_id`.
+2. Pour chaque client :
+   - Si ≥1 ligne `client_agents` → utiliser uniquement `client_agents`.
+   - Sinon → fallback `clients.agent_id` → `{ isPrimary: true, assignedAt: client.created_at }`.
+3. Déduplication finale `(clientId, agentId)` via `Map` ; `isPrimary === true` gagne ; garder `assignedAt` le plus récent.
+
+**Jamais** additionner `client_agents` + `clients.agent_id` pour le même client.
+
+## 5. Clients sans agent
+
+```ts
+clientsWithoutAgent = clients.filter(c => !clientAgentsByClient.has(c.id) && !c.agent_id);
+```
+
+## 6. Agent buckets + agents introuvables
+
+```ts
+const agentsById = new Map(agents.map(a => [a.id, a]));
+```
+
+`Map<agentId, { agent: AgentLite | null; isUnknown: boolean; primary: ClientLite[]; co: ClientLite[] }>`.
+
+Si `agentId` absent de `agentsById` : bucket avec `isUnknown: true`, label `Agent inconnu`, style discret. KPI corrects, clients non perdus.
+
+Set sur `clientId` par agent.
+
+## 7. KPI globaux (5 cartes, `PremiumKPICard`)
+
+```ts
+const uniqueClientCount = new Set(clients.map(c => c.id)).size;
+```
+
+1. **Clients actifs** — `uniqueClientCount`, "Tous agents confondus"
+2. **Agents actifs** — agents (connus + inconnus) avec ≥1 client, "Portefeuille en cours"
+3. **Assignations principales** — `assignments.filter(a => a.isPrimary).length`, "Responsabilité directe"
+4. **Co-assignations** — `assignments.filter(a => !a.isPrimary).length`, "Support équipe"
+5. **Sans agent** — `clientsWithoutAgent.length`, "À traiter", alerte douce. **Uniquement si > 0**.
+
+Note : `Clients actifs = clients uniques. Assignations principales et co-assignations = relations agent-client.`
+
+## 8. Filtres de la vue
+
+- Select Agent : `Tous les agents` (`'all'`) + agents connus.
+- Pills Responsabilité : `Tous` / `Principaux` / `Co-assignés`.
+- Recherche texte (helpers §3.4).
+- Select Tri clients : `Plus récent d'abord` (`'desc'`, défaut) / `Plus ancien d'abord` (`'asc'`).
+
+## 9. Section "Clients sans agent assigné"
+
+```ts
+const filteredClientsWithoutAgent = clientsWithoutAgent.filter(c => matchesClientSearch(c, searchTerm));
+const showWithoutAgentSection =
+  filteredClientsWithoutAgent.length > 0 &&
+  selectedAgent === 'all' &&
+  responsibilityFilter === 'all';
+```
+
+Jamais de section vide. Liste limitée à 10 + bouton `Voir tous (Z)`. Badge `Sans agent` alerte douce.
+
+```ts
+navigate(`/admin/clients/${client.id}`)  // backticks
+```
+
+Route confirmée : `/admin/clients/:id`.
+
+## 10. Tri des clients
+
+Cascade : `assignedAt` → `client.updated_at` → `client.created_at`. Défaut `'desc'`.
+
+## 11. Cartes agent
 
 ```text
-┌────────────────────┬────────────────────┬────────────────────┐
-│ Crown   Principaux │ Handshake Co-ass.  │ Briefcase  Total   │
-│        X clients   │        Y clients   │      X+Y clients   │
-│  Priorité de suivi │   Support équipe   │     Vue globale    │
-└────────────────────┴────────────────────┴────────────────────┘
+┌─────────────────────────────────────────────┐
+│ [Avatar] Prénom Nom · email                 │
+│ X principaux · Y co-assignés · Z total      │
+├─────────────────────────────────────────────┤
+│ Client A   [Crown Principal]   10.06.2026   │
+│ Client B   [Users Co-assigné]  08.06.2026   │
+│   → Principal : Prénom                      │
+└─────────────────────────────────────────────┘
 ```
 
-- Carte 1 "Principaux" : accent primaire fort, icône `Crown` → `setSelectedScope('primary')`
-- Carte 2 "Co-assignations" : style secondaire/muted, icône `Handshake` → `setSelectedScope('co')`
-- Carte 3 "Portfolio total" : neutre, icône `Briefcase` → `setSelectedScope('all')`
-- État sélectionné : ring + shadow
+- Buckets `isUnknown` : header `Agent inconnu`, style discret.
+- Liste respecte filtres + tri.
+- Ligne cliquable → `` navigate(`/admin/clients/${client.id}`) ``.
+- 10 clients max + bouton `Voir tous (Z)`.
+- Nom/email affichés via `getClientDisplayName` / `getClientDisplayEmail` (fallback `Client sans profil`).
 
-## 4. Calcul des compteurs (stables)
+## 12. Badges responsabilité
 
-Basés sur `clientsActifsOnly` (déjà existant, exclut `reloge`) :
+- **Principal** : `Crown`, accent primaire.
+- **Co-assigné** : `Users`, variant `secondary` muted, suffixe `avec {Prénom principal}` si dispo (via `client_agents.is_primary=true` ou fallback `clients.agent_id` ; `Agent inconnu` si introuvable).
+- **Sans agent** : alerte douce.
 
-```ts
-const primaryClients = clientsActifsOnly.filter(c => c.isPrimaryAgent === true);
-const coAssignedClients = clientsActifsOnly.filter(c => c.isPrimaryAgent !== true);
-const primaryCount = primaryClients.length;
-const coCount = coAssignedClients.length;
-const totalCount = primaryCount + coCount;
-```
+## 13. Tri des agents
 
-Catégories exclusives, pas de doublons. Compteurs non impactés par recherche / filtres secondaires / tri.
+Défaut : nb principaux desc → total desc → alphabétique. Buckets `isUnknown` en fin.
+Select optionnel léger : `Plus de principaux` / `Plus grand portefeuille` / `A-Z`.
+Agents sans client dans le filtre actif : carte masquée.
 
-## 5. Pills filtre "Périmètre"
+## 14. Empty states
 
-Ligne dédiée au-dessus de la barre de recherche, 3 pills synchronisées avec `selectedScope` :
-- `🌟 Principaux (X)`
-- `🤝 Co-assignés (Y)`
-- `📊 Tous (X+Y)`
+- Aucun agent avec client : "Aucun client assigné pour le moment." / "Les portefeuilles agents apparaîtront ici dès qu'un client sera assigné."
+- Filtres trop restrictifs : "Aucun client ne correspond à ces filtres." / "Modifiez l'agent, le type d'assignation ou la recherche."
 
-Filtre scope appliqué **avant** les autres dans `filteredClients`. Recherche texte et filtres existants inchangés.
+## 15. Anti-doublons compteurs (strict)
 
-## 6. Badge "Principal / Co-assigné" sur la carte
+- KPI 1 = `new Set(clients.map(c => c.id)).size`.
+- KPI 3/4 = relations.
+- KPI 5 = clients uniques sans assignation.
+- Compteurs par agent = Set sur `clientId`.
+- Si `client_agents` existe → ignorer `clients.agent_id`.
 
-Modifier `PremiumClientCard.tsx` :
-- 2 nouvelles props optionnelles : `isPrimaryAgent?: boolean`, `primaryAgentName?: string | null`
-- Inséré en **première position** dans la zone badges du header (lignes 140-159)
-  - `isPrimaryAgent` → badge accent `<Crown /> Principal`
-  - sinon → badge muted `<Users /> Co-assigné`, suffixé `avec {primaryAgentName}` si disponible
+## 16. Anti-régression (priorité maximale)
 
-`MesClients.tsx` passe les deux props lors du rendu.
+Mode `Liste clients` **strictement intact** : filtres, recherche, tri, multi-sélection, bulk, navigation détail, responsive, permissions, design premium. Fonctionne même si `clientAgents = []`. Aucun type global modifié.
 
-## 7. Tri intelligent en vue "Tous"
+## 17. Hors scope
 
-Dans `sortedClients`, si `selectedScope === 'all'` : trier d'abord par `isPrimaryAgent` desc, puis appliquer le tri date existant. Les autres scopes gardent le tri actuel.
+DB, RLS, Edge Functions, page détail, dashboard, création/édition client, système d'assignation, page agent, `PremiumClientCard`, types globaux. Pas de scoring, objectifs, commissions, alertes, automatisations.
 
-## 8. Empty states contextuels
+## 18. Validation
 
-Selon `selectedScope` :
-- `primary` → "Aucun client principal assigné pour le moment." / "Les clients dont vous êtes responsable apparaîtront ici en priorité."
-- `co` → "Aucune co-assignation active." / "Les clients partagés avec votre équipe apparaîtront ici."
-- `all` → "Aucun client actif trouvé." / "Votre portefeuille client apparaîtra ici dès qu'un client vous sera assigné."
-
-## Hors scope
-
-Dashboard, page détail, autres pages, DB, RLS, edge functions, chargement de données, indicateurs métier (urgence, prochaine action, score). Rien d'autre.
-
-## Validation
-
-Build TS OK + `/agent/clients` :
-- Ouvre par défaut sur "Principaux"
-- 3 compteurs corrects, clic carte = filtre
-- Pills synchronisées
-- Badge `Principal` / `Co-assigné avec X` visible
-- Vue "Tous" : principaux en tête
-- Filtres et recherche existants intacts
+- Build TS OK (aucun type global touché).
+- Mode `Liste clients` défaut et 100% intact.
+- Fetch `client_agents` non bloquant.
+- KPIs corrects ; KPI 5 et section "Sans agent" affichés uniquement si pertinent (jamais vide).
+- Recherche via `clientProfiles.get(client.user_id)` + fallback champs client + agent.
+- Helpers `getClientDisplayName`/`Email`/`Phone` : aucun crash si `user_id`/profil absent, fallback `Client sans profil`.
+- Section "Sans agent" filtrée par recherche, masquée si `selectedAgent !== 'all'` ou `responsibilityFilter !== 'all'`.
+- Bucket `Agent inconnu` pour `agent_id` introuvables ; clients non perdus.
+- Logique basée sur valeurs techniques (`'all' | 'primary' | 'co'`, `'desc' | 'asc'`).
+- Cartes agent : compteurs corrects, tri défaut récent → ancien.
+- Badges Principal / Co-assigné / Sans agent visibles, suffixe `avec {Prénom}` quand dispo.
+- Navigation via backticks `` `/admin/clients/${client.id}` ``.
+- KPI 1 via Set strict.
+- Aucun doublon `agent_id` + `client_agents`.
+- Responsive mobile/tablette OK.
