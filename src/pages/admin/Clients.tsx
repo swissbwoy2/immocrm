@@ -122,6 +122,9 @@ const Clients = () => {
   const [inviteForm, setInviteForm] = useState({ prenom: '', nom: '', email: '', telephone: '', typeRecherche: 'Acheter' });
   const [sendingInvite, setSendingInvite] = useState(false);
 
+  const [clientAgents, setClientAgents] = useState<ClientAgent[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'byAgent'>('list');
+
 
   useEffect(() => {
     loadData();
