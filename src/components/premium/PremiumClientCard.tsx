@@ -48,6 +48,8 @@ interface PremiumClientCardProps {
   daysElapsed: number;
   hasReminders: number;
   offresToday?: number;
+  isPrimaryAgent?: boolean;
+  primaryAgentName?: string | null;
   onEdit: (id: string) => void;
   onClick: (id: string) => void;
 }
