@@ -376,10 +376,13 @@ const MesClients = () => {
       (selectedScope === 'co' && client.isPrimaryAgent !== true);
     if (!matchScope) return false;
 
-    const matchSearch = searchTerm === "" || 
-      client.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${client.prenom} ${client.nom}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchSearch = q === "" ||
+      client.prenom?.toLowerCase().includes(q) ||
+      client.nom?.toLowerCase().includes(q) ||
+      `${client.prenom} ${client.nom}`.toLowerCase().includes(q) ||
+      client.email?.toLowerCase().includes(q) ||
+      client.telephone?.toLowerCase().includes(q);
     
     const matchRegion = selectedRegions.length === 0 || 
       (client.regions && client.regions.length > 0 && client.regions.some((r: string) => selectedRegions.includes(r)));
