@@ -92,7 +92,8 @@ const MesClients = () => {
       const { data: clientsData, error } = await supabase
         .from('clients')
         .select('*')
-        .in('id', clientIds);
+        .in('id', clientIds)
+        .is('anonymise_at', null);
 
       if (error) throw error;
 
