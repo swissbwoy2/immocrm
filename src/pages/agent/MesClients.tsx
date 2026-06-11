@@ -507,7 +507,7 @@ const MesClients = () => {
             const scopes = [
               {
                 key: 'primary' as const,
-                title: 'Principaux',
+                title: 'Mes principaux',
                 value: primaryCount,
                 subtitle: 'Priorité de suivi',
                 Icon: Crown,
@@ -517,7 +517,7 @@ const MesClients = () => {
               },
               {
                 key: 'co' as const,
-                title: 'Co-assignations',
+                title: 'Co-assignés',
                 value: coCount,
                 subtitle: 'Support équipe',
                 Icon: Handshake,
@@ -527,7 +527,7 @@ const MesClients = () => {
               },
               {
                 key: 'all' as const,
-                title: 'Portfolio total',
+                title: 'Total portfolio',
                 value: totalCount,
                 subtitle: 'Vue globale',
                 Icon: Briefcase,
