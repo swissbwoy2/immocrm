@@ -376,10 +376,13 @@ const MesClients = () => {
       (selectedScope === 'co' && client.isPrimaryAgent !== true);
     if (!matchScope) return false;
 
-    const matchSearch = searchTerm === "" || 
-      client.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${client.prenom} ${client.nom}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchSearch = q === "" ||
+      client.prenom?.toLowerCase().includes(q) ||
+      client.nom?.toLowerCase().includes(q) ||
+      `${client.prenom} ${client.nom}`.toLowerCase().includes(q) ||
+      client.email?.toLowerCase().includes(q) ||
+      client.telephone?.toLowerCase().includes(q);
     
     const matchRegion = selectedRegions.length === 0 || 
       (client.regions && client.regions.length > 0 && client.regions.some((r: string) => selectedRegions.includes(r)));
@@ -420,7 +423,10 @@ const MesClients = () => {
   const coAssignedClients = clientsActifsOnly.filter(c => c.isPrimaryAgent !== true);
   const primaryCount = primaryClients.length;
   const coCount = coAssignedClients.length;
-  const totalCount = primaryCount + coCount;
+  const totalCount = new Set([
+    ...primaryClients.map(c => c.id),
+    ...coAssignedClients.map(c => c.id),
+  ]).size;
 
   const sortedClients = [...filteredClients].sort((a, b) => {
     if (selectedScope === 'all') {
@@ -501,7 +507,7 @@ const MesClients = () => {
             const scopes = [
               {
                 key: 'primary' as const,
-                title: 'Principaux',
+                title: 'Mes principaux',
                 value: primaryCount,
                 subtitle: 'Priorité de suivi',
                 Icon: Crown,
@@ -511,7 +517,7 @@ const MesClients = () => {
               },
               {
                 key: 'co' as const,
-                title: 'Co-assignations',
+                title: 'Co-assignés',
                 value: coCount,
                 subtitle: 'Support équipe',
                 Icon: Handshake,
@@ -521,7 +527,7 @@ const MesClients = () => {
               },
               {
                 key: 'all' as const,
-                title: 'Portfolio total',
+                title: 'Total portfolio',
                 value: totalCount,
                 subtitle: 'Vue globale',
                 Icon: Briefcase,

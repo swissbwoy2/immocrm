@@ -151,7 +151,7 @@ export function PremiumClientCard({
             {isPrimaryAgent === false && (
               <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/60">
                 <Users className="h-3 w-3 mr-1" />
-                {primaryAgentName ? `Co-assigné avec ${primaryAgentName}` : 'Co-assigné'}
+                {primaryAgentName ? `Co-assigné avec ${primaryAgentName}` : 'Co-assigné avec agent inconnu'}
               </Badge>
             )}
             {client.isSolvable ? (
