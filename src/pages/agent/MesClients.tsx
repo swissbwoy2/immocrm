@@ -380,7 +380,7 @@ const MesClients = () => {
     const matchSearch = q === "" ||
       client.prenom?.toLowerCase().includes(q) ||
       client.nom?.toLowerCase().includes(q) ||
-      `${client.prenom} ${client.nom}`.toLowerCase().includes(q) ||
+      `${client.prenom ?? ""} ${client.nom ?? ""}`.toLowerCase().includes(q) ||
       client.email?.toLowerCase().includes(q) ||
       client.telephone?.toLowerCase().includes(q);
     
