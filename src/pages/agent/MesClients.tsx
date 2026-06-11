@@ -423,7 +423,10 @@ const MesClients = () => {
   const coAssignedClients = clientsActifsOnly.filter(c => c.isPrimaryAgent !== true);
   const primaryCount = primaryClients.length;
   const coCount = coAssignedClients.length;
-  const totalCount = primaryCount + coCount;
+  const totalCount = new Set([
+    ...primaryClients.map(c => c.id),
+    ...coAssignedClients.map(c => c.id),
+  ]).size;
 
   const sortedClients = [...filteredClients].sort((a, b) => {
     if (selectedScope === 'all') {
