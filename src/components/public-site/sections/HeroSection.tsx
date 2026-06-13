@@ -4,7 +4,6 @@ import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, U
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroChasseurAsset from '@/assets/hero-chasseur-split.png.asset.json';
 import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile-916.png.asset.json';
-import heroRevealVideo from '@/assets/hero-reveal-video.mp4';
 const heroBg = heroChasseurAsset.url;
 const heroBgMobile = heroChasseurMobileAsset.url;
 import { useSearchType } from '@/contexts/SearchTypeContext';
@@ -13,7 +12,6 @@ import { GrainOverlay } from '@/components/public-site/animations/GrainOverlay';
 import { WordReveal } from '@/components/public-site/animations/WordReveal';
 import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { Meteors } from '@/components/public-site/magic/Meteors';
-import { DiagonalSplitReveal } from '@/components/public-site/DiagonalSplitReveal';
 
 const parcours = [
   { to: '/relouer-mon-appartement', icon: KeyRound, label: "Relouer mon appart'" },
@@ -26,15 +24,22 @@ export function HeroSection() {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <DiagonalSplitReveal
-      imageSrc={heroBg}
-      imageSrcMobile={heroBgMobile}
-      videoSrc={heroRevealVideo}
-      title="Ton futur appartement, Notre Mission !"
-      scrollHint="Faites défiler pour découvrir"
-    >
-      <section className="relative bg-background overflow-hidden luxury-grain">
-        {/* Decorative elements */}
+    <section className="relative bg-background overflow-hidden luxury-grain">
+      {/* Static hero background image (desktop + mobile) */}
+      <picture className="absolute inset-0 -z-10">
+        <source media="(max-width: 768px)" srcSet={heroBgMobile} />
+        <img
+          src={heroBg}
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+          loading="eager"
+          decoding="async"
+        />
+      </picture>
+      <div className="absolute inset-0 bg-background/85 -z-10" aria-hidden="true" />
+
+      {/* Decorative elements */}
         <GrainOverlay opacity={0.03} />
         <Meteors number={12} className="z-[1]" />
 
@@ -362,7 +367,6 @@ export function HeroSection() {
             </motion.div>
           </div>
         </div>
-      </section>
-    </DiagonalSplitReveal>
+    </section>
   );
 }

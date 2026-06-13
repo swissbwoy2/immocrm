@@ -2,8 +2,6 @@ import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
-import { WebGLErrorBoundary } from '@/components/public-site/3d/WebGLErrorBoundary';
-import { TravelingGoldKey3D } from '@/components/public-site/3d/TravelingGoldKey3D';
 
 
 // Above the fold - eager
@@ -54,9 +52,8 @@ export default function HomePage() {
 
   return (
     <PublicSiteLayout>
-      <WebGLErrorBoundary>
-        <TravelingGoldKey3D />
-      </WebGLErrorBoundary>
+
+
 
       {/* Eager sections */}
       <DossierAnalyseSection />
