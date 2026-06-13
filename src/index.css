@@ -216,13 +216,30 @@ All colors MUST be HSL.
     background-color: transparent !important;
   }
   .theme-luxury .font-serif {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
   }
   .theme-luxury .luxury-shimmer-btn,
   .theme-luxury .luxury-cta-glow {
-    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+    background-image: none !important;
+    background-color: hsl(var(--primary)) !important;
     color: hsl(var(--primary-foreground)) !important;
-    box-shadow: var(--shadow-glow) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-radius: 0.25rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600 !important;
+  }
+  .theme-luxury .luxury-shimmer-btn:hover,
+  .theme-luxury .luxury-cta-glow:hover {
+    background-color: hsl(var(--accent)) !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+  /* Neutralise les overlays brillants des CTA pour un rendu plat éditorial */
+  .theme-luxury .luxury-shimmer-btn::before,
+  .theme-luxury .luxury-shimmer-btn::after {
+    display: none !important;
   }
   .theme-luxury .luxury-gradient-text {
     background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))) !important;
