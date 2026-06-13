@@ -318,11 +318,33 @@ All colors MUST be HSL.
   .theme-luxury section[class*="to-[hsl(38_"],
   .theme-luxury section[class*="to-[hsl(28_"],
   .theme-luxury section[class*="to-[hsl(30_"],
-  .theme-luxury div.absolute[class*="from-[hsl(38_"],
-  .theme-luxury div.absolute[class*="from-[hsl(28_"],
-  .theme-luxury div.absolute[class*="from-[hsl(30_"] {
+  .theme-luxury div.absolute[class*="from-[hsl(38_"]:not([data-split-overlay]),
+  .theme-luxury div.absolute[class*="from-[hsl(28_"]:not([data-split-overlay]),
+  .theme-luxury div.absolute[class*="from-[hsl(30_"]:not([data-split-overlay]) {
     background-image: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%) !important;
     background-color: hsl(var(--background)) !important;
+  }
+
+  /* Inline gold styles (progress bars, accents) → green primary gradient */
+  .theme-luxury [style*="hsl(38 45%"]:not([data-split-sticky]):not([data-split-overlay]),
+  .theme-luxury [style*="hsl(38 55%"]:not([data-split-sticky]):not([data-split-overlay]),
+  .theme-luxury [style*="hsl(28 35%"]:not([data-split-sticky]):not([data-split-overlay]) {
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+    background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+  }
+
+  /* Split reveal — keep dark hero on top of light theme (escape overrides) */
+  .theme-luxury [data-split-sticky],
+  .theme-luxury section[data-split-sticky] {
+    background-color: rgb(15, 25, 35) !important;
+    background-image: none !important;
+    color: #ffffff !important;
+  }
+  .theme-luxury [data-split-overlay] {
+    background-color: transparent !important;
+  }
+  .theme-luxury [data-split-title] {
+    color: #ffffff !important;
   }
 
   /* Button/anchor gradient (gold) → green primary gradient (keep colored CTAs) */
