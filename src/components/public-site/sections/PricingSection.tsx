@@ -89,7 +89,7 @@ export function PricingSection() {
     <section id="tarifs" className="py-24 md:py-32 bg-background luxury-mesh-bg">
       <div className="container mx-auto px-4">
         <ScrollReveal variant="fade-up" className="text-center mb-4">
-          <p className="text-xs sm:text-sm tracking-widest uppercase text-[hsl(38_45%_48%)] font-medium mb-3">
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-medium mb-3">
             Tarifs transparents
           </p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
@@ -122,7 +122,7 @@ export function PricingSection() {
             <Button
               asChild
               size="lg"
-              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0"
+              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0"
             >
               <Link to="/nouveau-mandat">
                 <Rocket className="h-5 w-5 mr-2" />

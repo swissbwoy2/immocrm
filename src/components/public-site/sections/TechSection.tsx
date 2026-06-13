@@ -21,7 +21,7 @@ export function TechSection() {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-[hsl(38_45%_48%/0.02)] to-background">
+    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-primary to-background">
       <div className="container mx-auto px-4 relative z-10">
 
         <div className="grid lg:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
@@ -30,12 +30,12 @@ export function TechSection() {
           <ScrollReveal variant="slide-right" className="hidden lg:flex items-center justify-center">
             <div className="relative w-72 h-72">
               {/* Center logo */}
-              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] flex items-center justify-center shadow-[0_0_36px_hsl(38_45%_48%/0.45)] z-10 overflow-hidden border-2 border-[hsl(38_55%_65%/0.4)]">
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center shadow-md z-10 overflow-hidden border-2 border-primary/30">
                 <motion.div
                   animate={prefersReducedMotion ? {} : {
                     boxShadow: [
-                      '0 0 0 0px hsl(38 45% 48% / 0.4)',
-                      '0 0 0 16px hsl(38 45% 48% / 0)',
+                      '0 0 0 0px hsl(var(--primary))',
+                      '0 0 0 16px hsl(var(--primary))',
                     ],
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' as const }}
@@ -52,8 +52,8 @@ export function TechSection() {
               {/* Inner orbit */}
               {innerOrbitIcons.map((Icon, i) => (
                 <OrbitingCircles key={i} radius={90} duration={18} delay={i * 4.5} iconSize={36} path={i === 0}>
-                  <div className="w-9 h-9 rounded-full bg-[hsl(30_15%_10%)] border border-[hsl(38_45%_48%/0.4)] flex items-center justify-center shadow-[0_0_10px_hsl(38_45%_48%/0.2)]">
-                    <Icon className="h-4 w-4 text-[hsl(38_45%_55%)]" />
+                  <div className="w-9 h-9 rounded-full bg-background border border-primary/30 flex items-center justify-center shadow-md">
+                    <Icon className="h-4 w-4 text-primary" />
                   </div>
                 </OrbitingCircles>
               ))}
@@ -61,8 +61,8 @@ export function TechSection() {
               {/* Outer orbit */}
               {outerOrbitIcons.map((Icon, i) => (
                 <OrbitingCircles key={i + 4} radius={130} duration={28} delay={i * 7} reverse iconSize={32} path={i === 0}>
-                  <div className="w-8 h-8 rounded-full bg-[hsl(30_15%_12%)] border border-[hsl(28_35%_35%/0.45)] flex items-center justify-center">
-                    <Icon className="h-3.5 w-3.5 text-[hsl(28_35%_52%)]" />
+                  <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center">
+                    <Icon className="h-3.5 w-3.5 text-foreground" />
                   </div>
                 </OrbitingCircles>
               ))}
@@ -73,8 +73,8 @@ export function TechSection() {
           <div>
             <ScrollReveal variant="fade-up" className="mb-4">
               <div className="inline-flex items-center gap-2 mb-6">
-                <div className="bg-[hsl(38_45%_48%/0.08)] border border-[hsl(38_45%_48%/0.25)] rounded-full px-5 py-2.5">
-                  <span className="text-sm font-semibold text-[hsl(38_45%_48%)]">Tech & Innovation</span>
+                <div className="bg-primary/10 border border-primary/30 rounded-full px-5 py-2.5">
+                  <span className="text-sm font-semibold text-primary">Tech & Innovation</span>
                 </div>
               </div>
               <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 font-serif">
@@ -98,17 +98,17 @@ export function TechSection() {
               {features.map((feature, index) => (
                 <motion.div key={index} variants={staggerItem}>
                   <TiltCard intensity={3}>
-                    <div className="relative rounded-2xl p-5 group bg-card/80 border border-border/40 hover:border-[hsl(38_45%_48%/0.4)] hover:shadow-[0_8px_24px_hsl(38_45%_48%/0.08)] transition-all duration-500">
+                    <div className="relative rounded-2xl p-5 group bg-card/80 border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-500">
                       <div className="flex gap-4">
-                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-[hsl(38_45%_48%/0.12)] to-[hsl(28_35%_35%/0.08)] border border-[hsl(38_45%_48%/0.2)] group-hover:border-[hsl(38_45%_48%/0.45)] flex items-center justify-center transition-all duration-300">
-                          <feature.icon className="h-6 w-6 text-[hsl(38_45%_48%)]" />
+                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300">
+                          <feature.icon className="h-6 w-6 text-primary" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-semibold text-foreground mb-1 group-hover:text-[hsl(38_45%_44%)] transition-colors font-serif">{feature.title}</h3>
+                          <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors font-serif">{feature.title}</h3>
                           <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
                         </div>
                       </div>
-                      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.5)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl" />
+                      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl" />
                     </div>
                   </TiltCard>
                 </motion.div>
@@ -118,8 +118,8 @@ export function TechSection() {
         </div>
 
         <ScrollReveal variant="fade-up" delay={0.3} className="text-center mt-12">
-          <div className="inline-flex items-center gap-3 bg-card/80 rounded-full px-6 py-3 border border-[hsl(38_45%_48%/0.25)]">
-            <Crown className="h-5 w-5 text-[hsl(38_55%_65%)]" />
+          <div className="inline-flex items-center gap-3 bg-card/80 rounded-full px-6 py-3 border border-primary/30">
+            <Crown className="h-5 w-5 text-primary" />
             <span className="text-foreground font-medium text-sm">L'alliance parfaite : humains + robots + réseau privé 🚀</span>
           </div>
         </ScrollReveal>

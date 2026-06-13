@@ -29,7 +29,7 @@ export function ForWhoSection() {
       <div className="container mx-auto px-4">
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
-          <p className="text-xs sm:text-sm tracking-widest uppercase text-[hsl(38_45%_48%)] font-medium mb-3">Pour qui ?</p>
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-medium mb-3">Pour qui ?</p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
             Ce service est fait pour vous si…
           </h2>
@@ -49,9 +49,9 @@ export function ForWhoSection() {
           {profiles.map((p, i) => (
             <motion.div key={i} variants={staggerItem}>
               <TiltCard intensity={5}>
-                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 text-center space-y-4 hover:border-[hsl(38_45%_48%/0.4)] hover:shadow-[0_8px_30px_hsl(38_45%_48%/0.08)] transition-all duration-500 h-full">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[hsl(38_45%_48%/0.12)] to-[hsl(28_35%_35%/0.08)] border border-[hsl(38_45%_48%/0.2)]">
-                    <p.icon className="h-7 w-7 text-[hsl(38_45%_48%)]" />
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 text-center space-y-4 hover:border-primary/30 hover:shadow-md transition-all duration-500 h-full">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30">
+                    <p.icon className="h-7 w-7 text-primary" />
                   </div>
                   <h3 className="text-lg font-bold text-foreground font-serif">{p.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
@@ -66,7 +66,7 @@ export function ForWhoSection() {
             asChild
             variant="outline"
             size="lg"
-            className="group border-[hsl(38_45%_48%/0.35)] hover:border-[hsl(38_45%_48%/0.7)] hover:bg-[hsl(38_45%_48%/0.06)] text-[hsl(38_45%_44%)] hover:text-[hsl(38_45%_40%)]"
+            className="group border-primary/30 hover:border-primary/30 hover:bg-primary/10 text-primary hover:text-primary"
           >
             <Link to="/nouveau-mandat">
               Activer ma recherche

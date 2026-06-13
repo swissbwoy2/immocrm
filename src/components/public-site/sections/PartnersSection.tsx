@@ -60,9 +60,9 @@ export function PartnersSection() {
       <div className="container mx-auto px-4 relative z-10">
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
-          <div className="inline-flex items-center gap-2 bg-background/80 rounded-full px-4 py-2 mb-4 border border-[hsl(38_45%_48%/0.25)]">
-            <Handshake className="h-4 w-4 text-[hsl(38_45%_48%)]" />
-            <span className="text-sm font-medium text-[hsl(38_45%_48%)]">Écosystème de confiance</span>
+          <div className="inline-flex items-center gap-2 bg-background/80 rounded-full px-4 py-2 mb-4 border border-primary/30">
+            <Handshake className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Écosystème de confiance</span>
           </div>
           <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-3 font-serif">
             Nos partenaires de{' '}
@@ -94,23 +94,23 @@ export function PartnersSection() {
                 whileHover={{ scale: 1.04 }}
                 className="relative group rounded-2xl overflow-hidden"
               >
-                <div className="relative flex flex-col items-center justify-center gap-4 px-8 py-8 bg-[hsl(38_45%_48%/0.06)] border-2 border-[hsl(38_45%_48%/0.3)] rounded-2xl hover:border-[hsl(38_45%_48%/0.65)] hover:shadow-[0_0_40px_hsl(38_45%_48%/0.2)] transition-all duration-500 h-36">
-                  <BorderBeam duration={6} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
+                <div className="relative flex flex-col items-center justify-center gap-4 px-8 py-8 bg-primary/10 border-2 border-primary/30 rounded-2xl hover:border-primary/30 hover:shadow-md transition-all duration-500 h-36">
+                  <BorderBeam duration={6} colorFrom="hsl(var(--primary))" colorTo="hsl(var(--primary))" />
 
-                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-[hsl(38_45%_44%/0.15)] border border-[hsl(38_45%_48%/0.45)] rounded-full px-2.5 py-1">
-                    <Award className="h-3 w-3 text-[hsl(38_55%_65%)]" />
-                    <span className="text-[10px] font-bold text-[hsl(38_55%_65%)] uppercase tracking-widest">Partenaire privilégié</span>
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-primary/10 border border-primary/30 rounded-full px-2.5 py-1">
+                    <Award className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Partenaire privilégié</span>
                   </div>
 
                   <img
                     src={p.logo}
                     alt={p.name}
                     className="h-12 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ filter: 'drop-shadow(0 0 8px hsl(38 45% 48% / 0.25))' }}
+                    style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary)))' }}
                   />
-                  <p className="text-xs text-[hsl(40_20%_60%)] group-hover:text-[hsl(40_20%_75%)] text-center transition-colors">{p.desc}</p>
+                  <p className="text-xs text-muted-foreground group-hover:text-muted-foreground text-center transition-colors">{p.desc}</p>
 
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,hsl(38_45%_48%/0.06),transparent)]" />
+                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-transparent" />
                 </div>
               </motion.a>
             ))}
@@ -119,7 +119,7 @@ export function PartnersSection() {
 
         {/* SECONDARY PARTNERS — Marquee */}
         <ScrollReveal variant="fade-in" delay={0.25}>
-          <p className="text-center text-xs uppercase tracking-widest text-[hsl(40_20%_45%)] mb-6 font-medium">
+          <p className="text-center text-xs uppercase tracking-widest text-muted-foreground mb-6 font-medium">
             Autres partenaires
           </p>
           <div className="relative">
@@ -130,7 +130,7 @@ export function PartnersSection() {
                 <div
                   key={p.name}
                   title={p.name}
-                  className="mx-6 flex items-center justify-center px-7 py-4 rounded-xl bg-card/50 border border-[hsl(38_45%_48%/0.12)] hover:border-[hsl(38_45%_48%/0.35)] hover:bg-[hsl(38_45%_48%/0.05)] transition-all duration-400 w-40"
+                  className="mx-6 flex items-center justify-center px-7 py-4 rounded-xl bg-card/50 border border-primary/30 hover:border-primary/30 hover:bg-primary/10 transition-all duration-400 w-40"
                 >
                   <img
                     src={p.logo}

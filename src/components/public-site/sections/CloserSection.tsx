@@ -45,7 +45,7 @@ export function CloserSection() {
             <Button
               asChild
               size="lg"
-              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 text-base md:text-lg px-8 md:px-12 py-6"
+              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0 text-base md:text-lg px-8 md:px-12 py-6"
             >
               <Link to="/nouveau-mandat">
                 <Rocket className="h-5 w-5 mr-2" />
@@ -55,7 +55,7 @@ export function CloserSection() {
             </Button>
           </MagneticButton>
           <div>
-            <a href="#comment-ca-marche" className="inline-flex items-center gap-2 text-sm text-[hsl(38_45%_48%)] hover:text-[hsl(38_55%_60%)] font-medium transition-colors">
+            <a href="#comment-ca-marche" className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary font-medium transition-colors">
               Voir comment ça marche<ArrowRight className="h-4 w-4" />
             </a>
           </div>
@@ -67,9 +67,9 @@ export function CloserSection() {
         <div className="grid lg:grid-cols-2 gap-12 md:gap-16 items-center">
           <ScrollReveal variant="slide-left">
             <div className="inline-flex items-center gap-2 mb-6">
-              <div className="bg-[hsl(38_45%_48%/0.08)] border border-[hsl(38_45%_48%/0.25)] rounded-full px-5 py-2.5">
-                <Handshake className="inline-block h-4 w-4 text-[hsl(38_45%_48%)] mr-2" />
-                <span className="text-sm font-semibold text-[hsl(38_45%_48%)]">Programme partenaire</span>
+              <div className="bg-primary/10 border border-primary/30 rounded-full px-5 py-2.5">
+                <Handshake className="inline-block h-4 w-4 text-primary mr-2" />
+                <span className="text-sm font-semibold text-primary">Programme partenaire</span>
               </div>
             </div>
             <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 font-serif">
@@ -83,14 +83,14 @@ export function CloserSection() {
               <p className="text-sm font-medium text-foreground mb-3">💡 Parfait pour :</p>
               <div className="flex flex-wrap gap-2">
                 {targetProfiles.map((profile, index) => (
-                  <div key={index} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.2)] text-sm text-muted-foreground hover:border-[hsl(38_45%_48%/0.4)] transition-colors">
-                    <profile.icon className="h-4 w-4 text-[hsl(38_45%_48%)]" />
+                  <div key={index} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-sm text-muted-foreground hover:border-primary/30 transition-colors">
+                    <profile.icon className="h-4 w-4 text-primary" />
                     <span>{profile.label}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0">
+            <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0">
               <Link to="/login">
                 <span>Devenir partenaire</span>
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -119,21 +119,21 @@ export function CloserSection() {
             {benefits.map((benefit, index) => (
               <motion.div key={index} variants={staggerItem}>
                 <TiltCard intensity={3}>
-                  <div className="relative rounded-2xl p-6 md:p-8 group bg-card/80 border border-border/40 hover:border-[hsl(38_45%_48%/0.4)] hover:shadow-[0_8px_30px_hsl(38_45%_48%/0.08)] transition-all duration-500">
+                  <div className="relative rounded-2xl p-6 md:p-8 group bg-card/80 border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-500">
                     <div className="flex gap-5 md:gap-6">
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[hsl(38_45%_48%/0.12)] to-[hsl(28_35%_35%/0.08)] border border-[hsl(38_45%_48%/0.2)] group-hover:border-[hsl(38_45%_48%/0.5)] flex items-center justify-center transition-all duration-300 group-hover:shadow-[0_0_15px_hsl(38_45%_48%/0.2)]">
-                          <benefit.icon className="h-8 w-8 text-[hsl(38_45%_48%)]" />
+                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300 group-hover:shadow-md">
+                          <benefit.icon className="h-8 w-8 text-primary" />
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2 group-hover:text-[hsl(38_45%_44%)] transition-colors font-serif">
+                        <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors font-serif">
                           {benefit.title}
                         </h3>
                         <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{benefit.description}</p>
                       </div>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.5)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl" />
+                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl" />
                   </div>
                 </TiltCard>
               </motion.div>

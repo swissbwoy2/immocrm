@@ -89,10 +89,10 @@ export function BudgetCalcSection() {
         <div className="max-w-4xl mx-auto">
           <ScrollReveal variant="fade-up" className="text-center mb-10 md:mb-14">
             <div className="inline-flex items-center gap-2 mb-4">
-              <div className="bg-[hsl(38_45%_48%/0.08)] rounded-full px-5 py-2.5 border border-[hsl(38_45%_48%/0.25)]">
+              <div className="bg-primary/10 rounded-full px-5 py-2.5 border border-primary/30">
                 <div className="flex items-center gap-2">
-                  {isAchat ? <Landmark className="h-4 w-4 text-[hsl(38_45%_48%)]" /> : <Calculator className="h-4 w-4 text-[hsl(38_45%_48%)]" />}
-                  <span className="text-[hsl(38_45%_48%)] font-semibold">Calculateur gratuit</span>
+                  {isAchat ? <Landmark className="h-4 w-4 text-primary" /> : <Calculator className="h-4 w-4 text-primary" />}
+                  <span className="text-primary font-semibold">Calculateur gratuit</span>
                 </div>
               </div>
             </div>
@@ -104,7 +104,7 @@ export function BudgetCalcSection() {
 
           <ScrollReveal variant="fade-up" delay={0.1}>
           <div className="relative">
-            <div className="rounded-2xl md:rounded-3xl border border-[hsl(38_45%_48%/0.2)] p-5 md:p-8 bg-card/80 overflow-hidden">
+            <div className="rounded-2xl md:rounded-3xl border border-primary/30 p-5 md:p-8 bg-card/80 overflow-hidden">
             <BorderBeam duration={14} />
               <div className="grid md:grid-cols-2 gap-6 md:gap-8">
                 <div className="space-y-5">
@@ -228,7 +228,7 @@ export function BudgetCalcSection() {
           </ScrollReveal>
 
           <div className="mt-8 max-w-2xl mx-auto">
-            <div className="relative overflow-hidden rounded-xl p-4 bg-muted/30 backdrop-blur-sm border border-[hsl(38_45%_48%/0.15)]">
+            <div className="relative overflow-hidden rounded-xl p-4 bg-muted/30 backdrop-blur-sm border border-primary/30">
               <div className="flex items-start gap-3"><Info className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" /><p className="text-xs text-muted-foreground">{content.disclaimer}</p></div>
             </div>
           </div>

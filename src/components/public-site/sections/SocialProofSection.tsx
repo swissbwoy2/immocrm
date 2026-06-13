@@ -11,8 +11,8 @@ export function SocialProofSection() {
 
         {/* Stats badges */}
         <ScrollReveal variant="fade-in" className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mb-4">
-          <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 border border-[hsl(38_45%_48%/0.3)] shadow-sm">
-            <Award className="h-4 w-4 text-[hsl(38_45%_48%)]" />
+          <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 border border-primary/30 shadow-sm">
+            <Award className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">Experts relocation depuis 2016</span>
           </div>
         </ScrollReveal>
@@ -36,13 +36,13 @@ export function SocialProofSection() {
         >
           <motion.div variants={staggerItem}>
             <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-[hsl(38_45%_48%)] bg-[hsl(38_45%_48%/0.08)] rounded-full px-3 py-1.5 mb-3 border border-[hsl(38_45%_48%/0.2)]">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 rounded-full px-3 py-1.5 mb-3 border border-primary/30">
                 <Users className="h-3 w-3" />
                 <span>Témoignage clients</span>
               </div>
               <h3 className="text-lg font-bold text-foreground font-serif">Ils nous ont fait confiance 🤝</h3>
             </div>
-            <div className="relative w-full rounded-2xl overflow-hidden bg-muted shadow-lg border border-[hsl(38_45%_48%/0.2)] hover:border-[hsl(38_45%_48%/0.4)] transition-colors duration-300">
+            <div className="relative w-full rounded-2xl overflow-hidden bg-muted shadow-lg border border-primary/30 hover:border-primary/30 transition-colors duration-300">
               <iframe
                 src="https://www.instagram.com/reel/DVPQODmCNBU/embed/"
                 className="w-full border-0"
@@ -56,13 +56,13 @@ export function SocialProofSection() {
 
           <motion.div variants={staggerItem}>
             <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-[hsl(38_45%_48%)] bg-[hsl(38_45%_48%/0.08)] rounded-full px-3 py-1.5 mb-3 border border-[hsl(38_45%_48%/0.2)]">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 rounded-full px-3 py-1.5 mb-3 border border-primary/30">
                 <Play className="h-3 w-3" />
                 <span>Vidéo de présentation</span>
               </div>
               <h3 className="text-lg font-bold text-foreground font-serif">Notre service en 1 minute 🎬</h3>
             </div>
-            <div className="relative w-full rounded-2xl overflow-hidden bg-muted shadow-lg border border-[hsl(38_45%_48%/0.2)] hover:border-[hsl(38_45%_48%/0.4)] transition-colors duration-300">
+            <div className="relative w-full rounded-2xl overflow-hidden bg-muted shadow-lg border border-primary/30 hover:border-primary/30 transition-colors duration-300">
               <iframe
                 src="https://www.instagram.com/reel/DUf-zVlDDDv/embed/"
                 className="w-full border-0"
