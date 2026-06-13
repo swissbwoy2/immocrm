@@ -139,73 +139,119 @@ All colors MUST be HSL.
     --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
   }
 
-  /* ============================================
-     LUXURY THEME — Ivory & Gold (Barnes/Christie's)
-     Scoped to public landing page only via .theme-luxury wrapper.
-     Zero impact on private spaces (admin/agent/client/apporteur).
-     ============================================ */
+  /* PUBLIC THEME — Immo-rama Green & White (scoped via .theme-luxury) */
   .theme-luxury {
-    /* Ivory cream background, deep mineral foreground */
-    --background: 40 30% 96%;
-    --foreground: 30 15% 12%;
-
-    --card: 40 35% 98%;
-    --card-foreground: 30 15% 12%;
-
-    --popover: 40 35% 98%;
-    --popover-foreground: 30 15% 12%;
-
-    /* Champagne gold accent */
-    --primary: 38 45% 48%;
-    --primary-foreground: 40 35% 98%;
-
-    --secondary: 38 25% 90%;
-    --secondary-foreground: 30 15% 12%;
-
-    --muted: 38 20% 92%;
-    --muted-foreground: 30 12% 38%;
-
-    --accent: 28 35% 35%;
-    --accent-foreground: 40 35% 98%;
-
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 40 35% 98%;
-
-    /* Hairline gold border */
-    --border: 38 30% 80%;
-    --input: 38 30% 80%;
-    --ring: 38 45% 48%;
-
-    --radius: 0.25rem;
-
-    /* Deep, soft luxury shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(30 20% 15% / 0.06);
-    --shadow-md: 0 6px 14px -4px hsl(30 20% 15% / 0.08), 0 2px 4px -2px hsl(30 20% 15% / 0.06);
-    --shadow-lg: 0 18px 35px -10px hsl(30 20% 15% / 0.12), 0 6px 12px -6px hsl(30 20% 15% / 0.08);
-    --shadow-xl: 0 30px 60px -15px hsl(30 20% 15% / 0.18), 0 12px 20px -10px hsl(30 20% 15% / 0.10);
-    --shadow-glow: 0 0 30px hsl(38 45% 48% / 0.18);
-    --shadow-card-hover: 0 20px 50px -12px hsl(38 45% 48% / 0.20);
+    --background: 0 0% 100%;
+    --foreground: 215 25% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+    --primary: 142 45% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 142 30% 95%;
+    --secondary-foreground: 215 25% 15%;
+    --muted: 142 20% 96%;
+    --muted-foreground: 215 15% 40%;
+    --accent: 200 70% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 142 20% 88%;
+    --input: 142 20% 88%;
+    --ring: 142 45% 50%;
+    --radius: 0.75rem;
+    --shadow-sm: 0 1px 2px 0 hsl(142 30% 20% / 0.05);
+    --shadow-md: 0 6px 14px -4px hsl(142 30% 20% / 0.08), 0 2px 4px -2px hsl(142 30% 20% / 0.05);
+    --shadow-lg: 0 18px 35px -10px hsl(142 30% 20% / 0.10), 0 6px 12px -6px hsl(142 30% 20% / 0.06);
+    --shadow-xl: 0 30px 60px -15px hsl(142 30% 20% / 0.14), 0 12px 20px -10px hsl(142 30% 20% / 0.08);
+    --shadow-glow: 0 0 30px hsl(142 45% 50% / 0.25);
+    --shadow-card-hover: 0 20px 50px -12px hsl(142 45% 50% / 0.22);
+    --imr-green: 142 45% 50%;
+    --imr-green-light: 142 55% 62%;
+    --imr-green-pale: 142 35% 94%;
+    --imr-sky: 200 70% 70%;
+    --imr-sky-soft: 200 80% 92%;
+    --imr-ink: 215 25% 15%;
+    --imr-ink-soft: 215 20% 35%;
   }
 
-  /* Luxury typography: serif headings on landing */
   .theme-luxury h1,
   .theme-luxury h2,
   .theme-luxury h3 {
-    font-family: 'Playfair Display', Georgia, serif;
-    letter-spacing: -0.01em;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: hsl(var(--imr-ink));
   }
 
-  /* Soften body text with refined tracking */
-  .theme-luxury {
-    letter-spacing: 0.005em;
-  }
+  .theme-luxury { letter-spacing: 0; }
 
-  /* Premium hairline separators */
   .theme-luxury hr,
   .theme-luxury .luxury-divider {
     border: none;
-    height: 1px;
-    background: linear-gradient(to right, transparent, hsl(var(--primary) / 0.4), transparent);
+    height: 2px;
+    background: linear-gradient(to right, transparent, hsl(var(--primary)), transparent);
+    border-radius: 2px;
+  }
+
+  /* Legacy gold/dark inline-color overrides */
+  .theme-luxury [class*="bg-[hsl(30_15%_8"],
+  .theme-luxury [class*="bg-[hsl(30_15%_10"],
+  .theme-luxury [class*="bg-[hsl(30_15%_11"],
+  .theme-luxury [class*="bg-[hsl(30_15%_12"],
+  .theme-luxury [class*="bg-[hsl(30_15%_14"],
+  .theme-luxury [class*="bg-[hsl(28_25%_12"] {
+    background-color: hsl(var(--background)) !important;
+  }
+  .theme-luxury [class*="text-[hsl(40_25%_96"],
+  .theme-luxury [class*="text-[hsl(40_25%_92"],
+  .theme-luxury [class*="text-[hsl(40_25%_85"],
+  .theme-luxury [class*="text-[hsl(40_35%_98"],
+  .theme-luxury [class*="text-[hsl(40_20%_75"],
+  .theme-luxury [class*="text-[hsl(40_20%_55"],
+  .theme-luxury [class*="text-[hsl(40_20%_50"] {
+    color: hsl(var(--imr-ink-soft)) !important;
+  }
+  .theme-luxury [class*="text-[hsl(38_45%_48"],
+  .theme-luxury [class*="text-[hsl(38_45%_55"],
+  .theme-luxury [class*="text-[hsl(38_55%_65"],
+  .theme-luxury [class*="text-[hsl(38_55%_70"],
+  .theme-luxury [class*="text-[hsl(38_55%_85"] {
+    color: hsl(var(--primary)) !important;
+  }
+  .theme-luxury [class*="border-[hsl(38_45%_48"],
+  .theme-luxury [class*="border-[hsl(38_45%_44"],
+  .theme-luxury [class*="border-[hsl(38_55%_65"],
+  .theme-luxury [class*="border-[hsl(38_30%_80"],
+  .theme-luxury [class*="border-[hsl(38_25%"] {
+    border-color: hsl(var(--primary) / 0.3) !important;
+  }
+  .theme-luxury [class*="bg-[hsl(38_45%_48"],
+  .theme-luxury [class*="bg-[hsl(38_25%_90"],
+  .theme-luxury [class*="bg-[hsl(38_20%_92"] {
+    background-color: hsl(var(--imr-green-pale)) !important;
+  }
+  .theme-luxury .luxury-shimmer-btn,
+  .theme-luxury .luxury-cta-glow {
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    box-shadow: var(--shadow-glow) !important;
+  }
+  .theme-luxury .luxury-gradient-text {
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+  }
+  .theme-luxury [style*="hsl(30 15% 8"],
+  .theme-luxury [style*="hsl(30 15% 10"],
+  .theme-luxury [style*="hsl(30 15% 11"] {
+    background-color: hsl(var(--imr-green-pale)) !important;
+  }
+  .theme-luxury .imr-hero-bg {
+    background: linear-gradient(180deg, hsl(var(--imr-sky-soft)) 0%, hsl(0 0% 100%) 70%);
   }
 }
 
