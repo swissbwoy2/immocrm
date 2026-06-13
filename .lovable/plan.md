@@ -1,78 +1,58 @@
 
-# Refonte couleurs site public — 100% clair
+# 3 corrections ciblées sur le site public
 
-## Règles strictes (demande user)
-- **Tous les fonds clairs / blancs** sur 100% des sections — aucune section sombre
-- **Texte** : bleu-vert foncé (encre profonde), lisible, contraste fort
-- **Aucun beige, brun, doré, anthracite** nulle part
-- Accents : vert Immo-rama + bleu ciel discret uniquement
-- Périmètre : **site public uniquement** (`.theme-luxury`)
+## 1. Remplacer l'image du hero "split reveal" par le chasseur
+- Uploader `user-uploads://ChatGPT_Image_13_juin_2026_18_31_03_1-2.png` via `lovable-assets` → `src/assets/hero-chasseur-split.png.asset.json`
+- Dans `src/components/public-site/sections/HeroSection.tsx` :
+  - Remplacer `import heroBg from '@/assets/hero-bg.jpg'` par l'import du nouveau pointeur asset
+  - `imageSrc={heroChasseur.url}` au lieu de `imageSrc={heroBg}`
+- Le composant `DiagonalSplitReveal` (split diagonal 18°, vidéo derrière, scrub scroll) reste **identique** — on ne touche qu'à la source image.
 
-## Problème actuel
-Les sections publiques utilisent des classes Tailwind arbitraires hardcodées sombres (`bg-[hsl(30_15%_10%)]`, alpha `/0.6`, etc.) que mes overrides CSS via `[class*=]` ne couvrent pas toutes → fonds noirs persistent, texte sombre illisible.
+## 2. Réparer la vidéo scroll-driven du split reveal
+La vidéo derrière le split ne se lance plus au scroll. Investigation à faire en preview live :
+- Lire console / network pour erreurs vidéo (404, CORS, decode)
+- Vérifier que `expansionRef` (wrapper `height: 380vh`) génère bien du scroll
+- Vérifier que le parent n'a pas reçu `overflow:hidden` via mes overrides récents
+- Vérifier que `prefersReducedMotion` n'est pas true en preview (sinon bascule en vidéo figée)
+- Vérifier que le sticky parent (inline `background: 'hsl(30 15% 8%)'`) n'a pas été cassé par mon override `[style*="hsl(30 15%"]` qui le passe à blanc — mais ça ne devrait pas tuer le scroll
 
-## Solution
-Refactor des composants publics pour utiliser des **tokens sémantiques**. Le scope `.theme-luxury` pilote tout, sans aucun fond foncé possible.
+Correctifs probables (selon diagnostic) :
+- Si la vidéo échoue à charger : vérifier path `src/assets/hero-reveal-video.mp4` et fallback autoplay
+- Si scroll bloqué : retirer un `overflow-hidden` introduit par erreur ou re-vérifier la sticky chain (un ancêtre avec `overflow:hidden`/`overflow:auto` casse `position:sticky`)
+- Si le ref ne se monte plus : aucun lien identifié avec mes changements CSS, donc investigation requise
 
-## Palette finale (`.theme-luxury` dans `src/index.css`)
-```text
---background       : 0 0% 100%        (blanc pur)
---card             : 0 0% 100%
---muted            : 160 25% 97%      (vert-bleu très pâle pour alternance subtile)
---secondary        : 160 30% 94%      (carte mise en avant)
---foreground       : 200 35% 18%      (bleu-vert foncé encre — texte principal)
---muted-foreground : 200 20% 38%      (texte secondaire)
---primary          : 158 55% 38%      (vert Immo-rama foncé pour CTA)
---primary-foreground : 0 0% 100%
---accent           : 200 70% 45%      (bleu profond pour liens / accents)
---border           : 160 15% 88%
+## 3. Supprimer les barres de progression brunes/dorées (3ᵉ image)
+Localisé dans `src/components/public-site/sections/AppShowcaseSection.tsx` ligne ~306-315 :
+```tsx
+<div className="relative h-1.5 w-full bg-[hsl(30_15%_12%)] rounded-full overflow-hidden">
+  <div style={{ background: 'linear-gradient(to right, hsl(38 45% 48%), hsl(38 55% 65%))' }} />
+</div>
 ```
-Toute teinte beige/brune/dorée bannie des tokens.
+Les inline `style` avec gradients dorés (`hsl(38 45% 48%)`) ne sont pas attrapés par mes overrides actuels (qui ciblent `[style*="hsl(30 15%"]` uniquement).
 
-## Mapping de substitution (appliqué dans tous les composants publics)
-```text
-bg-[hsl(30_15%_8..14%)]         → bg-background   (ou bg-muted en alternance)
-bg-[hsl(30_15%_..%/0.x)]        → bg-card / bg-muted
-text-[hsl(40_25%_85..98%)]      → text-foreground
-text-[hsl(40_20%_55..75%)]      → text-muted-foreground
-text-[hsl(38_..%_..%)] (doré)   → text-primary
-border-[hsl(38_..%)] (doré)     → border-border ou border-primary/30
-bg-[hsl(38_..%)] (doré pâle)    → bg-secondary
-luxury-grain, dark overlays     → supprimés
-gradients sombres inline        → remplacés par bg-background ou gradient clair
+Ajouter dans le bloc `.theme-luxury` de `src/index.css` :
+```css
+/* Inline gold styles → green primary */
+.theme-luxury [style*="hsl(38 "],
+.theme-luxury [style*="hsl(38 45%"],
+.theme-luxury [style*="hsl(38 55%"],
+.theme-luxury [style*="hsl(28 35%"],
+.theme-luxury [style*="hsl(40 35%"],
+.theme-luxury [style*="hsl(40 25%"] {
+  background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+  color: hsl(var(--imr-ink)) !important;
+}
+.theme-luxury [style*="linear-gradient"][style*="hsl(38"] {
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+}
 ```
 
-## Fichiers touchés (site public uniquement)
-### Sections (`src/components/public-site/sections/`)
-HeroSection, StatsSection, SocialProofSection, ForWhoSection, HowItWorksSection, ServicesFullSection, DifferentiatorSection, PricingSection, GuaranteeSection, TeamSection, PartnersSection, CoverageSection, FAQSection, AppShowcaseSection, BudgetCalcSection, DossierAnalyseSection, DossierAnalyseForm, CloserSection, TechSection, StickyMobileCTA.
-
-### Layout
-PublicSiteLayout, PublicSiteHeader, PublicSiteFooter, PublicSiteMenu, sous-dossiers `3d/`, `animations/`, `magic/` (passes ciblées).
-
-### Pages
-Index (landing), VendreMonBien, RelouerMonAppartement, ChasseurAppartement, ConstruireRenover.
-
-### CSS
-`src/index.css` : 
-- Mettre à jour les tokens `.theme-luxury` aux valeurs ci-dessus
-- Nettoyer les blocs overrides `[class*=]` devenus inutiles
-- `.imr-hero-bg` → gradient clair `from-secondary via-muted to-background`
-- Retirer les références à `luxury-grain` côté public
-
-## Alternance visuelle
-Pour éviter un mur blanc plat :
-- Sections impaires : `bg-background`
-- Sections paires : `bg-muted` (vert-bleu très pâle ~3% de saturation)
-- Cartes : `bg-card` + `shadow-md` + `border border-border`
-- CTA principal : `bg-primary text-primary-foreground`
-- CTA secondaire : `variant="outline"` avec `border-primary/40 text-primary`
+## Vérification
+- Screenshot du hero : nouvelle image chasseur visible, split diagonal préservé
+- Scroll : vidéo se scrub frame par frame derrière le split
+- Section AppShowcase : barres en vert (zéro doré/brun)
+- Reste du site public inchangé
 
 ## Hors scope
-- App interne (admin/agent/client/closeur/courier/advertiser/buyer) : **intacte**, conserve son thème sombre
-- Pas de modif de contenu, copy, structure, ni assets
-- Pas de modif backend
-
-## Vérification après build
-1. Screenshot `/`, `/vendre-mon-bien`, `/relouer-mon-appartement`, `/chasseur-appartement`, `/construire-renover`
-2. Confirmer : 0 section sombre, 0 nuance beige/brune, contraste AA partout
-3. Vérifier mobile (StickyMobileCTA, menu)
+- Aucun changement de contenu / copy / animations
+- App interne intacte
