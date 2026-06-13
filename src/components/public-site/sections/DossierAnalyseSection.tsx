@@ -15,10 +15,10 @@ export function DossierAnalyseSection() {
   };
 
   return (
-    <section id="analyse-dossier" className="relative overflow-hidden bg-[hsl(30_15%_5%)]">
+    <section id="analyse-dossier" className="relative overflow-hidden bg-background">
       {/* HERO conversion */}
       <div className="relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(38_45%_48%/0.12),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(38_45%_48%/0.08),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,hsl(var(--primary)/0.06),transparent_55%),radial-gradient(ellipse_at_bottom_right,hsl(var(--accent)/0.05),transparent_50%)]" />
         <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
           <div className="max-w-3xl mx-auto">
 
@@ -38,26 +38,25 @@ export function DossierAnalyseSection() {
 
               {/* Headline */}
               <div className="space-y-4">
-                <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-[hsl(40_30%_96%)] leading-[1.1]">
+                <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground leading-[1.1]">
                   Nous aidons <span className="text-primary italic">nos clients</span> à trouver rapidement leur futur appartement en Suisse romande
                 </h1>
-                <p className="text-white/70 text-base md:text-lg max-w-xl leading-relaxed">
+                <p className="text-muted-foreground text-base md:text-lg max-w-xl leading-relaxed">
                   L'expertise Immo-rama.ch pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.
                 </p>
               </div>
 
-              {/* Trust cards translucides + gold blur */}
+              {/* Trust cards */}
               <div className="relative grid sm:grid-cols-2 gap-4">
-                <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
-                <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
+                <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
-                  <p className="text-white text-lg font-semibold">1 mois de loyer brut</p>
-                  <p className="text-white/70 text-xs mt-1">Acompte 300.- remboursé à 100% si échec après 3 mois</p>
+                  <p className="text-foreground text-lg font-semibold">1 mois de loyer brut</p>
+                  <p className="text-muted-foreground text-xs mt-1">Acompte 300.- remboursé à 100% si échec après 3 mois</p>
                 </div>
-                <div className="relative p-4 rounded-xl bg-white/5 backdrop-blur-md border border-primary/20 shadow-lg">
+                <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
-                  <p className="text-white text-lg font-semibold">500+ familles</p>
-                  <p className="text-white/60 text-xs mt-1">Accompagnées avec succès</p>
+                  <p className="text-foreground text-lg font-semibold">500+ familles</p>
+                  <p className="text-muted-foreground text-xs mt-1">Accompagnées avec succès</p>
                 </div>
               </div>
 
