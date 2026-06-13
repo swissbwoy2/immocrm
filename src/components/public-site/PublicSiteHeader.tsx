@@ -82,7 +82,7 @@ export function PublicSiteHeader() {
                   <Button
                     asChild
                     size="sm"
-                    className="rounded-sm bg-accent text-accent-foreground hover:bg-accent/90 border-0 font-semibold uppercase tracking-[0.12em] px-2.5 sm:px-4"
+                    className="rounded-none bg-accent text-accent-foreground hover:bg-accent/90 border-0 font-bold uppercase tracking-[0.12em] px-2.5 sm:px-4"
                   >
                     <Link to="/demo">
                       <Sparkles className="h-4 w-4 mr-1 sm:mr-2" />
@@ -99,7 +99,7 @@ export function PublicSiteHeader() {
                   <Button
                     asChild
                     size="sm"
-                    className="rounded-sm luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+                    className="rounded-none luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
                   >
                     <Link to="/rendez-vous">
                       <Calendar className="h-4 w-4 sm:mr-2" />
