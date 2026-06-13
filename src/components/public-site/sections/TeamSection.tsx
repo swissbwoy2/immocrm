@@ -38,12 +38,12 @@ export function TeamSection() {
             className="relative group"
           >
             {/* Card with BorderBeam */}
-            <div className="relative flex flex-col items-center text-center p-10 rounded-2xl bg-card/80 border border-[hsl(38_45%_48%/0.25)] hover:border-[hsl(38_45%_48%/0.55)] hover:shadow-[0_8px_40px_hsl(38_45%_48%/0.15)] transition-all duration-500 overflow-hidden max-w-sm"
+            <div className="relative flex flex-col items-center text-center p-10 rounded-2xl bg-card/80 border border-primary/30 hover:border-primary/30 hover:shadow-md transition-all duration-500 overflow-hidden max-w-sm"
               style={{
                 perspective: 800,
               }}
             >
-              <BorderBeam duration={7} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
+              <BorderBeam duration={7} colorFrom="hsl(var(--primary))" colorTo="hsl(var(--primary))" />
 
               {/* 3D tilt via framer-motion */}
               <motion.div
@@ -62,13 +62,13 @@ export function TeamSection() {
                     className="absolute inset-0 rounded-full"
                     animate={prefersReducedMotion ? {} : {
                       boxShadow: [
-                        '0 0 0 0px hsl(38 45% 48% / 0.35)',
-                        '0 0 0 12px hsl(38 45% 48% / 0)',
+                        '0 0 0 0px hsl(var(--primary))',
+                        '0 0 0 12px hsl(var(--primary))',
                       ],
                     }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' as const }}
                   />
-                  <div className="relative w-36 h-36 rounded-full overflow-hidden ring-2 ring-[hsl(38_45%_48%/0.45)] ring-offset-2 ring-offset-card shadow-[0_0_24px_hsl(38_45%_48%/0.25)] group-hover:ring-[hsl(38_45%_48%/0.75)] transition-all duration-500">
+                  <div className="relative w-36 h-36 rounded-full overflow-hidden ring-2 ring-primary/40 ring-offset-2 ring-offset-card shadow-md group-hover:ring-primary/40 transition-all duration-500">
                     <img src={christPhoto} alt="Christ Ramazani" className="w-full h-full object-cover" loading="lazy" />
                   </div>
                 </div>
@@ -80,7 +80,7 @@ export function TeamSection() {
                   Directeur d'agence – Courtier location et vente
                 </p>
 
-                <Badge className="bg-[hsl(38_45%_48%/0.12)] text-[hsl(38_45%_48%)] border border-[hsl(38_45%_48%/0.3)] hover:bg-[hsl(38_45%_48%/0.18)] mb-4">
+                <Badge className="bg-primary/10 text-primary border border-primary/30 hover:bg-primary/10 mb-4">
                   Courtage &amp; Relocation
                 </Badge>
 
@@ -93,7 +93,7 @@ export function TeamSection() {
                       animate={isInView ? { scale: 1, opacity: 1 } : {}}
                       transition={{ delay: 0.5 + i * 0.08, type: 'spring' as const, stiffness: 300, damping: 18 }}
                     >
-                      <Star className="h-4 w-4 fill-[hsl(38_55%_65%)] text-[hsl(38_55%_65%)]" />
+                      <Star className="h-4 w-4 fill-primary text-primary" />
                     </motion.div>
                   ))}
                   <span className="text-xs text-muted-foreground ml-1">4.8/5</span>
@@ -101,13 +101,13 @@ export function TeamSection() {
 
                 {/* Social badges */}
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[hsl(38_45%_48%/0.08)] border border-[hsl(38_45%_48%/0.2)] backdrop-blur-sm hover:border-[hsl(38_45%_48%/0.4)] transition-all cursor-default">
-                    <MessageCircle className="h-3.5 w-3.5 text-[hsl(38_45%_55%)]" />
-                    <span className="text-xs text-[hsl(40_20%_60%)]">+500 clients</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm hover:border-primary/30 transition-all cursor-default">
+                    <MessageCircle className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs text-muted-foreground">+500 clients</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[hsl(38_45%_48%/0.08)] border border-[hsl(38_45%_48%/0.2)] backdrop-blur-sm hover:border-[hsl(38_45%_48%/0.4)] transition-all cursor-default">
-                    <Star className="h-3.5 w-3.5 text-[hsl(38_45%_55%)]" />
-                    <span className="text-xs text-[hsl(40_20%_60%)]">N°1 romand</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm hover:border-primary/30 transition-all cursor-default">
+                    <Star className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs text-muted-foreground">N°1 romand</span>
                   </div>
                 </div>
               </motion.div>

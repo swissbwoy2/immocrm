@@ -48,21 +48,21 @@ export function StatsSection() {
     <section id="ps-stats-section" className="py-24 md:py-32 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 luxury-hero-bg opacity-[0.97]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_50%,hsl(38_45%_48%/0.06)_0%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-transparent" />
       <RetroGrid className="opacity-30" angle={70} />
 
       <div className="container mx-auto px-4 relative z-10">
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
-          <div className="inline-flex items-center gap-2 bg-[hsl(38_45%_48%/0.12)] border border-[hsl(38_45%_48%/0.3)] rounded-full px-4 py-2 mb-4 backdrop-blur-sm">
-            <Star className="h-4 w-4 text-[hsl(38_55%_65%)] fill-[hsl(38_55%_65%/0.4)]" />
-            <span className="text-sm font-medium text-[hsl(38_55%_65%)]">Nos résultats concrets</span>
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-full px-4 py-2 mb-4 backdrop-blur-sm">
+            <Star className="h-4 w-4 text-primary fill-primary" />
+            <span className="text-sm font-medium text-primary">Nos résultats concrets</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-[hsl(40_25%_92%)] mb-4 font-serif">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 font-serif">
             Des chiffres qui{' '}
             <span className="luxury-gradient-text">parlent d'eux-mêmes</span>
           </h2>
-          <p className="text-lg text-[hsl(40_20%_60%)] max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Pas des promesses, des résultats vérifiables
           </p>
         </ScrollReveal>
@@ -81,14 +81,14 @@ export function StatsSection() {
           {statItems.map((stat, index) => (
             <motion.div key={index} variants={staggerItem}>
               <TiltCard intensity={6}>
-                <div className="rounded-xl p-6 text-center luxury-glass hover:border-[hsl(38_45%_48%/0.5)] transition-all duration-500 group h-full">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[hsl(38_45%_44%/0.3)] to-[hsl(28_35%_35%/0.2)] border border-[hsl(38_45%_48%/0.3)] flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:shadow-[0_0_20px_hsl(38_45%_48%/0.3)] transition-all duration-500">
-                    <stat.icon className="h-8 w-8 text-[hsl(38_55%_65%)]" />
+                <div className="rounded-xl p-6 text-center luxury-glass hover:border-primary/30 transition-all duration-500 group h-full">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:shadow-md transition-all duration-500">
+                    <stat.icon className="h-8 w-8 text-primary" />
                   </div>
                   <div className="text-3xl md:text-4xl font-bold font-serif mb-2 luxury-gradient-text">
                     <AnimatedCounter value={stat.value} suffix={stat.suffix} />
                   </div>
-                  <p className="text-[hsl(40_20%_60%)] text-sm font-medium">{stat.label}</p>
+                  <p className="text-muted-foreground text-sm font-medium">{stat.label}</p>
                 </div>
               </TiltCard>
             </motion.div>
@@ -96,13 +96,13 @@ export function StatsSection() {
         </motion.div>
 
         <ScrollReveal variant="fade-up" delay={0.2} className="text-center mt-12">
-          <p className="text-lg text-[hsl(40_20%_60%)] mb-4">Prêt à rejoindre les familles qui ont trouvé ?</p>
+          <p className="text-lg text-muted-foreground mb-4">Prêt à rejoindre les familles qui ont trouvé ?</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <MagneticButton strength={0.25}>
               <Button
                 asChild
                 size="lg"
-                className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0"
+                className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0"
               >
                 <Link to="/nouveau-mandat">
                   Démarre ta recherche
@@ -114,7 +114,7 @@ export function StatsSection() {
               asChild
               variant="outline"
               size="lg"
-              className="border-[hsl(38_45%_48%/0.35)] text-[hsl(38_55%_65%)] hover:border-[hsl(38_45%_48%/0.7)] hover:bg-[hsl(38_45%_48%/0.08)] bg-transparent"
+              className="border-primary/30 text-primary hover:border-primary/30 hover:bg-primary/10 bg-transparent"
             >
               <a href="#quickform">Tester ma solvabilité</a>
             </Button>

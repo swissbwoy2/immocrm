@@ -57,27 +57,27 @@ export function DifferentiatorSection() {
   };
 
   return (
-    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-[hsl(30_15%_8%)] to-[hsl(30_15%_10%)]">
+    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background to-background">
       {/* Subtle gold radials */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[hsl(38_45%_48%/0.04)] rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[hsl(28_35%_35%/0.05)] rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-background rounded-full blur-[100px] pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
           <div className="inline-flex items-center gap-2 mb-6">
-            <div className="bg-[hsl(38_45%_48%/0.1)] border border-[hsl(38_45%_48%/0.35)] rounded-full px-5 py-2.5 backdrop-blur-sm">
-              <Crown className="inline-block h-4 w-4 text-[hsl(38_55%_65%)] mr-2" />
-              <span className="text-sm font-semibold text-[hsl(38_55%_65%)] tracking-wide">Accès Privilégié</span>
+            <div className="bg-primary/10 border border-primary/30 rounded-full px-5 py-2.5 backdrop-blur-sm">
+              <Crown className="inline-block h-4 w-4 text-primary mr-2" />
+              <span className="text-sm font-semibold text-primary tracking-wide">Accès Privilégié</span>
             </div>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-[hsl(40_25%_92%)] mb-4 leading-tight font-serif">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 leading-tight font-serif">
             Pas une agence comme{' '}
             <span className="luxury-gradient-text">les autres</span>
           </h2>
-          <p className="text-base text-[hsl(40_20%_60%)] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             {content.subtitle.split('POUR toi')[0]}
-            <strong className="text-[hsl(40_25%_82%)]">POUR toi</strong>
+            <strong className="text-muted-foreground">POUR toi</strong>
             {content.subtitle.split('POUR toi')[1]}
           </p>
         </ScrollReveal>
@@ -91,11 +91,11 @@ export function DifferentiatorSection() {
           <div className="hidden md:block">
             <div className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-4 mb-4">
               <div className="p-4" />
-              <div className="relative rounded-2xl p-5 bg-[hsl(38_45%_48%/0.08)] border border-[hsl(38_45%_48%/0.35)] overflow-hidden">
+              <div className="relative rounded-2xl p-5 bg-primary/10 border border-primary/30 overflow-hidden">
                 <BorderBeam duration={8} />
                 <div className="flex items-center justify-center gap-3">
-                  <Crown className="h-5 w-5 text-[hsl(38_55%_65%)]" />
-                  <h3 className="text-base font-bold text-[hsl(40_25%_92%)] font-serif">Avec Immo-rama.ch</h3>
+                  <Crown className="h-5 w-5 text-primary" />
+                  <h3 className="text-base font-bold text-foreground font-serif">Avec Immo-rama.ch</h3>
                 </div>
               </div>
               <div className="relative rounded-2xl p-5 bg-[hsl(0_0%_100%/0.03)] border border-[hsl(0_0%_100%/0.08)]">
@@ -116,15 +116,15 @@ export function DifferentiatorSection() {
               {displayData.map((row, index) => (
                 <motion.div key={index} variants={staggerItem} className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-4 group">
                   <div className="flex items-center gap-3 p-3">
-                    <div className="p-2.5 rounded-xl bg-[hsl(38_45%_48%/0.1)] border border-[hsl(38_45%_48%/0.2)] group-hover:border-[hsl(38_45%_48%/0.4)] transition-all flex-shrink-0">
-                      <row.icon className="h-4 w-4 text-[hsl(38_45%_48%)]" />
+                    <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/30 group-hover:border-primary/30 transition-all flex-shrink-0">
+                      <row.icon className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="font-semibold text-[hsl(40_25%_85%)] text-sm">{row.aspect}</span>
+                    <span className="font-semibold text-muted-foreground text-sm">{row.aspect}</span>
                   </div>
-                  <div className="rounded-xl p-4 bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.2)] group-hover:border-[hsl(38_45%_48%/0.35)] transition-all">
+                  <div className="rounded-xl p-4 bg-primary/10 border border-primary/30 group-hover:border-primary/30 transition-all">
                     <div className="flex items-start gap-2">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-[hsl(40_20%_75%)] leading-relaxed">{row.logisorama}</span>
+                      <span className="text-sm text-muted-foreground leading-relaxed">{row.logisorama}</span>
                     </div>
                   </div>
                   <div className="rounded-xl p-4 bg-[hsl(0_0%_100%/0.02)] border border-[hsl(0_0%_100%/0.05)]">
@@ -147,17 +147,17 @@ export function DifferentiatorSection() {
             className="md:hidden space-y-4"
           >
             {displayData.map((row, index) => (
-              <motion.div key={index} variants={staggerItem} className="relative rounded-2xl overflow-hidden bg-[hsl(30_15%_12%)] border border-[hsl(38_45%_48%/0.15)]">
-                <div className="px-4 py-3 border-b border-[hsl(38_45%_48%/0.1)] flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[hsl(38_45%_48%/0.1)]">
-                    <row.icon className="h-4 w-4 text-[hsl(38_45%_48%)]" />
+              <motion.div key={index} variants={staggerItem} className="relative rounded-2xl overflow-hidden bg-background border border-primary/30">
+                <div className="px-4 py-3 border-b border-primary/30 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <row.icon className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="font-semibold text-[hsl(40_25%_85%)] text-sm">{row.aspect}</span>
+                  <span className="font-semibold text-muted-foreground text-sm">{row.aspect}</span>
                 </div>
                 <div className="p-4 space-y-3">
-                  <div className="flex items-start gap-2 p-3 rounded-xl bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.2)]">
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/10 border border-primary/30">
                     <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-[hsl(40_20%_75%)]">{row.logisorama}</p>
+                    <p className="text-sm text-muted-foreground">{row.logisorama}</p>
                   </div>
                   <div className="flex items-start gap-2 p-3 rounded-xl bg-[hsl(0_0%_100%/0.02)] border border-[hsl(0_0%_100%/0.05)]">
                     <X className="h-4 w-4 text-red-500/60 flex-shrink-0 mt-0.5" />
@@ -172,7 +172,7 @@ export function DifferentiatorSection() {
             <Button
               variant="ghost"
               onClick={() => setShowMore(!showMore)}
-              className="text-[hsl(38_45%_55%)] hover:text-[hsl(38_55%_70%)] hover:bg-[hsl(38_45%_48%/0.08)] gap-2"
+              className="text-primary hover:text-primary hover:bg-primary/10 gap-2"
             >
               {showMore ? (<>Voir moins<ChevronUp className="h-4 w-4" /></>) : (<>Voir le comparatif complet<ChevronDown className="h-4 w-4" /></>)}
             </Button>
@@ -181,33 +181,33 @@ export function DifferentiatorSection() {
 
         {/* CTA bottom card */}
         <ScrollReveal variant="fade-up" delay={0.2} className="mt-16 text-center">
-          <div className="relative max-w-3xl mx-auto rounded-2xl md:rounded-3xl p-8 md:p-12 bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.25)] overflow-hidden">
-            <BorderBeam duration={10} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,hsl(38_45%_48%/0.04),transparent)]" />
+          <div className="relative max-w-3xl mx-auto rounded-2xl md:rounded-3xl p-8 md:p-12 bg-primary/10 border border-primary/30 overflow-hidden">
+            <BorderBeam duration={10} colorFrom="hsl(var(--primary))" colorTo="hsl(var(--primary))" />
+            <div className="absolute inset-0 bg-transparent" />
             <div className="relative">
-              <h3 className="text-2xl md:text-4xl font-bold text-[hsl(40_25%_92%)] mb-3 font-serif">
+              <h3 className="text-2xl md:text-4xl font-bold text-foreground mb-3 font-serif">
                 La différence est claire 🎯
               </h3>
-              <p className="text-[hsl(40_20%_60%)] mb-8 max-w-xl mx-auto leading-relaxed">
+              <p className="text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
                 Avec Immo-rama.ch, l'immobilier devient accessible et une équipe expérimentée défend tes intérêts.
               </p>
               <MagneticButton strength={0.2}>
                 {isAchat ? (
                   <a href={content.ctaLink}>
-                    <Button size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 text-base px-10 py-6">
+                    <Button size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0 text-base px-10 py-6">
                       {content.cta} 🏠 <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                   </a>
                 ) : (
-                  <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 text-base px-10 py-6">
+                  <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0 text-base px-10 py-6">
                     <Link to={content.ctaLink}>{content.cta} 🚀 <ArrowRight className="ml-2 h-5 w-5" /></Link>
                   </Button>
                 )}
               </MagneticButton>
-              <p className="mt-5 text-sm text-[hsl(40_20%_50%)]">{content.guarantee}</p>
+              <p className="mt-5 text-sm text-muted-foreground">{content.guarantee}</p>
             </div>
           </div>
-          <p className="mt-6 text-xs text-[hsl(40_20%_40%)]">* Plus de 500 mandats confiés avec succès en Suisse romande depuis 2016</p>
+          <p className="mt-6 text-xs text-muted-foreground">* Plus de 500 mandats confiés avec succès en Suisse romande depuis 2016</p>
         </ScrollReveal>
 
       </div>

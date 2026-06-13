@@ -30,13 +30,13 @@ export function HeroSection() {
       title="Ton futur appartement, Notre Mission !"
       scrollHint="Faites défiler pour découvrir"
     >
-      <section className="relative bg-[hsl(30_15%_10%)] overflow-hidden luxury-grain">
+      <section className="relative bg-background overflow-hidden luxury-grain">
         {/* Decorative elements */}
         <GrainOverlay opacity={0.03} />
         <Meteors number={12} className="z-[1]" />
 
         {/* Dark gradient transition from expansion */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[hsl(30_15%_8%)] to-transparent pointer-events-none z-[2]" />
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-background to-transparent pointer-events-none z-[2]" />
 
         <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
           <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
@@ -48,9 +48,9 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="mb-3 md:mb-5"
             >
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[hsl(38_45%_48%/0.15)] to-[hsl(28_35%_35%/0.1)] border border-[hsl(38_45%_48%/0.5)] rounded-full px-4 py-2 backdrop-blur-sm">
-                <Crown className="h-4 w-4 text-[hsl(38_55%_65%)]" />
-                <span className="text-xs md:text-sm font-semibold text-[hsl(38_55%_75%)] tracking-wide">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary border border-primary/30 rounded-full px-4 py-2 backdrop-blur-sm">
+                <Crown className="h-4 w-4 text-primary" />
+                <span className="text-xs md:text-sm font-semibold text-primary tracking-wide">
                   ⭐ Agence N°1 de relocation en Suisse romande • Chasseur premium
                 </span>
               </div>
@@ -67,7 +67,7 @@ export function HeroSection() {
                 src={logoImmoRama}
                 alt="Immo-Rama"
                 className="h-16 md:h-32 w-auto drop-shadow-2xl"
-                style={{ filter: 'drop-shadow(0 0 24px hsl(38 45% 48% / 0.3))' }}
+                style={{ filter: 'drop-shadow(0 0 24px hsl(var(--primary)))' }}
               />
             </motion.div>
 
@@ -78,7 +78,7 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="mb-4 md:mb-7"
             >
-              <span className="text-base md:text-xl font-semibold tracking-widest uppercase text-[hsl(38_55%_65%)]"
+              <span className="text-base md:text-xl font-semibold tracking-widest uppercase text-primary"
                 style={{ letterSpacing: '0.15em' }}>
                 L'immobilier accessible
               </span>
@@ -91,7 +91,7 @@ export function HeroSection() {
               animate={{ scaleX: 1, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.35 }}
               style={{
-                background: 'linear-gradient(90deg, transparent, hsl(38 45% 48% / 0.9), hsl(38 55% 65%), hsl(38 45% 48% / 0.9), transparent)',
+                background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), hsl(var(--primary)), hsl(var(--primary)), transparent)',
               }}
             />
 
@@ -102,13 +102,13 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.4 }}
               className="mb-4 md:mb-6 w-full max-w-md"
             >
-              <div className="flex rounded-xl border border-[hsl(38_45%_48%/0.4)] bg-[hsl(30_15%_8%/0.6)] backdrop-blur-md p-1 gap-1">
+              <div className="flex rounded-xl border border-primary/30 bg-background backdrop-blur-md p-1 gap-1">
                 <button
                   onClick={() => setSearchType('location')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isLocation || !searchType
-                      ? 'bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(38_55%_52%)] text-[hsl(40_35%_98%)] shadow-lg shadow-[hsl(38_45%_48%/0.3)]'
-                      : 'text-[hsl(40_25%_65%)] hover:text-[hsl(40_25%_85%)] hover:bg-[hsl(38_45%_48%/0.1)]'
+                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
+                      : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
                   <Key className="h-5 w-5" />
@@ -118,8 +118,8 @@ export function HeroSection() {
                   onClick={() => setSearchType('achat')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isAchat
-                      ? 'bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(38_55%_52%)] text-[hsl(40_35%_98%)] shadow-lg shadow-[hsl(38_45%_48%/0.3)]'
-                      : 'text-[hsl(40_25%_65%)] hover:text-[hsl(40_25%_85%)] hover:bg-[hsl(38_45%_48%/0.1)]'
+                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
+                      : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
                   <Home className="h-5 w-5" />
@@ -135,16 +135,16 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="mb-6 md:mb-8 w-full max-w-2xl"
             >
-              <p className="text-xs uppercase tracking-widest text-[hsl(40_25%_55%)] mb-3">Autres parcours</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Autres parcours</p>
               <div className="grid grid-cols-3 gap-2 md:gap-3">
                 {parcours.map(({ to, icon: Icon, label }) => (
                   <Link
                     key={to}
                     to={to}
-                    className="flex flex-col items-center justify-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl border border-[hsl(38_45%_48%/0.2)] bg-[hsl(30_15%_8%/0.5)] backdrop-blur-sm hover:border-[hsl(38_45%_48%/0.6)] hover:bg-[hsl(38_45%_48%/0.08)] transition-all duration-300 group"
+                    className="flex flex-col items-center justify-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl border border-primary/30 bg-background backdrop-blur-sm hover:border-primary/30 hover:bg-primary/10 transition-all duration-300 group"
                   >
-                    <Icon className="h-5 w-5 md:h-6 md:w-6 text-[hsl(38_45%_48%)] group-hover:text-[hsl(38_55%_65%)] group-hover:scale-110 transition-all duration-300" />
-                    <span className="text-[11px] md:text-sm font-semibold text-[hsl(40_25%_80%)] group-hover:text-[hsl(40_25%_95%)] text-center leading-tight transition-colors">{label}</span>
+                    <Icon className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
+                    <span className="text-[11px] md:text-sm font-semibold text-muted-foreground group-hover:text-foreground text-center leading-tight transition-colors">{label}</span>
                   </Link>
                 ))}
               </div>
@@ -160,11 +160,11 @@ export function HeroSection() {
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
                 className="space-y-6 md:space-y-8 w-full"
               >
-                <p className="text-xs sm:text-sm tracking-widest uppercase text-[hsl(38_45%_55%)] font-semibold">
+                <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-semibold">
                   Agence N°1 de relocation en Suisse romande • Chasseur premium
                 </p>
 
-                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[hsl(40_25%_92%)] leading-tight max-w-3xl mx-auto font-serif">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight max-w-3xl mx-auto font-serif">
                   <WordReveal text="Ton futur appartement," delay={0.1} />
                   {' '}
                   <span className="luxury-gradient-text">
@@ -172,28 +172,28 @@ export function HeroSection() {
                   </span>
                 </h1>
 
-                <p className="text-sm sm:text-base md:text-lg text-[hsl(40_20%_65%)] max-w-2xl mx-auto leading-relaxed">
+                <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   Confie la recherche ou la relocation de ton appartement à{' '}
-                  <strong className="text-[hsl(40_25%_85%)]">des experts de l'immobilier en Suisse romande !</strong>
+                  <strong className="text-muted-foreground">des experts de l'immobilier en Suisse romande !</strong>
                 </p>
 
-                <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm sm:text-base font-medium text-[hsl(40_25%_75%)]">
+                <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm sm:text-base font-medium text-muted-foreground">
                   <span>Recherche ciblée</span>
-                  <span className="text-[hsl(38_45%_48%)]">·</span>
+                  <span className="text-primary">·</span>
                   <span>Dossier optimisé</span>
-                  <span className="text-[hsl(38_45%_48%)]">·</span>
+                  <span className="text-primary">·</span>
                   <span>Visites déléguées</span>
-                  <span className="text-[hsl(38_45%_48%)]">·</span>
+                  <span className="text-primary">·</span>
                   <span>Accompagnement jusqu'au bail</span>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm text-[hsl(40_20%_60%)]">
-                  <span className="font-medium text-[hsl(40_25%_82%)]">+500 familles accompagnées</span>
-                  <span className="hidden sm:inline text-[hsl(38_45%_48%/0.5)]">·</span>
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+                  <span className="font-medium text-muted-foreground">+500 familles accompagnées</span>
+                  <span className="hidden sm:inline text-primary">·</span>
                   <span>4.8★ Google</span>
-                  <span className="hidden sm:inline text-[hsl(38_45%_48%/0.5)]">·</span>
+                  <span className="hidden sm:inline text-primary">·</span>
                   <span>Réponse sous 24h</span>
-                  <span className="hidden sm:inline text-[hsl(38_45%_48%/0.5)]">·</span>
+                  <span className="hidden sm:inline text-primary">·</span>
                   <span>90 jours ou remboursé</span>
                 </div>
 
@@ -202,7 +202,7 @@ export function HeroSection() {
                     <Button
                       asChild
                       size="lg"
-                      className="w-full group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 font-semibold text-base md:text-lg py-7"
+                      className="w-full group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-primary-foreground border-0 font-semibold text-base md:text-lg py-7"
                     >
                       <a href="#analyse-dossier">
                         <FileSearch className="h-5 w-5 mr-2" />
@@ -211,20 +211,20 @@ export function HeroSection() {
                       </a>
                     </Button>
                   </MagneticButton>
-                  <p className="text-xs text-[hsl(40_20%_55%)] mt-3">
+                  <p className="text-xs text-muted-foreground mt-3">
                     Gratuit · Sans engagement · Réponse sous 24h
                   </p>
                 </div>
 
                 <a
                   href="#comment-ca-marche"
-                  className="inline-flex items-center gap-2 text-sm text-[hsl(38_45%_55%)] hover:text-[hsl(38_55%_70%)] font-medium transition-colors"
+                  className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary font-medium transition-colors"
                 >
                   Voir comment ça marche
                   <ArrowRight className="h-4 w-4" />
                 </a>
 
-                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-[hsl(40_20%_55%)]">
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CheckCircle className="h-3 w-3 text-green-500" />Acompte 300 CHF
                   </span>
@@ -248,30 +248,30 @@ export function HeroSection() {
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
                 className="space-y-4 w-full"
               >
-                <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-[hsl(40_25%_92%)] font-serif">
+                <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
                   <WordReveal text="Trouve ton bien idéal" delay={0.1} />
                   {' '}
                   <span className="luxury-gradient-text">
                     <WordReveal text="avant qu'il soit sur le marché" delay={0.3} />
                   </span>
                 </h1>
-                <p className="text-base md:text-2xl font-semibold text-[hsl(40_25%_82%)]">
+                <p className="text-base md:text-2xl font-semibold text-muted-foreground">
                   Accès exclusif à{' '}
                   <span className="luxury-gradient-text">des biens off-market dans ta région</span>
                 </p>
-                <p className="text-sm md:text-lg text-[hsl(38_45%_55%)] font-medium">
+                <p className="text-sm md:text-lg text-primary font-medium">
                   🏡 Commission: 1% du prix d'achat (acompte déduit)
                 </p>
-                <p className="text-sm md:text-lg text-[hsl(40_20%_65%)] max-w-2xl mx-auto leading-relaxed">
+                <p className="text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   Nos experts cherchent, sélectionnent et contactent les vendeurs pour toi, afin de{' '}
-                  <strong className="text-[hsl(40_25%_82%)]">maximiser tes chances de trouver plus vite et mieux</strong>.
+                  <strong className="text-muted-foreground">maximiser tes chances de trouver plus vite et mieux</strong>.
                 </p>
 
                 <div className="mx-auto max-w-lg">
                   <div className="rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-5 border border-green-500/40 bg-green-500/10 shadow-lg backdrop-blur-sm">
                     <div className="flex items-center justify-center gap-2 md:gap-3">
                       <ShieldCheck className="h-6 w-6 md:h-8 md:w-8 text-green-400 flex-shrink-0" />
-                      <span className="text-base md:text-2xl font-bold text-[hsl(40_25%_92%)]">
+                      <span className="text-base md:text-2xl font-bold text-foreground">
                         6 mois de recherche • Remboursé si échec
                       </span>
                     </div>
@@ -283,7 +283,7 @@ export function HeroSection() {
                     <Button
                       asChild
                       size="lg"
-                      className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0"
+                      className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-primary-foreground border-0"
                     >
                       <Link to="/nouveau-mandat">
                         <Rocket className="mr-3 h-6 w-6 md:h-7 md:w-7" />
@@ -292,7 +292,7 @@ export function HeroSection() {
                       </Link>
                     </Button>
                   </MagneticButton>
-                  <div className="flex items-center gap-2 text-sm text-[hsl(40_20%_60%)]">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Lock className="h-4 w-4 text-green-500" />
                     <span>Sans engagement • Aucune carte de crédit requise</span>
                   </div>
@@ -307,7 +307,7 @@ export function HeroSection() {
                       <span>Analyse gratuite de solvabilité</span>
                     </a>
                   </Button>
-                  <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-[hsl(40_20%_60%)] mt-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mt-2">
                     <span className="flex items-center gap-1">
                       <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />Acompte 2'500 CHF
                     </span>
@@ -329,7 +329,7 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.8 }}
               className="mt-6"
             >
-              <Button asChild variant="ghost" size="sm" className="text-[hsl(40_20%_55%)] hover:text-[hsl(40_25%_80%)] hover:bg-[hsl(38_45%_48%/0.08)]">
+              <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground hover:bg-primary/10">
                 <Link to="/login">Déjà client ? Se connecter</Link>
               </Button>
             </motion.div>
@@ -339,16 +339,16 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.9 }}
               className="mt-6"
             >
-              <div className="inline-flex items-center gap-2 bg-[hsl(30_15%_8%/0.6)] backdrop-blur-sm rounded-full px-4 py-2 border border-[hsl(38_45%_48%/0.3)]">
-                <Users className="h-4 w-4 text-[hsl(38_45%_55%)]" />
-                <span className="text-sm text-[hsl(40_20%_65%)]">
-                  <span className="text-[hsl(38_55%_65%)] font-medium">
+              <div className="inline-flex items-center gap-2 bg-background backdrop-blur-sm rounded-full px-4 py-2 border border-primary/30">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  <span className="text-primary font-medium">
                     {isAchat ? '+150 biens vendus' : '+500 familles accompagnées'}
                   </span>{' '}
                   avec succès
                 </span>
               </div>
-              <div className="mt-4 inline-flex items-center gap-2 text-xs text-[hsl(40_20%_55%)]">
+              <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="h-4 w-4 text-green-500" />
                 <span>
                   {isAchat

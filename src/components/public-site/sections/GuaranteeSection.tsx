@@ -28,14 +28,14 @@ export function GuaranteeSection() {
   const pricingItems = isAchat ? pricingItemsAchat : pricingItemsLocation;
 
   return (
-    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-[hsl(38_45%_48%/0.03)] to-background">
+    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-primary to-background">
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
 
           <ScrollReveal variant="fade-up" className="text-center mb-4">
-            <div className="inline-flex items-center gap-2 bg-[hsl(38_45%_48%/0.08)] rounded-full px-4 py-2 mb-4 border border-[hsl(38_45%_48%/0.25)]">
-              <Shield className="h-4 w-4 text-[hsl(38_45%_48%)]" />
-              <span className="text-[hsl(38_45%_48%)] font-medium text-sm">💰 Tarification transparente</span>
+            <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-2 mb-4 border border-primary/30">
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-primary font-medium text-sm">💰 Tarification transparente</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2 font-serif">
               {isAchat ? 'Commission transparente de 1% 🏡' : <>Tellement confiant qu'on te <span className="luxury-gradient-text">rembourse</span></>}
@@ -57,14 +57,14 @@ export function GuaranteeSection() {
               <motion.div
                 animate={prefersReducedMotion ? {} : { y: [0, -10, 0] }}
                 transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' as const }}
-                className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-[hsl(38_45%_44%/0.15)] to-[hsl(28_35%_35%/0.1)] border border-[hsl(38_45%_48%/0.4)] flex items-center justify-center"
-                style={{ boxShadow: '0 0 32px hsl(38 45% 48% / 0.2), 0 0 8px hsl(38 45% 48% / 0.15)' }}
+                className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center"
+                style={{ boxShadow: '0 0 32px hsl(var(--primary)), 0 0 8px hsl(var(--primary))' }}
               >
                 {/* Pulsing halo rings */}
                 {!prefersReducedMotion && [0, 1, 2].map((i) => (
                   <motion.div
                     key={i}
-                    className="absolute inset-0 rounded-2xl border border-[hsl(38_45%_48%/0.3)]"
+                    className="absolute inset-0 rounded-2xl border border-primary/30"
                     animate={{
                       scale: [1, 1.5 + i * 0.3],
                       opacity: [0.6, 0],
@@ -72,7 +72,7 @@ export function GuaranteeSection() {
                     transition={{ duration: 2, delay: i * 0.55, repeat: Infinity, ease: 'easeOut' as const }}
                   />
                 ))}
-                <Shield className="h-12 w-12 text-[hsl(38_55%_65%)]" />
+                <Shield className="h-12 w-12 text-primary" />
               </motion.div>
             </motion.div>
           </div>
@@ -87,12 +87,12 @@ export function GuaranteeSection() {
             {pricingItems.map((item, index) => (
               <motion.div key={index} variants={staggerItem}>
                 <TiltCard intensity={4}>
-                  <div className="relative rounded-2xl p-6 border border-[hsl(38_45%_48%/0.2)] hover:border-[hsl(38_45%_48%/0.45)] transition-all duration-500 h-full text-center bg-card/80 hover:shadow-[0_8px_30px_hsl(38_45%_48%/0.08)] group">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[hsl(38_45%_44%/0.2)] to-[hsl(28_35%_35%/0.15)] border border-[hsl(38_45%_48%/0.3)] flex items-center justify-center mx-auto mb-4">
-                      <item.icon className="h-7 w-7 text-[hsl(38_45%_48%)]" />
+                  <div className="relative rounded-2xl p-6 border border-primary/30 hover:border-primary/30 transition-all duration-500 h-full text-center bg-card/80 hover:shadow-md group">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mx-auto mb-4">
+                      <item.icon className="h-7 w-7 text-primary" />
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">{item.label}</p>
-                    <p className="text-xl md:text-2xl font-bold text-foreground mb-1 group-hover:text-[hsl(38_45%_44%)] transition-colors font-serif">{item.value}</p>
+                    <p className="text-xl md:text-2xl font-bold text-foreground mb-1 group-hover:text-primary transition-colors font-serif">{item.value}</p>
                     <p className="text-sm text-muted-foreground">{item.description}</p>
                   </div>
                 </TiltCard>
@@ -101,11 +101,11 @@ export function GuaranteeSection() {
           </motion.div>
 
           <ScrollReveal variant="fade-up" delay={0.2} className="mb-8">
-            <div className="relative max-w-xl mx-auto rounded-2xl p-6 border border-[hsl(38_45%_48%/0.35)] bg-[hsl(38_45%_48%/0.05)] overflow-hidden">
+            <div className="relative max-w-xl mx-auto rounded-2xl p-6 border border-primary/30 bg-primary/10 overflow-hidden">
               <BorderBeam duration={10} />
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 p-3 rounded-xl bg-[hsl(38_45%_48%/0.1)] border border-[hsl(38_45%_48%/0.3)]">
-                  <Shield className="h-8 w-8 text-[hsl(38_45%_48%)]" />
+                <div className="flex-shrink-0 p-3 rounded-xl bg-primary/10 border border-primary/30">
+                  <Shield className="h-8 w-8 text-primary" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-foreground mb-2 font-serif">
@@ -118,7 +118,7 @@ export function GuaranteeSection() {
                       <>Après ta shortlist personnalisée, tu peux nous confier ta recherche pendant <strong className="text-foreground">90 jours</strong>.<br />Pas de bail signé ? <strong className="text-foreground">Remboursement intégral. Sans condition.</strong></>
                     )}
                   </p>
-                  <Button asChild variant="outline" size="sm" className="group/btn border-[hsl(38_45%_48%/0.3)] hover:bg-[hsl(38_45%_48%/0.08)] text-[hsl(38_45%_44%)]">
+                  <Button asChild variant="outline" size="sm" className="group/btn border-primary/30 hover:bg-primary/10 text-primary">
                     <a href="/nouveau-mandat">
                       {isAchat ? "Démarrer ma recherche d'achat" : 'Découvrir le mandat 90 jours'}
                       <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
@@ -130,10 +130,10 @@ export function GuaranteeSection() {
           </ScrollReveal>
 
           <ScrollReveal variant="fade-up" delay={0.3} className="text-center">
-            <div className="inline-flex flex-col items-center gap-3 bg-gradient-to-r from-[hsl(38_45%_48%/0.12)] via-[hsl(38_45%_48%/0.18)] to-[hsl(38_45%_48%/0.12)] border-2 border-[hsl(38_45%_48%/0.35)] rounded-2xl px-6 py-5">
+            <div className="inline-flex flex-col items-center gap-3 bg-gradient-to-r from-primary via-primary to-primary border-2 border-primary/30 rounded-2xl px-6 py-5">
               <div className="flex items-center gap-3">
-                <Crown className="h-6 w-6 text-[hsl(38_55%_65%)]" />
-                <span className="text-lg md:text-xl font-bold text-[hsl(38_45%_48%)] font-serif">
+                <Crown className="h-6 w-6 text-primary" />
+                <span className="text-lg md:text-xl font-bold text-primary font-serif">
                   {isAchat ? 'Garantie remboursement 6 mois 🎯' : 'Garantie 100% remboursé 🎯'}
                 </span>
               </div>

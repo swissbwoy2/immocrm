@@ -179,14 +179,14 @@ export function DossierAnalyseForm() {
   if (!searchType) return null;
 
   return (
-    <section className="bg-gradient-to-b from-[hsl(30_15%_8%)] to-background relative overflow-hidden">
+    <section className="bg-gradient-to-b from-background to-background relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,hsl(var(--primary)/0.06)_0%,transparent_60%)]" />
       <div className="container mx-auto px-4 py-12 relative z-10">
         <div className="max-w-3xl mx-auto">
-          <h2 id="etape-1-qualification" className="text-center text-lg md:text-xl font-semibold text-[hsl(40_30%_96%)] mb-6 max-w-2xl mx-auto scroll-mt-24">
+          <h2 id="etape-1-qualification" className="text-center text-lg md:text-xl font-semibold text-foreground mb-6 max-w-2xl mx-auto scroll-mt-24">
             <span className="text-primary font-bold">Étape 1</span> — Qualifie ton dossier en 30 secondes, puis choisis ton rendez-vous au bureau.
           </h2>
-          <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl border border-[hsl(38_45%_48%/0.2)] shadow-lg p-6 md:p-8 overflow-hidden">
+          <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl border border-primary/30 shadow-lg p-6 md:p-8 overflow-hidden">
             <BorderBeam duration={10} />
             <div className="flex justify-center gap-2 mb-6">
               {['qualification', 'coordonnees'].map((s, i) => (

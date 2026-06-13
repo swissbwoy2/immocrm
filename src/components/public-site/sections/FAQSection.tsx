@@ -38,7 +38,7 @@ export function FAQSection() {
       <div className="container mx-auto px-4">
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
-          <p className="text-xs sm:text-sm tracking-widest uppercase text-[hsl(38_45%_48%)] font-medium mb-3">
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-medium mb-3">
             Questions fréquentes
           </p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
@@ -63,19 +63,19 @@ export function FAQSection() {
                 <CollapsibleTrigger
                   className={`w-full flex items-center justify-between gap-4 p-4 md:p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 text-left group
                     ${openIndex === i
-                      ? 'bg-[hsl(38_45%_48%/0.08)] border-[hsl(38_45%_48%/0.5)] shadow-[0_0_16px_hsl(38_45%_48%/0.1)]'
-                      : 'bg-card/50 border-[hsl(38_45%_48%/0.15)] hover:border-[hsl(38_45%_48%/0.4)] hover:bg-[hsl(38_45%_48%/0.04)]'
+                      ? 'bg-primary/10 border-primary/30 shadow-md'
+                      : 'bg-card/50 border-primary/30 hover:border-primary/30 hover:bg-primary/10'
                     }`}
                 >
-                  <span className="text-sm md:text-base font-semibold text-foreground group-hover:text-[hsl(38_45%_44%)] transition-colors">
+                  <span className="text-sm md:text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                     {faq.q}
                   </span>
                   <motion.div
                     animate={{ rotate: openIndex === i ? 45 : 0 }}
                     transition={{ duration: 0.22, ease: 'easeInOut' as const }}
-                    className="flex-shrink-0 w-8 h-8 rounded-full bg-[hsl(38_45%_48%/0.1)] border border-[hsl(38_45%_48%/0.25)] flex items-center justify-center"
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center"
                   >
-                    <Plus className="h-4 w-4 text-[hsl(38_45%_48%)]" />
+                    <Plus className="h-4 w-4 text-primary" />
                   </motion.div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -89,7 +89,7 @@ export function FAQSection() {
                         className="overflow-hidden"
                       >
                         <div className="px-4 md:px-5 pb-4 pt-3">
-                          <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-[hsl(38_45%_48%/0.4)] pl-4">{faq.a}</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-4">{faq.a}</p>
                         </div>
                       </motion.div>
                     )}

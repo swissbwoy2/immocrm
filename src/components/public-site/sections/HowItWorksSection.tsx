@@ -60,7 +60,7 @@ function ConnectorPath({ isInView }: { isInView: boolean }) {
       <svg width="56" height="28" viewBox="0 0 56 28" fill="none">
         <motion.path
           d="M 0 14 C 14 14, 14 4, 28 4 C 42 4, 42 24, 56 24"
-          stroke="hsl(38 45% 48%)"
+          stroke="hsl(var(--primary))"
           strokeWidth="1.5"
           strokeLinecap="round"
           fill="none"
@@ -70,7 +70,7 @@ function ConnectorPath({ isInView }: { isInView: boolean }) {
         />
         <motion.circle
           cx="56" cy="24" r="3"
-          fill="hsl(38 55% 65%)"
+          fill="hsl(var(--primary))"
           initial={prefersReducedMotion ? false : { scale: 0, opacity: 0 }}
           animate={isInView ? { scale: 1, opacity: 0.65 } : {}}
           transition={{ duration: 0.35, delay: 1.75 }}
@@ -89,9 +89,9 @@ function StepCard({ step, index, isInView }: { step: Step; index: number; isInVi
       initial={prefersReducedMotion ? false : { opacity: 0, y: 36 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.6, delay: index * 0.18, ease: [0.22, 1, 0.36, 1] as const }}
-      className="relative flex flex-col bg-card/60 backdrop-blur-sm border border-[hsl(38_45%_48%/0.18)] rounded-2xl p-7 hover:border-[hsl(38_45%_48%/0.5)] hover:shadow-[0_12px_40px_hsl(38_45%_48%/0.1)] transition-all duration-500 group overflow-hidden h-full"
+      className="relative flex flex-col bg-card/60 backdrop-blur-sm border border-primary/30 rounded-2xl p-7 hover:border-primary/30 hover:shadow-md transition-all duration-500 group overflow-hidden h-full"
     >
-      <span className="absolute -top-3 right-3 text-9xl font-bold text-[hsl(38_45%_48%/0.07)] select-none pointer-events-none leading-none font-serif">
+      <span className="absolute -top-3 right-3 text-9xl font-bold text-primary select-none pointer-events-none leading-none font-serif">
         {step.num}
       </span>
 
@@ -99,17 +99,17 @@ function StepCard({ step, index, isInView }: { step: Step; index: number; isInVi
         initial={prefersReducedMotion ? false : { rotate: -15, scale: 0.6, opacity: 0 }}
         animate={isInView ? { rotate: 0, scale: 1, opacity: 1 } : {}}
         transition={{ type: 'spring' as const, stiffness: 220, damping: 16, delay: index * 0.18 + 0.28 }}
-        className="w-14 h-14 rounded-xl bg-gradient-to-br from-[hsl(38_45%_44%/0.18)] to-[hsl(28_35%_35%/0.12)] border border-[hsl(38_45%_48%/0.35)] flex items-center justify-center mb-5 group-hover:shadow-[0_0_20px_hsl(38_45%_48%/0.25)] transition-shadow duration-300"
+        className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mb-5 group-hover:shadow-md transition-shadow duration-300"
       >
-        <Icon className="h-7 w-7 text-[hsl(38_55%_65%)]" />
+        <Icon className="h-7 w-7 text-primary" />
       </motion.div>
 
-      <h3 className="text-lg font-bold text-[hsl(40_25%_92%)] mb-3 font-serif relative z-10 group-hover:text-[hsl(38_45%_58%)] transition-colors duration-300">
+      <h3 className="text-lg font-bold text-foreground mb-3 font-serif relative z-10 group-hover:text-primary transition-colors duration-300">
         {step.title}
       </h3>
-      <p className="text-sm text-[hsl(40_20%_60%)] leading-relaxed relative z-10">{step.description}</p>
+      <p className="text-sm text-muted-foreground leading-relaxed relative z-10">{step.description}</p>
 
-      <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.55)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+      <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
     </motion.div>
   );
 }
@@ -141,7 +141,7 @@ export function HowItWorksSection() {
       <div className="container mx-auto px-4 relative z-10">
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
-          <p className="text-xs sm:text-sm tracking-widest uppercase text-[hsl(38_45%_48%)] font-medium mb-3">
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-medium mb-3">
             Comment ça marche
           </p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
@@ -160,7 +160,7 @@ export function HowItWorksSection() {
             <Button
               asChild
               size="lg"
-              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0"
+              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0"
             >
               <Link to="/nouveau-mandat">
                 <Rocket className="h-5 w-5 mr-2" />

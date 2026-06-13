@@ -16,7 +16,7 @@ interface Scene3DWrapperProps {
 function SceneLoader() {
   return (
     <div className="absolute inset-0 flex items-center justify-center">
-      <div className="w-8 h-8 rounded-full border-2 border-[hsl(38_45%_48%/0.4)] border-t-[hsl(38_45%_48%)] animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
     </div>
   );
 }

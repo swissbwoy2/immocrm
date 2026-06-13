@@ -29,22 +29,22 @@ export function BentoCard({ name, className, background, icon, description, cta,
     <div
       className={cn(
         'group relative col-span-3 flex flex-col justify-between overflow-hidden rounded-xl',
-        'bg-card/80 border border-[hsl(38_45%_48%/0.2)] hover:border-[hsl(38_45%_48%/0.5)]',
-        'shadow-sm hover:shadow-[0_8px_30px_hsl(38_45%_48%/0.1)]',
+        'bg-card/80 border border-primary/30 hover:border-primary/30',
+        'shadow-sm hover:shadow-md',
         'transition-all duration-500 cursor-pointer',
-        '[box-shadow:0_0_0_1px_hsl(38_45%_48%/0.1),0_2px_4px_hsl(38_45%_48%/0.05)]',
+        '',
         className
       )}
     >
       <div>{background}</div>
       <div className="pointer-events-none z-10 flex transform-gpu flex-col gap-1 p-6 transition-all duration-300 group-hover:-translate-y-10">
-        <div className="mb-2 text-[hsl(38_45%_48%)]">{icon}</div>
+        <div className="mb-2 text-primary">{icon}</div>
         <h3 className="text-xl font-semibold text-foreground font-serif">{name}</h3>
         <p className="max-w-lg text-muted-foreground text-sm">{description}</p>
       </div>
       {href && (
         <div className="pointer-events-none absolute bottom-0 flex w-full translate-y-10 transform-gpu flex-row items-center p-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-          <a href={href} className="text-sm font-medium text-[hsl(38_45%_48%)] hover:text-[hsl(38_55%_60%)]">
+          <a href={href} className="text-sm font-medium text-primary hover:text-primary">
             {cta} →
           </a>
         </div>

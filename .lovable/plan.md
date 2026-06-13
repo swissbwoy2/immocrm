@@ -1,58 +1,63 @@
+## Objectif
+Remettre le site public en version claire et lisible, sans brun résiduel, sans cartes/bulles vertes non voulues, avec texte visible partout, et avec un hero mobile correctement cadré.
 
-# 3 corrections ciblées sur le site public
+## Ce que je vais corriger
+1. Revenir sur les overrides CSS trop globaux
+- Nettoyer `src/index.css` pour supprimer les règles “nuclear” qui recolorent trop d’éléments par simple motif `hsl(...)`.
+- Garder uniquement des règles ciblées pour les rares composants qui doivent vraiment être recolorés.
+- Éviter que des cartes, badges, formulaires et bulles passent en vert par accident.
 
-## 1. Remplacer l'image du hero "split reveal" par le chasseur
-- Uploader `user-uploads://ChatGPT_Image_13_juin_2026_18_31_03_1-2.png` via `lovable-assets` → `src/assets/hero-chasseur-split.png.asset.json`
-- Dans `src/components/public-site/sections/HeroSection.tsx` :
-  - Remplacer `import heroBg from '@/assets/hero-bg.jpg'` par l'import du nouveau pointeur asset
-  - `imageSrc={heroChasseur.url}` au lieu de `imageSrc={heroBg}`
-- Le composant `DiagonalSplitReveal` (split diagonal 18°, vidéo derrière, scrub scroll) reste **identique** — on ne touche qu'à la source image.
+2. Corriger les vraies sources des couleurs section par section
+- `src/components/public-site/sections/AppShowcaseSection.tsx`
+  - Remplacer les couleurs doré/brun codées en dur des barres de progression.
+  - Remettre un fond clair propre sur la carte de features.
+- `src/components/public-site/sections/BudgetCalcSection.tsx`
+  - Corriger le bouton “Calculer mon budget” et les panneaux résultat pour retrouver un contraste net.
+  - Supprimer les halos/fonds verts non voulus dans le bloc de droite.
+- `src/components/public-site/sections/DossierAnalyseForm.tsx`
+  - Remplacer le fond sombre restant.
+  - Rendre tous les labels, radios, champs, textes d’aide et CTA parfaitement lisibles.
+- `src/components/public-site/sections/GuaranteeSection.tsx`
+  - Enlever le fond beige/brun du badge “Garantie 100% remboursé”.
+  - Passer sur fond blanc / très léger vert d’eau si nécessaire, avec texte foncé.
+- `src/components/public-site/sections/CoverageSection.tsx`
+  - Supprimer les fonds verts indésirables dans les bulles/cantons.
+  - Garder uniquement les accents bleu-vert demandés, sans aplats parasites.
+- `src/components/public-site/sections/HeroSection.tsx`
+  - Corriger le cadrage mobile de l’image du split.
+  - D’abord via réglage responsive de cadrage (`object-position` / comportement mobile dédié) sans changer le split.
 
-## 2. Réparer la vidéo scroll-driven du split reveal
-La vidéo derrière le split ne se lance plus au scroll. Investigation à faire en preview live :
-- Lire console / network pour erreurs vidéo (404, CORS, decode)
-- Vérifier que `expansionRef` (wrapper `height: 380vh`) génère bien du scroll
-- Vérifier que le parent n'a pas reçu `overflow:hidden` via mes overrides récents
-- Vérifier que `prefersReducedMotion` n'est pas true en preview (sinon bascule en vidéo figée)
-- Vérifier que le sticky parent (inline `background: 'hsl(30 15% 8%)'`) n'a pas été cassé par mon override `[style*="hsl(30 15%"]` qui le passe à blanc — mais ça ne devrait pas tuer le scroll
+3. Hero mobile
+- Je garde le split actuel.
+- Je corrige le cadrage mobile avec une version responsive du hero.
+- Si l’image source actuelle ne permet pas un bon cadrage en mobile, l’étape suivante sera d’ajouter une version mobile 9:16 dédiée, mais seulement si nécessaire.
 
-Correctifs probables (selon diagnostic) :
-- Si la vidéo échoue à charger : vérifier path `src/assets/hero-reveal-video.mp4` et fallback autoplay
-- Si scroll bloqué : retirer un `overflow-hidden` introduit par erreur ou re-vérifier la sticky chain (un ancêtre avec `overflow:hidden`/`overflow:auto` casse `position:sticky`)
-- Si le ref ne se monte plus : aucun lien identifié avec mes changements CSS, donc investigation requise
+4. Vérification
+- Vérifier le rendu en mobile et desktop sur les zones signalées :
+  - hero
+  - barres de progression
+  - calculateur
+  - formulaire dossier
+  - bloc garantie
+  - bloc couverture
+- Confirmer qu’il ne reste plus de brun, ni de texte illisible, ni de fonds verts injectés par erreur.
 
-## 3. Supprimer les barres de progression brunes/dorées (3ᵉ image)
-Localisé dans `src/components/public-site/sections/AppShowcaseSection.tsx` ligne ~306-315 :
-```tsx
-<div className="relative h-1.5 w-full bg-[hsl(30_15%_12%)] rounded-full overflow-hidden">
-  <div style={{ background: 'linear-gradient(to right, hsl(38 45% 48%), hsl(38 55% 65%))' }} />
-</div>
-```
-Les inline `style` avec gradients dorés (`hsl(38 45% 48%)`) ne sont pas attrapés par mes overrides actuels (qui ciblent `[style*="hsl(30 15%"]` uniquement).
+## Résultat attendu
+- Site 100% clair
+- Texte bleu-vert foncé lisible partout
+- Plus aucun brun/beige
+- Plus aucune bulle/carte verte non voulue
+- Hero mobile bien cadré sans casser l’effet split
 
-Ajouter dans le bloc `.theme-luxury` de `src/index.css` :
-```css
-/* Inline gold styles → green primary */
-.theme-luxury [style*="hsl(38 "],
-.theme-luxury [style*="hsl(38 45%"],
-.theme-luxury [style*="hsl(38 55%"],
-.theme-luxury [style*="hsl(28 35%"],
-.theme-luxury [style*="hsl(40 35%"],
-.theme-luxury [style*="hsl(40 25%"] {
-  background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
-  color: hsl(var(--imr-ink)) !important;
-}
-.theme-luxury [style*="linear-gradient"][style*="hsl(38"] {
-  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
-}
-```
+## Détails techniques
+- Fichier principal à assainir : `src/index.css`
+- Fichiers à corriger de manière ciblée :
+  - `src/components/public-site/sections/HeroSection.tsx`
+  - `src/components/public-site/sections/AppShowcaseSection.tsx`
+  - `src/components/public-site/sections/BudgetCalcSection.tsx`
+  - `src/components/public-site/sections/DossierAnalyseForm.tsx`
+  - `src/components/public-site/sections/GuaranteeSection.tsx`
+  - `src/components/public-site/sections/CoverageSection.tsx`
 
-## Vérification
-- Screenshot du hero : nouvelle image chasseur visible, split diagonal préservé
-- Scroll : vidéo se scrub frame par frame derrière le split
-- Section AppShowcase : barres en vert (zéro doré/brun)
-- Reste du site public inchangé
-
-## Hors scope
-- Aucun changement de contenu / copy / animations
-- App interne intacte
+## Note de méthode
+Je ne vais plus recolorer le site avec des sélecteurs globaux basés sur des fragments `hsl(...)`. Je vais remettre des styles explicites, composant par composant, pour éviter exactement ce type de régression.

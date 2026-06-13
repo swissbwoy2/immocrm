@@ -12,8 +12,8 @@ export const ShimmerButton = forwardRef<HTMLButtonElement, ShimmerButtonProps>(
   ({ children, className, variant = 'gold', ...props }, ref) => {
     const base =
       variant === 'gold'
-        ? 'bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_54%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)]'
-        : 'bg-[hsl(30_15%_10%)] text-[hsl(40_25%_85%)]';
+        ? 'bg-gradient-to-r from-primary via-primary to-primary text-foreground'
+        : 'bg-background text-muted-foreground';
 
     return (
       <button

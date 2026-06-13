@@ -149,7 +149,7 @@ export function AppShowcaseSection() {
     <section
       ref={trackRef}
       id="app-showcase"
-      className="relative w-full bg-[hsl(30_15%_6%)]"
+      className="relative w-full bg-background"
       style={{
         // Pas de track étendu sur mobile : section normale qui se scroll naturellement
         height: useScrub ? '220vh' : 'auto',
@@ -171,10 +171,9 @@ export function AppShowcaseSection() {
             className="absolute inset-0"
             style={{
               background:
-                'radial-gradient(ellipse 70% 60% at 25% 50%, hsl(38 45% 48% / 0.10), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 30%, hsl(28 35% 38% / 0.08), transparent 60%)',
+                'radial-gradient(ellipse 70% 60% at 25% 50%, hsl(var(--primary) / 0.06), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 30%, hsl(var(--accent) / 0.05), transparent 60%)',
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[hsl(30_15%_6%)/0.4] to-[hsl(30_15%_6%)]" />
         </div>
 
         <div className={`relative z-10 ${useScrub ? 'h-full' : ''} container mx-auto px-4 sm:px-6 flex items-center`}>
@@ -186,20 +185,20 @@ export function AppShowcaseSection() {
                 aria-hidden
                 animate={prefersReducedMotion ? undefined : { rotate: 360 }}
                 transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-                className="hidden md:block absolute h-[460px] w-[460px] lg:h-[560px] lg:w-[560px] rounded-full border border-dashed border-[hsl(38_45%_48%/0.18)]"
+                className="hidden md:block absolute h-[460px] w-[460px] lg:h-[560px] lg:w-[560px] rounded-full border border-dashed border-primary/30"
               />
               <motion.div
                 aria-hidden
                 animate={prefersReducedMotion ? undefined : { rotate: -360 }}
                 transition={{ duration: 45, repeat: Infinity, ease: 'linear' }}
-                className="hidden md:block absolute h-[540px] w-[540px] lg:h-[660px] lg:w-[660px] rounded-full border border-[hsl(38_45%_48%/0.10)]"
+                className="hidden md:block absolute h-[540px] w-[540px] lg:h-[660px] lg:w-[660px] rounded-full border border-primary/30"
               />
               {/* Pulsing halo — atténué sur mobile */}
               <motion.div
                 aria-hidden
                 animate={prefersReducedMotion ? undefined : { scale: [1, 1.06, 1], opacity: [0.25, 0.4, 0.25] }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute h-[280px] w-[280px] md:h-[400px] md:w-[400px] lg:h-[460px] lg:w-[460px] rounded-full bg-[hsl(38_45%_48%/0.18)] blur-2xl md:blur-3xl"
+                className="absolute h-[280px] w-[280px] md:h-[400px] md:w-[400px] lg:h-[460px] lg:w-[460px] rounded-full bg-primary/10 blur-2xl md:blur-3xl"
               />
 
               {/* Floating iPhone */}
@@ -227,17 +226,17 @@ export function AppShowcaseSection() {
                       />
                     )}
                     {videoMissing && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 bg-gradient-to-br from-[hsl(38_45%_48%/0.15)] via-black to-[hsl(28_35%_38%/0.15)]">
-                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[hsl(38_45%_48%)] to-[hsl(28_35%_38%)] flex items-center justify-center mb-4 shadow-2xl">
-                          <Smartphone className="h-8 w-8 text-[hsl(40_35%_98%)]" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 bg-gradient-to-br from-primary via-black to-primary">
+                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary flex items-center justify-center mb-4 shadow-2xl">
+                          <Smartphone className="h-8 w-8 text-foreground" />
                         </div>
-                        <p className="text-[hsl(40_35%_98%)]/90 text-sm font-medium">Logisorama</p>
-                        <p className="text-[hsl(40_25%_70%)]/70 text-xs mt-1">Tableau de bord client</p>
+                        <p className="text-foreground/90 text-sm font-medium">Logisorama</p>
+                        <p className="text-muted-foreground/70 text-xs mt-1">Tableau de bord client</p>
                       </div>
                     )}
 
                     {/* Status bar overlay (sous dynamic island) */}
-                    <div className="absolute top-[36px] left-0 right-0 z-10 flex justify-between items-center px-6 text-[10px] text-[hsl(40_25%_85%)]/80 font-medium">
+                    <div className="absolute top-[36px] left-0 right-0 z-10 flex justify-between items-center px-6 text-[10px] text-muted-foreground/80 font-medium">
                       <span>9:41</span>
                       <span className="flex items-center gap-1">
                         <Zap className="h-2.5 w-2.5" /> 5G
@@ -249,8 +248,8 @@ export function AppShowcaseSection() {
 
               {/* Live badge */}
               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-20">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-[hsl(40_25%_75%)] bg-[hsl(30_15%_8%/0.8)] px-4 py-2 rounded-full border border-[hsl(38_45%_48%/0.3)] backdrop-blur">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[hsl(38_55%_65%)] animate-pulse" />
+                <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-muted-foreground bg-background px-4 py-2 rounded-full border border-primary/30 backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                   En direct
                 </div>
               </div>
@@ -262,7 +261,7 @@ export function AppShowcaseSection() {
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-[hsl(38_55%_65%)] mb-3"
+                className="text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-primary mb-3"
               >
                 L'application
               </motion.p>
@@ -274,7 +273,7 @@ export function AppShowcaseSection() {
                 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4 bg-clip-text text-transparent"
                 style={{
                   backgroundImage:
-                    'linear-gradient(to bottom, hsl(40 35% 98%), hsl(40 25% 65%))',
+                    'linear-gradient(to bottom, hsl(var(--foreground)), hsl(var(--foreground)))',
                 }}
               >
                 Optimisez vos recherches depuis votre poche
@@ -284,26 +283,26 @@ export function AppShowcaseSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.1 }}
-                className="text-base sm:text-lg text-[hsl(40_25%_70%)] mb-8 leading-relaxed"
+                className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed"
               >
                 Offres, visites, postulations et messagerie ! Tout est synchronisé en temps réel
                 avec votre agent immobilier personnel sur votre iPhone, Android ou Web !
               </motion.p>
 
               {/* Feature bars */}
-              <div className="space-y-4 bg-[hsl(30_15%_8%/0.5)] p-5 sm:p-6 rounded-2xl border border-[hsl(38_45%_48%/0.2)] backdrop-blur-sm mb-8">
+              <div className="space-y-4 bg-background p-5 sm:p-6 rounded-2xl border border-primary/30 backdrop-blur-sm mb-8">
                 {FEATURES.map((feature, idx) => (
                   <div key={feature.label}>
                     <div className="flex items-center justify-between mb-2 text-sm">
-                      <div className="flex items-center gap-2 text-[hsl(40_25%_85%)]">
-                        <feature.icon size={16} className="text-[hsl(38_55%_65%)]" />
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <feature.icon size={16} className="text-primary" />
                         <span>{feature.label}</span>
                       </div>
-                      <span className="font-mono text-xs text-[hsl(40_25%_60%)]">
+                      <span className="font-mono text-xs text-muted-foreground">
                         {feature.value}%
                       </span>
                     </div>
-                    <div className="relative h-1.5 w-full bg-[hsl(30_15%_12%)] rounded-full overflow-hidden">
+                    <div className="relative h-1.5 w-full bg-background rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         whileInView={{ width: `${feature.value}%` }}
@@ -312,7 +311,7 @@ export function AppShowcaseSection() {
                         className="absolute inset-y-0 left-0 rounded-full"
                         style={{
                           background:
-                            'linear-gradient(to right, hsl(38 45% 48%), hsl(38 55% 65%))',
+                            'linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)))',
                         }}
                       />
                     </div>
@@ -326,7 +325,7 @@ export function AppShowcaseSection() {
                   <Button
                     size="lg"
                     onClick={() => navigate('/nouveau-mandat')}
-                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-[hsl(38_45%_44%)] via-[hsl(38_55%_52%)] to-[hsl(28_35%_38%)] text-[hsl(40_35%_98%)] border-0 hover:opacity-95 transition-all"
+                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-primary-foreground border-0 hover:opacity-95 transition-all"
                   >
                     Créer mon compte maintenant
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -335,12 +334,12 @@ export function AppShowcaseSection() {
                     size="lg"
                     variant="outline"
                     onClick={() => navigate('/demo')}
-                    className="group h-14 px-6 text-base font-semibold border-[hsl(38_45%_48%/0.5)] bg-[hsl(30_15%_8%/0.4)] text-[hsl(40_35%_98%)] hover:bg-[hsl(38_45%_48%/0.15)] hover:border-[hsl(38_55%_65%)] backdrop-blur transition-all"
+                    className="group h-14 px-6 text-base font-semibold border-primary/30 bg-background text-foreground hover:bg-primary/10 hover:border-primary/30 backdrop-blur transition-all"
                   >
                     🎬 Essayer la démo
                   </Button>
                 </div>
-                <p className="text-xs text-[hsl(40_25%_60%)]">
+                <p className="text-xs text-muted-foreground">
                   ✓ Sans engagement &nbsp;·&nbsp; ✓ Activation immédiate &nbsp;·&nbsp; ✓ Démo en lecture seule, sans inscription
                 </p>
               </div>
