@@ -207,7 +207,11 @@ export function DiagonalSplitReveal({
   if (prefersReducedMotion) {
     return (
       <div>
-        <section className="relative h-screen w-full overflow-hidden bg-[hsl(30_15%_8%)]">
+        <section
+          data-split-sticky
+          className="relative h-screen w-full overflow-hidden"
+          style={{ backgroundColor: 'rgb(15, 25, 35)' }}
+        >
           <video
             ref={reducedVideoRef}
             src={videoSrc}
@@ -217,16 +221,28 @@ export function DiagonalSplitReveal({
             onLoadedMetadata={handleLoadedMetadata(reducedVideoRef, SCRUB_DURATION)}
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.35)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
+          <div
+            data-split-overlay
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(to bottom, rgba(15,25,35,0.35), transparent, rgba(15,25,35,0.55))',
+            }}
+          />
           <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6">
-            <h1 className="text-3xl sm:text-5xl font-bold text-[hsl(40_25%_92%)] font-serif text-center max-w-4xl drop-shadow-2xl leading-tight">
+            <h1
+              data-split-title
+              className="text-3xl sm:text-5xl font-bold text-center max-w-4xl leading-tight"
+              style={{ color: '#ffffff', textShadow: '0 4px 24px rgba(0,0,0,0.6)' }}
+            >
               {title}
             </h1>
             <div
               className="mt-3 h-1 rounded-full"
               style={{
                 width: '160px',
-                background: 'linear-gradient(90deg, transparent, hsl(38 55% 65%), transparent)',
+                background:
+                  'linear-gradient(90deg, transparent, rgb(52, 211, 153), transparent)',
               }}
             />
           </div>
@@ -247,12 +263,13 @@ export function DiagonalSplitReveal({
     <div>
       <div ref={expansionRef} style={{ height: trackHeight, position: 'relative' }}>
         <div
+          data-split-sticky
           style={{
             position: 'sticky',
             top: 0,
             height: '100vh',
             overflow: 'hidden',
-            background: 'hsl(30 15% 8%)',
+            backgroundColor: 'rgb(15, 25, 35)',
           }}
         >
           {/* Vidéo en fond — scrubée 0→10s par le scroll, avec zoom cinéma */}
@@ -283,7 +300,14 @@ export function DiagonalSplitReveal({
                 WebkitBackfaceVisibility: 'hidden',
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.3)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
+            <div
+              data-split-overlay
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(to bottom, rgba(15,25,35,0.30), transparent, rgba(15,25,35,0.55))',
+              }}
+            />
           </motion.div>
 
           {/* Moitié haute de l'image */}
@@ -330,14 +354,19 @@ export function DiagonalSplitReveal({
             style={{ x: topX, y: topY, opacity: titleOpacity }}
             className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6"
           >
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[hsl(40_25%_92%)] font-serif text-center max-w-4xl drop-shadow-2xl leading-tight">
+            <h1
+              data-split-title
+              className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-center max-w-4xl leading-tight"
+              style={{ color: '#ffffff', textShadow: '0 4px 24px rgba(0,0,0,0.6)' }}
+            >
               {title}
             </h1>
             <div
               className="mt-3 h-1 rounded-full"
               style={{
                 width: isMobile ? '120px' : '160px',
-                background: 'linear-gradient(90deg, transparent, hsl(38 55% 65%), transparent)',
+                background:
+                  'linear-gradient(90deg, transparent, rgb(52, 211, 153), transparent)',
               }}
             />
           </motion.div>
@@ -347,15 +376,22 @@ export function DiagonalSplitReveal({
             style={{ opacity: scrollHintOpacity }}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none"
           >
-            <p className="text-xs font-semibold tracking-widest uppercase text-[hsl(38_45%_65%)]">
+            <p
+              className="text-xs font-semibold tracking-widest uppercase"
+              style={{ color: 'rgb(167, 243, 208)' }}
+            >
               {scrollHint}
             </p>
             <motion.div
               animate={{ y: [0, 8, 0] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-6 h-10 border-2 border-[hsl(38_45%_48%/0.5)] rounded-full flex justify-center pt-1.5"
+              className="w-6 h-10 rounded-full flex justify-center pt-1.5"
+              style={{ border: '2px solid rgba(167,243,208,0.5)' }}
             >
-              <div className="w-1 h-2.5 rounded-full bg-[hsl(38_55%_65%)]" />
+              <div
+                className="w-1 h-2.5 rounded-full"
+                style={{ backgroundColor: 'rgb(52, 211, 153)' }}
+              />
             </motion.div>
           </motion.div>
         </div>
