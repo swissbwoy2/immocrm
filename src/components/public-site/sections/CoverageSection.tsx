@@ -17,11 +17,11 @@ function PulsingDot({ delay = 0 }: { delay?: number }) {
   return (
     <span className="relative inline-flex h-2.5 w-2.5">
       <motion.span
-        className="absolute inline-flex h-full w-full rounded-full bg-[hsl(38_55%_65%)]"
+        className="absolute inline-flex h-full w-full rounded-full bg-primary"
         animate={prefersReducedMotion ? {} : { scale: [1, 2], opacity: [0.7, 0] }}
         transition={{ duration: 1.6, delay, repeat: Infinity, ease: 'easeOut' as const }}
       />
-      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[hsl(38_55%_65%)]" />
+      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
     </span>
   );
 }
@@ -44,7 +44,7 @@ export function CoverageSection() {
                 fogFar={20}
                 fallback={
                   <div className="w-full h-full flex items-center justify-center">
-                    <Globe className="h-32 w-32 text-[hsl(38_45%_48%/0.3)]" />
+                    <Globe className="h-32 w-32 text-primary" />
                   </div>
                 }
               >
@@ -69,7 +69,7 @@ export function CoverageSection() {
                     transition={{ delay: dot.delay + 0.3, duration: 0.4, type: 'spring' as const }}
                   >
                     <PulsingDot delay={dot.delay} />
-                    <span className="text-[9px] font-bold text-[hsl(38_55%_65%)] bg-[hsl(30_15%_8%/0.8)] px-1.5 py-0.5 rounded-full border border-[hsl(38_45%_48%/0.4)]">
+                    <span className="text-[9px] font-bold text-primary bg-background px-1.5 py-0.5 rounded-full border border-primary/30">
                       {dot.label}
                     </span>
                   </motion.div>
@@ -82,8 +82,8 @@ export function CoverageSection() {
           <div ref={cantonRef}>
             <ScrollReveal variant="fade-up" className="mb-4">
               <div className="inline-flex items-center gap-2 mb-4">
-                <Globe className="h-5 w-5 text-[hsl(38_45%_48%)]" />
-                <span className="text-sm font-semibold text-[hsl(38_45%_48%)] uppercase tracking-wider">Couverture</span>
+                <Globe className="h-5 w-5 text-primary" />
+                <span className="text-sm font-semibold text-primary uppercase tracking-wider">Couverture</span>
               </div>
               <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-4 font-serif">
                 Toute la{' '}
@@ -101,10 +101,10 @@ export function CoverageSection() {
             >
               {cantons.map((canton, i) => (
                 <motion.div key={canton} variants={staggerItem}>
-                  <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 border border-[hsl(38_45%_48%/0.2)] hover:border-[hsl(38_45%_48%/0.55)] hover:bg-[hsl(38_45%_48%/0.06)] hover:shadow-[0_0_12px_hsl(38_45%_48%/0.15)] transition-all duration-300 cursor-default group">
+                  <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 border border-primary/30 hover:border-primary/30 hover:bg-primary/10 hover:shadow-[0_0_12px_hsl(38_45%_48%/0.15)] transition-all duration-300 cursor-default group">
                     <PulsingDot delay={i * 0.25} />
-                    <MapPin className="h-3.5 w-3.5 text-[hsl(38_45%_48%)]" />
-                    <span className="font-semibold text-foreground text-sm group-hover:text-[hsl(38_45%_58%)] transition-colors">{canton}</span>
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    <span className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{canton}</span>
                     <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                   </div>
                 </motion.div>
@@ -118,7 +118,7 @@ export function CoverageSection() {
               <Button
                 asChild
                 variant="outline"
-                className="group border-[hsl(38_45%_48%/0.35)] hover:border-[hsl(38_45%_48%/0.7)] hover:bg-[hsl(38_45%_48%/0.06)] text-[hsl(38_45%_44%)]"
+                className="group border-primary/30 hover:border-primary/30 hover:bg-primary/10 text-primary"
               >
                 <Link to="/nouveau-mandat">
                   Démarre ta recherche
