@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch, Building2, Hammer, KeyRound } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroChasseurAsset from '@/assets/hero-chasseur-split.png.asset.json';
+import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile.jpg.asset.json';
 import heroRevealVideo from '@/assets/hero-reveal-video.mp4';
 const heroBg = heroChasseurAsset.url;
+const heroBgMobile = heroChasseurMobileAsset.url;
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GrainOverlay } from '@/components/public-site/animations/GrainOverlay';
@@ -26,6 +28,7 @@ export function HeroSection() {
   return (
     <DiagonalSplitReveal
       imageSrc={heroBg}
+      imageSrcMobile={heroBgMobile}
       videoSrc={heroRevealVideo}
       title="Ton futur appartement, Notre Mission !"
       scrollHint="Faites défiler pour découvrir"
@@ -48,7 +51,7 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="mb-3 md:mb-5"
             >
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary border border-primary/30 rounded-full px-4 py-2 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-full px-4 py-2 backdrop-blur-sm">
                 <Crown className="h-4 w-4 text-primary" />
                 <span className="text-xs md:text-sm font-semibold text-primary tracking-wide">
                   ⭐ Agence N°1 de relocation en Suisse romande • Chasseur premium
@@ -107,7 +110,7 @@ export function HeroSection() {
                   onClick={() => setSearchType('location')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isLocation || !searchType
-                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
@@ -118,7 +121,7 @@ export function HeroSection() {
                   onClick={() => setSearchType('achat')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isAchat
-                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
@@ -202,7 +205,7 @@ export function HeroSection() {
                     <Button
                       asChild
                       size="lg"
-                      className="w-full group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-primary-foreground border-0 font-semibold text-base md:text-lg py-7"
+                      className="w-full group luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 font-semibold text-base md:text-lg py-7"
                     >
                       <a href="#analyse-dossier">
                         <FileSearch className="h-5 w-5 mr-2" />
@@ -283,7 +286,7 @@ export function HeroSection() {
                     <Button
                       asChild
                       size="lg"
-                      className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-primary-foreground border-0"
+                      className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
                     >
                       <Link to="/nouveau-mandat">
                         <Rocket className="mr-3 h-6 w-6 md:h-7 md:w-7" />

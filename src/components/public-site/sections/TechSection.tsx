@@ -30,7 +30,7 @@ export function TechSection() {
           <ScrollReveal variant="slide-right" className="hidden lg:flex items-center justify-center">
             <div className="relative w-72 h-72">
               {/* Center logo */}
-              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center shadow-md z-10 overflow-hidden border-2 border-primary/30">
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center shadow-md z-10 overflow-hidden border-2 border-primary/30">
                 <motion.div
                   animate={prefersReducedMotion ? {} : {
                     boxShadow: [
@@ -100,7 +100,7 @@ export function TechSection() {
                   <TiltCard intensity={3}>
                     <div className="relative rounded-2xl p-5 group bg-card/80 border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-500">
                       <div className="flex gap-4">
-                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300">
                           <feature.icon className="h-6 w-6 text-primary" />
                         </div>
                         <div className="flex-1">

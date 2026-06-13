@@ -50,7 +50,7 @@ export function ForWhoSection() {
             <motion.div key={i} variants={staggerItem}>
               <TiltCard intensity={5}>
                 <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 text-center space-y-4 hover:border-primary/30 hover:shadow-md transition-all duration-500 h-full">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/20">
                     <p.icon className="h-7 w-7 text-primary" />
                   </div>
                   <h3 className="text-lg font-bold text-foreground font-serif">{p.title}</h3>

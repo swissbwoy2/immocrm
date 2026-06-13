@@ -80,7 +80,7 @@ export function ServicesFullSection() {
               <motion.div key={i} variants={staggerItem} ref={cardRefs[i]}>
                 <TiltCard intensity={4}>
                   <div className="bg-card/50 backdrop-blur-sm border border-primary/30 rounded-2xl p-8 space-y-3 hover:border-primary/30 hover:shadow-md transition-all duration-500 h-full group">
-                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 group-hover:border-primary/30 group-hover:shadow-md transition-all duration-300">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 group-hover:border-primary/30 group-hover:shadow-md transition-all duration-300">
                       <d.icon className="h-7 w-7 text-primary" />
                     </div>
                     <h3 className="text-lg font-bold text-foreground font-serif group-hover:text-primary transition-colors">{d.title}</h3>

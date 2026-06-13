@@ -28,7 +28,7 @@ export function GuaranteeSection() {
   const pricingItems = isAchat ? pricingItemsAchat : pricingItemsLocation;
 
   return (
-    <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-primary to-background">
+    <section className="py-24 md:py-32 relative overflow-hidden bg-background">
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
 
@@ -57,7 +57,7 @@ export function GuaranteeSection() {
               <motion.div
                 animate={prefersReducedMotion ? {} : { y: [0, -10, 0] }}
                 transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' as const }}
-                className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center"
+                className="relative w-24 h-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center"
                 style={{ boxShadow: '0 0 32px hsl(var(--primary)), 0 0 8px hsl(var(--primary))' }}
               >
                 {/* Pulsing halo rings */}
@@ -88,7 +88,7 @@ export function GuaranteeSection() {
               <motion.div key={index} variants={staggerItem}>
                 <TiltCard intensity={4}>
                   <div className="relative rounded-2xl p-6 border border-primary/30 hover:border-primary/30 transition-all duration-500 h-full text-center bg-card/80 hover:shadow-md group">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mx-auto mb-4">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
                       <item.icon className="h-7 w-7 text-primary" />
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">{item.label}</p>
@@ -130,14 +130,14 @@ export function GuaranteeSection() {
           </ScrollReveal>
 
           <ScrollReveal variant="fade-up" delay={0.3} className="text-center">
-            <div className="inline-flex flex-col items-center gap-3 bg-gradient-to-r from-primary via-primary to-primary border-2 border-primary/30 rounded-2xl px-6 py-5">
+            <div className="inline-flex flex-col items-center gap-3 bg-primary/10 border-2 border-primary/30 rounded-2xl px-6 py-5">
               <div className="flex items-center gap-3">
                 <Crown className="h-6 w-6 text-primary" />
-                <span className="text-lg md:text-xl font-bold text-primary font-serif">
+                <span className="text-lg md:text-xl font-bold text-foreground font-serif">
                   {isAchat ? 'Garantie remboursement 6 mois 🎯' : 'Garantie 100% remboursé 🎯'}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-foreground/80">
                 {isAchat ? '✓ Commission 1% • ✓ Acompte déduit • ✓ Remboursé si échec après 6 mois' : '✓ Zéro condition cachée • ✓ Remboursement sous 7 jours'}
               </p>
             </div>

@@ -194,12 +194,12 @@ export function DifferentiatorSection() {
               <MagneticButton strength={0.2}>
                 {isAchat ? (
                   <a href={content.ctaLink}>
-                    <Button size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0 text-base px-10 py-6">
+                    <Button size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 text-base px-10 py-6">
                       {content.cta} 🏠 <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                   </a>
                 ) : (
-                  <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0 text-base px-10 py-6">
+                  <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 text-base px-10 py-6">
                     <Link to={content.ctaLink}>{content.cta} 🚀 <ArrowRight className="ml-2 h-5 w-5" /></Link>
                   </Button>
                 )}

@@ -227,7 +227,7 @@ export function AppShowcaseSection() {
                     )}
                     {videoMissing && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 bg-gradient-to-br from-primary via-black to-primary">
-                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary flex items-center justify-center mb-4 shadow-2xl">
+                        <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 shadow-2xl">
                           <Smartphone className="h-8 w-8 text-foreground" />
                         </div>
                         <p className="text-foreground/90 text-sm font-medium">Logisorama</p>
@@ -325,7 +325,7 @@ export function AppShowcaseSection() {
                   <Button
                     size="lg"
                     onClick={() => navigate('/nouveau-mandat')}
-                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-primary-foreground border-0 hover:opacity-95 transition-all"
+                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 hover:opacity-95 transition-all"
                   >
                     Créer mon compte maintenant
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />

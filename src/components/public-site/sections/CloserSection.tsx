@@ -45,7 +45,7 @@ export function CloserSection() {
             <Button
               asChild
               size="lg"
-              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0 text-base md:text-lg px-8 md:px-12 py-6"
+              className="group luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 text-base md:text-lg px-8 md:px-12 py-6"
             >
               <Link to="/nouveau-mandat">
                 <Rocket className="h-5 w-5 mr-2" />
@@ -90,7 +90,7 @@ export function CloserSection() {
                 ))}
               </div>
             </div>
-            <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0">
+            <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0">
               <Link to="/login">
                 <span>Devenir partenaire</span>
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -122,7 +122,7 @@ export function CloserSection() {
                   <div className="relative rounded-2xl p-6 md:p-8 group bg-card/80 border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-500">
                     <div className="flex gap-5 md:gap-6">
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300 group-hover:shadow-md">
+                        <div className="w-16 h-16 rounded-xl bg-primary/10 border border-primary/20 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300 group-hover:shadow-md">
                           <benefit.icon className="h-8 w-8 text-primary" />
                         </div>
                       </div>
