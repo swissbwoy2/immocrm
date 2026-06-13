@@ -284,6 +284,46 @@ All colors MUST be HSL.
   .theme-luxury div[style*="linear-gradient"][style*="hsl(28"] {
     background: hsl(var(--background)) !important;
   }
+
+  /* text-white family → ink (was meant for dark bg, now invisible on white) */
+  .theme-luxury .text-white,
+  .theme-luxury [class*="text-white/"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* bg-white/X translucent cards → solid muted card */
+  .theme-luxury [class*="bg-white/"] {
+    background-color: hsl(var(--muted)) !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Radial / linear gradients with gold or dark alpha → neutralize */
+  .theme-luxury [class*="bg-[radial-gradient"],
+  .theme-luxury [class*="bg-[linear-gradient"][class*="hsl(38_"],
+  .theme-luxury [class*="bg-[linear-gradient"][class*="hsl(30_"],
+  .theme-luxury [class*="bg-[linear-gradient"][class*="hsl(28_"] {
+    background-image: none !important;
+    background-color: transparent !important;
+  }
+
+  /* font-serif on public site → modern sans */
+  .theme-luxury .font-serif {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  }
+
+  /* Gold gradient classes → green/sky gradient */
+  .theme-luxury [class*="from-[hsl(38_"],
+  .theme-luxury [class*="via-[hsl(38_"],
+  .theme-luxury [class*="to-[hsl(38_"],
+  .theme-luxury [class*="from-[hsl(28_"],
+  .theme-luxury [class*="via-[hsl(28_"],
+  .theme-luxury [class*="to-[hsl(28_"],
+  .theme-luxury [class*="from-[hsl(30_"],
+  .theme-luxury [class*="to-[hsl(30_"] {
+    --tw-gradient-from: hsl(var(--primary)) !important;
+    --tw-gradient-via: hsl(var(--imr-green-light)) !important;
+    --tw-gradient-to: hsl(var(--accent)) !important;
+  }
 }
 
 @layer base {
