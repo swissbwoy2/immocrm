@@ -10,6 +10,7 @@ import {
 
 interface DiagonalSplitRevealProps {
   imageSrc: string;
+  imageSrcMobile?: string;
   videoSrc: string;
   title: string;
   scrollHint?: string;
@@ -31,11 +32,14 @@ const SCRUB_DURATION = 10; // secondes de vidéo balayées
  */
 export function DiagonalSplitReveal({
   imageSrc,
+  imageSrcMobile,
   videoSrc,
   title,
   scrollHint = 'Faites défiler pour découvrir',
   children,
 }: DiagonalSplitRevealProps) {
+  const useMobileImage = (mob: boolean, tab: boolean) =>
+    (mob || tab) && imageSrcMobile ? imageSrcMobile : imageSrc;
   const expansionRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const reducedVideoRef = useRef<HTMLVideoElement>(null);
@@ -322,10 +326,10 @@ export function DiagonalSplitReveal({
             className="absolute inset-0"
           >
             <img
-              src={imageSrc}
+              src={useMobileImage(isMobile, isTablet)}
               alt=""
               className="w-full h-full object-cover"
-              style={{ objectPosition: isMobile ? '60% 30%' : 'center center' }}
+              style={{ objectPosition: 'center center' }}
               loading="eager"
               fetchPriority="high"
             />
@@ -343,10 +347,10 @@ export function DiagonalSplitReveal({
             className="absolute inset-0"
           >
             <img
-              src={imageSrc}
+              src={useMobileImage(isMobile, isTablet)}
               alt=""
               className="w-full h-full object-cover"
-              style={{ objectPosition: isMobile ? '60% 30%' : 'center center' }}
+              style={{ objectPosition: 'center center' }}
               loading="eager"
             />
           </motion.div>
