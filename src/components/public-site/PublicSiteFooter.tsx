@@ -16,16 +16,16 @@ export function PublicSiteFooter() {
             <Link to="/" className="inline-block mb-2 group">
               <img src={logoImmoRama} alt="Immo-Rama" className="h-12 w-auto group-hover:scale-105 transition-transform" />
             </Link>
-            <p className="text-primary font-semibold text-sm mb-4">L'immobilier accessible</p>
-            <p className="text-muted-foreground text-sm max-w-md mb-4 leading-relaxed">
-              <a href="https://www.immo-rama.ch" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">Immo-Rama.ch</a>{' '}
+            <p className="text-primary-foreground font-semibold text-sm mb-4">L'immobilier accessible</p>
+            <p className="text-primary-foreground/70 text-sm max-w-md mb-4 leading-relaxed">
+              <a href="https://www.immo-rama.ch" target="_blank" rel="noopener noreferrer" className="text-primary-foreground underline underline-offset-4 font-semibold hover:opacity-80">Immo-Rama.ch</a>{' '}
               – Agence immobilière - Gestion - Vente - Construction et rénovation
             </p>
-            <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
-              ✨ Le coup de pouce que tout le monde mérite dans sa recherche d'appartement. <strong className="text-foreground">Démarre ta recherche maintenant !</strong>
+            <p className="text-primary-foreground/70 text-sm max-w-md mb-6 leading-relaxed">
+              ✨ Le coup de pouce que tout le monde mérite dans sa recherche d'appartement. <strong className="text-primary-foreground">Démarre ta recherche maintenant !</strong>
             </p>
             <div className="inline-flex items-center gap-2">
-              <div className="relative glass-morphism rounded-full px-4 py-2 text-sm text-muted-foreground border border-border/40 bg-card/80">
+              <div className="relative glass-morphism rounded-full px-4 py-2 text-sm text-primary-foreground/70 border border-primary-foreground/15 bg-primary-foreground/5">
                 <span className="text-xl mr-2">🇨🇭</span>
                 <span>🇨🇭 Application fièrement Suisse</span>
               </div>
@@ -34,7 +34,7 @@ export function PublicSiteFooter() {
 
           {/* Portail */}
           <div>
-            <h4 className="font-semibold text-foreground mb-5">Portail Annonces</h4>
+            <h4 className="font-semibold text-primary-foreground mb-5">Portail Annonces</h4>
             <ul className="space-y-3">
               {[
                 { to: '/annonces', label: 'Toutes les annonces' },
@@ -43,8 +43,8 @@ export function PublicSiteFooter() {
                 { to: '/inscription-annonceur', label: 'Devenir annonceur' },
               ].map((link) => (
                 <li key={link.to}>
-                  <Link to={link.to} className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1 group">
-                    <span className="relative">{link.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                  <Link to={link.to} className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm inline-flex items-center gap-1 group">
+                    <span className="relative">{link.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                     <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary">→</span>
                   </Link>
                 </li>
@@ -54,7 +54,7 @@ export function PublicSiteFooter() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-foreground mb-5">Liens rapides</h4>
+            <h4 className="font-semibold text-primary-foreground mb-5">Liens rapides</h4>
             <ul className="space-y-3">
               {[
                 { to: '/nouveau-mandat', label: 'Activer ma recherche' },
@@ -62,21 +62,21 @@ export function PublicSiteFooter() {
                 { to: '/login', label: 'Se connecter' },
               ].map((link) => (
                 <li key={link.to}>
-                  <Link to={link.to} className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1 group">
-                    <span className="relative">{link.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                  <Link to={link.to} className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm inline-flex items-center gap-1 group">
+                    <span className="relative">{link.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                     <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary">→</span>
                   </Link>
                 </li>
               ))}
               <li>
-                <a href="https://www.immo-rama.ch" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1.5 group">
-                  <span className="relative">www.immo-rama.ch<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                <a href="https://www.immo-rama.ch" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm inline-flex items-center gap-1.5 group">
+                  <span className="relative">www.immo-rama.ch<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                   <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
                 </a>
               </li>
               <li>
-                <a href="mailto:info@immo-rama.ch" className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1 group">
-                  <span className="relative">Nous contacter<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                <a href="mailto:info@immo-rama.ch" className="text-primary-foreground/70 hover:text-primary-foreground transition-colors text-sm inline-flex items-center gap-1 group">
+                  <span className="relative">Nous contacter<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                   <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary">→</span>
                 </a>
               </li>
@@ -85,22 +85,22 @@ export function PublicSiteFooter() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold text-foreground mb-5">Contact</h4>
-            <ul className="space-y-4 text-sm text-muted-foreground">
+            <h4 className="font-semibold text-primary-foreground mb-5">Contact</h4>
+            <ul className="space-y-4 text-sm text-primary-foreground/70">
               <li>
-                <a href="tel:+41216342839" className="hover:text-primary transition-colors inline-flex items-center gap-3 group">
-                  <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-all">📞</span>
-                  <span className="relative font-semibold text-foreground">021 634 28 39<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                <a href="tel:+41216342839" className="hover:text-primary-foreground transition-colors inline-flex items-center gap-3 group">
+                  <span className="w-9 h-9 rounded-xl bg-primary-foreground/10 flex items-center justify-center group-hover:bg-primary-foreground/15 transition-all">📞</span>
+                  <span className="relative font-semibold text-primary-foreground">021 634 28 39<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                 </a>
               </li>
               <li>
-                <a href="mailto:info@immo-rama.ch" className="hover:text-primary transition-colors inline-flex items-center gap-3 group">
-                  <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-all">📧</span>
-                  <span className="relative">info@immo-rama.ch<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                <a href="mailto:info@immo-rama.ch" className="hover:text-primary-foreground transition-colors inline-flex items-center gap-3 group">
+                  <span className="w-9 h-9 rounded-xl bg-primary-foreground/10 flex items-center justify-center group-hover:bg-primary-foreground/15 transition-all">📧</span>
+                  <span className="relative">info@immo-rama.ch<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                 </a>
               </li>
               <li className="flex items-start gap-3">
-                <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">📍</span>
+                <span className="w-9 h-9 rounded-xl bg-primary-foreground/10 flex items-center justify-center shrink-0">📍</span>
                 <div className="flex flex-col">
                   <span>Chemin de l'Esparcette 5</span>
                   <span>1023 Crissier</span>
@@ -112,15 +112,15 @@ export function PublicSiteFooter() {
 
         {/* Bottom bar */}
         <div className="relative pt-8">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-foreground/20 to-transparent" />
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+            <p className="text-sm text-primary-foreground/70 flex items-center gap-2 flex-wrap">
               <span>© {currentYear} Immo-Rama.ch</span>
               <span className="hidden sm:inline">|</span>
               <span className="hidden sm:inline text-xs">IDE: CHE-442.303.796</span>
               <span className="hidden sm:inline">-</span>
               <span className="hidden sm:inline">Fait avec</span>
-              <Heart className="h-3 w-3 text-primary hidden sm:inline-block" />
+              <Heart className="h-3 w-3 text-primary-foreground hidden sm:inline-block" />
               <span className="hidden sm:inline">en Suisse 🇨🇭</span>
             </p>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
@@ -128,14 +128,14 @@ export function PublicSiteFooter() {
                 { label: 'Mentions légales', to: '/mentions-legales' },
                 { label: 'Politique de confidentialité', to: '/politique-confidentialite' },
               ].map((item) => (
-                <a key={item.label} href={item.to} className="text-muted-foreground hover:text-primary transition-colors relative group">
-                  <span className="relative">{item.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                <a key={item.label} href={item.to} className="text-primary-foreground/70 hover:text-primary-foreground transition-colors relative group">
+                  <span className="relative">{item.label}<span className="absolute bottom-0 left-0 w-0 h-px bg-primary-foreground group-hover:w-full transition-all duration-300" /></span>
                 </a>
               ))}
               <button
                 type="button"
                 onClick={() => import('@/components/CookieConsentBanner').then(m => m.openCookiePreferences())}
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
               >
                 Gérer mes cookies
               </button>
