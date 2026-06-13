@@ -39,7 +39,11 @@ export function DossierAnalyseSection() {
               {/* Headline */}
               <div className="space-y-4">
                 <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground leading-[1.1]">
-                  Nous aidons <span className="text-primary italic">nos clients</span> à trouver rapidement leur futur appartement en Suisse romande
+                  Nous aidons{" "}
+                  <span className="block text-primary italic font-semibold text-6xl md:text-8xl lg:text-9xl leading-[0.95] my-2 md:my-3">
+                    nos clients
+                  </span>
+                  à trouver rapidement leur futur appartement en Suisse romande
                 </h1>
                 <p className="text-muted-foreground text-base md:text-lg max-w-xl leading-relaxed">
                   L'expertise Immo-rama.ch pour sécuriser ton dossier et emménager rapidement, partout en Suisse romande.
