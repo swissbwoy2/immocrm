@@ -122,7 +122,7 @@ export function CloserSection() {
                   <div className="relative rounded-2xl p-6 md:p-8 group bg-card/80 border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-500">
                     <div className="flex gap-5 md:gap-6">
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300 group-hover:shadow-md">
+                        <div className="w-16 h-16 rounded-xl bg-primary/10 border border-primary/20 group-hover:border-primary/30 flex items-center justify-center transition-all duration-300 group-hover:shadow-md">
                           <benefit.icon className="h-8 w-8 text-primary" />
                         </div>
                       </div>

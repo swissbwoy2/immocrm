@@ -57,7 +57,7 @@ export function GuaranteeSection() {
               <motion.div
                 animate={prefersReducedMotion ? {} : { y: [0, -10, 0] }}
                 transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' as const }}
-                className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center"
+                className="relative w-24 h-24 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center"
                 style={{ boxShadow: '0 0 32px hsl(var(--primary)), 0 0 8px hsl(var(--primary))' }}
               >
                 {/* Pulsing halo rings */}
@@ -88,7 +88,7 @@ export function GuaranteeSection() {
               <motion.div key={index} variants={staggerItem}>
                 <TiltCard intensity={4}>
                   <div className="relative rounded-2xl p-6 border border-primary/30 hover:border-primary/30 transition-all duration-500 h-full text-center bg-card/80 hover:shadow-md group">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mx-auto mb-4">
+                    <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
                       <item.icon className="h-7 w-7 text-primary" />
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">{item.label}</p>

@@ -227,7 +227,7 @@ export function AppShowcaseSection() {
                     )}
                     {videoMissing && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 bg-gradient-to-br from-primary via-black to-primary">
-                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-primary flex items-center justify-center mb-4 shadow-2xl">
+                        <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 shadow-2xl">
                           <Smartphone className="h-8 w-8 text-foreground" />
                         </div>
                         <p className="text-foreground/90 text-sm font-medium">Logisorama</p>

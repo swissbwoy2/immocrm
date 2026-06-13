@@ -82,7 +82,7 @@ export function StatsSection() {
             <motion.div key={index} variants={staggerItem}>
               <TiltCard intensity={6}>
                 <div className="rounded-xl p-6 text-center luxury-glass hover:border-primary/30 transition-all duration-500 group h-full">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:shadow-md transition-all duration-500">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 group-hover:shadow-md transition-all duration-500">
                     <stat.icon className="h-8 w-8 text-primary" />
                   </div>
                   <div className="text-3xl md:text-4xl font-bold font-serif mb-2 luxury-gradient-text">

@@ -99,7 +99,7 @@ function StepCard({ step, index, isInView }: { step: Step; index: number; isInVi
         initial={prefersReducedMotion ? false : { rotate: -15, scale: 0.6, opacity: 0 }}
         animate={isInView ? { rotate: 0, scale: 1, opacity: 1 } : {}}
         transition={{ type: 'spring' as const, stiffness: 220, damping: 16, delay: index * 0.18 + 0.28 }}
-        className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mb-5 group-hover:shadow-md transition-shadow duration-300"
+        className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-5 group-hover:shadow-md transition-shadow duration-300"
       >
         <Icon className="h-7 w-7 text-primary" />
       </motion.div>
