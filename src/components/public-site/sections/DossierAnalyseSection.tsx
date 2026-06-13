@@ -77,7 +77,7 @@ export function DossierAnalyseSection() {
                   size="lg"
                   variant="outline"
                   onClick={() => openForm('achat')}
-                  className="group h-auto py-4 px-6 bg-transparent border border-primary/40 hover:border-primary/70 hover:bg-primary/5 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+                  className="group h-auto py-4 px-6 bg-transparent border border-primary/40 hover:border-primary/70 hover:bg-primary/5 text-foreground font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
                 >
                   <Home className="h-5 w-5 text-primary" />
                   <span className="text-base">Je veux acheter un bien</span>
