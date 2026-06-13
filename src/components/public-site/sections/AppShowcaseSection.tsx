@@ -325,7 +325,7 @@ export function AppShowcaseSection() {
                   <Button
                     size="lg"
                     onClick={() => navigate('/nouveau-mandat')}
-                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0 hover:opacity-95 transition-all"
+                    className="group h-14 px-8 text-base font-semibold luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-primary-foreground border-0 hover:opacity-95 transition-all"
                   >
                     Créer mon compte maintenant
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
