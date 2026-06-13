@@ -16,19 +16,19 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
       {/* Scroll progress bar dorée */}
       <ScrollProgressBar />
 
-      {/* Top banner — luxury black with gold underline (fixed above header) */}
+      {/* Top banner — éditorial sage sur cream */}
       <div
-        className="fixed top-0 left-0 right-0 z-[60] border-b bg-secondary border-border"
+        className="fixed top-0 left-0 right-0 z-[60] border-b bg-primary text-primary-foreground"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-xs sm:text-sm tracking-wide text-muted-foreground">
+          <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em]">
             Un logiciel propulsé par{' '}
             <a
               href="https://www.immo-rama.ch"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-primary transition-colors hover:opacity-80"
+              className="font-semibold underline-offset-4 hover:underline"
             >
               Immo-rama.ch
             </a>

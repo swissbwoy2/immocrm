@@ -28,11 +28,11 @@ export function PublicSiteHeader() {
         <div
           className="transition-all duration-500"
           style={{
-            backgroundColor: scrolled ? 'hsl(0 0% 100% / 0.97)' : 'hsl(0 0% 100% / 0.85)',
-            backdropFilter: scrolled ? 'blur(24px)' : 'blur(10px)',
-            WebkitBackdropFilter: scrolled ? 'blur(24px)' : 'blur(10px)',
-            borderBottom: `1px solid hsl(142 45% 50% / ${scrolled ? '0.35' : '0.15'})`,
-            boxShadow: scrolled ? '0 4px 24px hsl(142 30% 20% / 0.08)' : 'none',
+            backgroundColor: scrolled ? 'hsl(var(--background) / 0.97)' : 'hsl(var(--background) / 0.88)',
+            backdropFilter: scrolled ? 'blur(20px)' : 'blur(8px)',
+            WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'blur(8px)',
+            borderBottom: `1px solid hsl(var(--border) / ${scrolled ? '1' : '0.5'})`,
+            boxShadow: scrolled ? '0 1px 0 hsl(var(--border) / 0.6)' : 'none',
           }}
         >
           <div className="container mx-auto px-4 py-3">
@@ -74,26 +74,18 @@ export function PublicSiteHeader() {
                   </Link>
                 </Button>
 
-                {/* Try Demo — ultra mis en avant, label toujours visible */}
+                {/* Essayer la démo — sage uni, rectangulaire, éditorial */}
                 <motion.div
-                  whileHover={prefersReducedMotion ? {} : { scale: 1.04 }}
-                  whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
-                  animate={prefersReducedMotion ? {} : {
-                    boxShadow: [
-                      '0 0 0 0 hsl(160 84% 39% / 0.55)',
-                      '0 0 0 10px hsl(160 84% 39% / 0)',
-                    ],
-                  }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
-                  className="rounded-md"
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
                 >
                   <Button
                     asChild
                     size="sm"
-                    className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 text-white border-0 font-bold shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 transition-shadow px-2.5 sm:px-4"
+                    className="rounded-sm bg-accent text-accent-foreground hover:bg-accent/90 border-0 font-semibold uppercase tracking-[0.12em] px-2.5 sm:px-4"
                   >
                     <Link to="/demo">
-                      <Sparkles className="h-4 w-4 mr-1 sm:mr-2 animate-pulse" />
+                      <Sparkles className="h-4 w-4 mr-1 sm:mr-2" />
                       <span className="whitespace-nowrap">Essayer la démo</span>
                     </Link>
                   </Button>
@@ -107,7 +99,7 @@ export function PublicSiteHeader() {
                   <Button
                     asChild
                     size="sm"
-                    className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+                    className="rounded-sm luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
                   >
                     <Link to="/rendez-vous">
                       <Calendar className="h-4 w-4 sm:mr-2" />
