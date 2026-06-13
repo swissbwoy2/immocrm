@@ -6,13 +6,8 @@ export function PublicSiteFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-t from-card via-card to-background" />
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute bottom-20 left-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute top-20 right-[15%] w-40 h-40 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-      </div>
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+    <footer className="relative overflow-hidden bg-primary text-primary-foreground">
+      <div className="absolute top-0 left-0 right-0 h-px bg-primary-foreground/15" />
 
       <div className="container mx-auto px-4 py-16 md:py-20 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-10 mb-12 md:mb-16">
