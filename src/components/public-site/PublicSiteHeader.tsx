@@ -28,11 +28,11 @@ export function PublicSiteHeader() {
         <div
           className="transition-all duration-500"
           style={{
-            backgroundColor: scrolled ? 'hsl(40 30% 96% / 0.97)' : 'hsl(40 30% 96% / 0.72)',
+            backgroundColor: scrolled ? 'hsl(0 0% 100% / 0.97)' : 'hsl(0 0% 100% / 0.85)',
             backdropFilter: scrolled ? 'blur(24px)' : 'blur(10px)',
             WebkitBackdropFilter: scrolled ? 'blur(24px)' : 'blur(10px)',
-            borderBottom: `1px solid hsl(38 45% 48% / ${scrolled ? '0.45' : '0.2'})`,
-            boxShadow: scrolled ? '0 4px 24px hsl(30 15% 10% / 0.08)' : 'none',
+            borderBottom: `1px solid hsl(142 45% 50% / ${scrolled ? '0.35' : '0.15'})`,
+            boxShadow: scrolled ? '0 4px 24px hsl(142 30% 20% / 0.08)' : 'none',
           }}
         >
           <div className="container mx-auto px-4 py-3">
