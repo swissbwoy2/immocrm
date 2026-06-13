@@ -15,8 +15,8 @@ export function BorderBeam({
   size = 200,
   duration = 12,
   borderWidth = 1.5,
-  colorFrom = 'hsl(38 55% 65%)',
-  colorTo = 'hsl(28 35% 38%)',
+  colorFrom = 'hsl(var(--primary))',
+  colorTo = 'hsl(var(--primary))',
   delay = 0,
 }: BorderBeamProps) {
   return (
