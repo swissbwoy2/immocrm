@@ -139,52 +139,54 @@ All colors MUST be HSL.
     --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
   }
 
-  /* PUBLIC THEME — Immo-rama 100% Light (scoped via .theme-luxury) */
+  /* PUBLIC THEME — Immo-rama charte (cream + sage green) */
   .theme-luxury {
-    --background: 0 0% 100%;
-    --foreground: 200 35% 18%;
-    --card: 0 0% 100%;
-    --card-foreground: 200 35% 18%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 200 35% 18%;
-    --primary: 158 55% 38%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 160 30% 94%;
-    --secondary-foreground: 200 35% 18%;
-    --muted: 160 25% 97%;
-    --muted-foreground: 200 20% 38%;
-    --accent: 200 70% 45%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 160 15% 88%;
-    --input: 160 15% 88%;
-    --ring: 158 55% 38%;
-    --radius: 0.75rem;
-    --shadow-sm: 0 1px 2px 0 hsl(200 30% 20% / 0.05);
-    --shadow-md: 0 6px 14px -4px hsl(200 30% 20% / 0.08), 0 2px 4px -2px hsl(200 30% 20% / 0.05);
-    --shadow-lg: 0 18px 35px -10px hsl(200 30% 20% / 0.10), 0 6px 12px -6px hsl(200 30% 20% / 0.06);
-    --shadow-xl: 0 30px 60px -15px hsl(200 30% 20% / 0.14), 0 12px 20px -10px hsl(200 30% 20% / 0.08);
-    --shadow-glow: 0 0 30px hsl(158 55% 38% / 0.25);
-    --shadow-card-hover: 0 20px 50px -12px hsl(158 55% 38% / 0.22);
-    --imr-green: 158 55% 38%;
-    --imr-green-light: 158 50% 50%;
-    --imr-green-pale: 160 30% 94%;
-    --imr-sky: 200 70% 45%;
-    --imr-sky-soft: 200 60% 95%;
-    --imr-ink: 200 35% 18%;
-    --imr-ink-soft: 200 20% 38%;
+    --background: 40 30% 96%;
+    --foreground: 150 15% 15%;
+    --card: 40 30% 98%;
+    --card-foreground: 150 15% 15%;
+    --popover: 40 30% 98%;
+    --popover-foreground: 150 15% 15%;
+    --primary: 145 18% 32%;
+    --primary-foreground: 40 30% 97%;
+    --secondary: 40 20% 92%;
+    --secondary-foreground: 150 15% 15%;
+    --muted: 40 20% 92%;
+    --muted-foreground: 150 10% 35%;
+    --accent: 145 15% 88%;
+    --accent-foreground: 150 15% 15%;
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 40 30% 97%;
+    --border: 40 15% 85%;
+    --input: 40 15% 85%;
+    --ring: 145 18% 32%;
+    --radius: 0.5rem;
+    --shadow-sm: 0 1px 2px 0 hsl(150 15% 15% / 0.04);
+    --shadow-md: 0 6px 14px -4px hsl(150 15% 15% / 0.07), 0 2px 4px -2px hsl(150 15% 15% / 0.04);
+    --shadow-lg: 0 18px 35px -10px hsl(150 15% 15% / 0.09), 0 6px 12px -6px hsl(150 15% 15% / 0.05);
+    --shadow-xl: 0 30px 60px -15px hsl(150 15% 15% / 0.12), 0 12px 20px -10px hsl(150 15% 15% / 0.07);
+    --shadow-glow: 0 0 30px hsl(145 18% 32% / 0.18);
+    --shadow-card-hover: 0 20px 50px -12px hsl(145 18% 32% / 0.18);
+    --imr-green: 145 18% 32%;
+    --imr-green-light: 145 18% 45%;
+    --imr-green-pale: 40 20% 92%;
+    --imr-green-dark: 150 12% 25%;
+    --imr-sky: 145 18% 32%;
+    --imr-sky-soft: 40 25% 94%;
+    --imr-ink: 150 15% 15%;
+    --imr-ink-soft: 150 10% 35%;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
   }
 
   .theme-luxury h1,
   .theme-luxury h2,
   .theme-luxury h3,
   .theme-luxury h4 {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
     color: hsl(var(--imr-ink));
   }
 
@@ -193,9 +195,9 @@ All colors MUST be HSL.
   .theme-luxury hr,
   .theme-luxury .luxury-divider {
     border: none;
-    height: 2px;
-    background: linear-gradient(to right, transparent, hsl(var(--primary)), transparent);
-    border-radius: 2px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, hsl(var(--border)), transparent);
+    border-radius: 1px;
   }
 
   /* === Light theme helpers (minimal, targeted) === */
@@ -206,20 +208,21 @@ All colors MUST be HSL.
     background-color: transparent !important;
   }
   .theme-luxury .font-serif {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif !important;
   }
   .theme-luxury .luxury-shimmer-btn,
   .theme-luxury .luxury-cta-glow {
-    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+    background-image: none !important;
+    background-color: hsl(var(--primary)) !important;
     color: hsl(var(--primary-foreground)) !important;
-    box-shadow: var(--shadow-glow) !important;
+    box-shadow: var(--shadow-md) !important;
   }
   .theme-luxury .luxury-gradient-text {
-    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))) !important;
-    background-clip: text !important;
-    -webkit-background-clip: text !important;
-    color: transparent !important;
-    -webkit-text-fill-color: transparent !important;
+    background-image: none !important;
+    background-clip: initial !important;
+    -webkit-background-clip: initial !important;
+    color: hsl(var(--primary)) !important;
+    -webkit-text-fill-color: hsl(var(--primary)) !important;
   }
   .theme-luxury .luxury-hero-bg,
   .theme-luxury .luxury-mesh-bg,
