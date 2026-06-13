@@ -52,9 +52,8 @@ export default function HomePage() {
 
   return (
     <PublicSiteLayout>
-      <WebGLErrorBoundary>
-        <TravelingGoldKey3D />
-      </WebGLErrorBoundary>
+
+
 
       {/* Eager sections */}
       <DossierAnalyseSection />
