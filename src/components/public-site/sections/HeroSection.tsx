@@ -367,7 +367,6 @@ export function HeroSection() {
             </motion.div>
           </div>
         </div>
-      </section>
-    </DiagonalSplitReveal>
+    </section>
   );
 }
