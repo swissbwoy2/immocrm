@@ -346,6 +346,7 @@ export function DiagonalSplitReveal({
               src={imageSrc}
               alt=""
               className="w-full h-full object-cover"
+              style={{ objectPosition: isMobile ? '60% 30%' : 'center center' }}
               loading="eager"
             />
           </motion.div>
