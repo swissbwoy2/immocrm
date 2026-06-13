@@ -18,6 +18,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         success: "bg-green-600 text-white hover:bg-green-700 hover:shadow-md active:bg-green-800",
         warning: "bg-amber-500 text-white hover:bg-amber-600 hover:shadow-md active:bg-amber-700",
+        immo: "rounded-none bg-primary text-primary-foreground hover:bg-accent transition-colors uppercase tracking-widest text-xs font-bold",
+        "immo-outline": "rounded-none border border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground transition-colors uppercase tracking-widest text-xs font-bold",
       },
       size: {
         default: "h-10 px-4 py-2",

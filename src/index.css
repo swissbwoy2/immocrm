@@ -226,10 +226,10 @@ All colors MUST be HSL.
     background-color: hsl(var(--primary)) !important;
     color: hsl(var(--primary-foreground)) !important;
     box-shadow: var(--shadow-md) !important;
-    border-radius: 0.25rem !important;
+    border-radius: 0 !important;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600 !important;
+    letter-spacing: 0.12em;
+    font-weight: 700 !important;
   }
   .theme-luxury .luxury-shimmer-btn:hover,
   .theme-luxury .luxury-cta-glow:hover {
@@ -313,6 +313,32 @@ All colors MUST be HSL.
     --whatsapp-bubble-out: 158 35% 25%;
     --whatsapp-bubble-in: 217 19% 18%;
     --whatsapp-bg: 215 28% 11%;
+  }
+}
+
+/* === Immo-Rama Alpine editorial — utilitaires signature === */
+@layer components {
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.2em] text-accent;
+  }
+  .immo-btn {
+    @apply inline-flex items-center justify-center
+           px-8 py-4 text-xs font-bold uppercase tracking-widest
+           bg-primary text-primary-foreground
+           hover:bg-accent transition-colors
+           rounded-none;
+  }
+  .immo-btn-outline {
+    @apply inline-flex items-center justify-center
+           px-8 py-4 text-xs font-bold uppercase tracking-widest
+           border border-primary text-primary
+           hover:bg-primary hover:text-primary-foreground transition-colors
+           rounded-none;
+  }
+  .immo-card {
+    @apply bg-card border border-border
+           hover:border-accent hover:bg-secondary
+           transition-colors;
   }
 }
 
