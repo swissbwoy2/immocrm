@@ -139,46 +139,49 @@ All colors MUST be HSL.
     --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
   }
 
-  /* PUBLIC THEME — Immo-rama Green & White (scoped via .theme-luxury) */
+  /* PUBLIC THEME — Immo-rama 100% Light (scoped via .theme-luxury) */
   .theme-luxury {
     --background: 0 0% 100%;
-    --foreground: 215 25% 15%;
+    --foreground: 200 35% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 200 35% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 142 45% 50%;
+    --popover-foreground: 200 35% 18%;
+    --primary: 158 55% 38%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 142 30% 95%;
-    --secondary-foreground: 215 25% 15%;
-    --muted: 142 20% 96%;
-    --muted-foreground: 215 15% 40%;
-    --accent: 200 70% 60%;
+    --secondary: 160 30% 94%;
+    --secondary-foreground: 200 35% 18%;
+    --muted: 160 25% 97%;
+    --muted-foreground: 200 20% 38%;
+    --accent: 200 70% 45%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 142 20% 88%;
-    --input: 142 20% 88%;
-    --ring: 142 45% 50%;
+    --border: 160 15% 88%;
+    --input: 160 15% 88%;
+    --ring: 158 55% 38%;
     --radius: 0.75rem;
-    --shadow-sm: 0 1px 2px 0 hsl(142 30% 20% / 0.05);
-    --shadow-md: 0 6px 14px -4px hsl(142 30% 20% / 0.08), 0 2px 4px -2px hsl(142 30% 20% / 0.05);
-    --shadow-lg: 0 18px 35px -10px hsl(142 30% 20% / 0.10), 0 6px 12px -6px hsl(142 30% 20% / 0.06);
-    --shadow-xl: 0 30px 60px -15px hsl(142 30% 20% / 0.14), 0 12px 20px -10px hsl(142 30% 20% / 0.08);
-    --shadow-glow: 0 0 30px hsl(142 45% 50% / 0.25);
-    --shadow-card-hover: 0 20px 50px -12px hsl(142 45% 50% / 0.22);
-    --imr-green: 142 45% 50%;
-    --imr-green-light: 142 55% 62%;
-    --imr-green-pale: 142 35% 94%;
-    --imr-sky: 200 70% 70%;
-    --imr-sky-soft: 200 80% 92%;
-    --imr-ink: 215 25% 15%;
-    --imr-ink-soft: 215 20% 35%;
+    --shadow-sm: 0 1px 2px 0 hsl(200 30% 20% / 0.05);
+    --shadow-md: 0 6px 14px -4px hsl(200 30% 20% / 0.08), 0 2px 4px -2px hsl(200 30% 20% / 0.05);
+    --shadow-lg: 0 18px 35px -10px hsl(200 30% 20% / 0.10), 0 6px 12px -6px hsl(200 30% 20% / 0.06);
+    --shadow-xl: 0 30px 60px -15px hsl(200 30% 20% / 0.14), 0 12px 20px -10px hsl(200 30% 20% / 0.08);
+    --shadow-glow: 0 0 30px hsl(158 55% 38% / 0.25);
+    --shadow-card-hover: 0 20px 50px -12px hsl(158 55% 38% / 0.22);
+    --imr-green: 158 55% 38%;
+    --imr-green-light: 158 50% 50%;
+    --imr-green-pale: 160 30% 94%;
+    --imr-sky: 200 70% 45%;
+    --imr-sky-soft: 200 60% 95%;
+    --imr-ink: 200 35% 18%;
+    --imr-ink-soft: 200 20% 38%;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
   .theme-luxury h1,
   .theme-luxury h2,
-  .theme-luxury h3 {
+  .theme-luxury h3,
+  .theme-luxury h4 {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -195,43 +198,67 @@ All colors MUST be HSL.
     border-radius: 2px;
   }
 
-  /* Legacy gold/dark inline-color overrides */
-  .theme-luxury [class*="bg-[hsl(30_15%_8"],
-  .theme-luxury [class*="bg-[hsl(30_15%_10"],
-  .theme-luxury [class*="bg-[hsl(30_15%_11"],
-  .theme-luxury [class*="bg-[hsl(30_15%_12"],
-  .theme-luxury [class*="bg-[hsl(30_15%_14"],
-  .theme-luxury [class*="bg-[hsl(28_25%_12"] {
+  /* === NUCLEAR OVERRIDES: kill ALL dark luxury (hsl 28/30) and gold (hsl 38/40) === */
+  /* Catches any class containing these hue families, regardless of saturation/lightness/alpha */
+  .theme-luxury [class*="bg-[hsl(30_"],
+  .theme-luxury [class*="bg-[hsl(28_"],
+  .theme-luxury [class*="bg-[hsl(25_"],
+  .theme-luxury [class*="bg-[hsl(20_"],
+  .theme-luxury [class*="bg-[hsl(15_"] {
     background-color: hsl(var(--background)) !important;
+    background-image: none !important;
   }
-  .theme-luxury [class*="text-[hsl(40_25%_96"],
-  .theme-luxury [class*="text-[hsl(40_25%_92"],
-  .theme-luxury [class*="text-[hsl(40_25%_85"],
-  .theme-luxury [class*="text-[hsl(40_35%_98"],
-  .theme-luxury [class*="text-[hsl(40_20%_75"],
-  .theme-luxury [class*="text-[hsl(40_20%_55"],
-  .theme-luxury [class*="text-[hsl(40_20%_50"] {
-    color: hsl(var(--imr-ink-soft)) !important;
+
+  /* Dark-on-dark text classes (the 40 hue gold/cream family) → ink */
+  .theme-luxury [class*="text-[hsl(40_"],
+  .theme-luxury [class*="text-[hsl(30_"],
+  .theme-luxury [class*="text-[hsl(28_"] {
+    color: hsl(var(--imr-ink)) !important;
   }
-  .theme-luxury [class*="text-[hsl(38_45%_48"],
-  .theme-luxury [class*="text-[hsl(38_45%_55"],
-  .theme-luxury [class*="text-[hsl(38_55%_65"],
-  .theme-luxury [class*="text-[hsl(38_55%_70"],
-  .theme-luxury [class*="text-[hsl(38_55%_85"] {
+
+  /* Gold accents (38 hue family) — text → green, bg → pale green, borders → subtle */
+  .theme-luxury [class*="text-[hsl(38_"],
+  .theme-luxury [class*="text-[hsl(42_"],
+  .theme-luxury [class*="text-[hsl(45_"] {
     color: hsl(var(--primary)) !important;
   }
-  .theme-luxury [class*="border-[hsl(38_45%_48"],
-  .theme-luxury [class*="border-[hsl(38_45%_44"],
-  .theme-luxury [class*="border-[hsl(38_55%_65"],
-  .theme-luxury [class*="border-[hsl(38_30%_80"],
-  .theme-luxury [class*="border-[hsl(38_25%"] {
-    border-color: hsl(var(--primary) / 0.3) !important;
-  }
-  .theme-luxury [class*="bg-[hsl(38_45%_48"],
-  .theme-luxury [class*="bg-[hsl(38_25%_90"],
-  .theme-luxury [class*="bg-[hsl(38_20%_92"] {
+  .theme-luxury [class*="bg-[hsl(38_"],
+  .theme-luxury [class*="bg-[hsl(42_"],
+  .theme-luxury [class*="bg-[hsl(45_"] {
     background-color: hsl(var(--imr-green-pale)) !important;
+    background-image: none !important;
   }
+  .theme-luxury [class*="border-[hsl(38_"],
+  .theme-luxury [class*="border-[hsl(40_"],
+  .theme-luxury [class*="border-[hsl(28_"],
+  .theme-luxury [class*="border-[hsl(30_"],
+  .theme-luxury [class*="border-[hsl(42_"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Inline style overrides for dark bg + gold colors */
+  .theme-luxury [style*="hsl(30 15%"],
+  .theme-luxury [style*="hsl(28 25%"],
+  .theme-luxury [style*="hsl(30 20%"],
+  .theme-luxury [style*="hsl(25 15%"] {
+    background-color: hsl(var(--background)) !important;
+    background-image: none !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Luxury grain texture — neutralized on light theme */
+  .theme-luxury .luxury-grain,
+  .theme-luxury .luxury-grain::before,
+  .theme-luxury .luxury-grain::after {
+    background-image: none !important;
+    background-color: transparent !important;
+    opacity: 1 !important;
+  }
+  .theme-luxury .luxury-grain {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  /* Premium CTAs */
   .theme-luxury .luxury-shimmer-btn,
   .theme-luxury .luxury-cta-glow {
     background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
@@ -245,13 +272,96 @@ All colors MUST be HSL.
     color: transparent !important;
     -webkit-text-fill-color: transparent !important;
   }
-  .theme-luxury [style*="hsl(30 15% 8"],
-  .theme-luxury [style*="hsl(30 15% 10"],
-  .theme-luxury [style*="hsl(30 15% 11"] {
-    background-color: hsl(var(--imr-green-pale)) !important;
-  }
+
   .theme-luxury .imr-hero-bg {
-    background: linear-gradient(180deg, hsl(var(--imr-sky-soft)) 0%, hsl(0 0% 100%) 70%);
+    background: linear-gradient(180deg, hsl(var(--imr-sky-soft)) 0%, hsl(var(--muted)) 50%, hsl(var(--background)) 100%) !important;
+  }
+
+  /* Force any <section> background that ended up dark via inline gradients to light */
+  .theme-luxury section[style*="linear-gradient"][style*="hsl(30"],
+  .theme-luxury section[style*="linear-gradient"][style*="hsl(28"],
+  .theme-luxury div[style*="linear-gradient"][style*="hsl(30"],
+  .theme-luxury div[style*="linear-gradient"][style*="hsl(28"] {
+    background: hsl(var(--background)) !important;
+  }
+
+  /* text-white family → ink (was meant for dark bg, now invisible on white) */
+  .theme-luxury .text-white,
+  .theme-luxury [class*="text-white/"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* bg-white/X translucent cards → solid muted card */
+  .theme-luxury [class*="bg-white/"] {
+    background-color: hsl(var(--muted)) !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Radial / linear gradients with gold or dark alpha → neutralize */
+  .theme-luxury [class*="bg-[radial-gradient"],
+  .theme-luxury [class*="bg-[linear-gradient"][class*="hsl(38_"],
+  .theme-luxury [class*="bg-[linear-gradient"][class*="hsl(30_"],
+  .theme-luxury [class*="bg-[linear-gradient"][class*="hsl(28_"] {
+    background-image: none !important;
+    background-color: transparent !important;
+  }
+
+  /* font-serif on public site → modern sans */
+  .theme-luxury .font-serif {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  }
+
+  /* Gold/dark gradient classes on SECTIONS/full-width wrappers → light */
+  .theme-luxury section[class*="from-[hsl(38_"],
+  .theme-luxury section[class*="from-[hsl(28_"],
+  .theme-luxury section[class*="from-[hsl(30_"],
+  .theme-luxury section[class*="to-[hsl(38_"],
+  .theme-luxury section[class*="to-[hsl(28_"],
+  .theme-luxury section[class*="to-[hsl(30_"],
+  .theme-luxury div.absolute[class*="from-[hsl(38_"],
+  .theme-luxury div.absolute[class*="from-[hsl(28_"],
+  .theme-luxury div.absolute[class*="from-[hsl(30_"] {
+    background-image: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%) !important;
+    background-color: hsl(var(--background)) !important;
+  }
+
+  /* Button/anchor gradient (gold) → green primary gradient (keep colored CTAs) */
+  .theme-luxury button[class*="from-[hsl(38_"],
+  .theme-luxury button[class*="to-[hsl(38_"],
+  .theme-luxury button[class*="via-[hsl(38_"],
+  .theme-luxury a[class*="from-[hsl(38_"],
+  .theme-luxury a[class*="to-[hsl(38_"],
+  .theme-luxury a[class*="via-[hsl(38_"] {
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  /* Always-white-text CTAs (over green gradient) — re-force white */
+  .theme-luxury .luxury-shimmer-btn,
+  .theme-luxury .luxury-cta-glow,
+  .theme-luxury .bg-primary,
+  .theme-luxury button[class*="from-[hsl"][class*="text-white"],
+  .theme-luxury a[class*="from-[hsl"][class*="text-white"] {
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  /* Luxury helpers (luxury-hero-bg, luxury-mesh-bg, luxury-glass, etc.) → light */
+  .theme-luxury .luxury-hero-bg,
+  .theme-luxury .luxury-mesh-bg {
+    background: linear-gradient(180deg, hsl(var(--muted)) 0%, hsl(var(--background)) 100%) !important;
+  }
+  .theme-luxury .luxury-glass {
+    background: hsl(var(--card)) !important;
+    backdrop-filter: none !important;
+    border-color: hsl(var(--border)) !important;
+  }
+  .theme-luxury .luxury-hairline {
+    background: linear-gradient(to right, transparent, hsl(var(--border)), transparent) !important;
+  }
+  .theme-luxury .luxury-border-pulse,
+  .theme-luxury .luxury-border-pulse::after {
+    border-color: hsl(var(--primary) / 0.3) !important;
+    background: transparent !important;
   }
 }
 
