@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch, Building2, Hammer, KeyRound } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroChasseurAsset from '@/assets/hero-chasseur-split.png.asset.json';
-import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile.jpg.asset.json';
+import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile-916.png.asset.json';
 import heroRevealVideo from '@/assets/hero-reveal-video.mp4';
 const heroBg = heroChasseurAsset.url;
 const heroBgMobile = heroChasseurMobileAsset.url;
