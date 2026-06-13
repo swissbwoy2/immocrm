@@ -4,7 +4,6 @@ import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, U
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroChasseurAsset from '@/assets/hero-chasseur-split.png.asset.json';
 import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile-916.png.asset.json';
-import heroRevealVideo from '@/assets/hero-reveal-video.mp4';
 const heroBg = heroChasseurAsset.url;
 const heroBgMobile = heroChasseurMobileAsset.url;
 import { useSearchType } from '@/contexts/SearchTypeContext';
@@ -13,7 +12,6 @@ import { GrainOverlay } from '@/components/public-site/animations/GrainOverlay';
 import { WordReveal } from '@/components/public-site/animations/WordReveal';
 import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { Meteors } from '@/components/public-site/magic/Meteors';
-import { DiagonalSplitReveal } from '@/components/public-site/DiagonalSplitReveal';
 
 const parcours = [
   { to: '/relouer-mon-appartement', icon: KeyRound, label: "Relouer mon appart'" },
