@@ -1,58 +1,78 @@
-## Diagnostic
 
-J'ai vérifié la base. Deux problèmes différents :
+# Refonte couleurs site public — 100% clair
 
-### 1. Carina voit des clients supprimés (vrai bug UI)
+## Règles strictes (demande user)
+- **Tous les fonds clairs / blancs** sur 100% des sections — aucune section sombre
+- **Texte** : bleu-vert foncé (encre profonde), lisible, contraste fort
+- **Aucun beige, brun, doré, anthracite** nulle part
+- Accents : vert Immo-rama + bleu ciel discret uniquement
+- Périmètre : **site public uniquement** (`.theme-luxury`)
 
-Carina a 8 clients anonymisés (`statut = 'inactif'`, `anonymise_at` rempli) qui apparaissent encore dans sa liste :
+## Problème actuel
+Les sections publiques utilisent des classes Tailwind arbitraires hardcodées sombres (`bg-[hsl(30_15%_10%)]`, alpha `/0.6`, etc.) que mes overrides CSS via `[class*=]` ne couvrent pas toutes → fonds noirs persistent, texte sombre illisible.
 
-- Haris Qeska, Braima Braima, Karabrahimi Mondi, Ramadan Zumeraj, Rafaela Carvalho, Hamza Guerouaj, Tosca Rubli, Sofiane Neka.
+## Solution
+Refactor des composants publics pour utiliser des **tokens sémantiques**. Le scope `.theme-luxury` pilote tout, sans aucun fond foncé possible.
 
-Cause : `src/pages/agent/MesClients.tsx` (l. 76–95) charge tous les `client_agents` puis tous les `clients` sans filtrer `anonymise_at IS NULL`. La fonction `delete-client` ne supprime PAS les lignes `client_agents` à la fin (elle anonymise le client mais conserve les liens agent ↔ client pour l'historique commission). Résultat : ils restent dans la liste de l'agent.
+## Palette finale (`.theme-luxury` dans `src/index.css`)
+```text
+--background       : 0 0% 100%        (blanc pur)
+--card             : 0 0% 100%
+--muted            : 160 25% 97%      (vert-bleu très pâle pour alternance subtile)
+--secondary        : 160 30% 94%      (carte mise en avant)
+--foreground       : 200 35% 18%      (bleu-vert foncé encre — texte principal)
+--muted-foreground : 200 20% 38%      (texte secondaire)
+--primary          : 158 55% 38%      (vert Immo-rama foncé pour CTA)
+--primary-foreground : 0 0% 100%
+--accent           : 200 70% 45%      (bleu profond pour liens / accents)
+--border           : 160 15% 88%
+```
+Toute teinte beige/brune/dorée bannie des tokens.
 
-### 2. Oriane voit Chaltu Abdi Ahmed (donnée réelle, pas un bug UI)
-
-Chaltu a 3 entrées dans `client_agents` :
-- Victoria Martins → primaire
-- Carina Tavares → co-assignée (créée 2026-04-29)
-- **Oriane Dulymbois → co-assignée (créée 2026-05-23)**
-
-Donc Oriane est réellement co-assignée sur Chaltu en base. L'UI fait son travail. Si elle ne doit pas l'être, il faut supprimer la ligne `client_agents` correspondante (`id = bd12a26d-0662-40dc-980a-cc5b73b7b8a2`).
-
-## Plan
-
-### Fix 1 — Masquer les clients anonymisés dans /agent/clients (front uniquement)
-
-`src/pages/agent/MesClients.tsx`, modifier la requête `clients` (l. 92–95) :
-
-```ts
-const { data: clientsData, error } = await supabase
-  .from('clients')
-  .select('*')
-  .in('id', clientIds)
-  .is('anonymise_at', null);
+## Mapping de substitution (appliqué dans tous les composants publics)
+```text
+bg-[hsl(30_15%_8..14%)]         → bg-background   (ou bg-muted en alternance)
+bg-[hsl(30_15%_..%/0.x)]        → bg-card / bg-muted
+text-[hsl(40_25%_85..98%)]      → text-foreground
+text-[hsl(40_20%_55..75%)]      → text-muted-foreground
+text-[hsl(38_..%_..%)] (doré)   → text-primary
+border-[hsl(38_..%)] (doré)     → border-border ou border-primary/30
+bg-[hsl(38_..%)] (doré pâle)    → bg-secondary
+luxury-grain, dark overlays     → supprimés
+gradients sombres inline        → remplacés par bg-background ou gradient clair
 ```
 
-Effet :
-- Carina ne verra plus les 8 dossiers anonymisés.
-- Les KPI Principaux / Co-assignés / Total portfolio reflèteront le vrai portefeuille vivant.
-- Aucun impact sur l'historique commissions (les lignes `client_agents` et `transactions` restent intactes).
-- Aucun changement backend, RLS, ou autres pages.
+## Fichiers touchés (site public uniquement)
+### Sections (`src/components/public-site/sections/`)
+HeroSection, StatsSection, SocialProofSection, ForWhoSection, HowItWorksSection, ServicesFullSection, DifferentiatorSection, PricingSection, GuaranteeSection, TeamSection, PartnersSection, CoverageSection, FAQSection, AppShowcaseSection, BudgetCalcSection, DossierAnalyseSection, DossierAnalyseForm, CloserSection, TechSection, StickyMobileCTA.
 
-### Fix 2 — Cas Oriane × Chaltu
+### Layout
+PublicSiteLayout, PublicSiteHeader, PublicSiteFooter, PublicSiteMenu, sous-dossiers `3d/`, `animations/`, `magic/` (passes ciblées).
 
-Avant d'agir, je veux confirmation : faut-il **supprimer** la co-assignation Oriane → Chaltu (`client_agents.id = bd12a26d-0662-40dc-980a-cc5b73b7b8a2`, créée le 23/05/2026) ? Ou est-ce une co-assignation légitime qu'on garde ?
+### Pages
+Index (landing), VendreMonBien, RelouerMonAppartement, ChasseurAppartement, ConstruireRenover.
 
-Si OUI on supprime : 1 DELETE ciblé sur cette ligne uniquement. Carina (co) et Victoria (primaire) restent inchangées.
+### CSS
+`src/index.css` : 
+- Mettre à jour les tokens `.theme-luxury` aux valeurs ci-dessus
+- Nettoyer les blocs overrides `[class*=]` devenus inutiles
+- `.imr-hero-bg` → gradient clair `from-secondary via-muted to-background`
+- Retirer les références à `luxury-grain` côté public
+
+## Alternance visuelle
+Pour éviter un mur blanc plat :
+- Sections impaires : `bg-background`
+- Sections paires : `bg-muted` (vert-bleu très pâle ~3% de saturation)
+- Cartes : `bg-card` + `shadow-md` + `border border-border`
+- CTA principal : `bg-primary text-primary-foreground`
+- CTA secondaire : `variant="outline"` avec `border-primary/40 text-primary`
 
 ## Hors scope
+- App interne (admin/agent/client/closeur/courier/advertiser/buyer) : **intacte**, conserve son thème sombre
+- Pas de modif de contenu, copy, structure, ni assets
+- Pas de modif backend
 
-- Pas de changement de la fonction `delete-client` (le comportement actuel "garder client_agents pour l'historique" est volontaire).
-- Pas de changement RLS.
-- Pas de modification de `PremiumClientCard.tsx` ni des autres pages.
-
-## Question avant build
-
-Confirme deux choses :
-1. OK pour le filtre `anonymise_at IS NULL` dans la liste agent ?
-2. Pour Chaltu : on retire Oriane de la co-assignation, ou on la laisse ?
+## Vérification après build
+1. Screenshot `/`, `/vendre-mon-bien`, `/relouer-mon-appartement`, `/chasseur-appartement`, `/construire-renover`
+2. Confirmer : 0 section sombre, 0 nuance beige/brune, contraste AA partout
+3. Vérifier mobile (StickyMobileCTA, menu)
