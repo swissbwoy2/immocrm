@@ -107,7 +107,7 @@ export function HeroSection() {
                   onClick={() => setSearchType('location')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isLocation || !searchType
-                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-[hsl(38_45%_48%/0.3)]'
+                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
@@ -118,7 +118,7 @@ export function HeroSection() {
                   onClick={() => setSearchType('achat')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isAchat
-                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-[hsl(38_45%_48%/0.3)]'
+                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >

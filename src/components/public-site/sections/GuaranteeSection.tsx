@@ -87,7 +87,7 @@ export function GuaranteeSection() {
             {pricingItems.map((item, index) => (
               <motion.div key={index} variants={staggerItem}>
                 <TiltCard intensity={4}>
-                  <div className="relative rounded-2xl p-6 border border-primary/30 hover:border-primary/30 transition-all duration-500 h-full text-center bg-card/80 hover:shadow-[0_8px_30px_hsl(38_45%_48%/0.08)] group">
+                  <div className="relative rounded-2xl p-6 border border-primary/30 hover:border-primary/30 transition-all duration-500 h-full text-center bg-card/80 hover:shadow-md group">
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary border border-primary/30 flex items-center justify-center mx-auto mb-4">
                       <item.icon className="h-7 w-7 text-primary" />
                     </div>

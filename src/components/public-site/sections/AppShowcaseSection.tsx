@@ -174,7 +174,7 @@ export function AppShowcaseSection() {
                 'radial-gradient(ellipse 70% 60% at 25% 50%, hsl(var(--primary)), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 30%, hsl(var(--primary)), transparent 60%)',
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[hsl(30_15%_6%)/0.4] to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background to-background" />
         </div>
 
         <div className={`relative z-10 ${useScrub ? 'h-full' : ''} container mx-auto px-4 sm:px-6 flex items-center`}>

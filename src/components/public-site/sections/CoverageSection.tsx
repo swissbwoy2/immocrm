@@ -101,7 +101,7 @@ export function CoverageSection() {
             >
               {cantons.map((canton, i) => (
                 <motion.div key={canton} variants={staggerItem}>
-                  <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 border border-primary/30 hover:border-primary/30 hover:bg-primary/10 hover:shadow-[0_0_12px_hsl(38_45%_48%/0.15)] transition-all duration-300 cursor-default group">
+                  <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/80 border border-primary/30 hover:border-primary/30 hover:bg-primary/10 hover:shadow-md transition-all duration-300 cursor-default group">
                     <PulsingDot delay={i * 0.25} />
                     <MapPin className="h-3.5 w-3.5 text-primary" />
                     <span className="font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{canton}</span>
