@@ -4,7 +4,6 @@ import { useWhatsAppTracking } from '@/hooks/useWhatsAppTracking';
 import { PublicSiteHeader } from './PublicSiteHeader';
 import { PublicSiteFooter } from './PublicSiteFooter';
 import { StickyMobileCTA } from './sections/StickyMobileCTA';
-import { ScrollProgressBar } from './animations/ScrollProgressBar';
 
 const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
 
@@ -13,32 +12,9 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
 
   return (
     <div className="theme-luxury min-h-screen bg-background text-foreground">
-      {/* Scroll progress bar dorée */}
-      <ScrollProgressBar />
-
-      {/* Top banner — éditorial sage sur cream */}
-      <div
-        className="fixed top-0 left-0 right-0 z-[60] border-b bg-primary text-primary-foreground"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-      >
-        <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em]">
-            Un logiciel propulsé par{' '}
-            <a
-              href="https://www.immo-rama.ch"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold underline-offset-4 hover:underline"
-            >
-              Immo-rama.ch
-            </a>
-          </p>
-        </div>
-      </div>
-
       <PublicSiteHeader />
 
-      {children}
+      <main>{children}</main>
 
       <PublicSiteFooter />
 
