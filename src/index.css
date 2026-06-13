@@ -311,20 +311,38 @@ All colors MUST be HSL.
     font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   }
 
-  /* Gold/dark gradient classes → light green/sky tint */
-  .theme-luxury [class*="from-[hsl(38_"],
-  .theme-luxury [class*="via-[hsl(38_"],
-  .theme-luxury [class*="to-[hsl(38_"],
-  .theme-luxury [class*="from-[hsl(28_"],
-  .theme-luxury [class*="via-[hsl(28_"],
-  .theme-luxury [class*="to-[hsl(28_"],
-  .theme-luxury [class*="from-[hsl(30_"],
-  .theme-luxury [class*="via-[hsl(30_"],
-  .theme-luxury [class*="to-[hsl(30_"] {
+  /* Gold/dark gradient classes on SECTIONS/full-width wrappers → light */
+  .theme-luxury section[class*="from-[hsl(38_"],
+  .theme-luxury section[class*="from-[hsl(28_"],
+  .theme-luxury section[class*="from-[hsl(30_"],
+  .theme-luxury section[class*="to-[hsl(38_"],
+  .theme-luxury section[class*="to-[hsl(28_"],
+  .theme-luxury section[class*="to-[hsl(30_"],
+  .theme-luxury div.absolute[class*="from-[hsl(38_"],
+  .theme-luxury div.absolute[class*="from-[hsl(28_"],
+  .theme-luxury div.absolute[class*="from-[hsl(30_"] {
     background-image: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%) !important;
-    --tw-gradient-from: hsl(var(--background)) !important;
-    --tw-gradient-via: hsl(var(--muted)) !important;
-    --tw-gradient-to: hsl(var(--background)) !important;
+    background-color: hsl(var(--background)) !important;
+  }
+
+  /* Button/anchor gradient (gold) → green primary gradient (keep colored CTAs) */
+  .theme-luxury button[class*="from-[hsl(38_"],
+  .theme-luxury button[class*="to-[hsl(38_"],
+  .theme-luxury button[class*="via-[hsl(38_"],
+  .theme-luxury a[class*="from-[hsl(38_"],
+  .theme-luxury a[class*="to-[hsl(38_"],
+  .theme-luxury a[class*="via-[hsl(38_"] {
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
+    color: hsl(var(--primary-foreground)) !important;
+  }
+
+  /* Always-white-text CTAs (over green gradient) — re-force white */
+  .theme-luxury .luxury-shimmer-btn,
+  .theme-luxury .luxury-cta-glow,
+  .theme-luxury .bg-primary,
+  .theme-luxury button[class*="from-[hsl"][class*="text-white"],
+  .theme-luxury a[class*="from-[hsl"][class*="text-white"] {
+    color: hsl(var(--primary-foreground)) !important;
   }
 
   /* Luxury helpers (luxury-hero-bg, luxury-mesh-bg, luxury-glass, etc.) → light */
