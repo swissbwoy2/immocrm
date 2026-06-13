@@ -207,7 +207,11 @@ export function DiagonalSplitReveal({
   if (prefersReducedMotion) {
     return (
       <div>
-        <section className="relative h-screen w-full overflow-hidden bg-[hsl(30_15%_8%)]">
+        <section
+          data-split-sticky
+          className="relative h-screen w-full overflow-hidden"
+          style={{ backgroundColor: 'rgb(15, 25, 35)' }}
+        >
           <video
             ref={reducedVideoRef}
             src={videoSrc}
@@ -217,16 +221,28 @@ export function DiagonalSplitReveal({
             onLoadedMetadata={handleLoadedMetadata(reducedVideoRef, SCRUB_DURATION)}
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.35)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
+          <div
+            data-split-overlay
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(to bottom, rgba(15,25,35,0.35), transparent, rgba(15,25,35,0.55))',
+            }}
+          />
           <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6">
-            <h1 className="text-3xl sm:text-5xl font-bold text-[hsl(40_25%_92%)] font-serif text-center max-w-4xl drop-shadow-2xl leading-tight">
+            <h1
+              data-split-title
+              className="text-3xl sm:text-5xl font-bold text-center max-w-4xl leading-tight"
+              style={{ color: '#ffffff', textShadow: '0 4px 24px rgba(0,0,0,0.6)' }}
+            >
               {title}
             </h1>
             <div
               className="mt-3 h-1 rounded-full"
               style={{
                 width: '160px',
-                background: 'linear-gradient(90deg, transparent, hsl(38 55% 65%), transparent)',
+                background:
+                  'linear-gradient(90deg, transparent, rgb(52, 211, 153), transparent)',
               }}
             />
           </div>
