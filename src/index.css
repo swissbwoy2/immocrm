@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 
 /* Anchor scroll offset to clear sticky header */
@@ -34,156 +32,148 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* === Immo-Rama Reborn — Alpine editorial (sage + cream) === */
-    --background: 50 33% 97%;          /* cream */
-    --foreground: 125 8% 19%;          /* sage-dark */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 125 8% 19%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 125 8% 19%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 125 8% 19%;             /* sage-dark */
-    --primary-foreground: 50 33% 97%;  /* cream */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 47 22% 91%;
-    --secondary-foreground: 125 8% 19%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 47 22% 91%;
-    --muted-foreground: 120 6% 38%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 123 7% 47%;              /* sage */
-    --accent-foreground: 50 33% 97%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 50% 36%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 123 7% 75%;
-    --input: 123 7% 72%;
-    --ring: 123 7% 47%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 60%;
 
     --radius: 0.5rem;
 
-    /* Brand utility tokens (sage palette) */
-    --sage-dark: 125 8% 19%;
-    --sage: 123 7% 47%;
-    --sage-light: 85 19% 62%;
-    --cream: 50 33% 97%;
-    --cream-dark: 47 22% 91%;
-
-    --sidebar-background: 125 8% 19%;
-    --sidebar-foreground: 50 33% 97%;
-    --sidebar-primary: 123 7% 47%;
-    --sidebar-primary-foreground: 50 33% 97%;
-    --sidebar-accent: 125 8% 27%;
-    --sidebar-accent-foreground: 50 33% 97%;
-    --sidebar-border: 125 8% 27%;
-    --sidebar-ring: 123 7% 47%;
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 19% 20%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 19% 20%;
+    --sidebar-ring: 217 91% 60%;
 
     /* Enhanced design tokens */
-    --shadow-sm: 0 1px 2px 0 hsl(125 8% 19% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(125 8% 19% / 0.1), 0 2px 4px -2px hsl(125 8% 19% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(125 8% 19% / 0.1), 0 4px 6px -4px hsl(125 8% 19% / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(125 8% 19% / 0.1), 0 8px 10px -6px hsl(125 8% 19% / 0.1);
-    --shadow-glow: 0 0 20px hsl(123 7% 47% / 0.3);
-    --shadow-card-hover: 0 10px 40px -10px hsl(123 7% 47% / 0.25);
+    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.1), 0 2px 4px -2px hsl(222 47% 11% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.1), 0 4px 6px -4px hsl(222 47% 11% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(222 47% 11% / 0.1), 0 8px 10px -6px hsl(222 47% 11% / 0.1);
+    --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.3);
+    --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.2);
   }
 
   .dark {
-    --background: 125 10% 11%;
-    --foreground: 50 33% 97%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 125 9% 14%;
-    --card-foreground: 50 33% 97%;
+    --card: 217 19% 17%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 125 9% 14%;
-    --popover-foreground: 50 33% 97%;
+    --popover: 217 19% 17%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 85 19% 62%;             /* sage-light */
-    --primary-foreground: 125 8% 19%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 125 8% 19%;
-    --secondary-foreground: 50 33% 97%;
+    --secondary: 217 19% 20%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 125 8% 19%;
-    --muted-foreground: 110 6% 68%;
+    --muted: 217 19% 20%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 123 7% 47%;
-    --accent-foreground: 50 33% 97%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 50% 45%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 125 8% 25%;
-    --input: 125 8% 25%;
-    --ring: 85 19% 62%;
+    --border: 217 19% 25%;
+    --input: 217 19% 25%;
+    --ring: 217 91% 60%;
+    
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 19% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 19% 15%;
+    --sidebar-ring: 217 91% 60%;
 
-    --sidebar-background: 125 12% 8%;
-    --sidebar-foreground: 50 33% 97%;
-    --sidebar-primary: 85 19% 62%;
-    --sidebar-primary-foreground: 125 8% 19%;
-    --sidebar-accent: 125 8% 16%;
-    --sidebar-accent-foreground: 50 33% 97%;
-    --sidebar-border: 125 8% 16%;
-    --sidebar-ring: 85 19% 62%;
-
+    /* Enhanced design tokens - dark mode */
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
     --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.4), 0 8px 10px -6px hsl(0 0% 0% / 0.3);
-    --shadow-glow: 0 0 30px hsl(85 19% 62% / 0.4);
-    --shadow-card-hover: 0 10px 40px -10px hsl(85 19% 62% / 0.3);
+    --shadow-glow: 0 0 30px hsl(217 91% 60% / 0.4);
+    --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
   }
 
-  /* PUBLIC THEME — Immo-Rama Reborn (Alpine editorial sage + cream) */
+  /* PUBLIC THEME — Immo-rama 100% Light (scoped via .theme-luxury) */
   .theme-luxury {
-    --background: 50 33% 97%;           /* cream */
-    --foreground: 125 8% 19%;           /* sage-dark */
+    --background: 0 0% 100%;
+    --foreground: 200 35% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 125 8% 19%;
+    --card-foreground: 200 35% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 125 8% 19%;
-    --primary: 125 8% 19%;              /* sage-dark */
-    --primary-foreground: 50 33% 97%;
-    --secondary: 47 22% 91%;
-    --secondary-foreground: 125 8% 19%;
-    --muted: 47 22% 91%;
-    --muted-foreground: 120 6% 38%;
-    --accent: 123 7% 47%;               /* sage */
-    --accent-foreground: 50 33% 97%;
+    --popover-foreground: 200 35% 18%;
+    --primary: 158 55% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 30% 94%;
+    --secondary-foreground: 200 35% 18%;
+    --muted: 160 25% 97%;
+    --muted-foreground: 200 20% 38%;
+    --accent: 200 70% 45%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 123 7% 75%;
-    --input: 123 7% 72%;
-    --ring: 123 7% 47%;
-    --radius: 0.5rem;
-    --shadow-sm: 0 1px 2px 0 hsl(125 8% 19% / 0.05);
-    --shadow-md: 0 6px 14px -4px hsl(125 8% 19% / 0.08), 0 2px 4px -2px hsl(125 8% 19% / 0.05);
-    --shadow-lg: 0 18px 35px -10px hsl(125 8% 19% / 0.10), 0 6px 12px -6px hsl(125 8% 19% / 0.06);
-    --shadow-xl: 0 30px 60px -15px hsl(125 8% 19% / 0.14), 0 12px 20px -10px hsl(125 8% 19% / 0.08);
-    --shadow-glow: 0 0 30px hsl(123 7% 47% / 0.25);
-    --shadow-card-hover: 0 20px 50px -12px hsl(123 7% 47% / 0.22);
-    /* Legacy IMR tokens remapped to sage palette for back-compat */
-    --imr-green: 125 8% 19%;
-    --imr-green-light: 123 7% 47%;
-    --imr-green-pale: 47 22% 91%;
-    --imr-sky: 85 19% 62%;
-    --imr-sky-soft: 50 33% 97%;
-    --imr-ink: 125 8% 19%;
-    --imr-ink-soft: 120 6% 38%;
+    --border: 160 15% 88%;
+    --input: 160 15% 88%;
+    --ring: 158 55% 38%;
+    --radius: 0.75rem;
+    --shadow-sm: 0 1px 2px 0 hsl(200 30% 20% / 0.05);
+    --shadow-md: 0 6px 14px -4px hsl(200 30% 20% / 0.08), 0 2px 4px -2px hsl(200 30% 20% / 0.05);
+    --shadow-lg: 0 18px 35px -10px hsl(200 30% 20% / 0.10), 0 6px 12px -6px hsl(200 30% 20% / 0.06);
+    --shadow-xl: 0 30px 60px -15px hsl(200 30% 20% / 0.14), 0 12px 20px -10px hsl(200 30% 20% / 0.08);
+    --shadow-glow: 0 0 30px hsl(158 55% 38% / 0.25);
+    --shadow-card-hover: 0 20px 50px -12px hsl(158 55% 38% / 0.22);
+    --imr-green: 158 55% 38%;
+    --imr-green-light: 158 50% 50%;
+    --imr-green-pale: 160 30% 94%;
+    --imr-sky: 200 70% 45%;
+    --imr-sky-soft: 200 60% 95%;
+    --imr-ink: 200 35% 18%;
+    --imr-ink-soft: 200 20% 38%;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
@@ -192,9 +182,9 @@ All colors MUST be HSL.
   .theme-luxury h2,
   .theme-luxury h3,
   .theme-luxury h4 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     color: hsl(var(--imr-ink));
   }
 
@@ -216,30 +206,13 @@ All colors MUST be HSL.
     background-color: transparent !important;
   }
   .theme-luxury .font-serif {
-    font-family: 'Playfair Display', Georgia, serif !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.01em !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   }
   .theme-luxury .luxury-shimmer-btn,
   .theme-luxury .luxury-cta-glow {
-    background-image: none !important;
-    background-color: hsl(var(--primary)) !important;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--imr-green-light))) !important;
     color: hsl(var(--primary-foreground)) !important;
-    box-shadow: var(--shadow-md) !important;
-    border-radius: 0 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 700 !important;
-  }
-  .theme-luxury .luxury-shimmer-btn:hover,
-  .theme-luxury .luxury-cta-glow:hover {
-    background-color: hsl(var(--accent)) !important;
-    box-shadow: var(--shadow-lg) !important;
-  }
-  /* Neutralise les overlays brillants des CTA pour un rendu plat éditorial */
-  .theme-luxury .luxury-shimmer-btn::before,
-  .theme-luxury .luxury-shimmer-btn::after {
-    display: none !important;
+    box-shadow: var(--shadow-glow) !important;
   }
   .theme-luxury .luxury-gradient-text {
     background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))) !important;
@@ -282,12 +255,6 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', Georgia, serif;
-    letter-spacing: -0.01em;
   }
 
   /* Smooth scrolling globally */
@@ -313,32 +280,6 @@ All colors MUST be HSL.
     --whatsapp-bubble-out: 158 35% 25%;
     --whatsapp-bubble-in: 217 19% 18%;
     --whatsapp-bg: 215 28% 11%;
-  }
-}
-
-/* === Immo-Rama Alpine editorial — utilitaires signature === */
-@layer components {
-  .eyebrow {
-    @apply text-xs font-bold uppercase tracking-[0.2em] text-accent;
-  }
-  .immo-btn {
-    @apply inline-flex items-center justify-center
-           px-8 py-4 text-xs font-bold uppercase tracking-widest
-           bg-primary text-primary-foreground
-           hover:bg-accent transition-colors
-           rounded-none;
-  }
-  .immo-btn-outline {
-    @apply inline-flex items-center justify-center
-           px-8 py-4 text-xs font-bold uppercase tracking-widest
-           border border-primary text-primary
-           hover:bg-primary hover:text-primary-foreground transition-colors
-           rounded-none;
-  }
-  .immo-card {
-    @apply bg-card border border-border
-           hover:border-accent hover:bg-secondary
-           transition-colors;
   }
 }
 

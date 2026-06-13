@@ -1,107 +1,139 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
-
-const NAV = [
-  { label: 'Accueil', to: '/' },
-  { label: 'Annonces', to: '/annonces' },
-  { label: 'Achat-Vente', to: '/vendre-mon-bien' },
-  { label: 'Relogement', to: '/relouer-mon-appartement' },
-  { label: 'Relocation', to: '/chasseur-appartement' },
-  { label: 'Project Management', to: '/construire-renover' },
-  { label: 'Rendez-vous', to: '/rendez-vous' },
-  { label: 'À propos', to: '/login' },
-];
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Rocket, Menu, LogIn, Sparkles, Calendar } from 'lucide-react';
+import logo from '@/assets/logo-immo-rama-new.png';
+import { PublicSiteMenu } from './PublicSiteMenu';
+import { motion, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 
 export function PublicSiteHeader() {
-  const [open, setOpen] = useState(false);
-  const { pathname } = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const { scrollY } = useScroll();
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  useMotionValueEvent(scrollY, 'change', (y) => {
+    setScrolled(y > 40);
+  });
 
   return (
     <>
-      <header
-        className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      <motion.header
+        className="fixed left-0 right-0 z-50"
+        style={{ top: 'calc(36px + env(safe-area-inset-top, 0px))' }}
+        initial={prefersReducedMotion ? false : { y: -12, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
       >
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="h-20 flex items-center justify-between gap-4">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="Accueil Immo-Rama">
-              <span className="font-serif text-xl md:text-2xl font-semibold tracking-tight text-foreground">
-                IMM<span className="text-accent">O</span>-RAMA
-              </span>
-            </Link>
+        <div
+          className="transition-all duration-500"
+          style={{
+            backgroundColor: scrolled ? 'hsl(0 0% 100% / 0.97)' : 'hsl(0 0% 100% / 0.85)',
+            backdropFilter: scrolled ? 'blur(24px)' : 'blur(10px)',
+            WebkitBackdropFilter: scrolled ? 'blur(24px)' : 'blur(10px)',
+            borderBottom: `1px solid hsl(142 45% 50% / ${scrolled ? '0.35' : '0.15'})`,
+            boxShadow: scrolled ? '0 4px 24px hsl(142 30% 20% / 0.08)' : 'none',
+          }}
+        >
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              {/* Left: hamburger + logo */}
+              <div className="flex items-center gap-3">
+                <motion.button
+                  onClick={() => setMenuOpen(true)}
+                  className="p-2 rounded-lg hover:bg-primary/10 transition-colors"
+                  aria-label="Menu"
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
+                >
+                  <Menu className="h-5 w-5 text-foreground" />
+                </motion.button>
+                <Link to="/" className="flex items-center" aria-label="Accueil Immo-Rama">
+                  <motion.img
+                    src={logo}
+                    alt="Immo-Rama"
+                    className="w-auto"
+                    animate={prefersReducedMotion ? {} : { height: scrolled ? '28px' : '32px' }}
+                    transition={{ duration: 0.3 }}
+                    style={{ height: '32px' }}
+                  />
+                </Link>
+              </div>
 
-            {/* Desktop nav */}
-            <nav className="hidden xl:flex items-center gap-7 text-[11px] uppercase tracking-[0.18em] font-medium">
-              {NAV.map((item) => {
-                const active = pathname === item.to;
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className={
-                      active
-                        ? 'text-foreground border-b border-foreground pb-1'
-                        : 'text-foreground/70 hover:text-foreground transition-colors'
-                    }
-                  >
-                    {item.label}
+              {/* Right: CTAs */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/30 hover:border-primary/30 hover:bg-primary/10 transition-all duration-300"
+                >
+                  <Link to="/login">
+                    <LogIn className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Mon espace client</span>
                   </Link>
-                );
-              })}
-            </nav>
+                </Button>
 
-            {/* CTA + burger */}
-            <div className="flex items-center gap-2 shrink-0">
-              <Link
-                to="/vendre-mon-bien"
-                className="hidden md:inline-flex items-center px-5 py-3 bg-primary text-primary-foreground uppercase tracking-[0.18em] text-[11px] font-bold hover:bg-accent transition-colors"
-              >
-                Estimation gratuite
-              </Link>
+                {/* Try Demo — ultra mis en avant, label toujours visible */}
+                <motion.div
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.04 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                  animate={prefersReducedMotion ? {} : {
+                    boxShadow: [
+                      '0 0 0 0 hsl(160 84% 39% / 0.55)',
+                      '0 0 0 10px hsl(160 84% 39% / 0)',
+                    ],
+                  }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }}
+                  className="rounded-md"
+                >
+                  <Button
+                    asChild
+                    size="sm"
+                    className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 text-white border-0 font-bold shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 transition-shadow px-2.5 sm:px-4"
+                  >
+                    <Link to="/demo">
+                      <Sparkles className="h-4 w-4 mr-1 sm:mr-2 animate-pulse" />
+                      <span className="whitespace-nowrap">Essayer la démo</span>
+                    </Link>
+                  </Button>
+                </motion.div>
 
-              <button
-                onClick={() => setOpen((v) => !v)}
-                className="xl:hidden p-2 -mr-2 text-foreground"
-                aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
-              >
-                {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
+                <motion.div
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                  className="hidden sm:block"
+                >
+                  <Button
+                    asChild
+                    size="sm"
+                    className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+                  >
+                    <Link to="/rendez-vous">
+                      <Calendar className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Réserver mon RDV au bureau gratuitement</span>
+                    </Link>
+                  </Button>
+                </motion.div>
+
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="hidden lg:inline-flex text-muted-foreground hover:text-foreground"
+                >
+                  <Link to="/nouveau-mandat">
+                    <Rocket className="h-4 w-4 mr-1.5" />
+                    Activer ma recherche
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
+      </motion.header>
 
-        {/* Mobile drawer */}
-        {open && (
-          <div className="xl:hidden border-t border-border bg-background">
-            <nav className="container mx-auto px-4 py-6 flex flex-col gap-1">
-              {NAV.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className="py-3 text-sm uppercase tracking-[0.18em] font-medium text-foreground/80 hover:text-foreground border-b border-border last:border-0"
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <Link
-                to="/vendre-mon-bien"
-                className="mt-4 inline-flex items-center justify-center px-5 py-4 bg-primary text-primary-foreground uppercase tracking-[0.18em] text-xs font-bold hover:bg-accent transition-colors"
-              >
-                Estimation gratuite
-              </Link>
-            </nav>
-          </div>
-        )}
-      </header>
-
-      {/* spacer so content isn't hidden under fixed header */}
-      <div className="h-20" />
+      <PublicSiteMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>
   );
 }
