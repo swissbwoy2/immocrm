@@ -354,14 +354,19 @@ export function DiagonalSplitReveal({
             style={{ x: topX, y: topY, opacity: titleOpacity }}
             className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none px-6"
           >
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[hsl(40_25%_92%)] font-serif text-center max-w-4xl drop-shadow-2xl leading-tight">
+            <h1
+              data-split-title
+              className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-center max-w-4xl leading-tight"
+              style={{ color: '#ffffff', textShadow: '0 4px 24px rgba(0,0,0,0.6)' }}
+            >
               {title}
             </h1>
             <div
               className="mt-3 h-1 rounded-full"
               style={{
                 width: isMobile ? '120px' : '160px',
-                background: 'linear-gradient(90deg, transparent, hsl(38 55% 65%), transparent)',
+                background:
+                  'linear-gradient(90deg, transparent, rgb(52, 211, 153), transparent)',
               }}
             />
           </motion.div>
@@ -371,15 +376,22 @@ export function DiagonalSplitReveal({
             style={{ opacity: scrollHintOpacity }}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 pointer-events-none"
           >
-            <p className="text-xs font-semibold tracking-widest uppercase text-[hsl(38_45%_65%)]">
+            <p
+              className="text-xs font-semibold tracking-widest uppercase"
+              style={{ color: 'rgb(167, 243, 208)' }}
+            >
               {scrollHint}
             </p>
             <motion.div
               animate={{ y: [0, 8, 0] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-6 h-10 border-2 border-[hsl(38_45%_48%/0.5)] rounded-full flex justify-center pt-1.5"
+              className="w-6 h-10 rounded-full flex justify-center pt-1.5"
+              style={{ border: '2px solid rgba(167,243,208,0.5)' }}
             >
-              <div className="w-1 h-2.5 rounded-full bg-[hsl(38_55%_65%)]" />
+              <div
+                className="w-1 h-2.5 rounded-full"
+                style={{ backgroundColor: 'rgb(52, 211, 153)' }}
+              />
             </motion.div>
           </motion.div>
         </div>
