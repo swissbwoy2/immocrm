@@ -107,7 +107,7 @@ export function HeroSection() {
                   onClick={() => setSearchType('location')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isLocation || !searchType
-                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
@@ -118,7 +118,7 @@ export function HeroSection() {
                   onClick={() => setSearchType('achat')}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isAchat
-                      ? 'bg-gradient-to-r from-primary to-primary text-foreground shadow-lg shadow-primary/20'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20'
                       : 'text-muted-foreground hover:text-muted-foreground hover:bg-primary/10'
                   }`}
                 >
@@ -202,7 +202,7 @@ export function HeroSection() {
                     <Button
                       asChild
                       size="lg"
-                      className="w-full group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-primary-foreground border-0 font-semibold text-base md:text-lg py-7"
+                      className="w-full group luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 font-semibold text-base md:text-lg py-7"
                     >
                       <a href="#analyse-dossier">
                         <FileSearch className="h-5 w-5 mr-2" />
@@ -283,7 +283,7 @@ export function HeroSection() {
                     <Button
                       asChild
                       size="lg"
-                      className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-primary-foreground border-0"
+                      className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
                     >
                       <Link to="/nouveau-mandat">
                         <Rocket className="mr-3 h-6 w-6 md:h-7 md:w-7" />

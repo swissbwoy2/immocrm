@@ -107,7 +107,7 @@ export function PublicSiteHeader() {
                   <Button
                     asChild
                     size="sm"
-                    className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0"
+                    className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
                   >
                     <Link to="/rendez-vous">
                       <Calendar className="h-4 w-4 sm:mr-2" />

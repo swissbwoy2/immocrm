@@ -45,7 +45,7 @@ export function CloserSection() {
             <Button
               asChild
               size="lg"
-              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0 text-base md:text-lg px-8 md:px-12 py-6"
+              className="group luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0 text-base md:text-lg px-8 md:px-12 py-6"
             >
               <Link to="/nouveau-mandat">
                 <Rocket className="h-5 w-5 mr-2" />
@@ -90,7 +90,7 @@ export function CloserSection() {
                 ))}
               </div>
             </div>
-            <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0">
+            <Button asChild size="lg" className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0">
               <Link to="/login">
                 <span>Devenir partenaire</span>
                 <ArrowRight className="ml-2 h-5 w-5" />

@@ -160,7 +160,7 @@ export function HowItWorksSection() {
             <Button
               asChild
               size="lg"
-              className="group luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary via-primary to-primary text-foreground border-0"
+              className="group luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
             >
               <Link to="/nouveau-mandat">
                 <Rocket className="h-5 w-5 mr-2" />

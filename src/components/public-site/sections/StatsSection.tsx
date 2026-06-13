@@ -102,7 +102,7 @@ export function StatsSection() {
               <Button
                 asChild
                 size="lg"
-                className="luxury-shimmer-btn luxury-cta-glow bg-gradient-to-r from-primary to-primary text-foreground border-0"
+                className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
               >
                 <Link to="/nouveau-mandat">
                   Démarre ta recherche
