@@ -24,15 +24,22 @@ export function HeroSection() {
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <DiagonalSplitReveal
-      imageSrc={heroBg}
-      imageSrcMobile={heroBgMobile}
-      videoSrc={heroRevealVideo}
-      title="Ton futur appartement, Notre Mission !"
-      scrollHint="Faites défiler pour découvrir"
-    >
-      <section className="relative bg-background overflow-hidden luxury-grain">
-        {/* Decorative elements */}
+    <section className="relative bg-background overflow-hidden luxury-grain">
+      {/* Static hero background image (desktop + mobile) */}
+      <picture className="absolute inset-0 -z-10">
+        <source media="(max-width: 768px)" srcSet={heroBgMobile} />
+        <img
+          src={heroBg}
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+          loading="eager"
+          decoding="async"
+        />
+      </picture>
+      <div className="absolute inset-0 bg-background/85 -z-10" aria-hidden="true" />
+
+      {/* Decorative elements */}
         <GrainOverlay opacity={0.03} />
         <Meteors number={12} className="z-[1]" />
 
