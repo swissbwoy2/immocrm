@@ -68,7 +68,7 @@ export function TeamSection() {
                     }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' as const }}
                   />
-                  <div className="relative w-36 h-36 rounded-full overflow-hidden ring-2 ring-[hsl(38_45%_48%/0.45)] ring-offset-2 ring-offset-card shadow-md group-hover:ring-[hsl(38_45%_48%/0.75)] transition-all duration-500">
+                  <div className="relative w-36 h-36 rounded-full overflow-hidden ring-2 ring-primary/40 ring-offset-2 ring-offset-card shadow-md group-hover:ring-primary/40 transition-all duration-500">
                     <img src={christPhoto} alt="Christ Ramazani" className="w-full h-full object-cover" loading="lazy" />
                   </div>
                 </div>
@@ -93,7 +93,7 @@ export function TeamSection() {
                       animate={isInView ? { scale: 1, opacity: 1 } : {}}
                       transition={{ delay: 0.5 + i * 0.08, type: 'spring' as const, stiffness: 300, damping: 18 }}
                     >
-                      <Star className="h-4 w-4 fill-[hsl(38_55%_65%)] text-primary" />
+                      <Star className="h-4 w-4 fill-primary text-primary" />
                     </motion.div>
                   ))}
                   <span className="text-xs text-muted-foreground ml-1">4.8/5</span>

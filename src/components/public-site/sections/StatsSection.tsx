@@ -55,7 +55,7 @@ export function StatsSection() {
 
         <ScrollReveal variant="fade-up" className="text-center mb-4">
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-full px-4 py-2 mb-4 backdrop-blur-sm">
-            <Star className="h-4 w-4 text-primary fill-[hsl(38_55%_65%/0.4)]" />
+            <Star className="h-4 w-4 text-primary fill-primary" />
             <span className="text-sm font-medium text-primary">Nos résultats concrets</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 font-serif">
