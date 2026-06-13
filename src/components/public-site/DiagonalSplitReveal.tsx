@@ -247,12 +247,13 @@ export function DiagonalSplitReveal({
     <div>
       <div ref={expansionRef} style={{ height: trackHeight, position: 'relative' }}>
         <div
+          data-split-sticky
           style={{
             position: 'sticky',
             top: 0,
             height: '100vh',
             overflow: 'hidden',
-            background: 'hsl(30 15% 8%)',
+            backgroundColor: 'rgb(15, 25, 35)',
           }}
         >
           {/* Vidéo en fond — scrubée 0→10s par le scroll, avec zoom cinéma */}
@@ -283,7 +284,14 @@ export function DiagonalSplitReveal({
                 WebkitBackfaceVisibility: 'hidden',
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-[hsl(30_15%_8%/0.3)] via-transparent to-[hsl(30_15%_8%/0.55)]" />
+            <div
+              data-split-overlay
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(to bottom, rgba(15,25,35,0.30), transparent, rgba(15,25,35,0.55))',
+              }}
+            />
           </motion.div>
 
           {/* Moitié haute de l'image */}
