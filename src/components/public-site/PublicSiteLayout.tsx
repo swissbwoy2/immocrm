@@ -25,8 +25,8 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
           borderBottomColor: 'hsl(142 45% 50% / 0.3)',
         }}
       >
-        <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-xs sm:text-sm tracking-wide" style={{ color: 'hsl(215 20% 30%)' }}>
+        <div className="container mx-auto px-4 py-0.5 sm:py-1 text-center">
+          <p className="text-[10px] sm:text-xs tracking-wide leading-tight" style={{ color: 'hsl(215 20% 30%)' }}>
             Un logiciel propulsé par{' '}
             <a
               href="https://www.immo-rama.ch"
