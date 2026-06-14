@@ -35,7 +35,7 @@ export function PublicSiteHeader() {
             boxShadow: scrolled ? '0 4px 24px hsl(142 30% 20% / 0.08)' : 'none',
           }}
         >
-          <div className="container mx-auto px-4 py-3">
+          <div className="container mx-auto px-4 py-2.5 flex items-center" style={{ minHeight: 'var(--header-h, 60px)' }}>
             <div className="flex items-center justify-between">
               {/* Left: hamburger + logo */}
               <div className="flex items-center gap-3">
