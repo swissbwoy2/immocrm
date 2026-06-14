@@ -36,7 +36,7 @@ export function PublicSiteHeader() {
           }}
         >
           <div className="container mx-auto px-4 py-2.5 flex items-center" style={{ minHeight: 'var(--header-h, 60px)' }}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               {/* Left: hamburger + logo */}
               <div className="flex items-center gap-3">
                 <motion.button
