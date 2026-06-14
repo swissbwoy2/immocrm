@@ -46,7 +46,7 @@ export function HeroSection() {
         {/* Dark gradient transition from expansion */}
         <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-background to-transparent pointer-events-none z-[2]" />
 
-        <div className="container mx-auto px-4 pt-32 pb-12 md:pt-36 md:pb-20 relative z-10">
+        <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
           <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
 
             {/* Badge N°1 */}
