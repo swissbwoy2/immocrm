@@ -12,7 +12,14 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
   useWhatsAppTracking();
 
   return (
-    <div className="theme-luxury min-h-screen bg-background text-foreground">
+    <div
+      className="theme-luxury min-h-screen bg-background text-foreground"
+      style={{
+        // Hauteurs de référence utilisées par le header (fixe) et le décalage du contenu
+        ['--banner-h' as any]: '34px',
+        ['--header-h' as any]: '60px',
+      }}
+    >
       {/* Scroll progress bar dorée */}
       <ScrollProgressBar />
 
@@ -25,8 +32,11 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
           borderBottomColor: 'hsl(142 45% 50% / 0.3)',
         }}
       >
-        <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-xs sm:text-sm tracking-wide" style={{ color: 'hsl(215 20% 30%)' }}>
+        <div
+          className="container mx-auto px-4 text-center flex items-center justify-center"
+          style={{ height: 'var(--banner-h)' }}
+        >
+          <p className="text-[11px] sm:text-sm tracking-wide leading-none" style={{ color: 'hsl(215 20% 30%)' }}>
             Un logiciel propulsé par{' '}
             <a
               href="https://www.immo-rama.ch"
@@ -43,7 +53,15 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
 
       <PublicSiteHeader />
 
-      {children}
+      {/* Décalage global pour compenser la bannière + le header fixes */}
+      <div
+        style={{
+          paddingTop:
+            'calc(var(--banner-h) + var(--header-h) + env(safe-area-inset-top, 0px))',
+        }}
+      >
+        {children}
+      </div>
 
       <PublicSiteFooter />
 
