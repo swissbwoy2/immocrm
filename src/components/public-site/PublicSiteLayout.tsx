@@ -16,6 +16,30 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
       {/* Scroll progress bar dorée */}
       <ScrollProgressBar />
 
+      {/* Top banner — propulsé par Immo-rama.ch */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[60] border-b"
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          backgroundColor: 'hsl(142 35% 94%)',
+          borderBottomColor: 'hsl(142 45% 50% / 0.3)',
+        }}
+      >
+        <div className="container mx-auto px-4 py-2 text-center">
+          <p className="text-xs sm:text-sm tracking-wide" style={{ color: 'hsl(215 20% 30%)' }}>
+            Un logiciel propulsé par{' '}
+            <a
+              href="https://www.immo-rama.ch"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold transition-colors hover:opacity-80"
+              style={{ color: 'hsl(142 45% 40%)' }}
+            >
+              Immo-rama.ch
+            </a>
+          </p>
+        </div>
+      </div>
 
       <PublicSiteHeader />
 
@@ -26,13 +50,13 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
       {/* Sticky Mobile CTA */}
       <StickyMobileCTA />
 
-      {/* WhatsApp / Google Reviews Widget — raised above sticky mobile CTA */}
+      {/* WhatsApp / Google Reviews Widget — desktop only to avoid overlapping mobile sticky CTA */}
       <div
-        className="fixed left-4 md:left-6 z-[60] opacity-90 hover:opacity-100 transition-opacity"
-        style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
+        className="hidden md:block fixed left-6 bottom-6 z-[60] opacity-90 hover:opacity-100 transition-opacity"
       >
         <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
       </div>
+
 
       {/* Cookie Consent */}
       <Suspense fallback={null}>
