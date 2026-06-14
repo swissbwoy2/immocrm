@@ -17,9 +17,7 @@ export default {
         xs: "375px",
       },
       fontFamily: {
-        sans: ['Manrope', 'system-ui', '-apple-system', 'sans-serif'],
-        serif: ['"Cormorant Garamond"', '"Playfair Display"', 'Georgia', 'serif'],
-        display: ['"Cormorant Garamond"', '"Playfair Display"', 'Georgia', 'serif'],
+        serif: ['"Playfair Display"', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",

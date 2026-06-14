@@ -23,7 +23,7 @@ export function SocialProofSection() {
 
         {/* Google Reviews Widget */}
         <ScrollReveal variant="fade-up" delay={0.1} className="max-w-5xl mx-auto mb-16">
-          <div className="elfsight-app-6edfc233-2b60-465a-9be1-9b16cf306e85" data-elfsight-app-lazy />
+          <div className="elfsight-app-6edfc233-2b60-465a-9be1-9b16cf306e85" />
         </ScrollReveal>
 
         {/* Video testimonials */}
