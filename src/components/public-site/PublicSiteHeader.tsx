@@ -20,7 +20,7 @@ export function PublicSiteHeader() {
     <>
       <motion.header
         className="fixed left-0 right-0 z-50"
-        style={{ top: 'calc(36px + env(safe-area-inset-top, 0px))' }}
+        style={{ top: 'calc(var(--banner-h, 34px) + env(safe-area-inset-top, 0px))' }}
         initial={prefersReducedMotion ? false : { y: -12, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as const }}
