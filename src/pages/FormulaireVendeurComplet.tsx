@@ -315,10 +315,99 @@ export default function FormulaireVendeurComplet() {
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
+    const SOURCE = 'formulaire_vendeur_complet';
+    const PARCOURS = 'vente';
+    const firstName = data.nom.split(' ')[0] || data.nom;
+    const lastName = data.nom.split(' ').slice(1).join(' ') || '';
+    const baseAttempt = {
+      email: data.email,
+      phone: data.telephone,
+      first_name: firstName,
+      last_name: lastName,
+      source: SOURCE,
+      parcours: PARCOURS,
+    };
     try {
-      // 1) Create user account first
-      const firstName = data.nom.split(' ')[0] || data.nom;
-      const lastName = data.nom.split(' ').slice(1).join(' ') || '';
+      // 1) Build notes
+      const equipements = [];
+      if (data.balcon) equipements.push('Balcon');
+      if (data.terrasse) equipements.push('Terrasse');
+      if (data.jardin) equipements.push('Jardin');
+      if (data.garage) equipements.push('Garage');
+      if (data.parking) equipements.push('Parking');
+      if (data.cave) equipements.push('Cave');
+      if (data.ascenseur) equipements.push('Ascenseur');
+      if (data.vue_degagee) equipements.push('Vue dégagée');
+      if (data.piscine) equipements.push('Piscine');
+
+      const notes: string[] = [
+        `Type: ${data.type_bien}`,
+        `Surface: ${data.surface}m²`,
+        `Prix souhaité: ${data.prix_souhaite} CHF`,
+      ];
+
+      if (['appartement', 'villa'].includes(data.type_bien) && data.est_multi_logements !== 'oui_3plus') {
+        if (data.nombre_pieces) notes.push(`Pièces: ${data.nombre_pieces}`);
+        if (data.nombre_chambres) notes.push(`Chambres: ${data.nombre_chambres}`);
+        if (data.nombre_sdb) notes.push(`Salles de bain: ${data.nombre_sdb}`);
+        if (data.etage) notes.push(`Étage: ${data.etage}`);
+        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
+      }
+
+      if (data.type_bien === 'villa') {
+        if (data.surface_terrain) notes.push(`Terrain: ${data.surface_terrain}m²`);
+        if (data.est_multi_logements === 'oui_2') notes.push('Type: 2 logements');
+        if (data.est_multi_logements === 'oui_3plus') notes.push('Type: 3+ logements');
+      }
+
+      const showRendementFields = data.type_bien === 'immeuble' || data.est_multi_logements === 'oui_3plus';
+      if (showRendementFields) {
+        if (data.nb_logements) notes.push(`Logements: ${data.nb_logements}`);
+        if (data.revenus_locatifs) notes.push(`Revenus locatifs: ${data.revenus_locatifs} CHF/an`);
+        if (data.charges_annuelles) notes.push(`Charges: ${data.charges_annuelles} CHF/an`);
+        if (data.taux_occupation) notes.push(`Occupation: ${data.taux_occupation}%`);
+        if (data.etat_general) notes.push(`État: ${data.etat_general}`);
+        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
+      }
+
+      if (data.type_bien === 'terrain') {
+        if (data.zone_affectation) notes.push(`Zone: ${data.zone_affectation}`);
+        if (data.terrain_viabilise) notes.push('Viabilisé: Oui');
+        if (data.constructibilite) notes.push(`Constructibilité: ${data.constructibilite}`);
+        if (data.acces_route) notes.push('Accès route: Oui');
+      }
+
+      if (data.type_bien === 'commercial') {
+        if (data.usage_actuel) notes.push(`Usage: ${data.usage_actuel}`);
+        if (data.loyer_actuel) notes.push(`Loyer actuel: ${data.loyer_actuel} CHF/mois`);
+        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
+      }
+
+      if (equipements.length > 0) notes.push(`Équipements: ${equipements.join(', ')}`);
+      if (data.delai_vente) notes.push(`Délai souhaité: ${data.delai_vente}`);
+      if (data.motif_vente) notes.push(`Motif: ${data.motif_vente}`);
+      if (data.description) notes.push(`Description: ${data.description}`);
+      if (photos.length > 0) notes.push(`Photos: ${photos.map(p => p.url).join(', ')}`);
+
+      // 2) Safety net : créer le lead AVANT le signup
+      const { error: leadError } = await supabase.from('leads').insert({
+        email: data.email,
+        prenom: firstName,
+        nom: lastName,
+        telephone: data.telephone,
+        localite: data.ville || data.adresse,
+        budget: data.prix_souhaite,
+        source: SOURCE,
+        notes: notes.join(' | '),
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_content: utmParams.utm_content,
+        utm_term: utmParams.utm_term,
+      });
+      if (leadError) console.warn('Lead insert warning:', leadError);
+
+      // 3) Signup auth
       const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -332,120 +421,40 @@ export default function FormulaireVendeurComplet() {
           },
         },
       });
-      if (authError) throw authError;
 
-      // Create profile + assign 'client' role server-side (RLS-safe)
-      if (signUpData?.user?.id) {
-        const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
-          body: {
-            user_id: signUpData.user.id,
-            email: data.email,
-            first_name: firstName,
-            last_name: lastName,
-            phone: data.telephone,
-            source: 'formulaire_vendeur_complet',
-            parcours: 'vente',
-          },
-        });
-        if (provisionError) console.warn('create-public-user warning:', provisionError);
+      if (authError || !signUpData?.user?.id) {
+        await logSignupAttempt({ ...baseAttempt, stage: 'auth_signup_failed', error_message: authError?.message || 'user null returned' });
+        toast.error(humanizeAuthError(authError?.message));
+        setIsSubmitting(false);
+        return;
       }
 
-      // Build equipment list
-      const equipements = [];
-      if (data.balcon) equipements.push('Balcon');
-      if (data.terrasse) equipements.push('Terrasse');
-      if (data.jardin) equipements.push('Jardin');
-      if (data.garage) equipements.push('Garage');
-      if (data.parking) equipements.push('Parking');
-      if (data.cave) equipements.push('Cave');
-      if (data.ascenseur) equipements.push('Ascenseur');
-      if (data.vue_degagee) equipements.push('Vue dégagée');
-      if (data.piscine) equipements.push('Piscine');
-
-      // Build detailed notes based on property type
-      const notes: string[] = [
-        `Type: ${data.type_bien}`,
-        `Surface: ${data.surface}m²`,
-        `Prix souhaité: ${data.prix_souhaite} CHF`,
-      ];
-
-      // Standard details (appartement, villa simple)
-      if (['appartement', 'villa'].includes(data.type_bien) && data.est_multi_logements !== 'oui_3plus') {
-        if (data.nombre_pieces) notes.push(`Pièces: ${data.nombre_pieces}`);
-        if (data.nombre_chambres) notes.push(`Chambres: ${data.nombre_chambres}`);
-        if (data.nombre_sdb) notes.push(`Salles de bain: ${data.nombre_sdb}`);
-        if (data.etage) notes.push(`Étage: ${data.etage}`);
-        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
-      }
-
-      // Villa specific
-      if (data.type_bien === 'villa') {
-        if (data.surface_terrain) notes.push(`Terrain: ${data.surface_terrain}m²`);
-        if (data.est_multi_logements === 'oui_2') notes.push('Type: 2 logements');
-        if (data.est_multi_logements === 'oui_3plus') notes.push('Type: 3+ logements');
-      }
-
-      // Immeuble / Multi-logements
-      const showRendementFields = data.type_bien === 'immeuble' || data.est_multi_logements === 'oui_3plus';
-      if (showRendementFields) {
-        if (data.nb_logements) notes.push(`Logements: ${data.nb_logements}`);
-        if (data.revenus_locatifs) notes.push(`Revenus locatifs: ${data.revenus_locatifs} CHF/an`);
-        if (data.charges_annuelles) notes.push(`Charges: ${data.charges_annuelles} CHF/an`);
-        if (data.taux_occupation) notes.push(`Occupation: ${data.taux_occupation}%`);
-        if (data.etat_general) notes.push(`État: ${data.etat_general}`);
-        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
-      }
-
-      // Terrain
-      if (data.type_bien === 'terrain') {
-        if (data.zone_affectation) notes.push(`Zone: ${data.zone_affectation}`);
-        if (data.terrain_viabilise) notes.push('Viabilisé: Oui');
-        if (data.constructibilite) notes.push(`Constructibilité: ${data.constructibilite}`);
-        if (data.acces_route) notes.push('Accès route: Oui');
-      }
-
-      // Commercial
-      if (data.type_bien === 'commercial') {
-        if (data.usage_actuel) notes.push(`Usage: ${data.usage_actuel}`);
-        if (data.loyer_actuel) notes.push(`Loyer actuel: ${data.loyer_actuel} CHF/mois`);
-        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
-      }
-
-      // Equipment & general
-      if (equipements.length > 0) notes.push(`Équipements: ${equipements.join(', ')}`);
-      if (data.delai_vente) notes.push(`Délai souhaité: ${data.delai_vente}`);
-      if (data.motif_vente) notes.push(`Motif: ${data.motif_vente}`);
-      if (data.description) notes.push(`Description: ${data.description}`);
-      
-      // Add photos URLs
-      if (photos.length > 0) {
-        notes.push(`Photos: ${photos.map(p => p.url).join(', ')}`);
-      }
-
-      const { error } = await supabase.from('leads').insert({
-        email: data.email,
-        prenom: data.nom.split(' ')[0] || data.nom,
-        nom: data.nom.split(' ').slice(1).join(' ') || '',
-        telephone: data.telephone,
-        localite: data.ville || data.adresse,
-        budget: data.prix_souhaite,
-        source: 'formulaire_vendeur_complet',
-        notes: notes.join(' | '),
-        utm_source: utmParams.utm_source,
-        utm_medium: utmParams.utm_medium,
-        utm_campaign: utmParams.utm_campaign,
-        utm_content: utmParams.utm_content,
-        utm_term: utmParams.utm_term,
+      // 4) Provisionnement profil + rôle
+      const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
+        body: {
+          user_id: signUpData.user.id,
+          email: data.email,
+          first_name: firstName,
+          last_name: lastName,
+          phone: data.telephone,
+          source: SOURCE,
+          parcours: PARCOURS,
+        },
       });
 
-      if (error) throw error;
+      if (provisionError) {
+        await logSignupAttempt({ ...baseAttempt, stage: 'provision_failed', error_message: provisionError.message });
+        toast.error("Compte créé mais profil incomplet. Notre équipe va vous contacter rapidement.");
+      } else {
+        await logSignupAttempt({ ...baseAttempt, stage: 'succeeded' });
+      }
 
       setIsSuccess(true);
       toast.success('Votre bien a été soumis avec succès !');
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error);
-      toast.error('Une erreur est survenue. Veuillez réessayer.');
+      await logSignupAttempt({ ...baseAttempt, stage: 'auth_signup_failed', error_message: error?.message || String(error) });
+      toast.error(humanizeAuthError(error?.message));
     } finally {
       setIsSubmitting(false);
     }
