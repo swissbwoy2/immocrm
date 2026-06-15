@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
+import { logSignupAttempt, humanizeAuthError } from '@/lib/signupTracking';
 import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -123,43 +124,24 @@ export default function FormulaireConstruireRenover() {
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
+    const SOURCE = 'construire-renover';
+    const PARCOURS = 'renovation';
+    const baseAttempt = {
+      email: data.email,
+      phone: data.telephone,
+      first_name: data.prenom,
+      last_name: data.nom,
+      source: SOURCE,
+      parcours: PARCOURS,
+    };
     try {
-      const { data: signUpData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            first_name: data.prenom,
-            last_name: data.nom,
-            phone: data.telephone,
-            user_type: 'maitre_ouvrage',
-          },
-        },
-      });
-      if (authError) throw authError;
-
-      if (signUpData?.user?.id) {
-        const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
-          body: {
-            user_id: signUpData.user.id,
-            email: data.email,
-            first_name: data.prenom,
-            last_name: data.nom,
-            phone: data.telephone,
-            source: 'construire-renover',
-            parcours: 'renovation',
-          },
-        });
-        if (provisionError) console.warn('create-public-user warning:', provisionError);
-      }
-
+      // 1) Safety net : créer le lead AVANT le signup
       const { error: leadError } = await (supabase.from('leads') as any).insert({
         first_name: data.prenom,
         last_name: data.nom,
         email: data.email,
         phone: data.telephone,
-        source: 'construire-renover',
+        source: SOURCE,
         notes: JSON.stringify({
           type_projet: data.type_projet,
           nature_travaux: data.nature_travaux,
@@ -179,10 +161,53 @@ export default function FormulaireConstruireRenover() {
       });
       if (leadError) console.warn('Lead insert warning:', leadError);
 
+      // 2) Signup auth
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: data.prenom,
+            last_name: data.nom,
+            phone: data.telephone,
+            user_type: 'maitre_ouvrage',
+          },
+        },
+      });
+
+      if (authError || !signUpData?.user?.id) {
+        await logSignupAttempt({ ...baseAttempt, stage: 'auth_signup_failed', error_message: authError?.message || 'user null returned' });
+        toast.error(humanizeAuthError(authError?.message));
+        setSubmitting(false);
+        return;
+      }
+
+      // 3) Provisionnement profil + rôle (bloquant)
+      const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
+        body: {
+          user_id: signUpData.user.id,
+          email: data.email,
+          first_name: data.prenom,
+          last_name: data.nom,
+          phone: data.telephone,
+          source: SOURCE,
+          parcours: PARCOURS,
+        },
+      });
+
+      if (provisionError) {
+        await logSignupAttempt({ ...baseAttempt, stage: 'provision_failed', error_message: provisionError.message });
+        toast.error("Compte créé mais profil incomplet. Notre équipe va vous contacter rapidement.");
+      } else {
+        await logSignupAttempt({ ...baseAttempt, stage: 'succeeded' });
+      }
+
       toast.success('Demande envoyée ! Vérifiez votre email.');
       navigate('/inscription-validee');
     } catch (e: any) {
-      toast.error(e.message || 'Erreur lors de l\'envoi');
+      await logSignupAttempt({ ...baseAttempt, stage: 'auth_signup_failed', error_message: e?.message || String(e) });
+      toast.error(humanizeAuthError(e?.message));
     } finally {
       setSubmitting(false);
     }

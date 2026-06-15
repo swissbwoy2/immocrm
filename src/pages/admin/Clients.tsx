@@ -690,6 +690,10 @@ const Clients = () => {
                 <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
                 <span className="hidden sm:inline">Inviter un client</span>
               </Button>
+              <Button onClick={() => navigate('/admin/inscriptions-echouees')} size="sm" variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10">
+                <AlertTriangle className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Inscriptions échouées</span>
+              </Button>
             </div>
           }
         />
