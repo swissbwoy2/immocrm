@@ -25,6 +25,7 @@ import { VendeurFloatingNav } from '@/components/landing/vendeur/VendeurFloating
 import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
+import { logSignupAttempt, humanizeAuthError } from '@/lib/signupTracking';
 import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
