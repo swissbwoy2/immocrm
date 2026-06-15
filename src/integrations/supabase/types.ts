@@ -9830,6 +9830,57 @@ export type Database = {
           },
         ]
       }
+      signup_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          error_message: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          parcours: string | null
+          phone: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source: string | null
+          stage: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          error_message?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          parcours?: string | null
+          phone?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source?: string | null
+          stage: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          parcours?: string | null
+          phone?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source?: string | null
+          stage?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       source_connectors: {
         Row: {
           base_url: string | null
