@@ -1,44 +1,62 @@
-# Problème
+# Bug identifié — invite-client refuse les soumissions publiques depuis le 8 juin
 
-L'écran "Définir mon mot de passe" affiche **"Auth session missing!"** pour Christelle Miere.
+## Diagnostic
 
-Diagnostic via les logs auth :
-- 07:14:06 → lien d'invitation consommé avec succès, session créée
-- 07:16:57 → `updateUser({ password })` échoue avec `403 bad_jwt: missing sub claim`
+Le formulaire `/nouveau-mandat` enchaîne 4 étapes : (1) insertion `demandes_mandat`, (2) notif admin, (3) envoi PDF, (4) **appel `invite-client` qui crée le compte + la ligne `clients`**.
 
-La session JWT a été perdue / corrompue entre l'arrivée sur la page et la soumission du formulaire (probablement navigateur in-app, iOS, ou double consommation du `?code=`).
+Le 8 juin (commit `0778bd12`), un garde d'autorisation a été ajouté dans `invite-client`. Il accepte un appel public **uniquement si** `demandeMandat.id` est fourni ET correspond à une ligne `demandes_mandat` avec le même email :
 
-# Plan
+```ts
+if (!isAuthorized && demandeMandat?.id && email) {
+  // match l'id + email avec la table demandes_mandat
+}
+if (!isAuthorized) return 401;
+```
 
-## 1. Débloquer Christelle immédiatement
-Lui renvoyer un **nouveau lien d'activation** via `resetPasswordForEmail` (depuis admin), avec consigne :
-- Ouvrir le lien **directement dans Safari/Chrome** (pas dans WhatsApp/Mail)
-- Définir le mot de passe **sans recharger la page**
-- Ne pas fermer l'onglet entre clic et soumission
+**MAIS** dans `src/pages/NouveauMandat.tsx` (lignes 331-375), l'objet `demandeMandat` envoyé à la fonction **n'inclut PAS le champ `id`** — l'insertion à la ligne 255-257 ne fait pas de `.select()` pour récupérer l'id généré. Résultat :
 
-## 2. Fiabiliser `src/pages/FirstLogin.tsx`
+- `demandeMandat?.id` = `undefined`
+- pas de match → `isAuthorized = false` → **401**
+- compte client jamais créé, dossier invisible dans `admin/clients`
 
-### a) Détection robuste de la perte de session au moment du submit
-Si `updateUser` renvoie `Auth session missing` ou `bad_jwt` :
-- ne PAS afficher l'erreur brute
-- basculer en phase `expired` avec un message dédié : "Votre lien a expiré pendant la saisie. Demandez-en un nouveau ci-dessous." + email pré-rempli si disponible
+## Preuve
 
-### b) Empêcher la double consommation du `?code=`
-- Après `exchangeCodeForSession`, **nettoyer l'URL** (`window.history.replaceState`) pour retirer `?code=` afin qu'un reload ne tente pas un 2e échange (qui invalide la session existante).
+| Client | Soumission | Auth user créé ? | Client row |
+|---|---|---|---|
+| mimoza (26/05) | qr_invoice | ✅ | +5s |
+| eltonedu (28/05) | qr_invoice | ✅ | +5s |
+| arseneble (08/06 12:12) | twint | ✅ | +5s |
+| fyfyramazani (10/06) | qr_invoice | ✅ | +5s |
+| — **garde ajouté le 08/06 17:27** — | | | |
+| bcvscpncept (15/06) | qr_invoice | ❌ | ❌ |
+| faarahwarsame (16/06 11:27) | qr_invoice | ❌ | ❌ |
+| mirsefinkdm (16/06 12:21) | qr_invoice | ❌ | ❌ |
 
-### c) Pré-remplir l'email pour le renvoi
-- Après obtention de la session, faire `getUser()` et stocker l'email → l'utiliser dans `handleResendLink` automatiquement si on bascule en `expired`.
+Aucun `auth.users` n'existe pour ces 3 emails → confirme que `invite-client` n'a jamais créé le compte.
 
-### d) Avertissement préventif sur la page
-- Petit bandeau discret : "💡 Pour éviter tout souci, définissez votre mot de passe sans recharger ni fermer cette page."
+## Fix (1 fichier, 4 lignes)
 
-## 3. (Optionnel) Améliorer le template email d'invitation
-Ajouter dans le corps de l'email : "Si vous ouvrez ce lien depuis WhatsApp/Mail, copiez-collez-le dans Safari ou Chrome pour éviter les erreurs."
+`src/pages/NouveauMandat.tsx` :
 
-# Fichiers touchés
-- `src/pages/FirstLogin.tsx` (logique de robustesse + UI)
-- Aucune migration DB nécessaire
-- Pas de changement backend
+1. À l'insertion `demandes_mandat`, ajouter `.select('id').single()` pour récupérer l'`id` de la ligne créée.
+2. Passer ce `id` dans le payload `demandeMandat` envoyé à `invite-client` (et aussi à `send-mandat-pdf` pour rester cohérent).
 
-# Action manuelle (hors code)
-Renvoyer un nouveau lien à `christellemiere@hotmail.fr` depuis `/admin/clients` après le déploiement.
+```ts
+const { data: inserted, error: insertError } = await supabase
+  .from('demandes_mandat')
+  .insert(insertData as any)
+  .select('id')
+  .single();
+// ...
+demandeMandat: {
+  id: inserted?.id,         // ← AJOUT
+  adresse: formData.adresse,
+  ...
+}
+```
+
+## Action manuelle après déploiement
+
+Pour les 3 clients déjà soumis sans compte, depuis `admin/demandes-activation`, cliquer sur le bouton d'activation/invitation pour chacun — `invite-client` sera alors appelé avec le JWT admin (autorisation OK) et le dossier apparaîtra dans `admin/clients`.
+
+**Aucune migration DB, aucun changement de RLS, aucun changement métier.** Seul `src/pages/NouveauMandat.tsx` est modifié.

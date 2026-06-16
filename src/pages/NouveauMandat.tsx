@@ -252,11 +252,15 @@ export default function NouveauMandat() {
         utm_term: utmParams.utm_term,
       };
 
-      const { error: insertError } = await supabase
+      const { data: insertedDemande, error: insertError } = await supabase
         .from('demandes_mandat')
-        .insert(insertData as any);
+        .insert(insertData as any)
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
+      const demandeMandatId = insertedDemande?.id;
+
 
       // Créer notification pour les admins (utilise l'email au lieu de l'ID)
       try {
@@ -335,6 +339,7 @@ export default function NouveauMandat() {
             nom: formData.nom,
             telephone: formData.telephone,
             demandeMandat: {
+              id: demandeMandatId,
               adresse: formData.adresse,
               date_naissance: formData.date_naissance,
               nationalite: formData.nationalite,
