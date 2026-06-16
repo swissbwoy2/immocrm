@@ -339,6 +339,7 @@ export default function NouveauMandat() {
             nom: formData.nom,
             telephone: formData.telephone,
             demandeMandat: {
+              id: demandeMandatId,
               adresse: formData.adresse,
               date_naissance: formData.date_naissance,
               nationalite: formData.nationalite,
