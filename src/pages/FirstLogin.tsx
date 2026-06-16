@@ -19,6 +19,7 @@ export default function FirstLogin() {
   const [loading, setLoading] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+  const [sessionEmail, setSessionEmail] = useState<string>('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const resolvedRef = useRef(false);
