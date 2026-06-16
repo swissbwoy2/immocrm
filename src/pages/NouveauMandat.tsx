@@ -196,7 +196,11 @@ export default function NouveauMandat() {
       }
 
       // ÉTAPE 3: INSERT UNIQUE avec toutes les données
+      // UUID généré côté client → pas de .select() après insert
+      // (visiteur anon: aucune policy SELECT ne matche, ça déclenche un faux "RLS violation").
+      const demandeMandatId = crypto.randomUUID();
       const insertData = {
+        id: demandeMandatId,
         email: formData.email,
         prenom: formData.prenom,
         nom: formData.nom,
@@ -252,14 +256,11 @@ export default function NouveauMandat() {
         utm_term: utmParams.utm_term,
       };
 
-      const { data: insertedDemande, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('demandes_mandat')
-        .insert(insertData as any)
-        .select('id')
-        .single();
+        .insert(insertData as any);
 
       if (insertError) throw insertError;
-      const demandeMandatId = insertedDemande?.id;
 
 
       // Créer notification pour les admins (utilise l'email au lieu de l'ID)
