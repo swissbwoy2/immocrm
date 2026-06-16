@@ -1,62 +1,43 @@
-# Bug identifié — invite-client refuse les soumissions publiques depuis le 8 juin
+## Cause exacte de l'erreur
 
-## Diagnostic
-
-Le formulaire `/nouveau-mandat` enchaîne 4 étapes : (1) insertion `demandes_mandat`, (2) notif admin, (3) envoi PDF, (4) **appel `invite-client` qui crée le compte + la ligne `clients`**.
-
-Le 8 juin (commit `0778bd12`), un garde d'autorisation a été ajouté dans `invite-client`. Il accepte un appel public **uniquement si** `demandeMandat.id` est fourni ET correspond à une ligne `demandes_mandat` avec le même email :
+L'erreur `new row violates row-level security policy for table "demandes_mandat"` vient de la modification récente que j'ai faite dans `src/pages/NouveauMandat.tsx` :
 
 ```ts
-if (!isAuthorized && demandeMandat?.id && email) {
-  // match l'id + email avec la table demandes_mandat
-}
-if (!isAuthorized) return 401;
+.insert(insertData as any)
+.select('id')   // ⬅️ ajouté hier
+.single();
 ```
 
-**MAIS** dans `src/pages/NouveauMandat.tsx` (lignes 331-375), l'objet `demandeMandat` envoyé à la fonction **n'inclut PAS le champ `id`** — l'insertion à la ligne 255-257 ne fait pas de `.select()` pour récupérer l'id généré. Résultat :
+Le formulaire `/nouveau-mandat` est utilisé par des visiteurs **non connectés** (rôle `anon`).
 
-- `demandeMandat?.id` = `undefined`
-- pas de match → `isAuthorized = false` → **401**
-- compte client jamais créé, dossier invisible dans `admin/clients`
+- La policy **INSERT** (`Public can submit mandate requests`, `WITH CHECK true`) autorise bien l'insertion.
+- Mais le `.select('id')` force PostgREST à demander `Prefer: return=representation`, ce qui exige que la ligne soit visible via une policy **SELECT**.
+- Toutes les policies SELECT de `demandes_mandat` exigent `auth.uid()` (admin, propriétaire de la demande via email/profil). Pour un visiteur anonyme, **aucune** ne matche → Supabase renvoie le message RLS trompeur côté INSERT.
 
-## Preuve
+Résultat : la cliente Wint2 (non connectée) ne peut plus soumettre. Tous les nouveaux mandats publics sont bloqués depuis cette modif.
 
-| Client | Soumission | Auth user créé ? | Client row |
-|---|---|---|---|
-| mimoza (26/05) | qr_invoice | ✅ | +5s |
-| eltonedu (28/05) | qr_invoice | ✅ | +5s |
-| arseneble (08/06 12:12) | twint | ✅ | +5s |
-| fyfyramazani (10/06) | qr_invoice | ✅ | +5s |
-| — **garde ajouté le 08/06 17:27** — | | | |
-| bcvscpncept (15/06) | qr_invoice | ❌ | ❌ |
-| faarahwarsame (16/06 11:27) | qr_invoice | ❌ | ❌ |
-| mirsefinkdm (16/06 12:21) | qr_invoice | ❌ | ❌ |
+## Correctif (minimal, 1 fichier)
 
-Aucun `auth.users` n'existe pour ces 3 emails → confirme que `invite-client` n'a jamais créé le compte.
+Générer l'UUID côté client avant l'insertion, pour **éliminer le `.select()`** :
 
-## Fix (1 fichier, 4 lignes)
+1. Dans `src/pages/NouveauMandat.tsx`, créer l'id en amont :
+   ```ts
+   const demandeMandatId = crypto.randomUUID();
+   const insertData = { id: demandeMandatId, /* …reste inchangé… */ };
+   ```
+2. Remplacer le bloc d'insertion par :
+   ```ts
+   const { error: insertError } = await supabase
+     .from('demandes_mandat')
+     .insert(insertData as any);
+   if (insertError) throw insertError;
+   ```
+3. Garder `demandeMandatId` tel quel pour les appels suivants à `send-mandat-pdf` et `invite-client` (la valeur est connue avant l'insert, le fix précédent reste valable).
 
-`src/pages/NouveauMandat.tsx` :
+Aucune migration SQL nécessaire : la colonne `id` est un UUID PK, fournir une valeur explicite est accepté et l'INSERT WITH CHECK = true reste satisfait pour `anon`.
 
-1. À l'insertion `demandes_mandat`, ajouter `.select('id').single()` pour récupérer l'`id` de la ligne créée.
-2. Passer ce `id` dans le payload `demandeMandat` envoyé à `invite-client` (et aussi à `send-mandat-pdf` pour rester cohérent).
+## Vérification après build
 
-```ts
-const { data: inserted, error: insertError } = await supabase
-  .from('demandes_mandat')
-  .insert(insertData as any)
-  .select('id')
-  .single();
-// ...
-demandeMandat: {
-  id: inserted?.id,         // ← AJOUT
-  adresse: formData.adresse,
-  ...
-}
-```
-
-## Action manuelle après déploiement
-
-Pour les 3 clients déjà soumis sans compte, depuis `admin/demandes-activation`, cliquer sur le bouton d'activation/invitation pour chacun — `invite-client` sera alors appelé avec le JWT admin (autorisation OK) et le dossier apparaîtra dans `admin/clients`.
-
-**Aucune migration DB, aucun changement de RLS, aucun changement métier.** Seul `src/pages/NouveauMandat.tsx` est modifié.
+- Tester la soumission `/nouveau-mandat` en navigation privée (anon).
+- Vérifier l'apparition de la ligne dans `demandes_mandat` puis le déclenchement de `invite-client` (id transmis).
+- Confirmer que les 3 clients orphelins précédents peuvent toujours être activés manuellement depuis `admin/demandes-activation`.
