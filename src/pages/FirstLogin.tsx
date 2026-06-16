@@ -114,7 +114,25 @@ export default function FirstLogin() {
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error: any) {
-      toast({ title: 'Erreur', description: error.message || 'Une erreur est survenue', variant: 'destructive' });
+      const msg = (error?.message || '').toLowerCase();
+      const sessionLost =
+        msg.includes('auth session missing') ||
+        msg.includes('bad_jwt') ||
+        msg.includes('missing sub') ||
+        msg.includes('jwt expired') ||
+        error?.status === 401 ||
+        error?.status === 403;
+      if (sessionLost) {
+        if (sessionEmail) setResendEmail(sessionEmail);
+        setPhase('expired');
+        toast({
+          title: 'Session expirée',
+          description: "Votre lien d'activation a expiré pendant la saisie. Demandez-en un nouveau ci-dessous.",
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Erreur', description: error.message || 'Une erreur est survenue', variant: 'destructive' });
+      }
     } finally {
       setLoading(false);
     }
