@@ -1,43 +1,72 @@
-## Cause exacte de l'erreur
+## Preuve par les timestamps (et pourquoi mon premier diagnostic était bon)
 
-L'erreur `new row violates row-level security policy for table "demandes_mandat"` vient de la modification récente que j'ai faite dans `src/pages/NouveauMandat.tsx` :
+Vérification croisée DB + git :
+
+| Heure (UTC) | Évènement |
+|---|---|
+| 11:27 | ✅ Abubakar Mohamed — demande créée |
+| 12:21 | ✅ Mir Essiz — demande créée |
+| **12:42** | 🚨 **Mon commit qui ajoute `.select('id').single()` sur `demandes_mandat`** |
+| 19:03 | ❌ Saba Haile (Wint2 / winta-h@hotmail.com) — RLS error |
+
+→ Abubakar et Mir sont passés **avant** ma modif. La cliente Wint2 a buté **après**. Le diagnostic tient.
+
+Confirmation supplémentaire côté AbaNinja edge functions : pour `winta-h@hotmail.com`, `create-abaninja-client` puis `create-abaninja-invoice` ont tourné **2 fois avec succès** (R0418 + R0419) à 19:03 → l'étape AbaNinja est OK, c'est bien le `INSERT` final dans `demandes_mandat` qui a explosé. Le fichier `signup_attempts` ne contient rien parce qu'on n'a jamais loggé ce type d'échec.
+
+## Le fix est déjà appliqué
+
+`src/pages/NouveauMandat.tsx` génère maintenant l'UUID côté client et n'appelle plus `.select()` après l'insert (lignes 259-263). Wint2 et toute nouvelle soumission anon passeront.
+
+## Filet de sécurité — pour ne **jamais** reperdre un client
+
+Aujourd'hui, quand le `.insert()` final casse, on perd tout en silence : pas de ligne `demandes_mandat`, pas de `signup_attempts`, pas de notification admin. Seul AbaNinja garde une trace (la facture). Je propose 3 ajouts ciblés :
+
+### 1. Logger TOUT échec d'inscription dans `signup_attempts`
+
+Dans `NouveauMandat.tsx`, envelopper l'`insert` :
 
 ```ts
-.insert(insertData as any)
-.select('id')   // ⬅️ ajouté hier
-.single();
+const { error: insertError } = await supabase
+  .from('demandes_mandat')
+  .insert(insertData as any);
+
+if (insertError) {
+  // ❗ filet de sécurité : on garde une trace même si l'insert RLS échoue
+  await supabase.from('signup_attempts').insert({
+    email: formData.email,
+    first_name: formData.prenom,
+    last_name: formData.nom,
+    phone: formData.telephone,
+    source: 'nouveau-mandat',
+    parcours: formData.type_recherche,
+    stage: 'demandes_mandat_insert_failed',
+    error_message: insertError.message,
+    user_agent: navigator.userAgent,
+  });
+  throw insertError;
+}
 ```
 
-Le formulaire `/nouveau-mandat` est utilisé par des visiteurs **non connectés** (rôle `anon`).
+Vérifier que la policy INSERT sur `signup_attempts` autorise `anon` (à valider, sinon ajouter une policy permissive : c'est une table de logs).
 
-- La policy **INSERT** (`Public can submit mandate requests`, `WITH CHECK true`) autorise bien l'insertion.
-- Mais le `.select('id')` force PostgREST à demander `Prefer: return=representation`, ce qui exige que la ligne soit visible via une policy **SELECT**.
-- Toutes les policies SELECT de `demandes_mandat` exigent `auth.uid()` (admin, propriétaire de la demande via email/profil). Pour un visiteur anonyme, **aucune** ne matche → Supabase renvoie le message RLS trompeur côté INSERT.
+### 2. Notification admin immédiate sur échec
 
-Résultat : la cliente Wint2 (non connectée) ne peut plus soumettre. Tous les nouveaux mandats publics sont bloqués depuis cette modif.
+Même bloc `catch` → appel `create_notification` à l'admin avec lien `/admin/inscriptions-echouees`, message : « Échec inscription client X (winta-h@…) à l'étape Y, facture AbaNinja R0418 émise — à rattraper ».
 
-## Correctif (minimal, 1 fichier)
+### 3. Réparer rétroactivement les 3 clients orphelins déjà perdus
 
-Générer l'UUID côté client avant l'insertion, pour **éliminer le `.select()`** :
+- `mirsefinkdm@gmail.com` (Mir Essiz)
+- `faarahwarsame317@gmail.com` (Abubakar Mohamed)
+- `bcvscpncept@gmail.com` (Jennifer Poncet)
 
-1. Dans `src/pages/NouveauMandat.tsx`, créer l'id en amont :
-   ```ts
-   const demandeMandatId = crypto.randomUUID();
-   const insertData = { id: demandeMandatId, /* …reste inchangé… */ };
-   ```
-2. Remplacer le bloc d'insertion par :
-   ```ts
-   const { error: insertError } = await supabase
-     .from('demandes_mandat')
-     .insert(insertData as any);
-   if (insertError) throw insertError;
-   ```
-3. Garder `demandeMandatId` tel quel pour les appels suivants à `send-mandat-pdf` et `invite-client` (la valeur est connue avant l'insert, le fix précédent reste valable).
+Ces 3 lignes existent dans `demandes_mandat` mais sans compte auth ni ligne `clients` (le `invite-client` ne recevait pas d'`id`). Action : depuis `admin/demandes-activation`, lancer manuellement l'invitation pour chacun → `invite-client` créera leur compte + ligne `clients` et ils apparaîtront enfin dans `admin/clients`.
 
-Aucune migration SQL nécessaire : la colonne `id` est un UUID PK, fournir une valeur explicite est accepté et l'INSERT WITH CHECK = true reste satisfait pour `anon`.
+### 4. Récupérer Wint2 / Saba Haile manuellement
 
-## Vérification après build
+Sa demande n'est jamais arrivée en DB, mais les factures AbaNinja R0418/R0419 sont émises à son nom. Deux options :
+- (a) Lui renvoyer le lien `/nouveau-mandat` pour qu'elle resoumette (le fix est en place).
+- (b) Créer son compte directement via `admin/demandes-activation` en saisissant son email — `invite-client` enverra l'invitation.
 
-- Tester la soumission `/nouveau-mandat` en navigation privée (anon).
-- Vérifier l'apparition de la ligne dans `demandes_mandat` puis le déclenchement de `invite-client` (id transmis).
-- Confirmer que les 3 clients orphelins précédents peuvent toujours être activés manuellement depuis `admin/demandes-activation`.
+## Aucun changement DB requis
+
+Toutes les actions sont côté code client + actions admin manuelles. Pas de migration, pas de policy à modifier (sauf vérification rapide pour `anon` sur `signup_attempts`).

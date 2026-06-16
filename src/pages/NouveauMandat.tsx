@@ -260,7 +260,34 @@ export default function NouveauMandat() {
         .from('demandes_mandat')
         .insert(insertData as any);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // 🛡️ FILET DE SÉCURITÉ : on n'oublie JAMAIS un client, même si l'insert RLS casse
+        try {
+          await supabase.from('signup_attempts').insert({
+            email: formData.email,
+            first_name: formData.prenom,
+            last_name: formData.nom,
+            phone: formData.telephone,
+            source: 'nouveau-mandat',
+            parcours: formData.type_recherche || null,
+            stage: 'demandes_mandat_insert_failed',
+            error_message: `${insertError.message}${abaninjaInvoiceRef ? ` | AbaNinja invoice: ${abaninjaInvoiceRef}` : ''}`,
+            user_agent: navigator.userAgent,
+          });
+          // Notifier l'admin pour rattrapage manuel
+          await supabase.rpc('create_notification', {
+            p_user_id: '4c2ee841-a48b-4d7d-8ed6-3eac9ea124e8',
+            p_type: 'inscription_echouee',
+            p_title: '⚠️ Inscription client échouée',
+            p_message: `${formData.prenom} ${formData.nom} (${formData.email}) n'a pas pu finaliser /nouveau-mandat${abaninjaInvoiceRef ? ` — facture AbaNinja ${abaninjaInvoiceRef} déjà émise` : ''}. À rattraper manuellement.`,
+            p_link: '/admin/inscriptions-echouees',
+            p_metadata: { email: formData.email, abaninja_invoice_ref: abaninjaInvoiceRef, error: insertError.message },
+          });
+        } catch (logErr) {
+          console.error('Failed to log signup attempt:', logErr);
+        }
+        throw insertError;
+      }
 
 
       // Créer notification pour les admins (utilise l'email au lieu de l'ID)
