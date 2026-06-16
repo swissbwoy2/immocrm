@@ -33,6 +33,10 @@ export default function FirstLogin() {
       if (cancelled) return;
       if (session) {
         resolvedRef.current = true;
+        if (session.user?.email) {
+          setSessionEmail(session.user.email);
+          setResendEmail(session.user.email);
+        }
         setPhase('ready');
       }
     });
@@ -46,14 +50,29 @@ export default function FirstLogin() {
           await supabase.auth.exchangeCodeForSession(window.location.href).catch((e) => {
             console.warn('exchangeCodeForSession failed', e);
           });
+          // Nettoyer l'URL pour éviter double consommation du code en cas de reload
+          try {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+          } catch {}
+        } else if (window.location.hash.includes('access_token')) {
+          // Implicit flow : laisser supabase-js consommer le hash, puis le retirer
+          setTimeout(() => {
+            try {
+              window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+            } catch {}
+          }, 500);
         }
 
-        // 3) Implicit flow (#access_token=...) est auto-géré par supabase-js.
-        //    On vérifie tout de même si une session est déjà là.
+        // 3) Vérifier si une session est déjà là
         const { data: { session } } = await supabase.auth.getSession();
         if (cancelled) return;
         if (session) {
           resolvedRef.current = true;
+          if (session.user?.email) {
+            setSessionEmail(session.user.email);
+            setResendEmail(session.user.email);
+          }
           setPhase('ready');
           return;
         }
