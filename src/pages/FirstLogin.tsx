@@ -19,6 +19,7 @@ export default function FirstLogin() {
   const [loading, setLoading] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
+  const [sessionEmail, setSessionEmail] = useState<string>('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const resolvedRef = useRef(false);
@@ -32,6 +33,10 @@ export default function FirstLogin() {
       if (cancelled) return;
       if (session) {
         resolvedRef.current = true;
+        if (session.user?.email) {
+          setSessionEmail(session.user.email);
+          setResendEmail(session.user.email);
+        }
         setPhase('ready');
       }
     });
@@ -45,14 +50,29 @@ export default function FirstLogin() {
           await supabase.auth.exchangeCodeForSession(window.location.href).catch((e) => {
             console.warn('exchangeCodeForSession failed', e);
           });
+          // Nettoyer l'URL pour éviter double consommation du code en cas de reload
+          try {
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+          } catch {}
+        } else if (window.location.hash.includes('access_token')) {
+          // Implicit flow : laisser supabase-js consommer le hash, puis le retirer
+          setTimeout(() => {
+            try {
+              window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+            } catch {}
+          }, 500);
         }
 
-        // 3) Implicit flow (#access_token=...) est auto-géré par supabase-js.
-        //    On vérifie tout de même si une session est déjà là.
+        // 3) Vérifier si une session est déjà là
         const { data: { session } } = await supabase.auth.getSession();
         if (cancelled) return;
         if (session) {
           resolvedRef.current = true;
+          if (session.user?.email) {
+            setSessionEmail(session.user.email);
+            setResendEmail(session.user.email);
+          }
           setPhase('ready');
           return;
         }
@@ -94,7 +114,25 @@ export default function FirstLogin() {
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error: any) {
-      toast({ title: 'Erreur', description: error.message || 'Une erreur est survenue', variant: 'destructive' });
+      const msg = (error?.message || '').toLowerCase();
+      const sessionLost =
+        msg.includes('auth session missing') ||
+        msg.includes('bad_jwt') ||
+        msg.includes('missing sub') ||
+        msg.includes('jwt expired') ||
+        error?.status === 401 ||
+        error?.status === 403;
+      if (sessionLost) {
+        if (sessionEmail) setResendEmail(sessionEmail);
+        setPhase('expired');
+        toast({
+          title: 'Session expirée',
+          description: "Votre lien d'activation a expiré pendant la saisie. Demandez-en un nouveau ci-dessous.",
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'Erreur', description: error.message || 'Une erreur est survenue', variant: 'destructive' });
+      }
     } finally {
       setLoading(false);
     }
@@ -196,6 +234,9 @@ export default function FirstLogin() {
       description="Définissez votre mot de passe pour activer votre compte"
       badge="Première connexion"
     >
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+        💡 Pour éviter tout souci, définissez votre mot de passe maintenant, sans recharger ni fermer cette page.
+      </div>
       <form onSubmit={handleSetPassword} className="space-y-4">
         <AuthInput
           label="Nouveau mot de passe"
