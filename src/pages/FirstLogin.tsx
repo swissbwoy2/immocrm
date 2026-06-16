@@ -234,6 +234,9 @@ export default function FirstLogin() {
       description="Définissez votre mot de passe pour activer votre compte"
       badge="Première connexion"
     >
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
+        💡 Pour éviter tout souci, définissez votre mot de passe maintenant, sans recharger ni fermer cette page.
+      </div>
       <form onSubmit={handleSetPassword} className="space-y-4">
         <AuthInput
           label="Nouveau mot de passe"
