@@ -1,72 +1,65 @@
-## Preuve par les timestamps (et pourquoi mon premier diagnostic était bon)
+## Cause exacte (et pourquoi ça arrive maintenant)
 
-Vérification croisée DB + git :
+Le crash arrive UNIQUEMENT pour les clients aux champs financiers vides — comme Saba Haile, dont la fiche `clients` a été créée sans passer par tout le formulaire `/nouveau-mandat` (à cause du bug RLS d'hier), donc `revenus_mensuels = NULL`, `budget_max = NULL`, etc.
 
-| Heure (UTC) | Évènement |
-|---|---|
-| 11:27 | ✅ Abubakar Mohamed — demande créée |
-| 12:21 | ✅ Mir Essiz — demande créée |
-| **12:42** | 🚨 **Mon commit qui ajoute `.select('id').single()` sur `demandes_mandat`** |
-| 19:03 | ❌ Saba Haile (Wint2 / winta-h@hotmail.com) — RLS error |
+Dans `src/pages/admin/ClientDetail.tsx` ligne **1829** :
 
-→ Abubakar et Mir sont passés **avant** ma modif. La cliente Wint2 a buté **après**. Le diagnostic tient.
-
-Confirmation supplémentaire côté AbaNinja edge functions : pour `winta-h@hotmail.com`, `create-abaninja-client` puis `create-abaninja-invoice` ont tourné **2 fois avec succès** (R0418 + R0419) à 19:03 → l'étape AbaNinja est OK, c'est bien le `INSERT` final dans `demandes_mandat` qui a explosé. Le fichier `signup_attempts` ne contient rien parce qu'on n'a jamais loggé ce type d'échec.
-
-## Le fix est déjà appliqué
-
-`src/pages/NouveauMandat.tsx` génère maintenant l'UUID côté client et n'appelle plus `.select()` après l'insert (lignes 259-263). Wint2 et toute nouvelle soumission anon passeront.
-
-## Filet de sécurité — pour ne **jamais** reperdre un client
-
-Aujourd'hui, quand le `.insert()` final casse, on perd tout en silence : pas de ligne `demandes_mandat`, pas de `signup_attempts`, pas de notification admin. Seul AbaNinja garde une trace (la facture). Je propose 3 ajouts ciblés :
-
-### 1. Logger TOUT échec d'inscription dans `signup_attempts`
-
-Dans `NouveauMandat.tsx`, envelopper l'`insert` :
-
-```ts
-const { error: insertError } = await supabase
-  .from('demandes_mandat')
-  .insert(insertData as any);
-
-if (insertError) {
-  // ❗ filet de sécurité : on garde une trace même si l'insert RLS échoue
-  await supabase.from('signup_attempts').insert({
-    email: formData.email,
-    first_name: formData.prenom,
-    last_name: formData.nom,
-    phone: formData.telephone,
-    source: 'nouveau-mandat',
-    parcours: formData.type_recherche,
-    stage: 'demandes_mandat_insert_failed',
-    error_message: insertError.message,
-    user_agent: navigator.userAgent,
-  });
-  throw insertError;
-}
+```tsx
+<ClientCandidatesManager
+  clientId={client.id}
+  clientRevenus={client.revenus_mensuels}   // ❌ null pour Saba
+  budgetDemande={client.budget_max}          // ❌ null pour Saba
+/>
 ```
 
-Vérifier que la policy INSERT sur `signup_attempts` autorise `anon` (à valider, sinon ajouter une policy permissive : c'est une table de logs).
+Côté `ClientCandidatesManager` (ligne 21), la signature met `clientRevenus = 0` en default. **Mais en JavaScript, le default ne s'applique qu'à `undefined`, pas à `null`** — donc `clientRevenus` reste `null`, puis ligne 284 : `clientRevenus.toLocaleString()` → `TypeError: null is not an object`.
 
-### 2. Notification admin immédiate sur échec
+Le stack pointe `CandidateDocumentsSection-QvxXR8l1.js` car Vite a bundlé `ClientCandidatesManager` + `CandidateDocumentsSection` dans le même chunk de la route. La pile remonte jusqu'à `ClientDetail`, confirmant l'origine.
 
-Même bloc `catch` → appel `create_notification` à l'admin avec lien `/admin/inscriptions-echouees`, message : « Échec inscription client X (winta-h@…) à l'étape Y, facture AbaNinja R0418 émise — à rattraper ».
+La version admin de `ClientDetail.tsx` est buguée. La version **agent** (`src/pages/agent/ClientDetail.tsx:1605`) fait correctement `clientRevenus={client.revenus_mensuels || 0}` — voilà pourquoi le bug n'apparaissait pas avant : aucun client ne présentait de `revenus_mensuels = NULL` jusqu'à la création « incomplète » de Saba.
 
-### 3. Réparer rétroactivement les 3 clients orphelins déjà perdus
+## Correctif (2 endroits, 1 fichier critique + 1 garde-fou)
 
-- `mirsefinkdm@gmail.com` (Mir Essiz)
-- `faarahwarsame317@gmail.com` (Abubakar Mohamed)
-- `bcvscpncept@gmail.com` (Jennifer Poncet)
+### 1. `src/pages/admin/ClientDetail.tsx` ligne 1827-1832
 
-Ces 3 lignes existent dans `demandes_mandat` mais sans compte auth ni ligne `clients` (le `invite-client` ne recevait pas d'`id`). Action : depuis `admin/demandes-activation`, lancer manuellement l'invitation pour chacun → `invite-client` créera leur compte + ligne `clients` et ils apparaîtront enfin dans `admin/clients`.
+```tsx
+<ClientCandidatesManager
+  clientId={client.id}
+  clientRevenus={client.revenus_mensuels ?? 0}
+  budgetDemande={client.budget_max ?? 0}
+  onCandidatesChange={refreshCandidates}
+/>
+```
 
-### 4. Récupérer Wint2 / Saba Haile manuellement
+### 2. Garde-fou dans `src/components/ClientCandidatesManager.tsx`
 
-Sa demande n'est jamais arrivée en DB, mais les factures AbaNinja R0418/R0419 sont émises à son nom. Deux options :
-- (a) Lui renvoyer le lien `/nouveau-mandat` pour qu'elle resoumette (le fix est en place).
-- (b) Créer son compte directement via `admin/demandes-activation` en saisissant son email — `invite-client` enverra l'invitation.
+Remplacer la déstructuration pour neutraliser `null` venant d'un autre appelant :
 
-## Aucun changement DB requis
+```tsx
+export function ClientCandidatesManager({ 
+  clientId, 
+  clientRevenus: clientRevenusProp, 
+  budgetDemande: budgetDemandeProp = 0,
+  onDocumentsClick,
+  onCandidatesChange
+}: ClientCandidatesManagerProps) {
+  const clientRevenus = clientRevenusProp ?? 0;
+  const budgetDemande = budgetDemandeProp ?? 0;
+  // …reste inchangé
+```
 
-Toutes les actions sont côté code client + actions admin manuelles. Pas de migration, pas de policy à modifier (sauf vérification rapide pour `anon` sur `signup_attempts`).
+Même garde-fou minimal dans `src/components/premium/PremiumCandidatesCard.tsx` (ligne 21) — même pattern à risque.
+
+## Pourquoi je ne touche rien d'autre
+
+- `CandidateDocumentsSection.tsx` n'a aucun appel `toLocaleString` — c'est juste le composant racine du chunk, donc affiché dans la pile. Pas besoin de le modifier.
+- Les autres appels `toLocaleDateString` sur `client.date_naissance` etc. ne crashent pas (`new Date(null)` → 01.01.1970, moche mais ne plante pas). On les laisse pour ne pas dévier du scope.
+
+## Après le fix : vérification
+
+1. Recharger la fiche de Saba Haile dans `/admin/clients/…` → la page doit s'afficher sans crash.
+2. Comme les champs sont vides, l'admin verra des « —/0 CHF » mais aura accès au dossier pour compléter les infos manuellement.
+
+## Aucun changement DB
+
+Pur frontend, 2 fichiers max.
