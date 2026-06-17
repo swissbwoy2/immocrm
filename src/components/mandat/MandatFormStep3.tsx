@@ -1,7 +1,7 @@
 import { MandatFormData, UTILISATIONS_LOGEMENT } from './types';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
-import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
-import { PremiumRadioGroup } from '@/components/forms-premium/PremiumRadioGroup';
+import { LandingInput } from '@/components/forms-premium/LandingInput';
+import { LandingSelect } from '@/components/forms-premium/LandingSelect';
+import { LandingRadioGroup } from '@/components/forms-premium/LandingRadioGroup';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconWallet, IconHome, IconCalendar } from '@/components/forms-premium/icons/LuxuryIcons';
 import { Briefcase, Building2, AlertTriangle, Scale, CreditCard, TrendingUp, Home, Users } from 'lucide-react';
@@ -47,8 +47,8 @@ export default function MandatFormStep3({ data, onChange }: Props) {
         <CommercialFieldsStep3 data={data} onChange={onChange} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <PremiumInput label="Profession" value={data.profession} onChange={(e) => onChange({ profession: e.target.value })} icon={<Briefcase size={16} strokeWidth={1.5} className="text-[hsl(38_45%_48%)]" />} placeholder="Votre profession" required />
-          <PremiumInput label="Employeur" value={data.employeur} onChange={(e) => onChange({ employeur: e.target.value })} icon={<Building2 size={16} strokeWidth={1.5} className="text-[hsl(38_45%_48%)]" />} placeholder="Nom de l'entreprise" required />
+          <LandingInput label="Profession" value={data.profession} onChange={(e) => onChange({ profession: e.target.value })} icon={<Briefcase size={16} strokeWidth={1.5} className="text-[hsl(38_45%_48%)]" />} placeholder="Votre profession" required />
+          <LandingInput label="Employeur" value={data.employeur} onChange={(e) => onChange({ employeur: e.target.value })} icon={<Building2 size={16} strokeWidth={1.5} className="text-[hsl(38_45%_48%)]" />} placeholder="Nom de l'entreprise" required />
 
           {/* Revenus CHF */}
           <div className="space-y-1.5">
@@ -100,10 +100,10 @@ export default function MandatFormStep3({ data, onChange }: Props) {
             </div>
           )}
 
-          <PremiumInput label="Date d'engagement au poste" type="date" value={data.date_engagement} onChange={(e) => onChange({ date_engagement: e.target.value })} icon={<IconCalendar size={16} />} />
+          <LandingInput label="Date d'engagement au poste" type="date" value={data.date_engagement} onChange={(e) => onChange({ date_engagement: e.target.value })} icon={<IconCalendar size={16} />} />
 
           <div className="md:col-span-2">
-            <PremiumSelect
+            <LandingSelect
               label="Utilisation du logement à titre"
               icon={<IconHome size={16} />}
               value={data.utilisation_logement}
@@ -128,7 +128,7 @@ export default function MandatFormStep3({ data, onChange }: Props) {
                 </span>
               </div>
               <p className="text-xs text-[hsl(40_20%_40%)]">Leasing, crédit, pension alimentaire, etc.</p>
-              <PremiumRadioGroup
+              <LandingRadioGroup
                 options={OUNI_NON}
                 value={data.charges_extraordinaires ? 'oui' : 'non'}
                 onChange={(v) => onChange({ charges_extraordinaires: v === 'oui' })}
@@ -162,7 +162,7 @@ export default function MandatFormStep3({ data, onChange }: Props) {
                   Avez-vous des poursuites ou actes de défaut de biens ? <span className="text-red-400">*</span>
                 </span>
               </div>
-              <PremiumRadioGroup
+              <LandingRadioGroup
                 options={OUNI_NON}
                 value={data.poursuites ? 'oui' : 'non'}
                 onChange={(v) => onChange({ poursuites: v === 'oui' })}
@@ -179,7 +179,7 @@ export default function MandatFormStep3({ data, onChange }: Props) {
                   Êtes-vous sous curatelle ? <span className="text-red-400">*</span>
                 </span>
               </div>
-              <PremiumRadioGroup
+              <LandingRadioGroup
                 options={OUNI_NON}
                 value={data.curatelle ? 'oui' : 'non'}
                 onChange={(v) => onChange({ curatelle: v === 'oui' })}

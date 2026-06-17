@@ -1,6 +1,6 @@
 import { MandatFormData } from './types';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
-import { PremiumCheckbox } from '@/components/forms-premium/PremiumCheckbox';
+import { LandingInput } from '@/components/forms-premium/LandingInput';
+import { LandingCheckbox } from '@/components/forms-premium/LandingCheckbox';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconSignature } from '@/components/forms-premium/icons/LuxuryIcons';
 import SignaturePad from './SignaturePad';
@@ -42,7 +42,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
           <Gift size={15} className="text-[hsl(38_55%_65%)]" />
           <span className="text-sm font-medium text-[hsl(40_20%_70%)]">Code promo (optionnel)</span>
         </div>
-        <PremiumInput
+        <LandingInput
           label=""
           value={data.code_promo}
           onChange={(e) => onChange({ code_promo: e.target.value })}
@@ -90,7 +90,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
       </div>
 
       {/* CGV checkbox */}
-      <PremiumCheckbox
+      <LandingCheckbox
         checked={data.cgv_acceptees}
         onCheckedChange={(checked) => onChange({ cgv_acceptees: checked })}
         required

@@ -3,7 +3,7 @@ import { CreditCard, FileText, Sparkles, ShieldCheck } from 'lucide-react';
 import { MandatFormData, DocumentData } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { PremiumDocumentDropzone, UploadedPreview } from '@/components/forms-premium/PremiumDocumentDropzone';
+import { LandingDocumentDropzone, UploadedPreview } from '@/components/forms-premium/LandingDocumentDropzone';
 
 interface Props {
   data: MandatFormData;
@@ -157,7 +157,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
             </p>
             <span className="text-[11px] text-[hsl(40_20%_45%)]">Datant de moins de 3 mois</span>
           </div>
-          <PremiumDocumentDropzone
+          <LandingDocumentDropzone
             documentType="extrait_poursuites"
             baseFileName="extrait_poursuites"
             preview={previewFromDoc(docByKey['poursuites'])}
@@ -179,7 +179,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
             {SALAIRE_KEYS.map((s) => (
               <div key={s.key}>
                 <p className="text-[11px] text-[hsl(40_20%_55%)] mb-1.5">{s.label}</p>
-                <PremiumDocumentDropzone
+                <LandingDocumentDropzone
                   documentType="fiche_salaire"
                   baseFileName={s.key}
                   compact
@@ -212,7 +212,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
                 <p className="text-sm font-medium text-[hsl(40_20%_82%)] mb-2">
                   {idTitle} ({face}) <span className="text-red-400">*</span>
                 </p>
-                <PremiumDocumentDropzone
+                <LandingDocumentDropzone
                   documentType={idKind}
                   baseFileName={key}
                   preview={previewFromDoc(docByKey[key])}

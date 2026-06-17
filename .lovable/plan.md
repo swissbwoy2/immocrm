@@ -1,92 +1,40 @@
-## Constat
+## Problème
 
-Aujourd'hui `/nouveau-mandat` vit dans un univers visuel totalement différent de la landing :
+Les champs de remplissage de `/nouveau-mandat` utilisent toujours les couleurs **dorées sur fond sombre** héritées du thème Premium (`bg-[hsl(30_15%_9%/0.6)]`, `text-[hsl(40_20%_88%)]`, labels `text-[hsl(40_20%_45%)]`, placeholder transparent). Sur la nouvelle carte claire `bg-card/60`, ça donne des **rectangles bruns illisibles** (visible sur la capture : "E-mail", "Téléphone", "Prénom", "Nom de famille", "Jour", "Mois", "Année").
 
-| | Landing (`/`) | NouveauMandat actuel |
-|---|---|---|
-| Fond | `bg-background` (clair, semantic tokens) + hero image | `bg-[hsl(30_15%_8%)]` brun très sombre + `LuxuryFormBackground` animé + `FloatingKey3D` |
-| Couleurs | tokens (`primary`, `foreground`, `muted-foreground`, `card`) | gold hardcodés (`hsl(38 45% 48%)`, `hsl(40 20% 35%)`…) |
-| Navigation | `FloatingNav` (glass blur, CTA emerald) + bandeau "propulsé par Immo-rama" | sticky bar custom logo + compteur step |
-| Cartes | `bg-card/60 backdrop-blur` rounded-2xl border `border-border/50` | `PremiumFormCard` (dark gold) |
-| Footer | `LandingFooter` complet | barre fixe `bg-[hsl(30_15%_8%/0.95)]` 3 badges |
-| Boutons | `from-primary to-primary/90` + CTA emerald | `PremiumButton` (dégradés gold) |
-| Typo | identique au reste de l'app (semantic) | identique mais sur fond sombre, contrastes inversés |
+## Cause
 
-→ L'utilisateur veut que le tunnel mandat se fonde dans l'univers de la landing : même fond, mêmes couleurs sémantiques, même nav flottante, même footer, même style de cartes/boutons.
+`MandatFormStep1`...`MandatFormStep7` importent `PremiumInput`, `PremiumSelect`, `PremiumTextarea`, `PremiumRadioGroup`, `PremiumCheckbox`, `PremiumDocumentDropzone` — composants au design sombre/doré, non sémantiques. Le shell est passé en clair, mais pas les champs.
 
-## Objectif
+## Plan
 
-`/nouveau-mandat` doit donner l'impression d'être une étape naturelle de la landing : un visiteur qui clique sur le CTA reste dans le même monde graphique, sans rupture.
+### 1. Nouveaux composants champs "Landing" (tokens sémantiques)
 
-## Plan d'implémentation
+Créer dans `src/components/forms-premium/` :
 
-### 1. Nouveau shell `LandingFormShell` (remplace `PremiumFormShell` sur cette page)
+- `LandingInput.tsx` — même API que `PremiumInput` mais : `bg-background` / `border-border`, focus `border-primary` + `ring-primary/20`, label flottant `text-muted-foreground` → `text-primary` quand floated, input `text-foreground`, icône check `text-primary`.
+- `LandingSelect.tsx` — variante claire de `PremiumSelect`.
+- `LandingTextarea.tsx` — variante claire de `PremiumTextarea`.
+- `LandingRadioGroup.tsx` — cartes radio `bg-card border-border`, sélectionnée `border-primary bg-primary/5`.
+- `LandingCheckbox.tsx` — `border-border` / coché `bg-primary border-primary`.
+- `LandingDocumentDropzone.tsx` — variante claire (`bg-muted/30`, `border-dashed border-border`, hover `border-primary`).
 
-Fichier : `src/components/forms-premium/LandingFormShell.tsx` (nouveau)
+Aucun `text-white`, `bg-black` ou `hsl()` en dur — uniquement `background`, `foreground`, `card`, `border`, `muted`, `muted-foreground`, `primary`, `destructive`.
 
-- `bg-background` (palette landing, fini le brun sombre)
-- Réutilise les composants de la landing :
-  - Bandeau haut "Un logiciel propulsé par Immo-rama.ch" (copié-collé du Landing.tsx lignes 89-106)
-  - `<FloatingNav />`
-  - `<LandingFooter />` en bas de page (lazy)
-- Suppression de `LuxuryFormBackground` et `FloatingKey3D` (rupture visuelle avec la landing)
-- Suppression de la barre fixe "trust badges" en bas (remplacée par le vrai footer landing)
-- Conteneur central : `container mx-auto px-4 max-w-3xl py-10 md:py-16`
+### 2. Remplacer dans `MandatFormStep1-7`
 
-### 2. Refonte de l'en-tête de formulaire (hero compact)
+Substitution 1:1 des imports `Premium*` → `Landing*`. API identique, aucun changement de props/logique métier.
 
-Au-dessus du formulaire, un mini-hero dans le langage landing :
+### 3. Corriger l'autocomplete adresse dans `MandatFormStep1`
 
-- Badge `bg-primary/10 border border-primary/40 rounded-full` avec icône + "Nouveau mandat de recherche"
-- Titre `text-3xl md:text-4xl font-bold text-foreground` : "Démarrons votre recherche"
-- Sous-titre `text-muted-foreground` rappelant la garantie 90 jours
-- `PremiumGuaranteeBanner` repensé en `bg-card/60 backdrop-blur-sm border border-border/50 rounded-2xl` (mêmes tokens que les cartes du hero landing)
+Remplacer le `className` codé en dur (`bg-[hsl(30_15%_9%/0.6)]`...) par les tokens : `bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20`.
 
-### 3. Refonte de la progression et des steps
+### 4. Aucun autre formulaire impacté
 
-- `PremiumProgressBlock` : nouvelle variante qui utilise `bg-primary` sur la barre, `text-muted-foreground` pour les labels, fond `bg-card/60`
-- `PremiumStepIndicator` : pastilles `bg-primary` (active), `bg-muted` (inactives), `text-primary-foreground`/`text-muted-foreground`
+`MandatV3`, `FormulaireVendeurComplet`, `FormulaireRelouer`, `FormulaireConstruireRenover`, `QuickLeadForm` continuent d'utiliser les `Premium*` (thème sombre conservé). Les composants `Premium*` ne sont **pas modifiés**.
 
-Pas de réécriture from scratch : on ajoute une prop `variant="landing"` ou on modifie directement les classes hardcodées vers les tokens.
+## Fichiers
 
-### 4. Refonte de la carte du formulaire et des boutons
+**Créés :** `LandingInput.tsx`, `LandingSelect.tsx`, `LandingTextarea.tsx`, `LandingRadioGroup.tsx`, `LandingCheckbox.tsx`, `LandingDocumentDropzone.tsx`.
 
-- `PremiumFormCard` → `bg-card/60 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8` (exactement comme les deux cartes du hero landing)
-- `PremiumButton` :
-  - `variant="next"` / `variant="submit"` → `bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20`
-  - `variant="back"` → `variant="ghost"` shadcn avec `text-muted-foreground`
-- Suppression de toutes les couleurs hardcodées `hsl(38_45%…)` / `hsl(40_20%…)` → tokens sémantiques
-
-### 5. Mise à jour de `src/pages/NouveauMandat.tsx`
-
-- Remplace `<PremiumFormShell>` par `<LandingFormShell>`
-- Ajoute le mini-hero (titre + sous-titre + garantie) au-dessus de `PremiumProgressBlock`
-- `container … max-w-2xl` → `max-w-3xl` pour s'aligner sur l'amplitude des cartes landing
-- Le footer "Vos recherches seront activées dès réception de l'acompte" reste mais en `text-muted-foreground`
-- Aucune modification de la logique métier (steps, validation, submit, edge functions, localStorage)
-
-### 6. Points de vigilance
-
-- Aucun changement sur les composants `MandatFormStep1..7` (déjà neutres niveau couleurs car ils héritent des tokens shadcn)
-- Conserver `useUTMParams`, le tracking Meta Pixel `Lead`, la sauvegarde localStorage, le flux `invite-client`
-- Vérifier le contraste sur mobile (background clair → s'assurer que les bordures des inputs shadcn restent visibles)
-- Garder le bandeau supérieur `pt-env(safe-area-inset-top)` pour les notches iOS
-
-## Détails techniques
-
-Fichiers créés :
-- `src/components/forms-premium/LandingFormShell.tsx`
-
-Fichiers modifiés :
-- `src/pages/NouveauMandat.tsx` (shell + mini-hero)
-- `src/components/forms-premium/PremiumFormCard.tsx` (tokens sémantiques)
-- `src/components/forms-premium/PremiumButton.tsx` (tokens sémantiques)
-- `src/components/forms-premium/PremiumStepIndicator.tsx` (tokens sémantiques)
-- `src/components/forms-premium/PremiumProgressBlock.tsx` (tokens sémantiques)
-- `src/components/forms-premium/PremiumGuaranteeBanner.tsx` (style carte landing)
-
-Fichiers retirés de l'arborescence /nouveau-mandat (toujours dispo pour autres pages éventuelles) :
-- `LuxuryFormBackground` et `FloatingKey3D` ne sont plus rendus
-- L'ancien `PremiumFormShell` reste intouché si utilisé ailleurs (à vérifier rapidement avec `rg`)
-
-Aucune migration DB, aucune modification d'edge function.
+**Modifiés :** `MandatFormStep1.tsx` → `MandatFormStep7.tsx` (imports + correction className autocomplete adresse dans Step1).

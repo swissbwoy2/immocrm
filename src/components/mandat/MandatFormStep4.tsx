@@ -1,8 +1,8 @@
 import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS } from './types';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
-import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
-import { PremiumRadioGroup } from '@/components/forms-premium/PremiumRadioGroup';
-import { PremiumTextarea } from '@/components/forms-premium/PremiumTextarea';
+import { LandingInput } from '@/components/forms-premium/LandingInput';
+import { LandingSelect } from '@/components/forms-premium/LandingSelect';
+import { LandingRadioGroup } from '@/components/forms-premium/LandingRadioGroup';
+import { LandingTextarea } from '@/components/forms-premium/LandingTextarea';
 import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus } from 'lucide-react';
 import CapacityGauge from './CapacityGauge';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
@@ -67,7 +67,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
 
   return (
     <div className="space-y-5">
-      <PremiumSelect
+      <LandingSelect
         label="Comment avez-vous découvert notre agence ?"
         value={data.decouverte_agence}
         onValueChange={(v) => onChange({ decouverte_agence: v })}
@@ -76,7 +76,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
       />
 
       {/* Type de recherche */}
-      <PremiumRadioGroup
+      <LandingRadioGroup
         label="Que recherchez-vous ?"
         options={[
           { value: 'Louer', label: 'Louer', description: 'Acompte: 300 CHF', icon: <Home size={20} strokeWidth={1.5} /> },
@@ -146,7 +146,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
         </div>
       )}
 
-      <PremiumSelect
+      <LandingSelect
         label="Type d'objet"
         value={data.type_bien}
         onValueChange={(v) => {
@@ -161,7 +161,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
       />
 
       {!isCommercial && (
-        <PremiumSelect
+        <LandingSelect
           label="Nombre de pièces"
           value={data.pieces_recherche}
           onValueChange={(v) => onChange({ pieces_recherche: v })}
@@ -348,7 +348,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
         </>
       )}
 
-      <PremiumTextarea
+      <LandingTextarea
         label="Souhaits particuliers (étage, quartier, vue...)"
         value={data.souhaits_particuliers}
         onChange={(e) => onChange({ souhaits_particuliers: e.target.value })}
@@ -360,12 +360,12 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
       {!isCommercial && (
         <div className="space-y-4 pt-2">
           <div className="h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.12)] to-transparent" />
-          <PremiumRadioGroup label="Avez-vous des animaux ?" options={OUNI_NON} value={data.animaux ? 'oui' : 'non'} onChange={(v) => onChange({ animaux: v === 'oui' })} columns={2} />
-          <PremiumRadioGroup label="Jouez-vous d'un instrument de musique ?" options={OUNI_NON} value={data.instrument_musique ? 'oui' : 'non'} onChange={(v) => onChange({ instrument_musique: v === 'oui' })} columns={2} />
-          <PremiumRadioGroup label="Avez-vous un ou plusieurs véhicules ?" options={OUNI_NON} value={data.vehicules ? 'oui' : 'non'} onChange={(v) => onChange({ vehicules: v === 'oui' })} columns={2} />
+          <LandingRadioGroup label="Avez-vous des animaux ?" options={OUNI_NON} value={data.animaux ? 'oui' : 'non'} onChange={(v) => onChange({ animaux: v === 'oui' })} columns={2} />
+          <LandingRadioGroup label="Jouez-vous d'un instrument de musique ?" options={OUNI_NON} value={data.instrument_musique ? 'oui' : 'non'} onChange={(v) => onChange({ instrument_musique: v === 'oui' })} columns={2} />
+          <LandingRadioGroup label="Avez-vous un ou plusieurs véhicules ?" options={OUNI_NON} value={data.vehicules ? 'oui' : 'non'} onChange={(v) => onChange({ vehicules: v === 'oui' })} columns={2} />
           {data.vehicules && (
             <div className="pl-3 border-l-2 border-[hsl(38_45%_48%/0.3)]">
-              <PremiumInput label="Numéro(s) de plaque(s)" value={data.numero_plaques} onChange={(e) => onChange({ numero_plaques: e.target.value })} placeholder="Ex: VD 123456" />
+              <LandingInput label="Numéro(s) de plaque(s)" value={data.numero_plaques} onChange={(e) => onChange({ numero_plaques: e.target.value })} placeholder="Ex: VD 123456" />
             </div>
           )}
         </div>
