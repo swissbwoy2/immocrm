@@ -85,7 +85,7 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             onChange={(address: AddressComponents) => onChange({ adresse: address.fullAddress })}
             onInputChange={(value) => onChange({ adresse: value })}
             placeholder="Commencez à taper votre adresse..."
-            className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
+            className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300"
           />
         </div>
 
