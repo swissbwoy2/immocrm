@@ -1826,8 +1826,8 @@ export default function ClientDetail() {
           </div>
           <ClientCandidatesManager
             clientId={client.id}
-            clientRevenus={client.revenus_mensuels}
-            budgetDemande={client.budget_max}
+            clientRevenus={client.revenus_mensuels ?? 0}
+            budgetDemande={client.budget_max ?? 0}
             onCandidatesChange={refreshCandidates}
           />
         </div>
