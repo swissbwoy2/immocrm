@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUTMParams } from '@/hooks/useUTMParams';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
@@ -12,12 +12,12 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
-import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
-import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
-import { PremiumGuaranteeBanner } from '@/components/forms-premium/PremiumGuaranteeBanner';
-import { PremiumProgressBlock } from '@/components/forms-premium/PremiumProgressBlock';
-import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
-import { PremiumButton } from '@/components/forms-premium/PremiumButton';
+import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
+import { LandingStepIndicator } from '@/components/forms-premium/LandingStepIndicator';
+import { LandingGuaranteeBanner } from '@/components/forms-premium/LandingGuaranteeBanner';
+import { LandingProgressBlock } from '@/components/forms-premium/LandingProgressBlock';
+import { LandingFormCard } from '@/components/forms-premium/LandingFormCard';
+import { LandingButton } from '@/components/forms-premium/LandingButton';
 import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
 
 const STORAGE_KEY = 'mandat_form_data';
@@ -452,15 +452,33 @@ export default function NouveauMandat() {
   };
 
   return (
-    <PremiumFormShell currentStep={currentStep} totalSteps={STEPS.length}>
-      <PremiumGuaranteeBanner />
-      <PremiumProgressBlock currentStep={currentStep} totalSteps={STEPS.length} stepTitle={STEPS[currentStep]?.title ?? ''} />
-      <PremiumStepIndicator steps={STEPS} currentStep={currentStep} />
+    <LandingFormShell>
+      <div className="container mx-auto px-4 max-w-3xl pt-8 md:pt-12 pb-16 space-y-6">
+        {/* Mini-hero aligné landing */}
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/40 rounded-full px-4 py-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-xs md:text-sm font-semibold text-primary">
+              Nouveau mandat de recherche
+            </span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
+            Démarrons votre <span className="text-primary">recherche</span>
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.
+          </p>
+        </div>
 
-      <div className="container mx-auto px-4 max-w-2xl pb-8 pt-4">
-        {/* Titre/sous-titre vivent dans chaque step (style Macoloc) */}
+        <LandingGuaranteeBanner />
+        <LandingProgressBlock
+          currentStep={currentStep}
+          totalSteps={STEPS.length}
+          stepTitle={STEPS[currentStep]?.title ?? ''}
+        />
+        <LandingStepIndicator steps={STEPS} currentStep={currentStep} />
 
-        <PremiumFormCard>
+        <LandingFormCard>
           <PremiumStepTransition stepKey={currentStep} direction={1}>
             {currentStep === 4 ? (
               <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
@@ -469,35 +487,35 @@ export default function NouveauMandat() {
             )}
           </PremiumStepTransition>
 
-          <div className="flex justify-between items-center mt-10 pt-6 border-t border-[hsl(38_45%_48%/0.15)]">
-            <PremiumButton
+          <div className="flex justify-between items-center mt-10 pt-6 border-t border-border/50">
+            <LandingButton
               variant="back"
               onClick={currentStep === 0 ? () => navigate('/login') : handlePrevious}
             >
               {currentStep === 0 ? <><ArrowLeft className="h-4 w-4" /> Retour</> : undefined}
-            </PremiumButton>
+            </LandingButton>
 
             {currentStep < STEPS.length - 1 ? (
-              <PremiumButton variant="next" onClick={handleNext}>
+              <LandingButton variant="next" onClick={handleNext}>
                 Continuer
-              </PremiumButton>
+              </LandingButton>
             ) : (
-              <PremiumButton
+              <LandingButton
                 variant="submit"
                 onClick={handleSubmit}
                 loading={submitting}
                 disabled={submitting || !formData.cgv_acceptees || !formData.signature_data}
               >
                 Envoyer la demande
-              </PremiumButton>
+              </LandingButton>
             )}
           </div>
-        </PremiumFormCard>
+        </LandingFormCard>
 
-        <p className="text-center text-xs text-[hsl(40_20%_35%)] mt-6">
+        <p className="text-center text-xs text-muted-foreground">
           Vos recherches seront activées dès réception de l'acompte.
         </p>
       </div>
-    </PremiumFormShell>
+    </LandingFormShell>
   );
 }
