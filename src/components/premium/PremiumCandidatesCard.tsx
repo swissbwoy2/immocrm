@@ -18,11 +18,13 @@ interface PremiumCandidatesCardProps {
 
 export function PremiumCandidatesCard({ 
   clientId, 
-  clientRevenus = 0, 
-  budgetDemande = 0,
+  clientRevenus: clientRevenusProp, 
+  budgetDemande: budgetDemandeProp,
   onDocumentsClick,
   onCandidatesChange
 }: PremiumCandidatesCardProps) {
+  const clientRevenus = clientRevenusProp ?? 0;
+  const budgetDemande = budgetDemandeProp ?? 0;
   const { candidates, loading, addCandidate, updateCandidate, deleteCandidate, getCumulativeIncome } = useClientCandidates(clientId);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editCandidate, setEditCandidate] = useState<ClientCandidate | null>(null);
