@@ -1,5 +1,5 @@
 import { MandatFormData } from './types';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { LandingInput } from '@/components/forms-premium/LandingInput';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconHome, IconBuilding, IconPhone, IconWallet, IconCalendar } from '@/components/forms-premium/icons/LuxuryIcons';
 import { Grid, MessageSquare } from 'lucide-react';
@@ -18,7 +18,7 @@ export default function MandatFormStep2({ data, onChange }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PremiumInput
+        <LandingInput
           label="Gérance ou propriétaire actuel(le)"
           value={data.gerance_actuelle}
           onChange={(e) => onChange({ gerance_actuelle: e.target.value })}
@@ -26,7 +26,7 @@ export default function MandatFormStep2({ data, onChange }: Props) {
           placeholder="Nom de la gérance ou du propriétaire"
           required
         />
-        <PremiumInput
+        <LandingInput
           label="Contact gérance"
           value={data.contact_gerance}
           onChange={(e) => onChange({ contact_gerance: e.target.value })}
@@ -53,7 +53,7 @@ export default function MandatFormStep2({ data, onChange }: Props) {
           </div>
         </div>
 
-        <PremiumInput
+        <LandingInput
           label="Depuis le"
           type="date"
           value={data.depuis_le}

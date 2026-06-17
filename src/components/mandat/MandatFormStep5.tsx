@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Trash2, Users, UserPlus, Wallet, Briefcase, Globe } from 'lucide-react';
 import { MandatFormData, CandidatData, NATIONALITES, TYPES_PERMIS, LIENS_CANDIDAT } from './types';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
-import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { LandingInput } from '@/components/forms-premium/LandingInput';
+import { LandingSelect } from '@/components/forms-premium/LandingSelect';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 
 interface Props {
@@ -65,24 +65,24 @@ export default function MandatFormStep5({ data, onChange }: Props) {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3">
-                <PremiumInput label="Prénom" value={currentCandidat.prenom} onChange={(e) => setCurrentCandidat({ ...currentCandidat, prenom: e.target.value })} placeholder="Prénom" required />
-                <PremiumInput label="Nom" value={currentCandidat.nom} onChange={(e) => setCurrentCandidat({ ...currentCandidat, nom: e.target.value })} placeholder="Nom" required />
+                <LandingInput label="Prénom" value={currentCandidat.prenom} onChange={(e) => setCurrentCandidat({ ...currentCandidat, prenom: e.target.value })} placeholder="Prénom" required />
+                <LandingInput label="Nom" value={currentCandidat.nom} onChange={(e) => setCurrentCandidat({ ...currentCandidat, nom: e.target.value })} placeholder="Nom" required />
               </div>
-              <PremiumSelect
+              <LandingSelect
                 label="Lien avec le titulaire"
                 value={currentCandidat.lien_avec_client}
                 onValueChange={(v) => setCurrentCandidat({ ...currentCandidat, lien_avec_client: v })}
                 options={LIENS_CANDIDAT.map(l => ({ value: l, label: l }))}
                 required
               />
-              <PremiumInput label="Date de naissance" type="date" value={currentCandidat.date_naissance} onChange={(e) => setCurrentCandidat({ ...currentCandidat, date_naissance: e.target.value })} />
+              <LandingInput label="Date de naissance" type="date" value={currentCandidat.date_naissance} onChange={(e) => setCurrentCandidat({ ...currentCandidat, date_naissance: e.target.value })} />
               <div className="grid grid-cols-2 gap-3">
-                <PremiumSelect label="Nationalité" value={currentCandidat.nationalite} onValueChange={(v) => setCurrentCandidat({ ...currentCandidat, nationalite: v })} options={NATIONALITES.map(n => ({ value: n, label: n }))} />
-                <PremiumSelect label="Type de permis" value={currentCandidat.type_permis} onValueChange={(v) => setCurrentCandidat({ ...currentCandidat, type_permis: v })} options={TYPES_PERMIS.map(p => ({ value: p.value, label: p.label }))} />
+                <LandingSelect label="Nationalité" value={currentCandidat.nationalite} onValueChange={(v) => setCurrentCandidat({ ...currentCandidat, nationalite: v })} options={NATIONALITES.map(n => ({ value: n, label: n }))} />
+                <LandingSelect label="Type de permis" value={currentCandidat.type_permis} onValueChange={(v) => setCurrentCandidat({ ...currentCandidat, type_permis: v })} options={TYPES_PERMIS.map(p => ({ value: p.value, label: p.label }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <PremiumInput label="Profession" value={currentCandidat.profession} onChange={(e) => setCurrentCandidat({ ...currentCandidat, profession: e.target.value })} placeholder="Profession" />
-                <PremiumInput label="Employeur" value={currentCandidat.employeur} onChange={(e) => setCurrentCandidat({ ...currentCandidat, employeur: e.target.value })} placeholder="Employeur" />
+                <LandingInput label="Profession" value={currentCandidat.profession} onChange={(e) => setCurrentCandidat({ ...currentCandidat, profession: e.target.value })} placeholder="Profession" />
+                <LandingInput label="Employeur" value={currentCandidat.employeur} onChange={(e) => setCurrentCandidat({ ...currentCandidat, employeur: e.target.value })} placeholder="Employeur" />
               </div>
 
               {/* Revenus CHF */}

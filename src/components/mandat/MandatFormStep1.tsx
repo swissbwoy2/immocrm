@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { MandatFormData, NATIONALITES, TYPES_PERMIS, ETATS_CIVILS } from './types';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
-import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { LandingInput } from '@/components/forms-premium/LandingInput';
+import { LandingSelect } from '@/components/forms-premium/LandingSelect';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconUser, IconMail, IconPhone, IconMapPin, IconCalendar, IconShield } from '@/components/forms-premium/icons/LuxuryIcons';
 
@@ -68,10 +68,10 @@ export default function MandatFormStep1({ data, onChange }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PremiumInput label="E-mail" type="email" value={data.email} onChange={(e) => onChange({ email: e.target.value })} icon={<IconMail size={16} />} placeholder="votre.email@example.ch" required />
-        <PremiumInput label="Téléphone" type="tel" value={data.telephone} onChange={(e) => onChange({ telephone: e.target.value })} icon={<IconPhone size={16} />} placeholder="+41 79 123 45 67" required />
-        <PremiumInput label="Prénom" value={data.prenom} onChange={(e) => onChange({ prenom: e.target.value })} icon={<IconUser size={16} />} placeholder="Prénom" required />
-        <PremiumInput label="Nom de famille" value={data.nom} onChange={(e) => onChange({ nom: e.target.value })} icon={<IconUser size={16} />} placeholder="Nom" required />
+        <LandingInput label="E-mail" type="email" value={data.email} onChange={(e) => onChange({ email: e.target.value })} icon={<IconMail size={16} />} placeholder="votre.email@example.ch" required />
+        <LandingInput label="Téléphone" type="tel" value={data.telephone} onChange={(e) => onChange({ telephone: e.target.value })} icon={<IconPhone size={16} />} placeholder="+41 79 123 45 67" required />
+        <LandingInput label="Prénom" value={data.prenom} onChange={(e) => onChange({ prenom: e.target.value })} icon={<IconUser size={16} />} placeholder="Prénom" required />
+        <LandingInput label="Nom de famille" value={data.nom} onChange={(e) => onChange({ nom: e.target.value })} icon={<IconUser size={16} />} placeholder="Nom" required />
 
         {/* Adresse avec autocomplete */}
         <div className="md:col-span-2 space-y-1.5">
@@ -96,16 +96,16 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             Date de naissance <span className="text-red-400">*</span>
           </label>
           <div className="grid grid-cols-3 gap-2">
-            <PremiumSelect label="" value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)} placeholder="Jour" options={DAYS.map(d => ({ value: d, label: String(parseInt(d, 10)) }))} />
-            <PremiumSelect label="" value={dateParts.month} onValueChange={(v) => handleDatePartChange('month', v)} placeholder="Mois" options={MONTHS} />
-            <PremiumSelect label="" value={dateParts.year} onValueChange={(v) => handleDatePartChange('year', v)} placeholder="Année" options={YEARS.map(y => ({ value: y, label: y }))} />
+            <LandingSelect label="" value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)} placeholder="Jour" options={DAYS.map(d => ({ value: d, label: String(parseInt(d, 10)) }))} />
+            <LandingSelect label="" value={dateParts.month} onValueChange={(v) => handleDatePartChange('month', v)} placeholder="Mois" options={MONTHS} />
+            <LandingSelect label="" value={dateParts.year} onValueChange={(v) => handleDatePartChange('year', v)} placeholder="Année" options={YEARS.map(y => ({ value: y, label: y }))} />
           </div>
         </div>
 
-        <PremiumSelect label="Nationalité" icon={<IconShield size={16} />} value={data.nationalite} onValueChange={(v) => onChange({ nationalite: v })} options={NATIONALITES.map(n => ({ value: n, label: n }))} optional />
-        <PremiumSelect label="Type de permis de séjour" icon={<IconShield size={16} />} value={data.type_permis} onValueChange={(v) => onChange({ type_permis: v })} options={TYPES_PERMIS.map(p => ({ value: p.value, label: p.label }))} required />
+        <LandingSelect label="Nationalité" icon={<IconShield size={16} />} value={data.nationalite} onValueChange={(v) => onChange({ nationalite: v })} options={NATIONALITES.map(n => ({ value: n, label: n }))} optional />
+        <LandingSelect label="Type de permis de séjour" icon={<IconShield size={16} />} value={data.type_permis} onValueChange={(v) => onChange({ type_permis: v })} options={TYPES_PERMIS.map(p => ({ value: p.value, label: p.label }))} required />
         <div className="md:col-span-2">
-          <PremiumSelect label="État civil" icon={<IconUser size={16} />} value={data.etat_civil} onValueChange={(v) => onChange({ etat_civil: v })} options={ETATS_CIVILS.map(e => ({ value: e, label: e }))} optional />
+          <LandingSelect label="État civil" icon={<IconUser size={16} />} value={data.etat_civil} onValueChange={(v) => onChange({ etat_civil: v })} options={ETATS_CIVILS.map(e => ({ value: e, label: e }))} optional />
         </div>
       </div>
     </div>
