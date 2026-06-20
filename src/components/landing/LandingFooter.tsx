@@ -64,6 +64,7 @@ export function LandingFooter() {
               {[
                 { to: "/nouveau-mandat", label: "Activer ma recherche" },
                 { to: "/chasseur-appartement", label: "Chasseur d'appartement" },
+                { to: "/relouer-mon-appartement", label: "Relouer mon appartement (locataire sortant)" },
                 { to: "/rendez-vous", label: "Prendre rendez-vous" },
                 { to: "/login", label: "Espace client" },
               ].map((link) => (
