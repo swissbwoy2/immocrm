@@ -83,7 +83,7 @@ export function LandingDocumentDropzone({
           'relative rounded-2xl border-2 border-dashed transition-all duration-300',
           compact ? 'p-3' : 'p-5 sm:p-6',
           hasFile
-            ? 'border-emerald-500/50 bg-emerald-50/40'
+            ? 'border-primary/50 bg-primary/5'
             : drag
               ? 'border-primary bg-primary/5'
               : 'border-border bg-muted/30 hover:border-primary/50',
@@ -130,14 +130,14 @@ export function LandingDocumentDropzone({
               ) : (
                 <FileText className="h-7 w-7 text-primary" />
               )}
-              <div className="absolute top-1 right-1 rounded-full bg-emerald-500 text-white p-0.5">
+              <div className="absolute top-1 right-1 rounded-full bg-primary text-primary-foreground p-0.5">
                 <CheckCircle2 className="h-3.5 w-3.5" />
               </div>
             </div>
 
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{preview.name}</p>
-              <p className="text-[11px] text-emerald-600 mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] text-primary mt-0.5 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Document validé
               </p>
               <div className="flex items-center gap-2 mt-2">

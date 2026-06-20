@@ -11,16 +11,16 @@ interface LandingFormShellProps {
 
 export function LandingFormShell({ children }: LandingFormShellProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background text-foreground">
       <FloatingNav />
 
       {/* Top banner — same as landing */}
       <div
-        className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
+        className="bg-[hsl(var(--imr-green-pale))] border-b border-border"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-xs sm:text-sm text-slate-300">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Un logiciel propulsé par{' '}
             <a
               href="https://www.immo-rama.ch"
