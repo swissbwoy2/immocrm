@@ -28,6 +28,8 @@ import { ExternalRedirect } from "./components/ExternalRedirect";
 const PortailMaintenance = lazy(() => import("./pages/PortailMaintenance"));
 const ChasseurAppartement = lazy(() => import("./pages/ChasseurAppartement"));
 const RendezVousBureau = lazy(() => import("./pages/RendezVousBureau"));
+const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
+const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/legal/PolitiqueConfidentialite"));
