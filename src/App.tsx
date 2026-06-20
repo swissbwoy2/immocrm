@@ -39,9 +39,7 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // Public portal pages
-const PublicAnnonces = lazy(() => import("./pages/public/Annonces"));
-const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
-const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
+// Portail annonces en maintenance — composants Annonces/RechercheAnnonces/AnnonceDetail retirés du routing public
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
