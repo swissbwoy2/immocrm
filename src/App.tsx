@@ -23,15 +23,11 @@ const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const MandatV3 = lazy(() => import("./pages/MandatV3"));
 const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
 const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
-const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
-const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
-const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
+// Parcours propriétaires retirés du frontend public (redirigés vers Immo-rama.ch)
+import { ExternalRedirect } from "./components/ExternalRedirect";
+const PortailMaintenance = lazy(() => import("./pages/PortailMaintenance"));
 const ChasseurAppartement = lazy(() => import("./pages/ChasseurAppartement"));
 const RendezVousBureau = lazy(() => import("./pages/RendezVousBureau"));
-const RendezVousProprietaire = lazy(() => import("./pages/RendezVousProprietaire"));
-const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
-const ConstruireRenover = lazy(() => import("./pages/ConstruireRenover"));
-const FormulaireConstruireRenover = lazy(() => import("./pages/FormulaireConstruireRenover"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/legal/PolitiqueConfidentialite"));
@@ -43,9 +39,7 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // Public portal pages
-const PublicAnnonces = lazy(() => import("./pages/public/Annonces"));
-const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
-const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
+// Portail annonces en maintenance — composants Annonces/RechercheAnnonces/AnnonceDetail retirés du routing public
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
@@ -278,15 +272,18 @@ const App = () => (
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
               <Route path="/mandat/renouvellement" element={<MandatRenouvellement />} />
-              <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
-              <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
-              <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
+              {/* Parcours propriétaires — redirigés vers Immo-rama.ch */}
+              <Route path="/vendre-mon-bien" element={<ExternalRedirect to="https://immo-rama.ch/vendre-mon-bien" />} />
+              <Route path="/formulaire-vendeur" element={<ExternalRedirect to="https://immo-rama.ch/vendre-mon-bien" />} />
+              <Route path="/relouer-mon-appartement" element={<ExternalRedirect to="https://immo-rama.ch/relouer-mon-appartement" />} />
+              <Route path="/formulaire-relouer" element={<ExternalRedirect to="https://immo-rama.ch/relouer-mon-appartement" />} />
+              <Route path="/construire-renover" element={<ExternalRedirect to="https://immo-rama.ch/project-management" />} />
+              <Route path="/formulaire-construire-renover" element={<ExternalRedirect to="https://immo-rama.ch/project-management" />} />
+              <Route path="/rendez-vous-proprietaire" element={<ExternalRedirect to="https://immo-rama.ch" />} />
+
+              {/* Parcours chercheurs — Logisorama */}
               <Route path="/chasseur-appartement" element={<ChasseurAppartement />} />
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
-              <Route path="/rendez-vous-proprietaire" element={<RendezVousProprietaire />} />
-              <Route path="/formulaire-relouer" element={<FormulaireRelouer />} />
-              <Route path="/construire-renover" element={<ConstruireRenover />} />
-              <Route path="/formulaire-construire-renover" element={<FormulaireConstruireRenover />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -299,10 +296,10 @@ const App = () => (
               <Route path="/de/datenschutz" element={<PolitiqueConfidentialiteDE />} />
 
 
-              {/* Public Portal Routes */}
-              <Route path="/annonces" element={<PublicAnnonces />} />
-              <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
-              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
+              {/* Portail annonces — en maintenance */}
+              <Route path="/annonces" element={<PortailMaintenance />} />
+              <Route path="/annonces/recherche" element={<PortailMaintenance />} />
+              <Route path="/annonces/:slug" element={<PortailMaintenance />} />
               <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
               <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
               
