@@ -1,179 +1,216 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Home, Users, ShieldCheck, CheckCircle, Crown, Search, FileCheck, Sparkles, Gift } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
-import heroBg from '@/assets/hero-bg.jpg';
-import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
-import { ScrollExpansionHero } from '@/components/ui/scroll-expansion-hero';
+import { motion } from 'framer-motion';
+import {
+  ArrowRight,
+  CheckCircle2,
+  KeyRound,
+  Users,
+  FileCheck,
+  CalendarCheck,
+  ShieldCheck,
+  Clock,
+  HandCoins,
+  Sparkles,
+} from 'lucide-react';
+import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
+
+const BENEFITS = [
+  { icon: HandCoins, title: 'Évitez la double charge de loyer', desc: "On accélère la reprise de bail pour stopper l'hémorragie financière." },
+  { icon: ShieldCheck, title: 'Un repreneur solvable', desc: 'Dossiers vérifiés : salaire, poursuites, références.' },
+  { icon: CalendarCheck, title: 'Visites organisées pour vous', desc: 'Créneaux, confirmations, relances : on s’en occupe.' },
+  { icon: Users, title: 'Candidats présélectionnés', desc: 'Vous ne voyez que les profils sérieux.' },
+  { icon: FileCheck, title: 'Dossiers prêts pour la régie', desc: 'Un dossier complet, transmis sous le bon format.' },
+  { icon: Sparkles, title: 'Accompagnement jusqu’à la reprise', desc: 'On suit la régie ou le propriétaire jusqu’à la signature.' },
+];
+
+const STEPS = [
+  { n: '01', title: 'Vous nous confiez votre logement', desc: 'Adresse, loyer, date de reprise souhaitée, photos.' },
+  { n: '02', title: 'Nous activons la recherche', desc: 'Diffusion ciblée auprès de nos candidats solvables.' },
+  { n: '03', title: 'Visites + présélection', desc: 'On organise les visites et on filtre les dossiers.' },
+  { n: '04', title: 'Transmission à la régie', desc: 'Dossier complet remis pour validation officielle.' },
+];
 
 export default function RelouerMonAppartement() {
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = "Relouer mon appartement | Immo-Rama";
+    document.title = 'Relouer mon appartement — Locataire sortant | Logisorama';
+    const meta = document.querySelector('meta[name="description"]');
+    const content =
+      "Vous quittez votre appartement ? Logisorama trouve un repreneur solvable, organise les visites et transmet un dossier complet à la régie pour vous libérer du bail rapidement.";
+    if (meta) meta.setAttribute('content', content);
+    else {
+      const m = document.createElement('meta');
+      m.name = 'description';
+      m.content = content;
+      document.head.appendChild(m);
+    }
   }, []);
 
-  const steps = [
-    { icon: Home, title: 'Vous nous confiez votre bien', desc: 'Adresse, loyer souhaité, dates de disponibilité.' },
-    { icon: Search, title: 'Nous trouvons le locataire idéal', desc: 'Sélection rigoureuse parmi notre base de +500 candidats vérifiés.' },
-    { icon: FileCheck, title: 'Dossier complet pour la régie', desc: 'Vous recevez un dossier prêt à présenter à votre régie/propriétaire.' },
-    { icon: Sparkles, title: 'Vous êtes libéré du bail', desc: 'Sortie anticipée sans frais grâce à un repreneur solvable.' },
-  ];
-
   return (
-    <div className="theme-luxury min-h-screen bg-background">
-      {/* Header fixe avec retour accueil */}
-      <header
-        className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-      >
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" aria-label="Retour à l'accueil" className="flex items-center gap-2">
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto" />
-          </Link>
-          <div className="flex items-center gap-1">
-            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-              <Link to="/">← Accueil</Link>
-            </Button>
-            <LandingHamburgerMenu />
-          </div>
+    <LandingFormShell>
+      {/* HERO */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background pointer-events-none" />
+        <div className="container relative mx-auto px-4 py-16 md:py-24 max-w-5xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center"
+          >
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-6">
+              <KeyRound className="h-3.5 w-3.5" />
+              Spécial locataire sortant
+            </span>
+
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-5">
+              Vous quittez votre appartement ?<br />
+              <span className="bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 bg-clip-text text-transparent">
+                Évitez de payer deux loyers.
+              </span>
+            </h1>
+
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+              Logisorama vous aide à trouver rapidement un repreneur solvable, à organiser les
+              visites et à transmettre un dossier complet à votre régie ou propriétaire.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to="/formulaire-relouer"
+                className="inline-flex items-center gap-3 px-7 py-3.5 rounded-xl font-bold text-base text-white bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-[1.02] transition-all"
+              >
+                Trouver un repreneur maintenant
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+              <Link
+                to="/rendez-vous"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              >
+                Prendre rendez-vous
+              </Link>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary" /> Activation rapide</span>
+              <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Candidats solvables</span>
+              <span className="flex items-center gap-1.5"><FileCheck className="h-3.5 w-3.5 text-primary" /> Dossier prêt pour la régie</span>
+            </div>
+          </motion.div>
         </div>
-      </header>
+      </section>
 
-      <div className="pt-16">
-      {/* HERO — scroll expansion */}
-      <ScrollExpansionHero
-        mediaSrc={heroBg}
-        bgImageSrc={heroBg}
-        mediaType="image"
-        title="Vous quittez votre appartement ? Nous trouvons votre repreneur."
-        scrollToExpand="Faites défiler pour découvrir"
-      />
-
-      {/* COMMENT ÇA MARCHE */}
-      <section className="py-16 md:py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Comment ça marche ?
+      {/* BÉNÉFICES */}
+      <section className="py-16 md:py-20 bg-muted/30">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-12 max-w-2xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+              Pourquoi passer par Logisorama ?
             </h2>
-            <p className="text-muted-foreground text-base md:text-lg">
-              Un parcours simple, transparent, sans engagement.
+            <p className="text-muted-foreground">
+              Notre mission : vous libérer du bail le plus vite possible, sans stress et sans
+              double loyer.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {steps.map((step, idx) => (
-              <div key={idx} className="bg-background rounded-2xl p-6 border border-border/40 shadow-sm hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <step.icon className="h-6 w-6 text-primary" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {BENEFITS.map((b, i) => (
+              <motion.div
+                key={b.title}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                className="rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 p-6 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all"
+              >
+                <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
+                  <b.icon className="h-5 w-5 text-primary" />
                 </div>
-                <div className="text-xs font-semibold text-primary mb-2">ÉTAPE {idx + 1}</div>
-                <h3 className="text-lg font-bold text-foreground mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.desc}</p>
+                <h3 className="text-base font-bold text-foreground mb-1.5">{b.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{b.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* COMMENT ÇA MARCHE */}
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="text-center mb-12 max-w-2xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
+              Comment ça marche ?
+            </h2>
+            <p className="text-muted-foreground">Un parcours simple, en 4 étapes claires.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {STEPS.map((s) => (
+              <div
+                key={s.n}
+                className="relative rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 p-6"
+              >
+                <span className="text-4xl font-bold bg-gradient-to-br from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                  {s.n}
+                </span>
+                <h3 className="text-lg font-bold text-foreground mt-2 mb-1.5">{s.title}</h3>
+                <p className="text-sm text-muted-foreground">{s.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* TARIFS */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <p className="text-xs font-semibold tracking-widest uppercase text-primary mb-3">Tarifs transparents</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Choisissez votre formule
+      {/* RASSURANCE */}
+      <section className="py-12 md:py-16 bg-muted/30">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 p-6 md:p-10">
+            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-4">
+              Pensé pour les locataires qui doivent partir vite
             </h2>
-            <p className="text-muted-foreground text-base md:text-lg">
-              Service de base 100% gratuit, ou Premium pour maximiser vos chances de relouer rapidement.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {/* Colonne 1 — GRATUIT */}
-            <div className="bg-card/50 border border-border/50 rounded-2xl p-6 md:p-8 flex flex-col gap-5">
-              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                <Gift className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-muted-foreground mb-1">Service Standard</p>
-                <p className="text-4xl font-bold text-foreground">GRATUIT</p>
-                <p className="text-sm text-muted-foreground mt-1">Sans engagement</p>
-              </div>
-              <ul className="space-y-3 flex-1">
-                {[
-                  'Recherche d\'un repreneur dans notre base de candidats vérifiés',
-                  'Constitution du dossier complet pour votre régie',
-                  'Sortie anticipée de bail facilitée',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Colonne 2 — PREMIUM */}
-            <div className="relative bg-primary/5 border border-primary/40 rounded-2xl p-6 md:p-8 flex flex-col gap-5 shadow-lg shadow-primary/10">
-              <div className="absolute top-4 right-4">
-                <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-full">
-                  <Crown className="h-3 w-3" />
-                  RECOMMANDÉ
-                </span>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Crown className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-primary mb-1">Formule Premium</p>
-                <p className="text-4xl font-bold text-foreground">299.-</p>
-                <p className="text-sm text-muted-foreground mt-1">Paiement unique</p>
-              </div>
-              <ul className="space-y-3 flex-1">
-                {[
-                  'Publication sur Immobilier.ch',
-                  'Publication sur Flatfox',
-                  'Gestion complète des visites',
-                  'Pré-sélection des dossiers solvables',
-                  'Envoi du dossier finalisé à votre régie',
-                  'Tout le service Standard inclus',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5 text-sm text-foreground/80">
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul className="space-y-3">
+              {[
+                'Mutation professionnelle, achat, séparation, déménagement : on s’adapte à votre urgence.',
+                'On ne vous facture rien tant qu’aucun repreneur solvable n’est trouvé.',
+                'On reste votre interlocuteur jusqu’à la signature officielle de la reprise de bail.',
+              ].map((t) => (
+                <li key={t} className="flex items-start gap-3 text-sm text-foreground/85">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
 
       {/* CTA FINAL */}
-      <section className="py-16 md:py-24 bg-muted/20">
+      <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 text-center max-w-3xl">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Prêt à libérer votre appartement ?
+            Prêt à libérer votre bail ?
           </h2>
           <p className="text-muted-foreground text-base md:text-lg mb-8">
-            Service gratuit sans engagement — option Premium à 299.- pour publier sur Immobilier.ch &amp; Flatfox.
+            Remplissez le formulaire en 3 minutes — on revient vers vous très rapidement.
           </p>
-          <Button asChild size="lg" className="text-base md:text-xl px-8 md:px-14 py-5 md:py-8">
-            <Link to="/formulaire-relouer">
-              Commencer gratuitement
-              <ArrowRight className="ml-3 h-6 w-6" />
-            </Link>
-          </Button>
+          <Link
+            to="/formulaire-relouer"
+            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-base md:text-lg text-white bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-[1.02] transition-all"
+          >
+            Trouver un repreneur maintenant
+            <ArrowRight className="h-5 w-5" />
+          </Link>
           <div className="mt-6">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/">← Retour à l'accueil</Link>
-            </Button>
+            <Link
+              to="/"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Retour à l’accueil
+            </Link>
           </div>
         </div>
       </section>
-      </div>
-    </div>
+    </LandingFormShell>
   );
 }
