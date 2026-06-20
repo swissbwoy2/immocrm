@@ -26,13 +26,14 @@ const internalLinks = [
   { to: '/', label: 'Accueil', icon: Home },
   { to: '/nouveau-mandat', label: 'Activer ma recherche', icon: Rocket },
   { to: '/chasseur-appartement', label: 'Chasseur d’appartement', icon: Search },
+  { to: '/relouer-mon-appartement', label: 'Relouer mon appartement (locataire sortant)', icon: RefreshCw },
   { to: '/rendez-vous', label: 'Prendre rendez-vous', icon: CalendarCheck },
   { to: '/login', label: 'Espace client', icon: User },
 ];
 
 const externalProprio = [
   { href: 'https://immo-rama.ch/vendre-mon-bien', label: 'Vendre mon bien', icon: Banknote },
-  { href: 'https://immo-rama.ch/relouer-mon-appartement', label: 'Mettre en location', icon: RefreshCw },
+  { href: 'https://immo-rama.ch/relouer-mon-appartement', label: 'Mise en location propriétaire', icon: RefreshCw },
   { href: 'https://immo-rama.ch/project-management', label: 'Construire / Project Management', icon: HardHat },
 ];
 
