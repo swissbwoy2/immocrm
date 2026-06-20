@@ -274,14 +274,16 @@ const App = () => (
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
               <Route path="/mandat/renouvellement" element={<MandatRenouvellement />} />
-              {/* Parcours propriétaires — redirigés vers Immo-rama.ch */}
+              {/* Parcours propriétaires (vente / location bailleur / construction) — redirigés vers Immo-rama.ch */}
               <Route path="/vendre-mon-bien" element={<ExternalRedirect to="https://immo-rama.ch/vendre-mon-bien" />} />
               <Route path="/formulaire-vendeur" element={<ExternalRedirect to="https://immo-rama.ch/vendre-mon-bien" />} />
-              <Route path="/relouer-mon-appartement" element={<ExternalRedirect to="https://immo-rama.ch/relouer-mon-appartement" />} />
-              <Route path="/formulaire-relouer" element={<ExternalRedirect to="https://immo-rama.ch/relouer-mon-appartement" />} />
               <Route path="/construire-renover" element={<ExternalRedirect to="https://immo-rama.ch/project-management" />} />
               <Route path="/formulaire-construire-renover" element={<ExternalRedirect to="https://immo-rama.ch/project-management" />} />
               <Route path="/rendez-vous-proprietaire" element={<ExternalRedirect to="https://immo-rama.ch" />} />
+
+              {/* Relouer mon appartement — LOCATAIRE SORTANT uniquement (reste sur Logisorama) */}
+              <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
+              <Route path="/formulaire-relouer" element={<FormulaireRelouer />} />
 
               {/* Parcours chercheurs — Logisorama */}
               <Route path="/chasseur-appartement" element={<ChasseurAppartement />} />
