@@ -97,7 +97,7 @@ export function PremiumDocumentDropzone({
           'relative rounded-2xl border-2 border-dashed transition-all duration-300',
           compact ? 'p-3' : 'p-5 sm:p-6',
           hasFile
-            ? 'border-emerald-500/40 bg-emerald-950/10'
+            ? 'border-primary/40 bg-primary/10'
             : drag
               ? 'border-[hsl(38_55%_65%/0.7)] bg-[hsl(38_45%_48%/0.08)]'
               : 'border-[hsl(38_45%_48%/0.3)] bg-[hsl(30_15%_9%/0.5)] hover:border-[hsl(38_55%_65%/0.5)]',
@@ -146,14 +146,14 @@ export function PremiumDocumentDropzone({
               ) : (
                 <FileText className="h-7 w-7 text-[hsl(38_55%_65%)]" />
               )}
-              <div className="absolute top-1 right-1 rounded-full bg-emerald-500 text-white p-0.5">
+              <div className="absolute top-1 right-1 rounded-full bg-primary text-primary-foreground p-0.5">
                 <CheckCircle2 className="h-3.5 w-3.5" />
               </div>
             </div>
 
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[hsl(40_20%_82%)] truncate">{preview.name}</p>
-              <p className="text-[11px] text-emerald-400 mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] text-primary mt-0.5 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Document validé
               </p>
               <div className="flex items-center gap-2 mt-2">

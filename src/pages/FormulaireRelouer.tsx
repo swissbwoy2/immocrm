@@ -266,8 +266,8 @@ export default function FormulaireRelouer() {
         <div className="container mx-auto px-4 max-w-2xl py-16">
           <LandingFormCard>
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-5">
-                <KeyRound className="h-7 w-7 text-emerald-500" />
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-5">
+                <KeyRound className="h-7 w-7 text-primary" />
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
                 Demande envoyée !

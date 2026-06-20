@@ -665,7 +665,7 @@ export default function RendezVousBureau() {
                 <div
                   className={cn(
                     'rounded-lg border px-3 py-2 text-xs flex items-center justify-between',
-                    liveRatio >= 3 && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+                    liveRatio >= 3 && 'border-primary/40 bg-primary/10 text-primary',
                     liveRatio >= 2.5 && liveRatio < 3 && 'border-amber-500/40 bg-amber-500/10 text-amber-200',
                     liveRatio < 2.5 && 'border-rose-500/40 bg-rose-500/10 text-rose-200',
                   )}

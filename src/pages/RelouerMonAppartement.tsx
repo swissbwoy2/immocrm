@@ -66,7 +66,7 @@ export default function RelouerMonAppartement() {
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-5">
               Vous quittez votre appartement ?<br />
-              <span className="bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-[hsl(var(--imr-green-light))] bg-clip-text text-transparent">
                 Évitez de payer deux loyers.
               </span>
             </h1>
@@ -79,7 +79,7 @@ export default function RelouerMonAppartement() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/formulaire-relouer"
-                className="inline-flex items-center gap-3 px-7 py-3.5 rounded-xl font-bold text-base text-white bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-[1.02] transition-all"
+                className="inline-flex items-center gap-3 px-7 py-3.5 rounded-xl font-bold text-base text-primary-foreground bg-gradient-to-r from-primary to-[hsl(var(--imr-green-light))] shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all"
               >
                 Trouver un repreneur maintenant
                 <ArrowRight className="h-5 w-5" />
@@ -151,7 +151,7 @@ export default function RelouerMonAppartement() {
                 key={s.n}
                 className="relative rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 p-6"
               >
-                <span className="text-4xl font-bold bg-gradient-to-br from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                <span className="text-4xl font-bold bg-gradient-to-br from-primary to-[hsl(var(--imr-green-light))] bg-clip-text text-transparent">
                   {s.n}
                 </span>
                 <h3 className="text-lg font-bold text-foreground mt-2 mb-1.5">{s.title}</h3>
@@ -176,7 +176,7 @@ export default function RelouerMonAppartement() {
                 'On reste votre interlocuteur jusqu’à la signature officielle de la reprise de bail.',
               ].map((t) => (
                 <li key={t} className="flex items-start gap-3 text-sm text-foreground/85">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                   <span>{t}</span>
                 </li>
               ))}
@@ -196,7 +196,7 @@ export default function RelouerMonAppartement() {
           </p>
           <Link
             to="/formulaire-relouer"
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-base md:text-lg text-white bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-[1.02] transition-all"
+            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-bold text-base md:text-lg text-primary-foreground bg-gradient-to-r from-primary to-[hsl(var(--imr-green-light))] shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all"
           >
             Trouver un repreneur maintenant
             <ArrowRight className="h-5 w-5" />
