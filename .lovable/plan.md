@@ -1,106 +1,105 @@
 
-# Recentrage Logisorama.ch sur le parcours chercheur
+# Cause racine du problème "tout est bleu" et correction globale
 
-Objectif : Logisorama reste centré sur la recherche/chasseur d'appartement. Les parcours propriétaires (vente, mise en location, construction) basculent en redirection externe vers Immo-rama.ch. Le portail annonces passe en maintenance. Aucune donnée, aucun compte, aucun formulaire de recherche, aucune route admin/agent/client n'est touché.
+## Diagnostic (preuves)
 
-## 1. Redirections externes (propriétaires)
+`src/index.css` lignes 34-78 : le thème **par défaut** `:root` a `--primary: 217 91% 60%` → **bleu dodger**.
+`src/index.css` ligne 142+ : la classe `.theme-luxury` redéfinit `--primary: 158 55% 38%` → **vert Logisorama**.
 
-Les routes publiques suivantes sont remplacées par un composant `ExternalRedirect` qui exécute `window.location.replace(...)` au montage :
+La **home** (`PublicSiteLayout`) wrappe tout dans `.theme-luxury` → vert.
+Le **shell des formulaires** (`LandingFormShell`) **n'ajoute PAS `.theme-luxury`** → toutes les classes `bg-primary` / `text-primary` / `border-primary` / `ring-primary` retombent sur le bleu par défaut. C'est ce qui rend les inputs, focus, badges, progress, boutons, step indicators "bleus".
 
-| Route Logisorama | Destination Immo-rama |
-|---|---|
-| `/vendre-mon-bien` | `https://immo-rama.ch/vendre-mon-bien` |
-| `/formulaire-vendeur` | `https://immo-rama.ch/vendre-mon-bien` |
-| `/relouer-mon-appartement` | `https://immo-rama.ch/relouer-mon-appartement` |
-| `/formulaire-relouer` | `https://immo-rama.ch/relouer-mon-appartement` |
-| `/construire-renover` | `https://immo-rama.ch/project-management` |
-| `/formulaire-construire-renover` | `https://immo-rama.ch/project-management` |
-| `/rendez-vous-proprietaire` | `https://immo-rama.ch` |
+→ La correction prioritaire est **une seule ligne** : ajouter `theme-luxury` au root de `LandingFormShell`. Tout le reste (inputs, selects, checkbox, step indicator, progress, focus rings…) bascule automatiquement en vert.
 
-Les anciens composants pages (`VendreMonBien.tsx`, `RelouerMonAppartement.tsx`, `ConstruireRenover.tsx`, `FormulaireVendeurComplet.tsx`, `FormulaireRelouer.tsx`, `FormulaireConstruireRenover.tsx`, `RendezVousProprietaire.tsx`) restent dans le code mais ne sont plus utilisés en route publique (réutilisables côté admin si besoin).
+S'ajoute à cela un petit lot de couleurs hardcodées (`slate-900`, `emerald-500`, `teal-500`) à remplacer par les tokens du thème.
 
-## 2. Portail annonces → page maintenance
+## 1. Wrapper `theme-luxury` global pour les formulaires
 
-Routes `/annonces`, `/annonces/recherche`, `/annonces/:slug` remplacées par une nouvelle page `PortailMaintenance.tsx` (design Logisorama : `LandingFormShell` + carte premium semantic tokens, cohérente avec la home).
+`src/components/forms-premium/LandingFormShell.tsx` :
 
-Contenu :
-- Titre : « Portail annonces en maintenance »
-- Texte : « Notre portail d'annonces est actuellement en cours d'amélioration… »
-- CTAs : « Activer ma recherche » (`/nouveau-mandat`), « Prendre rendez-vous » (`/rendez-vous`), « Retour à l'accueil » (`/`)
-- Balise `<meta name="robots" content="noindex,nofollow" />` via `useEffect`
-
-Les routes annonceur (`/espace-annonceur/*`, `/inscription-annonceur`, `/connexion-annonceur`) et toute la zone admin/agent/client restent intactes (backoffice).
-
-## 3. Nettoyage navigation publique
-
-**`src/components/landing/LandingHamburgerMenu.tsx`** — nouvelle liste :
-- Accueil (`/`)
-- Trouver un logement (`/nouveau-mandat`)
-- Acheter un bien (`/chasseur-appartement`)
-- Rendez-vous (`/rendez-vous`)
-- Espace client (`/login`)
-- Section « Services propriétaires » discrète avec liens externes (target=_blank) : Vendre, Relouer, Project Management → Immo-rama.ch
-
-**`src/components/landing/FloatingNav.tsx`** — inchangé sur la structure (déjà ciblé chercheur : Mon espace client, Essayer la démo, Réserver RDV, Activer ma recherche). Vérification des liens.
-
-**`src/components/landing/LandingFooter.tsx`** :
-- Suppression du bloc « Portail Annonces » (4 liens `/annonces*`)
-- Remplacement par bloc « Recherche d'appartement » : Activer ma recherche, Chasseur, Prendre RDV, Se connecter
-- Suppression du lien « Vendre mon bien » des liens rapides
-- Ajout d'un bloc « Services propriétaires » avec 3 liens externes vers Immo-rama (Vendre, Relouer, Project Management), `target="_blank" rel="noopener"`
-
-**`src/components/public-site/sections/HeroSection.tsx`** — retrait des 3 tuiles `/relouer`, `/vendre`, `/construire`. Ne reste que la recherche locataire/acheteur.
-
-**`src/components/public-site/PublicSiteFooter.tsx`** — mêmes nettoyages que `LandingFooter`.
-
-**`src/components/landing/SeoLocalSection.tsx`** — les `<Link to="/vendre-mon-bien">` et `<Link to="/relouer-mon-appartement">` deviennent `<a href="https://immo-rama.ch/...">` externes.
-
-## 4. SEO
-
-- `public/sitemap.xml` (ou `scripts/generate-sitemap.ts` selon ce qui existe) : retirer toutes les entrées `/vendre-mon-bien`, `/formulaire-vendeur`, `/relouer-mon-appartement`, `/formulaire-relouer`, `/construire-renover`, `/formulaire-construire-renover`, `/annonces*`, et toute entrée IA publique. Garder : `/`, `/nouveau-mandat`, `/chasseur-appartement`, `/rendez-vous`, `/login`, `/demo`, pages légales.
-- `public/robots.txt` : ajouter `Disallow: /annonces` et `Disallow: /vendre-mon-bien`, `Disallow: /relouer-mon-appartement`, `Disallow: /construire-renover`, `Disallow: /formulaire-vendeur`, `Disallow: /formulaire-relouer`, `Disallow: /formulaire-construire-renover` (en plus du wildcard existant).
-- `index.html` : conserver tel quel (déjà orienté chasseur). Pas de changement de title/description.
-
-## 5. Harmonisation visuelle des formulaires
-
-Le travail déjà fait sur `/nouveau-mandat` (LandingFormShell + composants `Landing*`) sert de référence. Vérification rapide que les autres formulaires encore publics utilisés par le parcours chercheur (`/rendez-vous`, `/chasseur-appartement` si formulaire) reprennent les mêmes tokens (`bg-card/60`, `border-border/50`, primary emerald). Aucun nouveau composant créé sauf si un écart visible existe — à confirmer pendant l'implémentation.
-
-## 6. Routes IA publiques
-
-Audit confirmé : aucune route publique IA n'existe (`/agent-ia`, `/relocation-ia`, `/affiliation-ia` n'existent pas dans `src/App.tsx`). Les pages `AgentIA.tsx` et `ai-relocation/*` sont uniquement sous `/admin/*` (protégées). **Aucun changement nécessaire** : elles ne sont pas visibles publiquement. Si un menu admin pointe vers ces pages, on le laisse (usage interne).
-
-## Détails techniques
-
-### Nouveau composant `src/components/ExternalRedirect.tsx`
-```tsx
-import { useEffect } from 'react';
-export function ExternalRedirect({ to }: { to: string }) {
-  useEffect(() => { window.location.replace(to); }, [to]);
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground">
-      Redirection vers Immo-rama.ch…
-    </div>
-  );
-}
+```diff
+- <div className="min-h-screen bg-background">
++ <div className="theme-luxury min-h-screen bg-background text-foreground">
 ```
 
-### `src/App.tsx`
-Remplacement de 7 `element={...}` par `element={<ExternalRedirect to="https://immo-rama.ch/..." />}`. Remplacement des 3 routes `/annonces*` par `element={<PortailMaintenance />}`. Imports inutiles supprimés.
+Conséquence directe (zéro autre changement requis) :
+- inputs focus → ring vert au lieu de bleu
+- `LandingStepIndicator`, `LandingProgressBlock`, `LandingGuaranteeBanner` → vert
+- `LandingButton variant="next"` (déjà en `from-primary to-primary/90`) → vert
+- bordures focus selects, checkboxes, radios → vert
+- badges `bg-primary/10 text-primary` → vert
 
-### Nouvelle page `src/pages/PortailMaintenance.tsx`
-Utilise `LandingFormShell` (cohérence visuelle home), carte `bg-card/60 backdrop-blur border-border/50`, CTAs gradient primary.
+## 2. Top banner du shell — sortir du dark slate
 
-## Hors périmètre (intouché)
-- Backoffice admin/agent/client/coursier/proprietaire/annonceur
-- Authentification, Supabase, edge functions, données
-- Formulaire `/nouveau-mandat` (déjà refait)
-- Pages légales
-- Composants `Premium*` (utilisés ailleurs)
+`LandingFormShell.tsx`, bandeau supérieur :
 
-## Validation
-- Clic « Vendre mon bien » depuis n'importe quel menu/footer → `immo-rama.ch/vendre-mon-bien`
-- `/annonces` → page maintenance Logisorama (pas de 404)
-- Plus aucun lien interne vers `/vendre-mon-bien`, `/relouer-mon-appartement`, `/construire-renover`, `/annonces*`
-- Menu hamburger ne contient plus les 3 parcours propriétaires
-- Footer affiche un bloc « Services propriétaires » externe clair
-- Espace client, login, `/nouveau-mandat`, `/rendez-vous`, `/chasseur-appartement` fonctionnent
+```diff
+- className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
++ className="bg-[hsl(var(--imr-green-pale))] border-b border-border"
+...
+- <p className="text-xs sm:text-sm text-slate-300">
++ <p className="text-xs sm:text-sm text-muted-foreground">
+```
+
+Lien Immo-rama reste `text-primary hover:text-primary/80` (déjà OK).
+
+## 3. Bouton submit — remplacer emerald/teal par primary
+
+`src/components/forms-premium/LandingButton.tsx`, variant `submit` :
+
+```diff
+- 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-[1.02]'
++ 'bg-gradient-to-r from-primary to-[hsl(var(--imr-green-light))] shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02]'
+```
+
+## 4. Dropzones — émeraude → primary
+
+`src/components/forms-premium/LandingDocumentDropzone.tsx` :
+- `border-emerald-500/50 bg-emerald-50/40` → `border-primary/50 bg-primary/5`
+- `bg-emerald-500 text-white` (badge check) → `bg-primary text-primary-foreground`
+- `text-emerald-600` → `text-primary`
+
+Même substitution dans `src/components/forms-premium/PremiumDocumentDropzone.tsx`.
+
+## 5. Pages avec emerald/teal hardcodés
+
+`src/pages/RelouerMonAppartement.tsx` :
+- Hero gradient text `from-emerald-500 via-emerald-400 to-teal-500` → `from-primary to-[hsl(var(--imr-green-light))]`
+- CTA inline emerald → mêmes classes que LandingButton submit (primary gradient)
+- Numéros d'étapes `from-emerald-500 to-teal-500` → primary gradient
+- `text-emerald-500` (icônes check) → `text-primary`
+
+`src/pages/FormulaireRelouer.tsx` :
+- Success card : `bg-emerald-500/15 border-emerald-500/30 text-emerald-500` → `bg-primary/10 border-primary/30 text-primary`
+
+`src/pages/RendezVousBureau.tsx` :
+- `border-emerald-500/40 bg-emerald-500/10 text-emerald-200` → `border-primary/40 bg-primary/10 text-primary`
+
+## 6. Audit final
+
+Aucun autre `blue-*`, `sky-*`, `indigo-*`, `cyan-*` dans `src/components/forms-premium/`, `src/components/mandat/`, `src/pages/NouveauMandat.tsx`, `FormulaireRelouer.tsx`, `RendezVousBureau.tsx`, `RelouerMonAppartement.tsx`, `ChasseurAppartement.tsx` (vérifié par grep). Les seuls bleus du projet vivent dans des sections marketing de la home (`DifferentiationSection`, `GuaranteeSection`, etc.) — **hors scope** (pas de formulaire).
+
+Les composants Premium* admin/CRM ne sont **pas modifiés** (ils servent ailleurs).
+
+## 7. Hors scope (non touché)
+
+Auth, Supabase, upload documents, upload photos, signatures, mandate generation, Resend, AbaNinja, validations, routes admin/agent, logique métier des wizards, structure des steps, copy.
+
+## 8. Validation visuelle
+
+Après application, vérifier au browser (route preview) :
+- `/nouveau-mandat` : step indicator, progress, inputs focus, bouton suivant/envoyer → tous verts ; top banner pâle
+- `/formulaire-relouer` : idem
+- `/rendez-vous` : idem
+- `/relouer-mon-appartement` : titres, CTA, numéros d'étapes en vert (plus de teal)
+- Plus aucun bandeau `slate-900` dans les formulaires publics
+
+## Fichiers modifiés (résumé)
+
+- `src/components/forms-premium/LandingFormShell.tsx` (wrapper + banner)
+- `src/components/forms-premium/LandingButton.tsx` (gradient submit)
+- `src/components/forms-premium/LandingDocumentDropzone.tsx`
+- `src/components/forms-premium/PremiumDocumentDropzone.tsx`
+- `src/pages/RelouerMonAppartement.tsx`
+- `src/pages/FormulaireRelouer.tsx`
+- `src/pages/RendezVousBureau.tsx`
