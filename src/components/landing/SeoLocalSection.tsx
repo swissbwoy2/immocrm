@@ -90,15 +90,25 @@ export function SeoLocalSection() {
                 correspond vraiment à votre projet.
               </p>
               <p>
-                Si vous souhaitez vendre ou relouer un bien dont vous êtes propriétaire, vous pouvez
-                consulter nos pages dédiées :{' '}
-                <Link to="/vendre-mon-bien" className="text-primary font-semibold hover:underline">
+                Si vous souhaitez vendre ou relouer un bien dont vous êtes propriétaire, ces
+                services sont gérés directement par notre agence Immo-rama.ch :{' '}
+                <a
+                  href="https://immo-rama.ch/vendre-mon-bien"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-semibold hover:underline"
+                >
                   vendre mon bien
-                </Link>{' '}
+                </a>{' '}
                 ou{' '}
-                <Link to="/relouer-mon-appartement" className="text-primary font-semibold hover:underline">
+                <a
+                  href="https://immo-rama.ch/relouer-mon-appartement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-semibold hover:underline"
+                >
                   relouer mon appartement
-                </Link>
+                </a>
                 .
               </p>
             </section>

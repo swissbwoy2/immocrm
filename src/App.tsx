@@ -278,15 +278,18 @@ const App = () => (
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
               <Route path="/mandat/renouvellement" element={<MandatRenouvellement />} />
-              <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
-              <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
-              <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
+              {/* Parcours propriétaires — redirigés vers Immo-rama.ch */}
+              <Route path="/vendre-mon-bien" element={<ExternalRedirect to="https://immo-rama.ch/vendre-mon-bien" />} />
+              <Route path="/formulaire-vendeur" element={<ExternalRedirect to="https://immo-rama.ch/vendre-mon-bien" />} />
+              <Route path="/relouer-mon-appartement" element={<ExternalRedirect to="https://immo-rama.ch/relouer-mon-appartement" />} />
+              <Route path="/formulaire-relouer" element={<ExternalRedirect to="https://immo-rama.ch/relouer-mon-appartement" />} />
+              <Route path="/construire-renover" element={<ExternalRedirect to="https://immo-rama.ch/project-management" />} />
+              <Route path="/formulaire-construire-renover" element={<ExternalRedirect to="https://immo-rama.ch/project-management" />} />
+              <Route path="/rendez-vous-proprietaire" element={<ExternalRedirect to="https://immo-rama.ch" />} />
+
+              {/* Parcours chercheurs — Logisorama */}
               <Route path="/chasseur-appartement" element={<ChasseurAppartement />} />
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
-              <Route path="/rendez-vous-proprietaire" element={<RendezVousProprietaire />} />
-              <Route path="/formulaire-relouer" element={<FormulaireRelouer />} />
-              <Route path="/construire-renover" element={<ConstruireRenover />} />
-              <Route path="/formulaire-construire-renover" element={<FormulaireConstruireRenover />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -299,10 +302,10 @@ const App = () => (
               <Route path="/de/datenschutz" element={<PolitiqueConfidentialiteDE />} />
 
 
-              {/* Public Portal Routes */}
-              <Route path="/annonces" element={<PublicAnnonces />} />
-              <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
-              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
+              {/* Portail annonces — en maintenance */}
+              <Route path="/annonces" element={<PortailMaintenance />} />
+              <Route path="/annonces/recherche" element={<PortailMaintenance />} />
+              <Route path="/annonces/:slug" element={<PortailMaintenance />} />
               <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
               <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
               

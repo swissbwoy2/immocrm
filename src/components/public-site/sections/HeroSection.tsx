@@ -13,10 +13,11 @@ import { WordReveal } from '@/components/public-site/animations/WordReveal';
 import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { Meteors } from '@/components/public-site/magic/Meteors';
 
+// Services propriétaires — externalisés vers Immo-rama.ch
 const parcours = [
-  { to: '/relouer-mon-appartement', icon: KeyRound, label: "Relouer mon appart'" },
-  { to: '/vendre-mon-bien', icon: Building2, label: 'Vendre mon bien' },
-  { to: '/construire-renover', icon: Hammer, label: 'Construire & rénover' },
+  { href: 'https://immo-rama.ch/relouer-mon-appartement', icon: KeyRound, label: 'Mettre en location' },
+  { href: 'https://immo-rama.ch/vendre-mon-bien', icon: Building2, label: 'Vendre mon bien' },
+  { href: 'https://immo-rama.ch/project-management', icon: Hammer, label: 'Construire & rénover' },
 ];
 
 export function HeroSection() {
@@ -143,17 +144,19 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="mb-6 md:mb-8 w-full max-w-2xl"
             >
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Autres parcours</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Services propriétaires — Immo-rama.ch</p>
               <div className="grid grid-cols-3 gap-2 md:gap-3">
-                {parcours.map(({ to, icon: Icon, label }) => (
-                  <Link
-                    key={to}
-                    to={to}
+                {parcours.map(({ href, icon: Icon, label }) => (
+                  <a
+                    key={href}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl border border-primary/30 bg-background backdrop-blur-sm hover:border-primary/30 hover:bg-primary/10 transition-all duration-300 group"
                   >
                     <Icon className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:text-primary group-hover:scale-110 transition-all duration-300" />
                     <span className="text-[11px] md:text-sm font-semibold text-muted-foreground group-hover:text-foreground text-center leading-tight transition-colors">{label}</span>
-                  </Link>
+                  </a>
                 ))}
               </div>
             </motion.div>

@@ -1,5 +1,17 @@
 import { Link } from 'react-router-dom';
-import { Menu, Home, Search, Building, Banknote, RefreshCw, HardHat, Phone, User } from 'lucide-react';
+import {
+  Menu,
+  Home,
+  Search,
+  Building2,
+  CalendarCheck,
+  User,
+  Rocket,
+  ExternalLink,
+  Banknote,
+  RefreshCw,
+  HardHat,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -10,15 +22,18 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 
-const links = [
+const internalLinks = [
   { to: '/', label: 'Accueil', icon: Home },
-  { to: '/', label: 'Acheter / Chercher', icon: Search },
-  { to: '/', label: 'Louer', icon: Building },
-  { to: '/vendre-mon-bien', label: 'Vendre mon bien', icon: Banknote },
-  { to: '/relouer-mon-appartement', label: 'Relouer mon appartement', icon: RefreshCw },
-  { to: '/construire-renover', label: 'Construire / Rénover', icon: HardHat },
-  { to: '/#contact', label: 'Nous contacter', icon: Phone },
-  { to: '/auth', label: 'Espace client', icon: User },
+  { to: '/nouveau-mandat', label: 'Activer ma recherche', icon: Rocket },
+  { to: '/chasseur-appartement', label: 'Chasseur d’appartement', icon: Search },
+  { to: '/rendez-vous', label: 'Prendre rendez-vous', icon: CalendarCheck },
+  { to: '/login', label: 'Espace client', icon: User },
+];
+
+const externalProprio = [
+  { href: 'https://immo-rama.ch/vendre-mon-bien', label: 'Vendre mon bien', icon: Banknote },
+  { href: 'https://immo-rama.ch/relouer-mon-appartement', label: 'Mettre en location', icon: RefreshCw },
+  { href: 'https://immo-rama.ch/project-management', label: 'Construire / Project Management', icon: HardHat },
 ];
 
 interface LandingHamburgerMenuProps {
@@ -38,12 +53,13 @@ export function LandingHamburgerMenu({ className }: LandingHamburgerMenuProps) {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[85vw] sm:max-w-sm bg-background border-border">
+      <SheetContent side="right" className="w-[85vw] sm:max-w-sm bg-background border-border overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-left text-foreground">Navigation</SheetTitle>
         </SheetHeader>
+
         <nav className="mt-6 flex flex-col gap-1">
-          {links.map((link, idx) => {
+          {internalLinks.map((link, idx) => {
             const Icon = link.icon;
             return (
               <SheetClose asChild key={idx}>
@@ -60,8 +76,38 @@ export function LandingHamburgerMenu({ className }: LandingHamburgerMenuProps) {
             );
           })}
         </nav>
+
+        <div className="mt-8 pt-6 border-t border-border/50">
+          <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-3 px-3">
+            Services propriétaires
+          </p>
+          <nav className="flex flex-col gap-1">
+            {externalProprio.map((link, idx) => {
+              const Icon = link.icon;
+              return (
+                <a
+                  key={idx}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors group"
+                >
+                  <span className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  </span>
+                  <span className="text-sm flex-1">{link.label}</span>
+                  <ExternalLink className="h-3 w-3 opacity-50" />
+                </a>
+              );
+            })}
+          </nav>
+          <p className="text-[10px] text-muted-foreground/70 mt-3 px-3">
+            Géré par Immo-rama.ch
+          </p>
+        </div>
+
         <div className="mt-8 pt-6 border-t border-border/50 text-xs text-muted-foreground text-center">
-          Immo-Rama · Logisorama
+          Logisorama · by Immo-rama.ch
         </div>
       </SheetContent>
     </Sheet>

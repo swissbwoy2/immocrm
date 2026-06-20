@@ -57,15 +57,15 @@ export function LandingFooter() {
             </div>
           </div>
 
-          {/* Portail Annonces */}
+          {/* Recherche d'appartement */}
           <div>
-            <h4 className="font-semibold text-foreground mb-5">Portail Annonces</h4>
+            <h4 className="font-semibold text-foreground mb-5">Recherche d'appartement</h4>
             <ul className="space-y-3">
               {[
-                { to: "/annonces", label: "Toutes les annonces" },
-                { to: "/annonces/recherche?type=location", label: "Louer un bien" },
-                { to: "/annonces/recherche?type=vente", label: "Acheter un bien" },
-                { to: "/inscription-annonceur", label: "Devenir annonceur" },
+                { to: "/nouveau-mandat", label: "Activer ma recherche" },
+                { to: "/chasseur-appartement", label: "Chasseur d'appartement" },
+                { to: "/rendez-vous", label: "Prendre rendez-vous" },
+                { to: "/login", label: "Espace client" },
               ].map((link) => (
                 <li key={link.to}>
                   <Link
@@ -85,44 +85,31 @@ export function LandingFooter() {
             </ul>
           </div>
 
-          {/* Quick Links */}
+          {/* Services propriétaires — externes vers Immo-rama.ch */}
           <div>
-            <h4 className="font-semibold text-foreground mb-5">Liens rapides</h4>
+            <h4 className="font-semibold text-foreground mb-5">Services propriétaires</h4>
             <ul className="space-y-3">
               {[
-                { to: "/nouveau-mandat", label: "Activer ma recherche" },
-                { to: "/vendre-mon-bien", label: "Vendre mon bien" },
-                { to: "/login", label: "Se connecter" },
+                { href: "https://immo-rama.ch/vendre-mon-bien", label: "Vendre mon bien" },
+                { href: "https://immo-rama.ch/relouer-mon-appartement", label: "Mettre en location" },
+                { href: "https://immo-rama.ch/project-management", label: "Project Management" },
+                { href: "https://www.immo-rama.ch", label: "www.immo-rama.ch" },
               ].map((link) => (
-                <li key={link.to}>
-                  <Link
-                    to={link.to}
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1 group"
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1.5 group"
                   >
                     <span className="relative">
                       {link.label}
                       <span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
                     </span>
-                    <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary">
-                      →
-                    </span>
-                  </Link>
+                    <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  </a>
                 </li>
               ))}
-              <li>
-                <a
-                  href="https://www.immo-rama.ch"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1.5 group"
-                >
-                  <span className="relative">
-                    www.immo-rama.ch
-                    <span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
-                  </span>
-                  <ExternalLink className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-                </a>
-              </li>
               <li>
                 <a
                   href="mailto:info@immo-rama.ch"
