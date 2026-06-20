@@ -64,6 +64,7 @@ export function LandingFooter() {
               {[
                 { to: "/nouveau-mandat", label: "Activer ma recherche" },
                 { to: "/chasseur-appartement", label: "Chasseur d'appartement" },
+                { to: "/relouer-mon-appartement", label: "Relouer mon appartement (locataire sortant)" },
                 { to: "/rendez-vous", label: "Prendre rendez-vous" },
                 { to: "/login", label: "Espace client" },
               ].map((link) => (
@@ -91,7 +92,7 @@ export function LandingFooter() {
             <ul className="space-y-3">
               {[
                 { href: "https://immo-rama.ch/vendre-mon-bien", label: "Vendre mon bien" },
-                { href: "https://immo-rama.ch/relouer-mon-appartement", label: "Mettre en location" },
+                { href: "https://immo-rama.ch/relouer-mon-appartement", label: "Mise en location propriétaire" },
                 { href: "https://immo-rama.ch/project-management", label: "Project Management" },
                 { href: "https://www.immo-rama.ch", label: "www.immo-rama.ch" },
               ].map((link) => (

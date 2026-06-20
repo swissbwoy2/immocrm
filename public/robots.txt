@@ -3,8 +3,6 @@ Allow: /
 Disallow: /annonces
 Disallow: /vendre-mon-bien
 Disallow: /formulaire-vendeur
-Disallow: /relouer-mon-appartement
-Disallow: /formulaire-relouer
 Disallow: /construire-renover
 Disallow: /formulaire-construire-renover
 Disallow: /rendez-vous-proprietaire
@@ -14,8 +12,6 @@ Allow: /
 Disallow: /annonces
 Disallow: /vendre-mon-bien
 Disallow: /formulaire-vendeur
-Disallow: /relouer-mon-appartement
-Disallow: /formulaire-relouer
 Disallow: /construire-renover
 Disallow: /formulaire-construire-renover
 Disallow: /rendez-vous-proprietaire
@@ -31,8 +27,6 @@ Allow: /
 Disallow: /annonces
 Disallow: /vendre-mon-bien
 Disallow: /formulaire-vendeur
-Disallow: /relouer-mon-appartement
-Disallow: /formulaire-relouer
 Disallow: /construire-renover
 Disallow: /formulaire-construire-renover
 Disallow: /rendez-vous-proprietaire
