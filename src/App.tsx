@@ -23,15 +23,8 @@ const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const MandatV3 = lazy(() => import("./pages/MandatV3"));
 const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
 const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
-const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
-const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
-const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
-const ChasseurAppartement = lazy(() => import("./pages/ChasseurAppartement"));
-const RendezVousBureau = lazy(() => import("./pages/RendezVousBureau"));
-const RendezVousProprietaire = lazy(() => import("./pages/RendezVousProprietaire"));
-const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
-const ConstruireRenover = lazy(() => import("./pages/ConstruireRenover"));
-const FormulaireConstruireRenover = lazy(() => import("./pages/FormulaireConstruireRenover"));
+// Parcours propriétaires retirés du frontend public (redirigés vers Immo-rama.ch)
+import { ExternalRedirect } from "./components/ExternalRedirect";
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/legal/PolitiqueConfidentialite"));
