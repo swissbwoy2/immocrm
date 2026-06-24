@@ -392,19 +392,71 @@ const Clients = () => {
   const statutOptions = ['actif', 'en_attente', 'reloge', 'stoppe', 'suspendu', 'inactif'];
   const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', stoppe: 'Stoppé', suspendu: 'Suspendu', inactif: 'Inactif' };
 
+  const isReletter = (c: Client) => c.journey_type === 'property_reletting';
+  const isMixed = (c: Client) => c.journey_type === 'mixed';
+  const isSearcher = (c: Client) => !c.journey_type || c.journey_type === 'housing_search';
+
   const filteredClients = clients.filter(client => {
+    // 1) Filtre par onglet journey
+    if (journeyTab === 'chercheurs' && !(isSearcher(client) || isMixed(client))) return false;
+    if (journeyTab === 'reloueurs' && !(isReletter(client) || isMixed(client))) return false;
+    if (journeyTab === 'mixtes' && !isMixed(client)) return false;
+
     const profile = clientProfiles.get(client.user_id);
-    const matchesSearch = profile 
+    const matchesSearch = profile
       ? (`${profile.prenom} ${profile.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
          profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
       : true;
+    if (!matchesSearch) return false;
+
+    // 2) Pour les clients reloueurs purs (carte reloueur) — appliquer les filtres reloueur
+    if (isReletter(client)) {
+      const req = relouerByUser.get(client.user_id);
+      // Filtres reloueur (s'appliquent dans tous les onglets où une carte reloueur est rendue)
+      if (relouerStatus !== 'all' && req?.status !== relouerStatus) return false;
+      if (relouerType !== 'all' && (req?.property_type || '') !== relouerType) return false;
+      if (relouerCommune.trim() && !(req?.property_city || '').toLowerCase().includes(relouerCommune.trim().toLowerCase())) return false;
+      if (relouerPhotos !== 'all') {
+        const n = req ? (relouerCounts.get(req.id)?.photos ?? 0) : 0;
+        if (relouerPhotos === 'with' && n === 0) return false;
+        if (relouerPhotos === 'without' && n > 0) return false;
+      }
+      if (relouerDocs !== 'all') {
+        const n = req ? (relouerCounts.get(req.id)?.docs ?? 0) : 0;
+        if (relouerDocs === 'with' && n === 0) return false;
+        if (relouerDocs === 'without' && n > 0) return false;
+      }
+      if (relouerAvailability !== 'all') {
+        const has = !!req?.availability_date;
+        if (relouerAvailability === 'set' && !has) return false;
+        if (relouerAvailability === 'none' && has) return false;
+      }
+      // Pour reloueurs purs : filtre agent appliqué sur l'agent assigné du dossier
+      if (filterAgent !== 'all') {
+        if (req?.assigned_agent_id !== filterAgent) return false;
+      }
+      if (showUnassignedOnly && req?.assigned_agent_id) return false;
+      // Pièces du logement (réutilise sélecteur pièces si présent)
+      if (selectedPieces.length > 0) {
+        const ok = selectedPieces.some(p => {
+          if (req?.rooms == null) return false;
+          if (p === '5+') return req.rooms >= 5;
+          const n = Number(p);
+          return !Number.isNaN(n) && Math.abs(req.rooms - n) < 0.01;
+        });
+        if (!ok) return false;
+      }
+      return true;
+    }
+
+    // 3) Pour chercheurs / mixtes — filtres chercheur classiques
     const matchesAgent = filterAgent === "all" || client.agent_id === filterAgent;
     const matchesUnassigned = !showUnassignedOnly || !client.agent_id;
-    
-    const matchRegion = selectedRegions.length === 0 || 
+
+    const matchRegion = selectedRegions.length === 0 ||
       (client.region_recherche && selectedRegions.includes(client.region_recherche));
-    
-    const matchPieces = selectedPieces.length === 0 || 
+
+    const matchPieces = selectedPieces.length === 0 ||
       selectedPieces.some(p => {
         if (client.pieces == null) return false;
         if (p === '5+') return client.pieces >= 5;
@@ -412,27 +464,35 @@ const Clients = () => {
         return !Number.isNaN(pieceNum) && Math.abs(client.pieces - pieceNum) < 0.01;
       });
 
-    const matchTypeRecherche = selectedTypeRecherche === 'all' || 
+    const matchTypeRecherche = selectedTypeRecherche === 'all' ||
       (client as any).type_recherche === selectedTypeRecherche;
 
-    const matchTypePermis = selectedTypePermis === 'all' || 
+    const matchTypePermis = selectedTypePermis === 'all' ||
       client.type_permis === selectedTypePermis;
 
-    const matchStatut = selectedStatut === 'all' || 
+    const matchStatut = selectedStatut === 'all' ||
       (client as any).statut === selectedStatut;
 
     const bMin = budgetMin ? Number(budgetMin) : 0;
     const bMax = budgetMax ? Number(budgetMax) : Infinity;
     const clientBudget = client.budget_max || 0;
     const matchBudget = clientBudget >= bMin && clientBudget <= bMax;
-    
-    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
+
+    return matchesAgent && matchesUnassigned && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
   });
 
-  const activeFilterCount = selectedRegions.length + selectedPieces.length + 
-    (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0) + 
-    (selectedTypeRecherche !== 'all' ? 1 : 0) + (selectedTypePermis !== 'all' ? 1 : 0) + 
-    (selectedStatut !== 'all' ? 1 : 0) + (budgetMin ? 1 : 0) + (budgetMax ? 1 : 0);
+  const showReletterFilters = journeyTab === 'reloueurs';
+  const showSearcherFilters = journeyTab === 'chercheurs' || journeyTab === 'mixtes' || journeyTab === 'all';
+
+  const activeFilterCount = (showSearcherFilters ? (selectedRegions.length + selectedPieces.length +
+    (selectedTypeRecherche !== 'all' ? 1 : 0) + (selectedTypePermis !== 'all' ? 1 : 0) +
+    (selectedStatut !== 'all' ? 1 : 0) + (budgetMin ? 1 : 0) + (budgetMax ? 1 : 0)) : 0) +
+    (showReletterFilters ? ((relouerStatus !== 'all' ? 1 : 0) + (relouerType !== 'all' ? 1 : 0) +
+      (relouerCommune.trim() ? 1 : 0) + (relouerPhotos !== 'all' ? 1 : 0) +
+      (relouerDocs !== 'all' ? 1 : 0) + (relouerAvailability !== 'all' ? 1 : 0) +
+      selectedPieces.length) : 0) +
+    (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0);
+
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
