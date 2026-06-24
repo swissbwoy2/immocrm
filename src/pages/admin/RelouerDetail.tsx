@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import {
   ArrowLeft, Phone, Mail, MapPin, Key, Calendar, FileText, Camera, Users,
-  Building2, Save, Plus, Trash2,
+  Building2, Plus, UserCheck, Clock, History,
 } from 'lucide-react';
+import { RelouerUploader } from '@/components/relouer/RelouerUploader';
+import { RelouerSlotsManager } from '@/components/relouer/RelouerSlotsManager';
+import { RelouerTimeline } from '@/components/relouer/RelouerTimeline';
 
 const STATUSES = [
   'new_request','to_qualify','missing_information','waiting_documents',
@@ -22,42 +25,44 @@ const STATUSES = [
 export default function AdminRelouerDetail() {
   const { id } = useParams<{ id: string }>();
   const [r, setR] = useState<any>(null);
-  const [photos, setPhotos] = useState<any[]>([]);
-  const [docs, setDocs] = useState<any[]>([]);
-  const [slots, setSlots] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [cands, setCands] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
-  const [timeline, setTimeline] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => { if (id) load(); }, [id]);
 
   const load = async () => {
-    const [req, ph, dc, sl, cd, nt, tl] = await Promise.all([
+    const [req, ag, cd, nt] = await Promise.all([
       supabase.from('relouer_requests').select('*').eq('id', id!).maybeSingle(),
-      supabase.from('relouer_photos').select('*').eq('request_id', id!).order('display_order'),
-      supabase.from('relouer_documents').select('*').eq('request_id', id!).order('created_at'),
-      supabase.from('relouer_visit_slots').select('*').eq('request_id', id!).order('slot_start'),
+      supabase.from('agents').select('id, user_id, profile:profiles!agents_user_id_fkey(prenom, nom, email)').eq('statut', 'actif'),
       supabase.from('relouer_candidates').select('*').eq('request_id', id!).order('created_at', { ascending: false }),
       supabase.from('relouer_notes').select('*').eq('request_id', id!).order('created_at', { ascending: false }),
-      supabase.from('relouer_timeline').select('*').eq('request_id', id!).order('created_at', { ascending: false }).limit(50),
     ]);
     setR(req.data);
-    setPhotos(ph.data || []);
-    setDocs(dc.data || []);
-    setSlots(sl.data || []);
+    setAgents(ag.data || []);
     setCands(cd.data || []);
     setNotes(nt.data || []);
-    setTimeline(tl.data || []);
   };
 
-  const save = async (patch: any) => {
-    setSaving(true);
+  const logEvent = async (event_type: string, payload: any = {}) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('relouer_timeline').insert({
+      request_id: id!, event_type, payload, created_by: user?.id || null,
+    });
+  };
+
+  const save = async (patch: any, evt?: string) => {
     const { error } = await supabase.from('relouer_requests').update(patch).eq('id', id!);
-    setSaving(false);
-    if (error) toast.error(error.message);
-    else { toast.success('Enregistré'); setR({ ...r, ...patch }); }
+    if (error) { toast.error(error.message); return; }
+    if (evt) await logEvent(evt, patch);
+    toast.success('Enregistré');
+    setR({ ...r, ...patch });
+  };
+
+  const assignAgent = async (agentId: string) => {
+    const value = agentId === '__none__' ? null : agentId;
+    await save({ assigned_agent_id: value }, 'agent_assigned');
   };
 
   const addNote = async () => {
@@ -72,10 +77,13 @@ export default function AdminRelouerDetail() {
 
   if (!r) return <div className="p-8 text-center text-muted-foreground">Chargement…</div>;
 
+  const currentAgent = agents.find((a) => a.id === r.assigned_agent_id);
+  const agentLabel = currentAgent ? `${(currentAgent.profile as any)?.prenom || ''} ${(currentAgent.profile as any)?.nom || ''}`.trim() : null;
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       <Link to="/admin/relouer" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="h-4 w-4" /> Retour aux dossiers Relouer
+        <ArrowLeft className="h-4 w-4" /> Retour aux logements à relouer
       </Link>
 
       {/* Bandeau */}
@@ -110,9 +118,29 @@ export default function AdminRelouerDetail() {
 
         <div className="flex flex-wrap gap-3 mt-4 items-center">
           <div className="text-xs text-muted-foreground">Statut :</div>
-          <Select value={r.status} onValueChange={(v) => save({ status: v })}>
+          <Select value={r.status} onValueChange={(v) => save({ status: v }, 'status_changed')}>
             <SelectTrigger className="w-56 bg-white"><SelectValue /></SelectTrigger>
             <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+          </Select>
+
+          <div className="text-xs text-muted-foreground ml-2 flex items-center gap-1">
+            <UserCheck className="h-3.5 w-3.5" /> Agent :
+          </div>
+          <Select value={r.assigned_agent_id || '__none__'} onValueChange={assignAgent}>
+            <SelectTrigger className="w-64 bg-white">
+              <SelectValue placeholder="Aucun agent assigné">
+                {agentLabel || 'Aucun agent assigné'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Aucun agent —</SelectItem>
+              {agents.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {(a.profile as any)?.prenom} {(a.profile as any)?.nom}
+                  {(a.profile as any)?.email ? ` · ${(a.profile as any).email}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
         </div>
       </Card>
@@ -166,6 +194,18 @@ export default function AdminRelouerDetail() {
             </div>
           </Section>
 
+          <Section title="Photos du logement" icon={Camera}>
+            <RelouerUploader requestId={r.id} kind="photos" />
+          </Section>
+
+          <Section title="Documents du dossier" icon={FileText}>
+            <RelouerUploader requestId={r.id} kind="documents" />
+          </Section>
+
+          <Section title="Créneaux de visite" icon={Calendar}>
+            <RelouerSlotsManager requestId={r.id} mode="admin" />
+          </Section>
+
           <Section title={`Candidats (${cands.length})`} icon={Users}>
             {cands.length === 0 ? (
               <div className="text-sm text-muted-foreground">Aucun candidat pour le moment.</div>
@@ -204,22 +244,8 @@ export default function AdminRelouerDetail() {
             </div>
           </Section>
 
-          <Section title={`Photos (${photos.length})`} icon={Camera}>
-            <div className="text-xs text-muted-foreground">Upload via dashboard reloueur ou MVP à compléter.</div>
-          </Section>
-
-          <Section title={`Documents (${docs.length})`} icon={FileText}>
-            <div className="text-xs text-muted-foreground">Upload via dashboard reloueur ou MVP à compléter.</div>
-          </Section>
-
-          <Section title={`Créneaux (${slots.length})`} icon={Calendar}>
-            {slots.length === 0
-              ? <div className="text-xs text-muted-foreground">Aucun créneau.</div>
-              : slots.map((s) => (
-                  <div key={s.id} className="text-sm py-1 border-b last:border-0">
-                    {new Date(s.slot_start).toLocaleString('fr-CH')} — {s.status}
-                  </div>
-                ))}
+          <Section title="Histoire du dossier" icon={History}>
+            <RelouerTimeline requestId={r.id} limit={40} />
           </Section>
         </div>
       </div>
