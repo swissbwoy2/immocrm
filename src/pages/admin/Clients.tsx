@@ -1079,7 +1079,8 @@ const Clients = () => {
             )}
 
 
-            {/* Type permis + Statut + Budget filters - desktop */}
+            {/* Type permis + Statut + Budget filters - desktop (chercheurs uniquement) */}
+            {showSearcherFilters && (
             <div className="hidden sm:flex flex-wrap gap-4">
               <div>
                 <p className="text-xs font-medium mb-2 text-muted-foreground">Permis</p>
@@ -1130,6 +1131,97 @@ const Clients = () => {
                 </div>
               </div>
             </div>
+            )}
+
+            {/* Filtres dossier reloueur — onglet Clients reloueurs */}
+            {showReletterFilters && (
+            <div className="hidden sm:flex flex-wrap items-end gap-4 mt-2 pt-4 border-t border-border/30">
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Statut dossier</p>
+                <Select value={relouerStatus} onValueChange={setRelouerStatus}>
+                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="new_request">Nouvelle</SelectItem>
+                    <SelectItem value="to_qualify">À qualifier</SelectItem>
+                    <SelectItem value="missing_information">Infos manquantes</SelectItem>
+                    <SelectItem value="waiting_documents">Docs en attente</SelectItem>
+                    <SelectItem value="waiting_photos">Photos en attente</SelectItem>
+                    <SelectItem value="ready_to_publish">Prêt à publier</SelectItem>
+                    <SelectItem value="published">Publié</SelectItem>
+                    <SelectItem value="visits_scheduled">Visites en cours</SelectItem>
+                    <SelectItem value="applications_received">Candidatures reçues</SelectItem>
+                    <SelectItem value="sent_to_agency">Transmis régie</SelectItem>
+                    <SelectItem value="rented">Reloué</SelectItem>
+                    <SelectItem value="cancelled">Annulé</SelectItem>
+                    <SelectItem value="archived">Archivé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Type de logement</p>
+                <Select value={relouerType} onValueChange={setRelouerType}>
+                  <SelectTrigger className="w-[160px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="Appartement">Appartement</SelectItem>
+                    <SelectItem value="Maison">Maison</SelectItem>
+                    <SelectItem value="Studio">Studio</SelectItem>
+                    <SelectItem value="Loft">Loft</SelectItem>
+                    <SelectItem value="Villa">Villa</SelectItem>
+                    <SelectItem value="Autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Commune</p>
+                <Input
+                  value={relouerCommune}
+                  onChange={(e) => setRelouerCommune(e.target.value)}
+                  placeholder="Ville…"
+                  className="w-[160px] bg-background/50 border-border/50 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Photos</p>
+                <Select value={relouerPhotos} onValueChange={(v) => setRelouerPhotos(v as any)}>
+                  <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="with">Avec photos</SelectItem>
+                    <SelectItem value="without">Sans photos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Documents</p>
+                <Select value={relouerDocs} onValueChange={(v) => setRelouerDocs(v as any)}>
+                  <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="with">Avec docs</SelectItem>
+                    <SelectItem value="without">Sans docs</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Disponibilité</p>
+                <Select value={relouerAvailability} onValueChange={(v) => setRelouerAvailability(v as any)}>
+                  <SelectTrigger className="w-[150px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="set">Date renseignée</SelectItem>
+                    <SelectItem value="none">Sans date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            )}
+
           </div>
         </div>
 
