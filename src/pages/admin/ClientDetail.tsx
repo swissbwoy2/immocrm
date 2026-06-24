@@ -201,6 +201,9 @@ export default function ClientDetail() {
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   
+  const [relouerRequest, setRelouerRequest] = useState<any | null>(null);
+  const [relouerCandidates, setRelouerCandidates] = useState<any[]>([]);
+
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
