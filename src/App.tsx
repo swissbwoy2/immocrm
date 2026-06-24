@@ -328,8 +328,9 @@ const App = () => (
               <Route path="/admin/inscriptions-echouees" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminInscriptionsEchouees /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/clients/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminClientDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/clients/:id/mandat-prefill" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><StaffMandatPrefill /></AppLayout></ProtectedRoute>} />
-              <Route path="/admin/relouer" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRelouer /></AppLayout></ProtectedRoute>} />
-              <Route path="/admin/relouer/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRelouerDetail /></AppLayout></ProtectedRoute>} />
+             {/* /admin/relouer redirige vers l'onglet Reloueurs de /admin/clients (registre CRM global) */}
+             <Route path="/admin/relouer" element={<Navigate to="/admin/clients?tab=reloueurs" replace />} />
+             <Route path="/admin/relouer/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRelouerDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/dashboard/relouer" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboardRelouer /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/assignations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAssignations /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/mandats" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMandats /></AppLayout></ProtectedRoute>} />
