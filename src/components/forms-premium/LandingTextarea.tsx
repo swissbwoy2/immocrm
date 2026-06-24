@@ -1,4 +1,4 @@
-import { TextareaHTMLAttributes, ReactNode, useState } from 'react';
+import { TextareaHTMLAttributes, ReactNode, useState, forwardRef, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 
 interface LandingTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -8,9 +8,15 @@ interface LandingTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
   optional?: boolean;
 }
 
-export function LandingTextarea({ label, icon, error, optional, className = '', ...props }: LandingTextareaProps) {
+export const LandingTextarea = forwardRef<HTMLTextAreaElement, LandingTextareaProps>(function LandingTextarea(
+  { label, icon, error, optional, className = '', ...props },
+  ref,
+) {
   const [focused, setFocused] = useState(false);
-  const hasValue = Boolean(props.value || props.defaultValue);
+  const [internalHasValue, setInternalHasValue] = useState(
+    Boolean(props.value || props.defaultValue),
+  );
+  const hasValue = Boolean(props.value) || Boolean(props.defaultValue) || internalHasValue;
   const floated = focused || hasValue;
 
   return (
@@ -38,12 +44,17 @@ export function LandingTextarea({ label, icon, error, optional, className = '', 
 
         <textarea
           {...props}
+          ref={ref}
           onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
           onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+            setInternalHasValue(Boolean(e.target.value));
+            props.onChange?.(e);
+          }}
           className={`w-full bg-transparent text-foreground placeholder-transparent pt-7 pb-3 px-4 outline-none text-sm rounded-xl resize-none min-h-[100px] ${className}`}
         />
       </div>
       {error && <p className="text-[11px] text-destructive mt-1 pl-1">{error}</p>}
     </div>
   );
-}
+});
