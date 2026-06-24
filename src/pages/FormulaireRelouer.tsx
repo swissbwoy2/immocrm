@@ -181,11 +181,15 @@ export default function FormulaireRelouer() {
 
       // 1) Toujours créer le lead pour ne jamais perdre le contact
       const { error: leadError } = await (supabase.from('leads') as any).insert({
-        first_name: data.prenom,
-        last_name: data.nom,
+        prenom: data.prenom,
+        nom: data.nom,
         email: data.email,
-        phone: data.telephone,
+        telephone: data.telephone,
         source: SOURCE,
+        formulaire: SOURCE,
+        type_bien: data.type_bien,
+        localite: data.ville,
+        nb_pieces: data.nombre_pieces ? parseFloat(data.nombre_pieces) : null,
         notes: JSON.stringify({
           parcours: 'locataire_sortant',
           type_bien: data.type_bien,
