@@ -417,8 +417,8 @@ export default function FormulaireRelouer() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <LandingInput label="Loyer net (CHF)" required {...register('loyer_net')} value={watch('loyer_net') || ''} type="number" placeholder="1800" error={errors.loyer_net?.message} />
-                    <LandingInput label="Charges (CHF)" {...register('charges')} value={watch('charges') || ''} type="number" placeholder="200" />
+                    <LandingInput label="Loyer net (CHF)" required {...register('loyer_net')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="1800" error={errors.loyer_net?.message} />
+                    <LandingInput label="Charges (CHF)" {...register('charges')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="200" />
                   </div>
 
                   {loyerBrut && (
