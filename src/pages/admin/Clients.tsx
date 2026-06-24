@@ -1335,9 +1335,16 @@ const Clients = () => {
             const isSelected = selectedIds.has(client.id);
 
             // Carte adaptée parcours reloueur (jamais de badges chercheur)
-            if (isReletter(client)) {
+            if (isReletter(client) || (isMixed(client) && relouerByUser.has(client.user_id))) {
               const req = relouerByUser.get(client.user_id);
               const counts = req ? (relouerCounts.get(req.id) ?? { photos: 0, docs: 0, slots: 0, candidates: 0 }) : { photos: 0, docs: 0, slots: 0, candidates: 0 };
+              const pureReletter = isReletter(client);
+              // Reloueur pur : clic ouvre directement le dossier reloueur.
+              // Mixte : clic ouvre la fiche client, bouton secondaire ouvre le dossier reloueur.
+              const handleOpenClient = () => {
+                if (pureReletter && req) navigate(`/admin/relouer/${req.id}`);
+                else navigate(`/admin/clients/${client.id}`);
+              };
               return (
                 <ClientCardReletter
                   key={client.id}
@@ -1346,12 +1353,14 @@ const Clients = () => {
                   request={req}
                   counts={counts}
                   agentName={getAgentName(req?.assigned_agent_id || undefined)}
-                  isMixed={false}
+                  isMixed={!pureReletter}
                   isSelected={isSelected}
                   selectionMode={selectionMode}
                   onToggleSelect={() => toggleSelect(client.id)}
-                  onOpenClient={() => navigate(`/admin/clients/${client.id}`)}
+                  onOpenClient={handleOpenClient}
                   onOpenDossier={() => req && navigate(`/admin/relouer/${req.id}`)}
+                  onInvite={(e) => handleInviteClient(profile.email, client.id, e)}
+                  inviting={invitingClientId === client.id}
                   index={index}
                 />
               );
