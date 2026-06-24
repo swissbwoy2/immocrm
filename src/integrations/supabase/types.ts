@@ -8378,6 +8378,7 @@ export type Database = {
           request_id: string
           slot_end: string
           slot_start: string
+          slot_type: string | null
           status: string
           updated_at: string
         }
@@ -8390,6 +8391,7 @@ export type Database = {
           request_id: string
           slot_end: string
           slot_start: string
+          slot_type?: string | null
           status?: string
           updated_at?: string
         }
@@ -8402,6 +8404,7 @@ export type Database = {
           request_id?: string
           slot_end?: string
           slot_start?: string
+          slot_type?: string | null
           status?: string
           updated_at?: string
         }
