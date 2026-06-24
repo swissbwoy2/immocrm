@@ -55,7 +55,7 @@ export default function AdminRelouer() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
-    document.title = 'Relouer — Admin | Logisorama';
+    document.title = 'Logements à relouer — Admin | Logisorama';
     load();
   }, []);
 
@@ -149,9 +149,9 @@ export default function AdminRelouer() {
               <Key className="h-5 w-5 text-sky-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Relouer mon appartement</h1>
+              <h1 className="text-2xl font-bold text-foreground">Logements à relouer</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Dossiers locataires sortants — recherche de repreneur et transmission à la régie.
+                Dossiers de clients reloueurs — recherche de repreneur et transmission à la régie.
               </p>
             </div>
           </div>
