@@ -15,7 +15,7 @@ import { Meteors } from '@/components/public-site/magic/Meteors';
 
 // Services propriétaires — externalisés vers Immo-rama.ch
 const parcours = [
-  { href: 'https://immo-rama.ch/relouer-mon-appartement', icon: KeyRound, label: 'Mettre en location' },
+  { href: 'https://logisorama.ch/relouer-mon-appartement', icon: KeyRound, label: 'Mettre en location' },
   { href: 'https://immo-rama.ch/vendre-mon-bien', icon: Building2, label: 'Vendre mon bien' },
   { href: 'https://immo-rama.ch/project-management', icon: Hammer, label: 'Construire & rénover' },
 ];

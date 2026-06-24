@@ -102,7 +102,7 @@ export function SeoLocalSection() {
                 </a>{' '}
                 ou{' '}
                 <a
-                  href="https://immo-rama.ch/relouer-mon-appartement"
+                  href="https://logisorama.ch/relouer-mon-appartement"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary font-semibold hover:underline"
