@@ -266,7 +266,7 @@ export default function FormulaireRelouer() {
           if (provisionError) {
             await logSignupAttempt({ ...baseAttempt, stage: 'provision_failed', error_message: provisionError.message });
           } else {
-            await logSignupAttempt({ ...baseAttempt, stage: 'succeeded_existing_user' });
+            await logSignupAttempt({ ...baseAttempt, stage: 'succeeded' });
           }
           toast.info('Un compte existe déjà avec cet email — connectez-vous pour accéder à votre dashboard.');
         } else {
