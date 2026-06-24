@@ -2395,7 +2395,8 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Contrat de mandat */}
+          {/* Contrat de mandat — chercheur only */}
+          {!isReletter && (
           <PremiumCard icon={FileText} title="Contrat de mandat" delay={680}>
             <CardContent className="space-y-4">
               {client.mandat_pdf_url || client.mandat_signature_data || client.demande_mandat_id ? (
