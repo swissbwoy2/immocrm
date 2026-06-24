@@ -129,10 +129,36 @@ const Clients = () => {
   const [clientAgents, setClientAgents] = useState<ClientAgent[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'byAgent'>('list');
 
+  // Onglet journey (Tous / Chercheurs / Reloueurs / Mixtes)
+  const initialTab = ((): JourneyTab => {
+    const fromUrl = searchParams.get('tab');
+    if (fromUrl === 'all' || fromUrl === 'chercheurs' || fromUrl === 'reloueurs' || fromUrl === 'mixtes') return fromUrl;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('adminClientsJourneyTab') : null;
+    if (stored === 'all' || stored === 'chercheurs' || stored === 'reloueurs' || stored === 'mixtes') return stored;
+    return 'all';
+  })();
+  const [journeyTab, setJourneyTab] = useState<JourneyTab>(initialTab);
+
+  // Données reloueurs (jointures par user_id)
+  const [relouerByUser, setRelouerByUser] = useState<Map<string, ReletterRequest>>(new Map());
+  const [relouerCounts, setRelouerCounts] = useState<Map<string, ReletterCounts>>(new Map());
+
+  // Filtres spécifiques onglet Reloueurs
+  const [relouerStatus, setRelouerStatus] = useState<string>('all');
+  const [relouerCommune, setRelouerCommune] = useState<string>('');
+  const [relouerType, setRelouerType] = useState<string>('all');
+  const [relouerPhotos, setRelouerPhotos] = useState<'all' | 'with' | 'without'>('all');
+  const [relouerDocs, setRelouerDocs] = useState<'all' | 'with' | 'without'>('all');
+  const [relouerAvailability, setRelouerAvailability] = useState<'all' | 'set' | 'none'>('all');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('adminClientsJourneyTab', journeyTab);
+  }, [journeyTab]);
 
   useEffect(() => {
     loadData();
   }, []);
+
 
   // Handle URL params for deep linking
   useEffect(() => {
