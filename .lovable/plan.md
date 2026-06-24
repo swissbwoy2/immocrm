@@ -1,32 +1,31 @@
-## Cause racine
+## Cause racine identifiée
 
-Tous les champs numériques de `FormulaireRelouer.tsx` utilisent le pattern cassé sur mobile :
+`LandingInput` n'est **pas** un composant `forwardRef`. Quand on fait `{...register('loyer_net')}`, React-Hook-Form injecte un `ref` qui est **silencieusement ignoré** par le composant fonctionnel. Le champ n'est donc jamais correctement attaché à RHF → à la validation `trigger()`, RHF lit son état interne vide → "Required" même quand l'utilisateur a tapé "1500".
 
-```tsx
-{...register('x')} value={watch('x') || ''} type="number"
-```
+Pourquoi ça "marchait" avant mes modifications : le pattern `value={watch('x') || ''}` rendait le champ **contrôlé**, ce qui forçait React à propager les valeurs via `onChange` et masquait le bug de ref manquant. En retirant `value={watch}`, le bug devient visible.
 
-Deux problèmes combinés :
-1. **Contrôlé via `watch`** : à chaque frappe, RHF re-render le champ avec la nouvelle valeur. Sur mobile (Safari/Chrome iOS surtout), ça interrompt la saisie clavier — la touche pressée n'apparaît pas.
-2. **`type="number"`** : sur clavier mobile FR-CH, refuse silencieusement virgule/point décimal et certains chiffres selon le `step`.
+## Correctif — 2 fichiers seulement
 
-Conséquence : impossible de saisir Pièces, Surface, Étage (et potentiellement Loyer / Charges).
+### 1. `src/components/forms-premium/LandingInput.tsx`
+Convertir en `React.forwardRef<HTMLInputElement, LandingInputProps>` :
+- Wrapper la fonction dans `forwardRef`
+- Transférer `ref` au `<input>` interne
+- Détecter `hasValue` aussi via `ref.current?.value` (lecture lazy) pour que le label flottant fonctionne en mode non contrôlé. En pratique : remonter `hasValue` via un petit `useState` mis à jour dans `onChange` interne, en plus de `props.value || props.defaultValue`.
 
-## Correction — `src/pages/FormulaireRelouer.tsx` uniquement
+Aucun changement d'API ni de style.
 
-**1. Champ Pièces (ligne 366)** → remplacer par un `<select>` natif stylé cohérent design premium vert, valeurs `1 → 6.5+` par pas de 0.5 (mémoire projet "Rooms filter uses 0.5 increments"). Branché via `register('nombre_pieces')`, sans `value`/`watch`.
+### 2. `src/components/forms-premium/LandingSelect.tsx` et `LandingTextarea.tsx`
+Même traitement préventif : `forwardRef` vers `<select>` / `<textarea>`. Évite que le `<select>` Pièces ajouté précédemment souffre du même bug.
 
-**2. Champs Surface, Étage, Loyer net, Charges (lignes 367, 368, 403, 404)** :
-- Retirer `value={watch(...) || ''}` → laisser `register` gérer en non-contrôlé
-- Remplacer `type="number"` par `type="text"` + `inputMode="numeric"` (étage) ou `inputMode="decimal"` (surface, loyer, charges)
-- Ajouter `pattern="[0-9]*"` pour forcer le clavier numérique iOS
+### 3. `src/pages/FormulaireRelouer.tsx`
+Aucun changement requis. Les champs restent en `type="text"` + `inputMode` + `register(...)` non contrôlé. Une fois le `ref` correctement transféré, RHF reçoit les valeurs.
 
-**3. Calcul loyer brut (lignes 100-106)** : inchangé, `watch('loyer_net')` continue de fonctionner avec register non contrôlé.
+## Vérification
 
-**4. Schéma Zod (lignes 33-46)** : inchangé (tout est déjà `z.string()`).
+- Build TS automatique.
+- Vérifier sur preview mobile (430×778) que saisie de "1500" puis clic "Suivant" passe sans erreur "Required".
 
 ## Hors périmètre
 
-- Aucun autre fichier modifié
-- Aucune logique métier, Supabase, edge function, ou design system touché
-- Bannière 399 CHF, redirections, SEO : intacts
+- Logique métier, schéma Zod, Supabase, edge functions, design system : intacts.
+- Bannière 399 CHF, redirections, SEO : intacts.
