@@ -2152,10 +2152,17 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Carte de localisation */}
-          <SwissRomandeMapGoogle client={client} />
+          {/* Carte de localisation — chercheur: zones de recherche; reloueur: logement */}
+          <SwissRomandeMapGoogle
+            client={isReletter && relouerRequest
+              ? { ...client, region_recherche: relouerRequest.property_city || relouerRequest.property_canton || client.region_recherche }
+              : client}
+          />
 
-          {/* Autres informations */}
+          {/* Autres informations — chercheur vs logement reloueur */}
+          {isReletter ? (
+            <ReletterPropertyFeaturesCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={FileText} title="Autres informations" delay={600}>
             <CardContent className="space-y-4">
               {client.utilisation_logement && (
@@ -2192,6 +2199,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Suivi */}
           <PremiumCard icon={Users} title="Suivi" className="lg:col-span-2" delay={650}>
