@@ -1333,6 +1333,30 @@ const Clients = () => {
             if (!profile) return null;
 
             const isSelected = selectedIds.has(client.id);
+
+            // Carte adaptée parcours reloueur (jamais de badges chercheur)
+            if (isReletter(client)) {
+              const req = relouerByUser.get(client.user_id);
+              const counts = req ? (relouerCounts.get(req.id) ?? { photos: 0, docs: 0, slots: 0, candidates: 0 }) : { photos: 0, docs: 0, slots: 0, candidates: 0 };
+              return (
+                <ClientCardReletter
+                  key={client.id}
+                  clientId={client.id}
+                  profile={profile}
+                  request={req}
+                  counts={counts}
+                  agentName={getAgentName(req?.assigned_agent_id || undefined)}
+                  isMixed={false}
+                  isSelected={isSelected}
+                  selectionMode={selectionMode}
+                  onToggleSelect={() => toggleSelect(client.id)}
+                  onOpenClient={() => navigate(`/admin/clients/${client.id}`)}
+                  onOpenDossier={() => req && navigate(`/admin/relouer/${req.id}`)}
+                  index={index}
+                />
+              );
+            }
+
             return (
               <div 
                 key={client.id} 
