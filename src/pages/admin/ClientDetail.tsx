@@ -298,6 +298,29 @@ export default function ClientDetail() {
 
       if (candidaturesError) throw candidaturesError;
       setCandidatures(candidaturesData || []);
+
+      // Load reloueur data if applicable
+      if (clientData.journey_type === 'property_reletting') {
+        const { data: reqData } = await supabase
+          .from('relouer_requests')
+          .select('*')
+          .eq('user_id', clientData.user_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setRelouerRequest(reqData || null);
+        if (reqData?.id) {
+          const { data: candData } = await supabase
+            .from('relouer_candidates')
+            .select('*')
+            .eq('request_id', reqData.id)
+            .order('created_at', { ascending: false });
+          setRelouerCandidates(candData || []);
+        }
+      } else {
+        setRelouerRequest(null);
+        setRelouerCandidates([]);
+      }
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
