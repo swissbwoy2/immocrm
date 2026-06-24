@@ -19,6 +19,7 @@ import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentView";
+import { ClientCardReletter, type ReletterRequest, type ReletterCounts } from "@/components/admin/ClientCardReletter";
 import { cn } from "@/lib/utils";
 
 type ClientAgent = {
@@ -50,7 +51,10 @@ interface Client {
   created_at?: string;
   date_ajout?: string;
   poursuites?: boolean;
+  journey_type?: string | null;
 }
+
+type JourneyTab = 'all' | 'chercheurs' | 'reloueurs' | 'mixtes';
 
 interface ClientCandidate {
   id: string;
@@ -125,10 +129,36 @@ const Clients = () => {
   const [clientAgents, setClientAgents] = useState<ClientAgent[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'byAgent'>('list');
 
+  // Onglet journey (Tous / Chercheurs / Reloueurs / Mixtes)
+  const initialTab = ((): JourneyTab => {
+    const fromUrl = searchParams.get('tab');
+    if (fromUrl === 'all' || fromUrl === 'chercheurs' || fromUrl === 'reloueurs' || fromUrl === 'mixtes') return fromUrl;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('adminClientsJourneyTab') : null;
+    if (stored === 'all' || stored === 'chercheurs' || stored === 'reloueurs' || stored === 'mixtes') return stored;
+    return 'all';
+  })();
+  const [journeyTab, setJourneyTab] = useState<JourneyTab>(initialTab);
+
+  // Données reloueurs (jointures par user_id)
+  const [relouerByUser, setRelouerByUser] = useState<Map<string, ReletterRequest>>(new Map());
+  const [relouerCounts, setRelouerCounts] = useState<Map<string, ReletterCounts>>(new Map());
+
+  // Filtres spécifiques onglet Reloueurs
+  const [relouerStatus, setRelouerStatus] = useState<string>('all');
+  const [relouerCommune, setRelouerCommune] = useState<string>('');
+  const [relouerType, setRelouerType] = useState<string>('all');
+  const [relouerPhotos, setRelouerPhotos] = useState<'all' | 'with' | 'without'>('all');
+  const [relouerDocs, setRelouerDocs] = useState<'all' | 'with' | 'without'>('all');
+  const [relouerAvailability, setRelouerAvailability] = useState<'all' | 'set' | 'none'>('all');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('adminClientsJourneyTab', journeyTab);
+  }, [journeyTab]);
 
   useEffect(() => {
     loadData();
   }, []);
+
 
   // Handle URL params for deep linking
   useEffect(() => {
@@ -152,21 +182,19 @@ const Clients = () => {
     try {
       setLoading(true);
 
-      // Load clients (exclure anonymisés RGPD par défaut — restent en base pour stats/comptabilité)
-      // Exclure les clients reloueurs (journey_type='property_reletting')
-      // pour qu'ils n'apparaissent pas avec des badges chercheur incohérents.
-      // Tolérant aux NULL pendant la transition post-migration.
+      // Load TOUS les clients (registre CRM global, tous parcours confondus).
+      // L'onglet journey filtre l'affichage côté client (housing_search / property_reletting / mixed / NULL).
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
         .is('anonymise_at', null)
-        .or('journey_type.eq.housing_search,journey_type.eq.mixed,journey_type.is.null')
         .order('created_at', { ascending: false })
         .limit(15000);
 
 
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
+
 
       // Load all client profiles - now including presence fields
       const clientUserIds = clientsData?.map(c => c.user_id) || [];
@@ -291,6 +319,48 @@ const Clients = () => {
       const confirmedSet = new Set<string>();
       confirmationsData?.forEach(c => confirmedSet.add(c.client_id));
       setDocConfirmations(confirmedSet);
+
+      // Load relouer_requests (dossiers logements à relouer) — indexés par user_id
+      const reletterUserIds = (clientsData || [])
+        .filter((c: any) => c.journey_type === 'property_reletting' || c.journey_type === 'mixed')
+        .map((c: any) => c.user_id)
+        .filter(Boolean);
+      if (reletterUserIds.length > 0) {
+        const { data: rData } = await supabase
+          .from('relouer_requests')
+          .select('id, user_id, status, property_street, property_zip, property_city, property_type, rooms, surface, rent_net, availability_date, assigned_agent_id')
+          .in('user_id', reletterUserIds)
+          .order('created_at', { ascending: false })
+          .limit(5000);
+        const rMap = new Map<string, ReletterRequest>();
+        (rData || []).forEach((r: any) => {
+          if (r.user_id && !rMap.has(r.user_id)) rMap.set(r.user_id, r as ReletterRequest);
+        });
+        setRelouerByUser(rMap);
+
+        const requestIds = Array.from(rMap.values()).map(r => r.id);
+        if (requestIds.length > 0) {
+          const [{ data: photos }, { data: docs }, { data: slots }, { data: cands }] = await Promise.all([
+            supabase.from('relouer_photos').select('request_id').in('request_id', requestIds).limit(15000),
+            supabase.from('relouer_documents').select('request_id').in('request_id', requestIds).limit(15000),
+            supabase.from('relouer_visit_slots').select('request_id').in('request_id', requestIds).limit(15000),
+            supabase.from('relouer_candidates').select('request_id').in('request_id', requestIds).limit(15000),
+          ]);
+          const cMap = new Map<string, ReletterCounts>();
+          requestIds.forEach(id => cMap.set(id, { photos: 0, docs: 0, slots: 0, candidates: 0 }));
+          (photos || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.photos++; });
+          (docs || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.docs++; });
+          (slots || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.slots++; });
+          (cands || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.candidates++; });
+          setRelouerCounts(cMap);
+        } else {
+          setRelouerCounts(new Map());
+        }
+      } else {
+        setRelouerByUser(new Map());
+        setRelouerCounts(new Map());
+      }
+
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -322,19 +392,71 @@ const Clients = () => {
   const statutOptions = ['actif', 'en_attente', 'reloge', 'stoppe', 'suspendu', 'inactif'];
   const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', stoppe: 'Stoppé', suspendu: 'Suspendu', inactif: 'Inactif' };
 
+  const isReletter = (c: Client) => c.journey_type === 'property_reletting';
+  const isMixed = (c: Client) => c.journey_type === 'mixed';
+  const isSearcher = (c: Client) => !c.journey_type || c.journey_type === 'housing_search';
+
   const filteredClients = clients.filter(client => {
+    // 1) Filtre par onglet journey
+    if (journeyTab === 'chercheurs' && !(isSearcher(client) || isMixed(client))) return false;
+    if (journeyTab === 'reloueurs' && !(isReletter(client) || isMixed(client))) return false;
+    if (journeyTab === 'mixtes' && !isMixed(client)) return false;
+
     const profile = clientProfiles.get(client.user_id);
-    const matchesSearch = profile 
+    const matchesSearch = profile
       ? (`${profile.prenom} ${profile.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
          profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
       : true;
+    if (!matchesSearch) return false;
+
+    // 2) Pour les clients reloueurs purs (carte reloueur) — appliquer les filtres reloueur
+    if (isReletter(client)) {
+      const req = relouerByUser.get(client.user_id);
+      // Filtres reloueur (s'appliquent dans tous les onglets où une carte reloueur est rendue)
+      if (relouerStatus !== 'all' && req?.status !== relouerStatus) return false;
+      if (relouerType !== 'all' && (req?.property_type || '') !== relouerType) return false;
+      if (relouerCommune.trim() && !(req?.property_city || '').toLowerCase().includes(relouerCommune.trim().toLowerCase())) return false;
+      if (relouerPhotos !== 'all') {
+        const n = req ? (relouerCounts.get(req.id)?.photos ?? 0) : 0;
+        if (relouerPhotos === 'with' && n === 0) return false;
+        if (relouerPhotos === 'without' && n > 0) return false;
+      }
+      if (relouerDocs !== 'all') {
+        const n = req ? (relouerCounts.get(req.id)?.docs ?? 0) : 0;
+        if (relouerDocs === 'with' && n === 0) return false;
+        if (relouerDocs === 'without' && n > 0) return false;
+      }
+      if (relouerAvailability !== 'all') {
+        const has = !!req?.availability_date;
+        if (relouerAvailability === 'set' && !has) return false;
+        if (relouerAvailability === 'none' && has) return false;
+      }
+      // Pour reloueurs purs : filtre agent appliqué sur l'agent assigné du dossier
+      if (filterAgent !== 'all') {
+        if (req?.assigned_agent_id !== filterAgent) return false;
+      }
+      if (showUnassignedOnly && req?.assigned_agent_id) return false;
+      // Pièces du logement (réutilise sélecteur pièces si présent)
+      if (selectedPieces.length > 0) {
+        const ok = selectedPieces.some(p => {
+          if (req?.rooms == null) return false;
+          if (p === '5+') return req.rooms >= 5;
+          const n = Number(p);
+          return !Number.isNaN(n) && Math.abs(req.rooms - n) < 0.01;
+        });
+        if (!ok) return false;
+      }
+      return true;
+    }
+
+    // 3) Pour chercheurs / mixtes — filtres chercheur classiques
     const matchesAgent = filterAgent === "all" || client.agent_id === filterAgent;
     const matchesUnassigned = !showUnassignedOnly || !client.agent_id;
-    
-    const matchRegion = selectedRegions.length === 0 || 
+
+    const matchRegion = selectedRegions.length === 0 ||
       (client.region_recherche && selectedRegions.includes(client.region_recherche));
-    
-    const matchPieces = selectedPieces.length === 0 || 
+
+    const matchPieces = selectedPieces.length === 0 ||
       selectedPieces.some(p => {
         if (client.pieces == null) return false;
         if (p === '5+') return client.pieces >= 5;
@@ -342,27 +464,35 @@ const Clients = () => {
         return !Number.isNaN(pieceNum) && Math.abs(client.pieces - pieceNum) < 0.01;
       });
 
-    const matchTypeRecherche = selectedTypeRecherche === 'all' || 
+    const matchTypeRecherche = selectedTypeRecherche === 'all' ||
       (client as any).type_recherche === selectedTypeRecherche;
 
-    const matchTypePermis = selectedTypePermis === 'all' || 
+    const matchTypePermis = selectedTypePermis === 'all' ||
       client.type_permis === selectedTypePermis;
 
-    const matchStatut = selectedStatut === 'all' || 
+    const matchStatut = selectedStatut === 'all' ||
       (client as any).statut === selectedStatut;
 
     const bMin = budgetMin ? Number(budgetMin) : 0;
     const bMax = budgetMax ? Number(budgetMax) : Infinity;
     const clientBudget = client.budget_max || 0;
     const matchBudget = clientBudget >= bMin && clientBudget <= bMax;
-    
-    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
+
+    return matchesAgent && matchesUnassigned && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
   });
 
-  const activeFilterCount = selectedRegions.length + selectedPieces.length + 
-    (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0) + 
-    (selectedTypeRecherche !== 'all' ? 1 : 0) + (selectedTypePermis !== 'all' ? 1 : 0) + 
-    (selectedStatut !== 'all' ? 1 : 0) + (budgetMin ? 1 : 0) + (budgetMax ? 1 : 0);
+  const showReletterFilters = journeyTab === 'reloueurs';
+  const showSearcherFilters = journeyTab === 'chercheurs' || journeyTab === 'mixtes' || journeyTab === 'all';
+
+  const activeFilterCount = (showSearcherFilters ? (selectedRegions.length + selectedPieces.length +
+    (selectedTypeRecherche !== 'all' ? 1 : 0) + (selectedTypePermis !== 'all' ? 1 : 0) +
+    (selectedStatut !== 'all' ? 1 : 0) + (budgetMin ? 1 : 0) + (budgetMax ? 1 : 0)) : 0) +
+    (showReletterFilters ? ((relouerStatus !== 'all' ? 1 : 0) + (relouerType !== 'all' ? 1 : 0) +
+      (relouerCommune.trim() ? 1 : 0) + (relouerPhotos !== 'all' ? 1 : 0) +
+      (relouerDocs !== 'all' ? 1 : 0) + (relouerAvailability !== 'all' ? 1 : 0) +
+      selectedPieces.length) : 0) +
+    (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0);
+
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
@@ -725,6 +855,45 @@ const Clients = () => {
           ))}
         </div>
 
+        {/* Onglets parcours (registre CRM global) */}
+        {viewMode === 'list' && (() => {
+          const totals = {
+            all: clients.length,
+            chercheurs: clients.filter(c => isSearcher(c) || isMixed(c)).length,
+            reloueurs: clients.filter(c => isReletter(c) || isMixed(c)).length,
+            mixtes: clients.filter(c => isMixed(c)).length,
+          };
+          const tabs: { key: JourneyTab; label: string; count: number }[] = [
+            { key: 'all', label: 'Tous les clients', count: totals.all },
+            { key: 'chercheurs', label: 'Chercheurs de logement', count: totals.chercheurs },
+            { key: 'reloueurs', label: 'Clients reloueurs', count: totals.reloueurs },
+            { key: 'mixtes', label: 'Mixtes', count: totals.mixtes },
+          ];
+          return (
+            <div className="mb-6 flex flex-wrap gap-2">
+              {tabs.map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setJourneyTab(t.key)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-2",
+                    journeyTab === t.key
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  <span>{t.label}</span>
+                  <Badge variant="secondary" className={cn(
+                    "text-[10px] px-1.5 py-0",
+                    journeyTab === t.key ? "bg-white/20 text-white border-0" : ""
+                  )}>{t.count}</Badge>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
         {viewMode === 'byAgent' && (
           <ClientsByAgentView
             clients={clients}
@@ -735,6 +904,7 @@ const Clients = () => {
         )}
 
         {viewMode === 'list' && (<>
+
         {/* Premium Filter Section */}
 
         <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-6 mb-6 animate-fade-in">
@@ -845,7 +1015,8 @@ const Clients = () => {
               </div>
             </details>
 
-            {/* Filtres Régions - desktop */}
+            {/* Filtres Régions - desktop (chercheurs uniquement) */}
+            {showSearcherFilters && (
             <div className="mb-4 hidden sm:block">
               <p className="text-xs font-medium mb-2 text-muted-foreground">Régions</p>
               <div className="flex flex-wrap gap-2">
@@ -865,6 +1036,8 @@ const Clients = () => {
                 ))}
               </div>
             </div>
+            )}
+
 
             {/* Filtres Nombre de pièces - desktop */}
             <div className="hidden sm:block">
@@ -887,7 +1060,8 @@ const Clients = () => {
               </div>
             </div>
 
-            {/* Type de recherche filter - desktop */}
+            {/* Type de recherche filter - desktop (chercheurs uniquement) */}
+            {showSearcherFilters && (
             <div className="hidden sm:block">
               <p className="text-xs font-medium mb-2 text-muted-foreground">Type de recherche</p>
               <div className="flex flex-wrap gap-2">
@@ -902,8 +1076,11 @@ const Clients = () => {
                 </Button>
               </div>
             </div>
+            )}
 
-            {/* Type permis + Statut + Budget filters - desktop */}
+
+            {/* Type permis + Statut + Budget filters - desktop (chercheurs uniquement) */}
+            {showSearcherFilters && (
             <div className="hidden sm:flex flex-wrap gap-4">
               <div>
                 <p className="text-xs font-medium mb-2 text-muted-foreground">Permis</p>
@@ -954,6 +1131,97 @@ const Clients = () => {
                 </div>
               </div>
             </div>
+            )}
+
+            {/* Filtres dossier reloueur — onglet Clients reloueurs */}
+            {showReletterFilters && (
+            <div className="hidden sm:flex flex-wrap items-end gap-4 mt-2 pt-4 border-t border-border/30">
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Statut dossier</p>
+                <Select value={relouerStatus} onValueChange={setRelouerStatus}>
+                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="new_request">Nouvelle</SelectItem>
+                    <SelectItem value="to_qualify">À qualifier</SelectItem>
+                    <SelectItem value="missing_information">Infos manquantes</SelectItem>
+                    <SelectItem value="waiting_documents">Docs en attente</SelectItem>
+                    <SelectItem value="waiting_photos">Photos en attente</SelectItem>
+                    <SelectItem value="ready_to_publish">Prêt à publier</SelectItem>
+                    <SelectItem value="published">Publié</SelectItem>
+                    <SelectItem value="visits_scheduled">Visites en cours</SelectItem>
+                    <SelectItem value="applications_received">Candidatures reçues</SelectItem>
+                    <SelectItem value="sent_to_agency">Transmis régie</SelectItem>
+                    <SelectItem value="rented">Reloué</SelectItem>
+                    <SelectItem value="cancelled">Annulé</SelectItem>
+                    <SelectItem value="archived">Archivé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Type de logement</p>
+                <Select value={relouerType} onValueChange={setRelouerType}>
+                  <SelectTrigger className="w-[160px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="Appartement">Appartement</SelectItem>
+                    <SelectItem value="Maison">Maison</SelectItem>
+                    <SelectItem value="Studio">Studio</SelectItem>
+                    <SelectItem value="Loft">Loft</SelectItem>
+                    <SelectItem value="Villa">Villa</SelectItem>
+                    <SelectItem value="Autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Commune</p>
+                <Input
+                  value={relouerCommune}
+                  onChange={(e) => setRelouerCommune(e.target.value)}
+                  placeholder="Ville…"
+                  className="w-[160px] bg-background/50 border-border/50 h-8 text-xs"
+                />
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Photos</p>
+                <Select value={relouerPhotos} onValueChange={(v) => setRelouerPhotos(v as any)}>
+                  <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="with">Avec photos</SelectItem>
+                    <SelectItem value="without">Sans photos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Documents</p>
+                <Select value={relouerDocs} onValueChange={(v) => setRelouerDocs(v as any)}>
+                  <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    <SelectItem value="with">Avec docs</SelectItem>
+                    <SelectItem value="without">Sans docs</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Disponibilité</p>
+                <Select value={relouerAvailability} onValueChange={(v) => setRelouerAvailability(v as any)}>
+                  <SelectTrigger className="w-[150px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes</SelectItem>
+                    <SelectItem value="set">Date renseignée</SelectItem>
+                    <SelectItem value="none">Sans date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            )}
+
           </div>
         </div>
 
@@ -1065,6 +1333,30 @@ const Clients = () => {
             if (!profile) return null;
 
             const isSelected = selectedIds.has(client.id);
+
+            // Carte adaptée parcours reloueur (jamais de badges chercheur)
+            if (isReletter(client)) {
+              const req = relouerByUser.get(client.user_id);
+              const counts = req ? (relouerCounts.get(req.id) ?? { photos: 0, docs: 0, slots: 0, candidates: 0 }) : { photos: 0, docs: 0, slots: 0, candidates: 0 };
+              return (
+                <ClientCardReletter
+                  key={client.id}
+                  clientId={client.id}
+                  profile={profile}
+                  request={req}
+                  counts={counts}
+                  agentName={getAgentName(req?.assigned_agent_id || undefined)}
+                  isMixed={false}
+                  isSelected={isSelected}
+                  selectionMode={selectionMode}
+                  onToggleSelect={() => toggleSelect(client.id)}
+                  onOpenClient={() => navigate(`/admin/clients/${client.id}`)}
+                  onOpenDossier={() => req && navigate(`/admin/relouer/${req.id}`)}
+                  index={index}
+                />
+              );
+            }
+
             return (
               <div 
                 key={client.id} 
