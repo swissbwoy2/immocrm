@@ -2312,7 +2312,8 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Candidatures déposées */}
+          {/* Candidatures déposées — chercheur only */}
+          {!isReletter && (
           <PremiumCard icon={FileCheck} title={`Candidatures déposées (${candidatures.length})`} className="lg:col-span-2" delay={750}>
             <CardContent className="space-y-4">
               {candidatures.length > 0 ? (
