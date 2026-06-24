@@ -1140,7 +1140,7 @@ export default function ClientDetail() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground font-medium">Progression du mandat</p>
+                        <p className="text-sm text-muted-foreground font-medium">{isReletter ? 'Progression de la relocation' : 'Progression du mandat'}</p>
                       </div>
                       <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
                         daysElapsed < 60 
