@@ -1007,27 +1007,39 @@ export default function ClientDetail() {
                         Non activé
                       </Badge>
                     )}
-                    <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
-                      {client.nationalite || 'N/A'}
-                    </Badge>
-                    <Badge
-                      variant={clientHasStableStatus ? "secondary" : "destructive"}
-                      className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
-                    >
-                      <Shield className="w-3 h-3 mr-1" />
-                      Permis {client.type_permis || 'N/A'}
-                      {!clientHasStableStatus && " ⚠️"}
-                    </Badge>
-                    {solvabilityResult.isSolvable ? (
-                      <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 backdrop-blur-sm">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Solvable
-                      </Badge>
+                    {isReletter ? (
+                      <>
+                        <Badge className="bg-primary/15 text-primary border-primary/30 backdrop-blur-sm">
+                          <Home className="w-3 h-3 mr-1" />
+                          Client reloueur
+                        </Badge>
+                        <ReletterAddressBadge request={relouerRequest} />
+                      </>
                     ) : (
-                      <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Non solvable
-                      </Badge>
+                      <>
+                        <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
+                          {client.nationalite || 'N/A'}
+                        </Badge>
+                        <Badge
+                          variant={clientHasStableStatus ? "secondary" : "destructive"}
+                          className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
+                        >
+                          <Shield className="w-3 h-3 mr-1" />
+                          Permis {client.type_permis || 'N/A'}
+                          {!clientHasStableStatus && " ⚠️"}
+                        </Badge>
+                        {solvabilityResult.isSolvable ? (
+                          <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 backdrop-blur-sm">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Solvable
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Non solvable
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
