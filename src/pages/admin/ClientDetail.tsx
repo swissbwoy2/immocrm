@@ -2245,7 +2245,8 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Offres envoyées */}
+          {/* Offres envoyées — chercheur only */}
+          {!isReletter && (
           <PremiumCard icon={Send} title={`Offres envoyées (${offres.length})`} className="lg:col-span-2" delay={700}>
             <CardContent className="space-y-4">
               <div className="flex justify-end mb-2">
