@@ -2661,6 +2661,7 @@ export type Database = {
           gerance_actuelle: string | null
           id: string
           instrument_musique: boolean | null
+          journey_type: string | null
           loyer_actuel: number | null
           mandat_date_signature: string | null
           mandat_pdf_url: string | null
@@ -2743,6 +2744,7 @@ export type Database = {
           gerance_actuelle?: string | null
           id?: string
           instrument_musique?: boolean | null
+          journey_type?: string | null
           loyer_actuel?: number | null
           mandat_date_signature?: string | null
           mandat_pdf_url?: string | null
@@ -2825,6 +2827,7 @@ export type Database = {
           gerance_actuelle?: string | null
           id?: string
           instrument_musique?: boolean | null
+          journey_type?: string | null
           loyer_actuel?: number | null
           mandat_date_signature?: string | null
           mandat_pdf_url?: string | null
@@ -7958,6 +7961,456 @@ export type Database = {
             columns: ["demande_mandat_id"]
             isOneToOne: false
             referencedRelation: "demandes_mandat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_candidates: {
+        Row: {
+          agent_notes: string | null
+          created_at: string
+          email: string | null
+          id: string
+          id_document_path: string | null
+          income_monthly: number | null
+          nom: string | null
+          permit_type: string | null
+          phone: string | null
+          prenom: string | null
+          request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_notes?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          id_document_path?: string | null
+          income_monthly?: number | null
+          nom?: string | null
+          permit_type?: string | null
+          phone?: string | null
+          prenom?: string | null
+          request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_notes?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          id_document_path?: string | null
+          income_monthly?: number | null
+          nom?: string | null
+          permit_type?: string | null
+          phone?: string | null
+          prenom?: string | null
+          request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_candidates_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "relouer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_documents: {
+        Row: {
+          admin_comment: string | null
+          created_at: string
+          document_type: string
+          filename: string | null
+          id: string
+          request_id: string
+          status: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          admin_comment?: string | null
+          created_at?: string
+          document_type: string
+          filename?: string | null
+          id?: string
+          request_id: string
+          status?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          admin_comment?: string | null
+          created_at?: string
+          document_type?: string
+          filename?: string | null
+          id?: string
+          request_id?: string
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_documents_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "relouer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_notes: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          request_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          request_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_notes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "relouer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_photos: {
+        Row: {
+          admin_comment: string | null
+          category: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          is_primary: boolean | null
+          request_id: string
+          status: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          admin_comment?: string | null
+          category?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_primary?: boolean | null
+          request_id: string
+          status?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          admin_comment?: string | null
+          category?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_primary?: boolean | null
+          request_id?: string
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_photos_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "relouer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_requests: {
+        Row: {
+          agency_address: string | null
+          agency_contact_name: string | null
+          agency_email: string | null
+          agency_name: string | null
+          agency_phone: string | null
+          assigned_agent_id: string | null
+          availability_date: string | null
+          charges: number | null
+          created_at: string
+          current_lease_end_date: string | null
+          description: string | null
+          email: string | null
+          floor: number | null
+          furnished: boolean | null
+          guarantee_amount: number | null
+          has_balcony: boolean | null
+          has_box: boolean | null
+          has_cellar: boolean | null
+          has_elevator: boolean | null
+          has_garden: boolean | null
+          has_indoor_parking: boolean | null
+          has_outdoor_parking: boolean | null
+          has_terrace: boolean | null
+          id: string
+          lead_id: string | null
+          lease_reference: string | null
+          nom: string | null
+          pets_allowed: boolean | null
+          prenom: string | null
+          property_canton: string | null
+          property_city: string | null
+          property_number: string | null
+          property_street: string | null
+          property_type: string | null
+          property_zip: string | null
+          rent_gross: number | null
+          rent_net: number | null
+          requester_role: string | null
+          resignation_date: string | null
+          resignation_sent: boolean | null
+          rooms: number | null
+          special_features: string | null
+          status: string
+          surface: number | null
+          telephone: string | null
+          updated_at: string
+          user_id: string | null
+          visit_contact_email: string | null
+          visit_contact_name: string | null
+          visit_contact_phone: string | null
+          visit_contact_type: string | null
+          visit_instructions: string | null
+        }
+        Insert: {
+          agency_address?: string | null
+          agency_contact_name?: string | null
+          agency_email?: string | null
+          agency_name?: string | null
+          agency_phone?: string | null
+          assigned_agent_id?: string | null
+          availability_date?: string | null
+          charges?: number | null
+          created_at?: string
+          current_lease_end_date?: string | null
+          description?: string | null
+          email?: string | null
+          floor?: number | null
+          furnished?: boolean | null
+          guarantee_amount?: number | null
+          has_balcony?: boolean | null
+          has_box?: boolean | null
+          has_cellar?: boolean | null
+          has_elevator?: boolean | null
+          has_garden?: boolean | null
+          has_indoor_parking?: boolean | null
+          has_outdoor_parking?: boolean | null
+          has_terrace?: boolean | null
+          id?: string
+          lead_id?: string | null
+          lease_reference?: string | null
+          nom?: string | null
+          pets_allowed?: boolean | null
+          prenom?: string | null
+          property_canton?: string | null
+          property_city?: string | null
+          property_number?: string | null
+          property_street?: string | null
+          property_type?: string | null
+          property_zip?: string | null
+          rent_gross?: number | null
+          rent_net?: number | null
+          requester_role?: string | null
+          resignation_date?: string | null
+          resignation_sent?: boolean | null
+          rooms?: number | null
+          special_features?: string | null
+          status?: string
+          surface?: number | null
+          telephone?: string | null
+          updated_at?: string
+          user_id?: string | null
+          visit_contact_email?: string | null
+          visit_contact_name?: string | null
+          visit_contact_phone?: string | null
+          visit_contact_type?: string | null
+          visit_instructions?: string | null
+        }
+        Update: {
+          agency_address?: string | null
+          agency_contact_name?: string | null
+          agency_email?: string | null
+          agency_name?: string | null
+          agency_phone?: string | null
+          assigned_agent_id?: string | null
+          availability_date?: string | null
+          charges?: number | null
+          created_at?: string
+          current_lease_end_date?: string | null
+          description?: string | null
+          email?: string | null
+          floor?: number | null
+          furnished?: boolean | null
+          guarantee_amount?: number | null
+          has_balcony?: boolean | null
+          has_box?: boolean | null
+          has_cellar?: boolean | null
+          has_elevator?: boolean | null
+          has_garden?: boolean | null
+          has_indoor_parking?: boolean | null
+          has_outdoor_parking?: boolean | null
+          has_terrace?: boolean | null
+          id?: string
+          lead_id?: string | null
+          lease_reference?: string | null
+          nom?: string | null
+          pets_allowed?: boolean | null
+          prenom?: string | null
+          property_canton?: string | null
+          property_city?: string | null
+          property_number?: string | null
+          property_street?: string | null
+          property_type?: string | null
+          property_zip?: string | null
+          rent_gross?: number | null
+          rent_net?: number | null
+          requester_role?: string | null
+          resignation_date?: string | null
+          resignation_sent?: boolean | null
+          rooms?: number | null
+          special_features?: string | null
+          status?: string
+          surface?: number | null
+          telephone?: string | null
+          updated_at?: string
+          user_id?: string | null
+          visit_contact_email?: string | null
+          visit_contact_name?: string | null
+          visit_contact_phone?: string | null
+          visit_contact_type?: string | null
+          visit_instructions?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_requests_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relouer_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_timeline: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          request_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_type: string
+          id?: string
+          payload?: Json | null
+          request_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_timeline_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "relouer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relouer_visit_slots: {
+        Row: {
+          capacity: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          request_id: string
+          slot_end: string
+          slot_start: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          request_id: string
+          slot_end: string
+          slot_start: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          request_id?: string
+          slot_end?: string
+          slot_start?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relouer_visit_slots_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "relouer_requests"
             referencedColumns: ["id"]
           },
         ]
