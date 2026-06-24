@@ -19,6 +19,7 @@ import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentView";
+import { ClientCardReletter, type ReletterRequest, type ReletterCounts } from "@/components/admin/ClientCardReletter";
 import { cn } from "@/lib/utils";
 
 type ClientAgent = {
@@ -50,7 +51,10 @@ interface Client {
   created_at?: string;
   date_ajout?: string;
   poursuites?: boolean;
+  journey_type?: string | null;
 }
+
+type JourneyTab = 'all' | 'chercheurs' | 'reloueurs' | 'mixtes';
 
 interface ClientCandidate {
   id: string;
