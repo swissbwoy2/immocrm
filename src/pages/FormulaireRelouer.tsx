@@ -181,11 +181,15 @@ export default function FormulaireRelouer() {
 
       // 1) Toujours créer le lead pour ne jamais perdre le contact
       const { error: leadError } = await (supabase.from('leads') as any).insert({
-        first_name: data.prenom,
-        last_name: data.nom,
+        prenom: data.prenom,
+        nom: data.nom,
         email: data.email,
-        phone: data.telephone,
+        telephone: data.telephone,
         source: SOURCE,
+        formulaire: SOURCE,
+        type_bien: data.type_bien,
+        localite: data.ville,
+        nb_pieces: data.nombre_pieces ? parseFloat(data.nombre_pieces) : null,
         notes: JSON.stringify({
           parcours: 'locataire_sortant',
           type_bien: data.type_bien,
@@ -226,10 +230,11 @@ export default function FormulaireRelouer() {
           },
         });
 
-        if (authError || !signUpData?.user?.id) {
-          await logSignupAttempt({ ...baseAttempt, stage: 'auth_signup_failed', error_message: authError?.message || 'user null' });
-          toast.warning(humanizeAuthError(authError?.message) + ' — votre demande a quand même été transmise.');
-        } else {
+        const alreadyRegistered =
+          !!authError && /already|registered|exists/i.test(authError.message || '');
+
+        if (signUpData?.user?.id) {
+          // Nouveau compte — provisionner profil + rôle
           const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
             body: {
               user_id: signUpData.user.id,
@@ -246,6 +251,27 @@ export default function FormulaireRelouer() {
           } else {
             await logSignupAttempt({ ...baseAttempt, stage: 'succeeded' });
           }
+        } else if (alreadyRegistered) {
+          // Compte déjà existant — créer profil + rôle si manquants (sans écraser)
+          const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
+            body: {
+              email: data.email,
+              first_name: data.prenom,
+              last_name: data.nom,
+              phone: data.telephone,
+              source: SOURCE,
+              parcours: PARCOURS,
+            },
+          });
+          if (provisionError) {
+            await logSignupAttempt({ ...baseAttempt, stage: 'provision_failed', error_message: provisionError.message });
+          } else {
+            await logSignupAttempt({ ...baseAttempt, stage: 'succeeded' });
+          }
+          toast.info('Un compte existe déjà avec cet email — connectez-vous pour accéder à votre dashboard.');
+        } else {
+          await logSignupAttempt({ ...baseAttempt, stage: 'auth_signup_failed', error_message: authError?.message || 'user null' });
+          toast.warning(humanizeAuthError(authError?.message) + ' — votre demande a quand même été transmise.');
         }
       }
 
