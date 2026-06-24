@@ -2116,7 +2116,10 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Critères de recherche */}
+          {/* Critères — chercheur: recherche / reloueur: futur locataire */}
+          {isReletter ? (
+            <ReletterCriteriaCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={Home} title="Critères de recherche" delay={550}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2151,6 +2154,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Carte de localisation — chercheur: zones de recherche; reloueur: logement */}
           <SwissRomandeMapGoogle
