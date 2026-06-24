@@ -920,8 +920,10 @@ export default function ClientDetail() {
   return (
     <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
       <div className="p-4 md:p-8 space-y-6">
-        {/* Trial / Activated banner */}
-        {(() => {
+        {/* Status banner — reloueur or chercheur */}
+        {isReletter ? (
+          <ReletterStatusBanner request={relouerRequest} />
+        ) : (() => {
           const hasSignature = !!client.mandat_signature_data;
           const hasMandat = !!client.demande_mandat_id;
           const isFullyActivated = hasSignature && hasMandat && client.statut === 'actif';
