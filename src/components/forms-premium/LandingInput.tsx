@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, ReactNode, useState } from 'react';
+import { InputHTMLAttributes, ReactNode, useState, forwardRef, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -12,9 +12,17 @@ interface LandingInputProps extends InputHTMLAttributes<HTMLInputElement> {
   optional?: boolean;
 }
 
-export function LandingInput({ label, icon, rightAction, error, hint, required, optional, className = '', ...props }: LandingInputProps) {
+export const LandingInput = forwardRef<HTMLInputElement, LandingInputProps>(function LandingInput(
+  { label, icon, rightAction, error, hint, required, optional, className = '', ...props },
+  ref,
+) {
   const [focused, setFocused] = useState(false);
-  const hasValue = Boolean(props.value || props.defaultValue);
+  // Track value internally so uncontrolled inputs (react-hook-form register pattern)
+  // still trigger the floating label / check icon state.
+  const [internalHasValue, setInternalHasValue] = useState(
+    Boolean(props.value || props.defaultValue),
+  );
+  const hasValue = Boolean(props.value) || Boolean(props.defaultValue) || internalHasValue;
   const floated = focused || hasValue;
 
   return (
@@ -49,8 +57,13 @@ export function LandingInput({ label, icon, rightAction, error, hint, required, 
           )}
           <input
             {...props}
+            ref={ref}
             onFocus={(e) => { setFocused(true); props.onFocus?.(e); }}
             onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setInternalHasValue(Boolean(e.target.value));
+              props.onChange?.(e);
+            }}
             className={`w-full bg-transparent text-foreground placeholder-transparent pt-6 pb-2 px-4 outline-none text-sm rounded-xl ${className}`}
           />
           {rightAction && <span className="mr-2 flex-shrink-0">{rightAction}</span>}
@@ -86,4 +99,4 @@ export function LandingInput({ label, icon, rightAction, error, hint, required, 
       </AnimatePresence>
     </div>
   );
-}
+});
