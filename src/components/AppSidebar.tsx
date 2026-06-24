@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Key } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -69,6 +69,8 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Clients & Mandats',
           items: [
             { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
+            { name: 'Relouer', icon: Key, path: '/admin/relouer', notifKey: null },
+
             { name: 'Leads Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
             { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
             { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },

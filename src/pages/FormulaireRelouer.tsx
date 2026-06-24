@@ -180,7 +180,7 @@ export default function FormulaireRelouer() {
       if (data.parking) equipements.push('Parking');
 
       // 1) Toujours créer le lead pour ne jamais perdre le contact
-      const { error: leadError } = await (supabase.from('leads') as any).insert({
+      const { data: leadRow, error: leadError } = await (supabase.from('leads') as any).insert({
         prenom: data.prenom,
         nom: data.nom,
         email: data.email,
@@ -211,8 +211,28 @@ export default function FormulaireRelouer() {
           description: data.description,
           photos: photos.map((p) => p.url),
         }),
-      });
+      }).select('id').single();
       if (leadError) console.warn('Lead insert warning:', leadError);
+
+      const relouerProperty = {
+        lead_id: leadRow?.id || null,
+        type_bien: data.type_bien,
+        adresse: data.adresse,
+        npa: data.npa,
+        ville: data.ville,
+        nombre_pieces: data.nombre_pieces,
+        surface: data.surface,
+        etage: data.etage,
+        equipements,
+        loyer_net: data.loyer_net,
+        charges: data.charges,
+        date_reprise: data.date_reprise,
+        date_fin_bail: data.date_fin_bail,
+        resiliation_donnee: data.resiliation_donnee,
+        motif_depart: data.motif_depart,
+        description: data.description,
+        urgence: data.urgence,
+      };
 
       // 2) Signup auth uniquement si demandé
       if (data.creer_compte && data.password && data.password.length >= 8) {
@@ -233,36 +253,28 @@ export default function FormulaireRelouer() {
         const alreadyRegistered =
           !!authError && /already|registered|exists/i.test(authError.message || '');
 
+        const provisionBody: any = {
+          email: data.email,
+          first_name: data.prenom,
+          last_name: data.nom,
+          phone: data.telephone,
+          source: SOURCE,
+          formulaire: SOURCE,
+          parcours: PARCOURS,
+          intention: 'relouer_mon_appartement',
+          relouer_property: relouerProperty,
+        };
+
         if (signUpData?.user?.id) {
-          // Nouveau compte — provisionner profil + rôle
-          const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
-            body: {
-              user_id: signUpData.user.id,
-              email: data.email,
-              first_name: data.prenom,
-              last_name: data.nom,
-              phone: data.telephone,
-              source: SOURCE,
-              parcours: PARCOURS,
-            },
-          });
+          provisionBody.user_id = signUpData.user.id;
+          const { error: provisionError } = await supabase.functions.invoke('create-public-user', { body: provisionBody });
           if (provisionError) {
             await logSignupAttempt({ ...baseAttempt, stage: 'provision_failed', error_message: provisionError.message });
           } else {
             await logSignupAttempt({ ...baseAttempt, stage: 'succeeded' });
           }
         } else if (alreadyRegistered) {
-          // Compte déjà existant — créer profil + rôle si manquants (sans écraser)
-          const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
-            body: {
-              email: data.email,
-              first_name: data.prenom,
-              last_name: data.nom,
-              phone: data.telephone,
-              source: SOURCE,
-              parcours: PARCOURS,
-            },
-          });
+          const { error: provisionError } = await supabase.functions.invoke('create-public-user', { body: provisionBody });
           if (provisionError) {
             await logSignupAttempt({ ...baseAttempt, stage: 'provision_failed', error_message: provisionError.message });
           } else {
@@ -274,6 +286,7 @@ export default function FormulaireRelouer() {
           toast.warning(humanizeAuthError(authError?.message) + ' — votre demande a quand même été transmise.');
         }
       }
+
 
       toast.success('Demande envoyée ! Notre équipe vous recontacte rapidement.');
       setDone(true);
