@@ -971,7 +971,7 @@ export default function ClientDetail() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-[0_0_25px_rgba(var(--primary),0.3)]">
                     {profile.prenom[0]}{profile.nom[0]}
                   </div>
-                  {solvabilityResult.isSolvable && (
+                  {!isReletter && solvabilityResult.isSolvable && (
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-card">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
