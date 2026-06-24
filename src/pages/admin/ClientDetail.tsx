@@ -2614,6 +2614,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Documents */}
           <PremiumCard icon={FileText} title={`Documents (${documents.length})`} className="lg:col-span-2" delay={700}>
