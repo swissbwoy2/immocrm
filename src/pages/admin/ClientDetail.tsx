@@ -1925,7 +1925,10 @@ export default function ClientDetail() {
 
         {/* Premium Information Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Situation financière */}
+          {/* Situation financière — chercheur / logement reloueur */}
+          {isReletter ? (
+            <ReletterFinancialCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={DollarSign} title="Situation financière" delay={350}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -1976,6 +1979,7 @@ export default function ClientDetail() {
               </div>
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Informations personnelles */}
           <PremiumCard icon={User} title="Informations personnelles" delay={400}>
