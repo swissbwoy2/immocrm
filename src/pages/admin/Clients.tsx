@@ -1339,12 +1339,9 @@ const Clients = () => {
               const req = relouerByUser.get(client.user_id);
               const counts = req ? (relouerCounts.get(req.id) ?? { photos: 0, docs: 0, slots: 0, candidates: 0 }) : { photos: 0, docs: 0, slots: 0, candidates: 0 };
               const pureReletter = isReletter(client);
-              // Reloueur pur : clic ouvre directement le dossier reloueur.
-              // Mixte : clic ouvre la fiche client, bouton secondaire ouvre le dossier reloueur.
-              const handleOpenClient = () => {
-                if (pureReletter && req) navigate(`/admin/relouer/${req.id}`);
-                else navigate(`/admin/clients/${client.id}`);
-              };
+              // Tous les reloueurs (purs ou mixtes) ouvrent la fiche client unifiée.
+              // La fiche reloueur est désormais une variante de ClientDetail (même design).
+              const handleOpenClient = () => navigate(`/admin/clients/${client.id}`);
               return (
                 <ClientCardReletter
                   key={client.id}
@@ -1358,7 +1355,7 @@ const Clients = () => {
                   selectionMode={selectionMode}
                   onToggleSelect={() => toggleSelect(client.id)}
                   onOpenClient={handleOpenClient}
-                  onOpenDossier={() => req && navigate(`/admin/relouer/${req.id}`)}
+                  onOpenDossier={() => navigate(`/admin/clients/${client.id}`)}
                   onInvite={(e) => handleInviteClient(profile.email, client.id, e)}
                   inviting={invitingClientId === client.id}
                   index={index}

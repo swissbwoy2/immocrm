@@ -98,6 +98,7 @@ interface Client {
   abaninja_client_uuid?: string | null;
   abaninja_invoice_id?: string | null;
   abaninja_invoice_ref?: string | null;
+  journey_type?: string | null;
 }
 
 interface Profile {
@@ -118,6 +119,17 @@ interface Agent {
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 import { PremiumCard } from '@/components/premium/PremiumCard';
+import {
+  ReletterStatusBanner,
+  ReletterFinancialCard,
+  ReletterCurrentSituationCard,
+  ReletterFileMgmtCard,
+  ReletterCriteriaCard,
+  ReletterPropertyFeaturesCard,
+  ReletterProfilesProposedCard,
+  ReletterDossiersTransmisCard,
+  ReletterAddressBadge,
+} from '@/components/admin/ReletterDetailSections';
 
 // Premium stat mini-card
 const PremiumStatCard = ({ 
@@ -189,6 +201,9 @@ export default function ClientDetail() {
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   
+  const [relouerRequest, setRelouerRequest] = useState<any | null>(null);
+  const [relouerCandidates, setRelouerCandidates] = useState<any[]>([]);
+
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
@@ -283,6 +298,29 @@ export default function ClientDetail() {
 
       if (candidaturesError) throw candidaturesError;
       setCandidatures(candidaturesData || []);
+
+      // Load reloueur data if applicable
+      if (clientData.journey_type === 'property_reletting') {
+        const { data: reqData } = await supabase
+          .from('relouer_requests')
+          .select('*')
+          .eq('user_id', clientData.user_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setRelouerRequest(reqData || null);
+        if (reqData?.id) {
+          const { data: candData } = await supabase
+            .from('relouer_candidates')
+            .select('*')
+            .eq('request_id', reqData.id)
+            .order('created_at', { ascending: false });
+          setRelouerCandidates(candData || []);
+        }
+      } else {
+        setRelouerRequest(null);
+        setRelouerCandidates([]);
+      }
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
@@ -789,6 +827,7 @@ export default function ClientDetail() {
 
   // Check if client has stable status
   const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
+  const isReletter = client.journey_type === 'property_reletting';
 
   const progressColor = daysElapsed < 60 ? 'from-green-500 to-emerald-400' : daysElapsed < 90 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400';
 
@@ -881,8 +920,10 @@ export default function ClientDetail() {
   return (
     <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
       <div className="p-4 md:p-8 space-y-6">
-        {/* Trial / Activated banner */}
-        {(() => {
+        {/* Status banner — reloueur or chercheur */}
+        {isReletter ? (
+          <ReletterStatusBanner request={relouerRequest} />
+        ) : (() => {
           const hasSignature = !!client.mandat_signature_data;
           const hasMandat = !!client.demande_mandat_id;
           const isFullyActivated = hasSignature && hasMandat && client.statut === 'actif';
@@ -930,7 +971,7 @@ export default function ClientDetail() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-[0_0_25px_rgba(var(--primary),0.3)]">
                     {profile.prenom[0]}{profile.nom[0]}
                   </div>
-                  {solvabilityResult.isSolvable && (
+                  {!isReletter && solvabilityResult.isSolvable && (
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-card">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
@@ -966,27 +1007,39 @@ export default function ClientDetail() {
                         Non activé
                       </Badge>
                     )}
-                    <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
-                      {client.nationalite || 'N/A'}
-                    </Badge>
-                    <Badge
-                      variant={clientHasStableStatus ? "secondary" : "destructive"}
-                      className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
-                    >
-                      <Shield className="w-3 h-3 mr-1" />
-                      Permis {client.type_permis || 'N/A'}
-                      {!clientHasStableStatus && " ⚠️"}
-                    </Badge>
-                    {solvabilityResult.isSolvable ? (
-                      <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 backdrop-blur-sm">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Solvable
-                      </Badge>
+                    {isReletter ? (
+                      <>
+                        <Badge className="bg-primary/15 text-primary border-primary/30 backdrop-blur-sm">
+                          <Home className="w-3 h-3 mr-1" />
+                          Client reloueur
+                        </Badge>
+                        <ReletterAddressBadge request={relouerRequest} />
+                      </>
                     ) : (
-                      <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Non solvable
-                      </Badge>
+                      <>
+                        <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
+                          {client.nationalite || 'N/A'}
+                        </Badge>
+                        <Badge
+                          variant={clientHasStableStatus ? "secondary" : "destructive"}
+                          className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
+                        >
+                          <Shield className="w-3 h-3 mr-1" />
+                          Permis {client.type_permis || 'N/A'}
+                          {!clientHasStableStatus && " ⚠️"}
+                        </Badge>
+                        {solvabilityResult.isSolvable ? (
+                          <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 backdrop-blur-sm">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Solvable
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Non solvable
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1087,7 +1140,7 @@ export default function ClientDetail() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground font-medium">Progression du mandat</p>
+                        <p className="text-sm text-muted-foreground font-medium">{isReletter ? 'Progression de la relocation' : 'Progression du mandat'}</p>
                       </div>
                       <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
                         daysElapsed < 60 
@@ -1156,15 +1209,17 @@ export default function ClientDetail() {
                 <span className="hidden sm:inline">Envoyer dossier</span>
                 <span className="sm:hidden">Dossier</span>
               </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
-                onClick={() => navigate(`/admin/clients/${client.id}/mandat-prefill`)}
-              >
-                <FileCheck className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Pré-remplir le mandat</span>
-                <span className="sm:hidden">Mandat</span>
-              </Button>
+              {!isReletter && (
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
+                  onClick={() => navigate(`/admin/clients/${client.id}/mandat-prefill`)}
+                >
+                  <FileCheck className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline">Pré-remplir le mandat</span>
+                  <span className="sm:hidden">Mandat</span>
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 
@@ -1771,22 +1826,22 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        {/* Solvability Alert - wrapped in premium container */}
-        <div 
-          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-1 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-          style={{ animationDelay: '100ms' }}
-        >
-          {/* Glow effect based on solvability */}
-          <div className={`absolute inset-0 opacity-20 transition-opacity duration-500 ${solvabilityResult.isSolvable ? 'bg-gradient-to-br from-green-500/20 to-transparent' : 'bg-gradient-to-br from-red-500/20 to-transparent'}`} />
-          {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        {/* Solvability Alert - chercheur only */}
+        {!isReletter && (
+          <div 
+            className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-1 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+            style={{ animationDelay: '100ms' }}
+          >
+            <div className={`absolute inset-0 opacity-20 transition-opacity duration-500 ${solvabilityResult.isSolvable ? 'bg-gradient-to-br from-green-500/20 to-transparent' : 'bg-gradient-to-br from-red-500/20 to-transparent'}`} />
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            </div>
+            <SolvabilityAlert 
+              result={solvabilityResult} 
+              className="relative z-10"
+            />
           </div>
-          <SolvabilityAlert 
-            result={solvabilityResult} 
-            className="relative z-10"
-          />
-        </div>
+        )}
 
         {/* Client Activity Stats - with premium wrapper */}
         <div 
@@ -1822,7 +1877,7 @@ export default function ClientDetail() {
             <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
               <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Co-candidats du dossier</h3>
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">{isReletter ? 'Candidats intéressés' : 'Co-candidats du dossier'}</h3>
           </div>
           <ClientCandidatesManager
             clientId={client.id}
@@ -1832,13 +1887,12 @@ export default function ClientDetail() {
           />
         </div>
 
-        {/* Candidate Documents - with premium wrapper */}
-        {candidates.length > 0 && (
+        {/* Candidate Documents - chercheur only */}
+        {!isReletter && candidates.length > 0 && (
           <div 
             className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
             style={{ animationDelay: '250ms' }}
           >
-            {/* Shine effect */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
             </div>
@@ -1871,7 +1925,10 @@ export default function ClientDetail() {
 
         {/* Premium Information Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Situation financière */}
+          {/* Situation financière — chercheur / logement reloueur */}
+          {isReletter ? (
+            <ReletterFinancialCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={DollarSign} title="Situation financière" delay={350}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -1922,6 +1979,7 @@ export default function ClientDetail() {
               </div>
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Informations personnelles */}
           <PremiumCard icon={User} title="Informations personnelles" delay={400}>
@@ -1982,7 +2040,10 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Situation actuelle */}
+          {/* Situation actuelle — chercheur / Contact régie — reloueur */}
+          {isReletter ? (
+            <ReletterCurrentSituationCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={Building2} title="Situation actuelle" delay={450}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2023,8 +2084,12 @@ export default function ClientDetail() {
               </div>
             </CardContent>
           </PremiumCard>
+          )}
 
-          {/* Situation professionnelle */}
+          {/* Situation professionnelle — chercheur / Gestion du dossier — reloueur */}
+          {isReletter ? (
+            <ReletterFileMgmtCard request={relouerRequest} agentName={agent ? `${agent.profile.prenom} ${agent.profile.nom}` : null} />
+          ) : (
           <PremiumCard icon={Briefcase} title="Situation professionnelle" delay={500}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2061,8 +2126,12 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
-          {/* Critères de recherche */}
+          {/* Critères — chercheur: recherche / reloueur: futur locataire */}
+          {isReletter ? (
+            <ReletterCriteriaCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={Home} title="Critères de recherche" delay={550}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2097,11 +2166,19 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
-          {/* Carte de localisation */}
-          <SwissRomandeMapGoogle client={client} />
+          {/* Carte de localisation — chercheur: zones de recherche; reloueur: logement */}
+          <SwissRomandeMapGoogle
+            client={isReletter && relouerRequest
+              ? { ...client, region_recherche: relouerRequest.property_city || relouerRequest.property_canton || client.region_recherche }
+              : client}
+          />
 
-          {/* Autres informations */}
+          {/* Autres informations — chercheur vs logement reloueur */}
+          {isReletter ? (
+            <ReletterPropertyFeaturesCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={FileText} title="Autres informations" delay={600}>
             <CardContent className="space-y-4">
               {client.utilisation_logement && (
@@ -2138,6 +2215,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Suivi */}
           <PremiumCard icon={Users} title="Suivi" className="lg:col-span-2" delay={650}>
@@ -2191,7 +2269,8 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Offres envoyées */}
+          {/* Offres envoyées — chercheur only */}
+          {!isReletter && (
           <PremiumCard icon={Send} title={`Offres envoyées (${offres.length})`} className="lg:col-span-2" delay={700}>
             <CardContent className="space-y-4">
               <div className="flex justify-end mb-2">
@@ -2257,8 +2336,13 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
+          {isReletter && <ReletterProfilesProposedCard count={0} />}
 
-          {/* Candidatures déposées */}
+
+
+          {/* Candidatures déposées — chercheur only */}
+          {!isReletter && (
           <PremiumCard icon={FileCheck} title={`Candidatures déposées (${candidatures.length})`} className="lg:col-span-2" delay={750}>
             <CardContent className="space-y-4">
               {candidatures.length > 0 ? (
@@ -2340,8 +2424,12 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
+          {isReletter && <ReletterDossiersTransmisCard candidates={relouerCandidates} />}
 
-          {/* Contrat de mandat */}
+
+          {/* Contrat de mandat — chercheur only */}
+          {!isReletter && (
           <PremiumCard icon={FileText} title="Contrat de mandat" delay={680}>
             <CardContent className="space-y-4">
               {client.mandat_pdf_url || client.mandat_signature_data || client.demande_mandat_id ? (
@@ -2559,6 +2647,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Documents */}
           <PremiumCard icon={FileText} title={`Documents (${documents.length})`} className="lg:col-span-2" delay={700}>
