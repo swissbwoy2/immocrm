@@ -1015,7 +1015,8 @@ const Clients = () => {
               </div>
             </details>
 
-            {/* Filtres Régions - desktop */}
+            {/* Filtres Régions - desktop (chercheurs uniquement) */}
+            {showSearcherFilters && (
             <div className="mb-4 hidden sm:block">
               <p className="text-xs font-medium mb-2 text-muted-foreground">Régions</p>
               <div className="flex flex-wrap gap-2">
@@ -1035,6 +1036,8 @@ const Clients = () => {
                 ))}
               </div>
             </div>
+            )}
+
 
             {/* Filtres Nombre de pièces - desktop */}
             <div className="hidden sm:block">
