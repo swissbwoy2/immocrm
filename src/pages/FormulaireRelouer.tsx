@@ -16,7 +16,7 @@ import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
 import { LandingFormCard } from '@/components/forms-premium/LandingFormCard';
 import { LandingStepIndicator } from '@/components/forms-premium/LandingStepIndicator';
 import { LandingProgressBlock } from '@/components/forms-premium/LandingProgressBlock';
-import { LandingGuaranteeBanner } from '@/components/forms-premium/LandingGuaranteeBanner';
+import { RelouerForfaitBanner } from '@/components/forms-premium/RelouerForfaitBanner';
 import { LandingButton } from '@/components/forms-premium/LandingButton';
 import { LandingInput } from '@/components/forms-premium/LandingInput';
 import { LandingSelect } from '@/components/forms-premium/LandingSelect';
@@ -300,7 +300,7 @@ export default function FormulaireRelouer() {
 
   return (
     <LandingFormShell>
-      <LandingGuaranteeBanner />
+      <RelouerForfaitBanner />
       <LandingProgressBlock currentStep={step - 1} totalSteps={STEPS.length} stepTitle={STEPS[step - 1]?.title ?? ''} />
       <LandingStepIndicator steps={STEPS} currentStep={step - 1} />
 

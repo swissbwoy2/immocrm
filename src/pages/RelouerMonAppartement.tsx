@@ -172,7 +172,7 @@ export default function RelouerMonAppartement() {
             <ul className="space-y-3">
               {[
                 'Mutation professionnelle, achat, séparation, déménagement : on s’adapte à votre urgence.',
-                'On ne vous facture rien tant qu’aucun repreneur solvable n’est trouvé.',
+                'Forfait unique de 399.– CHF par appartement, facturé à l’activation de la recherche de locataire.',
                 'On reste votre interlocuteur jusqu’à la signature officielle de la reprise de bail.',
               ].map((t) => (
                 <li key={t} className="flex items-start gap-3 text-sm text-foreground/85">
