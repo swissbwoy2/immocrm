@@ -319,6 +319,48 @@ const Clients = () => {
       const confirmedSet = new Set<string>();
       confirmationsData?.forEach(c => confirmedSet.add(c.client_id));
       setDocConfirmations(confirmedSet);
+
+      // Load relouer_requests (dossiers logements à relouer) — indexés par user_id
+      const reletterUserIds = (clientsData || [])
+        .filter((c: any) => c.journey_type === 'property_reletting' || c.journey_type === 'mixed')
+        .map((c: any) => c.user_id)
+        .filter(Boolean);
+      if (reletterUserIds.length > 0) {
+        const { data: rData } = await supabase
+          .from('relouer_requests')
+          .select('id, user_id, status, property_street, property_zip, property_city, property_type, rooms, surface, rent_net, availability_date, assigned_agent_id')
+          .in('user_id', reletterUserIds)
+          .order('created_at', { ascending: false })
+          .limit(5000);
+        const rMap = new Map<string, ReletterRequest>();
+        (rData || []).forEach((r: any) => {
+          if (r.user_id && !rMap.has(r.user_id)) rMap.set(r.user_id, r as ReletterRequest);
+        });
+        setRelouerByUser(rMap);
+
+        const requestIds = Array.from(rMap.values()).map(r => r.id);
+        if (requestIds.length > 0) {
+          const [{ data: photos }, { data: docs }, { data: slots }, { data: cands }] = await Promise.all([
+            supabase.from('relouer_photos').select('request_id').in('request_id', requestIds).limit(15000),
+            supabase.from('relouer_documents').select('request_id').in('request_id', requestIds).limit(15000),
+            supabase.from('relouer_visit_slots').select('request_id').in('request_id', requestIds).limit(15000),
+            supabase.from('relouer_candidates').select('request_id').in('request_id', requestIds).limit(15000),
+          ]);
+          const cMap = new Map<string, ReletterCounts>();
+          requestIds.forEach(id => cMap.set(id, { photos: 0, docs: 0, slots: 0, candidates: 0 }));
+          (photos || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.photos++; });
+          (docs || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.docs++; });
+          (slots || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.slots++; });
+          (cands || []).forEach((p: any) => { const c = cMap.get(p.request_id); if (c) c.candidates++; });
+          setRelouerCounts(cMap);
+        } else {
+          setRelouerCounts(new Map());
+        }
+      } else {
+        setRelouerByUser(new Map());
+        setRelouerCounts(new Map());
+      }
+
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
