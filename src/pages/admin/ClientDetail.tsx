@@ -1826,22 +1826,22 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        {/* Solvability Alert - wrapped in premium container */}
-        <div 
-          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-1 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-          style={{ animationDelay: '100ms' }}
-        >
-          {/* Glow effect based on solvability */}
-          <div className={`absolute inset-0 opacity-20 transition-opacity duration-500 ${solvabilityResult.isSolvable ? 'bg-gradient-to-br from-green-500/20 to-transparent' : 'bg-gradient-to-br from-red-500/20 to-transparent'}`} />
-          {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        {/* Solvability Alert - chercheur only */}
+        {!isReletter && (
+          <div 
+            className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-1 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+            style={{ animationDelay: '100ms' }}
+          >
+            <div className={`absolute inset-0 opacity-20 transition-opacity duration-500 ${solvabilityResult.isSolvable ? 'bg-gradient-to-br from-green-500/20 to-transparent' : 'bg-gradient-to-br from-red-500/20 to-transparent'}`} />
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            </div>
+            <SolvabilityAlert 
+              result={solvabilityResult} 
+              className="relative z-10"
+            />
           </div>
-          <SolvabilityAlert 
-            result={solvabilityResult} 
-            className="relative z-10"
-          />
-        </div>
+        )}
 
         {/* Client Activity Stats - with premium wrapper */}
         <div 
