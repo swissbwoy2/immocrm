@@ -2312,6 +2312,10 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
+          {isReletter && <ReletterProfilesProposedCard count={0} />}
+
+
 
           {/* Candidatures déposées — chercheur only */}
           {!isReletter && (
