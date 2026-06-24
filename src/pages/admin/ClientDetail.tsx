@@ -2078,7 +2078,10 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Situation professionnelle */}
+          {/* Situation professionnelle — chercheur / Gestion du dossier — reloueur */}
+          {isReletter ? (
+            <ReletterFileMgmtCard request={relouerRequest} agentName={agent ? `${agent.profile.prenom} ${agent.profile.nom}` : null} />
+          ) : (
           <PremiumCard icon={Briefcase} title="Situation professionnelle" delay={500}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2115,6 +2118,7 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Critères — chercheur: recherche / reloueur: futur locataire */}
           {isReletter ? (
