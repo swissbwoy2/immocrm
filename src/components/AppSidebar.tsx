@@ -69,6 +69,8 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Clients & Mandats',
           items: [
             { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
+            { name: 'Relouer', icon: Key, path: '/admin/relouer', notifKey: null },
+
             { name: 'Leads Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
             { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
             { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },
