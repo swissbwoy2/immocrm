@@ -1887,13 +1887,12 @@ export default function ClientDetail() {
           />
         </div>
 
-        {/* Candidate Documents - with premium wrapper */}
-        {candidates.length > 0 && (
+        {/* Candidate Documents - chercheur only */}
+        {!isReletter && candidates.length > 0 && (
           <div 
             className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
             style={{ animationDelay: '250ms' }}
           >
-            {/* Shine effect */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
             </div>
