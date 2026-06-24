@@ -153,12 +153,17 @@ const Clients = () => {
       setLoading(true);
 
       // Load clients (exclure anonymisés RGPD par défaut — restent en base pour stats/comptabilité)
+      // Exclure les clients reloueurs (journey_type='property_reletting')
+      // pour qu'ils n'apparaissent pas avec des badges chercheur incohérents.
+      // Tolérant aux NULL pendant la transition post-migration.
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
         .is('anonymise_at', null)
+        .or('journey_type.eq.housing_search,journey_type.eq.mixed,journey_type.is.null')
         .order('created_at', { ascending: false })
         .limit(15000);
+
 
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
