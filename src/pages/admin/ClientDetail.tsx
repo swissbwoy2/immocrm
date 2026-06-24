@@ -1877,7 +1877,7 @@ export default function ClientDetail() {
             <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
               <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Co-candidats du dossier</h3>
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">{isReletter ? 'Candidats intéressés' : 'Co-candidats du dossier'}</h3>
           </div>
           <ClientCandidatesManager
             clientId={client.id}
