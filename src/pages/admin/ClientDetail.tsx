@@ -2395,6 +2395,9 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+          )}
+          {isReletter && <ReletterDossiersTransmisCard candidates={relouerCandidates} />}
+
 
           {/* Contrat de mandat — chercheur only */}
           {!isReletter && (
