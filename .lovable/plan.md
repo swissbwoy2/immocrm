@@ -1,42 +1,32 @@
-## Problème
+## Cause racine
 
-Sur le parcours **locataire sortant** (`/relouer-mon-appartement` → `/formulaire-relouer`), le bandeau affiche actuellement :
+Tous les champs numériques de `FormulaireRelouer.tsx` utilisent le pattern cassé sur mobile :
 
-> « Garantie 90 jours — Remboursement complet sans succès au bout de 90 jours de recherche »
+```tsx
+{...register('x')} value={watch('x') || ''} type="number"
+```
 
-C'est **faux** pour cette prestation. La garantie 90 jours / remboursement concerne le mandat chasseur d'appartement (300 CHF), pas la relocation.
+Deux problèmes combinés :
+1. **Contrôlé via `watch`** : à chaque frappe, RHF re-render le champ avec la nouvelle valeur. Sur mobile (Safari/Chrome iOS surtout), ça interrompt la saisie clavier — la touche pressée n'apparaît pas.
+2. **`type="number"`** : sur clavier mobile FR-CH, refuse silencieusement virgule/point décimal et certains chiffres selon le `step`.
 
-Pour **relouer mon appartement** (locataire sortant), la prestation est :
-- **Forfait unique : 399.– CHF par appartement**
-- **Facturé à l'activation de la recherche de locataire** (pas à la signature, pas conditionné au succès).
-- Paiement par facture QR ou Twint.
+Conséquence : impossible de saisir Pièces, Surface, Étage (et potentiellement Loyer / Charges).
 
-## Correctif
+## Correction — `src/pages/FormulaireRelouer.tsx` uniquement
 
-### 1. Nouveau composant `src/components/forms-premium/RelouerForfaitBanner.tsx`
-Même structure visuelle que `LandingGuaranteeBanner` (carte arrondie, vert primary Logisorama, icône `Tag` / `Receipt` lucide-react).
+**1. Champ Pièces (ligne 366)** → remplacer par un `<select>` natif stylé cohérent design premium vert, valeurs `1 → 6.5+` par pas de 0.5 (mémoire projet "Rooms filter uses 0.5 increments"). Branché via `register('nombre_pieces')`, sans `value`/`watch`.
 
-Contenu :
-- Badge : « Forfait locataire sortant »
-- Titre : « Prestation forfaitaire **399.– CHF** par appartement »
-- Sous-texte : « Facturée à l'activation de la recherche de locataire. Paiement par facture QR ou Twint via 076 483 91 99. »
+**2. Champs Surface, Étage, Loyer net, Charges (lignes 367, 368, 403, 404)** :
+- Retirer `value={watch(...) || ''}` → laisser `register` gérer en non-contrôlé
+- Remplacer `type="number"` par `type="text"` + `inputMode="numeric"` (étage) ou `inputMode="decimal"` (surface, loyer, charges)
+- Ajouter `pattern="[0-9]*"` pour forcer le clavier numérique iOS
 
-### 2. `src/pages/FormulaireRelouer.tsx`
-- Retirer l'import et l'usage de `LandingGuaranteeBanner` (lignes 19 et 303).
-- Insérer `<RelouerForfaitBanner />` à la place.
+**3. Calcul loyer brut (lignes 100-106)** : inchangé, `watch('loyer_net')` continue de fonctionner avec register non contrôlé.
 
-### 3. `src/pages/RelouerMonAppartement.tsx`
-Ajouter une ligne de transparence prix dans la section RASSURANCE (liste juste avant « Pensé pour les locataires qui doivent partir vite ») :
-> « Forfait unique de **399.– CHF** par appartement, facturé à l'activation de la recherche de locataire. »
+**4. Schéma Zod (lignes 33-46)** : inchangé (tout est déjà `z.string()`).
 
-Retirer la phrase actuelle « On ne vous facture rien tant qu'aucun repreneur solvable n'est trouvé. » qui contredit la facturation à l'activation.
+## Hors périmètre
 
-### 4. Vérifications de cohérence
-- `LandingGuaranteeBanner` reste utilisé uniquement sur les parcours mandat chasseur (300 CHF / 90 jours).
-- Aucune mention « 90 jours », « remboursement » ou « gratuit tant que » ne doit subsister sur `/relouer-mon-appartement` ni `/formulaire-relouer` (vérification `rg` après edits).
-- Pas de changement de logique métier, pas de migration, pas d'edge function impactée.
-
-## Périmètre
-
-- 1 fichier créé : `RelouerForfaitBanner.tsx`
-- 2 fichiers modifiés : `FormulaireRelouer.tsx`, `RelouerMonAppartement.tsx`
+- Aucun autre fichier modifié
+- Aucune logique métier, Supabase, edge function, ou design system touché
+- Bannière 399 CHF, redirections, SEO : intacts

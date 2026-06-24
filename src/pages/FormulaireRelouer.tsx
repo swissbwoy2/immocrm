@@ -363,9 +363,26 @@ export default function FormulaireRelouer() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
-                    <LandingInput label="Pièces" required {...register('nombre_pieces')} value={watch('nombre_pieces') || ''} type="number" step="0.5" placeholder="3.5" error={errors.nombre_pieces?.message} />
-                    <LandingInput label="Surface (m²)" {...register('surface')} value={watch('surface') || ''} type="number" placeholder="80" />
-                    <LandingInput label="Étage" {...register('etage')} value={watch('etage') || ''} placeholder="3" />
+                    <div className="relative">
+                      <label className="absolute left-4 top-1 text-[11px] font-medium text-primary z-10 pointer-events-none">
+                        Pièces<span className="text-destructive ml-0.5">*</span>
+                      </label>
+                      <select
+                        {...register('nombre_pieces')}
+                        defaultValue=""
+                        className="w-full appearance-none rounded-xl border border-border bg-background text-foreground pt-6 pb-2 px-4 text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)] transition-all"
+                      >
+                        <option value="" disabled>Choisir…</option>
+                        {['1','1.5','2','2.5','3','3.5','4','4.5','5','5.5','6','6.5+'].map(v => (
+                          <option key={v} value={v}>{v}</option>
+                        ))}
+                      </select>
+                      {errors.nombre_pieces?.message && (
+                        <p className="text-[11px] text-destructive mt-1 pl-1">{errors.nombre_pieces.message}</p>
+                      )}
+                    </div>
+                    <LandingInput label="Surface (m²)" {...register('surface')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="80" />
+                    <LandingInput label="Étage" {...register('etage')} type="text" inputMode="numeric" pattern="[0-9]*" placeholder="3" />
                   </div>
 
                   <div>
@@ -400,8 +417,8 @@ export default function FormulaireRelouer() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <LandingInput label="Loyer net (CHF)" required {...register('loyer_net')} value={watch('loyer_net') || ''} type="number" placeholder="1800" error={errors.loyer_net?.message} />
-                    <LandingInput label="Charges (CHF)" {...register('charges')} value={watch('charges') || ''} type="number" placeholder="200" />
+                    <LandingInput label="Loyer net (CHF)" required {...register('loyer_net')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="1800" error={errors.loyer_net?.message} />
+                    <LandingInput label="Charges (CHF)" {...register('charges')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="200" />
                   </div>
 
                   {loyerBrut && (
