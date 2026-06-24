@@ -2036,7 +2036,10 @@ export default function ClientDetail() {
             </CardContent>
           </PremiumCard>
 
-          {/* Situation actuelle */}
+          {/* Situation actuelle — chercheur / Contact régie — reloueur */}
+          {isReletter ? (
+            <ReletterCurrentSituationCard request={relouerRequest} />
+          ) : (
           <PremiumCard icon={Building2} title="Situation actuelle" delay={450}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2077,6 +2080,7 @@ export default function ClientDetail() {
               </div>
             </CardContent>
           </PremiumCard>
+          )}
 
           {/* Situation professionnelle — chercheur / Gestion du dossier — reloueur */}
           {isReletter ? (
