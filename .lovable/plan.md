@@ -1,105 +1,42 @@
+## Problème
 
-# Cause racine du problème "tout est bleu" et correction globale
+Sur le parcours **locataire sortant** (`/relouer-mon-appartement` → `/formulaire-relouer`), le bandeau affiche actuellement :
 
-## Diagnostic (preuves)
+> « Garantie 90 jours — Remboursement complet sans succès au bout de 90 jours de recherche »
 
-`src/index.css` lignes 34-78 : le thème **par défaut** `:root` a `--primary: 217 91% 60%` → **bleu dodger**.
-`src/index.css` ligne 142+ : la classe `.theme-luxury` redéfinit `--primary: 158 55% 38%` → **vert Logisorama**.
+C'est **faux** pour cette prestation. La garantie 90 jours / remboursement concerne le mandat chasseur d'appartement (300 CHF), pas la relocation.
 
-La **home** (`PublicSiteLayout`) wrappe tout dans `.theme-luxury` → vert.
-Le **shell des formulaires** (`LandingFormShell`) **n'ajoute PAS `.theme-luxury`** → toutes les classes `bg-primary` / `text-primary` / `border-primary` / `ring-primary` retombent sur le bleu par défaut. C'est ce qui rend les inputs, focus, badges, progress, boutons, step indicators "bleus".
+Pour **relouer mon appartement** (locataire sortant), la prestation est :
+- **Forfait unique : 399.– CHF par appartement**
+- **Facturé à l'activation de la recherche de locataire** (pas à la signature, pas conditionné au succès).
+- Paiement par facture QR ou Twint.
 
-→ La correction prioritaire est **une seule ligne** : ajouter `theme-luxury` au root de `LandingFormShell`. Tout le reste (inputs, selects, checkbox, step indicator, progress, focus rings…) bascule automatiquement en vert.
+## Correctif
 
-S'ajoute à cela un petit lot de couleurs hardcodées (`slate-900`, `emerald-500`, `teal-500`) à remplacer par les tokens du thème.
+### 1. Nouveau composant `src/components/forms-premium/RelouerForfaitBanner.tsx`
+Même structure visuelle que `LandingGuaranteeBanner` (carte arrondie, vert primary Logisorama, icône `Tag` / `Receipt` lucide-react).
 
-## 1. Wrapper `theme-luxury` global pour les formulaires
+Contenu :
+- Badge : « Forfait locataire sortant »
+- Titre : « Prestation forfaitaire **399.– CHF** par appartement »
+- Sous-texte : « Facturée à l'activation de la recherche de locataire. Paiement par facture QR ou Twint via 076 483 91 99. »
 
-`src/components/forms-premium/LandingFormShell.tsx` :
+### 2. `src/pages/FormulaireRelouer.tsx`
+- Retirer l'import et l'usage de `LandingGuaranteeBanner` (lignes 19 et 303).
+- Insérer `<RelouerForfaitBanner />` à la place.
 
-```diff
-- <div className="min-h-screen bg-background">
-+ <div className="theme-luxury min-h-screen bg-background text-foreground">
-```
+### 3. `src/pages/RelouerMonAppartement.tsx`
+Ajouter une ligne de transparence prix dans la section RASSURANCE (liste juste avant « Pensé pour les locataires qui doivent partir vite ») :
+> « Forfait unique de **399.– CHF** par appartement, facturé à l'activation de la recherche de locataire. »
 
-Conséquence directe (zéro autre changement requis) :
-- inputs focus → ring vert au lieu de bleu
-- `LandingStepIndicator`, `LandingProgressBlock`, `LandingGuaranteeBanner` → vert
-- `LandingButton variant="next"` (déjà en `from-primary to-primary/90`) → vert
-- bordures focus selects, checkboxes, radios → vert
-- badges `bg-primary/10 text-primary` → vert
+Retirer la phrase actuelle « On ne vous facture rien tant qu'aucun repreneur solvable n'est trouvé. » qui contredit la facturation à l'activation.
 
-## 2. Top banner du shell — sortir du dark slate
+### 4. Vérifications de cohérence
+- `LandingGuaranteeBanner` reste utilisé uniquement sur les parcours mandat chasseur (300 CHF / 90 jours).
+- Aucune mention « 90 jours », « remboursement » ou « gratuit tant que » ne doit subsister sur `/relouer-mon-appartement` ni `/formulaire-relouer` (vérification `rg` après edits).
+- Pas de changement de logique métier, pas de migration, pas d'edge function impactée.
 
-`LandingFormShell.tsx`, bandeau supérieur :
+## Périmètre
 
-```diff
-- className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
-+ className="bg-[hsl(var(--imr-green-pale))] border-b border-border"
-...
-- <p className="text-xs sm:text-sm text-slate-300">
-+ <p className="text-xs sm:text-sm text-muted-foreground">
-```
-
-Lien Immo-rama reste `text-primary hover:text-primary/80` (déjà OK).
-
-## 3. Bouton submit — remplacer emerald/teal par primary
-
-`src/components/forms-premium/LandingButton.tsx`, variant `submit` :
-
-```diff
-- 'bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 hover:scale-[1.02]'
-+ 'bg-gradient-to-r from-primary to-[hsl(var(--imr-green-light))] shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02]'
-```
-
-## 4. Dropzones — émeraude → primary
-
-`src/components/forms-premium/LandingDocumentDropzone.tsx` :
-- `border-emerald-500/50 bg-emerald-50/40` → `border-primary/50 bg-primary/5`
-- `bg-emerald-500 text-white` (badge check) → `bg-primary text-primary-foreground`
-- `text-emerald-600` → `text-primary`
-
-Même substitution dans `src/components/forms-premium/PremiumDocumentDropzone.tsx`.
-
-## 5. Pages avec emerald/teal hardcodés
-
-`src/pages/RelouerMonAppartement.tsx` :
-- Hero gradient text `from-emerald-500 via-emerald-400 to-teal-500` → `from-primary to-[hsl(var(--imr-green-light))]`
-- CTA inline emerald → mêmes classes que LandingButton submit (primary gradient)
-- Numéros d'étapes `from-emerald-500 to-teal-500` → primary gradient
-- `text-emerald-500` (icônes check) → `text-primary`
-
-`src/pages/FormulaireRelouer.tsx` :
-- Success card : `bg-emerald-500/15 border-emerald-500/30 text-emerald-500` → `bg-primary/10 border-primary/30 text-primary`
-
-`src/pages/RendezVousBureau.tsx` :
-- `border-emerald-500/40 bg-emerald-500/10 text-emerald-200` → `border-primary/40 bg-primary/10 text-primary`
-
-## 6. Audit final
-
-Aucun autre `blue-*`, `sky-*`, `indigo-*`, `cyan-*` dans `src/components/forms-premium/`, `src/components/mandat/`, `src/pages/NouveauMandat.tsx`, `FormulaireRelouer.tsx`, `RendezVousBureau.tsx`, `RelouerMonAppartement.tsx`, `ChasseurAppartement.tsx` (vérifié par grep). Les seuls bleus du projet vivent dans des sections marketing de la home (`DifferentiationSection`, `GuaranteeSection`, etc.) — **hors scope** (pas de formulaire).
-
-Les composants Premium* admin/CRM ne sont **pas modifiés** (ils servent ailleurs).
-
-## 7. Hors scope (non touché)
-
-Auth, Supabase, upload documents, upload photos, signatures, mandate generation, Resend, AbaNinja, validations, routes admin/agent, logique métier des wizards, structure des steps, copy.
-
-## 8. Validation visuelle
-
-Après application, vérifier au browser (route preview) :
-- `/nouveau-mandat` : step indicator, progress, inputs focus, bouton suivant/envoyer → tous verts ; top banner pâle
-- `/formulaire-relouer` : idem
-- `/rendez-vous` : idem
-- `/relouer-mon-appartement` : titres, CTA, numéros d'étapes en vert (plus de teal)
-- Plus aucun bandeau `slate-900` dans les formulaires publics
-
-## Fichiers modifiés (résumé)
-
-- `src/components/forms-premium/LandingFormShell.tsx` (wrapper + banner)
-- `src/components/forms-premium/LandingButton.tsx` (gradient submit)
-- `src/components/forms-premium/LandingDocumentDropzone.tsx`
-- `src/components/forms-premium/PremiumDocumentDropzone.tsx`
-- `src/pages/RelouerMonAppartement.tsx`
-- `src/pages/FormulaireRelouer.tsx`
-- `src/pages/RendezVousBureau.tsx`
+- 1 fichier créé : `RelouerForfaitBanner.tsx`
+- 2 fichiers modifiés : `FormulaireRelouer.tsx`, `RelouerMonAppartement.tsx`
