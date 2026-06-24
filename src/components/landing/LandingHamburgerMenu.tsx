@@ -33,7 +33,7 @@ const internalLinks = [
 
 const externalProprio = [
   { href: 'https://immo-rama.ch/vendre-mon-bien', label: 'Vendre mon bien', icon: Banknote },
-  { href: 'https://immo-rama.ch/relouer-mon-appartement', label: 'Mise en location propriétaire', icon: RefreshCw },
+  { href: 'https://logisorama.ch/relouer-mon-appartement', label: 'Mise en location propriétaire', icon: RefreshCw },
   { href: 'https://immo-rama.ch/project-management', label: 'Construire / Project Management', icon: HardHat },
 ];
 
