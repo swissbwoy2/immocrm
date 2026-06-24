@@ -119,6 +119,17 @@ interface Agent {
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 import { PremiumCard } from '@/components/premium/PremiumCard';
+import {
+  ReletterStatusBanner,
+  ReletterFinancialCard,
+  ReletterCurrentSituationCard,
+  ReletterFileMgmtCard,
+  ReletterCriteriaCard,
+  ReletterPropertyFeaturesCard,
+  ReletterProfilesProposedCard,
+  ReletterDossiersTransmisCard,
+  ReletterAddressBadge,
+} from '@/components/admin/ReletterDetailSections';
 
 // Premium stat mini-card
 const PremiumStatCard = ({ 
