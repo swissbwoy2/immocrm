@@ -63,7 +63,7 @@ const AdminAgentDetail = lazy(() => import("./pages/admin/AgentDetail"));
 const AdminClients = lazy(() => import("./pages/admin/Clients"));
 const AdminInscriptionsEchouees = lazy(() => import("./pages/admin/InscriptionsEchouees"));
 const AdminClientDetail = lazy(() => import("./pages/admin/ClientDetail"));
-const AdminRelouer = lazy(() => import("./pages/admin/Relouer"));
+// /admin/relouer (liste) supprimé de la sidebar — la route redirige vers /admin/clients?tab=reloueurs
 const AdminRelouerDetail = lazy(() => import("./pages/admin/RelouerDetail"));
 const ClientDashboardRelouer = lazy(() => import("./pages/client/DashboardRelouer"));
 const AdminAssignations = lazy(() => import("./pages/admin/Assignations"));
