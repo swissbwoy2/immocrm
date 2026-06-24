@@ -855,6 +855,45 @@ const Clients = () => {
           ))}
         </div>
 
+        {/* Onglets parcours (registre CRM global) */}
+        {viewMode === 'list' && (() => {
+          const totals = {
+            all: clients.length,
+            chercheurs: clients.filter(c => isSearcher(c) || isMixed(c)).length,
+            reloueurs: clients.filter(c => isReletter(c) || isMixed(c)).length,
+            mixtes: clients.filter(c => isMixed(c)).length,
+          };
+          const tabs: { key: JourneyTab; label: string; count: number }[] = [
+            { key: 'all', label: 'Tous les clients', count: totals.all },
+            { key: 'chercheurs', label: 'Chercheurs de logement', count: totals.chercheurs },
+            { key: 'reloueurs', label: 'Clients reloueurs', count: totals.reloueurs },
+            { key: 'mixtes', label: 'Mixtes', count: totals.mixtes },
+          ];
+          return (
+            <div className="mb-6 flex flex-wrap gap-2">
+              {tabs.map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setJourneyTab(t.key)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-2",
+                    journeyTab === t.key
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  <span>{t.label}</span>
+                  <Badge variant="secondary" className={cn(
+                    "text-[10px] px-1.5 py-0",
+                    journeyTab === t.key ? "bg-white/20 text-white border-0" : ""
+                  )}>{t.count}</Badge>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
         {viewMode === 'byAgent' && (
           <ClientsByAgentView
             clients={clients}
@@ -865,6 +904,7 @@ const Clients = () => {
         )}
 
         {viewMode === 'list' && (<>
+
         {/* Premium Filter Section */}
 
         <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-6 mb-6 animate-fade-in">
