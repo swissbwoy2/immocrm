@@ -50,21 +50,23 @@ import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
 import VenteClientDashboard from './dashboards/VenteClientDashboard';
 import RelocationClientDashboard from './dashboards/RelocationClientDashboard';
+import DashboardRelouer from './DashboardRelouer';
 
 export default function ClientDashboardDispatcher() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<{ prenom?: string; nom?: string; parcours_type?: string } | null>(null);
+  const [journeyType, setJourneyType] = useState<string | null>(null);
   const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       if (!user) { setResolved(true); return; }
-      const { data } = await supabase
-        .from('profiles')
-        .select('prenom, nom, parcours_type')
-        .eq('id', user.id)
-        .maybeSingle();
-      setProfile(data || null);
+      const [{ data: prof }, { data: client }] = await Promise.all([
+        supabase.from('profiles').select('prenom, nom, parcours_type').eq('id', user.id).maybeSingle(),
+        supabase.from('clients').select('journey_type').eq('user_id', user.id).maybeSingle(),
+      ]);
+      setProfile(prof || null);
+      setJourneyType(client?.journey_type || null);
       setResolved(true);
     };
     load();
@@ -78,12 +80,16 @@ export default function ClientDashboardDispatcher() {
     );
   }
 
+  // Reloueur pur — dashboard dédié, jamais de badges chercheur
+  if (journeyType === 'property_reletting') return <DashboardRelouer />;
+
   const pt = profile?.parcours_type;
   if (pt === 'renovation') return <RenovationClientDashboard profile={profile} />;
   if (pt === 'vente') return <VenteClientDashboard profile={profile} />;
   if (pt === 'relocation') return <RelocationClientDashboard profile={profile} />;
   return <ClientDashboardLocation />;
 }
+
 
 function ClientDashboardLocation() {
   const navigate = useNavigate();
