@@ -98,6 +98,7 @@ interface Client {
   abaninja_client_uuid?: string | null;
   abaninja_invoice_id?: string | null;
   abaninja_invoice_ref?: string | null;
+  journey_type?: string | null;
 }
 
 interface Profile {
