@@ -1060,7 +1060,8 @@ const Clients = () => {
               </div>
             </div>
 
-            {/* Type de recherche filter - desktop */}
+            {/* Type de recherche filter - desktop (chercheurs uniquement) */}
+            {showSearcherFilters && (
             <div className="hidden sm:block">
               <p className="text-xs font-medium mb-2 text-muted-foreground">Type de recherche</p>
               <div className="flex flex-wrap gap-2">
@@ -1075,6 +1076,8 @@ const Clients = () => {
                 </Button>
               </div>
             </div>
+            )}
+
 
             {/* Type permis + Statut + Budget filters - desktop */}
             <div className="hidden sm:flex flex-wrap gap-4">
