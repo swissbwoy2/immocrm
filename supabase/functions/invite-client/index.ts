@@ -118,6 +118,21 @@ interface DemandeMandat {
   cgv_acceptees_at?: string;
 }
 
+interface PurchaseProfilePayload {
+  prix_cible?: number;
+  region?: string;
+  type_bien?: string;
+  surface_min?: number;
+  horizon_mois?: number;
+  usage?: string;
+  etat_civil?: string;
+  nombre_enfants?: number;
+  nationalite?: string;
+  type_permis?: string;
+  date_naissance?: string;
+  financing?: Record<string, any>;
+}
+
 interface InviteClientRequest {
   email: string;
   clientId?: string;
@@ -129,6 +144,8 @@ interface InviteClientRequest {
   typeRecherche?: string;
   /** Optional: id of the agents row to auto-assign as primary agent */
   agentId?: string;
+  /** 🆕 Bloc achat — déclenche création purchase_project + financing + steps */
+  purchaseProfile?: PurchaseProfilePayload;
 }
 
 serve(async (req) => {
@@ -138,7 +155,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId, purchaseProfile }: InviteClientRequest = await req.json();
     const redirectTo = `${getAppBaseUrl(req)}/first-login`;
     console.log('Redirect URL:', redirectTo);
 
