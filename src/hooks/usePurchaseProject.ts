@@ -83,15 +83,45 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
       setSettings(s);
     }
 
-    let q = supabase.from('purchase_projects').select('*').order('created_at', { ascending: false }).limit(1);
-    if (opts.clientId) q = q.eq('client_id', opts.clientId);
-    else if (opts.userId) q = q.eq('user_id', opts.userId);
-    else { setLoading(false); return; }
+    if (!opts.clientId && !opts.userId) { setLoading(false); return; }
 
-    const { data: prj } = await q.maybeSingle();
+    // Détection stricte acheteur : le projet peut être lié au client_id OU au user_id
+    // (certains acheteurs invités admin ont été créés avant la liaison client_id complète).
+    let prj: any = null;
+    if (opts.clientId) {
+      const { data } = await supabase
+        .from('purchase_projects')
+        .select('*')
+        .eq('client_id', opts.clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      prj = data;
+    }
+    if (!prj && opts.userId) {
+      const { data } = await supabase
+        .from('purchase_projects')
+        .select('*')
+        .eq('user_id', opts.userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      prj = data;
+    }
     setProject(prj as any);
 
-    if (!prj) { setLoading(false); return; }
+    if (!prj) {
+      setFinancing(null);
+      setProperties([]);
+      setVisitReports([]);
+      setNegotiations([]);
+      setNotary(null);
+      setSteps([]);
+      setDocuments([]);
+      setAgent(null);
+      setLoading(false);
+      return;
+    }
 
     const projectId = (prj as any).id;
     const [fin, props, visits, negos, not, stepsRes, docs] = await Promise.all([
@@ -133,10 +163,21 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
   const computed = financing ? computeFinancing(financing, settings) : null;
 
   const createProject = useCallback(async (clientId: string, userId: string | null, agentId: string | null) => {
-    // idempotent: skip if active project already exists
-    const { data: existing } = await supabase
-      .from('purchase_projects').select('id').eq('client_id', clientId).maybeSingle();
-    if (existing?.id) return existing.id;
+    // idempotent: skip if a project already exists for this client OR user.
+    const { data: existingByClient } = await supabase.from('purchase_projects').select('id').eq('client_id', clientId).limit(1).maybeSingle();
+    if (existingByClient?.id) return existingByClient.id;
+
+    const { data: existingByUser } = userId
+      ? await supabase.from('purchase_projects').select('id').eq('user_id', userId).limit(1).maybeSingle()
+      : { data: null as any };
+    if (existingByUser?.id) return existingByUser.id;
+
+    await supabase.from('clients').update({
+      type_recherche: 'Acheter',
+      journey_type: 'purchase_search',
+      statut: 'en_attente',
+      priorite: 'haute',
+    } as any).eq('id', clientId);
 
     const { data: created, error } = await supabase
       .from('purchase_projects')
@@ -145,6 +186,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
         user_id: userId,
         assigned_agent_id: agentId,
         statut: 'en_attente_activation',
+        statut_mandat: 'a_signer',
         statut_acompte: 'a_payer',
         montant_mandat: 4999,
         montant_acompte: 2499,
@@ -159,8 +201,16 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     const stepsPayload = ACHAT_STEPS.map((s) => ({
       project_id: projectId, step_key: s.key, label: s.label, ordre: s.ordre, statut: 'a_faire',
     }));
-    await supabase.from('purchase_project_steps').insert(stepsPayload);
-    await supabase.from('purchase_financing_profiles').insert({ project_id: projectId });
+    await supabase.from('purchase_project_steps').upsert(stepsPayload, { onConflict: 'project_id,step_key', ignoreDuplicates: true });
+    const { data: existingFin } = await supabase.from('purchase_financing_profiles').select('id').eq('project_id', projectId).maybeSingle();
+    if (!existingFin?.id) await supabase.from('purchase_financing_profiles').insert({ project_id: projectId, statut_bancaire: 'a_evaluer' } as any);
+    if (userId) {
+      await supabase
+        .from('documents')
+        .update({ purchase_project_id: projectId, purchase_category: 'autres_documents_bancaires' } as any)
+        .eq('user_id', userId)
+        .is('purchase_project_id', null);
+    }
     await reload();
     return projectId;
   }, [reload]);

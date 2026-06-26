@@ -43,6 +43,7 @@ import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
+import { isPurchaseBuyer } from '@/lib/journey';
 
 interface Client {
   id: string;
@@ -129,9 +130,9 @@ export default function ClientDetail() {
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
-  const isAcheteur = client?.type_recherche === 'Acheter';
-  const isPurchaseEligible = isAcheteur || client?.journey_type === 'purchase_search';
   const purchaseHook = usePurchaseProject({ clientId: client?.id });
+  const isAcheteur = isPurchaseBuyer(client, purchaseHook.project);
+  const isPurchaseEligible = isAcheteur;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -670,6 +671,32 @@ export default function ClientDetail() {
             <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
           </div>
           <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="agent" />
+        </div>
+      </main>
+    );
+  }
+
+  if (isPurchaseEligible) {
+    return (
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-4 md:p-8 space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+          </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
+            <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
+          </div>
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3 animate-fade-in">
+            <div className="p-2 rounded-full bg-amber-500/20 shrink-0">
+              <Clock className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-700 dark:text-amber-400">Projet d'achat en attente d'activation</p>
+              <p className="text-sm text-muted-foreground">Mandat achat : 6 mois. Le suivi opérationnel de 60 jours démarrera après activation par votre conseiller.</p>
+            </div>
+          </div>
+          <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
         </div>
       </main>
     );

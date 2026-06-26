@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Key } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ import { SilentErrorBoundary } from './SilentErrorBoundary';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useWhatsAppUnreadCount } from '@/hooks/useWhatsAppUnreadCount';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
+import { isPurchaseBuyer } from '@/lib/journey';
 
 interface MenuItem {
   name: string;
@@ -209,6 +210,33 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       ];
 
     case 'client': {
+      if (parcoursType === 'achat') {
+        return [
+          {
+            label: null,
+            items: [
+              { name: 'Mon projet achat', icon: LayoutDashboard, path: '/client', notifKey: null },
+              { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
+              { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
+              { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
+            ],
+          },
+          {
+            label: 'Achat',
+            items: [
+              { name: 'Biens sélectionnés', icon: Building2, path: '/client', notifKey: null },
+              { name: 'Financement', icon: Banknote, path: '/client', notifKey: null },
+              { name: 'Documents achat', icon: FileText, path: '/client/dossier', notifKey: null },
+            ],
+          },
+          {
+            label: 'Système',
+            items: [
+              { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
+            ],
+          },
+        ];
+      }
       if (parcoursType === 'renovation') {
         return [
           {
@@ -460,7 +488,30 @@ export function AppSidebar() {
       .select('*')
       .eq('id', user.id)
       .single();
-    if (data) setProfile(data);
+    if (!data) return;
+
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id, user_id, type_recherche, journey_type')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    let purchaseProject: any = null;
+    const { data: byUser } = await supabase
+      .from('purchase_projects')
+      .select('id, client_id, user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    purchaseProject = byUser;
+    if (!purchaseProject && client?.id) {
+      const { data: byClient } = await supabase
+        .from('purchase_projects')
+        .select('id, client_id, user_id')
+        .eq('client_id', client.id)
+        .maybeSingle();
+      purchaseProject = byClient;
+    }
+
+    setProfile({ ...data, parcours_type: isPurchaseBuyer(client, purchaseProject) ? 'achat' : data.parcours_type });
   };
 
   const sections = useMemo(

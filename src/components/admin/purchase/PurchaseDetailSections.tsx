@@ -81,8 +81,8 @@ export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
             </div>
             <p className="text-sm text-muted-foreground">
               {isPending
-                ? 'Progression 60 jours en attente d\'activation admin.'
-                : `Jour ${prog.jourActuel}/${prog.dureeJours} · ${prog.jourRestant} jours restants · ${doneSteps}/${h.steps.length} étapes complétées`}
+                ? 'Mandat achat : 6 mois · Le suivi opérationnel 60 jours démarrera après activation admin.'
+                : `Mandat achat : 6 mois · Suivi opérationnel jour ${prog.jourActuel}/${prog.dureeJours} · ${prog.jourRestant} jours restants · ${doneSteps}/${h.steps.length} étapes complétées`}
             </p>
           </div>
           {mode === 'admin' && <ProjectMetaEditorDialog project={h.project} onSave={h.updateProject} />}
