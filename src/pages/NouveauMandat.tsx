@@ -5,6 +5,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
+import MandatFormStep0Journey from '@/components/mandat/MandatFormStep0Journey';
 import MandatFormStep1 from '@/components/mandat/MandatFormStep1';
 import MandatFormStep2 from '@/components/mandat/MandatFormStep2';
 import MandatFormStep3 from '@/components/mandat/MandatFormStep3';
@@ -12,6 +13,9 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
+import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
+import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
+import MandatAchatStepPersonal from '@/components/mandat/achat/MandatAchatStepPersonal';
 import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
 import { LandingStepIndicator } from '@/components/forms-premium/LandingStepIndicator';
 import { LandingGuaranteeBanner } from '@/components/forms-premium/LandingGuaranteeBanner';
@@ -21,14 +25,31 @@ import { LandingButton } from '@/components/forms-premium/LandingButton';
 import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
 
 const STORAGE_KEY = 'mandat_form_data';
-const STEPS = [
-  { title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
-  { title: 'Situation actuelle', component: MandatFormStep2, icon: '🏠' },
-  { title: 'Situation financière', component: MandatFormStep3, icon: '💼' },
-  { title: 'Candidats', component: MandatFormStep5, icon: '👥' },
-  { title: 'Critères de recherche', component: MandatFormStep4, icon: '🔍' },
-  { title: 'Documents', component: MandatFormStep6, icon: '📄' },
-  { title: 'Signature', component: MandatFormStep7, icon: '✍️' },
+
+type StepDef = { key: string; title: string; component: any; icon: string };
+
+const STEP_JOURNEY: StepDef = { key: 'journey', title: 'Projet immobilier', component: MandatFormStep0Journey, icon: '🧭' };
+
+const RENTAL_STEPS: StepDef[] = [
+  STEP_JOURNEY,
+  { key: 'perso', title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
+  { key: 'situation', title: 'Situation actuelle', component: MandatFormStep2, icon: '🏠' },
+  { key: 'finance', title: 'Situation financière', component: MandatFormStep3, icon: '💼' },
+  { key: 'candidats', title: 'Candidats', component: MandatFormStep5, icon: '👥' },
+  { key: 'criteres', title: 'Critères de recherche', component: MandatFormStep4, icon: '🔍' },
+  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  { key: 'signature', title: 'Signature', component: MandatFormStep7, icon: '✍️' },
+];
+
+const PURCHASE_STEPS: StepDef[] = [
+  STEP_JOURNEY,
+  { key: 'perso', title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
+  { key: 'projet', title: 'Projet d\'achat', component: MandatAchatStepProject, icon: '🏢' },
+  { key: 'financement', title: 'Financement', component: MandatAchatStepFinancing, icon: '💰' },
+  { key: 'situation_perso', title: 'Situation personnelle', component: MandatAchatStepPersonal, icon: '👤' },
+  { key: 'co_acquereurs', title: 'Co-acquéreurs', component: MandatFormStep5, icon: '👥' },
+  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  { key: 'signature', title: 'Signature', component: MandatFormStep7, icon: '✍️' },
 ];
 
 export default function NouveauMandat() {
