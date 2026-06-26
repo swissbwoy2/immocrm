@@ -472,7 +472,7 @@ export default function Dossier() {
       { label: 'Attestation EPL / retrait pour logement principal', category: 'Fonds propres' },
       { label: 'Attestation libre passage', category: 'Fonds propres' },
       { label: 'Justificatif placements financiers', category: 'Fonds propres' },
-      { label: 'Justificatif donation / avance d'hoirie', category: 'Fonds propres' },
+      { label: "Justificatif donation / avance d'hoirie", category: 'Fonds propres' },
       // Charges
       { label: 'Justificatif crédit privé', category: 'Charges' },
       { label: 'Justificatif leasing', category: 'Charges' },

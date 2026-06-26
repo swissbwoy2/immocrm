@@ -13,6 +13,7 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
+import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
 import MandatAchatStepPersonal from '@/components/mandat/achat/MandatAchatStepPersonal';
@@ -23,6 +24,9 @@ import { LandingProgressBlock } from '@/components/forms-premium/LandingProgress
 import { LandingFormCard } from '@/components/forms-premium/LandingFormCard';
 import { LandingButton } from '@/components/forms-premium/LandingButton';
 import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
+
+const normalizeDate = (val: string | null | undefined): string | null =>
+  val && val.trim() !== '' ? val.trim() : null;
 
 const STORAGE_KEY = 'mandat_form_data';
 
@@ -49,7 +53,7 @@ const PURCHASE_STEPS: StepDef[] = [
   { key: 'situation_perso', title: 'Situation personnelle', component: MandatAchatStepPersonal, icon: '👤' },
   { key: 'co_acquereurs', title: 'Co-acquéreurs', component: MandatFormStep5, icon: '👥' },
   { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
-  { key: 'signature', title: 'Signature', component: MandatFormStep7, icon: '✍️' },
+  { key: 'signature', title: 'Signature', component: MandatAchatStepSignature, icon: '✍️' },
 ];
 
 export default function NouveauMandat() {
@@ -247,14 +251,14 @@ export default function NouveauMandat() {
         nom: formData.nom,
         telephone: formData.telephone,
         adresse: formData.adresse,
-        date_naissance: formData.date_naissance,
+        date_naissance: normalizeDate(formData.date_naissance),
         nationalite: formData.nationalite,
         type_permis: formData.type_permis,
         etat_civil: formData.etat_civil,
         gerance_actuelle: formData.gerance_actuelle,
         contact_gerance: formData.contact_gerance,
         loyer_actuel: formData.loyer_actuel,
-        depuis_le: formData.depuis_le,
+        depuis_le: normalizeDate(formData.depuis_le),
         pieces_actuel: formData.pieces_actuel,
         charges_extraordinaires: formData.charges_extraordinaires,
         montant_charges_extra: formData.montant_charges_extra,
@@ -264,14 +268,14 @@ export default function NouveauMandat() {
         profession: formData.profession,
         employeur: formData.employeur,
         revenus_mensuels: formData.revenus_mensuels,
-        date_engagement: formData.date_engagement || null,
+        date_engagement: normalizeDate(formData.date_engagement),
         utilisation_logement: formData.utilisation_logement,
         animaux: formData.animaux,
         instrument_musique: formData.instrument_musique,
         vehicules: formData.vehicules,
         numero_plaques: formData.numero_plaques,
         decouverte_agence: formData.decouverte_agence,
-        type_recherche: formData.type_recherche,
+        type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
         nombre_occupants: formData.nombre_occupants,
         type_bien: formData.type_bien,
         pieces_recherche: formData.pieces_recherche,

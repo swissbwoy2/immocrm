@@ -8,6 +8,9 @@ const corsHeaders = {
 
 const DEFAULT_APP_URL = 'https://logisorama.ch';
 
+const normalizeDate = (val: string | null | undefined): string | null =>
+  val && String(val).trim() !== '' ? String(val).trim() : null;
+
 const normalizeJourneyValue = (value?: string | null) => (value || '')
   .toString()
   .trim()
@@ -385,14 +388,14 @@ serve(async (req) => {
       if (demandeMandat) {
         Object.assign(clientData, {
           adresse: demandeMandat.adresse,
-          date_naissance: demandeMandat.date_naissance,
+          date_naissance: normalizeDate(demandeMandat.date_naissance),
           nationalite: demandeMandat.nationalite,
           type_permis: demandeMandat.type_permis,
           etat_civil: demandeMandat.etat_civil,
           gerance_actuelle: demandeMandat.gerance_actuelle,
           contact_gerance: demandeMandat.contact_gerance,
           loyer_actuel: demandeMandat.loyer_actuel,
-          depuis_le: demandeMandat.depuis_le,
+          depuis_le: normalizeDate(demandeMandat.depuis_le),
           pieces_actuel: demandeMandat.pieces_actuel,
           charges_extraordinaires: demandeMandat.charges_extraordinaires,
           montant_charges_extra: demandeMandat.montant_charges_extra,
@@ -402,7 +405,7 @@ serve(async (req) => {
           profession: demandeMandat.profession,
           employeur: demandeMandat.employeur,
           revenus_mensuels: demandeMandat.revenus_mensuels,
-          date_engagement: demandeMandat.date_engagement,
+          date_engagement: normalizeDate(demandeMandat.date_engagement),
           utilisation_logement: demandeMandat.utilisation_logement,
           animaux: demandeMandat.animaux,
           instrument_musique: demandeMandat.instrument_musique,
@@ -484,14 +487,14 @@ serve(async (req) => {
       if (demandeMandat) {
         const updateData: any = {
           adresse: demandeMandat.adresse,
-          date_naissance: demandeMandat.date_naissance,
+          date_naissance: normalizeDate(demandeMandat.date_naissance),
           nationalite: demandeMandat.nationalite,
           type_permis: demandeMandat.type_permis,
           etat_civil: demandeMandat.etat_civil,
           gerance_actuelle: demandeMandat.gerance_actuelle,
           contact_gerance: demandeMandat.contact_gerance,
           loyer_actuel: demandeMandat.loyer_actuel,
-          depuis_le: demandeMandat.depuis_le,
+          depuis_le: normalizeDate(demandeMandat.depuis_le),
           pieces_actuel: demandeMandat.pieces_actuel,
           charges_extraordinaires: demandeMandat.charges_extraordinaires,
           montant_charges_extra: demandeMandat.montant_charges_extra,
@@ -501,7 +504,7 @@ serve(async (req) => {
           profession: demandeMandat.profession,
           employeur: demandeMandat.employeur,
           revenus_mensuels: demandeMandat.revenus_mensuels,
-          date_engagement: demandeMandat.date_engagement,
+          date_engagement: normalizeDate(demandeMandat.date_engagement),
           utilisation_logement: demandeMandat.utilisation_logement,
           animaux: demandeMandat.animaux,
           instrument_musique: demandeMandat.instrument_musique,
@@ -556,7 +559,7 @@ serve(async (req) => {
             client_id: clientRecordId,
             prenom: candidat.prenom,
             nom: candidat.nom,
-            date_naissance: candidat.date_naissance,
+            date_naissance: normalizeDate(candidat.date_naissance),
             nationalite: candidat.nationalite,
             type_permis: candidat.type_permis,
             profession: candidat.profession,

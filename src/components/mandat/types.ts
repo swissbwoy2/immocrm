@@ -106,10 +106,23 @@ export interface CandidatData {
   date_naissance: string;
   nationalite: string;
   type_permis: string;
+  email?: string;
+  telephone?: string;
+  adresse?: string;
   profession: string;
   employeur: string;
+  type_contrat?: string;
+  date_entree_fonction?: string;
   revenus_mensuels: number;
+  revenus_annuels?: number;
+  autres_revenus?: number;
+  charges_mensuelles?: number;
+  credit_leasing_pension?: number;
+  fonds_propres_personnels?: number;
+  lpp_disponible?: number;
+  troisieme_pilier?: number;
   lien_avec_client: string;
+  remarques?: string;
 }
 
 export interface DocumentData {
