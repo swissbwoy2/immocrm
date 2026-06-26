@@ -784,7 +784,7 @@ serve(async (req) => {
             // Rattacher les documents achat existants si uploadés avant la création du projet.
             await supabaseAdmin
               .from('documents')
-              .update({ purchase_project_id: projectId, purchase_category: 'autres_documents_bancaires' })
+              .update({ purchase_project_id: projectId, purchase_category: 'autre' })
               .eq('user_id', userId)
               .is('purchase_project_id', null);
         }
