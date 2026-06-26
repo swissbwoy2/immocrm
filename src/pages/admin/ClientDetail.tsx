@@ -922,9 +922,30 @@ export default function ClientDetail() {
     }
   };
 
+  // ===== Parcours achat actif : remplace la fiche par les sections achat =====
+  if (purchaseHook.project) {
+    return (
+      <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="p-4 md:p-8 space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+          </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
+            <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
+          </div>
+          <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="admin" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
       <div className="p-4 md:p-8 space-y-6">
+        {isPurchaseEligible && !purchaseHook.project && (
+          <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
+        )}
         {/* Status banner — reloueur or chercheur */}
         {isReletter ? (
           <ReletterStatusBanner request={relouerRequest} />
