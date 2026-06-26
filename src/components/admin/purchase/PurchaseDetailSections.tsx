@@ -336,7 +336,7 @@ function DocActionRow({ doc, onChange }: { doc: any; onChange: () => Promise<voi
   const validate = async (statut: 'valide' | 'refuse' | 'manquant' | 'demande') => {
     setBusy(true);
     try {
-      const patch: any = { statut_admin: statut, commentaire_admin: commentaire || null, date_validation_admin: new Date().toISOString() };
+      const patch: any = { statut, commentaire_admin: commentaire || null, validated_at: new Date().toISOString() };
       await supabase.from('documents').update(patch).eq('id', doc.id);
       toast.success('Document mis à jour');
       await onChange();
