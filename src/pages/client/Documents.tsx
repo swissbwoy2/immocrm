@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
+import { isPurchaseBuyer } from '@/lib/journey';
 
 interface DocumentRequest {
   id: string;
@@ -60,6 +61,25 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>('autre');
+  const [isClientBuyer, setIsClientBuyer] = useState(false);
+  const [purchaseProjectId, setPurchaseProjectId] = useState<string | null>(null);
+
+  const PURCHASE_DOC_CATEGORY_MAP: Record<string, string> = {
+    piece_identite: 'identite', permis_sejour: 'identite',
+    certificat_salaire: 'revenus', fiche_salaire_1: 'revenus', fiche_salaire_2: 'revenus',
+    fiche_salaire_3: 'revenus', fiche_salaire: 'revenus',
+    contrat_travail: 'revenus', attestation_employeur: 'revenus',
+    releve_bancaire_fonds_propres: 'fonds_propres', attestation_3a: 'fonds_propres',
+    attestation_lpp: 'fonds_propres', attestation_epl: 'fonds_propres',
+    attestation_libre_passage: 'fonds_propres', justificatif_placements: 'fonds_propres',
+    justificatif_donation: 'fonds_propres', justificatif_avance_hoirie: 'fonds_propres',
+    justificatif_credit_prive: 'charges', justificatif_leasing: 'charges',
+    justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
+    justificatif_charges_fixes: 'charges',
+    decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
+    autre: 'autre',
+  };
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewDocument, setPreviewDocument] = useState<any>(null);
@@ -109,31 +129,73 @@ export default function Documents() {
         .eq('id', user.id)
         .single();
 
-      // 2. Récupérer le client
+      // 2. Récupérer le client (avec champs buyer detection)
       const { data: clientData } = await supabase
         .from('clients')
-        .select('id')
+        .select('id, type_recherche, journey_type')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      let buyer = false;
+      let pp: any = null;
       if (clientData) {
         setClientId(clientData.id);
+        // Charger le projet achat pour détecter acheteur
+        const { data: byUser } = await supabase
+          .from('purchase_projects')
+          .select('id, client_id, user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        pp = byUser;
+        if (!pp && clientData.id) {
+          const { data: byClient } = await supabase
+            .from('purchase_projects')
+            .select('id, client_id, user_id')
+            .eq('client_id', clientData.id)
+            .maybeSingle();
+          pp = byClient;
+        }
+        buyer = isPurchaseBuyer(clientData, pp);
+        setIsClientBuyer(buyer);
+        setPurchaseProjectId(pp?.id || null);
+        if (buyer) {
+          setSelectedType('piece_identite');
+        }
       }
 
       // 3. Charger les documents de la table documents
       let docsFromTable: any[] = [];
       if (clientData) {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('client_id', clientData.id)
-          .order('date_upload', { ascending: false });
+        if (buyer && pp?.id) {
+          // Rattacher les anciens docs sans purchase_project_id au projet achat
+          await supabase
+            .from('documents')
+            .update({ purchase_project_id: pp.id, purchase_category: 'autre' } as any)
+            .eq('client_id', clientData.id)
+            .is('purchase_project_id', null);
 
-        if (!error) docsFromTable = data || [];
+          // Charger uniquement les documents de ce projet achat
+          const { data, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('purchase_project_id', pp.id)
+            .order('date_upload', { ascending: false });
+
+          if (!error) docsFromTable = data || [];
+        } else if (!buyer) {
+          // Comportement location inchangé
+          const { data, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('client_id', clientData.id)
+            .order('date_upload', { ascending: false });
+
+          if (!error) docsFromTable = data || [];
+        }
       }
 
-      // 4. Si pas de documents dans la table, récupérer depuis demandes_mandat
-      if (docsFromTable.length === 0 && profileData?.email) {
+      // 4. Si pas de documents dans la table, récupérer depuis demandes_mandat (locataires uniquement)
+      if (!buyer && docsFromTable.length === 0 && profileData?.email) {
         console.log('No documents in table, fetching from demandes_mandat for email:', profileData.email);
         
         const { data: mandatData } = await supabase
@@ -251,6 +313,9 @@ export default function Documents() {
 
       if (uploadError) throw uploadError;
 
+      const purchaseCategory = isClientBuyer
+        ? (PURCHASE_DOC_CATEGORY_MAP[selectedType] || 'autre')
+        : null;
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
@@ -260,6 +325,8 @@ export default function Documents() {
           user_id: user!.id,
           client_id: clientId,
           type_document: selectedType,
+          purchase_project_id: isClientBuyer ? purchaseProjectId : null,
+          purchase_category: purchaseCategory,
           url: filePath,
         });
 
@@ -450,36 +517,111 @@ export default function Documents() {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
+      // Location
       'fiche_salaire': '💰 Fiche salaire',
       'extrait_poursuites': '📋 Extrait poursuites',
-      'piece_identite': '🪪 Pièce ID',
       'attestation_domicile': '🏠 Attestation domicile',
       'rc_menage': '🛡️ RC Ménage',
-      'contrat_travail': '📝 Contrat travail',
-      'attestation_employeur': '👔 Attestation employeur',
       'copie_bail': '📋 Copie bail',
       'attestation_garantie_loyer': '🔐 Garantie loyer',
+      // Commun
+      'piece_identite': '🪪 Pièce d\'identité',
+      'permis_sejour': '🪪 Permis de séjour',
+      'contrat_travail': '📝 Contrat travail',
+      'attestation_employeur': '👔 Attestation employeur',
       'dossier_complet': '📎 Dossier complet',
-      'autre': '📄 Autre'
+      // Achat — revenus
+      'certificat_salaire': '💰 Certificat de salaire',
+      'fiche_salaire_1': '💰 Fiche salaire 1',
+      'fiche_salaire_2': '💰 Fiche salaire 2',
+      'fiche_salaire_3': '💰 Fiche salaire 3',
+      // Achat — fonds propres
+      'releve_bancaire_fonds_propres': '🏦 Relevé bancaire FP',
+      'attestation_3a': '🏦 Attestation 3a',
+      'attestation_lpp': '🏦 Attestation LPP',
+      'attestation_epl': '🏦 Attestation EPL',
+      'attestation_libre_passage': '🏦 Libre passage',
+      'justificatif_placements': '📊 Justificatif placements',
+      'justificatif_donation': '🎁 Justificatif donation',
+      'justificatif_avance_hoirie': '🎁 Avance d\'hoirie',
+      // Achat — charges
+      'justificatif_credit_prive': '💳 Crédit privé',
+      'justificatif_leasing': '🚗 Leasing',
+      'justificatif_carte_credit': '💳 Carte de crédit',
+      'justificatif_pension_alimentaire': '👶 Pension alimentaire',
+      'justificatif_charges_fixes': '📊 Charges fixes',
+      // Achat — fiscalité
+      'decision_taxation': '📋 Décision de taxation',
+      'declaration_fiscale': '📋 Déclaration fiscale',
+      // Achat — autorisations
+      'accord_transmission': '✅ Accord transmission',
+      'consentement_donnees': '✅ Consentement données',
+      // Autre
+      'autre': '📄 Autre',
     };
-    return labels[type] || '📄 Autre';
+    return labels[type] || '📄 ' + (type || 'Autre').replace(/_/g, ' ');
   };
 
   const getTypeBadgeStyle = (type: string) => {
+    // Famille identité (bleu)
+    const identite = 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700';
+    // Famille revenus (vert émeraude)
+    const revenus = 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700';
+    // Famille fonds propres (ciel)
+    const fondsPropres = 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-700';
+    // Famille charges (orange)
+    const charges = 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700';
+    // Famille fiscalité (violet)
+    const fiscalite = 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700';
+    // Famille autorisation (indigo)
+    const autorisation = 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700';
+    // Famille location-spécifique
+    const locationStyle = 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700';
+    const autre = 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600';
+
     const styles: Record<string, string> = {
-      'fiche_salaire': 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700',
-      'extrait_poursuites': 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700',
-      'piece_identite': 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700',
-      'attestation_domicile': 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700',
+      // Identité
+      'piece_identite': identite,
+      'permis_sejour': identite,
+      // Revenus
+      'fiche_salaire': revenus,
+      'fiche_salaire_1': revenus,
+      'fiche_salaire_2': revenus,
+      'fiche_salaire_3': revenus,
+      'certificat_salaire': revenus,
+      'contrat_travail': revenus,
+      'attestation_employeur': revenus,
+      // Fonds propres
+      'releve_bancaire_fonds_propres': fondsPropres,
+      'attestation_3a': fondsPropres,
+      'attestation_lpp': fondsPropres,
+      'attestation_epl': fondsPropres,
+      'attestation_libre_passage': fondsPropres,
+      'justificatif_placements': fondsPropres,
+      'justificatif_donation': fondsPropres,
+      'justificatif_avance_hoirie': fondsPropres,
+      // Charges
+      'extrait_poursuites': charges,
+      'justificatif_credit_prive': charges,
+      'justificatif_leasing': charges,
+      'justificatif_carte_credit': charges,
+      'justificatif_pension_alimentaire': charges,
+      'justificatif_charges_fixes': charges,
+      // Fiscalité
+      'decision_taxation': fiscalite,
+      'declaration_fiscale': fiscalite,
+      // Autorisations
+      'accord_transmission': autorisation,
+      'consentement_donnees': autorisation,
+      // Location-spécifique
+      'attestation_domicile': locationStyle,
       'rc_menage': 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-950/50 dark:text-pink-300 dark:border-pink-700',
-      'contrat_travail': 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700',
-      'attestation_employeur': 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-950/50 dark:text-cyan-300 dark:border-cyan-700',
-      'copie_bail': 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700',
+      'copie_bail': locationStyle,
       'attestation_garantie_loyer': 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-700',
       'dossier_complet': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700',
-      'autre': 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600'
+      'autre': autre,
     };
-    return styles[type] || styles['autre'];
+    return styles[type] || autre;
   };
 
   const getFileIcon = (type: string) => {
@@ -568,40 +710,86 @@ export default function Documents() {
           </div>
         </div>
 
-        {/* Info banner modernisé */}
-        <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
-          <CardContent className="relative flex items-start gap-4 pt-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
-              <AlertCircle className="w-5 h-5 text-white" />
-            </div>
-            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
-              <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
-              <ul className="grid gap-2">
-                {[
-                  'Formulaire de demande de recherches dûment complété et signé',
-                  'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
-                  'Copie des 3 dernières fiches de salaire et du contrat de travail',
-                  'Attestation de l\'employeur',
-                  'Copie de la déclaration d\'impôts (si indépendant)',
-                  'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
-                  'Attestation de domicile ou d\'établissement de la commune actuelle',
-                  'Copie de la RC-ménage (assurance responsabilité civile)'
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
-                Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Info banner — conditionnel acheteur / locataire */}
+        {isClientBuyer ? (
+          <Card className="relative overflow-hidden border-sky-200/50 bg-gradient-to-br from-sky-50/80 to-sky-50/30 dark:from-sky-950/50 dark:to-sky-950/20 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-100/50 via-transparent to-transparent dark:from-sky-900/30" />
+            <CardContent className="relative flex items-start gap-4 pt-6">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-sky-500/25">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-sm text-sky-800 dark:text-sky-200 space-y-3">
+                <p className="font-semibold text-base">Documents requis pour votre dossier d'achat immobilier :</p>
+                <ul className="grid gap-2">
+                  {[
+                    "Pièce d'identité (passeport / carte d'identité)",
+                    'Permis de séjour (si applicable)',
+                    'Certificat de salaire annuel',
+                    '3 dernières fiches de salaire',
+                    'Contrat de travail',
+                    'Attestation employeur (si nécessaire)',
+                    'Relevé bancaire fonds propres',
+                    'Attestation 3e pilier (3a)',
+                    'Attestation LPP',
+                    'Attestation EPL / retrait pour logement principal',
+                    'Attestation libre passage',
+                    'Justificatif placements financiers',
+                    'Justificatif donation / avance d'hoirie',
+                    'Justificatif crédit privé',
+                    'Justificatif leasing',
+                    'Justificatif carte de crédit (mensualités)',
+                    'Justificatif pension alimentaire',
+                    'Dernière décision de taxation',
+                    'Déclaration fiscale (si nécessaire)',
+                    'Accord de transmission aux partenaires financiers',
+                    'Consentement traitement des données financières',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-sky-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
+            <CardContent className="relative flex items-start gap-4 pt-6">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
+                <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
+                <ul className="grid gap-2">
+                  {[
+                    'Formulaire de demande de recherches dûment complété et signé',
+                    'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
+                    'Copie des 3 dernières fiches de salaire et du contrat de travail',
+                    'Attestation de l\'employeur',
+                    'Copie de la déclaration d\'impôts (si indépendant)',
+                    'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
+                    'Attestation de domicile ou d\'établissement de la commune actuelle',
+                    'Copie de la RC-ménage (assurance responsabilité civile)'
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
+                  Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Documents demandés par l'agent */}
         {documentRequests.length > 0 && (
@@ -823,16 +1011,47 @@ export default function Documents() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
-                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
-                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
-                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
-                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
-                  <SelectItem value="autre">📄 Autre document</SelectItem>
+                  {isClientBuyer ? (
+                    <>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                      <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
+                      <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
+                      <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
+                      <SelectItem value="fiche_salaire_3">💰 Fiche de salaire 3</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
+                      <SelectItem value="attestation_3a">🏦 Attestation 3e pilier (3a)</SelectItem>
+                      <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
+                      <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
+                      <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
+                      <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
+                      <SelectItem value="justificatif_donation">🎁 Justificatif donation / hoirie</SelectItem>
+                      <SelectItem value="justificatif_credit_prive">💳 Justificatif crédit privé</SelectItem>
+                      <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
+                      <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
+                      <SelectItem value="justificatif_pension_alimentaire">👶 Pension alimentaire</SelectItem>
+                      <SelectItem value="decision_taxation">📋 Décision de taxation</SelectItem>
+                      <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
+                      <SelectItem value="accord_transmission">✅ Accord transmission partenaires</SelectItem>
+                      <SelectItem value="consentement_donnees">✅ Consentement données financières</SelectItem>
+                      <SelectItem value="autre">📄 Autre document achat</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                      <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                      <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                      <SelectItem value="autre">📄 Autre document</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

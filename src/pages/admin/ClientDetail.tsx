@@ -133,6 +133,7 @@ import {
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
+import { PurchaseClientDetailPremium } from '@/components/admin/purchase/PurchaseClientDetailPremium';
 import { isPurchaseBuyer } from '@/lib/journey';
 
 // Premium stat mini-card
@@ -390,17 +391,36 @@ export default function ClientDetail() {
 
       if (uploadError) throw uploadError;
 
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      const purchaseCategoryMap: Record<string, string> = {
+        piece_identite: 'identite', permis_sejour: 'identite',
+        certificat_salaire: 'revenus', fiche_salaire: 'revenus', fiche_salaire_2: 'revenus', fiche_salaire_3: 'revenus',
+        contrat_travail: 'revenus', attestation_employeur: 'revenus',
+        releve_bancaire_fonds_propres: 'fonds_propres', attestation_3a: 'fonds_propres', attestation_lpp: 'fonds_propres',
+        attestation_epl: 'fonds_propres', attestation_libre_passage: 'fonds_propres',
+        justificatif_placements: 'fonds_propres', justificatif_donation: 'fonds_propres',
+        justificatif_credit_prive: 'charges', justificatif_leasing: 'charges',
+        justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
+        decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+        accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
+      };
+
+      const isPurchaseDoc = isPurchaseEligible && purchaseHook.project?.id;
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
           nom: selectedFile.name,
           type: selectedFile.type,
           taille: selectedFile.size,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: currentUser?.id,
           client_id: client.id,
           type_document: selectedDocType,
           url: fileName,
-        });
+          ...(isPurchaseDoc ? {
+            purchase_project_id: purchaseHook.project!.id,
+            purchase_category: purchaseCategoryMap[selectedDocType] || 'autre',
+          } : {}),
+        } as any);
 
       if (dbError) throw dbError;
 
@@ -928,47 +948,165 @@ export default function ClientDetail() {
     }
   };
 
-  // ===== Parcours achat actif : remplace la fiche par les sections achat =====
-  if (purchaseHook.project) {
-    return (
-      <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="p-4 md:p-8 space-y-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Retour
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
-            <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
-          </div>
-          <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="admin" />
-        </div>
-      </div>
-    );
-  }
-
-  if (isPurchaseEligible) {
-    return (
-      <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="p-4 md:p-8 space-y-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Retour
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
-            <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
-          </div>
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3 animate-fade-in">
-            <div className="p-2 rounded-full bg-amber-500/20 shrink-0">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
+  // ===== Parcours achat : fiche admin premium acheteur =====
+  if (purchaseHook.project || isPurchaseEligible) {
+    // Si acheteur sans projet encore, proposer la création
+    if (!purchaseHook.project && isPurchaseEligible) {
+      return (
+        <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
+          <div className="p-4 md:p-8 space-y-6">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+            </Button>
             <div>
-              <p className="font-semibold text-amber-700 dark:text-amber-400">Projet d'achat en attente d'activation</p>
-              <p className="text-sm text-muted-foreground">Mandat achat : 6 mois. Le suivi opérationnel de 60 jours démarrera après activation par votre conseiller.</p>
+              <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
+              <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
             </div>
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3 animate-fade-in">
+              <div className="p-2 rounded-full bg-amber-500/20 shrink-0">
+                <Clock className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-amber-700 dark:text-amber-400">Projet d'achat en attente d'activation</p>
+                <p className="text-sm text-muted-foreground">Mandat achat : 6 mois. Le suivi opérationnel de 60 jours démarrera après activation par votre conseiller.</p>
+              </div>
+            </div>
+            <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
           </div>
-          <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <>
+        <PurchaseClientDetailPremium
+          client={client}
+          profile={profile}
+          agent={agent}
+          purchaseHook={purchaseHook}
+          navigate={navigate}
+          onInvite={handleInvite}
+          inviting={inviting}
+          onSendEmailOpen={() => setSendEmailDialogOpen(true)}
+          onSendMessage={handleSendMessage}
+          onEditOpen={handleEditClick}
+          onDeleteConfirm={handleDelete}
+          deleting={deleting}
+          onCreateInvoice={handleCreateAbaNinjaInvoice}
+          abaNinjaLoading={abaNinjaLoading}
+        />
+
+        {/* Buyer-specific dialogs — these must be rendered in the same component tree as the state */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <Edit className="w-5 h-5 text-primary" />
+                </div>
+                Modifier les informations du client
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Prénom *</Label>
+                  <Input
+                    value={editFormData.prenom || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
+                    placeholder="Prénom"
+                    className="bg-card/50 backdrop-blur-sm border-border/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nom *</Label>
+                  <Input
+                    value={editFormData.nom || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
+                    placeholder="Nom"
+                    className="bg-card/50 backdrop-blur-sm border-border/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    value={editFormData.email || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    placeholder="email@exemple.com"
+                    className="bg-card/50 backdrop-blur-sm border-border/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Téléphone</Label>
+                  <Input
+                    value={editFormData.telephone || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
+                    placeholder="+41 XX XXX XX XX"
+                    className="bg-card/50 backdrop-blur-sm border-border/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nationalité</Label>
+                  <Input
+                    value={editFormData.nationalite || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
+                    placeholder="Suisse"
+                    className="bg-card/50 backdrop-blur-sm border-border/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Statut client</Label>
+                  <Select
+                    value={editFormData.statut || 'actif'}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, statut: value })}
+                  >
+                    <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="actif">Actif</SelectItem>
+                      <SelectItem value="en_attente">En attente</SelectItem>
+                      <SelectItem value="inactif">Inactif</SelectItem>
+                      <SelectItem value="archive">Archivé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Notes internes</Label>
+                <textarea
+                  className="w-full min-h-[80px] rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  value={editFormData.notes_internes || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes_internes: e.target.value })}
+                  placeholder="Notes internes..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="bg-card/50">
+                Annuler
+              </Button>
+              <Button
+                onClick={handleEditSave}
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              >
+                Sauvegarder
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <SendEmailDialog
+          open={sendEmailDialogOpen}
+          onOpenChange={setSendEmailDialogOpen}
+          clientId={client.id}
+          clientName={`${profile.prenom} ${profile.nom}`}
+          clientEmail={profile.email}
+        />
+      </>
     );
   }
 
@@ -2855,16 +2993,49 @@ export default function ClientDetail() {
                   <SelectValue placeholder="Sélectionner le type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
-                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
-                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
-                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
-                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
-                  <SelectItem value="autre">📄 Autre</SelectItem>
+                  {isPurchaseEligible ? (
+                    // ── Documents achat ──
+                    <>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                      <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
+                      <SelectItem value="fiche_salaire">💰 Fiche de salaire (1)</SelectItem>
+                      <SelectItem value="fiche_salaire_2">💰 Fiche de salaire (2)</SelectItem>
+                      <SelectItem value="fiche_salaire_3">💰 Fiche de salaire (3)</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
+                      <SelectItem value="attestation_3a">🏦 Attestation 3e pilier</SelectItem>
+                      <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
+                      <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
+                      <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
+                      <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
+                      <SelectItem value="justificatif_donation">🎁 Justificatif donation / avance d'hoirie</SelectItem>
+                      <SelectItem value="justificatif_credit_prive">📋 Justificatif crédit privé</SelectItem>
+                      <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
+                      <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
+                      <SelectItem value="justificatif_pension_alimentaire">👶 Justificatif pension alimentaire</SelectItem>
+                      <SelectItem value="decision_taxation">📋 Dernière décision de taxation</SelectItem>
+                      <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
+                      <SelectItem value="accord_transmission">✅ Accord transmission partenaires financiers</SelectItem>
+                      <SelectItem value="consentement_donnees">✅ Consentement traitement données</SelectItem>
+                      <SelectItem value="autre">📄 Autre document achat</SelectItem>
+                    </>
+                  ) : (
+                    // ── Documents location ──
+                    <>
+                      <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                      <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                      <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                      <SelectItem value="autre">📄 Autre</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

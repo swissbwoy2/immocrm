@@ -20,6 +20,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +71,26 @@ export default function Dossier() {
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [editProfileDialogOpen, setEditProfileDialogOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState<string>('piece_identite');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Mapping type doc achat → purchase_category
+  const PURCHASE_DOC_CATEGORY_MAP: Record<string, string> = {
+    piece_identite: 'identite', permis_sejour: 'identite',
+    certificat_salaire: 'revenus', fiche_salaire_1: 'revenus', fiche_salaire_2: 'revenus',
+    fiche_salaire_3: 'revenus', fiche_salaire: 'revenus',
+    contrat_travail: 'revenus', attestation_employeur: 'revenus',
+    releve_bancaire_fonds_propres: 'fonds_propres', attestation_3a: 'fonds_propres',
+    attestation_lpp: 'fonds_propres', attestation_epl: 'fonds_propres',
+    attestation_libre_passage: 'fonds_propres', justificatif_placements: 'fonds_propres',
+    justificatif_donation: 'fonds_propres', justificatif_avance_hoirie: 'fonds_propres',
+    justificatif_credit_prive: 'charges', justificatif_leasing: 'charges',
+    justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
+    justificatif_charges_fixes: 'charges',
+    decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
+    autre: 'autre',
+  };
   const [loading, setLoading] = useState(true);
   
   // Hooks pour la gestion des candidats et solvabilité
@@ -178,7 +199,7 @@ export default function Dossier() {
       if (isBuyerForDocs && purchaseProjectForDocs?.id) {
         await supabase
           .from('documents')
-          .update({ purchase_project_id: purchaseProjectForDocs.id, purchase_category: 'autres_documents_bancaires' } as any)
+          .update({ purchase_project_id: purchaseProjectForDocs.id, purchase_category: 'autre' } as any)
           .eq('user_id', user.id)
           .is('purchase_project_id', null);
       }
@@ -245,6 +266,9 @@ export default function Dossier() {
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
+        const purchaseCategory = isAcheteur
+          ? (PURCHASE_DOC_CATEGORY_MAP[selectedDocType] || 'autre')
+          : null;
         const { error } = await supabase
           .from('documents')
           .insert({
@@ -254,8 +278,8 @@ export default function Dossier() {
             user_id: user!.id,
             client_id: client.id,
             purchase_project_id: isAcheteur ? purchaseHook.project?.id || null : null,
-            purchase_category: isAcheteur ? 'autres_documents_bancaires' : null,
-            type_document: isAcheteur ? 'autre' : undefined,
+            purchase_category: purchaseCategory,
+            type_document: isAcheteur ? selectedDocType : undefined,
             url: e.target?.result as string,
           });
 
@@ -433,22 +457,33 @@ export default function Dossier() {
     const financingComplete = !!computed && (financing?.revenu_annuel_retenu || 0) > 0 && (financing?.prix_cible || 0) > 0;
     const fmt = (value?: number | null) => formatCHF(value || 0);
     const achatDocuments = [
-      "Pièce d'identité",
-      'Permis de séjour si applicable',
-      'Certificat de salaire annuel',
-      '3 dernières fiches de salaire',
-      'Contrat de travail',
-      'Attestation employeur si nécessaire',
-      'Relevés bancaires des fonds propres',
-      'Attestation 3e pilier',
-      'Attestation LPP',
-      'Attestation EPL / retrait possible pour logement principal',
-      'Justificatifs crédits privés',
-      'Justificatifs leasing',
-      'Justificatifs cartes de crédit avec mensualités',
-      'Dernière décision de taxation',
-      'Accord de transmission du dossier aux partenaires financiers',
-      'Autres documents bancaires',
+      // Identité
+      { label: "Pièce d'identité (passeport / carte d'identité)", category: 'Identité' },
+      { label: 'Permis de séjour (si applicable)', category: 'Identité' },
+      // Revenus
+      { label: 'Certificat de salaire annuel', category: 'Revenus' },
+      { label: 'Fiche de salaire (3 derniers mois)', category: 'Revenus' },
+      { label: 'Contrat de travail', category: 'Revenus' },
+      { label: "Attestation employeur (si nécessaire)", category: 'Revenus' },
+      // Fonds propres
+      { label: 'Relevé bancaire fonds propres', category: 'Fonds propres' },
+      { label: 'Attestation 3e pilier (3a)', category: 'Fonds propres' },
+      { label: 'Attestation LPP', category: 'Fonds propres' },
+      { label: 'Attestation EPL / retrait pour logement principal', category: 'Fonds propres' },
+      { label: 'Attestation libre passage', category: 'Fonds propres' },
+      { label: 'Justificatif placements financiers', category: 'Fonds propres' },
+      { label: 'Justificatif donation / avance d'hoirie', category: 'Fonds propres' },
+      // Charges
+      { label: 'Justificatif crédit privé', category: 'Charges' },
+      { label: 'Justificatif leasing', category: 'Charges' },
+      { label: 'Justificatif carte de crédit (mensualités)', category: 'Charges' },
+      { label: 'Justificatif pension alimentaire', category: 'Charges' },
+      // Fiscalité
+      { label: 'Dernière décision de taxation', category: 'Fiscalité' },
+      { label: 'Déclaration fiscale (si nécessaire)', category: 'Fiscalité' },
+      // Autorisations
+      { label: 'Accord de transmission aux partenaires financiers', category: 'Autorisations' },
+      { label: 'Consentement traitement des données financières', category: 'Autorisations' },
     ];
 
     return (
@@ -471,7 +506,7 @@ export default function Dossier() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
                   <CardTitle>{isActive ? "Projet d'achat actif" : "Projet d'achat en attente d'activation"}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Durée contractuelle du mandat achat : 6 mois, environ 180 jours.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Durée contractuelle du mandat achat : 6 mois · Suivi opérationnel : 60 jours après activation.</p>
                 </div>
                 <Badge variant={isActive ? 'default' : 'secondary'}>{isActive ? 'Actif' : 'En attente'}</Badge>
               </div>
@@ -538,14 +573,26 @@ export default function Dossier() {
               </Button>
             }
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
-              {achatDocuments.map((label) => (
-                <div key={label} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
-                  <FileText className="w-4 h-4 text-primary" />
-                  <span className="text-sm">{label}</span>
+            {(() => {
+              const categories = [...new Set(achatDocuments.map(d => d.category))];
+              return (
+                <div className="space-y-4 mb-6">
+                  {categories.map(cat => (
+                    <div key={cat}>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{cat}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {achatDocuments.filter(d => d.category === cat).map(doc => (
+                          <div key={doc.label} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/30 hover:border-primary/30 transition-colors">
+                            <FileText className="w-4 h-4 text-primary shrink-0" />
+                            <span className="text-sm">{doc.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
             {documents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {documents.map((doc, index) => (
@@ -569,12 +616,46 @@ export default function Dossier() {
         </div>
 
         {/* Upload Dialog achat */}
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <Dialog open={uploadDialogOpen} onOpenChange={(open) => { setUploadDialogOpen(open); if (!open) setSelectedDocType('piece_identite'); }}>
           <DialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><Upload className="w-5 h-5 text-primary" />Ajouter un document achat</DialogTitle>
               <DialogDescription>Formats acceptés : PDF, JPG, PNG (max 5 MB)</DialogDescription>
             </DialogHeader>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Type de document</Label>
+              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
+                  <SelectValue placeholder="Choisir le type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                  <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                  <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
+                  <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
+                  <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
+                  <SelectItem value="fiche_salaire_3">💰 Fiche de salaire 3</SelectItem>
+                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                  <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
+                  <SelectItem value="attestation_3a">🏦 Attestation 3e pilier (3a)</SelectItem>
+                  <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
+                  <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
+                  <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
+                  <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
+                  <SelectItem value="justificatif_donation">🎁 Justificatif donation / hoirie</SelectItem>
+                  <SelectItem value="justificatif_credit_prive">💳 Justificatif crédit privé</SelectItem>
+                  <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
+                  <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
+                  <SelectItem value="justificatif_pension_alimentaire">👶 Justificatif pension alimentaire</SelectItem>
+                  <SelectItem value="decision_taxation">📋 Décision de taxation</SelectItem>
+                  <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
+                  <SelectItem value="accord_transmission">✅ Accord de transmission partenaires</SelectItem>
+                  <SelectItem value="consentement_donnees">✅ Consentement traitement données</SelectItem>
+                  <SelectItem value="autre">📄 Autre document achat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${dragActive ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"><Upload className="w-8 h-8 text-primary" /></div>
               <p className="text-sm font-medium mb-2">Glissez-déposez votre fichier ici</p>
