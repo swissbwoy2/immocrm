@@ -28,8 +28,6 @@ export interface PurchaseProject {
   conditions_resiliation: string | null;
   conditions_remboursement: string | null;
   notes_internes: string | null;
-  partenaire_bancaire?: string | null;
-  statut_bancaire?: string | null;
   created_at: string;
   updated_at: string;
 }
