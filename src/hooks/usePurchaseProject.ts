@@ -28,6 +28,8 @@ export interface PurchaseProject {
   conditions_resiliation: string | null;
   conditions_remboursement: string | null;
   notes_internes: string | null;
+  partenaire_bancaire?: string | null;
+  statut_bancaire?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +48,18 @@ export interface UsePurchaseProjectResult {
   documents: any[];
   agent: any | null;
   reload: () => Promise<void>;
+  // mutations
+  createProject: (clientId: string, userId: string | null, agentId: string | null) => Promise<string | null>;
+  updateProject: (patch: Partial<PurchaseProject>) => Promise<void>;
+  updateFinancing: (patch: Record<string, any>) => Promise<void>;
+  upsertProperty: (row: any) => Promise<void>;
+  deleteProperty: (id: string) => Promise<void>;
+  upsertVisitReport: (row: any) => Promise<void>;
+  deleteVisitReport: (id: string) => Promise<void>;
+  upsertNegotiation: (row: any) => Promise<void>;
+  deleteNegotiation: (id: string) => Promise<void>;
+  upsertNotary: (row: any) => Promise<void>;
+  updateStep: (id: string, patch: any) => Promise<void>;
 }
 
 export function usePurchaseProject(opts: { userId?: string | null; clientId?: string | null }): UsePurchaseProjectResult {
@@ -63,17 +77,13 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
 
   const reload = useCallback(async () => {
     setLoading(true);
-    // Settings (toujours, modifiables côté admin)
     const { data: settingsRows } = await supabase.from('purchase_financing_settings').select('key,value');
     if (settingsRows && settingsRows.length > 0) {
       const s = { ...DEFAULT_FINANCING_SETTINGS };
-      settingsRows.forEach((r: any) => {
-        if (r.key in s) (s as any)[r.key] = Number(r.value);
-      });
+      settingsRows.forEach((r: any) => { if (r.key in s) (s as any)[r.key] = Number(r.value); });
       setSettings(s);
     }
 
-    // Projet
     let q = supabase.from('purchase_projects').select('*').order('created_at', { ascending: false }).limit(1);
     if (opts.clientId) q = q.eq('client_id', opts.clientId);
     else if (opts.userId) q = q.eq('user_id', opts.userId);
@@ -82,10 +92,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     const { data: prj } = await q.maybeSingle();
     setProject(prj as any);
 
-    if (!prj) {
-      setLoading(false);
-      return;
-    }
+    if (!prj) { setLoading(false); return; }
 
     const projectId = (prj as any).id;
     const [fin, props, visits, negos, not, stepsRes, docs] = await Promise.all([
@@ -126,7 +133,113 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
 
   const computed = financing ? computeFinancing(financing, settings) : null;
 
-  return { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent, reload };
+  const createProject = useCallback(async (clientId: string, userId: string | null, agentId: string | null) => {
+    // idempotent: skip if active project already exists
+    const { data: existing } = await supabase
+      .from('purchase_projects').select('id').eq('client_id', clientId).maybeSingle();
+    if (existing?.id) return existing.id;
+
+    const { data: created, error } = await supabase
+      .from('purchase_projects')
+      .insert({
+        client_id: clientId,
+        user_id: userId,
+        assigned_agent_id: agentId,
+        statut: 'actif',
+        duree_progression_jours: 60,
+        date_debut_progression: new Date().toISOString().slice(0, 10),
+      })
+      .select('id').single();
+    if (error || !created) { console.error(error); return null; }
+
+    const projectId = created.id;
+    // 17 steps
+    const stepsPayload = ACHAT_STEPS.map((s) => ({
+      project_id: projectId, key: s.key, label: s.label, ordre: s.ordre, statut: 'a_faire',
+    }));
+    await supabase.from('purchase_project_steps').insert(stepsPayload);
+    await supabase.from('purchase_financing_profiles').insert({ project_id: projectId });
+    await reload();
+    return projectId;
+  }, [reload]);
+
+  const updateProject = useCallback(async (patch: Partial<PurchaseProject>) => {
+    if (!project) return;
+    await supabase.from('purchase_projects').update(patch).eq('id', project.id);
+    await reload();
+  }, [project, reload]);
+
+  const updateFinancing = useCallback(async (patch: Record<string, any>) => {
+    if (!project) return;
+    if (financing?.id) {
+      await supabase.from('purchase_financing_profiles').update(patch).eq('id', financing.id);
+    } else {
+      await supabase.from('purchase_financing_profiles').insert({ project_id: project.id, ...patch });
+    }
+    await reload();
+  }, [project, financing, reload]);
+
+  const upsertProperty = useCallback(async (row: any) => {
+    if (!project) return;
+    const payload = { ...row, project_id: project.id };
+    if (row.id) await supabase.from('purchase_selected_properties').update(payload).eq('id', row.id);
+    else await supabase.from('purchase_selected_properties').insert(payload);
+    await reload();
+  }, [project, reload]);
+
+  const deleteProperty = useCallback(async (id: string) => {
+    await supabase.from('purchase_selected_properties').delete().eq('id', id);
+    await reload();
+  }, [reload]);
+
+  const upsertVisitReport = useCallback(async (row: any) => {
+    if (!project) return;
+    const payload = { ...row, project_id: project.id };
+    if (row.id) await supabase.from('purchase_visit_reports').update(payload).eq('id', row.id);
+    else await supabase.from('purchase_visit_reports').insert(payload);
+    await reload();
+  }, [project, reload]);
+
+  const deleteVisitReport = useCallback(async (id: string) => {
+    await supabase.from('purchase_visit_reports').delete().eq('id', id);
+    await reload();
+  }, [reload]);
+
+  const upsertNegotiation = useCallback(async (row: any) => {
+    if (!project) return;
+    const payload = { ...row, project_id: project.id };
+    if (row.id) await supabase.from('purchase_negotiations').update(payload).eq('id', row.id);
+    else await supabase.from('purchase_negotiations').insert(payload);
+    await reload();
+  }, [project, reload]);
+
+  const deleteNegotiation = useCallback(async (id: string) => {
+    await supabase.from('purchase_negotiations').delete().eq('id', id);
+    await reload();
+  }, [reload]);
+
+  const upsertNotary = useCallback(async (row: any) => {
+    if (!project) return;
+    const payload = { ...row, project_id: project.id };
+    if (notary?.id) await supabase.from('purchase_notary_steps').update(payload).eq('id', notary.id);
+    else await supabase.from('purchase_notary_steps').insert(payload);
+    await reload();
+  }, [project, notary, reload]);
+
+  const updateStep = useCallback(async (id: string, patch: any) => {
+    await supabase.from('purchase_project_steps').update(patch).eq('id', id);
+    await reload();
+  }, [reload]);
+
+  return {
+    loading, project, financing, computed, settings,
+    properties, visitReports, negotiations, notary, steps, documents, agent, reload,
+    createProject, updateProject, updateFinancing,
+    upsertProperty, deleteProperty,
+    upsertVisitReport, deleteVisitReport,
+    upsertNegotiation, deleteNegotiation,
+    upsertNotary, updateStep,
+  };
 }
 
 export { ACHAT_STEPS, computeProgression };
