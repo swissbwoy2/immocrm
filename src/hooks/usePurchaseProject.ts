@@ -204,6 +204,13 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     await supabase.from('purchase_project_steps').upsert(stepsPayload, { onConflict: 'project_id,step_key', ignoreDuplicates: true });
     const { data: existingFin } = await supabase.from('purchase_financing_profiles').select('id').eq('project_id', projectId).maybeSingle();
     if (!existingFin?.id) await supabase.from('purchase_financing_profiles').insert({ project_id: projectId, statut_bancaire: 'a_evaluer' } as any);
+    if (userId) {
+      await supabase
+        .from('documents')
+        .update({ purchase_project_id: projectId, purchase_category: 'autres_documents_bancaires' } as any)
+        .eq('user_id', userId)
+        .is('purchase_project_id', null);
+    }
     await reload();
     return projectId;
   }, [reload]);
