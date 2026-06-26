@@ -72,6 +72,7 @@ interface Client {
   profession?: string;
   type_bien?: string;
   type_recherche?: string;
+  journey_type?: string;
   source_revenus?: string;
   anciennete_mois?: number;
   created_at?: string;
