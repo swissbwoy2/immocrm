@@ -368,7 +368,7 @@ function DocActionRow({ doc, onChange }: { doc: any; onChange: () => Promise<voi
           <FileText className="h-4 w-4 text-sky-600 shrink-0" />
           <span className="text-sm truncate">{doc.nom}</span>
           {doc.purchase_category && <Badge variant="outline" className="text-[10px]">{doc.purchase_category}</Badge>}
-          {doc.statut_admin && <Badge className={`text-[10px] border-0 ${statutColor[doc.statut_admin] || 'bg-zinc-100 text-zinc-700'}`}>{doc.statut_admin}</Badge>}
+          {doc.statut && <Badge className={`text-[10px] border-0 ${statutColor[doc.statut] || 'bg-zinc-100 text-zinc-700'}`}>{doc.statut}</Badge>}
         </div>
         <div className="flex items-center gap-1 flex-wrap">
           <Button size="sm" variant="ghost" onClick={view}>Voir</Button>
