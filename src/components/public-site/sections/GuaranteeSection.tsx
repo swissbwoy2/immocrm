@@ -21,9 +21,9 @@ export function GuaranteeSection() {
     { icon: RefreshCcw, label: 'Échec après 3 mois ?', value: 'Remboursement', description: 'Intégral. Sans condition.' },
   ];
   const pricingItemsAchat = [
-    { icon: Wallet, label: 'Acompte', value: "2'500 CHF", description: 'Déduit de la commission finale' },
+    { icon: Wallet, label: 'Acompte', value: "2'499 CHF (sur 4'999)", description: 'Déduit de la commission finale' },
     { icon: CheckCircle, label: 'Commission', value: '1% du prix', description: "De l'achat, acompte déduit" },
-    { icon: RefreshCcw, label: 'Échec après 6 mois ?', value: 'Remboursement', description: "Intégral des 2'500 CHF" },
+    { icon: RefreshCcw, label: 'Échec après 6 mois ?', value: 'Remboursement', description: "Intégral de l'acompte 2'499 CHF" },
   ];
   const pricingItems = isAchat ? pricingItemsAchat : pricingItemsLocation;
 
@@ -41,7 +41,7 @@ export function GuaranteeSection() {
               {isAchat ? 'Commission transparente de 1% 🏡' : <>Tellement confiant qu'on te <span className="luxury-gradient-text">rembourse</span></>}
             </h2>
             <p className="text-muted-foreground">
-              {isAchat ? "Acompte de 2'500 CHF déduit de ta commission finale." : 'Échec après 3 mois ? Remboursement intégral ! 💪'}
+              {isAchat ? "Acompte de 2'499 CHF déduit du prix total de 4'999 CHF." : 'Échec après 3 mois ? Remboursement intégral ! 💪'}
             </p>
           </ScrollReveal>
 
@@ -113,7 +113,7 @@ export function GuaranteeSection() {
                   </h3>
                   <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                     {isAchat ? (
-                      <>Mandat de <strong className="text-foreground">6 mois</strong> : on cherche activement ton bien idéal.<br /><strong className="text-foreground">Pas de bien trouvé ? Acompte de 2'500 CHF intégralement remboursé.</strong></>
+                      <>Mandat de <strong className="text-foreground">6 mois</strong> : on cherche activement ton bien idéal.<br /><strong className="text-foreground">Pas de bien trouvé ? Acompte de 2'499 CHF intégralement remboursé.</strong></>
                     ) : (
                       <>Après ta shortlist personnalisée, tu peux nous confier ta recherche pendant <strong className="text-foreground">90 jours</strong>.<br />Pas de bail signé ? <strong className="text-foreground">Remboursement intégral. Sans condition.</strong></>
                     )}

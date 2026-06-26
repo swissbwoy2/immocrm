@@ -27,7 +27,7 @@ const shortComparisonDataAchat = [
   { aspect: 'Accès off-market', logisorama: 'Biens exclusifs avant publication, réseau de vendeurs privés.', solo: 'Que les annonces publiques, déjà vues par tout le monde.', icon: Key },
   { aspect: 'Négociation experte', logisorama: 'On négocie le prix pour toi avec notre expertise du marché.', solo: 'Tu fais face seul aux vendeurs, sans savoir les prix réels.', icon: Handshake },
   { aspect: 'Financement optimisé', logisorama: 'Partenaires bancaires pour les meilleurs taux hypothécaires.', solo: 'Tu démarches seul les banques, sans pouvoir de négociation.', icon: Landmark },
-  { aspect: 'Commission transparente', logisorama: "1% du prix d'achat, acompte de 2'500 CHF déduit. Remboursé après 6 mois.", solo: "Tu paies 3-5% de commission à l'agence, sans garantie.", icon: PiggyBank },
+  { aspect: 'Commission transparente', logisorama: "Prix forfaitaire 4'999 CHF TTC. Acompte d'activation 2'499 CHF (déduit). Solde 2'500 CHF uniquement en cas de succès.", solo: "Tu paies 3-5% de commission à l'agence, sans garantie.", icon: PiggyBank },
 ];
 const fullComparisonDataAchat = [
   { aspect: 'Évaluation du bien', logisorama: 'Analyse complète : état, charges, potentiel, risques cachés.', solo: 'Tu te fies à la description du vendeur, souvent incomplète.', icon: Search },
@@ -52,7 +52,7 @@ export function DifferentiatorSection() {
     cta: isAchat ? 'Trouver mon bien !' : 'Je me lance !',
     ctaLink: isAchat ? '#quickform' : '/nouveau-mandat',
     guarantee: isAchat
-      ? "Commission 1% • Acompte 2'500 CHF déduit • Remboursé après 6 mois"
+      ? "Forfait 4'999 CHF • Acompte 2'499 CHF (déduit) • Solde 2'500 CHF si succès"
       : '90 jours pour trouver • Remboursement intégral si échec',
   };
 

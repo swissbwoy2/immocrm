@@ -74,7 +74,7 @@ const shortComparisonDataAchat = [{
   icon: Landmark
 }, {
   aspect: "Commission transparente",
-  logisorama: "1% du prix d'achat, acompte de 2'500 CHF déduit. Remboursé après 6 mois.",
+  logisorama: "Prix forfaitaire 4'999 CHF TTC. Acompte d'activation 2'499 CHF (déduit). Solde 2'500 CHF uniquement en cas de succès.",
   solo: "Tu paies 3-5% de commission à l'agence, sans garantie.",
   icon: PiggyBank
 }];
@@ -124,7 +124,7 @@ export function DifferentiationSection() {
     cta: isAchat ? "Trouver mon bien !" : "Je me lance !",
     ctaLink: isAchat ? "#quickform" : "/nouveau-mandat",
     guarantee: isAchat 
-      ? "Commission 1% • Acompte 2'500 CHF déduit • Remboursé après 6 mois"
+      ? "Forfait 4'999 CHF • Acompte 2'499 CHF (déduit) • Solde 2'500 CHF si succès"
       : "90 jours pour trouver • Remboursement intégral si échec",
   };
   
