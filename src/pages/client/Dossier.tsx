@@ -472,7 +472,7 @@ export default function Dossier() {
       { label: 'Attestation EPL / retrait pour logement principal', category: 'Fonds propres' },
       { label: 'Attestation libre passage', category: 'Fonds propres' },
       { label: 'Justificatif placements financiers', category: 'Fonds propres' },
-      { label: 'Justificatif donation / avance d'hoirie', category: 'Fonds propres' },
+      { label: "Justificatif donation / avance d'hoirie", category: 'Fonds propres' },
       // Charges
       { label: 'Justificatif crédit privé', category: 'Charges' },
       { label: 'Justificatif leasing', category: 'Charges' },
@@ -506,7 +506,7 @@ export default function Dossier() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
                   <CardTitle>{isActive ? "Projet d'achat actif" : "Projet d'achat en attente d'activation"}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Durée contractuelle du mandat achat : 6 mois · Suivi opérationnel : 60 jours après activation.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Durée contractuelle du mandat achat : 6 mois à compter de l'activation par Immo-Rama.ch.</p>
                 </div>
                 <Badge variant={isActive ? 'default' : 'secondary'}>{isActive ? 'Actif' : 'En attente'}</Badge>
               </div>
@@ -519,11 +519,11 @@ export default function Dossier() {
                     <span>{progression.jourActuel}/{progression.dureeJours} jours</span>
                   </div>
                   <Progress value={progression.pourcentage} className="h-3" />
-                  <p className="text-xs text-muted-foreground">Barre opérationnelle 60 jours après activation admin.</p>
+                  <p className="text-xs text-muted-foreground">Progression du mandat après activation.</p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm">
-                  Le suivi opérationnel de 60 jours démarrera après activation par votre conseiller.
+                  Votre suivi démarrera après activation par votre conseiller.
                 </div>
               )}
             </CardContent>

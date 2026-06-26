@@ -283,7 +283,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     await reload();
   }, [reload]);
 
-  // 🆕 Activation explicite par l'admin : passe le projet en "actif" et démarre la barre 60j.
+  // 🆕 Activation explicite par l'admin : passe le projet en "actif" et démarre la progression (mandat 6 mois).
   const activateProject = useCallback(async () => {
     if (!project) return;
     await supabase.from('purchase_projects').update({

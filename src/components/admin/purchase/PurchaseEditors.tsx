@@ -361,7 +361,7 @@ export function ProjectMetaEditorDialog({ project, onSave }: { project: any; onS
           <NumField label="Montant acompte" value={p.montant_acompte} onChange={set('montant_acompte')} suffix="CHF" />
           <TxtField label="Date signature mandat" value={p.date_signature_mandat} onChange={set('date_signature_mandat')} type="date" />
           <TxtField label="Date paiement acompte" value={p.date_paiement_acompte} onChange={set('date_paiement_acompte')} type="date" />
-          <TxtField label="Date début progression (60j)" value={p.date_debut_progression} onChange={set('date_debut_progression')} type="date" />
+          <TxtField label="Date début progression" value={p.date_debut_progression} onChange={set('date_debut_progression')} type="date" />
           <AreaField label="Conditions de renouvellement" value={p.conditions_renouvellement} onChange={set('conditions_renouvellement')} />
           <AreaField label="Conditions de résiliation" value={p.conditions_resiliation} onChange={set('conditions_resiliation')} />
           <AreaField label="Conditions de remboursement" value={p.conditions_remboursement} onChange={set('conditions_remboursement')} />

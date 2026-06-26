@@ -48,7 +48,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Notre équipe vérifie votre dossier, votre mandat signé et le règlement de l'acompte <strong>CHF 2&apos;499.–</strong>.
-                Dès activation, votre barre de progression <strong>60 jours</strong> démarrera automatiquement.
+                Dès activation, votre suivi achat démarrera automatiquement.
               </p>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Mandat signé électroniquement ✓</li>

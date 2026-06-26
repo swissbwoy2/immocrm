@@ -1,9 +1,10 @@
-import { MandatFormData, TYPES_BIEN, REGIONS, DECOUVERTES_AGENCE } from '../types';
+import { MandatFormData, TYPES_BIEN, DECOUVERTES_AGENCE } from '../types';
 import { LandingInput } from '@/components/forms-premium/LandingInput';
 import { LandingSelect } from '@/components/forms-premium/LandingSelect';
 import { LandingTextarea } from '@/components/forms-premium/LandingTextarea';
 import { LandingRadioGroup } from '@/components/forms-premium/LandingRadioGroup';
-import { Building2, MapPin, Calendar, Target } from 'lucide-react';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
+import { Building2, Calendar, MapPin, Target } from 'lucide-react';
 
 interface Props {
   data: MandatFormData;
@@ -53,22 +54,28 @@ export default function MandatAchatStepProject({ data, onChange }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <LandingSelect
-          label="Région recherchée"
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-foreground flex items-center gap-1">
+          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+          Région / commune recherchée <span className="text-destructive ml-0.5">*</span>
+        </label>
+        <GooglePlacesAutocomplete
           value={data.region_recherche}
-          onValueChange={(v) => onChange({ region_recherche: v })}
-          options={REGIONS.map((r) => ({ value: r, label: r }))}
-          required
+          onChange={(v) => onChange({ region_recherche: v })}
+          placeholder="Ex: Lausanne, Morges, Nyon, Genève, Pully..."
+          types={['locality', 'sublocality', 'administrative_area_level_1', 'administrative_area_level_2', 'postal_code']}
+          restrictToSwitzerland={true}
         />
-        <LandingInput
-          label="Surface minimum (m²)"
-          type="number"
-          value={data.surface_souhaitee || ''}
-          onChange={(e) => onChange({ surface_souhaitee: Number(e.target.value) || 0 })}
-          placeholder="ex. 90"
-        />
+        <p className="text-xs text-muted-foreground">Tapez librement une commune, ville, quartier, région ou district suisse</p>
       </div>
+
+      <LandingInput
+        label="Surface minimum (m²)"
+        type="number"
+        value={data.surface_souhaitee || ''}
+        onChange={(e) => onChange({ surface_souhaitee: Number(e.target.value) || 0 })}
+        placeholder="ex. 90"
+      />
 
       <LandingRadioGroup
         label="Usage du bien"

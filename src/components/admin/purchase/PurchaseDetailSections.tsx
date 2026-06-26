@@ -58,12 +58,12 @@ export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
                 <Badge className="bg-amber-100 text-amber-700 border-0">En attente</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Validez le dossier, le mandat et l'acompte CHF 2'499.– puis activez le parcours. La barre de progression 60 jours démarrera automatiquement.
+                Validez le dossier, le mandat et l'acompte CHF 2'499.– puis activez le parcours. Le suivi achat (mandat 6 mois) démarrera automatiquement.
               </p>
             </div>
             <Button
               className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={async () => { await h.activateProject(); toast.success('Parcours achat activé · barre 60j démarrée'); }}
+              onClick={async () => { await h.activateProject(); toast.success('Parcours achat activé'); }}
             >
               <Sparkles className="h-4 w-4 mr-2" /> Activer le parcours achat
             </Button>
@@ -82,7 +82,7 @@ export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
           </div>
           <p className="text-sm text-muted-foreground mb-3">
             {isPending
-              ? 'Mandat achat : 6 mois · Le suivi opérationnel 60 jours démarrera après activation admin.'
+              ? 'Mandat achat : 6 mois · Le suivi achat démarrera après activation admin.'
               : `Mandat achat : 6 mois · Suivi opérationnel jour ${prog.jourActuel}/${prog.dureeJours} · ${prog.jourRestant} jours restants · ${doneSteps}/${h.steps.length} étapes complétées`}
           </p>
           {!isPending && <Progress value={prog.pourcentage} className="h-2 mb-4" />}

@@ -28,7 +28,7 @@ export function AchatProgressionBar({ dateDebut, dureeJours = 60, stepsDone = 0 
       <div className="flex items-center justify-between text-sm text-muted-foreground flex-wrap gap-2">
         <div className="flex items-center gap-1.5">
           <Calendar className="h-4 w-4" />
-          <span>{jourRestant} jour{jourRestant > 1 ? 's' : ''} restant{jourRestant > 1 ? 's' : ''} sur votre suivi de 60 jours</span>
+          <span>{jourRestant} jour{jourRestant > 1 ? 's' : ''} restant{jourRestant > 1 ? 's' : ''} sur votre mandat de 6 mois</span>
         </div>
         <div className="flex items-center gap-1.5">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -36,9 +36,7 @@ export function AchatProgressionBar({ dateDebut, dureeJours = 60, stepsDone = 0 
         </div>
       </div>
       <p className="text-xs text-muted-foreground mt-3">
-        Votre projet d'achat avance étape par étape avec Immo-Rama. La durée de 60 jours correspond à votre progression
-        opérationnelle visible ; le mandat, son renouvellement et les conditions de remboursement éventuel sont régis
-        séparément par votre contrat.
+        Votre projet d'achat avance étape par étape avec Immo-Rama. Le mandat d'accompagnement à l'achat est conclu pour une durée de 6 mois à compter de son activation par Immo-Rama.ch.
       </p>
     </Card>
   );
