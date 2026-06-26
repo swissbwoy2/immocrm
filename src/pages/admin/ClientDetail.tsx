@@ -130,6 +130,9 @@ import {
   ReletterDossiersTransmisCard,
   ReletterAddressBadge,
 } from '@/components/admin/ReletterDetailSections';
+import { usePurchaseProject } from '@/hooks/usePurchaseProject';
+import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
+import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 
 // Premium stat mini-card
 const PremiumStatCard = ({ 
