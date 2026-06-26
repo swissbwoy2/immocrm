@@ -8,6 +8,19 @@ const corsHeaders = {
 
 const DEFAULT_APP_URL = 'https://logisorama.ch';
 
+const normalizeJourneyValue = (value?: string | null) => (value || '')
+  .toString()
+  .trim()
+  .toLowerCase()
+  .replace(/[\s-]+/g, '_');
+
+const isBuyerType = (value?: string | null) => {
+  const normalized = normalizeJourneyValue(value);
+  return ['acheter', 'achat', 'purchase', 'purchase_search'].includes(normalized);
+};
+
+const normalizeTypeRecherche = (value?: string | null) => isBuyerType(value) ? 'Acheter' : 'Louer';
+
 const getAppBaseUrl = (req: Request) => {
   const origin = req.headers.get('origin');
   if (origin) return origin.replace(/\/$/, '');
@@ -142,6 +155,8 @@ interface InviteClientRequest {
   demandeMandat?: DemandeMandat;
   invitationLegere?: boolean;
   typeRecherche?: string;
+  journeyType?: string;
+  createPurchaseProject?: boolean;
   /** Optional: id of the agents row to auto-assign as primary agent */
   agentId?: string;
   /** 🆕 Bloc achat — déclenche création purchase_project + financing + steps */
@@ -155,11 +170,13 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId, purchaseProfile }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, journeyType, createPurchaseProject, agentId, purchaseProfile }: InviteClientRequest = await req.json();
+    const wantsPurchaseJourney = isBuyerType(typeRecherche) || isBuyerType(journeyType) || createPurchaseProject === true || !!purchaseProfile;
+    const normalizedTypeRecherche = wantsPurchaseJourney ? 'Acheter' : normalizeTypeRecherche(typeRecherche || demandeMandat?.type_recherche || 'Louer');
     const redirectTo = `${getAppBaseUrl(req)}/first-login`;
     console.log('Redirect URL:', redirectTo);
 
-    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere, agentId });
+    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere, agentId, normalizedTypeRecherche, wantsPurchaseJourney });
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -335,7 +352,7 @@ serve(async (req) => {
     // Check if client record exists, if not create it with all data from demande
     const { data: existingClient } = await supabaseAdmin
       .from('clients')
-      .select('id')
+      .select('id, agent_id')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -352,8 +369,9 @@ serve(async (req) => {
       if (invitationLegere) {
         // Invitation légère: statut en_attente, pas de date_ajout (barre à 0%)
         clientData.statut = 'en_attente';
-        clientData.priorite = 'moyenne';
-        clientData.type_recherche = typeRecherche || 'Acheter';
+        clientData.priorite = wantsPurchaseJourney ? 'haute' : 'moyenne';
+        clientData.type_recherche = normalizedTypeRecherche;
+        clientData.journey_type = wantsPurchaseJourney ? 'purchase_search' : 'housing_search';
         if (agentId) clientData.agent_id = agentId;
       } else {
         // Full mandate: activation immédiate
@@ -392,9 +410,9 @@ serve(async (req) => {
           numero_plaques: demandeMandat.numero_plaques,
           decouverte_agence: demandeMandat.decouverte_agence,
           // Type de recherche: Louer ou Acheter
-          type_recherche: demandeMandat.type_recherche || 'Louer',
-          // 🆕 journey_type : déterminé par la source (purchaseProfile = parcours achat explicite)
-          journey_type: purchaseProfile ? 'purchase_search' : 'housing_search',
+          type_recherche: wantsPurchaseJourney ? 'Acheter' : (demandeMandat.type_recherche || 'Louer'),
+          // 🆕 journey_type : déterminé par le parcours achat explicite
+          journey_type: wantsPurchaseJourney ? 'purchase_search' : 'housing_search',
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
@@ -442,6 +460,26 @@ serve(async (req) => {
         }
       }
 
+      if (invitationLegere || wantsPurchaseJourney) {
+        const patch: any = {};
+        if (invitationLegere) {
+          patch.statut = 'en_attente';
+          patch.priorite = wantsPurchaseJourney ? 'haute' : 'moyenne';
+          patch.type_recherche = normalizedTypeRecherche;
+          patch.journey_type = wantsPurchaseJourney ? 'purchase_search' : 'housing_search';
+        }
+        if (wantsPurchaseJourney) {
+          patch.type_recherche = 'Acheter';
+          patch.journey_type = 'purchase_search';
+          patch.priorite = 'haute';
+        }
+        if (agentId) patch.agent_id = agentId;
+        if (Object.keys(patch).length > 0) {
+          const { error: lightUpdateError } = await supabaseAdmin.from('clients').update(patch).eq('id', existingClient.id);
+          if (lightUpdateError) console.error('Error updating light/purchase client:', lightUpdateError);
+        }
+      }
+
       // Update existing client with demande data
       if (demandeMandat) {
         const updateData: any = {
@@ -471,9 +509,9 @@ serve(async (req) => {
           numero_plaques: demandeMandat.numero_plaques,
           decouverte_agence: demandeMandat.decouverte_agence,
           // Type de recherche: Louer ou Acheter
-          type_recherche: demandeMandat.type_recherche || 'Louer',
+          type_recherche: wantsPurchaseJourney ? 'Acheter' : (demandeMandat.type_recherche || 'Louer'),
           // 🆕 journey_type : recalibré si l'utilisateur passe maintenant par le parcours achat
-          ...(purchaseProfile ? { journey_type: 'purchase_search' } : {}),
+          ...(wantsPurchaseJourney ? { journey_type: 'purchase_search' } : {}),
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
@@ -598,30 +636,51 @@ serve(async (req) => {
 
     console.log('Email sent successfully to user:', userId);
 
-    // === 🆕 Création du parcours ACHAT (purchase_project) si purchaseProfile fourni ===
+    // === 🆕 Création du parcours ACHAT (purchase_project) si parcours achat détecté ===
     // Statut initial : 'en_attente_activation' — admin doit ensuite valider et démarrer la barre 60 jours.
-    if (purchaseProfile && clientRecordId) {
+    if (wantsPurchaseJourney && clientRecordId) {
       try {
+        const { data: currentClientForPurchase } = await supabaseAdmin
+          .from('clients')
+          .select('agent_id')
+          .eq('id', clientRecordId)
+          .maybeSingle();
+        const assignedAgentId = agentId || currentClientForPurchase?.agent_id || null;
+
+        await supabaseAdmin
+          .from('clients')
+          .update({
+            type_recherche: 'Acheter',
+            journey_type: 'purchase_search',
+            statut: invitationLegere ? 'en_attente' : undefined,
+            priorite: 'haute',
+          })
+          .eq('id', clientRecordId);
+
         // Idempotence : ne pas recréer si déjà existant pour ce client.
         const { data: existingProject } = await supabaseAdmin
           .from('purchase_projects')
-          .select('id')
-          .eq('client_id', clientRecordId)
+          .select('id, user_id, assigned_agent_id')
+          .or(`client_id.eq.${clientRecordId},user_id.eq.${userId}`)
+          .limit(1)
           .maybeSingle();
 
-        if (!existingProject) {
+        let projectId = existingProject?.id as string | undefined;
+
+        if (!projectId) {
           const { data: createdProject, error: projectErr } = await supabaseAdmin
             .from('purchase_projects')
             .insert({
               client_id: clientRecordId,
               user_id: userId,
-              assigned_agent_id: agentId || null,
+              assigned_agent_id: assignedAgentId,
               statut: 'en_attente_activation',
-              statut_mandat: 'signe',
+              statut_mandat: 'a_signer',
               statut_acompte: 'a_payer',
               montant_acompte: 2499,
               montant_mandat: 4999,
               duree_progression_jours: 60,
+              date_debut_progression: null,
               // date_debut_progression: NULL — démarre seulement à l'activation admin
             })
             .select('id')
@@ -630,35 +689,60 @@ serve(async (req) => {
           if (projectErr || !createdProject) {
             console.error('Failed to create purchase_project:', projectErr);
           } else {
-            const projectId = createdProject.id;
+            projectId = createdProject.id;
             console.log('Purchase project created:', projectId);
+          }
+        } else {
+          console.log('Purchase project already exists for client/user, ensuring linked fields.');
+          await supabaseAdmin
+            .from('purchase_projects')
+            .update({
+              client_id: clientRecordId,
+              user_id: userId,
+              assigned_agent_id: existingProject.assigned_agent_id || assignedAgentId,
+              statut_acompte: 'a_payer',
+              statut_mandat: 'a_signer',
+              montant_acompte: 2499,
+              montant_mandat: 4999,
+              duree_progression_jours: 60,
+            })
+            .eq('id', projectId);
+        }
 
+        if (projectId) {
             // Financing profile
-            const fin = purchaseProfile.financing || {};
-            const { error: finErr } = await supabaseAdmin
+            const { data: existingFin } = await supabaseAdmin
               .from('purchase_financing_profiles')
-              .insert({
-                project_id: projectId,
-                revenu_annuel_retenu: fin.revenu_annuel_retenu ?? 0,
-                bonus_3ans_moyenne: fin.bonus_3ans_moyenne ?? 0,
-                autres_revenus: fin.autres_revenus ?? 0,
-                fonds_propres_cash: fin.fonds_propres_cash ?? 0,
-                fonds_propres_3a: fin.fonds_propres_3a ?? 0,
-                fonds_propres_lpp: fin.fonds_propres_lpp ?? 0,
-                montant_epl_disponible: fin.montant_epl_disponible ?? 0,
-                credit_prive_mensuel: fin.credit_prive_mensuel ?? 0,
-                leasing_mensuel: fin.leasing_mensuel ?? 0,
-                cartes_credit_mensuel: fin.cartes_credit_mensuel ?? 0,
-                pensions_versees: fin.pensions_versees ?? 0,
-                poursuites: fin.poursuites ?? false,
-                etat_civil: fin.etat_civil ?? null,
-                nombre_enfants: fin.nombre_enfants ?? 0,
-                nationalite: fin.nationalite ?? null,
-                type_permis: fin.type_permis ?? null,
-                prix_cible: fin.prix_cible ?? 0,
-                statut_bancaire: 'a_evaluer',
-              });
-            if (finErr) console.error('Failed to create financing profile:', finErr);
+              .select('id')
+              .eq('project_id', projectId)
+              .maybeSingle();
+            if (!existingFin) {
+              const fin = purchaseProfile?.financing || {};
+              const { error: finErr } = await supabaseAdmin
+                .from('purchase_financing_profiles')
+                .insert({
+                  project_id: projectId,
+                  revenu_annuel_retenu: fin.revenu_annuel_retenu ?? 0,
+                  bonus_3ans_moyenne: fin.bonus_3ans_moyenne ?? 0,
+                  autres_revenus: fin.autres_revenus ?? 0,
+                  fonds_propres_cash: fin.fonds_propres_cash ?? 0,
+                  fonds_propres_3a: fin.fonds_propres_3a ?? 0,
+                  fonds_propres_lpp: fin.fonds_propres_lpp ?? 0,
+                  montant_epl_disponible: fin.montant_epl_disponible ?? 0,
+                  credit_prive_mensuel: fin.credit_prive_mensuel ?? 0,
+                  leasing_mensuel: fin.leasing_mensuel ?? 0,
+                  cartes_credit_mensuel: fin.cartes_credit_mensuel ?? 0,
+                  pensions_versees: fin.pensions_versees ?? 0,
+                  poursuites: fin.poursuites ?? false,
+                  etat_civil: fin.etat_civil ?? null,
+                  nombre_enfants: fin.nombre_enfants ?? 0,
+                  nationalite: fin.nationalite ?? null,
+                  type_permis: fin.type_permis ?? null,
+                  prix_cible: fin.prix_cible ?? 0,
+                  statut_bancaire: 'a_evaluer',
+                });
+              if (finErr) console.error('Failed to create financing profile:', finErr);
+            }
 
             // 17 étapes (a_faire)
             const ACHAT_STEPS_DEF = [
@@ -687,11 +771,17 @@ serve(async (req) => {
               ordre: s.ordre,
               statut: 'a_faire',
             }));
-            const { error: stepsErr } = await supabaseAdmin.from('purchase_project_steps').insert(stepsPayload);
+            const { error: stepsErr } = await supabaseAdmin
+              .from('purchase_project_steps')
+              .upsert(stepsPayload, { onConflict: 'project_id,step_key', ignoreDuplicates: true });
             if (stepsErr) console.error('Failed to seed purchase steps:', stepsErr);
-          }
-        } else {
-          console.log('Purchase project already exists for client, skipping creation.');
+
+            // Rattacher les documents achat existants si uploadés avant la création du projet.
+            await supabaseAdmin
+              .from('documents')
+              .update({ purchase_project_id: projectId, purchase_category: 'autres_documents_bancaires' })
+              .eq('user_id', userId)
+              .is('purchase_project_id', null);
         }
       } catch (pErr) {
         console.error('Purchase project provisioning failed:', pErr);
@@ -704,7 +794,7 @@ serve(async (req) => {
     let invoiceCreated = false;
     let invoiceError: string | null = null;
     if (invitationLegere && clientRecordId) {
-      const normalizedType = (typeRecherche || 'Acheter').toLowerCase();
+      const normalizedType = normalizedTypeRecherche.toLowerCase();
       const isLouer = normalizedType === 'louer' || normalizedType === 'location';
       // Création facture pour location uniquement (achat suit un autre flux acompte)
       if (isLouer) {
