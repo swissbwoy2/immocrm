@@ -56,7 +56,7 @@ const faqItemsAchat = [
   {
     question: "Combien ça coûte exactement ?",
     answer:
-      "C'est transparent : un acompte de 2'500 CHF est versé pour activer ton mandat de recherche. En cas d'achat, la commission s'élève à 1% du prix d'acquisition. Les 2'500 CHF d'acompte sont intégralement déduits de cette commission. Aucun frais caché.",
+      "C'est transparent : prix forfaitaire de 4'999 CHF TTC. Un acompte d'activation de 2'499 CHF est versé à la signature (intégralement déduit du prix total). Le solde de 2'500 CHF n'est dû qu'en cas de succès (acte d'acquisition). Aucun frais caché.",
   },
   {
     question: "Dois-je signer un contrat ?",
@@ -66,7 +66,7 @@ const faqItemsAchat = [
   {
     question: "Comment fonctionne la garantie remboursement ?",
     answer:
-      "Si après 6 mois de recherche active aucun bien correspondant à tes critères n'a été trouvé, ton acompte de 2'500 CHF t'est intégralement remboursé. Aucun risque financier : tu ne paies la commission de 1% que si tu achètes effectivement un bien grâce à notre accompagnement.",
+      "Si après 6 mois de recherche active aucun bien correspondant à tes critères n'a été trouvé, ton acompte de 2'499 CHF t'est intégralement remboursé. Aucun risque financier : tu ne paies le solde de 2'500 CHF que si tu achètes effectivement un bien grâce à notre accompagnement.",
   },
   {
     question: "Que se passe-t-il si je trouve moi-même ?",
@@ -86,7 +86,7 @@ const faqItemsAchat = [
   {
     question: "Comment ça marche concrètement ?",
     answer:
-      "Tu remplis le formulaire et signes un mandat de recherche. Tu verses l'acompte de 2'500 CHF et ton chasseur immobilier dédié se met immédiatement au travail : recherche active, accès aux biens off-market, pré-sélection, organisation des visites, négociation du prix et accompagnement jusqu'au notaire.",
+      "Tu remplis le formulaire et signes un mandat de recherche. Tu verses l'acompte d'activation de 2'499 CHF (sur un forfait total de 4'999 CHF TTC) et ton chasseur immobilier dédié se met immédiatement au travail : recherche active, accès aux biens off-market, pré-sélection, organisation des visites, négociation du prix et accompagnement jusqu'au notaire.",
   },
   {
     question: "Comment travaillez-vous pour moi ?",
