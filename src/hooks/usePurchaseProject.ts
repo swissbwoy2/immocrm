@@ -50,6 +50,7 @@ export interface UsePurchaseProjectResult {
   createProject: (clientId: string, userId: string | null, agentId: string | null) => Promise<string | null>;
   updateProject: (patch: Partial<PurchaseProject>) => Promise<void>;
   updateFinancing: (patch: Record<string, any>) => Promise<void>;
+  activateProject: () => Promise<void>;
   upsertProperty: (row: any) => Promise<void>;
   deleteProperty: (id: string) => Promise<void>;
   upsertVisitReport: (row: any) => Promise<void>;
