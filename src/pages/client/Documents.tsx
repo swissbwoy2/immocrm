@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
+import { isPurchaseBuyer } from '@/lib/journey';
 
 interface DocumentRequest {
   id: string;
@@ -60,6 +61,25 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>('autre');
+  const [isClientBuyer, setIsClientBuyer] = useState(false);
+  const [purchaseProjectId, setPurchaseProjectId] = useState<string | null>(null);
+
+  const PURCHASE_DOC_CATEGORY_MAP: Record<string, string> = {
+    piece_identite: 'identite', permis_sejour: 'identite',
+    certificat_salaire: 'revenus', fiche_salaire_1: 'revenus', fiche_salaire_2: 'revenus',
+    fiche_salaire_3: 'revenus', fiche_salaire: 'revenus',
+    contrat_travail: 'revenus', attestation_employeur: 'revenus',
+    releve_bancaire_fonds_propres: 'fonds_propres', attestation_3a: 'fonds_propres',
+    attestation_lpp: 'fonds_propres', attestation_epl: 'fonds_propres',
+    attestation_libre_passage: 'fonds_propres', justificatif_placements: 'fonds_propres',
+    justificatif_donation: 'fonds_propres', justificatif_avance_hoirie: 'fonds_propres',
+    justificatif_credit_prive: 'charges', justificatif_leasing: 'charges',
+    justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
+    justificatif_charges_fixes: 'charges',
+    decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
+    autre: 'autre',
+  };
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewDocument, setPreviewDocument] = useState<any>(null);
@@ -109,15 +129,37 @@ export default function Documents() {
         .eq('id', user.id)
         .single();
 
-      // 2. Récupérer le client
+      // 2. Récupérer le client (avec champs buyer detection)
       const { data: clientData } = await supabase
         .from('clients')
-        .select('id')
+        .select('id, type_recherche, journey_type')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (clientData) {
         setClientId(clientData.id);
+        // Charger le projet achat pour détecter acheteur
+        let pp: any = null;
+        const { data: byUser } = await supabase
+          .from('purchase_projects')
+          .select('id, client_id, user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        pp = byUser;
+        if (!pp && clientData.id) {
+          const { data: byClient } = await supabase
+            .from('purchase_projects')
+            .select('id, client_id, user_id')
+            .eq('client_id', clientData.id)
+            .maybeSingle();
+          pp = byClient;
+        }
+        const buyer = isPurchaseBuyer(clientData, pp);
+        setIsClientBuyer(buyer);
+        setPurchaseProjectId(pp?.id || null);
+        if (buyer) {
+          setSelectedType('piece_identite');
+        }
       }
 
       // 3. Charger les documents de la table documents
@@ -251,6 +293,9 @@ export default function Documents() {
 
       if (uploadError) throw uploadError;
 
+      const purchaseCategory = isClientBuyer
+        ? (PURCHASE_DOC_CATEGORY_MAP[selectedType] || 'autre')
+        : null;
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
@@ -260,6 +305,8 @@ export default function Documents() {
           user_id: user!.id,
           client_id: clientId,
           type_document: selectedType,
+          purchase_project_id: isClientBuyer ? purchaseProjectId : null,
+          purchase_category: purchaseCategory,
           url: filePath,
         });
 
@@ -823,16 +870,47 @@ export default function Documents() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
-                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
-                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
-                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
-                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
-                  <SelectItem value="autre">📄 Autre document</SelectItem>
+                  {isClientBuyer ? (
+                    <>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                      <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
+                      <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
+                      <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
+                      <SelectItem value="fiche_salaire_3">💰 Fiche de salaire 3</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
+                      <SelectItem value="attestation_3a">🏦 Attestation 3e pilier (3a)</SelectItem>
+                      <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
+                      <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
+                      <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
+                      <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
+                      <SelectItem value="justificatif_donation">🎁 Justificatif donation / hoirie</SelectItem>
+                      <SelectItem value="justificatif_credit_prive">💳 Justificatif crédit privé</SelectItem>
+                      <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
+                      <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
+                      <SelectItem value="justificatif_pension_alimentaire">👶 Pension alimentaire</SelectItem>
+                      <SelectItem value="decision_taxation">📋 Décision de taxation</SelectItem>
+                      <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
+                      <SelectItem value="accord_transmission">✅ Accord transmission partenaires</SelectItem>
+                      <SelectItem value="consentement_donnees">✅ Consentement données financières</SelectItem>
+                      <SelectItem value="autre">📄 Autre document achat</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                      <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                      <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                      <SelectItem value="autre">📄 Autre document</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
