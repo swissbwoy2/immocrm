@@ -136,10 +136,11 @@ export default function Documents() {
         .eq('user_id', user.id)
         .maybeSingle();
 
+      let buyer = false;
+      let pp: any = null;
       if (clientData) {
         setClientId(clientData.id);
         // Charger le projet achat pour détecter acheteur
-        let pp: any = null;
         const { data: byUser } = await supabase
           .from('purchase_projects')
           .select('id, client_id, user_id')
@@ -154,7 +155,7 @@ export default function Documents() {
             .maybeSingle();
           pp = byClient;
         }
-        const buyer = isPurchaseBuyer(clientData, pp);
+        buyer = isPurchaseBuyer(clientData, pp);
         setIsClientBuyer(buyer);
         setPurchaseProjectId(pp?.id || null);
         if (buyer) {
@@ -165,13 +166,32 @@ export default function Documents() {
       // 3. Charger les documents de la table documents
       let docsFromTable: any[] = [];
       if (clientData) {
-        const { data, error } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('client_id', clientData.id)
-          .order('date_upload', { ascending: false });
+        if (buyer && pp?.id) {
+          // Rattacher les anciens docs sans purchase_project_id au projet achat
+          await supabase
+            .from('documents')
+            .update({ purchase_project_id: pp.id, purchase_category: 'autre' } as any)
+            .eq('client_id', clientData.id)
+            .is('purchase_project_id', null);
 
-        if (!error) docsFromTable = data || [];
+          // Charger uniquement les documents de ce projet achat
+          const { data, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('purchase_project_id', pp.id)
+            .order('date_upload', { ascending: false });
+
+          if (!error) docsFromTable = data || [];
+        } else if (!buyer) {
+          // Comportement location inchangé
+          const { data, error } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('client_id', clientData.id)
+            .order('date_upload', { ascending: false });
+
+          if (!error) docsFromTable = data || [];
+        }
       }
 
       // 4. Si pas de documents dans la table, récupérer depuis demandes_mandat
