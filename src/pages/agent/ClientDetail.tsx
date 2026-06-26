@@ -40,6 +40,9 @@ import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete'
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormDialog';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
+import { usePurchaseProject } from '@/hooks/usePurchaseProject';
+import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
+import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 
 interface Client {
   id: string;
