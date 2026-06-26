@@ -5,6 +5,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
+import MandatFormStep0Journey from '@/components/mandat/MandatFormStep0Journey';
 import MandatFormStep1 from '@/components/mandat/MandatFormStep1';
 import MandatFormStep2 from '@/components/mandat/MandatFormStep2';
 import MandatFormStep3 from '@/components/mandat/MandatFormStep3';
@@ -12,6 +13,9 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
+import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
+import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
+import MandatAchatStepPersonal from '@/components/mandat/achat/MandatAchatStepPersonal';
 import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
 import { LandingStepIndicator } from '@/components/forms-premium/LandingStepIndicator';
 import { LandingGuaranteeBanner } from '@/components/forms-premium/LandingGuaranteeBanner';
@@ -21,14 +25,31 @@ import { LandingButton } from '@/components/forms-premium/LandingButton';
 import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
 
 const STORAGE_KEY = 'mandat_form_data';
-const STEPS = [
-  { title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
-  { title: 'Situation actuelle', component: MandatFormStep2, icon: '🏠' },
-  { title: 'Situation financière', component: MandatFormStep3, icon: '💼' },
-  { title: 'Candidats', component: MandatFormStep5, icon: '👥' },
-  { title: 'Critères de recherche', component: MandatFormStep4, icon: '🔍' },
-  { title: 'Documents', component: MandatFormStep6, icon: '📄' },
-  { title: 'Signature', component: MandatFormStep7, icon: '✍️' },
+
+type StepDef = { key: string; title: string; component: any; icon: string };
+
+const STEP_JOURNEY: StepDef = { key: 'journey', title: 'Projet immobilier', component: MandatFormStep0Journey, icon: '🧭' };
+
+const RENTAL_STEPS: StepDef[] = [
+  STEP_JOURNEY,
+  { key: 'perso', title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
+  { key: 'situation', title: 'Situation actuelle', component: MandatFormStep2, icon: '🏠' },
+  { key: 'finance', title: 'Situation financière', component: MandatFormStep3, icon: '💼' },
+  { key: 'candidats', title: 'Candidats', component: MandatFormStep5, icon: '👥' },
+  { key: 'criteres', title: 'Critères de recherche', component: MandatFormStep4, icon: '🔍' },
+  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  { key: 'signature', title: 'Signature', component: MandatFormStep7, icon: '✍️' },
+];
+
+const PURCHASE_STEPS: StepDef[] = [
+  STEP_JOURNEY,
+  { key: 'perso', title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
+  { key: 'projet', title: 'Projet d\'achat', component: MandatAchatStepProject, icon: '🏢' },
+  { key: 'financement', title: 'Financement', component: MandatAchatStepFinancing, icon: '💰' },
+  { key: 'situation_perso', title: 'Situation personnelle', component: MandatAchatStepPersonal, icon: '👤' },
+  { key: 'co_acquereurs', title: 'Co-acquéreurs', component: MandatFormStep5, icon: '👥' },
+  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  { key: 'signature', title: 'Signature', component: MandatFormStep7, icon: '✍️' },
 ];
 
 export default function NouveauMandat() {
@@ -60,38 +81,56 @@ export default function NouveauMandat() {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
+  const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
+  const currentStepDef = steps[currentStep] ?? steps[0];
+
   const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 0:
-        // Made optional: adresse, nationalite, etat_civil (Apple requirement 5.1.1)
+    const def = steps[step];
+    if (!def) return true;
+    const isPurchase = formData.journey === 'purchase';
+
+    switch (def.key) {
+      case 'journey':
+        return !!formData.journey;
+      case 'perso':
         return !!(formData.email && formData.prenom && formData.nom && formData.telephone &&
           formData.date_naissance && formData.type_permis);
-      case 1:
+      case 'situation':
         return !!(formData.gerance_actuelle && formData.contact_gerance &&
           formData.loyer_actuel >= 0 && formData.depuis_le && formData.pieces_actuel > 0 &&
           formData.motif_changement);
-      case 2:
-        // Made optional: profession, employeur, revenus_mensuels (Apple requirement 5.1.1)
+      case 'finance':
         return true;
-      case 3:
-        return true; // Candidats optionnels
-      case 4: {
-        const baseValid = !!(formData.decouverte_agence && formData.type_bien &&
-          formData.budget_max > 0);
+      case 'candidats':
+      case 'co_acquereurs':
+        return true;
+      case 'criteres': {
+        const baseValid = !!(formData.decouverte_agence && formData.type_bien && formData.budget_max > 0);
         if (formData.type_bien === 'Local commercial') {
           return baseValid && !!(formData.surface_souhaitee && formData.surface_souhaitee > 0 &&
             formData.affectation_commerciale && formData.etage_souhaite);
         }
         return baseValid && !!formData.pieces_recherche;
       }
-      case 5: {
+      case 'projet':
+        return !!(formData.decouverte_agence && formData.type_bien && formData.budget_max > 0 && formData.region_recherche);
+      case 'financement':
+        return !!(formData.revenus_mensuels > 0 &&
+          (formData.apport_personnel + formData.achat_fonds_propres_3a + formData.achat_fonds_propres_lpp + formData.achat_montant_epl) > 0);
+      case 'situation_perso':
+        return true;
+      case 'docs': {
+        if (isPurchase) {
+          // Documents recommandés mais pas bloquants pour l'achat (validation bancaire post-activation)
+          return true;
+        }
         const types = new Set(formData.documents_uploades.map((d) => d.type));
         const isPermis = ['B', 'C', 'F', 'N'].includes(formData.type_permis);
         const idKind = isPermis ? 'permis_sejour' : 'piece_identite';
         const required = ['poursuites', 'salaire1', 'salaire2', 'salaire3', `${idKind}_recto`, `${idKind}_verso`];
         return required.every((k) => types.has(k));
       }
-      case 6:
+      case 'signature':
         return !!(formData.signature_data && formData.cgv_acceptees);
       default:
         return true;
@@ -103,7 +142,7 @@ export default function NouveauMandat() {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
       window.scrollTo(0, 0);
     }
@@ -138,7 +177,9 @@ export default function NouveauMandat() {
         return;
       }
 
-      const montantAcompte = formData.type_recherche === 'Acheter' ? 2500 : 300;
+      const isPurchase = formData.journey === 'purchase' || formData.type_recherche === 'Acheter';
+      // ⚠️ Acompte exact : CHF 2'499 pour achat, CHF 300 pour location.
+      const montantAcompte = isPurchase ? 2499 : 300;
 
       // ÉTAPE 1: Créer le client AbaNinja AVANT l'insert
       let abaninjaClientUuid: string | null = null;
@@ -373,25 +414,26 @@ export default function NouveauMandat() {
               nationalite: formData.nationalite,
               type_permis: formData.type_permis,
               etat_civil: formData.etat_civil,
-              gerance_actuelle: formData.gerance_actuelle,
-              contact_gerance: formData.contact_gerance,
-              loyer_actuel: formData.loyer_actuel,
-              depuis_le: formData.depuis_le,
-              pieces_actuel: formData.pieces_actuel,
-              charges_extraordinaires: formData.charges_extraordinaires,
-              montant_charges_extra: formData.montant_charges_extra,
-              poursuites: formData.poursuites,
-              curatelle: formData.curatelle,
-              motif_changement: formData.motif_changement,
-              profession: formData.profession,
-              employeur: formData.employeur,
-              revenus_mensuels: formData.revenus_mensuels,
-              date_engagement: formData.date_engagement,
-              utilisation_logement: formData.utilisation_logement,
+              // Champs LOCATION : neutralisés en mode achat
+              gerance_actuelle: isPurchase ? null : formData.gerance_actuelle,
+              contact_gerance: isPurchase ? null : formData.contact_gerance,
+              loyer_actuel: isPurchase ? null : formData.loyer_actuel,
+              depuis_le: isPurchase ? null : formData.depuis_le,
+              pieces_actuel: isPurchase ? null : formData.pieces_actuel,
+              charges_extraordinaires: isPurchase ? null : formData.charges_extraordinaires,
+              montant_charges_extra: isPurchase ? null : formData.montant_charges_extra,
+              motif_changement: isPurchase ? null : formData.motif_changement,
+              date_engagement: isPurchase ? null : formData.date_engagement,
+              utilisation_logement: isPurchase ? null : formData.utilisation_logement,
               animaux: formData.animaux,
               instrument_musique: formData.instrument_musique,
               vehicules: formData.vehicules,
               numero_plaques: formData.numero_plaques,
+              poursuites: formData.poursuites,
+              curatelle: formData.curatelle,
+              profession: formData.profession,
+              employeur: formData.employeur,
+              revenus_mensuels: formData.revenus_mensuels,
               decouverte_agence: formData.decouverte_agence,
               type_recherche: formData.type_recherche,
               nombre_occupants: formData.nombre_occupants,
@@ -403,7 +445,41 @@ export default function NouveauMandat() {
               souhaits_particuliers: formData.souhaits_particuliers,
               documents_uploades: formData.documents_uploades,
               candidats: formData.candidats,
-            }
+            },
+            // 🆕 Bloc dédié achat : déclenche la création d'un purchase_project
+            // en statut 'en_attente_activation' + financing_profile + 17 étapes.
+            purchaseProfile: isPurchase ? {
+              prix_cible: formData.budget_max,
+              region: formData.region_recherche,
+              type_bien: formData.type_bien,
+              surface_min: formData.surface_souhaitee,
+              horizon_mois: formData.achat_horizon_mois,
+              usage: formData.achat_usage,
+              etat_civil: formData.etat_civil,
+              nombre_enfants: formData.achat_nombre_enfants,
+              nationalite: formData.nationalite,
+              type_permis: formData.type_permis,
+              date_naissance: formData.date_naissance,
+              financing: {
+                revenu_annuel_retenu: formData.achat_revenu_annuel_retenu || (formData.revenus_mensuels || 0) * 12,
+                bonus_3ans_moyenne: formData.achat_bonus_3ans,
+                autres_revenus: formData.achat_autres_revenus,
+                fonds_propres_cash: formData.apport_personnel,
+                fonds_propres_3a: formData.achat_fonds_propres_3a,
+                fonds_propres_lpp: formData.achat_fonds_propres_lpp,
+                montant_epl_disponible: formData.achat_montant_epl,
+                credit_prive_mensuel: formData.achat_credit_mensuel,
+                leasing_mensuel: formData.achat_leasing_mensuel,
+                cartes_credit_mensuel: formData.achat_cartes_credit_mensuel,
+                pensions_versees: formData.achat_pensions_versees,
+                poursuites: formData.poursuites,
+                etat_civil: formData.etat_civil,
+                nombre_enfants: formData.achat_nombre_enfants,
+                nationalite: formData.nationalite,
+                type_permis: formData.type_permis,
+                prix_cible: formData.budget_max,
+              },
+            } : undefined,
           }
         });
 
@@ -444,11 +520,16 @@ export default function NouveauMandat() {
     }
   };
 
-  const StepComponent = STEPS[currentStep].component;
+  const StepComponent = currentStepDef.component;
+  const isPurchaseJourney = formData.journey === 'purchase';
 
   const handleAddCoBuyer = () => {
-    setCurrentStep(3);
-    window.scrollTo(0, 0);
+    // Step "candidats" / "co_acquereurs" index in current flow
+    const idx = steps.findIndex((s) => s.key === 'candidats' || s.key === 'co_acquereurs');
+    if (idx >= 0) {
+      setCurrentStep(idx);
+      window.scrollTo(0, 0);
+    }
   };
 
   return (
@@ -459,28 +540,32 @@ export default function NouveauMandat() {
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/40 rounded-full px-4 py-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-xs md:text-sm font-semibold text-primary">
-              Nouveau mandat de recherche
+              {isPurchaseJourney ? 'Accompagnement à l\'achat' : 'Nouveau mandat de recherche'}
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
-            Démarrons votre <span className="text-primary">recherche</span>
+            {isPurchaseJourney
+              ? <>Démarrons votre <span className="text-primary">projet d'achat</span></>
+              : <>Démarrons votre <span className="text-primary">recherche</span></>}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.
+            {isPurchaseJourney
+              ? 'Acompte d\'activation CHF 2\'499.– · Parcours 60 jours après activation par votre conseiller.'
+              : 'Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.'}
           </p>
         </div>
 
         <LandingGuaranteeBanner />
         <LandingProgressBlock
           currentStep={currentStep}
-          totalSteps={STEPS.length}
-          stepTitle={STEPS[currentStep]?.title ?? ''}
+          totalSteps={steps.length}
+          stepTitle={currentStepDef.title}
         />
-        <LandingStepIndicator steps={STEPS} currentStep={currentStep} />
+        <LandingStepIndicator steps={steps} currentStep={currentStep} />
 
         <LandingFormCard>
           <PremiumStepTransition stepKey={currentStep} direction={1}>
-            {currentStep === 4 ? (
+            {currentStepDef.key === 'criteres' ? (
               <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
             ) : (
               <StepComponent data={formData} onChange={handleChange} />
@@ -495,8 +580,8 @@ export default function NouveauMandat() {
               {currentStep === 0 ? <><ArrowLeft className="h-4 w-4" /> Retour</> : undefined}
             </LandingButton>
 
-            {currentStep < STEPS.length - 1 ? (
-              <LandingButton variant="next" onClick={handleNext}>
+            {currentStep < steps.length - 1 ? (
+              <LandingButton variant="next" onClick={handleNext} disabled={currentStepDef.key === 'journey' && !formData.journey}>
                 Continuer
               </LandingButton>
             ) : (

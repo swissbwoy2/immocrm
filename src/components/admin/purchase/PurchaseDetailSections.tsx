@@ -42,8 +42,34 @@ export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
   const c = h.computed;
   const doneSteps = h.steps.filter((s) => s.statut === 'fait').length;
 
+  const isPending = h.project.statut === 'en_attente_activation';
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* 🆕 Bannière d'activation : visible uniquement en mode admin tant que le projet n'est pas activé. */}
+      {isPending && mode === 'admin' && (
+        <Card className="p-5 border-amber-300 bg-gradient-to-br from-amber-50 to-white">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <h2 className="font-semibold text-lg">Parcours achat en attente d'activation</h2>
+                <Badge className="bg-amber-100 text-amber-700 border-0">En attente</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Validez le dossier, le mandat et l'acompte CHF 2'499.– puis activez le parcours. La barre de progression 60 jours démarrera automatiquement.
+              </p>
+            </div>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={async () => { await h.activateProject(); toast.success('Parcours achat activé · barre 60j démarrée'); }}
+            >
+              <Sparkles className="h-4 w-4 mr-2" /> Activer le parcours achat
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {/* Banner */}
       <Card className="p-5 border-sky-200 bg-gradient-to-br from-sky-50 to-white">
         <div className="flex items-start justify-between flex-wrap gap-3">
@@ -54,12 +80,14 @@ export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
               <Badge className="bg-sky-100 text-sky-700 border-0">{h.project.statut}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              Jour {prog.jourActuel}/{prog.dureeJours} · {prog.jourRestant} jours restants · {doneSteps}/{h.steps.length} étapes complétées
+              {isPending
+                ? 'Progression 60 jours en attente d\'activation admin.'
+                : `Jour ${prog.jourActuel}/${prog.dureeJours} · ${prog.jourRestant} jours restants · ${doneSteps}/${h.steps.length} étapes complétées`}
             </p>
           </div>
           {mode === 'admin' && <ProjectMetaEditorDialog project={h.project} onSave={h.updateProject} />}
         </div>
-        <Progress value={prog.pourcentage} className="h-2 mt-3" />
+        {!isPending && <Progress value={prog.pourcentage} className="h-2 mt-3" />}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
           <Kpi label="Mandat" value={h.project.statut_mandat || '—'} />
           <Kpi label="Acompte" value={h.project.statut_acompte || '—'} />

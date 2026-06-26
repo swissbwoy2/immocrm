@@ -1,4 +1,9 @@
+export type JourneyChoice = 'rental' | 'purchase' | null;
+
 export interface MandatFormData {
+  // NOUVEAU : type de projet immobilier (Step 0)
+  journey: JourneyChoice;
+
   // Informations personnelles
   email: string;
   prenom: string;
@@ -9,14 +14,14 @@ export interface MandatFormData {
   nationalite: string;
   type_permis: string;
   etat_civil: string;
-  
-  // Situation actuelle
+
+  // Situation actuelle (LOCATION uniquement)
   gerance_actuelle: string;
   contact_gerance: string;
   loyer_actuel: number;
   depuis_le: string;
   pieces_actuel: number;
-  
+
   // Finances
   charges_extraordinaires: boolean;
   montant_charges_extra: number;
@@ -28,14 +33,14 @@ export interface MandatFormData {
   revenus_mensuels: number;
   date_engagement: string;
   utilisation_logement: string;
-  
+
   // Autres infos
   animaux: boolean;
   instrument_musique: boolean;
   vehicules: boolean;
   numero_plaques: string;
   decouverte_agence: string;
-  
+
   // Critères de recherche
   type_recherche: string;
   nombre_occupants: number;
@@ -45,17 +50,32 @@ export interface MandatFormData {
   budget_max: number;
   apport_personnel: number; // For purchase: available down payment
   souhaits_particuliers: string;
-  
+
+  // ACHAT : champs financiers complémentaires (mappés sur purchase_financing_profiles)
+  achat_fonds_propres_3a: number;
+  achat_fonds_propres_lpp: number;
+  achat_montant_epl: number;
+  achat_revenu_annuel_retenu: number;
+  achat_bonus_3ans: number;
+  achat_autres_revenus: number;
+  achat_credit_mensuel: number;
+  achat_leasing_mensuel: number;
+  achat_cartes_credit_mensuel: number;
+  achat_pensions_versees: number;
+  achat_horizon_mois: number; // 3, 6, 12
+  achat_usage: 'residence_principale' | 'residence_secondaire' | 'investissement' | '';
+  achat_nombre_enfants: number;
+
   // Candidats
   candidats: CandidatData[];
-  
+
   // Documents
   documents_uploades: DocumentData[];
-  
+
   // Signature et CGV
   signature_data: string;
   cgv_acceptees: boolean;
-  
+
   // Code promo
   code_promo: string;
 
@@ -64,14 +84,14 @@ export interface MandatFormData {
 
   // Commercial - Location type
   location_type: 'personnel' | 'societe' | null;
-  
+
   // Commercial - Company fields
   raison_sociale: string;
   numero_ide: string;
   chiffre_affaires: number;
   type_exploitation: string;
   nombre_employes: number;
-  
+
   // Commercial - Search criteria
   surface_souhaitee: number;
   etage_souhaite: string;
@@ -190,6 +210,7 @@ export const BESOINS_COMMERCIAUX = [
 ];
 
 export const initialFormData: MandatFormData = {
+  journey: null,
   email: '',
   prenom: '',
   nom: '',
@@ -227,6 +248,22 @@ export const initialFormData: MandatFormData = {
   budget_max: 0,
   apport_personnel: 0,
   souhaits_particuliers: '',
+
+  // Achat - financement complémentaire
+  achat_fonds_propres_3a: 0,
+  achat_fonds_propres_lpp: 0,
+  achat_montant_epl: 0,
+  achat_revenu_annuel_retenu: 0,
+  achat_bonus_3ans: 0,
+  achat_autres_revenus: 0,
+  achat_credit_mensuel: 0,
+  achat_leasing_mensuel: 0,
+  achat_cartes_credit_mensuel: 0,
+  achat_pensions_versees: 0,
+  achat_horizon_mois: 6,
+  achat_usage: '',
+  achat_nombre_enfants: 0,
+
   candidats: [],
   documents_uploades: [],
   signature_data: '',

@@ -118,6 +118,21 @@ interface DemandeMandat {
   cgv_acceptees_at?: string;
 }
 
+interface PurchaseProfilePayload {
+  prix_cible?: number;
+  region?: string;
+  type_bien?: string;
+  surface_min?: number;
+  horizon_mois?: number;
+  usage?: string;
+  etat_civil?: string;
+  nombre_enfants?: number;
+  nationalite?: string;
+  type_permis?: string;
+  date_naissance?: string;
+  financing?: Record<string, any>;
+}
+
 interface InviteClientRequest {
   email: string;
   clientId?: string;
@@ -129,6 +144,8 @@ interface InviteClientRequest {
   typeRecherche?: string;
   /** Optional: id of the agents row to auto-assign as primary agent */
   agentId?: string;
+  /** 🆕 Bloc achat — déclenche création purchase_project + financing + steps */
+  purchaseProfile?: PurchaseProfilePayload;
 }
 
 serve(async (req) => {
@@ -138,7 +155,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId, purchaseProfile }: InviteClientRequest = await req.json();
     const redirectTo = `${getAppBaseUrl(req)}/first-login`;
     console.log('Redirect URL:', redirectTo);
 
@@ -376,6 +393,8 @@ serve(async (req) => {
           decouverte_agence: demandeMandat.decouverte_agence,
           // Type de recherche: Louer ou Acheter
           type_recherche: demandeMandat.type_recherche || 'Louer',
+          // 🆕 journey_type : déterminé par la source (purchaseProfile = parcours achat explicite)
+          journey_type: purchaseProfile ? 'purchase_search' : 'housing_search',
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
@@ -453,6 +472,8 @@ serve(async (req) => {
           decouverte_agence: demandeMandat.decouverte_agence,
           // Type de recherche: Louer ou Acheter
           type_recherche: demandeMandat.type_recherche || 'Louer',
+          // 🆕 journey_type : recalibré si l'utilisateur passe maintenant par le parcours achat
+          ...(purchaseProfile ? { journey_type: 'purchase_search' } : {}),
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
@@ -576,6 +597,107 @@ serve(async (req) => {
     }
 
     console.log('Email sent successfully to user:', userId);
+
+    // === 🆕 Création du parcours ACHAT (purchase_project) si purchaseProfile fourni ===
+    // Statut initial : 'en_attente_activation' — admin doit ensuite valider et démarrer la barre 60 jours.
+    if (purchaseProfile && clientRecordId) {
+      try {
+        // Idempotence : ne pas recréer si déjà existant pour ce client.
+        const { data: existingProject } = await supabaseAdmin
+          .from('purchase_projects')
+          .select('id')
+          .eq('client_id', clientRecordId)
+          .maybeSingle();
+
+        if (!existingProject) {
+          const { data: createdProject, error: projectErr } = await supabaseAdmin
+            .from('purchase_projects')
+            .insert({
+              client_id: clientRecordId,
+              user_id: userId,
+              assigned_agent_id: agentId || null,
+              statut: 'en_attente_activation',
+              statut_mandat: 'signe',
+              statut_acompte: 'a_payer',
+              montant_acompte: 2499,
+              duree_progression_jours: 60,
+              // date_debut_progression: NULL — démarre seulement à l'activation admin
+            })
+            .select('id')
+            .single();
+
+          if (projectErr || !createdProject) {
+            console.error('Failed to create purchase_project:', projectErr);
+          } else {
+            const projectId = createdProject.id;
+            console.log('Purchase project created:', projectId);
+
+            // Financing profile
+            const fin = purchaseProfile.financing || {};
+            const { error: finErr } = await supabaseAdmin
+              .from('purchase_financing_profiles')
+              .insert({
+                project_id: projectId,
+                revenu_annuel_retenu: fin.revenu_annuel_retenu ?? 0,
+                bonus_3ans_moyenne: fin.bonus_3ans_moyenne ?? 0,
+                autres_revenus: fin.autres_revenus ?? 0,
+                fonds_propres_cash: fin.fonds_propres_cash ?? 0,
+                fonds_propres_3a: fin.fonds_propres_3a ?? 0,
+                fonds_propres_lpp: fin.fonds_propres_lpp ?? 0,
+                montant_epl_disponible: fin.montant_epl_disponible ?? 0,
+                credit_prive_mensuel: fin.credit_prive_mensuel ?? 0,
+                leasing_mensuel: fin.leasing_mensuel ?? 0,
+                cartes_credit_mensuel: fin.cartes_credit_mensuel ?? 0,
+                pensions_versees: fin.pensions_versees ?? 0,
+                poursuites: fin.poursuites ?? false,
+                etat_civil: fin.etat_civil ?? null,
+                nombre_enfants: fin.nombre_enfants ?? 0,
+                nationalite: fin.nationalite ?? null,
+                type_permis: fin.type_permis ?? null,
+                prix_cible: fin.prix_cible ?? 0,
+                statut_bancaire: 'a_evaluer',
+              });
+            if (finErr) console.error('Failed to create financing profile:', finErr);
+
+            // 17 étapes (a_faire)
+            const ACHAT_STEPS_DEF = [
+              { key: 'acompte_paye',          label: "Acompte payé (CHF 2'499)",                  ordre: 1 },
+              { key: 'mandat_signe',          label: "Mandat d'accompagnement signé",             ordre: 2 },
+              { key: 'kickoff',               label: 'Rendez-vous de cadrage avec votre conseiller', ordre: 3 },
+              { key: 'documents_financement', label: 'Documents financiers transmis',             ordre: 4 },
+              { key: 'analyse_capacite',      label: "Capacité d'achat calculée",                 ordre: 5 },
+              { key: 'envoi_banque',          label: 'Dossier envoyé au partenaire bancaire',     ordre: 6 },
+              { key: 'validation_bancaire',   label: 'Validation bancaire reçue (24-48 h)',       ordre: 7 },
+              { key: 'criteres_definis',      label: 'Critères de recherche définis',             ordre: 8 },
+              { key: 'biens_selectionnes',    label: 'Biens sélectionnés analysés',               ordre: 9 },
+              { key: 'visite_courtier',       label: 'Visite par notre courtier',                 ordre: 10 },
+              { key: 'rapport_visite',        label: 'Rapport de visite remis',                   ordre: 11 },
+              { key: 'contre_visite',         label: 'Contre-visite avec vous',                   ordre: 12 },
+              { key: 'offre_envoyee',         label: "Offre d'achat envoyée",                     ordre: 13 },
+              { key: 'negociation',           label: 'Négociation aboutie',                       ordre: 14 },
+              { key: 'rdv_notaire',           label: 'Rendez-vous notaire planifié',              ordre: 15 },
+              { key: 'signature_notariee',    label: "Signature de l'acte authentique",           ordre: 16 },
+              { key: 'remise_cles',           label: 'Remise des clés',                           ordre: 17 },
+            ];
+            const stepsPayload = ACHAT_STEPS_DEF.map((s) => ({
+              project_id: projectId,
+              step_key: s.key,
+              label: s.label,
+              ordre: s.ordre,
+              statut: 'a_faire',
+            }));
+            const { error: stepsErr } = await supabaseAdmin.from('purchase_project_steps').insert(stepsPayload);
+            if (stepsErr) console.error('Failed to seed purchase steps:', stepsErr);
+          }
+        } else {
+          console.log('Purchase project already exists for client, skipping creation.');
+        }
+      } catch (pErr) {
+        console.error('Purchase project provisioning failed:', pErr);
+      }
+    }
+
+
 
     // === Invitation légère locative : créer automatiquement la facture AbaNinja 300 CHF ===
     let invoiceCreated = false;
