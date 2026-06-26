@@ -31,12 +31,10 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
   return (
     <PremiumPageShellV2>
       <div className="space-y-6 p-4 md:p-6">
-        <PremiumDashboardHeader
-          name={fullName}
-          initials={initials}
-          subtitle="Votre projet d'accompagnement à l'achat"
-          rightSlot={<Badge className="bg-amber-500/15 text-amber-700 border-amber-400/40">En attente d'activation</Badge>}
-        />
+        <PremiumDashboardHeader userName={fullName} parcoursType="achat" />
+        <div className="flex justify-end">
+          <Badge className="bg-amber-500/15 text-amber-700 border-amber-400/40">En attente d'activation</Badge>
+        </div>
 
         <Card className="p-6 border-amber-200 bg-gradient-to-br from-amber-50/60 to-white">
           <div className="flex items-start gap-4">
