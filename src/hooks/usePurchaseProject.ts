@@ -229,10 +229,20 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     await reload();
   }, [reload]);
 
+  // 🆕 Activation explicite par l'admin : passe le projet en "actif" et démarre la barre 60j.
+  const activateProject = useCallback(async () => {
+    if (!project) return;
+    await supabase.from('purchase_projects').update({
+      statut: 'actif',
+      date_debut_progression: new Date().toISOString().slice(0, 10),
+    }).eq('id', project.id);
+    await reload();
+  }, [project, reload]);
+
   return {
     loading, project, financing, computed, settings,
     properties, visitReports, negotiations, notary, steps, documents, agent, reload,
-    createProject, updateProject, updateFinancing,
+    createProject, updateProject, updateFinancing, activateProject,
     upsertProperty, deleteProperty,
     upsertVisitReport, deleteVisitReport,
     upsertNegotiation, deleteNegotiation,
