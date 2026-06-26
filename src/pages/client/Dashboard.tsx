@@ -53,6 +53,7 @@ import RelocationClientDashboard from './dashboards/RelocationClientDashboard';
 import DashboardRelouer from './DashboardRelouer';
 import DashboardAchat from './DashboardAchat';
 import DashboardAchatEnAttente from './DashboardAchatEnAttente';
+import { isPurchaseBuyer } from '@/lib/journey';
 
 export default function ClientDashboardDispatcher() {
   const { user } = useAuth();
@@ -66,11 +67,17 @@ export default function ClientDashboardDispatcher() {
   useEffect(() => {
     const load = async () => {
       if (!user) { setResolved(true); return; }
-      const [{ data: prof }, { data: client }, { data: pp }] = await Promise.all([
+      const [{ data: prof }, { data: client }] = await Promise.all([
         supabase.from('profiles').select('prenom, nom, parcours_type').eq('id', user.id).maybeSingle(),
-        supabase.from('clients').select('journey_type, type_recherche').eq('user_id', user.id).maybeSingle(),
-        supabase.from('purchase_projects').select('id, statut').eq('user_id', user.id).maybeSingle(),
+        supabase.from('clients').select('id, user_id, journey_type, type_recherche').eq('user_id', user.id).maybeSingle(),
       ]);
+      let pp: any = null;
+      const { data: byUser } = await supabase.from('purchase_projects').select('id, client_id, user_id, statut').eq('user_id', user.id).maybeSingle();
+      pp = byUser;
+      if (!pp && client?.id) {
+        const { data: byClient } = await supabase.from('purchase_projects').select('id, client_id, user_id, statut').eq('client_id', client.id).maybeSingle();
+        pp = byClient;
+      }
       setProfile(prof || null);
       setJourneyType(client?.journey_type || null);
       setTypeRecherche(client?.type_recherche || null);
@@ -101,7 +108,7 @@ export default function ClientDashboardDispatcher() {
   }
 
   // 🆕 Acheteur sans projet créé : ne jamais retomber sur le dashboard location
-  if (journeyType === 'purchase_search' || typeRecherche === 'Acheter') {
+  if (isPurchaseBuyer({ journey_type: journeyType, type_recherche: typeRecherche }, null)) {
     return <DashboardAchatEnAttente profile={profile} />;
   }
 

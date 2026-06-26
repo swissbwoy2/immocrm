@@ -21,6 +21,7 @@ import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentView";
 import { ClientCardReletter, type ReletterRequest, type ReletterCounts } from "@/components/admin/ClientCardReletter";
 import { cn } from "@/lib/utils";
+import { isBuyerType, isPurchaseBuyer, normalizeTypeRecherche } from "@/lib/journey";
 
 type ClientAgent = {
   client_id: string;
@@ -52,7 +53,15 @@ interface Client {
   date_ajout?: string;
   poursuites?: boolean;
   journey_type?: string | null;
+  type_recherche?: string | null;
 }
+
+type PurchaseProjectLite = {
+  id: string;
+  client_id: string | null;
+  user_id: string | null;
+  statut: string | null;
+};
 
 type JourneyTab = 'all' | 'chercheurs' | 'acheteurs' | 'reloueurs' | 'mixtes';
 
@@ -143,6 +152,8 @@ const Clients = () => {
   // Données reloueurs (jointures par user_id)
   const [relouerByUser, setRelouerByUser] = useState<Map<string, ReletterRequest>>(new Map());
   const [relouerCounts, setRelouerCounts] = useState<Map<string, ReletterCounts>>(new Map());
+  const [purchaseByClient, setPurchaseByClient] = useState<Map<string, PurchaseProjectLite>>(new Map());
+  const [purchaseByUser, setPurchaseByUser] = useState<Map<string, PurchaseProjectLite>>(new Map());
 
   // Filtres spécifiques onglet Reloueurs
   const [relouerStatus, setRelouerStatus] = useState<string>('all');
@@ -234,6 +245,31 @@ const Clients = () => {
           });
           setClientCandidates(candidatesMap);
         }
+      }
+
+      // Load purchase projects in batch: acheteur = type achat OU journey achat OU projet achat existant.
+      if (clientIds.length > 0) {
+        const { data: purchaseRows, error: purchaseError } = await supabase
+          .from('purchase_projects')
+          .select('id, client_id, user_id, statut')
+          .in('client_id', clientIds)
+          .limit(15000);
+        if (!purchaseError && purchaseRows) {
+          const byClient = new Map<string, PurchaseProjectLite>();
+          const byUser = new Map<string, PurchaseProjectLite>();
+          purchaseRows.forEach((p: any) => {
+            if (p.client_id && !byClient.has(p.client_id)) byClient.set(p.client_id, p as PurchaseProjectLite);
+            if (p.user_id && !byUser.has(p.user_id)) byUser.set(p.user_id, p as PurchaseProjectLite);
+          });
+          setPurchaseByClient(byClient);
+          setPurchaseByUser(byUser);
+        } else {
+          setPurchaseByClient(new Map());
+          setPurchaseByUser(new Map());
+        }
+      } else {
+        setPurchaseByClient(new Map());
+        setPurchaseByUser(new Map());
       }
 
       // Load agents with active profiles
@@ -393,9 +429,10 @@ const Clients = () => {
   const statutOptions = ['actif', 'en_attente', 'reloge', 'stoppe', 'suspendu', 'inactif'];
   const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', stoppe: 'Stoppé', suspendu: 'Suspendu', inactif: 'Inactif' };
 
-  const isReletter = (c: Client) => c.journey_type === 'property_reletting';
+  const getPurchaseProject = (c: Client) => purchaseByClient.get(c.id) || purchaseByUser.get(c.user_id) || null;
+  const isBuyer = (c: Client) => isPurchaseBuyer(c, getPurchaseProject(c));
+  const isReletter = (c: Client) => !isBuyer(c) && c.journey_type === 'property_reletting';
   const isMixed = (c: Client) => c.journey_type === 'mixed';
-  const isBuyer = (c: Client) => (c as any).type_recherche === 'Acheter' || c.journey_type === 'purchase_search';
   const isSearcher = (c: Client) => !isBuyer(c) && (!c.journey_type || c.journey_type === 'housing_search');
 
   const filteredClients = clients.filter(client => {
@@ -414,6 +451,11 @@ const Clients = () => {
          profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
       : true;
     if (!matchesSearch) return false;
+
+    // Filtre type de recherche global, avant tout retour spécifique reloueur.
+    if (selectedTypeRecherche !== 'all') {
+      if (normalizeTypeRecherche((client as any).type_recherche) !== selectedTypeRecherche) return false;
+    }
 
     // 2) Pour les clients reloueurs purs (carte reloueur) — appliquer les filtres reloueur
     if (isReletter(client)) {
@@ -470,8 +512,7 @@ const Clients = () => {
         return !Number.isNaN(pieceNum) && Math.abs(client.pieces - pieceNum) < 0.01;
       });
 
-    const matchTypeRecherche = selectedTypeRecherche === 'all' ||
-      (client as any).type_recherche === selectedTypeRecherche;
+    const matchTypeRecherche = true;
 
     const matchTypePermis = selectedTypePermis === 'all' ||
       client.type_permis === selectedTypePermis;
@@ -663,7 +704,9 @@ const Clients = () => {
           nom: inviteForm.nom,
           telephone: inviteForm.telephone || null,
           invitationLegere: true,
-          typeRecherche: inviteForm.typeRecherche,
+          typeRecherche: normalizeTypeRecherche(inviteForm.typeRecherche),
+          journeyType: isBuyerType(inviteForm.typeRecherche) ? 'purchase_search' : 'housing_search',
+          createPurchaseProject: isBuyerType(inviteForm.typeRecherche),
         }
       });
       if (error) throw error;

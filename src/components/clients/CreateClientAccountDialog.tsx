@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { UserPlus, Send, Loader2, Home, Key } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { isBuyerType, normalizeTypeRecherche } from '@/lib/journey';
 
 interface CreateClientAccountDialogProps {
   open: boolean;
@@ -47,6 +48,7 @@ export const CreateClientAccountDialog = ({
 
     try {
       setSending(true);
+      const normalizedType = normalizeTypeRecherche(form.typeRecherche);
       const { error } = await supabase.functions.invoke('invite-client', {
         body: {
           email: form.email.trim().toLowerCase(),
@@ -54,7 +56,9 @@ export const CreateClientAccountDialog = ({
           nom: form.nom.trim(),
           telephone: form.telephone.trim() || null,
           invitationLegere: true,
-          typeRecherche: form.typeRecherche,
+          typeRecherche: normalizedType,
+          journeyType: isBuyerType(normalizedType) ? 'purchase_search' : 'housing_search',
+          createPurchaseProject: isBuyerType(normalizedType),
           agentId: agentId || undefined,
         },
       });
