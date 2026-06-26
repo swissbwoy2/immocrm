@@ -36,7 +36,7 @@ export default function MandatAchatStepPersonal({ data, onChange }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <LandingInput
           label="Profession"
-          icon={Briefcase}
+          icon={<Briefcase className="h-4 w-4" />}
           value={data.profession}
           onChange={(e) => onChange({ profession: e.target.value })}
           placeholder="ex. Ingénieur"

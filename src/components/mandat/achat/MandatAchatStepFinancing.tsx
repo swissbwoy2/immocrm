@@ -48,7 +48,7 @@ export default function MandatAchatStepFinancing({ data, onChange }: Props) {
         <LandingInput
           label="Revenu mensuel du ménage (CHF)"
           type="number"
-          icon={TrendingUp}
+          icon={<TrendingUp className="h-4 w-4" />}
           value={data.revenus_mensuels || ''}
           onChange={(e) => onChange({ revenus_mensuels: Number(e.target.value) || 0 })}
           placeholder="ex. 9000"

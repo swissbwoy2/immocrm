@@ -38,7 +38,7 @@ export default function MandatAchatStepProject({ data, onChange }: Props) {
         <LandingInput
           label="Budget cible (CHF)"
           type="number"
-          icon={Target}
+          icon={<Target className="h-4 w-4" />}
           value={data.budget_max || ''}
           onChange={(e) => onChange({ budget_max: Number(e.target.value) || 0 })}
           placeholder="ex. 750 000"
