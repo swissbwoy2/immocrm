@@ -177,7 +177,9 @@ export default function NouveauMandat() {
         return;
       }
 
-      const montantAcompte = formData.type_recherche === 'Acheter' ? 2500 : 300;
+      const isPurchase = formData.journey === 'purchase' || formData.type_recherche === 'Acheter';
+      // ⚠️ Acompte exact : CHF 2'499 pour achat, CHF 300 pour location.
+      const montantAcompte = isPurchase ? 2499 : 300;
 
       // ÉTAPE 1: Créer le client AbaNinja AVANT l'insert
       let abaninjaClientUuid: string | null = null;
@@ -483,11 +485,16 @@ export default function NouveauMandat() {
     }
   };
 
-  const StepComponent = STEPS[currentStep].component;
+  const StepComponent = currentStepDef.component;
+  const isPurchaseJourney = formData.journey === 'purchase';
 
   const handleAddCoBuyer = () => {
-    setCurrentStep(3);
-    window.scrollTo(0, 0);
+    // Step "candidats" / "co_acquereurs" index in current flow
+    const idx = steps.findIndex((s) => s.key === 'candidats' || s.key === 'co_acquereurs');
+    if (idx >= 0) {
+      setCurrentStep(idx);
+      window.scrollTo(0, 0);
+    }
   };
 
   return (
@@ -498,28 +505,32 @@ export default function NouveauMandat() {
           <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/40 rounded-full px-4 py-2">
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-xs md:text-sm font-semibold text-primary">
-              Nouveau mandat de recherche
+              {isPurchaseJourney ? 'Accompagnement à l\'achat' : 'Nouveau mandat de recherche'}
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
-            Démarrons votre <span className="text-primary">recherche</span>
+            {isPurchaseJourney
+              ? <>Démarrons votre <span className="text-primary">projet d'achat</span></>
+              : <>Démarrons votre <span className="text-primary">recherche</span></>}
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.
+            {isPurchaseJourney
+              ? 'Acompte d\'activation CHF 2\'499.– · Parcours 60 jours après activation par votre conseiller.'
+              : 'Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.'}
           </p>
         </div>
 
         <LandingGuaranteeBanner />
         <LandingProgressBlock
           currentStep={currentStep}
-          totalSteps={STEPS.length}
-          stepTitle={STEPS[currentStep]?.title ?? ''}
+          totalSteps={steps.length}
+          stepTitle={currentStepDef.title}
         />
-        <LandingStepIndicator steps={STEPS} currentStep={currentStep} />
+        <LandingStepIndicator steps={steps} currentStep={currentStep} />
 
         <LandingFormCard>
           <PremiumStepTransition stepKey={currentStep} direction={1}>
-            {currentStep === 4 ? (
+            {currentStepDef.key === 'criteres' ? (
               <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
             ) : (
               <StepComponent data={formData} onChange={handleChange} />
@@ -534,8 +545,8 @@ export default function NouveauMandat() {
               {currentStep === 0 ? <><ArrowLeft className="h-4 w-4" /> Retour</> : undefined}
             </LandingButton>
 
-            {currentStep < STEPS.length - 1 ? (
-              <LandingButton variant="next" onClick={handleNext}>
+            {currentStep < steps.length - 1 ? (
+              <LandingButton variant="next" onClick={handleNext} disabled={currentStepDef.key === 'journey' && !formData.journey}>
                 Continuer
               </LandingButton>
             ) : (
