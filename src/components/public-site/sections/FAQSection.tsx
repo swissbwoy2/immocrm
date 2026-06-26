@@ -15,8 +15,8 @@ const faqsLocation = [
 ];
 
 const faqsAchat = [
-  { q: "Que se passe-t-il si vous ne trouvez rien en 6 mois ?", a: "Votre acompte de 2'500 CHF vous est intégralement remboursé. Notre engagement est total : si nous ne trouvons pas de bien correspondant à vos critères dans les 6 mois, vous ne perdez rien." },
-  { q: "Combien coûte le service ?", a: "Un acompte de 2'500 CHF à l'engagement (déduit de la commission finale), puis 1% du prix d'achat payable uniquement à la signature de l'acte authentique chez le notaire. Aucun frais caché." },
+  { q: "Que se passe-t-il si vous ne trouvez rien en 6 mois ?", a: "Votre acompte de 2'499 CHF vous est intégralement remboursé. Notre engagement est total : si nous ne trouvons pas de bien correspondant à vos critères dans les 6 mois, vous ne perdez rien." },
+  { q: "Combien coûte le service ?", a: "Service au prix forfaitaire de 4'999 CHF TTC : acompte d'activation de 2'499 CHF à la signature (déduit), puis solde de 2'500 CHF uniquement en cas de succès (acte d'acquisition). Aucun frais caché." },
   { q: "Comment fonctionne la recherche d'un bien ?", a: "Votre agent accède aux biens off-market via son réseau professionnel, contacte directement vendeurs, notaires et régies, et vous présente une sélection sur-mesure. Vous ne visitez que les biens qui correspondent vraiment à votre projet." },
   { q: "M'aidez-vous pour le financement hypothécaire ?", a: "Oui. Nous vous mettons en relation avec notre comparateur indépendant pour obtenir les meilleurs taux auprès de nos partenaires bancaires : UBS, Raiffeisen, BCV, BCGE, Crédit Agricole et d'autres établissements." },
   { q: "Couvrez-vous toute la Suisse romande ?", a: "Nous intervenons dans les cantons de Genève, Vaud, Fribourg, Neuchâtel, Valais et Jura. Notre réseau de contacts est particulièrement dense sur l'Arc lémanique." },

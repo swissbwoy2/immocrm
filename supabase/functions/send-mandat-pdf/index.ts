@@ -112,7 +112,9 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   let yPosition = pageHeight - margin;
   
   const isPurchase = data.type_recherche === 'Acheter';
-  const acompte = isPurchase ? 2500 : 300;
+  const acompte = isPurchase ? 2499 : 300;
+  const mandatTotal = isPurchase ? 4999 : 300;
+  const solde = isPurchase ? 2500 : 0;
   
   // Helper function to add text with sanitization
   const addText = (text: string, x: number, y: number, size: number, font = helveticaFont, color = rgb(0, 0, 0)) => {
@@ -377,13 +379,24 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   
   // Section 7: Acompte
   checkNewPage();
-  addText('ACOMPTE ET CONDITIONS', margin, yPosition, 12, helveticaBold);
+  addText('HONORAIRES ET ACOMPTE', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
   
-  addText(`Montant de l'acompte: ${acompte} CHF`, margin, yPosition, 11, helveticaBold);
-  yPosition -= lineHeight;
-  addText('Pour l\'activation de vos recherches de logement', margin, yPosition, 10);
-  yPosition -= 20;
+  if (isPurchase) {
+    addText(`Prix total du service: CHF ${mandatTotal}.- TTC`, margin, yPosition, 11, helveticaBold);
+    yPosition -= lineHeight;
+    addText(`Acompte d'activation: CHF ${acompte}.- TTC (du a la signature)`, margin, yPosition, 10);
+    yPosition -= lineHeight;
+    addText(`Solde du en cas de succes: CHF ${solde}.- TTC (a l'acquisition du bien)`, margin, yPosition, 10);
+    yPosition -= lineHeight;
+    addText(`L'acompte de CHF ${acompte}.- est deduit du prix total de CHF ${mandatTotal}.-.`, margin, yPosition, 10);
+    yPosition -= 20;
+  } else {
+    addText(`Montant de l'acompte: CHF ${acompte}.-`, margin, yPosition, 11, helveticaBold);
+    yPosition -= lineHeight;
+    addText("Pour l'activation de vos recherches de logement", margin, yPosition, 10);
+    yPosition -= 20;
+  }
   
   const paymentMethod = (data.payment_method ?? 'qr_invoice');
   if (paymentMethod === 'twint') {
@@ -470,12 +483,22 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= lineHeight;
     addWrappedText(
-      "Le mandant s'engage a payer au mandataire, a la conclusion de l'acte de vente chez un notaire, le montant correspondant a 1% du prix de vente defini entre les parties.",
+      "Le mandant s'engage a payer au mandataire un prix total forfaitaire de CHF 4'999.- TTC pour le service de recherche et d'accompagnement a l'achat immobilier.",
       margin, maxTextWidth, 9
     );
     yPosition -= 5;
     addWrappedText(
-      "Un acompte de CHF 2'500.- est du pour activer vos recherches, et sera deduit de la commission en cas de reussite ou rembourse totalement en cas d'echec.",
+      "Un acompte d'activation de CHF 2'499.- TTC est du a la signature du present mandat. Cet acompte est integralement deduit du prix total de CHF 4'999.- TTC.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 5;
+    addWrappedText(
+      "Le solde de CHF 2'500.- TTC est du uniquement en cas de succes, soit a la conclusion de l'acte d'acquisition d'un bien immobilier presente ou accompagne par le mandataire.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 5;
+    addWrappedText(
+      "En cas d'echec total des recherches au terme du mandat, l'acompte est rembourse selon les conditions prevues a l'article 'Remboursement'.",
       margin, maxTextWidth, 9
     );
     yPosition -= 5;
@@ -795,7 +818,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email with PDF attachment
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@immo-rama.ch";
     const isPurchase = data.type_recherche === 'Acheter';
-    const acompte = isPurchase ? 2500 : 300;
+    const acompte = isPurchase ? 2499 : 300;
     
     // Format budget without Unicode issues
     const budgetFormatted = data.budget_max.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");

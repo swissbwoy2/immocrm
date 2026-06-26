@@ -144,9 +144,12 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
         client_id: clientId,
         user_id: userId,
         assigned_agent_id: agentId,
-        statut: 'actif',
+        statut: 'en_attente_activation',
+        statut_acompte: 'a_payer',
+        montant_mandat: 4999,
+        montant_acompte: 2499,
         duree_progression_jours: 60,
-        date_debut_progression: new Date().toISOString().slice(0, 10),
+        date_debut_progression: null,
       })
       .select('id').single();
     if (error || !created) { console.error(error); return null; }

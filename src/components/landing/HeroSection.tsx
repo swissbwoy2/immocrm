@@ -33,7 +33,7 @@ export function HeroSection() {
       promise: "6 mois de recherche • Remboursé si échec",
       cta: "Trouver mon bien idéal",
       ctaLink: "/nouveau-mandat",
-      acompte: "Acompte 2'500 CHF",
+      acompte: "Acompte 2'499 CHF",
       garantie: "Mandat de 6 mois",
       refund: "Acompte déduit de la commission",
       familiesText: "+150 biens vendus",

@@ -392,6 +392,15 @@ export default function Dossier() {
     );
   }
 
+  // 🛡️ Acheteurs : isolation stricte. Aucun contenu location dans le dossier.
+  // L'acheteur est renvoyé vers son dashboard achat dédié (DashboardAchat ou DashboardAchatEnAttente),
+  // qui affiche budget achat, fonds propres, capacité, hypothèque, taux d'effort, documents achat, etc.
+  const isBuyerClient = client.type_recherche === 'Acheter' || (client as any).journey_type === 'purchase_search';
+  if (isBuyerClient) {
+    navigate('/client/dashboard', { replace: true });
+    return null;
+  }
+
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
   const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);

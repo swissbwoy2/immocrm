@@ -620,6 +620,7 @@ serve(async (req) => {
               statut_mandat: 'signe',
               statut_acompte: 'a_payer',
               montant_acompte: 2499,
+              montant_mandat: 4999,
               duree_progression_jours: 60,
               // date_debut_progression: NULL — démarre seulement à l'activation admin
             })

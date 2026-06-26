@@ -47,7 +47,7 @@ export default function CGVContent({ typeRecherche }: Props) {
                 HONORAIRES
               </p>
               <p className="mt-2 text-muted-foreground">
-                Le mandant s'engage à payer au mandataire, à la conclusion de l'acte de vente chez un notaire, le montant correspondant à 1 % du prix de vente défini entre les parties. Un acompte de CHF 2'500.- est dû pour activer vos recherches, et sera déduit de la commission en cas de réussite ou remboursé totalement en cas d'échec.
+                Le mandant s'engage à payer au mandataire un prix total forfaitaire de <strong>CHF 4'999.- TTC</strong> pour le service de recherche et d'accompagnement à l'achat immobilier. Un <strong>acompte d'activation de CHF 2'499.- TTC</strong> est dû à la signature et est <strong>intégralement déduit du prix total de CHF 4'999.-</strong>. Le <strong>solde de CHF 2'500.- TTC</strong> est dû uniquement en cas de succès, à la conclusion de l'acte d'acquisition d'un bien présenté ou accompagné par le mandataire.
               </p>
               <p className="mt-2 text-muted-foreground">
                 En toute confidentialité le mandataire s'engage également à communiquer au mandant toutes les informations nécessaires pour au bon déroulement de cette mission.
@@ -90,8 +90,8 @@ export default function CGVContent({ typeRecherche }: Props) {
             </p>
             <div className="mt-3 pt-3 border-t border-border/50">
               <p className="text-sm font-medium">
-                Acompte pour l'activation de vos recherches de bien à acheter:{' '}
-                <span className="text-primary font-bold">2'500 CHF</span>
+                Acompte d'activation : <span className="text-primary font-bold">2'499 CHF</span>
+                {' '}<span className="text-xs text-muted-foreground">(déduit du prix total de 4'999 CHF — solde 2'500 CHF en cas de succès)</span>
               </p>
             </div>
           </Card>
