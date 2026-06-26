@@ -252,7 +252,7 @@ const Clients = () => {
         const { data: purchaseRows, error: purchaseError } = await supabase
           .from('purchase_projects')
           .select('id, client_id, user_id, statut')
-          .in('client_id', clientIds)
+          .or(`client_id.in.(${clientIds.join(',')}),user_id.in.(${clientUserIds.join(',')})`)
           .limit(15000);
         if (!purchaseError && purchaseRows) {
           const byClient = new Map<string, PurchaseProjectLite>();
