@@ -148,6 +148,13 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
             <span className="text-sm text-[hsl(40_20%_60%)]">Durée contractuelle du mandat</span>
             <strong className="text-[hsl(40_20%_75%)]">6 mois</strong>
           </div>
+          <div className="flex justify-between items-center py-2">
+            <span className="text-sm text-[hsl(40_20%_60%)]">Suivi opérationnel intensif après activation</span>
+            <strong className="text-[hsl(40_20%_75%)]">60 jours</strong>
+          </div>
+        </div>
+        <div className="mt-3 p-3 rounded-lg bg-amber-950/20 border border-amber-500/20 text-xs text-amber-300">
+          <strong>Important :</strong> Le suivi opérationnel de 60 jours débute après l'activation de votre dossier par votre conseiller. Cette période ne remplace pas la durée contractuelle de 6 mois du mandat.
         </div>
       </Section>
 
