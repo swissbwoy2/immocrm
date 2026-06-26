@@ -432,7 +432,7 @@ const Clients = () => {
   const getPurchaseProject = (c: Client) => purchaseByClient.get(c.id) || purchaseByUser.get(c.user_id) || null;
   const isBuyer = (c: Client) => isPurchaseBuyer(c, getPurchaseProject(c));
   const isReletter = (c: Client) => !isBuyer(c) && c.journey_type === 'property_reletting';
-  const isMixed = (c: Client) => c.journey_type === 'mixed';
+  const isMixed = (c: Client) => !isBuyer(c) && c.journey_type === 'mixed';
   const isSearcher = (c: Client) => !isBuyer(c) && (!c.journey_type || c.journey_type === 'housing_search');
 
   const filteredClients = clients.filter(client => {
@@ -442,7 +442,10 @@ const Clients = () => {
       if (!isBuyer(client)) return false;
     }
     if (journeyTab === 'chercheurs' && !(isSearcher(client) || isMixed(client))) return false;
-    if (journeyTab === 'reloueurs' && !(isReletter(client) || isMixed(client))) return false;
+    if (journeyTab === 'reloueurs') {
+      if (isBuyer(client)) return false;
+      if (!(isReletter(client) || isMixed(client))) return false;
+    }
     if (journeyTab === 'mixtes' && !isMixed(client)) return false;
 
     const profile = clientProfiles.get(client.user_id);
@@ -454,7 +457,11 @@ const Clients = () => {
 
     // Filtre type de recherche global, avant tout retour spécifique reloueur.
     if (selectedTypeRecherche !== 'all') {
-      if (normalizeTypeRecherche((client as any).type_recherche) !== selectedTypeRecherche) return false;
+      if (selectedTypeRecherche === 'Acheter') {
+        if (!isBuyer(client)) return false;
+      } else if (isBuyer(client) || normalizeTypeRecherche((client as any).type_recherche) !== selectedTypeRecherche) {
+        return false;
+      }
     }
 
     // 2) Pour les clients reloueurs purs (carte reloueur) — appliquer les filtres reloueur
