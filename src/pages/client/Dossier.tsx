@@ -37,10 +37,14 @@ import { ExtraitPoursuitesHeroCard } from '@/components/ExtraitPoursuitesHeroCar
 import { useClientCandidates, ClientCandidate } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
+import { usePurchaseProject, computeProgression } from '@/hooks/usePurchaseProject';
+import { isPurchaseBuyer } from '@/lib/journey';
+import { formatCHF } from '@/lib/purchaseFinancing';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
+import { Progress } from '@/components/ui/progress';
 import { 
   PremiumPageHeader,
   PremiumMandatProgress,
@@ -70,7 +74,8 @@ export default function Dossier() {
   
   // Hooks pour la gestion des candidats et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
-  const isAcheteur = client?.type_recherche === 'Acheter';
+  const purchaseHook = usePurchaseProject({ userId: user?.id, clientId: client?.id });
+  const isAcheteur = isPurchaseBuyer(client, purchaseHook.project);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
 
@@ -226,6 +231,9 @@ export default function Dossier() {
             taille: file.size,
             user_id: user!.id,
             client_id: client.id,
+            purchase_project_id: isAcheteur ? purchaseHook.project?.id || null : null,
+            purchase_category: isAcheteur ? 'autres_documents_bancaires' : null,
+            type_document: isAcheteur ? 'autre' : undefined,
             url: e.target?.result as string,
           });
 
@@ -393,12 +401,178 @@ export default function Dossier() {
   }
 
   // 🛡️ Acheteurs : isolation stricte. Aucun contenu location dans le dossier.
-  // L'acheteur est renvoyé vers son dashboard achat dédié (DashboardAchat ou DashboardAchatEnAttente),
-  // qui affiche budget achat, fonds propres, capacité, hypothèque, taux d'effort, documents achat, etc.
-  const isBuyerClient = client.type_recherche === 'Acheter' || (client as any).journey_type === 'purchase_search';
+  const isBuyerClient = isPurchaseBuyer(client, purchaseHook.project);
   if (isBuyerClient) {
-    navigate('/client/dashboard', { replace: true });
-    return null;
+    const project = purchaseHook.project;
+    const isActive = project?.statut === 'actif';
+    const progression = computeProgression(project?.date_debut_progression, project?.duree_progression_jours || 60);
+    const financing = purchaseHook.financing;
+    const computed = purchaseHook.computed;
+    const financingComplete = !!computed && (financing?.revenu_annuel_retenu || 0) > 0 && (financing?.prix_cible || 0) > 0;
+    const achatDocuments = [
+      "Pièce d'identité",
+      'Permis de séjour si applicable',
+      'Certificat de salaire annuel',
+      '3 dernières fiches de salaire',
+      'Contrat de travail',
+      'Attestation employeur si nécessaire',
+      'Relevés bancaires des fonds propres',
+      'Attestation 3e pilier',
+      'Attestation LPP',
+      'Attestation EPL / retrait possible pour logement principal',
+      'Justificatifs crédits privés',
+      'Justificatifs leasing',
+      'Justificatifs cartes de crédit avec mensualités',
+      'Dernière décision de taxation',
+      'Accord de transmission du dossier aux partenaires financiers',
+      'Autres documents bancaires',
+    ];
+
+    return (
+      <div className="relative flex-1 overflow-y-auto">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+        </div>
+        <div className="relative z-10 p-4 md:p-8 space-y-6">
+          <PremiumPageHeader
+            title="Mon dossier achat"
+            subtitle="Votre dossier d'accompagnement à l'achat immobilier"
+            icon={FolderOpen}
+            action={<Badge className="bg-primary/10 text-primary border-primary/20">Acheteur</Badge>}
+            className="mb-6"
+          />
+
+          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <CardTitle>{isActive ? "Projet d'achat actif" : "Projet d'achat en attente d'activation"}</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">Durée contractuelle du mandat achat : 6 mois, environ 180 jours.</p>
+                </div>
+                <Badge variant={isActive ? 'default' : 'secondary'}>{isActive ? 'Actif' : 'En attente'}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isActive ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Suivi opérationnel achat</span>
+                    <span>{progression.jourActuel}/{progression.dureeJours} jours</span>
+                  </div>
+                  <Progress value={progression.pourcentage} className="h-3" />
+                  <p className="text-xs text-muted-foreground">Barre opérationnelle 60 jours après activation admin.</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm">
+                  Le suivi opérationnel de 60 jours démarrera après activation par votre conseiller.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <PremiumDossierSection title="Financement achat" icon={Wallet} delay={100}>
+            {!financingComplete ? (
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
+                <p className="font-semibold text-blue-700 dark:text-blue-300">Financement à compléter</p>
+                <p className="text-sm text-muted-foreground mt-1">Votre conseiller complétera votre capacité d'achat, vos fonds propres et votre statut bancaire.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <PremiumFinanceCard title="Revenu annuel retenu" value={computed.revenuTotal} icon={DollarSign} variant="default" delay={0} />
+                <PremiumFinanceCard title="Fonds propres disponibles" value={computed.fondsPropresTotal} icon={Wallet} variant="success" delay={50} />
+                <PremiumFinanceCard title="Prix cible" value={computed.prixCible} icon={Home} variant="warning" delay={100} />
+                <PremiumFinanceCard title="Hypothèque estimée" value={computed.montantHypothecaire} icon={Building2} variant="info" delay={150} />
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
+                  <p className="text-sm text-muted-foreground">Fonds propres requis</p>
+                  <p className="text-xl font-bold">{formatCHF(computed.fondsPropresRequis)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
+                  <p className="text-sm text-muted-foreground">Charges théoriques mensuelles</p>
+                  <p className="text-xl font-bold">{formatCHF(computed.chargesMensuelles)}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
+                  <p className="text-sm text-muted-foreground">Taux d'effort</p>
+                  <p className="text-xl font-bold">{computed.tauxEffort.toFixed(1)}%</p>
+                </div>
+                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
+                  <p className="text-sm text-muted-foreground">Statut bancaire</p>
+                  <p className="text-xl font-bold">{financing?.statut_bancaire || 'À évaluer'}</p>
+                </div>
+              </div>
+            )}
+          </PremiumDossierSection>
+
+          <PremiumDossierSection
+            title="Documents achat"
+            icon={FileText}
+            delay={200}
+            action={
+              <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="group relative overflow-hidden">
+                <Upload className="w-4 h-4 mr-2" />
+                Ajouter un document
+              </Button>
+            }
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
+              {achatDocuments.map((label) => (
+                <div key={label} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span className="text-sm">{label}</span>
+                </div>
+              ))}
+            </div>
+            {documents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {documents.map((doc, index) => (
+                  <PremiumDocumentCard key={doc.id} document={doc} onDownload={handleDownload} onDelete={(doc) => { setSelectedDoc(doc); setDeleteDialogOpen(true); }} delay={index * 50} />
+                ))}
+              </div>
+            ) : (
+              <PremiumDocumentEmptyState onUpload={() => setUploadDialogOpen(true)} />
+            )}
+          </PremiumDossierSection>
+
+          {agent && (
+            <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative p-2 bg-primary/10 rounded-xl"><User className="w-5 h-5 text-primary" /></div>
+                <h2 className="text-xl font-semibold">Mon conseiller</h2>
+              </div>
+              <PremiumAgentCard agent={agent} onMessage={() => navigate('/client/messagerie')} onCall={() => window.location.href = `tel:${agent.telephone}`} />
+            </div>
+          )}
+        </div>
+
+        {/* Upload Dialog achat */}
+        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+          <DialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2"><Upload className="w-5 h-5 text-primary" />Ajouter un document achat</DialogTitle>
+              <DialogDescription>Formats acceptés : PDF, JPG, PNG (max 5 MB)</DialogDescription>
+            </DialogHeader>
+            <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${dragActive ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"><Upload className="w-8 h-8 text-primary" /></div>
+              <p className="text-sm font-medium mb-2">Glissez-déposez votre fichier ici</p>
+              <p className="text-xs text-muted-foreground mb-4">ou</p>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="group"><Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />Sélectionner un fichier</Button>
+              <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); }} />
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setUploadDialogOpen(false)}>Annuler</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2"><Trash2 className="w-5 h-5 text-red-500" />Supprimer le document</AlertDialogTitle>
+              <AlertDialogDescription>Êtes-vous sûr de vouloir supprimer "{selectedDoc?.nom}" ? Cette action est irréversible.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Supprimer</AlertDialogAction></AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
   }
 
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
