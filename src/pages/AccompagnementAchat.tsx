@@ -11,7 +11,7 @@ export default function AccompagnementAchat() {
     const meta = document.querySelector('meta[name="description"]');
     if (meta) {
       meta.setAttribute('content',
-        'Accompagnement complet à l\'achat immobilier en Suisse : validation bancaire 24-48 h, courtier qui visite pour vous, négociation et signature notariée. 60 jours d\'accompagnement opérationnel.',
+        'Accompagnement complet à l\'achat immobilier en Suisse : validation bancaire 24-48 h, courtier qui visite pour vous, négociation et signature notariée. Mandat 6 mois jusqu\'à la remise des clés.',
       );
     }
   }, []);
@@ -29,7 +29,7 @@ export default function AccompagnementAchat() {
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
           Validation bancaire en 24 à 48 heures, biens sélectionnés et visités par notre courtier,
           offre d'achat défendue à votre place, suivi notarial jusqu'à la remise des clés.
-          60 jours d'accompagnement opérationnel.
+          Mandat d'accompagnement 6 mois.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
           <Button size="lg" className="bg-sky-600 hover:bg-sky-700" asChild>
@@ -42,7 +42,7 @@ export default function AccompagnementAchat() {
         <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
           <Badge variant="outline" className="border-sky-200">CHF 4'999 — acompte CHF 2'499</Badge>
           <Badge variant="outline" className="border-sky-200">Validation bancaire 24-48 h</Badge>
-          <Badge variant="outline" className="border-sky-200">60 jours d'accompagnement</Badge>
+          <Badge variant="outline" className="border-sky-200">Mandat 6 mois</Badge>
         </div>
       </section>
 
@@ -97,7 +97,7 @@ export default function AccompagnementAchat() {
           <Sparkles className="h-10 w-10 text-sky-600 mx-auto mb-3" />
           <h2 className="text-2xl md:text-3xl font-bold mb-3">Démarrer votre projet d'achat aujourd'hui</h2>
           <p className="text-muted-foreground mb-6">
-            En 60 jours, vous passez de l'idée d'achat à la remise des clés, encadré par une équipe spécialisée.
+            Avec votre mandat de 6 mois, vous passez de l'idée d'achat à la remise des clés, encadré par une équipe spécialisée.
           </p>
           <Button size="lg" className="bg-sky-600 hover:bg-sky-700" asChild>
             <Link to="/formulaire-relouer?intention=achat">Démarrer mon projet d'achat</Link>

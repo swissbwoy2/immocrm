@@ -220,7 +220,7 @@ export default function NouveauMandat() {
             body: {
               client_uuid: abaninjaClientUuid,
               address_uuid: abaninjaAddressUuid,
-              type_recherche: formData.type_recherche,
+              type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
               prenom: formData.prenom,
               nom: formData.nom,
               email: formData.email,
@@ -554,7 +554,7 @@ export default function NouveauMandat() {
           </h1>
           <p className="text-sm md:text-base text-muted-foreground">
             {isPurchaseJourney
-              ? 'Acompte d\'activation CHF 2\'499.– · Parcours 60 jours après activation par votre conseiller.'
+              ? 'Acompte d\'activation CHF 2\'499.– · Mandat 6 mois à compter de l\'activation par votre conseiller.'
               : 'Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.'}
           </p>
         </div>

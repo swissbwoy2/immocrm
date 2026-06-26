@@ -18,7 +18,7 @@ interface Choice {
 
 const CHOICES: Choice[] = [
   { key: 'rental',    icon: Home,       title: 'Louer un logement',         desc: 'Trouver et signer un nouveau bail.' },
-  { key: 'purchase',  icon: Building2,  title: 'Acheter un bien immobilier', desc: 'Accompagnement complet à l\'achat (60 jours).' },
+  { key: 'purchase',  icon: Building2,  title: 'Acheter un bien immobilier', desc: 'Accompagnement complet à l\'achat — mandat 6 mois.' },
   { key: 'reletting', icon: RotateCcw,  title: 'Relouer mon logement',      desc: 'Vous quittez votre bail : trouver un repreneur.', redirect: '/relouer-mon-appartement' },
   { key: 'selling',   icon: Tag,        title: 'Vendre mon bien',           desc: 'Mise en vente et accompagnement.', redirect: '/vendre-mon-bien' },
 ];

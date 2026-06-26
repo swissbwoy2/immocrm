@@ -968,7 +968,7 @@ export default function ClientDetail() {
               </div>
               <div>
                 <p className="font-semibold text-amber-700 dark:text-amber-400">Projet d'achat en attente d'activation</p>
-                <p className="text-sm text-muted-foreground">Mandat achat : 6 mois. Le suivi opérationnel de 60 jours démarrera après activation par votre conseiller.</p>
+                <p className="text-sm text-muted-foreground">Mandat achat : 6 mois. Le suivi démarrera après activation par votre conseiller.</p>
               </div>
             </div>
             <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />

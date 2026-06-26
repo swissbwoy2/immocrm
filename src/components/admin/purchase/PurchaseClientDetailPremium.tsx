@@ -111,7 +111,7 @@ export function PurchaseClientDetailPremium({
             <div>
               <p className="font-semibold text-amber-700 dark:text-amber-400">Projet d'achat en attente d'activation</p>
               <p className="text-sm text-muted-foreground">
-                Mandat achat : 6 mois · Le suivi opérationnel de 60 jours démarrera après activation admin.
+                Mandat achat : 6 mois · Activation en attente.
               </p>
             </div>
           </div>
@@ -198,7 +198,7 @@ export function PurchaseClientDetailPremium({
                       <div>
                         <p className="font-semibold text-muted-foreground">⏳ En attente d'activation</p>
                         <p className="text-sm text-muted-foreground">
-                          Le suivi opérationnel de 60 jours démarrera après activation admin
+                          Le dossier sera activé par l'admin pour démarrer le parcours
                         </p>
                       </div>
                     </div>
@@ -212,7 +212,7 @@ export function PurchaseClientDetailPremium({
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground font-medium">Suivi opérationnel achat (60 jours)</p>
+                      <p className="text-sm text-muted-foreground font-medium">Progression achat — mandat 6 mois</p>
                     </div>
                     <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
                       prog.jourActuel < 45
@@ -226,7 +226,7 @@ export function PurchaseClientDetailPremium({
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground text-right mb-2">
-                    <AnimatedCounter value={prog.jourActuel} duration={800} decimals={0} /> / 60 jours
+                    Jour <AnimatedCounter value={prog.jourActuel} duration={800} decimals={0} />
                   </p>
                   <div className="relative h-4 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
                     <div
@@ -356,7 +356,7 @@ export function PurchaseClientDetailPremium({
           <PremiumStatCard label="Mandat total achat" value={`CHF ${montantMandat.toLocaleString('fr-CH')}`} variant="primary" icon={Banknote} />
           <PremiumStatCard label="Acompte" value={`CHF ${montantAcompte.toLocaleString('fr-CH')}`} variant="warning" icon={Wallet} />
           <PremiumStatCard label="Solde au succès" value={`CHF ${soldeSucces.toLocaleString('fr-CH')}`} variant="success" icon={Target} />
-          <PremiumStatCard label="Suivi opérationnel" value="60 jours" icon={Clock} />
+          <PremiumStatCard label="Durée mandat" value="6 mois" icon={Clock} />
         </div>
 
         {/* ─── KPI grid ─── */}

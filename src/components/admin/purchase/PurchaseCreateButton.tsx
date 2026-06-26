@@ -24,7 +24,7 @@ export function PurchaseCreateButton({ clientId, userId, assignedAgentId, onCrea
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold">Client identifié comme acheteur</h3>
           <p className="text-sm text-muted-foreground">
-            Aucun parcours d'accompagnement à l'achat n'est encore actif pour ce client. Créer le parcours active la barre 60 jours, les 17 étapes, le profil de financement et la tenue des charges.
+            Aucun parcours d'accompagnement à l'achat n'est encore actif pour ce client. Créer le parcours active les 17 étapes, le profil de financement et la tenue des charges (mandat 6 mois).
           </p>
         </div>
         <Button
