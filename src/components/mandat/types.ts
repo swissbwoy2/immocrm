@@ -210,6 +210,7 @@ export const BESOINS_COMMERCIAUX = [
 ];
 
 export const initialFormData: MandatFormData = {
+  journey: null,
   email: '',
   prenom: '',
   nom: '',
@@ -247,6 +248,22 @@ export const initialFormData: MandatFormData = {
   budget_max: 0,
   apport_personnel: 0,
   souhaits_particuliers: '',
+
+  // Achat - financement complémentaire
+  achat_fonds_propres_3a: 0,
+  achat_fonds_propres_lpp: 0,
+  achat_montant_epl: 0,
+  achat_revenu_annuel_retenu: 0,
+  achat_bonus_3ans: 0,
+  achat_autres_revenus: 0,
+  achat_credit_mensuel: 0,
+  achat_leasing_mensuel: 0,
+  achat_cartes_credit_mensuel: 0,
+  achat_pensions_versees: 0,
+  achat_horizon_mois: 6,
+  achat_usage: '',
+  achat_nombre_enfants: 0,
+
   candidats: [],
   documents_uploades: [],
   signature_data: '',
