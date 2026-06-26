@@ -133,10 +133,22 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
   const computed = financing ? computeFinancing(financing, settings) : null;
 
   const createProject = useCallback(async (clientId: string, userId: string | null, agentId: string | null) => {
-    // idempotent: skip if active project already exists
-    const { data: existing } = await supabase
-      .from('purchase_projects').select('id').eq('client_id', clientId).maybeSingle();
-    if (existing?.id) return existing.id;
+    // idempotent: skip if a project already exists for this client OR user.
+    let existingQuery = supabase.from('purchase_projects').select('id').eq('client_id', clientId).limit(1);
+    const { data: existingByClient } = await existingQuery.maybeSingle();
+    if (existingByClient?.id) return existingByClient.id;
+
+    const { data: existingByUser } = userId
+      ? await supabase.from('purchase_projects').select('id').eq('user_id', userId).limit(1).maybeSingle()
+      : { data: null as any };
+    if (existingByUser?.id) return existingByUser.id;
+
+    await supabase.from('clients').update({
+      type_recherche: 'Acheter',
+      journey_type: 'purchase_search',
+      statut: 'en_attente',
+      priorite: 'haute',
+    } as any).eq('id', clientId);
 
     const { data: created, error } = await supabase
       .from('purchase_projects')
@@ -145,6 +157,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
         user_id: userId,
         assigned_agent_id: agentId,
         statut: 'en_attente_activation',
+        statut_mandat: 'a_signer',
         statut_acompte: 'a_payer',
         montant_mandat: 4999,
         montant_acompte: 2499,
@@ -159,8 +172,9 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     const stepsPayload = ACHAT_STEPS.map((s) => ({
       project_id: projectId, step_key: s.key, label: s.label, ordre: s.ordre, statut: 'a_faire',
     }));
-    await supabase.from('purchase_project_steps').insert(stepsPayload);
-    await supabase.from('purchase_financing_profiles').insert({ project_id: projectId });
+    await supabase.from('purchase_project_steps').upsert(stepsPayload, { onConflict: 'project_id,step_key', ignoreDuplicates: true });
+    const { data: existingFin } = await supabase.from('purchase_financing_profiles').select('id').eq('project_id', projectId).maybeSingle();
+    if (!existingFin?.id) await supabase.from('purchase_financing_profiles').insert({ project_id: projectId, statut_bancaire: 'a_evaluer' } as any);
     await reload();
     return projectId;
   }, [reload]);
