@@ -4,8 +4,8 @@ import SignaturePad from '../SignaturePad';
 import { LandingCheckbox } from '@/components/forms-premium/LandingCheckbox';
 import { LandingInput } from '@/components/forms-premium/LandingInput';
 import {
-  FileCheck, PenLine, CheckCircle2, Sparkles, AlertCircle,
-  User, Home, Shield, Scale, Gift
+  FileCheck, PenLine, CheckCircle2, AlertCircle,
+  User, Home, Shield, Scale, Gift, Briefcase, Mail
 } from 'lucide-react';
 
 interface Props {
@@ -13,16 +13,45 @@ interface Props {
   onChange: (data: Partial<MandatFormData>) => void;
 }
 
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+// Design tokens premium lisibles
+const C = {
+  ink: '#1B2A24',        // texte principal vert-noir doux
+  inkSoft: '#3A4A42',
+  forest: '#1F5132',     // vert forêt titres
+  gold: '#B8893A',       // accent doré
+  goldSoft: '#C9A05B',
+  cardBg: '#FFFFFF',
+  cardAlt: '#FBF8F1',    // blanc cassé
+  border: 'rgba(184, 137, 58, 0.22)',
+  borderSoft: 'rgba(31, 81, 50, 0.12)',
+  rowDivider: 'rgba(31, 81, 50, 0.08)',
+};
+
+function Section({ title, icon, children, alt = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; alt?: boolean }) {
   return (
-    <div className="rounded-xl border border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)] p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-[hsl(38_45%_48%/0.15)] flex items-center justify-center">
+    <div
+      className="rounded-xl p-5 space-y-3 shadow-sm"
+      style={{ background: alt ? C.cardAlt : C.cardBg, border: `1px solid ${C.border}` }}
+    >
+      <div className="flex items-center gap-2.5 pb-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center"
+          style={{ background: 'rgba(184, 137, 58, 0.12)', color: C.gold }}
+        >
           {icon}
         </div>
-        <h3 className="text-sm font-semibold text-[hsl(40_20%_75%)]">{title}</h3>
+        <h3 className="text-base font-semibold" style={{ color: C.forest }}>{title}</h3>
       </div>
       {children}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-1 py-1.5" style={{ borderBottom: `1px dashed ${C.rowDivider}` }}>
+      <span className="text-[13px]" style={{ color: C.inkSoft }}>{label}</span>
+      <span className="text-sm font-semibold" style={{ color: C.ink }}>{value || '—'}</span>
     </div>
   );
 }
@@ -43,31 +72,38 @@ const PERIMETRE_MISSION = [
   "Suivi jusqu'à la remise des clés",
 ];
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '—';
-  try {
-    return new Date(dateStr).toLocaleDateString('fr-CH');
-  } catch {
-    return dateStr;
-  }
-}
+const AUTORISATIONS = [
+  "Le client autorise Immo-Rama.ch à transmettre ses données personnelles et financières aux partenaires bancaires, courtiers en financement, notaires, agences immobilières, propriétaires, vendeurs et partenaires nécessaires à la réalisation de son projet d'achat.",
+  "Le client consent au traitement de ses données financières dans le cadre de l'analyse de capacité d'achat et de la recherche de financement.",
+  "Le client autorise Immo-Rama.ch à le représenter dans les démarches de recherche, prise de contact, coordination et négociation liées au projet d'achat.",
+];
 
+const LIMITES = [
+  "Immo-Rama.ch agit comme accompagnateur et conseiller.",
+  "Immo-Rama.ch ne garantit pas l'obtention d'un financement hypothécaire.",
+  "Immo-Rama.ch ne garantit pas l'acceptation d'une offre d'achat par un vendeur.",
+  "Immo-Rama.ch ne garantit pas la disponibilité d'un bien immobilier.",
+  "La décision finale d'achat et de signature de l'acte authentique reste entièrement sous la responsabilité du client.",
+];
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  try { return new Date(dateStr).toLocaleDateString('fr-CH'); } catch { return dateStr; }
+}
 function formatBudget(n: number): string {
-  if (!n) return '—';
+  if (!n) return '';
   return n.toLocaleString('fr-CH') + ' CHF';
 }
-
 function usageLabel(usage: string): string {
   const map: Record<string, string> = {
     residence_principale: 'Résidence principale',
     residence_secondaire: 'Résidence secondaire',
     investissement: 'Investissement locatif',
   };
-  return map[usage] || usage || '—';
+  return map[usage] || usage || '';
 }
-
 function horizonLabel(mois: number): string {
-  if (!mois) return '—';
+  if (!mois) return '';
   if (mois <= 3) return '0-3 mois';
   if (mois <= 6) return '3-6 mois';
   return '6-12 mois';
@@ -80,48 +116,51 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
   const [signatureTimestamp] = useState(() => new Date().toLocaleString('fr-CH'));
 
   return (
-    <div className="space-y-6">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-white">Mandat d'accompagnement à l'achat</h2>
-        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">Vérifiez vos informations, lisez les conditions et signez votre mandat.</p>
+    <div className="space-y-5" style={{ color: C.ink }}>
+      {/* Header premium */}
+      <div
+        className="rounded-xl p-5"
+        style={{ background: `linear-gradient(135deg, ${C.cardAlt} 0%, #FFFFFF 100%)`, border: `1px solid ${C.border}` }}
+      >
+        <div className="flex items-center gap-2 mb-1.5">
+          <FileCheck size={18} style={{ color: C.gold }} />
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.gold }}>Mandat d'accompagnement à l'achat immobilier</span>
+        </div>
+        <h2 className="text-2xl font-bold" style={{ color: C.forest }}>Vérification, lecture et signature</h2>
+        <p className="text-sm mt-1.5" style={{ color: C.inkSoft }}>
+          Relisez attentivement le présent mandat. Une fois signé, il sera transmis par email au format PDF et votre espace client sera activé après validation de l'acompte.
+        </p>
       </div>
 
-      {/* 1. Récapitulatif client */}
-      <Section title="1. Récapitulatif client" icon={<User size={14} className="text-[hsl(38_55%_65%)]" />}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-[hsl(40_20%_65%)]">
-          <div><span className="text-[hsl(40_20%_45%)]">Nom :</span> <strong className="text-[hsl(40_20%_82%)]">{data.prenom} {data.nom}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Email :</span> <strong className="text-[hsl(40_20%_82%)]">{data.email || '—'}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Téléphone :</span> <strong className="text-[hsl(40_20%_82%)]">{data.telephone || '—'}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Adresse :</span> <strong className="text-[hsl(40_20%_82%)]">{data.adresse || '—'}</strong></div>
-          {data.date_naissance && (
-            <div><span className="text-[hsl(40_20%_45%)]">Date de naissance :</span> <strong className="text-[hsl(40_20%_82%)]">{formatDate(data.date_naissance)}</strong></div>
-          )}
-          {data.nationalite && (
-            <div><span className="text-[hsl(40_20%_45%)]">Nationalité :</span> <strong className="text-[hsl(40_20%_82%)]">{data.nationalite}</strong></div>
-          )}
-        </div>
+      {/* 1. Récapitulatif du mandant */}
+      <Section title="1. Récapitulatif du mandant" icon={<User size={15} />}>
+        <Row label="Nom" value={data.nom} />
+        <Row label="Prénom" value={data.prenom} />
+        <Row label="Email" value={data.email} />
+        <Row label="Téléphone" value={data.telephone} />
+        <Row label="Adresse" value={data.adresse} />
+        {data.date_naissance && <Row label="Date de naissance" value={formatDate(data.date_naissance)} />}
+        {data.nationalite && <Row label="Nationalité" value={data.nationalite} />}
+        {data.profession && <Row label="Profession" value={<span className="inline-flex items-center gap-1"><Briefcase size={12} style={{ color: C.gold }} />{data.profession}</span>} />}
       </Section>
 
-      {/* 2. Récapitulatif projet */}
-      <Section title="2. Récapitulatif projet d'achat" icon={<Home size={14} className="text-[hsl(38_55%_65%)]" />}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-[hsl(40_20%_65%)]">
-          <div><span className="text-[hsl(40_20%_45%)]">Type de bien :</span> <strong className="text-[hsl(40_20%_82%)]">{data.type_bien || '—'}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Région :</span> <strong className="text-[hsl(40_20%_82%)]">{data.region_recherche || '—'}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Budget cible :</span> <strong className="text-[hsl(40_20%_82%)]">{formatBudget(data.budget_max)}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Pièces min. :</span> <strong className="text-[hsl(40_20%_82%)]">{data.pieces_recherche || '—'}</strong></div>
-          {data.surface_souhaitee > 0 && (
-            <div><span className="text-[hsl(40_20%_45%)]">Surface min. :</span> <strong className="text-[hsl(40_20%_82%)]">{data.surface_souhaitee} m²</strong></div>
-          )}
-          <div><span className="text-[hsl(40_20%_45%)]">Usage :</span> <strong className="text-[hsl(40_20%_82%)]">{usageLabel(data.achat_usage || '')}</strong></div>
-          <div><span className="text-[hsl(40_20%_45%)]">Horizon :</span> <strong className="text-[hsl(40_20%_82%)]">{horizonLabel(data.achat_horizon_mois)}</strong></div>
-        </div>
+      {/* 2. Projet d'achat */}
+      <Section title="2. Projet d'achat immobilier" icon={<Home size={15} />} alt>
+        <Row label="Type de bien recherché" value={data.type_bien} />
+        <Row label="Région recherchée" value={data.region_recherche} />
+        <Row label="Budget cible" value={formatBudget(data.budget_max)} />
+        <Row label="Nombre de pièces minimum" value={data.pieces_recherche} />
+        {data.surface_souhaitee > 0 && <Row label="Surface minimum" value={`${data.surface_souhaitee} m²`} />}
+        <Row label="Usage du bien" value={usageLabel(data.achat_usage || '')} />
+        <Row label="Horizon de réalisation" value={horizonLabel(data.achat_horizon_mois)} />
         {data.candidats.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-[hsl(38_45%_48%/0.15)]">
-            <p className="text-xs text-[hsl(40_20%_50%)] mb-1.5">Co-acquéreurs :</p>
+          <div className="pt-3 mt-2" style={{ borderTop: `1px solid ${C.borderSoft}` }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: C.forest }}>Co-acquéreurs ({data.candidats.length})</p>
             <div className="space-y-1">
               {data.candidats.map(c => (
-                <div key={c.id} className="text-xs text-[hsl(40_20%_65%)]">
-                  • {c.prenom} {c.nom} ({c.lien_avec_client}){c.revenus_mensuels > 0 ? ` — ${c.revenus_mensuels.toLocaleString('fr-CH')} CHF/mois` : ''}
+                <div key={c.id} className="text-sm" style={{ color: C.ink }}>
+                  • <strong>{c.prenom} {c.nom}</strong> <span style={{ color: C.inkSoft }}>— {c.lien_avec_client}</span>
+                  {c.revenus_mensuels > 0 && <span style={{ color: C.inkSoft }}> · {c.revenus_mensuels.toLocaleString('fr-CH')} CHF/mois</span>}
                 </div>
               ))}
             </div>
@@ -130,87 +169,68 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
       </Section>
 
       {/* 3. Conditions financières */}
-      <Section title="3. Conditions financières Immo-Rama.ch" icon={<span className="text-[hsl(38_55%_65%)] text-xs font-bold">CHF</span>}>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center py-2 border-b border-[hsl(38_45%_48%/0.1)]">
-            <span className="text-sm text-[hsl(40_20%_60%)]">Prix total du mandat d'accompagnement</span>
-            <strong className="text-[hsl(38_55%_65%)]">CHF 4&apos;999.–</strong>
+      <Section title="3. Conditions financières Immo-Rama.ch" icon={<span className="text-[11px] font-bold">CHF</span>}>
+        <div className="space-y-1">
+          <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Prix total du mandat d'accompagnement</span>
+            <strong className="text-base" style={{ color: C.forest }}>CHF 4&apos;999.–</strong>
           </div>
-          <div className="flex justify-between items-center py-2 border-b border-[hsl(38_45%_48%/0.1)]">
-            <span className="text-sm text-[hsl(40_20%_60%)]">Acompte à l'activation du dossier</span>
-            <strong className="text-[hsl(38_55%_65%)]">CHF 2&apos;499.–</strong>
+          <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Acompte à l'activation du dossier</span>
+            <strong className="text-base" style={{ color: C.gold }}>CHF 2&apos;499.–</strong>
           </div>
-          <div className="flex justify-between items-center py-2 border-b border-[hsl(38_45%_48%/0.1)]">
-            <span className="text-sm text-[hsl(40_20%_60%)]">Solde de succès (à la remise des clés)</span>
-            <strong className="text-[hsl(38_55%_65%)]">CHF 2&apos;500.–</strong>
+          <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Solde de succès (à la remise des clés)</span>
+            <strong className="text-base" style={{ color: C.ink }}>CHF 2&apos;500.–</strong>
           </div>
-          <div className="flex justify-between items-center py-2 border-b border-[hsl(38_45%_48%/0.1)]">
-            <span className="text-sm text-[hsl(40_20%_60%)]">Durée contractuelle du mandat</span>
-            <strong className="text-[hsl(40_20%_75%)]">6 mois</strong>
+          <div className="flex justify-between items-center py-2">
+            <span className="text-sm" style={{ color: C.inkSoft }}>Durée contractuelle du mandat</span>
+            <strong className="text-base" style={{ color: C.ink }}>6 mois</strong>
           </div>
         </div>
       </Section>
 
-      {/* 4. Périmètre de mission */}
-      <Section title="4. Périmètre de mission" icon={<FileCheck size={14} className="text-[hsl(38_55%_65%)]" />}>
-        <ul className="space-y-1.5">
+      {/* 4. Mission */}
+      <Section title="4. Mission confiée à Immo-Rama.ch" icon={<FileCheck size={15} />} alt>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
           {PERIMETRE_MISSION.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-[hsl(40_20%_65%)]">
-              <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-              {item}
+            <li key={i} className="flex items-start gap-2 text-sm" style={{ color: C.ink }}>
+              <CheckCircle2 size={15} className="mt-0.5 flex-shrink-0" style={{ color: C.forest }} />
+              <span>{item}</span>
             </li>
           ))}
         </ul>
       </Section>
 
       {/* 5. Autorisations */}
-      <Section title="5. Autorisations et consentements" icon={<Shield size={14} className="text-[hsl(38_55%_65%)]" />}>
-        <ul className="space-y-2 text-sm text-[hsl(40_20%_65%)]">
-          <li className="flex items-start gap-2">
-            <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-            Autorisation de transmettre mes données personnelles et financières aux partenaires bancaires et courtiers en financement d'Immo-Rama.ch.
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-            Consentement au traitement de mes données financières aux fins d'analyse de capacité d'achat et de recherche de financement.
-          </li>
-          <li className="flex items-start gap-2">
-            <CheckCircle2 size={14} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-            Autorisation de contacter en mon nom les banques, courtiers, propriétaires, agences, notaires et partenaires nécessaires à la réalisation du projet d'achat.
-          </li>
+      <Section title="5. Autorisations et consentements" icon={<Shield size={15} />}>
+        <ul className="space-y-2.5">
+          {AUTORISATIONS.map((item, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: C.ink }}>
+              <CheckCircle2 size={15} className="mt-0.5 flex-shrink-0" style={{ color: C.forest }} />
+              <span>{item}</span>
+            </li>
+          ))}
         </ul>
       </Section>
 
-      {/* 6. Limites de responsabilité */}
-      <Section title="6. Limites de responsabilité" icon={<Scale size={14} className="text-[hsl(38_55%_65%)]" />}>
-        <div className="space-y-2 text-sm text-[hsl(40_20%_60%)]">
-          <p>Immo-Rama.ch agit en tant qu'accompagnateur et conseiller dans le cadre de ce mandat. En signant ce document, le client reconnaît que :</p>
-          <ul className="space-y-1.5 mt-2">
-            <li className="flex items-start gap-2">
-              <span className="text-[hsl(38_55%_65%)] font-bold mt-0.5">•</span>
-              Immo-Rama.ch ne garantit pas l'obtention d'un financement hypothécaire.
+      {/* 6. Limites */}
+      <Section title="6. Limites de responsabilité" icon={<Scale size={15} />} alt>
+        <ul className="space-y-2">
+          {LIMITES.map((item, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: C.ink }}>
+              <span className="font-bold mt-0.5" style={{ color: C.gold }}>•</span>
+              <span>{item}</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[hsl(38_55%_65%)] font-bold mt-0.5">•</span>
-              Immo-Rama.ch ne garantit pas l'acceptation d'une offre d'achat par un tiers vendeur.
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[hsl(38_55%_65%)] font-bold mt-0.5">•</span>
-              La décision finale d'achat et de signature de l'acte authentique reste entièrement la responsabilité du client.
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[hsl(38_55%_65%)] font-bold mt-0.5">•</span>
-              Immo-Rama.ch ne peut être tenu responsable des fluctuations du marché immobilier ou des décisions de tiers.
-            </li>
-          </ul>
-        </div>
+          ))}
+        </ul>
       </Section>
 
       {/* Code promo */}
-      <div className="rounded-xl border border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)] p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Gift size={15} className="text-[hsl(38_55%_65%)]" />
-          <span className="text-sm font-medium text-[hsl(40_20%_70%)]">Code promo (optionnel)</span>
+      <div className="rounded-xl p-4" style={{ background: C.cardBg, border: `1px solid ${C.border}` }}>
+        <div className="flex items-center gap-2 mb-2">
+          <Gift size={15} style={{ color: C.gold }} />
+          <span className="text-sm font-medium" style={{ color: C.forest }}>Code promo (optionnel)</span>
         </div>
         <LandingInput
           label=""
@@ -220,56 +240,63 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
         />
       </div>
 
-      {/* 7. Signature électronique */}
-      <div className={`rounded-xl border p-4 transition-all duration-500 ${
-        hasSignature
-          ? 'border-emerald-500/25 bg-emerald-950/10 shadow-[0_0_20px_hsl(142_60%_40%/0.08)]'
-          : 'border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)]'
-      }`}>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <PenLine size={15} className={hasSignature ? 'text-emerald-400' : 'text-[hsl(38_55%_65%)]'} />
-              <span className="text-sm font-semibold text-[hsl(40_20%_75%)]">
-                7. Signature électronique <span className="text-red-400">*</span>
-              </span>
-            </div>
-            {hasSignature && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={13} /> Signé
-              </span>
-            )}
+      {/* 7. Signature */}
+      <div
+        className="rounded-xl p-5 transition-all"
+        style={{
+          background: C.cardBg,
+          border: `2px solid ${hasSignature ? C.forest : C.border}`,
+          boxShadow: hasSignature ? '0 4px 20px rgba(31, 81, 50, 0.12)' : 'none',
+        }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <PenLine size={16} style={{ color: hasSignature ? C.forest : C.gold }} />
+            <h3 className="text-base font-semibold" style={{ color: C.forest }}>
+              7. Signature électronique <span style={{ color: '#C0392B' }}>*</span>
+            </h3>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div>
-              <span className="text-[hsl(40_20%_45%)] text-xs">Nom du signataire :</span>
-              <p className="text-[hsl(40_20%_82%)] font-medium">{data.prenom} {data.nom}</p>
-            </div>
-            <div>
-              <span className="text-[hsl(40_20%_45%)] text-xs">Date et heure :</span>
-              <p className="text-[hsl(40_20%_82%)] font-medium">{signatureTimestamp}</p>
-            </div>
-          </div>
-
-          <p className="text-xs text-[hsl(40_20%_45%)]">Dessinez votre signature dans le cadre ci-dessous. Utilisez votre souris, votre doigt ou un stylet.</p>
-          <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
-          <p className="text-[10px] text-[hsl(40_20%_35%)]">L'adresse IP et l'horodatage exact sont enregistrés côté serveur lors de la soumission.</p>
+          {hasSignature && (
+            <span className="text-xs font-semibold flex items-center gap-1 px-2 py-1 rounded-full" style={{ color: C.forest, background: 'rgba(31, 81, 50, 0.08)' }}>
+              <CheckCircle2 size={12} /> Signé
+            </span>
+          )}
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 p-3 rounded-lg" style={{ background: C.cardAlt }}>
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-semibold mb-0.5" style={{ color: C.gold }}>Nom du signataire</div>
+            <div className="text-sm font-semibold" style={{ color: C.ink }}>{data.prenom} {data.nom}</div>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-wide font-semibold mb-0.5" style={{ color: C.gold }}>Date et heure</div>
+            <div className="text-sm font-semibold" style={{ color: C.ink }}>{signatureTimestamp}</div>
+          </div>
+        </div>
+
+        <p className="text-sm mb-2 leading-relaxed" style={{ color: C.inkSoft }}>
+          En signant, je confirme avoir lu et accepté le présent mandat d'accompagnement à l'achat immobilier, ses conditions financières, son périmètre de mission, ses autorisations et ses limites de responsabilité.
+        </p>
+        <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
+        <p className="text-[11px] mt-2" style={{ color: C.inkSoft }}>
+          L'adresse IP et l'horodatage exact sont enregistrés côté serveur lors de la soumission.
+        </p>
       </div>
 
-      {/* Acceptation mandat */}
-      <LandingCheckbox
-        checked={data.cgv_acceptees}
-        onCheckedChange={(checked) => onChange({ cgv_acceptees: checked })}
-        required
-        label="En cochant cette case, je déclare avoir lu et accepté l'intégralité du présent mandat d'accompagnement à l'achat immobilier, ainsi que les conditions financières, le périmètre de mission, les autorisations de transmission de données et les limites de responsabilité d'Immo-Rama.ch. Je comprends que ce mandat est conclu pour une durée de 6 mois à compter de son activation par un conseiller Immo-Rama.ch."
-      />
+      {/* Acceptation */}
+      <div className="rounded-xl p-4" style={{ background: C.cardAlt, border: `1px solid ${C.border}` }}>
+        <LandingCheckbox
+          checked={data.cgv_acceptees}
+          onCheckedChange={(checked) => onChange({ cgv_acceptees: checked })}
+          required
+          label="Je déclare avoir lu et accepté l'intégralité du présent mandat d'accompagnement à l'achat immobilier, ainsi que les conditions financières, le périmètre de mission, les autorisations de transmission de données et les limites de responsabilité d'Immo-Rama.ch. Je comprends que ce mandat est conclu pour une durée de 6 mois à compter de son activation."
+        />
+      </div>
 
       {!isComplete && (
-        <div className="rounded-xl border border-red-500/30 bg-red-950/15 p-3 flex items-start gap-2">
-          <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-red-300">
+        <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: '#FDECEA', border: '1px solid #E5A29A' }}>
+          <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#A93226' }} />
+          <p className="text-sm" style={{ color: '#7B241C' }}>
             {!hasSignature && !hasCGVAccepted && 'Veuillez signer le mandat et accepter les conditions pour continuer.'}
             {!hasSignature && hasCGVAccepted && 'Veuillez signer le mandat pour continuer.'}
             {hasSignature && !hasCGVAccepted && 'Veuillez accepter les conditions du mandat pour continuer.'}
@@ -278,11 +305,14 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
       )}
 
       {isComplete && (
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-3 flex items-start gap-2">
-          <Sparkles size={15} className="text-emerald-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-emerald-300">
-            Mandat signé. Après validation, votre mandat signé vous sera envoyé par email au format PDF et votre espace client sera créé.
-          </p>
+        <div className="rounded-xl p-4 flex items-start gap-2.5" style={{ background: 'rgba(31, 81, 50, 0.06)', border: `1px solid ${C.forest}` }}>
+          <Mail size={18} className="flex-shrink-0 mt-0.5" style={{ color: C.forest }} />
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: C.forest }}>Mandat prêt à être envoyé</p>
+            <p className="text-sm" style={{ color: C.ink }}>
+              Après validation, votre mandat signé sera transmis par email au format PDF et votre espace client sera créé.
+            </p>
+          </div>
         </div>
       )}
     </div>

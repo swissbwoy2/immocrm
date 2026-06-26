@@ -28,6 +28,11 @@ import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTra
 const normalizeDate = (val: string | null | undefined): string | null =>
   val && val.trim() !== '' ? val.trim() : null;
 
+const todayISO = () => new Date().toISOString().split('T')[0];
+
+const normalizeRequiredDate = (val: string | null | undefined): string =>
+  val && val.trim() !== '' ? val.trim() : todayISO();
+
 const STORAGE_KEY = 'mandat_form_data';
 
 type StepDef = { key: string; title: string; component: any; icon: string };
@@ -251,20 +256,22 @@ export default function NouveauMandat() {
         nom: formData.nom,
         telephone: formData.telephone,
         adresse: formData.adresse,
-        date_naissance: normalizeDate(formData.date_naissance),
+        date_naissance: normalizeRequiredDate(formData.date_naissance),
         nationalite: formData.nationalite,
         type_permis: formData.type_permis,
         etat_civil: formData.etat_civil,
-        gerance_actuelle: formData.gerance_actuelle,
-        contact_gerance: formData.contact_gerance,
+        gerance_actuelle: isPurchase ? (formData.gerance_actuelle || 'N/A — Parcours achat') : formData.gerance_actuelle,
+        contact_gerance: isPurchase ? (formData.contact_gerance || 'N/A — Parcours achat') : formData.contact_gerance,
         loyer_actuel: formData.loyer_actuel,
-        depuis_le: normalizeDate(formData.depuis_le),
-        pieces_actuel: formData.pieces_actuel,
+        depuis_le: isPurchase
+          ? normalizeRequiredDate(formData.depuis_le)
+          : normalizeRequiredDate(formData.depuis_le),
+        pieces_actuel: formData.pieces_actuel || 1,
         charges_extraordinaires: formData.charges_extraordinaires,
         montant_charges_extra: formData.montant_charges_extra,
         poursuites: formData.poursuites,
         curatelle: formData.curatelle,
-        motif_changement: formData.motif_changement,
+        motif_changement: isPurchase ? (formData.motif_changement || 'Projet d’achat immobilier') : formData.motif_changement,
         profession: formData.profession,
         employeur: formData.employeur,
         revenus_mensuels: formData.revenus_mensuels,
