@@ -52,25 +52,30 @@ import VenteClientDashboard from './dashboards/VenteClientDashboard';
 import RelocationClientDashboard from './dashboards/RelocationClientDashboard';
 import DashboardRelouer from './DashboardRelouer';
 import DashboardAchat from './DashboardAchat';
+import DashboardAchatEnAttente from './DashboardAchatEnAttente';
 
 export default function ClientDashboardDispatcher() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<{ prenom?: string; nom?: string; parcours_type?: string } | null>(null);
   const [journeyType, setJourneyType] = useState<string | null>(null);
+  const [typeRecherche, setTypeRecherche] = useState<string | null>(null);
+  const [purchaseStatus, setPurchaseStatus] = useState<string | null>(null);
   const [hasPurchaseProject, setHasPurchaseProject] = useState<boolean>(false);
   const [resolved, setResolved] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       if (!user) { setResolved(true); return; }
-      const [{ data: prof }, { data: client }, { count: purchaseCount }] = await Promise.all([
+      const [{ data: prof }, { data: client }, { data: pp }] = await Promise.all([
         supabase.from('profiles').select('prenom, nom, parcours_type').eq('id', user.id).maybeSingle(),
-        supabase.from('clients').select('journey_type').eq('user_id', user.id).maybeSingle(),
-        supabase.from('purchase_projects').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('clients').select('journey_type, type_recherche').eq('user_id', user.id).maybeSingle(),
+        supabase.from('purchase_projects').select('id, statut').eq('user_id', user.id).maybeSingle(),
       ]);
       setProfile(prof || null);
       setJourneyType(client?.journey_type || null);
-      setHasPurchaseProject((purchaseCount || 0) > 0);
+      setTypeRecherche(client?.type_recherche || null);
+      setPurchaseStatus(pp?.statut || null);
+      setHasPurchaseProject(!!pp);
       setResolved(true);
     };
     load();
@@ -87,8 +92,18 @@ export default function ClientDashboardDispatcher() {
   // Reloueur pur — dashboard dédié, jamais de badges chercheur
   if (journeyType === 'property_reletting') return <DashboardRelouer />;
 
-  // Parcours achat — projet d'accompagnement actif
-  if (hasPurchaseProject) return <DashboardAchat profile={profile} />;
+  // 🆕 Parcours achat — distinction "en attente d'activation" vs "actif"
+  if (hasPurchaseProject) {
+    if (purchaseStatus === 'en_attente_activation') {
+      return <DashboardAchatEnAttente profile={profile} />;
+    }
+    return <DashboardAchat profile={profile} />;
+  }
+
+  // 🆕 Acheteur sans projet créé : ne jamais retomber sur le dashboard location
+  if (journeyType === 'purchase_search' || typeRecherche === 'Acheter') {
+    return <DashboardAchatEnAttente profile={profile} />;
+  }
 
   const pt = profile?.parcours_type;
   if (pt === 'renovation') return <RenovationClientDashboard profile={profile} />;
