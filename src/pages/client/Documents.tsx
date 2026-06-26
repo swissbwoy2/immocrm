@@ -194,8 +194,8 @@ export default function Documents() {
         }
       }
 
-      // 4. Si pas de documents dans la table, récupérer depuis demandes_mandat
-      if (docsFromTable.length === 0 && profileData?.email) {
+      // 4. Si pas de documents dans la table, récupérer depuis demandes_mandat (locataires uniquement)
+      if (!buyer && docsFromTable.length === 0 && profileData?.email) {
         console.log('No documents in table, fetching from demandes_mandat for email:', profileData.email);
         
         const { data: mandatData } = await supabase
