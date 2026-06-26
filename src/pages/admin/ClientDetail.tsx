@@ -230,6 +230,11 @@ export default function ClientDetail() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
+  // IMPORTANT: hook appelé inconditionnellement AVANT tout early return pour préserver l'ordre des hooks.
+  const purchaseHook = usePurchaseProject({ clientId: client?.id ?? null });
+
+
+
   useEffect(() => {
     if (id) {
       loadClientData();
@@ -832,7 +837,7 @@ export default function ClientDetail() {
   const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
   const isReletter = client.journey_type === 'property_reletting';
   const isPurchaseEligible = client.type_recherche === 'Acheter' || (client as any).journey_type === 'purchase_search';
-  const purchaseHook = usePurchaseProject({ clientId: client.id });
+  // purchaseHook est déjà appelé en haut du composant (avant les early returns).
 
   const progressColor = daysElapsed < 60 ? 'from-green-500 to-emerald-400' : daysElapsed < 90 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400';
 
