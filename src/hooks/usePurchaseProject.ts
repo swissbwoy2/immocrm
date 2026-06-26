@@ -83,15 +83,45 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
       setSettings(s);
     }
 
-    let q = supabase.from('purchase_projects').select('*').order('created_at', { ascending: false }).limit(1);
-    if (opts.clientId) q = q.eq('client_id', opts.clientId);
-    else if (opts.userId) q = q.eq('user_id', opts.userId);
-    else { setLoading(false); return; }
+    if (!opts.clientId && !opts.userId) { setLoading(false); return; }
 
-    const { data: prj } = await q.maybeSingle();
+    // Détection stricte acheteur : le projet peut être lié au client_id OU au user_id
+    // (certains acheteurs invités admin ont été créés avant la liaison client_id complète).
+    let prj: any = null;
+    if (opts.clientId) {
+      const { data } = await supabase
+        .from('purchase_projects')
+        .select('*')
+        .eq('client_id', opts.clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      prj = data;
+    }
+    if (!prj && opts.userId) {
+      const { data } = await supabase
+        .from('purchase_projects')
+        .select('*')
+        .eq('user_id', opts.userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      prj = data;
+    }
     setProject(prj as any);
 
-    if (!prj) { setLoading(false); return; }
+    if (!prj) {
+      setFinancing(null);
+      setProperties([]);
+      setVisitReports([]);
+      setNegotiations([]);
+      setNotary(null);
+      setSteps([]);
+      setDocuments([]);
+      setAgent(null);
+      setLoading(false);
+      return;
+    }
 
     const projectId = (prj as any).id;
     const [fin, props, visits, negos, not, stepsRes, docs] = await Promise.all([
