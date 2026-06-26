@@ -472,6 +472,8 @@ serve(async (req) => {
           decouverte_agence: demandeMandat.decouverte_agence,
           // Type de recherche: Louer ou Acheter
           type_recherche: demandeMandat.type_recherche || 'Louer',
+          // 🆕 journey_type : recalibré si l'utilisateur passe maintenant par le parcours achat
+          ...(purchaseProfile ? { journey_type: 'purchase_search' } : {}),
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
