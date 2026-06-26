@@ -30,6 +30,7 @@ const ChasseurAppartement = lazy(() => import("./pages/ChasseurAppartement"));
 const RendezVousBureau = lazy(() => import("./pages/RendezVousBureau"));
 const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
 const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
+const AccompagnementAchat = lazy(() => import("./pages/AccompagnementAchat"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/legal/PolitiqueConfidentialite"));
@@ -287,6 +288,9 @@ const App = () => (
               {/* Relouer mon appartement — LOCATAIRE SORTANT uniquement (reste sur Logisorama) */}
               <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
               <Route path="/formulaire-relouer" element={<FormulaireRelouer />} />
+
+              {/* Accompagnement à l'achat immobilier (ACHETEUR) */}
+              <Route path="/accompagnement-achat" element={<AccompagnementAchat />} />
 
               {/* Parcours chercheurs — Logisorama */}
               <Route path="/chasseur-appartement" element={<ChasseurAppartement />} />

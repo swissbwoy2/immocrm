@@ -3733,6 +3733,8 @@ export type Database = {
           id: string
           nom: string
           offre_id: string | null
+          purchase_category: string | null
+          purchase_project_id: string | null
           statut: string | null
           taille: number | null
           type: string
@@ -3748,6 +3750,8 @@ export type Database = {
           id?: string
           nom: string
           offre_id?: string | null
+          purchase_category?: string | null
+          purchase_project_id?: string | null
           statut?: string | null
           taille?: number | null
           type: string
@@ -3763,6 +3767,8 @@ export type Database = {
           id?: string
           nom?: string
           offre_id?: string | null
+          purchase_category?: string | null
+          purchase_project_id?: string | null
           statut?: string | null
           taille?: number | null
           type?: string
@@ -3790,6 +3796,13 @@ export type Database = {
             columns: ["offre_id"]
             isOneToOne: false
             referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_purchase_project_id_fkey"
+            columns: ["purchase_project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
             referencedColumns: ["id"]
           },
         ]
@@ -7688,6 +7701,612 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_financing_profiles: {
+        Row: {
+          adresse_bien: string | null
+          allocations_familiales: number | null
+          autres_engagements: number | null
+          autres_revenus: number | null
+          bonus_3ans_moyenne: number | null
+          cartes_credit_mensuel: number | null
+          charges_theoriques_annuelles: number | null
+          charges_theoriques_mensuelles: number | null
+          commentaire_banque: string | null
+          created_at: string
+          credit_prive_mensuel: number | null
+          date_envoi_banque: string | null
+          date_naissance_acheteur_1: string | null
+          date_naissance_acheteur_2: string | null
+          date_retour_banque: string | null
+          donation_avance_hoirie: number | null
+          etat_civil: string | null
+          fonds_propres_3a: number | null
+          fonds_propres_cash: number | null
+          fonds_propres_epargne: number | null
+          fonds_propres_libre_passage: number | null
+          fonds_propres_lpp: number | null
+          fonds_propres_requis: number | null
+          fonds_propres_total: number | null
+          id: string
+          leasing_mensuel: number | null
+          montant_epl_disponible: number | null
+          montant_hypothecaire_estime: number | null
+          nationalite: string | null
+          nationalite_2: string | null
+          nombre_enfants: number | null
+          nouveau_emploi: boolean | null
+          partenaire_financier: string | null
+          pensions_recues: number | null
+          pensions_versees: number | null
+          placements: number | null
+          poursuites: boolean | null
+          prix_cible: number | null
+          prix_max_finançable: number | null
+          project_id: string
+          rentes_avs_ai_lpp: number | null
+          revenu_annuel_brut: number | null
+          revenu_annuel_retenu: number | null
+          revenu_different_annee_precedente: boolean | null
+          revenus_locatifs: number | null
+          statut_bancaire: string | null
+          taux_effort: number | null
+          type_permis: string | null
+          type_permis_2: string | null
+          updated_at: string
+        }
+        Insert: {
+          adresse_bien?: string | null
+          allocations_familiales?: number | null
+          autres_engagements?: number | null
+          autres_revenus?: number | null
+          bonus_3ans_moyenne?: number | null
+          cartes_credit_mensuel?: number | null
+          charges_theoriques_annuelles?: number | null
+          charges_theoriques_mensuelles?: number | null
+          commentaire_banque?: string | null
+          created_at?: string
+          credit_prive_mensuel?: number | null
+          date_envoi_banque?: string | null
+          date_naissance_acheteur_1?: string | null
+          date_naissance_acheteur_2?: string | null
+          date_retour_banque?: string | null
+          donation_avance_hoirie?: number | null
+          etat_civil?: string | null
+          fonds_propres_3a?: number | null
+          fonds_propres_cash?: number | null
+          fonds_propres_epargne?: number | null
+          fonds_propres_libre_passage?: number | null
+          fonds_propres_lpp?: number | null
+          fonds_propres_requis?: number | null
+          fonds_propres_total?: number | null
+          id?: string
+          leasing_mensuel?: number | null
+          montant_epl_disponible?: number | null
+          montant_hypothecaire_estime?: number | null
+          nationalite?: string | null
+          nationalite_2?: string | null
+          nombre_enfants?: number | null
+          nouveau_emploi?: boolean | null
+          partenaire_financier?: string | null
+          pensions_recues?: number | null
+          pensions_versees?: number | null
+          placements?: number | null
+          poursuites?: boolean | null
+          prix_cible?: number | null
+          prix_max_finançable?: number | null
+          project_id: string
+          rentes_avs_ai_lpp?: number | null
+          revenu_annuel_brut?: number | null
+          revenu_annuel_retenu?: number | null
+          revenu_different_annee_precedente?: boolean | null
+          revenus_locatifs?: number | null
+          statut_bancaire?: string | null
+          taux_effort?: number | null
+          type_permis?: string | null
+          type_permis_2?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adresse_bien?: string | null
+          allocations_familiales?: number | null
+          autres_engagements?: number | null
+          autres_revenus?: number | null
+          bonus_3ans_moyenne?: number | null
+          cartes_credit_mensuel?: number | null
+          charges_theoriques_annuelles?: number | null
+          charges_theoriques_mensuelles?: number | null
+          commentaire_banque?: string | null
+          created_at?: string
+          credit_prive_mensuel?: number | null
+          date_envoi_banque?: string | null
+          date_naissance_acheteur_1?: string | null
+          date_naissance_acheteur_2?: string | null
+          date_retour_banque?: string | null
+          donation_avance_hoirie?: number | null
+          etat_civil?: string | null
+          fonds_propres_3a?: number | null
+          fonds_propres_cash?: number | null
+          fonds_propres_epargne?: number | null
+          fonds_propres_libre_passage?: number | null
+          fonds_propres_lpp?: number | null
+          fonds_propres_requis?: number | null
+          fonds_propres_total?: number | null
+          id?: string
+          leasing_mensuel?: number | null
+          montant_epl_disponible?: number | null
+          montant_hypothecaire_estime?: number | null
+          nationalite?: string | null
+          nationalite_2?: string | null
+          nombre_enfants?: number | null
+          nouveau_emploi?: boolean | null
+          partenaire_financier?: string | null
+          pensions_recues?: number | null
+          pensions_versees?: number | null
+          placements?: number | null
+          poursuites?: boolean | null
+          prix_cible?: number | null
+          prix_max_finançable?: number | null
+          project_id?: string
+          rentes_avs_ai_lpp?: number | null
+          revenu_annuel_brut?: number | null
+          revenu_annuel_retenu?: number | null
+          revenu_different_annee_precedente?: boolean | null
+          revenus_locatifs?: number | null
+          statut_bancaire?: string | null
+          taux_effort?: number | null
+          type_permis?: string | null
+          type_permis_2?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_financing_profiles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_financing_settings: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          label: string
+          unit: string | null
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          unit?: string | null
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
+          unit?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      purchase_negotiations: {
+        Row: {
+          contre_offre: number | null
+          created_at: string
+          date_acceptation: string | null
+          date_offre: string | null
+          date_reponse: string | null
+          historique: Json | null
+          id: string
+          montant_offre: number | null
+          notes: string | null
+          project_id: string
+          property_id: string | null
+          statut: string | null
+          updated_at: string
+        }
+        Insert: {
+          contre_offre?: number | null
+          created_at?: string
+          date_acceptation?: string | null
+          date_offre?: string | null
+          date_reponse?: string | null
+          historique?: Json | null
+          id?: string
+          montant_offre?: number | null
+          notes?: string | null
+          project_id: string
+          property_id?: string | null
+          statut?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contre_offre?: number | null
+          created_at?: string
+          date_acceptation?: string | null
+          date_offre?: string | null
+          date_reponse?: string | null
+          historique?: Json | null
+          id?: string
+          montant_offre?: number | null
+          notes?: string | null
+          project_id?: string
+          property_id?: string | null
+          statut?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_negotiations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_negotiations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_selected_properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_notary_steps: {
+        Row: {
+          created_at: string
+          date_rdv: string | null
+          date_remise_cles: string | null
+          date_signature: string | null
+          id: string
+          notaire_email: string | null
+          notaire_nom: string | null
+          notaire_telephone: string | null
+          notes: string | null
+          project_id: string
+          statut: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_rdv?: string | null
+          date_remise_cles?: string | null
+          date_signature?: string | null
+          id?: string
+          notaire_email?: string | null
+          notaire_nom?: string | null
+          notaire_telephone?: string | null
+          notes?: string | null
+          project_id: string
+          statut?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_rdv?: string | null
+          date_remise_cles?: string | null
+          date_signature?: string | null
+          id?: string
+          notaire_email?: string | null
+          notaire_nom?: string | null
+          notaire_telephone?: string | null
+          notes?: string | null
+          project_id?: string
+          statut?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_notary_steps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_project_steps: {
+        Row: {
+          created_at: string
+          date_fait: string | null
+          id: string
+          label: string
+          notes: string | null
+          ordre: number
+          project_id: string
+          statut: string
+          step_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_fait?: string | null
+          id?: string
+          label: string
+          notes?: string | null
+          ordre: number
+          project_id: string
+          statut?: string
+          step_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_fait?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          ordre?: number
+          project_id?: string
+          statut?: string
+          step_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_project_steps_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_projects: {
+        Row: {
+          assigned_agent_id: string | null
+          client_id: string
+          conditions_remboursement: string | null
+          conditions_renouvellement: string | null
+          conditions_resiliation: string | null
+          created_at: string
+          date_debut_progression: string | null
+          date_fin_progression: string | null
+          date_paiement_acompte: string | null
+          date_signature_mandat: string | null
+          duree_progression_jours: number
+          id: string
+          montant_acompte: number | null
+          montant_mandat: number | null
+          notes_internes: string | null
+          statut: string
+          statut_acompte: string | null
+          statut_mandat: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          assigned_agent_id?: string | null
+          client_id: string
+          conditions_remboursement?: string | null
+          conditions_renouvellement?: string | null
+          conditions_resiliation?: string | null
+          created_at?: string
+          date_debut_progression?: string | null
+          date_fin_progression?: string | null
+          date_paiement_acompte?: string | null
+          date_signature_mandat?: string | null
+          duree_progression_jours?: number
+          id?: string
+          montant_acompte?: number | null
+          montant_mandat?: number | null
+          notes_internes?: string | null
+          statut?: string
+          statut_acompte?: string | null
+          statut_mandat?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          assigned_agent_id?: string | null
+          client_id?: string
+          conditions_remboursement?: string | null
+          conditions_renouvellement?: string | null
+          conditions_resiliation?: string | null
+          created_at?: string
+          date_debut_progression?: string | null
+          date_fin_progression?: string | null
+          date_paiement_acompte?: string | null
+          date_signature_mandat?: string | null
+          duree_progression_jours?: number
+          id?: string
+          montant_acompte?: number | null
+          montant_mandat?: number | null
+          notes_internes?: string | null
+          statut?: string
+          statut_acompte?: string | null
+          statut_mandat?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_projects_assigned_agent_id_fkey"
+            columns: ["assigned_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_selected_properties: {
+        Row: {
+          adresse: string | null
+          annee_construction: number | null
+          created_at: string
+          etage: number | null
+          id: string
+          lat: number | null
+          lien_annonce: string | null
+          lng: number | null
+          notes: string | null
+          npa: string | null
+          pieces: number | null
+          prix: number | null
+          prochaine_action: string | null
+          project_id: string
+          score: number | null
+          source: string | null
+          statut: string | null
+          surface: number | null
+          titre: string | null
+          type_bien: string | null
+          updated_at: string
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          annee_construction?: number | null
+          created_at?: string
+          etage?: number | null
+          id?: string
+          lat?: number | null
+          lien_annonce?: string | null
+          lng?: number | null
+          notes?: string | null
+          npa?: string | null
+          pieces?: number | null
+          prix?: number | null
+          prochaine_action?: string | null
+          project_id: string
+          score?: number | null
+          source?: string | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          updated_at?: string
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          annee_construction?: number | null
+          created_at?: string
+          etage?: number | null
+          id?: string
+          lat?: number | null
+          lien_annonce?: string | null
+          lng?: number | null
+          notes?: string | null
+          npa?: string | null
+          pieces?: number | null
+          prix?: number | null
+          prochaine_action?: string | null
+          project_id?: string
+          score?: number | null
+          source?: string | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          updated_at?: string
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_selected_properties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_visit_reports: {
+        Row: {
+          avis_prix: string | null
+          courtier_id: string | null
+          created_at: string
+          date_visite: string | null
+          documents_manquants: string | null
+          estimation_prix: number | null
+          etat_general: string | null
+          id: string
+          points_faibles: string | null
+          points_forts: string | null
+          project_id: string
+          property_id: string
+          recommandation: string | null
+          risques: string | null
+          statut: string | null
+          updated_at: string
+        }
+        Insert: {
+          avis_prix?: string | null
+          courtier_id?: string | null
+          created_at?: string
+          date_visite?: string | null
+          documents_manquants?: string | null
+          estimation_prix?: number | null
+          etat_general?: string | null
+          id?: string
+          points_faibles?: string | null
+          points_forts?: string | null
+          project_id: string
+          property_id: string
+          recommandation?: string | null
+          risques?: string | null
+          statut?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avis_prix?: string | null
+          courtier_id?: string | null
+          created_at?: string
+          date_visite?: string | null
+          documents_manquants?: string | null
+          estimation_prix?: number | null
+          etat_general?: string | null
+          id?: string
+          points_faibles?: string | null
+          points_forts?: string | null
+          project_id?: string
+          property_id?: string
+          recommandation?: string | null
+          risques?: string | null
+          statut?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_visit_reports_courtier_id_fkey"
+            columns: ["courtier_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_visit_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_visit_reports_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_selected_properties"
             referencedColumns: ["id"]
           },
         ]
