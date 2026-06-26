@@ -507,12 +507,12 @@ const handler = async (req: Request): Promise<Response> => {
       addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "Le mandant s'engage a payer au mandataire, a la conclusion de l'acte de vente chez un notaire, le montant correspondant a 1% du prix de vente defini entre les parties.",
+        "Le mandant s'engage a payer au mandataire un prix total forfaitaire de CHF 4'999.- TTC pour le service de recherche et d'accompagnement a l'achat immobilier.",
         margin, maxTextWidth, 9
       );
       yPosition -= 5;
       addWrappedText(
-        "Un acompte de CHF 2'500.- est du pour activer vos recherches, et sera deduit de la commission en cas de reussite ou rembourse totalement en cas d'echec.",
+        "Un acompte d'activation de CHF 2'499.- TTC est du a la signature et est integralement deduit du prix total de CHF 4'999.-. Le solde de CHF 2'500.- TTC est du uniquement en cas de succes, a la conclusion de l'acte d'acquisition.",
         margin, maxTextWidth, 9
       );
       yPosition -= 5;
@@ -731,7 +731,7 @@ const handler = async (req: Request): Promise<Response> => {
     addText("Une facture QR vous est envoyee par email, payable depuis votre app bancaire.", margin + 10, yPosition, 9);
     yPosition -= lineHeight + 5;
     
-    const acompte = isPurchase ? "2'500 CHF" : "300 CHF";
+    const acompte = isPurchase ? "2'499 CHF (sur 4'999 CHF TTC, solde 2'500 CHF en cas de succes)" : "300 CHF";
     addText(`Montant de l'acompte : ${acompte}`, margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= 30;
     
