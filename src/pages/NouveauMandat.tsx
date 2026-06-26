@@ -81,38 +81,56 @@ export default function NouveauMandat() {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
+  const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
+  const currentStepDef = steps[currentStep] ?? steps[0];
+
   const validateStep = (step: number): boolean => {
-    switch (step) {
-      case 0:
-        // Made optional: adresse, nationalite, etat_civil (Apple requirement 5.1.1)
+    const def = steps[step];
+    if (!def) return true;
+    const isPurchase = formData.journey === 'purchase';
+
+    switch (def.key) {
+      case 'journey':
+        return !!formData.journey;
+      case 'perso':
         return !!(formData.email && formData.prenom && formData.nom && formData.telephone &&
           formData.date_naissance && formData.type_permis);
-      case 1:
+      case 'situation':
         return !!(formData.gerance_actuelle && formData.contact_gerance &&
           formData.loyer_actuel >= 0 && formData.depuis_le && formData.pieces_actuel > 0 &&
           formData.motif_changement);
-      case 2:
-        // Made optional: profession, employeur, revenus_mensuels (Apple requirement 5.1.1)
+      case 'finance':
         return true;
-      case 3:
-        return true; // Candidats optionnels
-      case 4: {
-        const baseValid = !!(formData.decouverte_agence && formData.type_bien &&
-          formData.budget_max > 0);
+      case 'candidats':
+      case 'co_acquereurs':
+        return true;
+      case 'criteres': {
+        const baseValid = !!(formData.decouverte_agence && formData.type_bien && formData.budget_max > 0);
         if (formData.type_bien === 'Local commercial') {
           return baseValid && !!(formData.surface_souhaitee && formData.surface_souhaitee > 0 &&
             formData.affectation_commerciale && formData.etage_souhaite);
         }
         return baseValid && !!formData.pieces_recherche;
       }
-      case 5: {
+      case 'projet':
+        return !!(formData.decouverte_agence && formData.type_bien && formData.budget_max > 0 && formData.region_recherche);
+      case 'financement':
+        return !!(formData.revenus_mensuels > 0 &&
+          (formData.apport_personnel + formData.achat_fonds_propres_3a + formData.achat_fonds_propres_lpp + formData.achat_montant_epl) > 0);
+      case 'situation_perso':
+        return true;
+      case 'docs': {
+        if (isPurchase) {
+          // Documents recommandés mais pas bloquants pour l'achat (validation bancaire post-activation)
+          return true;
+        }
         const types = new Set(formData.documents_uploades.map((d) => d.type));
         const isPermis = ['B', 'C', 'F', 'N'].includes(formData.type_permis);
         const idKind = isPermis ? 'permis_sejour' : 'piece_identite';
         const required = ['poursuites', 'salaire1', 'salaire2', 'salaire3', `${idKind}_recto`, `${idKind}_verso`];
         return required.every((k) => types.has(k));
       }
-      case 6:
+      case 'signature':
         return !!(formData.signature_data && formData.cgv_acceptees);
       default:
         return true;
@@ -124,7 +142,7 @@ export default function NouveauMandat() {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
       window.scrollTo(0, 0);
     }
