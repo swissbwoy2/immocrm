@@ -170,9 +170,9 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
   const updateFinancing = useCallback(async (patch: Record<string, any>) => {
     if (!project) return;
     if (financing?.id) {
-      await supabase.from('purchase_financing_profiles').update(patch).eq('id', financing.id);
+      await supabase.from('purchase_financing_profiles').update(patch as any).eq('id', financing.id);
     } else {
-      await supabase.from('purchase_financing_profiles').insert({ project_id: project.id, ...patch });
+      await supabase.from('purchase_financing_profiles').insert({ project_id: project.id, ...patch } as any);
     }
     await reload();
   }, [project, financing, reload]);
