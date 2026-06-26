@@ -28,6 +28,11 @@ import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTra
 const normalizeDate = (val: string | null | undefined): string | null =>
   val && val.trim() !== '' ? val.trim() : null;
 
+const todayISO = () => new Date().toISOString().split('T')[0];
+
+const normalizeRequiredDate = (val: string | null | undefined): string =>
+  val && val.trim() !== '' ? val.trim() : todayISO();
+
 const STORAGE_KEY = 'mandat_form_data';
 
 type StepDef = { key: string; title: string; component: any; icon: string };
