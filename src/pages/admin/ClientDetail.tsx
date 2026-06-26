@@ -831,6 +831,8 @@ export default function ClientDetail() {
   // Check if client has stable status
   const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
   const isReletter = client.journey_type === 'property_reletting';
+  const isPurchaseEligible = client.type_recherche === 'Acheter' || (client as any).journey_type === 'purchase_search';
+  const purchaseHook = usePurchaseProject({ clientId: client.id });
 
   const progressColor = daysElapsed < 60 ? 'from-green-500 to-emerald-400' : daysElapsed < 90 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400';
 
