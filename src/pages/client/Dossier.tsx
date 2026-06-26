@@ -409,6 +409,7 @@ export default function Dossier() {
     const financing = purchaseHook.financing;
     const computed = purchaseHook.computed;
     const financingComplete = !!computed && (financing?.revenu_annuel_retenu || 0) > 0 && (financing?.prix_cible || 0) > 0;
+    const fmt = (value?: number | null) => formatCHF(value || 0);
     const achatDocuments = [
       "Pièce d'identité",
       'Permis de séjour si applicable',
@@ -482,14 +483,15 @@ export default function Dossier() {
                 <PremiumFinanceCard title="Revenu annuel retenu" value={computed.revenuTotal} icon={DollarSign} variant="default" delay={0} />
                 <PremiumFinanceCard title="Fonds propres disponibles" value={computed.fondsPropresTotal} icon={Wallet} variant="success" delay={50} />
                 <PremiumFinanceCard title="Prix cible" value={computed.prixCible} icon={Home} variant="warning" delay={100} />
-                <PremiumFinanceCard title="Hypothèque estimée" value={computed.montantHypothecaire} icon={Building2} variant="info" delay={150} />
+                <PremiumFinanceCard title="Capacité d'achat" value={computed.capaciteAchatMax} icon={Search} variant="success" delay={150} />
+                <PremiumFinanceCard title="Hypothèque estimée" value={computed.montantHypothecaire} icon={Building2} variant="info" delay={200} />
                 <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                   <p className="text-sm text-muted-foreground">Fonds propres requis</p>
-                  <p className="text-xl font-bold">{formatCHF(computed.fondsPropresRequis)}</p>
+                  <p className="text-xl font-bold">{fmt(computed.fondsPropresRequis)}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                   <p className="text-sm text-muted-foreground">Charges théoriques mensuelles</p>
-                  <p className="text-xl font-bold">{formatCHF(computed.chargesMensuelles)}</p>
+                  <p className="text-xl font-bold">{fmt(computed.chargesMensuelles)}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                   <p className="text-sm text-muted-foreground">Taux d'effort</p>
