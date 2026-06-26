@@ -646,15 +646,17 @@ serve(async (req) => {
           .eq('id', clientRecordId)
           .maybeSingle();
         const assignedAgentId = agentId || currentClientForPurchase?.agent_id || null;
+        const purchaseMandateStatus = invitationLegere ? 'a_signer' : ((demandeMandat?.signature_data || demandeMandat?.cgv_acceptees_at) ? 'signe' : 'a_signer');
 
+        const purchaseClientPatch: Record<string, unknown> = {
+          type_recherche: 'Acheter',
+          journey_type: 'purchase_search',
+          priorite: 'haute',
+        };
+        if (invitationLegere) purchaseClientPatch.statut = 'en_attente';
         await supabaseAdmin
           .from('clients')
-          .update({
-            type_recherche: 'Acheter',
-            journey_type: 'purchase_search',
-            statut: invitationLegere ? 'en_attente' : undefined,
-            priorite: 'haute',
-          })
+          .update(purchaseClientPatch)
           .eq('id', clientRecordId);
 
         // Idempotence : ne pas recréer si déjà existant pour ce client.
@@ -675,7 +677,7 @@ serve(async (req) => {
               user_id: userId,
               assigned_agent_id: assignedAgentId,
               statut: 'en_attente_activation',
-              statut_mandat: 'a_signer',
+              statut_mandat: purchaseMandateStatus,
               statut_acompte: 'a_payer',
               montant_acompte: 2499,
               montant_mandat: 4999,
@@ -701,7 +703,7 @@ serve(async (req) => {
               user_id: userId,
               assigned_agent_id: existingProject.assigned_agent_id || assignedAgentId,
               statut_acompte: 'a_payer',
-              statut_mandat: 'a_signer',
+              statut_mandat: purchaseMandateStatus,
               montant_acompte: 2499,
               montant_mandat: 4999,
               duree_progression_jours: 60,
