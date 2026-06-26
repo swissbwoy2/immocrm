@@ -256,7 +256,7 @@ export default function NouveauMandat() {
         nom: formData.nom,
         telephone: formData.telephone,
         adresse: formData.adresse,
-        date_naissance: normalizeDate(formData.date_naissance),
+        date_naissance: normalizeRequiredDate(formData.date_naissance),
         nationalite: formData.nationalite,
         type_permis: formData.type_permis,
         etat_civil: formData.etat_civil,
