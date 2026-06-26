@@ -3728,6 +3728,7 @@ export type Database = {
         Row: {
           candidate_id: string | null
           client_id: string | null
+          commentaire_admin: string | null
           created_at: string | null
           date_upload: string | null
           id: string
@@ -3741,10 +3742,12 @@ export type Database = {
           type_document: string | null
           url: string | null
           user_id: string
+          validated_at: string | null
         }
         Insert: {
           candidate_id?: string | null
           client_id?: string | null
+          commentaire_admin?: string | null
           created_at?: string | null
           date_upload?: string | null
           id?: string
@@ -3758,10 +3761,12 @@ export type Database = {
           type_document?: string | null
           url?: string | null
           user_id: string
+          validated_at?: string | null
         }
         Update: {
           candidate_id?: string | null
           client_id?: string | null
+          commentaire_admin?: string | null
           created_at?: string | null
           date_upload?: string | null
           id?: string
@@ -3775,6 +3780,7 @@ export type Database = {
           type_document?: string | null
           url?: string | null
           user_id?: string
+          validated_at?: string | null
         }
         Relationships: [
           {
