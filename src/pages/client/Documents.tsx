@@ -497,36 +497,111 @@ export default function Documents() {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
+      // Location
       'fiche_salaire': '💰 Fiche salaire',
       'extrait_poursuites': '📋 Extrait poursuites',
-      'piece_identite': '🪪 Pièce ID',
       'attestation_domicile': '🏠 Attestation domicile',
       'rc_menage': '🛡️ RC Ménage',
-      'contrat_travail': '📝 Contrat travail',
-      'attestation_employeur': '👔 Attestation employeur',
       'copie_bail': '📋 Copie bail',
       'attestation_garantie_loyer': '🔐 Garantie loyer',
+      // Commun
+      'piece_identite': '🪪 Pièce d\'identité',
+      'permis_sejour': '🪪 Permis de séjour',
+      'contrat_travail': '📝 Contrat travail',
+      'attestation_employeur': '👔 Attestation employeur',
       'dossier_complet': '📎 Dossier complet',
-      'autre': '📄 Autre'
+      // Achat — revenus
+      'certificat_salaire': '💰 Certificat de salaire',
+      'fiche_salaire_1': '💰 Fiche salaire 1',
+      'fiche_salaire_2': '💰 Fiche salaire 2',
+      'fiche_salaire_3': '💰 Fiche salaire 3',
+      // Achat — fonds propres
+      'releve_bancaire_fonds_propres': '🏦 Relevé bancaire FP',
+      'attestation_3a': '🏦 Attestation 3a',
+      'attestation_lpp': '🏦 Attestation LPP',
+      'attestation_epl': '🏦 Attestation EPL',
+      'attestation_libre_passage': '🏦 Libre passage',
+      'justificatif_placements': '📊 Justificatif placements',
+      'justificatif_donation': '🎁 Justificatif donation',
+      'justificatif_avance_hoirie': '🎁 Avance d\'hoirie',
+      // Achat — charges
+      'justificatif_credit_prive': '💳 Crédit privé',
+      'justificatif_leasing': '🚗 Leasing',
+      'justificatif_carte_credit': '💳 Carte de crédit',
+      'justificatif_pension_alimentaire': '👶 Pension alimentaire',
+      'justificatif_charges_fixes': '📊 Charges fixes',
+      // Achat — fiscalité
+      'decision_taxation': '📋 Décision de taxation',
+      'declaration_fiscale': '📋 Déclaration fiscale',
+      // Achat — autorisations
+      'accord_transmission': '✅ Accord transmission',
+      'consentement_donnees': '✅ Consentement données',
+      // Autre
+      'autre': '📄 Autre',
     };
-    return labels[type] || '📄 Autre';
+    return labels[type] || '📄 ' + (type || 'Autre').replace(/_/g, ' ');
   };
 
   const getTypeBadgeStyle = (type: string) => {
+    // Famille identité (bleu)
+    const identite = 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700';
+    // Famille revenus (vert émeraude)
+    const revenus = 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700';
+    // Famille fonds propres (ciel)
+    const fondsPropres = 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-700';
+    // Famille charges (orange)
+    const charges = 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700';
+    // Famille fiscalité (violet)
+    const fiscalite = 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700';
+    // Famille autorisation (indigo)
+    const autorisation = 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700';
+    // Famille location-spécifique
+    const locationStyle = 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700';
+    const autre = 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600';
+
     const styles: Record<string, string> = {
-      'fiche_salaire': 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700',
-      'extrait_poursuites': 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700',
-      'piece_identite': 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700',
-      'attestation_domicile': 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700',
+      // Identité
+      'piece_identite': identite,
+      'permis_sejour': identite,
+      // Revenus
+      'fiche_salaire': revenus,
+      'fiche_salaire_1': revenus,
+      'fiche_salaire_2': revenus,
+      'fiche_salaire_3': revenus,
+      'certificat_salaire': revenus,
+      'contrat_travail': revenus,
+      'attestation_employeur': revenus,
+      // Fonds propres
+      'releve_bancaire_fonds_propres': fondsPropres,
+      'attestation_3a': fondsPropres,
+      'attestation_lpp': fondsPropres,
+      'attestation_epl': fondsPropres,
+      'attestation_libre_passage': fondsPropres,
+      'justificatif_placements': fondsPropres,
+      'justificatif_donation': fondsPropres,
+      'justificatif_avance_hoirie': fondsPropres,
+      // Charges
+      'extrait_poursuites': charges,
+      'justificatif_credit_prive': charges,
+      'justificatif_leasing': charges,
+      'justificatif_carte_credit': charges,
+      'justificatif_pension_alimentaire': charges,
+      'justificatif_charges_fixes': charges,
+      // Fiscalité
+      'decision_taxation': fiscalite,
+      'declaration_fiscale': fiscalite,
+      // Autorisations
+      'accord_transmission': autorisation,
+      'consentement_donnees': autorisation,
+      // Location-spécifique
+      'attestation_domicile': locationStyle,
       'rc_menage': 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-950/50 dark:text-pink-300 dark:border-pink-700',
-      'contrat_travail': 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700',
-      'attestation_employeur': 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-950/50 dark:text-cyan-300 dark:border-cyan-700',
-      'copie_bail': 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700',
+      'copie_bail': locationStyle,
       'attestation_garantie_loyer': 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-700',
       'dossier_complet': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700',
-      'autre': 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600'
+      'autre': autre,
     };
-    return styles[type] || styles['autre'];
+    return styles[type] || autre;
   };
 
   const getFileIcon = (type: string) => {
@@ -615,40 +690,86 @@ export default function Documents() {
           </div>
         </div>
 
-        {/* Info banner modernisé */}
-        <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
-          <CardContent className="relative flex items-start gap-4 pt-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
-              <AlertCircle className="w-5 h-5 text-white" />
-            </div>
-            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
-              <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
-              <ul className="grid gap-2">
-                {[
-                  'Formulaire de demande de recherches dûment complété et signé',
-                  'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
-                  'Copie des 3 dernières fiches de salaire et du contrat de travail',
-                  'Attestation de l\'employeur',
-                  'Copie de la déclaration d\'impôts (si indépendant)',
-                  'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
-                  'Attestation de domicile ou d\'établissement de la commune actuelle',
-                  'Copie de la RC-ménage (assurance responsabilité civile)'
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
-                Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Info banner — conditionnel acheteur / locataire */}
+        {isClientBuyer ? (
+          <Card className="relative overflow-hidden border-sky-200/50 bg-gradient-to-br from-sky-50/80 to-sky-50/30 dark:from-sky-950/50 dark:to-sky-950/20 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-100/50 via-transparent to-transparent dark:from-sky-900/30" />
+            <CardContent className="relative flex items-start gap-4 pt-6">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-sky-500/25">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-sm text-sky-800 dark:text-sky-200 space-y-3">
+                <p className="font-semibold text-base">Documents requis pour votre dossier d'achat immobilier :</p>
+                <ul className="grid gap-2">
+                  {[
+                    "Pièce d'identité (passeport / carte d'identité)",
+                    'Permis de séjour (si applicable)',
+                    'Certificat de salaire annuel',
+                    '3 dernières fiches de salaire',
+                    'Contrat de travail',
+                    'Attestation employeur (si nécessaire)',
+                    'Relevé bancaire fonds propres',
+                    'Attestation 3e pilier (3a)',
+                    'Attestation LPP',
+                    'Attestation EPL / retrait pour logement principal',
+                    'Attestation libre passage',
+                    'Justificatif placements financiers',
+                    'Justificatif donation / avance d'hoirie',
+                    'Justificatif crédit privé',
+                    'Justificatif leasing',
+                    'Justificatif carte de crédit (mensualités)',
+                    'Justificatif pension alimentaire',
+                    'Dernière décision de taxation',
+                    'Déclaration fiscale (si nécessaire)',
+                    'Accord de transmission aux partenaires financiers',
+                    'Consentement traitement des données financières',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-sky-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
+            <CardContent className="relative flex items-start gap-4 pt-6">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
+                <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
+                <ul className="grid gap-2">
+                  {[
+                    'Formulaire de demande de recherches dûment complété et signé',
+                    'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
+                    'Copie des 3 dernières fiches de salaire et du contrat de travail',
+                    'Attestation de l\'employeur',
+                    'Copie de la déclaration d\'impôts (si indépendant)',
+                    'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
+                    'Attestation de domicile ou d\'établissement de la commune actuelle',
+                    'Copie de la RC-ménage (assurance responsabilité civile)'
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
+                  Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Documents demandés par l'agent */}
         {documentRequests.length > 0 && (

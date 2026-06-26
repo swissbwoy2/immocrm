@@ -199,7 +199,7 @@ export default function Dossier() {
       if (isBuyerForDocs && purchaseProjectForDocs?.id) {
         await supabase
           .from('documents')
-          .update({ purchase_project_id: purchaseProjectForDocs.id, purchase_category: 'autres_documents_bancaires' } as any)
+          .update({ purchase_project_id: purchaseProjectForDocs.id, purchase_category: 'autre' } as any)
           .eq('user_id', user.id)
           .is('purchase_project_id', null);
       }
