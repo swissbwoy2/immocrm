@@ -40,6 +40,9 @@ import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete'
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormDialog';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
+import { usePurchaseProject } from '@/hooks/usePurchaseProject';
+import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
+import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 
 interface Client {
   id: string;
@@ -69,6 +72,7 @@ interface Client {
   profession?: string;
   type_bien?: string;
   type_recherche?: string;
+  journey_type?: string;
   source_revenus?: string;
   anciennete_mois?: number;
   created_at?: string;
@@ -126,6 +130,8 @@ export default function ClientDetail() {
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
   const isAcheteur = client?.type_recherche === 'Acheter';
+  const isPurchaseEligible = isAcheteur || client?.journey_type === 'purchase_search';
+  const purchaseHook = usePurchaseProject({ clientId: client?.id });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -651,9 +657,30 @@ export default function ClientDetail() {
   const progressPercentage = (daysElapsed / 90) * 100;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
+  // ===== Parcours achat : early-return si un purchase_project actif existe =====
+  if (purchaseHook.project) {
+    return (
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-4 md:p-8 space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+          </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
+            <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
+          </div>
+          <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="agent" />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
+        {isPurchaseEligible && !purchaseHook.project && (
+          <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
+        )}
         {/* Header - Responsive */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="relative flex-1 min-w-0">
