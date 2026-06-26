@@ -164,12 +164,34 @@ export default function Dossier() {
         }
       }
 
-      // Load documents
-      const { data: docsData } = await supabase
+      // Load documents. Pour un acheteur, rattacher les anciens uploads au projet achat si possible
+      // et filtrer strictement les documents achat afin de ne jamais afficher la liste location.
+      const { data: purchaseProjectForDocs } = await supabase
+        .from('purchase_projects')
+        .select('id, client_id, user_id')
+        .or(`client_id.eq.${clientData.id},user_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const isBuyerForDocs = isPurchaseBuyer(clientData, purchaseProjectForDocs);
+      if (isBuyerForDocs && purchaseProjectForDocs?.id) {
+        await supabase
+          .from('documents')
+          .update({ purchase_project_id: purchaseProjectForDocs.id, purchase_category: 'autres_documents_bancaires' } as any)
+          .eq('user_id', user.id)
+          .is('purchase_project_id', null);
+      }
+
+      let docsQuery = supabase
         .from('documents')
         .select('*')
         .eq('user_id', user.id)
         .order('date_upload', { ascending: false });
+      if (isBuyerForDocs && purchaseProjectForDocs?.id) {
+        docsQuery = docsQuery.eq('purchase_project_id', purchaseProjectForDocs.id);
+      }
+      const { data: docsData } = await docsQuery;
 
       setDocuments(docsData || []);
     } catch (error) {
