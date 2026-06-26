@@ -134,8 +134,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
 
   const createProject = useCallback(async (clientId: string, userId: string | null, agentId: string | null) => {
     // idempotent: skip if a project already exists for this client OR user.
-    let existingQuery = supabase.from('purchase_projects').select('id').eq('client_id', clientId).limit(1);
-    const { data: existingByClient } = await existingQuery.maybeSingle();
+    const { data: existingByClient } = await supabase.from('purchase_projects').select('id').eq('client_id', clientId).limit(1).maybeSingle();
     if (existingByClient?.id) return existingByClient.id;
 
     const { data: existingByUser } = userId
