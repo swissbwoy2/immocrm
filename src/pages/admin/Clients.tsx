@@ -54,7 +54,7 @@ interface Client {
   journey_type?: string | null;
 }
 
-type JourneyTab = 'all' | 'chercheurs' | 'reloueurs' | 'mixtes';
+type JourneyTab = 'all' | 'chercheurs' | 'acheteurs' | 'reloueurs' | 'mixtes';
 
 interface ClientCandidate {
   id: string;
@@ -132,9 +132,10 @@ const Clients = () => {
   // Onglet journey (Tous / Chercheurs / Reloueurs / Mixtes)
   const initialTab = ((): JourneyTab => {
     const fromUrl = searchParams.get('tab');
-    if (fromUrl === 'all' || fromUrl === 'chercheurs' || fromUrl === 'reloueurs' || fromUrl === 'mixtes') return fromUrl;
+    const allowed: JourneyTab[] = ['all','chercheurs','acheteurs','reloueurs','mixtes'];
+    if (fromUrl && (allowed as string[]).includes(fromUrl)) return fromUrl as JourneyTab;
     const stored = typeof window !== 'undefined' ? localStorage.getItem('adminClientsJourneyTab') : null;
-    if (stored === 'all' || stored === 'chercheurs' || stored === 'reloueurs' || stored === 'mixtes') return stored;
+    if (stored && (allowed as string[]).includes(stored)) return stored as JourneyTab;
     return 'all';
   })();
   const [journeyTab, setJourneyTab] = useState<JourneyTab>(initialTab);
@@ -394,10 +395,15 @@ const Clients = () => {
 
   const isReletter = (c: Client) => c.journey_type === 'property_reletting';
   const isMixed = (c: Client) => c.journey_type === 'mixed';
-  const isSearcher = (c: Client) => !c.journey_type || c.journey_type === 'housing_search';
+  const isBuyer = (c: Client) => (c as any).type_recherche === 'Acheter' || c.journey_type === 'purchase_search';
+  const isSearcher = (c: Client) => !isBuyer(c) && (!c.journey_type || c.journey_type === 'housing_search');
 
   const filteredClients = clients.filter(client => {
-    // 1) Filtre par onglet journey
+    // 1) Filtre par onglet journey — PRIORITE ABSOLUE acheteurs (jamais reloueurs)
+    if (journeyTab === 'acheteurs') {
+      if (isReletter(client)) return false;
+      if (!isBuyer(client)) return false;
+    }
     if (journeyTab === 'chercheurs' && !(isSearcher(client) || isMixed(client))) return false;
     if (journeyTab === 'reloueurs' && !(isReletter(client) || isMixed(client))) return false;
     if (journeyTab === 'mixtes' && !isMixed(client)) return false;
@@ -860,12 +866,14 @@ const Clients = () => {
           const totals = {
             all: clients.length,
             chercheurs: clients.filter(c => isSearcher(c) || isMixed(c)).length,
+            acheteurs: clients.filter(c => isBuyer(c) && !isReletter(c)).length,
             reloueurs: clients.filter(c => isReletter(c) || isMixed(c)).length,
             mixtes: clients.filter(c => isMixed(c)).length,
           };
           const tabs: { key: JourneyTab; label: string; count: number }[] = [
             { key: 'all', label: 'Tous les clients', count: totals.all },
-            { key: 'chercheurs', label: 'Chercheurs de logement', count: totals.chercheurs },
+            { key: 'chercheurs', label: 'Chercheurs (location)', count: totals.chercheurs },
+            { key: 'acheteurs', label: 'Acheteurs', count: totals.acheteurs },
             { key: 'reloueurs', label: 'Clients reloueurs', count: totals.reloueurs },
             { key: 'mixtes', label: 'Mixtes', count: totals.mixtes },
           ];
