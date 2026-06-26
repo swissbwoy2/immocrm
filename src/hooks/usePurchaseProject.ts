@@ -153,7 +153,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     const projectId = created.id;
     // 17 steps
     const stepsPayload = ACHAT_STEPS.map((s) => ({
-      project_id: projectId, key: s.key, label: s.label, ordre: s.ordre, statut: 'a_faire',
+      project_id: projectId, step_key: s.key, label: s.label, ordre: s.ordre, statut: 'a_faire',
     }));
     await supabase.from('purchase_project_steps').insert(stepsPayload);
     await supabase.from('purchase_financing_profiles').insert({ project_id: projectId });
