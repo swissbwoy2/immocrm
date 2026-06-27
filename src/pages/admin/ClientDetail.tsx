@@ -1212,6 +1212,23 @@ export default function ClientDetail() {
                         </Badge>
                         <ReletterAddressBadge request={relouerRequest} />
                       </>
+                    ) : isPurchaseEligible ? (
+                      <>
+                        <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
+                          {client.nationalite || 'N/A'}
+                        </Badge>
+                        <Badge className="bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30 backdrop-blur-sm">
+                          <Home className="w-3 h-3 mr-1" />
+                          {purchaseHook.project?.statut === 'actif' ? 'Mandat actif' : 'Projet achat'}
+                        </Badge>
+                        <Badge variant="outline" className="bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30 backdrop-blur-sm">
+                          Banque : {(() => {
+                            const s = purchaseHook.financing?.statut_bancaire;
+                            const map: Record<string, string> = { a_evaluer: 'à évaluer', en_cours: 'en analyse', validation_orale: 'prévalidé', valide: 'validé', refuse: 'refusé', bloque: 'bloqué' };
+                            return map[s as string] || 'à évaluer';
+                          })()}
+                        </Badge>
+                      </>
                     ) : (
                       <>
                         <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
