@@ -142,17 +142,26 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     setSteps(stepsRes.data || []);
     setDocuments(docs.data || []);
 
-    if ((prj as any).assigned_agent_id) {
+    // Conseiller affiché : priorité au assigned_agent_id du projet,
+    // sinon repli sur clients.agent_id (parcours achat invité admin sans seed du projet).
+    let agentId: string | null = (prj as any).assigned_agent_id || null;
+    if (!agentId && (prj as any).client_id) {
+      const { data: cli } = await supabase.from('clients').select('agent_id').eq('id', (prj as any).client_id).maybeSingle();
+      agentId = (cli as any)?.agent_id || null;
+    }
+    if (agentId) {
       const { data: a } = await supabase
         .from('agents')
         .select('id, user_id, profile:profiles!agents_user_id_fkey(prenom, nom, email, telephone, avatar_url)')
-        .eq('id', (prj as any).assigned_agent_id)
+        .eq('id', agentId)
         .maybeSingle();
       if (a) setAgent({
         prenom: (a.profile as any)?.prenom, nom: (a.profile as any)?.nom,
         email: (a.profile as any)?.email, telephone: (a.profile as any)?.telephone,
         avatar_url: (a.profile as any)?.avatar_url,
       });
+    } else {
+      setAgent(null);
     }
 
     setLoading(false);
