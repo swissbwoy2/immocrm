@@ -201,6 +201,15 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
           <AchatDocumentsSection documents={documents} />
         </div>
       </div>
+      {clientRow && profileRow && (
+        <EditClientProfileDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          client={clientRow}
+          profile={profileRow}
+          onSaved={reloadClient}
+        />
+      )}
     </PremiumPageShellV2>
   );
 }
