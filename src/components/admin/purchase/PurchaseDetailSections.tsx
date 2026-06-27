@@ -146,6 +146,12 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
         </CardContent>
       </PremiumCard>
 
+      {/* Co-acheteurs */}
+      <CoAcheteursEditor
+        value={(h.project as any).co_acheteurs || []}
+        onSave={async (next) => { await h.updateProject({ co_acheteurs: next } as any); }}
+      />
+
       {/* Documents */}
       <DocumentsAdminBlock projectId={h.project.id} documents={h.documents} reload={h.reload} mode={mode} onUploadDoc={onUploadDoc} />
 
