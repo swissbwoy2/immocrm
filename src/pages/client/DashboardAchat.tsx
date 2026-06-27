@@ -41,7 +41,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       if (!project?.client_id) return;
       const { data } = await supabase
         .from('offres')
-        .select('id, adresse, prix, statut, created_at, nombre_pieces, surface, etage, npa, ville, lien_annonce, description, disponibilite')
+        .select('*')
         .eq('client_id', project.client_id)
         .order('created_at', { ascending: false });
       setOffres(data || []);
