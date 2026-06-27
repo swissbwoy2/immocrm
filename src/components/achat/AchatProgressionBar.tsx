@@ -11,7 +11,14 @@ interface AchatProgressionBarProps {
 }
 
 export function AchatProgressionBar({ dateDebut, dureeJours = 180, stepsDone = 0 }: AchatProgressionBarProps) {
-  const { jourActuel, jourRestant, pourcentage } = computeProgression(dateDebut, dureeJours);
+  const { pourcentage, tempsRestantLabel, jourRestant } = computeProgression(dateDebut, dureeJours);
+
+  const countdownColor =
+    jourRestant > 60
+      ? 'bg-sky-100 text-sky-700 border-sky-200'
+      : jourRestant > 21
+      ? 'bg-amber-100 text-amber-700 border-amber-200'
+      : 'bg-red-100 text-red-700 border-red-200';
 
   return (
     <Card className="p-6 border-sky-100">
@@ -20,8 +27,9 @@ export function AchatProgressionBar({ dateDebut, dureeJours = 180, stepsDone = 0
           <ShieldCheck className="h-5 w-5 text-sky-600" />
           Progression de votre accompagnement achat
         </h2>
-        <Badge variant="outline" className="border-sky-200 text-sky-700">
-          Mandat achat : 6 mois
+        <Badge variant="outline" className={`border ${countdownColor}`}>
+          <Clock className="h-3.5 w-3.5 mr-1.5" />
+          Temps restant : {tempsRestantLabel}
         </Badge>
       </div>
       <Progress value={pourcentage} className="h-2 mb-3" />

@@ -86,6 +86,30 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
           </a>
         )}
 
+        {/* Carte Google Maps */}
+        {!compact && offre.adresse && (
+          <div className="rounded-xl overflow-hidden border border-sky-100 shadow-sm">
+            <iframe
+              title={`Carte ${offre.adresse}`}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(offre.adresse)}&output=embed`}
+              width="100%"
+              height="220"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              style={{ border: 0, display: 'block' }}
+              allowFullScreen
+            />
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(offre.adresse)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-1.5 text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 py-2 transition"
+            >
+              <MapPin className="h-3.5 w-3.5" /> Ouvrir dans Google Maps
+            </a>
+          </div>
+        )}
+
         {/* Conseil achat */}
         {!compact && (
           <div className="rounded-lg bg-amber-50/60 border border-amber-100 px-3 py-2 flex items-start gap-2 text-xs text-amber-900">

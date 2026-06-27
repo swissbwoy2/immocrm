@@ -223,7 +223,7 @@ export function PurchaseClientDetailPremium({
                         : 'bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse'
                     }`}>
                       <TrendingUp className="w-4 h-4" />
-                      Mandat 6 mois
+                      Temps restant : {prog.tempsRestantLabel}
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground text-right mb-2">

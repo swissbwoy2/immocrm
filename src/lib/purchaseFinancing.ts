@@ -192,12 +192,27 @@ export const ACHAT_STEPS: AchatStep[] = [
 ];
 
 export function computeProgression(dateDebut: string | null | undefined, dureeJours = 180) {
-  if (!dateDebut) return { jourActuel: 0, dureeJours, pourcentage: 0, jourRestant: dureeJours };
+  if (!dateDebut) {
+    return {
+      jourActuel: 0,
+      dureeJours,
+      pourcentage: 0,
+      jourRestant: dureeJours,
+      heuresRestantes: 0,
+      minutesRestantes: 0,
+      tempsRestantLabel: `${dureeJours}j 0h 0m`,
+    };
+  }
   const start = new Date(dateDebut).getTime();
   const now = Date.now();
-  const diffJours = Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24)));
-  const jourActuel = Math.min(diffJours, dureeJours);
-  const jourRestant = Math.max(0, dureeJours - jourActuel);
-  const pourcentage = Math.round((jourActuel / dureeJours) * 100);
-  return { jourActuel, dureeJours, pourcentage, jourRestant };
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const diffJoursFloat = Math.max(0, (now - start) / msPerDay);
+  const jourActuel = Math.min(Math.floor(diffJoursFloat), dureeJours);
+  const restantFloat = Math.max(0, dureeJours - diffJoursFloat);
+  const jourRestant = Math.floor(restantFloat);
+  const heuresRestantes = Math.floor((restantFloat - jourRestant) * 24);
+  const minutesRestantes = Math.floor(((restantFloat - jourRestant) * 24 - heuresRestantes) * 60);
+  const pourcentage = Math.min(100, Math.round((diffJoursFloat / dureeJours) * 100));
+  const tempsRestantLabel = `${jourRestant}j ${heuresRestantes}h ${minutesRestantes}m`;
+  return { jourActuel, dureeJours, pourcentage, jourRestant, heuresRestantes, minutesRestantes, tempsRestantLabel };
 }
