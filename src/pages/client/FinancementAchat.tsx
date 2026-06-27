@@ -1,0 +1,51 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePurchaseProject } from '@/hooks/usePurchaseProject';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { Card } from '@/components/ui/card';
+import { Loader2, Banknote } from 'lucide-react';
+import { AchatFinancingCard } from '@/components/achat/AchatFinancingCard';
+
+export default function FinancementAchat() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { loading, project, financing, computed, settings } = usePurchaseProject({ userId: user?.id || null });
+
+  useEffect(() => {
+    document.title = 'Financement | Immo-Rama';
+  }, []);
+
+  if (loading) {
+    return <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-sky-600" /></div>;
+  }
+
+  if (!project) {
+    // Pas acheteur → renvoyer vers le dashboard client
+    navigate('/client', { replace: true });
+    return null;
+  }
+
+  return (
+    <PremiumPageShellV2>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Banknote className="h-6 w-6 text-sky-600" /> Financement de votre projet d'achat
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Capacité d'achat, fonds propres, statut bancaire et prochaines étapes.
+        </p>
+      </div>
+
+      <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+
+      {!computed && (
+        <Card className="p-6 mt-4 border-sky-100">
+          <p className="text-sm text-muted-foreground">
+            Votre profil de financement sera complété par votre conseiller après vos premiers échanges.
+          </p>
+        </Card>
+      )}
+    </PremiumPageShellV2>
+  );
+}
