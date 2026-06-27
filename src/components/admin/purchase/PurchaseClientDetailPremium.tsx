@@ -544,6 +544,9 @@ export function PurchaseClientDetailPremium({
           </PremiumCard>
         </div>
 
+        {/* ─── Zones de recherche (Google Maps) ─── */}
+        <SwissRomandeMapGoogle client={client} />
+
         {/* ─── PurchaseDetailSections: financing, docs, properties, visits, negotiations, notary, steps ─── */}
         <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="admin" onUploadDoc={onUploadDoc} />
 
