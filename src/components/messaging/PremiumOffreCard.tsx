@@ -7,9 +7,11 @@ import { AddressLink } from '@/components/AddressLink';
 interface PremiumOffreCardProps {
   offre: any;
   className?: string;
+  mode?: 'location' | 'achat';
 }
 
-export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, className }) => {
+export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, className, mode = 'location' }) => {
+  const isAchat = mode === 'achat';
   return (
     <div 
       className={cn(
