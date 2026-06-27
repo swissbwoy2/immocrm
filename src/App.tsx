@@ -166,6 +166,9 @@ const ClientNotifications = lazy(() => import("./pages/client/Notifications"));
 const ClientParametres = lazy(() => import("./pages/client/Parametres"));
 const ClientAnnonces = lazy(() => import("./pages/client/Annonces"));
 const ClientCarte = lazy(() => import("./pages/client/Carte"));
+const ClientBiensProposes = lazy(() => import("./pages/client/BiensProposes"));
+const ClientBiensSelectionnes = lazy(() => import("./pages/client/BiensSelectionnes"));
+const ClientFinancementAchat = lazy(() => import("./pages/client/FinancementAchat"));
 
 // Apporteur pages
 const ApporteurDashboard = lazy(() => import("./pages/apporteur/Dashboard"));
@@ -433,6 +436,9 @@ const App = () => (
               <Route path="/client/parametres" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/client/annonces" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientAnnonces /></AppLayout></ProtectedRoute>} />
               <Route path="/client/carte" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCarte /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/biens-proposes" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientBiensProposes /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/biens-selectionnes" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientBiensSelectionnes /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/financement" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientFinancementAchat /></AppLayout></ProtectedRoute>} />
               <Route path="/client/renovation" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/client/renovation/:id" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
 

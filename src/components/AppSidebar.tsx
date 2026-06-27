@@ -224,9 +224,9 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           {
             label: 'Mon achat',
             items: [
-              { name: 'Biens proposés', icon: Home, path: '/client', notifKey: null },
-              { name: 'Biens sélectionnés', icon: Building2, path: '/client', notifKey: null },
-              { name: 'Financement', icon: Banknote, path: '/client', notifKey: null },
+              { name: 'Biens proposés', icon: Home, path: '/client/biens-proposes', notifKey: null },
+              { name: 'Biens sélectionnés', icon: Building2, path: '/client/biens-selectionnes', notifKey: null },
+              { name: 'Financement', icon: Banknote, path: '/client/financement', notifKey: null },
               { name: 'Documents achat', icon: FileText, path: '/client/dossier', notifKey: null },
             ],
           },
