@@ -29,8 +29,8 @@ interface DashboardAchatProps {
 export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent } =
-    usePurchaseProject({ userId: user?.id || null });
+  const hook = usePurchaseProject({ userId: user?.id || null });
+  const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent, updateFinancing, updateProject } = hook;
 
   const [offres, setOffres] = useState<any[]>([]);
 
