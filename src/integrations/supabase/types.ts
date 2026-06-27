@@ -8075,6 +8075,7 @@ export type Database = {
         Row: {
           assigned_agent_id: string | null
           client_id: string
+          co_acheteurs: Json
           conditions_remboursement: string | null
           conditions_renouvellement: string | null
           conditions_resiliation: string | null
@@ -8097,6 +8098,7 @@ export type Database = {
         Insert: {
           assigned_agent_id?: string | null
           client_id: string
+          co_acheteurs?: Json
           conditions_remboursement?: string | null
           conditions_renouvellement?: string | null
           conditions_resiliation?: string | null
@@ -8119,6 +8121,7 @@ export type Database = {
         Update: {
           assigned_agent_id?: string | null
           client_id?: string
+          co_acheteurs?: Json
           conditions_remboursement?: string | null
           conditions_renouvellement?: string | null
           conditions_resiliation?: string | null
