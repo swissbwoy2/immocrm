@@ -109,6 +109,12 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
           )}
         </div>
 
+        {isAchat && (
+          <div className="text-xs text-blue-900/80 dark:text-blue-100/80 bg-white/50 dark:bg-white/5 border border-blue-200/50 rounded-lg px-3 py-2 mb-3">
+            Validation bancaire recommandée avant offre d'achat. Planifiez une visite ou demandez une analyse du bien.
+          </div>
+        )}
+
         {/* Link preview */}
         {offre.lien_annonce && (
           <div className="mt-3">
