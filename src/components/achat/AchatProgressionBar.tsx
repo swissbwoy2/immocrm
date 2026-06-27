@@ -10,7 +10,7 @@ interface AchatProgressionBarProps {
   stepsDone?: number;
 }
 
-export function AchatProgressionBar({ dateDebut, dureeJours = 60, stepsDone = 0 }: AchatProgressionBarProps) {
+export function AchatProgressionBar({ dateDebut, dureeJours = 180, stepsDone = 0 }: AchatProgressionBarProps) {
   const { jourActuel, jourRestant, pourcentage } = computeProgression(dateDebut, dureeJours);
 
   return (

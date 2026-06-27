@@ -112,11 +112,11 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
         <Kpi icon={Banknote} label="Capacité d'achat" value={computed ? `CHF ${Math.round(computed.capaciteAchatMax).toLocaleString('fr-CH')}` : '—'} color="text-amber-600" small />
       </div>
 
-      {/* PROGRESSION 60 JOURS */}
+      {/* PROGRESSION MANDAT ACHAT (6 mois) */}
       <div className="mb-6">
         <AchatProgressionBar
           dateDebut={project.date_debut_progression || project.created_at}
-          dureeJours={project.duree_progression_jours}
+          dureeJours={project.duree_progression_jours || 180}
           stepsDone={stepsDone}
         />
       </div>

@@ -191,7 +191,7 @@ export const ACHAT_STEPS: AchatStep[] = [
   { key: 'remise_cles',           label: 'Remise des clés',                          ordre: 17, group: 'notaire' },
 ];
 
-export function computeProgression(dateDebut: string | null | undefined, dureeJours = 60) {
+export function computeProgression(dateDebut: string | null | undefined, dureeJours = 180) {
   if (!dateDebut) return { jourActuel: 0, dureeJours, pourcentage: 0, jourRestant: dureeJours };
   const start = new Date(dateDebut).getTime();
   const now = Date.now();

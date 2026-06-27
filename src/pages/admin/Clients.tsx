@@ -1374,12 +1374,13 @@ const Clients = () => {
               (g.revenus_mensuels || 0) >= budgetDemande * 3
             );
             
-            // Determine solvability
+            // Determine solvability (location only — never for purchase buyers)
+            const isAcheteur = isBuyer(client);
             const hasCriticalProblems = client.poursuites || (!clientHasStableStatus && !validGarant);
-            const budgetOk = budgetDemande === 0 || 
+            const budgetOk = budgetDemande === 0 ||
               (clientHasStableStatus && budgetPossible >= budgetDemande) ||
               (validGarant && Math.round((validGarant.revenus_mensuels || 0) / 3) >= budgetDemande);
-            const isSolvable = !hasCriticalProblems && budgetOk && (clientHasStableStatus || !!validGarant);
+            const isSolvable = isAcheteur ? true : (!hasCriticalProblems && budgetOk && (clientHasStableStatus || !!validGarant));
             
             // Count excluded candidates
             const excludedCandidates = candidates.filter(c => 
@@ -1654,7 +1655,12 @@ const Clients = () => {
                             </Badge>
                           )
                         )}
-                        {isSolvable ? (
+                        {isAcheteur ? (
+                          <Badge className="bg-sky-500/20 text-sky-600 border border-sky-500/30 text-[10px]">
+                            <Home className="w-3 h-3 mr-0.5" />
+                            {getPurchaseProject(client)?.statut === 'actif' ? 'Mandat actif' : 'Projet achat'}
+                          </Badge>
+                        ) : isSolvable ? (
                           <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px] shadow-[0_0_10px_rgba(34,197,94,0.2)]">
                             <CheckCircle className="w-3 h-3 mr-0.5" />
                             Solvable
@@ -1689,40 +1695,58 @@ const Clients = () => {
                 {/* SECTION 2: Finances - Premium */}
                 <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
                   <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
-                    <span className="text-base">💰</span> Finances
+                    <span className="text-base">💰</span> {isAcheteur ? 'Profil achat' : 'Finances'}
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-2 md:p-2.5 rounded-xl text-center border border-border/30">
-                      <p className="text-[10px] md:text-xs text-muted-foreground">Revenu total</p>
-                      <p className="text-xs md:text-sm font-bold">CHF {totalRevenus.toLocaleString()}</p>
+                  {isAcheteur ? (
+                    /* Achat: revenus annuels + statut financement */
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-gradient-to-br from-sky-50 to-sky-100/30 p-2 md:p-2.5 rounded-xl text-center border border-sky-200/50">
+                        <p className="text-[10px] md:text-xs text-muted-foreground">Revenus mensuels</p>
+                        <p className="text-xs md:text-sm font-bold text-sky-700">
+                          {client.revenus_mensuels ? `CHF ${(client.revenus_mensuels).toLocaleString()}` : '—'}
+                        </p>
+                      </div>
+                      <div className="bg-gradient-to-br from-sky-50 to-indigo-50/30 p-2 md:p-2.5 rounded-xl text-center border border-sky-200/50">
+                        <p className="text-[10px] md:text-xs text-muted-foreground">Mandat achat</p>
+                        <p className="text-xs md:text-sm font-bold text-sky-700">6 mois</p>
+                      </div>
                     </div>
-                    <div className={cn(
-                      "p-2 md:p-2.5 rounded-xl text-center border transition-all",
-                      budgetOk 
-                        ? 'bg-gradient-to-br from-primary/15 to-primary/5 border-primary/30' 
-                        : 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/30'
-                    )}>
-                      <p className="text-[10px] md:text-xs text-muted-foreground">Budget max</p>
-                      <p className={cn(
-                        "text-xs md:text-sm font-bold",
-                        budgetOk ? 'text-primary' : 'text-destructive'
-                      )}>
-                        CHF {budgetDemande.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  {/* Info garant */}
-                  {validGarant && (
-                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-green-600 bg-green-500/10 px-2 py-1 rounded-full w-fit">
-                      <Shield className="w-3 h-3" />
-                      <span className="font-medium">Garant valide</span>
-                    </div>
-                  )}
-                  {excludedCandidates > 0 && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-orange-600">
-                      <AlertTriangle className="w-3 h-3 animate-pulse-soft" />
-                      <span>{excludedCandidates} candidat(s) non comptabilisé(s)</span>
-                    </div>
+                  ) : (
+                    /* Location: logique solvabilité classique */
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-2 md:p-2.5 rounded-xl text-center border border-border/30">
+                          <p className="text-[10px] md:text-xs text-muted-foreground">Revenu total</p>
+                          <p className="text-xs md:text-sm font-bold">CHF {totalRevenus.toLocaleString()}</p>
+                        </div>
+                        <div className={cn(
+                          "p-2 md:p-2.5 rounded-xl text-center border transition-all",
+                          budgetOk
+                            ? 'bg-gradient-to-br from-primary/15 to-primary/5 border-primary/30'
+                            : 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/30'
+                        )}>
+                          <p className="text-[10px] md:text-xs text-muted-foreground">Budget max</p>
+                          <p className={cn(
+                            "text-xs md:text-sm font-bold",
+                            budgetOk ? 'text-primary' : 'text-destructive'
+                          )}>
+                            CHF {budgetDemande.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {validGarant && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[10px] text-green-600 bg-green-500/10 px-2 py-1 rounded-full w-fit">
+                          <Shield className="w-3 h-3" />
+                          <span className="font-medium">Garant valide</span>
+                        </div>
+                      )}
+                      {excludedCandidates > 0 && (
+                        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-orange-600">
+                          <AlertTriangle className="w-3 h-3 animate-pulse-soft" />
+                          <span>{excludedCandidates} candidat(s) non comptabilisé(s)</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 

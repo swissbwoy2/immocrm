@@ -121,10 +121,12 @@ export function FinancingEditorDialog({ financing, onSave }: { financing: any; o
           <NumField label="Budget cible" value={f.budget_cible} onChange={set('budget_cible')} suffix="CHF" />
           <TxtField label="Partenaire bancaire" value={f.partenaire_bancaire} onChange={set('partenaire_bancaire')} />
           <SelField label="Statut bancaire" value={f.statut_bancaire} onChange={set('statut_bancaire')} options={[
-            { value: 'en_attente', label: 'En attente' },
-            { value: 'envoye', label: 'Envoyé à la banque' },
+            { value: 'a_evaluer', label: 'À évaluer' },
+            { value: 'en_analyse', label: 'En analyse' },
+            { value: 'prevalidé', label: 'Prévalidé' },
             { value: 'valide', label: 'Validé' },
             { value: 'refuse', label: 'Refusé' },
+            { value: 'bloqué', label: 'Bloqué' },
           ]} />
           <AreaField label="Commentaire interne" value={f.commentaire_interne} onChange={set('commentaire_interne')} />
         </FieldGrid>

@@ -994,6 +994,7 @@ export default function ClientDetail() {
           deleting={deleting}
           onCreateInvoice={handleCreateAbaNinjaInvoice}
           abaNinjaLoading={abaNinjaLoading}
+          onUploadDoc={() => setUploadDialogOpen(true)}
         />
 
         {/* Buyer-specific dialogs — these must be rendered in the same component tree as the state */}
