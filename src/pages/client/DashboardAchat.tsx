@@ -147,6 +147,19 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 space-y-6">
           <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+          {offres.length > 0 && (
+            <Card className="p-5 border-sky-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center gap-2"><Home className="h-4 w-4 text-sky-600" /> Derniers biens proposés</h3>
+                <Button size="sm" variant="ghost" onClick={() => navigate('/client/biens-proposes')}>Tout voir</Button>
+              </div>
+              <div className="space-y-3">
+                {offres.slice(0, 2).map((o) => (
+                  <PurchaseOffreCard key={o.id} offre={o} compact />
+                ))}
+              </div>
+            </Card>
+          )}
           <AchatPropertiesList properties={properties} />
           <AchatVisitReportsList reports={visitReports} properties={properties} />
           <AchatNegotiationCard negotiations={negotiations} />
