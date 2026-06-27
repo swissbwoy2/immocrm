@@ -135,6 +135,7 @@ import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDeta
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { PurchaseClientDetailPremium } from '@/components/admin/purchase/PurchaseClientDetailPremium';
 import { isPurchaseBuyer } from '@/lib/journey';
+import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 
 // Premium stat mini-card
 const PremiumStatCard = ({ 
