@@ -16,6 +16,7 @@ interface Props {
   clientId: string;
   userId?: string | null;
   mode: 'admin' | 'agent';
+  onUploadDoc?: () => void;
 }
 
 const STATUT_PROP: Record<string, { label: string; color: string }> = {
@@ -34,12 +35,12 @@ const STATUT_VISIT: Record<string, { label: string; color: string }> = {
   offre_recommandee: { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
 };
 
-export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
+export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: Props) {
   const h = usePurchaseProject({ clientId, userId });
   if (h.loading) return <Card className="p-6">Chargement du parcours achat…</Card>;
   if (!h.project) return null;
 
-  const prog = computeProgression(h.project.date_debut_progression, h.project.duree_progression_jours || 60);
+  const prog = computeProgression(h.project.date_debut_progression, h.project.duree_progression_jours || 180);
   const c = h.computed;
   const doneSteps = h.steps.filter((s) => s.statut === 'fait').length;
 
@@ -123,19 +124,29 @@ export function PurchaseDetailSections({ clientId, userId, mode }: Props) {
               ))}
             </div>
           )}
-          {h.financing?.statut_bancaire && (
-            <div className="mt-3 flex items-center gap-2">
-              <Badge className="bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-0" variant="outline">
-                <Shield className="h-3 w-3 mr-1" />
-                Banque : {h.financing.statut_bancaire}{h.financing.partenaire_bancaire ? ` · ${h.financing.partenaire_bancaire}` : ''}
-              </Badge>
-            </div>
-          )}
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            <Badge
+              className={
+                h.financing?.statut_bancaire === 'valide'
+                  ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-0'
+                  : h.financing?.statut_bancaire === 'refuse' || h.financing?.statut_bancaire === 'bloque'
+                  ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-0'
+                  : h.financing?.statut_bancaire === 'prevalidé' || h.financing?.statut_bancaire === 'en_analyse'
+                  ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border-0'
+                  : 'bg-muted text-muted-foreground border-0'
+              }
+              variant="outline"
+            >
+              <Shield className="h-3 w-3 mr-1" />
+              Banque : {h.financing?.statut_bancaire || 'à évaluer'}
+              {h.financing?.partenaire_bancaire ? ` · ${h.financing.partenaire_bancaire}` : ''}
+            </Badge>
+          </div>
         </CardContent>
       </PremiumCard>
 
       {/* Documents */}
-      <DocumentsAdminBlock projectId={h.project.id} documents={h.documents} reload={h.reload} mode={mode} />
+      <DocumentsAdminBlock projectId={h.project.id} documents={h.documents} reload={h.reload} mode={mode} onUploadDoc={onUploadDoc} />
 
       {/* Properties */}
       <PremiumCard icon={Home} title={`Biens sélectionnés (${h.properties.length})`} delay={200}>
@@ -380,19 +391,26 @@ function Mini({ icon: Icon, color, label, text }: any) {
 }
 
 // ---- Documents admin block: checklist AchatDocumentsSection + actions per-document
-function DocumentsAdminBlock({ projectId, documents, reload, mode }: { projectId: string; documents: any[]; reload: () => Promise<void>; mode: 'admin' | 'agent' }) {
+function DocumentsAdminBlock({ projectId, documents, reload, mode, onUploadDoc }: { projectId: string; documents: any[]; reload: () => Promise<void>; mode: 'admin' | 'agent'; onUploadDoc?: () => void }) {
   return (
     <div className="space-y-4">
       <AchatDocumentsSection documents={documents} />
-      <PremiumCard icon={FileText} title={`Actions documents achat (${documents.length})`} delay={175}>
+      <PremiumCard icon={FileText} title={`Documents achat (${documents.length})`} delay={175}>
         <CardContent className="pb-5">
+          <div className="flex items-center justify-end mb-3">
+            {onUploadDoc && (
+              <Button size="sm" variant="outline" onClick={onUploadDoc} className="gap-2">
+                <FileText className="h-4 w-4" />
+                Ajouter un document
+              </Button>
+            )}
+          </div>
           {documents.length === 0 ? (
             <div className="text-center py-8">
               <div className="mx-auto w-12 h-12 rounded-full bg-muted/40 flex items-center justify-center mb-3">
                 <FileText className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-sm text-muted-foreground">Aucun document uploadé.</p>
-              <p className="text-xs text-muted-foreground mt-1">L'upload s'effectue côté client depuis « Mon dossier ».</p>
             </div>
           ) : (
             <div className="space-y-2">

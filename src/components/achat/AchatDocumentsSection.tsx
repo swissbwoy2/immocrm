@@ -6,83 +6,82 @@ interface AchatDocumentsSectionProps {
   documents: any[];
 }
 
-// 6 catégories du parcours achat
+// Catégories du parcours achat — clés alignées sur purchase_category en DB
 export const ACHAT_DOC_CATEGORIES: { key: string; label: string; items: string[] }[] = [
+  {
+    key: 'identite',
+    label: 'Identité',
+    items: [
+      'Pièce d\'identité (passeport ou carte nationale)',
+      'Permis de séjour si non-suisse',
+    ],
+  },
   {
     key: 'revenus',
     label: 'Revenus',
     items: [
-      'Fiches de salaire (si revenu différent de l\'année précédente)',
       'Certificat de salaire de l\'année précédente',
+      'Fiches de salaire (3 derniers mois)',
       'Contrat de travail (si nouvel emploi)',
-      'Bonus, commissions et primes (idéalement sur 3 ans)',
+      'Bonus, commissions et primes (3 ans)',
       'Allocations familiales',
       'Pensions alimentaires reçues',
       'Revenus locatifs',
       'Rentes AVS / AI / LPP',
-      'Autres revenus réguliers',
     ],
   },
   {
     key: 'fonds_propres',
     label: 'Fonds propres',
     items: [
-      'Relevés bancaires',
+      'Relevés bancaires fonds propres',
       'Comptes épargne',
-      'Comptes 3a',
+      'Attestation 3e pilier (3a)',
+      'Attestation LPP (caisse de pension)',
+      'Attestation EPL (épargne-logement)',
       'Certificat de libre passage LPP',
-      'Attestation de caisse de pension (avoir disponible + montant EPL retirable)',
-      'Placements',
-      'Donation ou avance d\'hoirie',
+      'Justificatif placements',
+      'Justificatif donation / avance d\'hoirie',
     ],
   },
   {
-    key: 'situation_financiere',
-    label: 'Situation financière',
+    key: 'charges',
+    label: 'Charges & engagements',
     items: [
-      'Leasing',
-      'Crédit privé',
-      'Cartes de crédit avec mensualités',
-      'Pensions alimentaires versées',
-      'Autres engagements financiers',
+      'Justificatif leasing',
+      'Justificatif crédit privé',
+      'Justificatif cartes de crédit',
+      'Justificatif pensions alimentaires versées',
       'Extrait des poursuites',
     ],
   },
   {
-    key: 'situation_familiale',
-    label: 'Situation familiale',
+    key: 'fiscalite',
+    label: 'Fiscalité',
     items: [
-      'État civil',
-      'Nombre d\'enfants',
-      'Date de naissance des acheteurs',
+      'Dernière déclaration fiscale',
+      'Dernière décision de taxation',
     ],
   },
   {
-    key: 'autorisations',
+    key: 'autorisation',
     label: 'Autorisations',
     items: [
-      'Nationalité',
-      'Type de permis de séjour',
-      'Pièce d\'identité (passeport)',
+      'Accord de transmission des données bancaires',
+      'Consentement traitement données financières',
     ],
   },
   {
-    key: 'bien_immobilier',
-    label: 'Bien immobilier',
-    items: [
-      'Extrait du registre foncier',
-      'Plans et descriptif du bien',
-      'PPE / règlement de copropriété',
-      'Décompte de charges',
-      'Diagnostic CECB éventuel',
-    ],
+    key: 'autre',
+    label: 'Autres documents',
+    items: [],
   },
 ];
 
 export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps) {
   const byCategory = new Map<string, any[]>();
   documents.forEach((d) => {
-    const cat = d.purchase_category || 'autres';
+    const cat = d.purchase_category || 'autre';
     if (!byCategory.has(cat)) byCategory.set(cat, []);
     byCategory.get(cat)!.push(d);
   });
@@ -99,33 +98,45 @@ export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps)
       </p>
 
       <div className="space-y-4">
-        {ACHAT_DOC_CATEGORIES.map((cat) => {
+        {ACHAT_DOC_CATEGORIES.filter((cat) => cat.key !== 'autre' || (byCategory.get('autre') || []).length > 0).map((cat) => {
           const docs = byCategory.get(cat.key) || [];
           return (
             <div key={cat.key} className="rounded-xl border border-border p-4">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-sm">{cat.label}</h3>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${docs.length > 0 ? 'border-emerald-300 text-emerald-700 bg-emerald-50' : ''}`}
+                  >
+                    {docs.length > 0 ? <Check className="h-3 w-3 mr-1 inline" /> : null}
                     {docs.length} document{docs.length > 1 ? 's' : ''}
                   </Badge>
                 </div>
               </div>
-              <ul className="space-y-1">
-                {cat.items.map((item) => {
-                  const present = docs.some((d) =>
-                    (d.nom || '').toLowerCase().includes(item.toLowerCase().split(' ')[0]),
-                  );
-                  return (
-                    <li key={item} className="flex items-start gap-2 text-xs">
-                      {present
-                        ? <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                        : <X className="h-3.5 w-3.5 text-zinc-400 mt-0.5 flex-shrink-0" />}
-                      <span className={present ? 'text-emerald-900' : 'text-muted-foreground'}>{item}</span>
+              {docs.length > 0 && (
+                <ul className="space-y-1 mb-2">
+                  {docs.map((d) => (
+                    <li key={d.id} className="flex items-center gap-2 text-xs text-emerald-800">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                      <span className="truncate">{d.nom}</span>
+                      {d.statut && d.statut !== 'en_attente' && (
+                        <Badge variant="outline" className="text-[10px] ml-auto shrink-0">{d.statut}</Badge>
+                      )}
                     </li>
-                  );
-                })}
-              </ul>
+                  ))}
+                </ul>
+              )}
+              {cat.items.length > 0 && (
+                <ul className="space-y-1 mt-1">
+                  {cat.items.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground">
+                      <X className="h-3 w-3 text-zinc-300 mt-0.5 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           );
         })}

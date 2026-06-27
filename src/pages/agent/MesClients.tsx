@@ -250,7 +250,8 @@ const MesClients = () => {
           !hasStableStatus(c.type_permis, c.nationalite)
         );
         
-        // Check solvability
+        // Check solvability (skip for purchase buyers — uses banking logic, not rental)
+        const isAcheteurClient = client.type_recherche === 'Acheter' || (client as any).journey_type === 'purchase_search';
         const budgetDemande = Number(client.budget_max) || 0;
         const hasNoPoursuites = !client.poursuites;
         
@@ -268,7 +269,7 @@ const MesClients = () => {
         
         const budgetOk = effectiveBudgetPossible >= budgetDemande || budgetDemande === 0;
         const hasStableStatusOrGarant = clientHasStableStatus || !!garant;
-        const isSolvable = budgetOk && hasStableStatusOrGarant && hasNoPoursuites;
+        const isSolvable = isAcheteurClient ? true : (budgetOk && hasStableStatusOrGarant && hasNoPoursuites);
         
         // Collect solvability issues for display
         const solvabilityIssues: string[] = [];

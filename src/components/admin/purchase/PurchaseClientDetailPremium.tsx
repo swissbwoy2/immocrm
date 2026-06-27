@@ -69,13 +69,14 @@ interface Props {
   deleting: boolean;
   onCreateInvoice: () => void;
   abaNinjaLoading: boolean;
+  onUploadDoc?: () => void;
 }
 
 export function PurchaseClientDetailPremium({
   client, profile, agent, purchaseHook, navigate,
   onInvite, inviting, onSendEmailOpen, onSendMessage,
   onEditOpen, onDeleteConfirm, deleting,
-  onCreateInvoice, abaNinjaLoading,
+  onCreateInvoice, abaNinjaLoading, onUploadDoc,
 }: Props) {
   const { project, financing, computed, properties, visitReports, negotiations, steps, documents } = purchaseHook;
 
@@ -83,7 +84,7 @@ export function PurchaseClientDetailPremium({
   const isActive = project?.statut === 'actif';
 
   const prog = isActive && project
-    ? computeProgression(project.date_debut_progression, project.duree_progression_jours || 60)
+    ? computeProgression(project.date_debut_progression, project.duree_progression_jours || 180)
     : null;
 
   const doneSteps = steps.filter((s) => s.statut === 'fait').length;
@@ -215,9 +216,9 @@ export function PurchaseClientDetailPremium({
                       <p className="text-sm text-muted-foreground font-medium">Progression achat — mandat 6 mois</p>
                     </div>
                     <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
-                      prog.jourActuel < 45
+                      prog.jourActuel < 90
                         ? 'bg-sky-500/20 text-sky-600 dark:text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)]'
-                        : prog.jourActuel < 60
+                        : prog.jourActuel < 150
                         ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
                         : 'bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse'
                     }`}>
@@ -231,7 +232,7 @@ export function PurchaseClientDetailPremium({
                   <div className="relative h-4 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
                     <div
                       className={`absolute inset-y-0 left-0 bg-gradient-to-r rounded-full transition-all duration-1000 ease-out ${
-                        prog.jourActuel < 45 ? 'from-sky-500 to-sky-400' : prog.jourActuel < 60 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400'
+                        prog.jourActuel < 90 ? 'from-sky-500 to-sky-400' : prog.jourActuel < 150 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400'
                       }`}
                       style={{ width: `${Math.min(prog.pourcentage, 100)}%` }}
                     >
@@ -239,7 +240,7 @@ export function PurchaseClientDetailPremium({
                     </div>
                     <div
                       className={`absolute inset-y-0 left-0 blur-md opacity-50 rounded-full bg-gradient-to-r ${
-                        prog.jourActuel < 45 ? 'from-sky-500 to-sky-400' : prog.jourActuel < 60 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400'
+                        prog.jourActuel < 90 ? 'from-sky-500 to-sky-400' : prog.jourActuel < 150 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400'
                       }`}
                       style={{ width: `${Math.min(prog.pourcentage, 100)}%` }}
                     />
@@ -473,11 +474,13 @@ export function PurchaseClientDetailPremium({
                     {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
-                {client.revenus_mensuels ? (
+                {(financing?.revenu_annuel_retenu || client.revenus_mensuels) ? (
                   <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 backdrop-blur-sm">
-                    <p className="text-xs text-muted-foreground mb-1">Revenus mensuels nets</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {financing?.revenu_annuel_retenu ? 'Revenu annuel retenu' : 'Revenus mensuels nets'}
+                    </p>
                     <p className="font-bold text-green-600 dark:text-green-400">
-                      CHF {client.revenus_mensuels.toLocaleString('fr-CH')}
+                      CHF {(financing?.revenu_annuel_retenu || client.revenus_mensuels).toLocaleString('fr-CH')}
                     </p>
                   </div>
                 ) : null}
@@ -541,7 +544,7 @@ export function PurchaseClientDetailPremium({
         </div>
 
         {/* ─── PurchaseDetailSections: financing, docs, properties, visits, negotiations, notary, steps ─── */}
-        <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="admin" />
+        <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="admin" onUploadDoc={onUploadDoc} />
 
       </div>
     </div>
