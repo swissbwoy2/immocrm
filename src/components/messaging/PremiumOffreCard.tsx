@@ -7,9 +7,11 @@ import { AddressLink } from '@/components/AddressLink';
 interface PremiumOffreCardProps {
   offre: any;
   className?: string;
+  mode?: 'location' | 'achat';
 }
 
-export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, className }) => {
+export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, className, mode = 'location' }) => {
+  const isAchat = mode === 'achat';
   return (
     <div 
       className={cn(
@@ -73,7 +75,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
             <p className="text-lg font-bold text-primary">
               {offre.prix?.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">CHF/mois</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{isAchat ? 'CHF prix de vente' : 'CHF/mois'}</p>
           </div>
           
           {offre.surface && (
@@ -106,6 +108,12 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
             </div>
           )}
         </div>
+
+        {isAchat && (
+          <div className="text-xs text-blue-900/80 dark:text-blue-100/80 bg-white/50 dark:bg-white/5 border border-blue-200/50 rounded-lg px-3 py-2 mb-3">
+            Validation bancaire recommandée avant offre d'achat. Planifiez une visite ou demandez une analyse du bien.
+          </div>
+        )}
 
         {/* Link preview */}
         {offre.lien_annonce && (

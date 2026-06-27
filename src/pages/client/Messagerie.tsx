@@ -45,6 +45,7 @@ import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
+import { isPurchaseBuyer } from "@/lib/journey";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -67,6 +68,24 @@ const Messagerie = () => {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
+  const [isBuyer, setIsBuyer] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id, user_id, type_recherche, journey_type')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const { data: project } = await supabase
+        .from('purchase_projects')
+        .select('id, user_id, client_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setIsBuyer(isPurchaseBuyer(client, project));
+    })();
+  }, [user]);
   const [pendingAttachment, setPendingAttachment] = useState<{
     url: string;
     type: string;
@@ -1783,7 +1802,7 @@ const Messagerie = () => {
                   />
                   {isLastMessageForOffre && offresMap[msg.offre_id!] && (
                     <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[80%] md:max-w-[65%] animate-slide-up`}>
-                      <PremiumOffreCard offre={offresMap[msg.offre_id!]} />
+                      <PremiumOffreCard offre={offresMap[msg.offre_id!]} mode={isBuyer ? 'achat' : 'location'} />
                       <OffreActions 
                         offre={offresMap[msg.offre_id!]} 
                         visite={visitesMap[msg.offre_id!]}

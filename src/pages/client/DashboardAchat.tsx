@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { ACHAT_STEPS } from '@/lib/purchaseFinancing';
 import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
@@ -16,6 +17,7 @@ import { AchatVisitReportsList } from '@/components/achat/AchatVisitReportsList'
 import { AchatNegotiationCard } from '@/components/achat/AchatNegotiationCard';
 import { AchatNotarySection } from '@/components/achat/AchatNotarySection';
 import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection';
+import { PurchaseOffreCard } from '@/components/achat/PurchaseOffreCard';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardAchatProps {
@@ -28,9 +30,23 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent } =
     usePurchaseProject({ userId: user?.id || null });
 
+  const [offres, setOffres] = useState<any[]>([]);
+
   useEffect(() => {
     document.title = 'Mon projet d\'achat | Immo-Rama';
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (!project?.client_id) return;
+      const { data } = await supabase
+        .from('offres')
+        .select('id, adresse, prix, statut, created_at, nombre_pieces, surface, etage, npa, ville, lien_annonce, description, disponibilite')
+        .eq('client_id', project.client_id)
+        .order('created_at', { ascending: false });
+      setOffres(data || []);
+    })();
+  }, [project?.client_id]);
 
   if (loading) {
     return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-sky-600" /></div>;
@@ -105,12 +121,19 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Kpi icon={Sparkles} label="Étapes" value={`${stepsDone}/${ACHAT_STEPS.length}`} color="text-sky-600" />
-        <Kpi icon={Home} label="Biens sélectionnés" value={properties.length} color="text-indigo-600" />
-        <Kpi icon={Eye} label="Visites courtier" value={visitReports.length} color="text-emerald-600" />
-        <Kpi icon={Banknote} label="Capacité d'achat" value={computed ? `CHF ${Math.round(computed.capaciteAchatMax).toLocaleString('fr-CH')}` : '—'} color="text-amber-600" small />
-      </div>
+      {(() => {
+        const SEL = ['interesse', 'visite_planifiee', 'visite_effectuee', 'offre_envisagee'];
+        const biensProposes = offres.length;
+        const biensSelectionnes = offres.filter((o: any) => SEL.includes(o.statut)).length;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Kpi icon={Home} label="Biens proposés" value={biensProposes} color="text-sky-600" />
+            <Kpi icon={Sparkles} label="Biens sélectionnés" value={biensSelectionnes} color="text-emerald-600" />
+            <Kpi icon={Eye} label="Visites courtier" value={visitReports.length} color="text-indigo-600" />
+            <Kpi icon={Banknote} label="Capacité d'achat" value={computed ? `CHF ${Math.round(computed.capaciteAchatMax).toLocaleString('fr-CH')}` : '—'} color="text-amber-600" small />
+          </div>
+        );
+      })()}
 
       {/* PROGRESSION MANDAT ACHAT (6 mois) */}
       <div className="mb-6">
@@ -124,6 +147,19 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 space-y-6">
           <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+          {offres.length > 0 && (
+            <Card className="p-5 border-sky-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center gap-2"><Home className="h-4 w-4 text-sky-600" /> Derniers biens proposés</h3>
+                <Button size="sm" variant="ghost" onClick={() => navigate('/client/biens-proposes')}>Tout voir</Button>
+              </div>
+              <div className="space-y-3">
+                {offres.slice(0, 2).map((o) => (
+                  <PurchaseOffreCard key={o.id} offre={o} compact />
+                ))}
+              </div>
+            </Card>
+          )}
           <AchatPropertiesList properties={properties} />
           <AchatVisitReportsList reports={visitReports} properties={properties} />
           <AchatNegotiationCard negotiations={negotiations} />
