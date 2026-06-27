@@ -135,6 +135,7 @@ import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDeta
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { PurchaseClientDetailPremium } from '@/components/admin/purchase/PurchaseClientDetailPremium';
 import { isPurchaseBuyer } from '@/lib/journey';
+import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 
 // Premium stat mini-card
 const PremiumStatCard = ({ 
@@ -997,108 +998,14 @@ export default function ClientDetail() {
           onUploadDoc={() => setUploadDialogOpen(true)}
         />
 
-        {/* Buyer-specific dialogs — these must be rendered in the same component tree as the state */}
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <Edit className="w-5 h-5 text-primary" />
-                </div>
-                Modifier les informations du client
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Prénom *</Label>
-                  <Input
-                    value={editFormData.prenom || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
-                    placeholder="Prénom"
-                    className="bg-card/50 backdrop-blur-sm border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Nom *</Label>
-                  <Input
-                    value={editFormData.nom || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
-                    placeholder="Nom"
-                    className="bg-card/50 backdrop-blur-sm border-border/50"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email *</Label>
-                  <Input
-                    type="email"
-                    value={editFormData.email || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    placeholder="email@exemple.com"
-                    className="bg-card/50 backdrop-blur-sm border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Téléphone</Label>
-                  <Input
-                    value={editFormData.telephone || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
-                    placeholder="+41 XX XXX XX XX"
-                    className="bg-card/50 backdrop-blur-sm border-border/50"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nationalité</Label>
-                  <Input
-                    value={editFormData.nationalite || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
-                    placeholder="Suisse"
-                    className="bg-card/50 backdrop-blur-sm border-border/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Statut client</Label>
-                  <Select
-                    value={editFormData.statut || 'actif'}
-                    onValueChange={(value) => setEditFormData({ ...editFormData, statut: value })}
-                  >
-                    <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="actif">Actif</SelectItem>
-                      <SelectItem value="en_attente">En attente</SelectItem>
-                      <SelectItem value="inactif">Inactif</SelectItem>
-                      <SelectItem value="archive">Archivé</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Notes internes</Label>
-                <textarea
-                  className="w-full min-h-[80px] rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  value={editFormData.notes_internes || ''}
-                  onChange={(e) => setEditFormData({ ...editFormData, notes_internes: e.target.value })}
-                  placeholder="Notes internes..."
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="bg-card/50">
-                Annuler
-              </Button>
-              <Button
-                onClick={handleEditSave}
-                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-              >
-                Sauvegarder
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Buyer-specific dialogs — full editor (personal, finances, professional, criteria, housing) */}
+        <EditClientProfileDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          client={client}
+          profile={profile}
+          onSaved={loadClientData}
+        />
 
         <SendEmailDialog
           open={sendEmailDialogOpen}

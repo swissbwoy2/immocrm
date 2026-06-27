@@ -20,6 +20,9 @@ import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection'
 import { PurchaseOffreCard } from '@/components/achat/PurchaseOffreCard';
 import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
 import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor';
+import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
+import { Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardAchatProps {
@@ -33,10 +36,23 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent, updateFinancing, updateProject } = hook;
 
   const [offres, setOffres] = useState<any[]>([]);
+  const [clientRow, setClientRow] = useState<any | null>(null);
+  const [profileRow, setProfileRow] = useState<any | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Mon projet d\'achat | Immo-Rama';
   }, []);
+
+  const reloadClient = async () => {
+    if (!project?.client_id) return;
+    const { data: c } = await supabase.from('clients').select('*').eq('id', project.client_id).maybeSingle();
+    setClientRow(c);
+    if (c?.user_id) {
+      const { data: p } = await supabase.from('profiles').select('*').eq('id', c.user_id).maybeSingle();
+      setProfileRow(p);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -47,7 +63,9 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
         .eq('client_id', project.client_id)
         .order('created_at', { ascending: false });
       setOffres(data || []);
+      await reloadClient();
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.client_id]);
 
   if (loading) {
@@ -149,9 +167,13 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-end gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Edit className="h-4 w-4 mr-1" /> Modifier mon dossier
+            </Button>
             <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
           </div>
           <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+          {clientRow && <SwissRomandeMapGoogle client={clientRow} />}
           <CoAcheteursEditor
             value={(project as any).co_acheteurs || []}
             onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
@@ -179,6 +201,15 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
           <AchatDocumentsSection documents={documents} />
         </div>
       </div>
+      {clientRow && profileRow && (
+        <EditClientProfileDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          client={clientRow}
+          profile={profileRow}
+          onSaved={reloadClient}
+        />
+      )}
     </PremiumPageShellV2>
   );
 }

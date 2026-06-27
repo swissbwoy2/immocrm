@@ -9,6 +9,7 @@ import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { PurchaseDetailSections } from './PurchaseDetailSections';
 import { computeProgression, formatCHF } from '@/lib/purchaseFinancing';
 import type { UsePurchaseProjectResult } from '@/hooks/usePurchaseProject';
+import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
 
 const PremiumStatCard = ({
   label, value, prefix = '', animated = false, variant = 'default', icon: Icon,
@@ -542,6 +543,9 @@ export function PurchaseClientDetailPremium({
             </CardContent>
           </PremiumCard>
         </div>
+
+        {/* ─── Zones de recherche (Google Maps) ─── */}
+        <SwissRomandeMapGoogle client={client} />
 
         {/* ─── PurchaseDetailSections: financing, docs, properties, visits, negotiations, notary, steps ─── */}
         <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="admin" onUploadDoc={onUploadDoc} />
