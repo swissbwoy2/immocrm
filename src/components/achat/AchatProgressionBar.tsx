@@ -21,14 +21,14 @@ export function AchatProgressionBar({ dateDebut, dureeJours = 180, stepsDone = 0
           Progression de votre accompagnement achat
         </h2>
         <Badge variant="outline" className="border-sky-200 text-sky-700">
-          Jour {jourActuel} sur {dureeJours}
+          Mandat achat : 6 mois
         </Badge>
       </div>
       <Progress value={pourcentage} className="h-2 mb-3" />
       <div className="flex items-center justify-between text-sm text-muted-foreground flex-wrap gap-2">
         <div className="flex items-center gap-1.5">
           <Calendar className="h-4 w-4" />
-          <span>{jourRestant} jour{jourRestant > 1 ? 's' : ''} restant{jourRestant > 1 ? 's' : ''} sur votre mandat de 6 mois</span>
+          <span>Mandat actif — durée contractuelle de 6 mois</span>
         </div>
         <div className="flex items-center gap-1.5">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
