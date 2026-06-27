@@ -17,6 +17,7 @@ import { AchatVisitReportsList } from '@/components/achat/AchatVisitReportsList'
 import { AchatNegotiationCard } from '@/components/achat/AchatNegotiationCard';
 import { AchatNotarySection } from '@/components/achat/AchatNotarySection';
 import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection';
+import { PurchaseOffreCard } from '@/components/achat/PurchaseOffreCard';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardAchatProps {
