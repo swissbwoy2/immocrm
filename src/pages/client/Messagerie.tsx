@@ -68,6 +68,24 @@ const Messagerie = () => {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
+  const [isBuyer, setIsBuyer] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id, user_id, type_recherche, journey_type')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const { data: project } = await supabase
+        .from('purchase_projects')
+        .select('id, user_id, client_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setIsBuyer(isPurchaseBuyer(client, project));
+    })();
+  }, [user]);
   const [pendingAttachment, setPendingAttachment] = useState<{
     url: string;
     type: string;
