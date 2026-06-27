@@ -7,6 +7,7 @@ import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { ACHAT_STEPS, computeProgression, formatCHF } from '@/lib/purchaseFinancing';
 import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection';
 import { FinancingEditorDialog, PropertyEditorDialog, VisitReportEditorDialog, NegotiationEditorDialog, NotaryEditorDialog, ProjectMetaEditorDialog } from './PurchaseEditors';
+import { CoAcheteursEditor } from './CoAcheteursEditor';
 import { PremiumCard } from '@/components/premium/PremiumCard';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
