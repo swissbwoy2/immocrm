@@ -124,7 +124,7 @@ export function PurchaseClientDetailPremium({
             <div>
               <p className="font-semibold text-sky-600 dark:text-sky-400">✅ Parcours achat actif</p>
               <p className="text-sm text-muted-foreground">
-                {prog ? `Jour ${prog.jourActuel}/${prog.dureeJours} · ${doneSteps}/${steps.length} étapes complétées` : 'Suivi opérationnel en cours'}
+                {prog ? `Mandat achat : 6 mois · ${doneSteps}/${steps.length} étapes complétées` : 'Mandat achat : 6 mois'}
               </p>
             </div>
           </div>
@@ -223,11 +223,11 @@ export function PurchaseClientDetailPremium({
                         : 'bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse'
                     }`}>
                       <TrendingUp className="w-4 h-4" />
-                      {prog.jourRestant}j restants
+                      Mandat 6 mois
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground text-right mb-2">
-                    Jour <AnimatedCounter value={prog.jourActuel} duration={800} decimals={0} />
+                    <AnimatedCounter value={doneSteps} duration={800} decimals={0} />/{steps.length} étapes complétées
                   </p>
                   <div className="relative h-4 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
                     <div

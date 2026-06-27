@@ -1168,7 +1168,7 @@ export default function ClientDetail() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-[0_0_25px_rgba(var(--primary),0.3)]">
                     {profile.prenom[0]}{profile.nom[0]}
                   </div>
-                  {!isReletter && solvabilityResult.isSolvable && (
+                  {!isReletter && !isPurchaseEligible && solvabilityResult.isSolvable && (
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-card">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
@@ -1211,6 +1211,23 @@ export default function ClientDetail() {
                           Client reloueur
                         </Badge>
                         <ReletterAddressBadge request={relouerRequest} />
+                      </>
+                    ) : isPurchaseEligible ? (
+                      <>
+                        <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
+                          {client.nationalite || 'N/A'}
+                        </Badge>
+                        <Badge className="bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30 backdrop-blur-sm">
+                          <Home className="w-3 h-3 mr-1" />
+                          {purchaseHook.project?.statut === 'actif' ? 'Mandat actif' : 'Projet achat'}
+                        </Badge>
+                        <Badge variant="outline" className="bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30 backdrop-blur-sm">
+                          Banque : {(() => {
+                            const s = purchaseHook.financing?.statut_bancaire;
+                            const map: Record<string, string> = { a_evaluer: 'à évaluer', en_cours: 'en analyse', validation_orale: 'prévalidé', valide: 'validé', refuse: 'refusé', bloque: 'bloqué' };
+                            return map[s as string] || 'à évaluer';
+                          })()}
+                        </Badge>
                       </>
                     ) : (
                       <>

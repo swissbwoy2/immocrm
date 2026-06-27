@@ -515,11 +515,11 @@ export default function Dossier() {
               {isActive ? (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span>Suivi opérationnel achat</span>
-                    <span>{progression.jourActuel}/{progression.dureeJours} jours</span>
+                    <span>Mandat achat actif — 6 mois</span>
+                    <span>{progression.pourcentage}%</span>
                   </div>
                   <Progress value={progression.pourcentage} className="h-3" />
-                  <p className="text-xs text-muted-foreground">Progression du mandat après activation.</p>
+                  <p className="text-xs text-muted-foreground">Progression du mandat d'accompagnement à l'achat (durée contractuelle 6 mois).</p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm">

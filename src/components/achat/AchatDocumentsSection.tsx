@@ -79,9 +79,11 @@ export const ACHAT_DOC_CATEGORIES: { key: string; label: string; items: string[]
 ];
 
 export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps) {
+  const ALLOWED = new Set(['identite', 'revenus', 'fonds_propres', 'charges', 'fiscalite', 'autorisation', 'autre']);
   const byCategory = new Map<string, any[]>();
   documents.forEach((d) => {
-    const cat = d.purchase_category || 'autre';
+    const raw = d.purchase_category || 'autre';
+    const cat = ALLOWED.has(raw) ? raw : 'autre';
     if (!byCategory.has(cat)) byCategory.set(cat, []);
     byCategory.get(cat)!.push(d);
   });

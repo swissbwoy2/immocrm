@@ -84,7 +84,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
           <p className="text-sm text-muted-foreground mb-3">
             {isPending
               ? 'Mandat achat : 6 mois · Le suivi achat démarrera après activation admin.'
-              : `Mandat achat : 6 mois · Suivi opérationnel jour ${prog.jourActuel}/${prog.dureeJours} · ${prog.jourRestant} jours restants · ${doneSteps}/${h.steps.length} étapes complétées`}
+              : `Mandat achat : 6 mois · ${doneSteps}/${h.steps.length} étapes complétées`}
           </p>
           {!isPending && <Progress value={prog.pourcentage} className="h-2 mb-4" />}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
