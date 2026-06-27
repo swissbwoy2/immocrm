@@ -75,7 +75,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
             <p className="text-lg font-bold text-primary">
               {offre.prix?.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">CHF/mois</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{isAchat ? 'CHF prix de vente' : 'CHF/mois'}</p>
           </div>
           
           {offre.surface && (
