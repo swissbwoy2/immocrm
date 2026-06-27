@@ -20,6 +20,9 @@ import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection'
 import { PurchaseOffreCard } from '@/components/achat/PurchaseOffreCard';
 import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
 import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor';
+import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
+import { Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardAchatProps {
