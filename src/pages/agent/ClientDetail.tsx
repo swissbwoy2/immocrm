@@ -45,7 +45,6 @@ import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDeta
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
-import { Edit } from 'lucide-react';
 
 interface Client {
   id: string;
