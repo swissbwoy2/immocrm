@@ -29,9 +29,23 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent } =
     usePurchaseProject({ userId: user?.id || null });
 
+  const [offres, setOffres] = useState<any[]>([]);
+
   useEffect(() => {
     document.title = 'Mon projet d\'achat | Immo-Rama';
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (!project?.client_id) return;
+      const { data } = await supabase
+        .from('offres')
+        .select('id, adresse, prix, statut, created_at, nombre_pieces, surface, etage, npa, ville, lien_annonce, description, disponibilite')
+        .eq('client_id', project.client_id)
+        .order('created_at', { ascending: false });
+      setOffres(data || []);
+    })();
+  }, [project?.client_id]);
 
   if (loading) {
     return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-sky-600" /></div>;
