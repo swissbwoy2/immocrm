@@ -1802,7 +1802,7 @@ const Messagerie = () => {
                   />
                   {isLastMessageForOffre && offresMap[msg.offre_id!] && (
                     <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[80%] md:max-w-[65%] animate-slide-up`}>
-                      <PremiumOffreCard offre={offresMap[msg.offre_id!]} />
+                      <PremiumOffreCard offre={offresMap[msg.offre_id!]} mode={isBuyer ? 'achat' : 'location'} />
                       <OffreActions 
                         offre={offresMap[msg.offre_id!]} 
                         visite={visitesMap[msg.offre_id!]}
