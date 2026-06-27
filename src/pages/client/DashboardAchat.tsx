@@ -148,7 +148,14 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
+          </div>
           <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+          <CoAcheteursEditor
+            value={(project as any).co_acheteurs || []}
+            onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
+          />
           {offres.length > 0 && (
             <Card className="p-5 border-sky-100">
               <div className="flex items-center justify-between mb-3">
