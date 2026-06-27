@@ -7,6 +7,7 @@ import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { ACHAT_STEPS, computeProgression, formatCHF } from '@/lib/purchaseFinancing';
 import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection';
 import { FinancingEditorDialog, PropertyEditorDialog, VisitReportEditorDialog, NegotiationEditorDialog, NotaryEditorDialog, ProjectMetaEditorDialog } from './PurchaseEditors';
+import { CoAcheteursEditor } from './CoAcheteursEditor';
 import { PremiumCard } from '@/components/premium/PremiumCard';
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -144,6 +145,12 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
           </div>
         </CardContent>
       </PremiumCard>
+
+      {/* Co-acheteurs */}
+      <CoAcheteursEditor
+        value={(h.project as any).co_acheteurs || []}
+        onSave={async (next) => { await h.updateProject({ co_acheteurs: next } as any); }}
+      />
 
       {/* Documents */}
       <DocumentsAdminBlock projectId={h.project.id} documents={h.documents} reload={h.reload} mode={mode} onUploadDoc={onUploadDoc} />
