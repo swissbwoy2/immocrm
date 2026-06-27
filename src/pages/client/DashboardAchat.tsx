@@ -120,12 +120,19 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Kpi icon={Sparkles} label="Étapes" value={`${stepsDone}/${ACHAT_STEPS.length}`} color="text-sky-600" />
-        <Kpi icon={Home} label="Biens sélectionnés" value={properties.length} color="text-indigo-600" />
-        <Kpi icon={Eye} label="Visites courtier" value={visitReports.length} color="text-emerald-600" />
-        <Kpi icon={Banknote} label="Capacité d'achat" value={computed ? `CHF ${Math.round(computed.capaciteAchatMax).toLocaleString('fr-CH')}` : '—'} color="text-amber-600" small />
-      </div>
+      {(() => {
+        const SEL = ['interesse', 'visite_planifiee', 'visite_effectuee', 'offre_envisagee'];
+        const biensProposes = offres.length;
+        const biensSelectionnes = offres.filter((o: any) => SEL.includes(o.statut)).length;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <Kpi icon={Home} label="Biens proposés" value={biensProposes} color="text-sky-600" />
+            <Kpi icon={Sparkles} label="Biens sélectionnés" value={biensSelectionnes} color="text-emerald-600" />
+            <Kpi icon={Eye} label="Visites courtier" value={visitReports.length} color="text-indigo-600" />
+            <Kpi icon={Banknote} label="Capacité d'achat" value={computed ? `CHF ${Math.round(computed.capaciteAchatMax).toLocaleString('fr-CH')}` : '—'} color="text-amber-600" small />
+          </div>
+        );
+      })()}
 
       {/* PROGRESSION MANDAT ACHAT (6 mois) */}
       <div className="mb-6">
