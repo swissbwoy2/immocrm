@@ -167,9 +167,13 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-end gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Edit className="h-4 w-4 mr-1" /> Modifier mon dossier
+            </Button>
             <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
           </div>
           <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+          {clientRow && <SwissRomandeMapGoogle client={clientRow} />}
           <CoAcheteursEditor
             value={(project as any).co_acheteurs || []}
             onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
