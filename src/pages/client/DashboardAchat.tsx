@@ -36,10 +36,23 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent, updateFinancing, updateProject } = hook;
 
   const [offres, setOffres] = useState<any[]>([]);
+  const [clientRow, setClientRow] = useState<any | null>(null);
+  const [profileRow, setProfileRow] = useState<any | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     document.title = 'Mon projet d\'achat | Immo-Rama';
   }, []);
+
+  const reloadClient = async () => {
+    if (!project?.client_id) return;
+    const { data: c } = await supabase.from('clients').select('*').eq('id', project.client_id).maybeSingle();
+    setClientRow(c);
+    if (c?.user_id) {
+      const { data: p } = await supabase.from('profiles').select('*').eq('id', c.user_id).maybeSingle();
+      setProfileRow(p);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -50,7 +63,9 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
         .eq('client_id', project.client_id)
         .order('created_at', { ascending: false });
       setOffres(data || []);
+      await reloadClient();
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.client_id]);
 
   if (loading) {
