@@ -286,7 +286,7 @@ export default function DemandesActivation() {
       if (clientId) {
         console.log('Generating FULL mandat PDF for client:', clientId);
         const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
-          body: { client_id: clientId },
+          body: { client_id: clientId, core_only: true },
         });
 
         if (pdfError) {
