@@ -664,18 +664,33 @@ export default function ClientDetail() {
     return (
       <main className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-8 space-y-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Retour
-          </Button>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+            </Button>
+            <Button size="sm" onClick={() => { setEditFormData({ ...client }); setEditDialogOpen(true); }}>
+              Modifier le dossier
+            </Button>
+          </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
             <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
           </div>
+          {/* Carte zones de recherche */}
+          <SwissRomandeMapGoogle client={client} />
           <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="agent" />
+          <EditClientProfileDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            client={client}
+            profile={profile}
+            onSaved={loadClientData}
+          />
         </div>
       </main>
     );
   }
+
 
   if (isPurchaseEligible) {
     return (
