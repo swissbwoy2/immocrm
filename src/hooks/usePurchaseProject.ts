@@ -199,7 +199,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
         statut_acompte: 'a_payer',
         montant_mandat: 4999,
         montant_acompte: 2499,
-        duree_progression_jours: 60,
+        duree_progression_jours: 180,
         date_debut_progression: null,
       })
       .select('id').single();
