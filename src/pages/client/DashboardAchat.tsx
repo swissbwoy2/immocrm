@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { ACHAT_STEPS } from '@/lib/purchaseFinancing';
 import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
