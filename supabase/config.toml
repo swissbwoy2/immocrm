@@ -1,238 +1,161 @@
 project_id = "ydljsdscdnqrqnjvqela"
 
-[functions.resend-agent-invitation]
-verify_jwt = true
-
-[functions.reset-client-password]
-verify_jwt = true
-
-[functions.import-clients-csv]
-verify_jwt = true
-
-[functions.invite-client]
-verify_jwt = false
-
-[functions.migrate-documents-to-storage]
-verify_jwt = false
-
-[functions.send-smtp-email]
-verify_jwt = true
-
-[functions.generate-share-link]
-verify_jwt = false
-
-[functions.get-shared-files]
-verify_jwt = false
-
-[functions.send-visit-reminders]
-verify_jwt = false
-
-[functions.sync-all-imap-emails]
-verify_jwt = false
-
-[functions.send-recommendation-email]
-verify_jwt = false
-
-[functions.send-etat-lieux-reminders]
-verify_jwt = false
-
-[functions.send-signature-reminders]
-verify_jwt = false
-
-[functions.send-notification-email]
-verify_jwt = false
-
-[functions.create-abaninja-client]
-verify_jwt = false
-
-[functions.create-abaninja-invoice]
-verify_jwt = false
-
-[functions.send-mandat-pdf]
-verify_jwt = false
-
-[functions.abaninja-webhook]
-verify_jwt = false
-
-[functions.resend-abaninja-invoice]
-verify_jwt = false
-
-[functions.send-invoice-reminders]
-verify_jwt = false
-
-[functions.send-pending-notification-emails]
-verify_jwt = false
-
-[functions.notify-unassigned-clients]
-verify_jwt = false
-
-[functions.notify-unassigned-clients.schedule]
-cron = "0 */12 * * *"
-
-[functions.get-mapbox-token]
-verify_jwt = false
-
-[functions.notify-new-lead]
-verify_jwt = false
-
-[functions.send-push-notification]
-verify_jwt = false
-
-[functions.get-google-maps-token]
-verify_jwt = false
-
-[functions.create-proprietaire]
-verify_jwt = false
-
-[functions.generate-full-mandat-pdf]
-verify_jwt = false
-
-[functions.fill-rental-form-ai]
-verify_jwt = true
-
-[functions.ai-matching]
-verify_jwt = true
-
-[functions.generate-brochure-pdf]
-verify_jwt = false
-
-[functions.generate-dossier-complet-pdf]
-verify_jwt = true
-
-[functions.invite-proprietaire]
-verify_jwt = false
-
-[functions.resend-proprietaire-invitation]
-verify_jwt = true
-
-[functions.generate-bail-pdf]
-verify_jwt = false
-
-[functions.create-final-invoice]
-verify_jwt = false
-
-[functions.create-coursier]
-verify_jwt = false
-
-[functions.generate-estimation-report-pdf]
-verify_jwt = false
-
-[functions.google-calendar-auth]
-verify_jwt = false
-
-[functions.google-calendar-callback]
-verify_jwt = false
-
-[functions.sync-google-calendar]
-verify_jwt = false
-
-[functions.send-calendar-invite]
-verify_jwt = false
-
-[functions.mandate-submit-signature]
-verify_jwt = false
-
-[functions.mandate-get-status]
-verify_jwt = false
-
-[functions.mandate-create]
-verify_jwt = false
-
-[functions.mandate-update-draft]
-verify_jwt = false
-
-[functions.meta-leads-backfill]
-verify_jwt = true
-
-[functions.ai-relocation-api]
-verify_jwt = false
-
-[functions.ai-relocation-scheduler]
-verify_jwt = false
-
-[functions.ai-relocation-webhook]
-verify_jwt = false
-
-[functions.send-document-update-reminders]
-verify_jwt = false
-
-[functions.renovation-create-project]
-verify_jwt = false
-
-[functions.renovation-create-upload]
-verify_jwt = false
-
-[functions.renovation-register-upload]
-verify_jwt = false
-
-[functions.renovation-analyze-file]
-verify_jwt = false
-
-[functions.renovation-download-file]
-verify_jwt = false
-
-[functions.renovation-create-quote]
-verify_jwt = false
-
-[functions.renovation-analyze-quote]
-verify_jwt = false
-
-[functions.renovation-compare-quotes]
-verify_jwt = false
-
-[functions.renovation-score-companies]
-verify_jwt = false
-
-[functions.renovation-update-progress]
-verify_jwt = false
-
-[functions.renovation-get-history]
-verify_jwt = true
-
-[functions.renovation-generate-alerts]
-verify_jwt = true
-
-[functions.renovation-close-project]
-verify_jwt = true
-
-[functions.renovation-generate-final-report]
-verify_jwt = true
-
-[functions.renovation-dispatch-notifications]
-verify_jwt = true
-
-[functions.create-public-user]
-verify_jwt = false
-
-[functions.mandate-expiry-reminders]
-verify_jwt = false
-
-[functions.mandate-renewal-action]
-verify_jwt = false
-
-[functions.extract-poursuites-date]
-verify_jwt = true
-
-[functions.extract-poursuites-batch]
-verify_jwt = true
-
-[functions.send-payslip-update-reminders]
-verify_jwt = false
-
-
-[functions.track-email-open]
-verify_jwt = false
-
-[functions.track-email-click]
-verify_jwt = false
-
-[functions.send-whatsapp-notification]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-
-
-[functions.send-followup-campaign]
-verify_jwt = false
-
+[functions]
+  [functions.abaninja-webhook]
+    verify_jwt = false
+  [functions.ai-matching]
+    verify_jwt = true
+  [functions.ai-relocation-api]
+    verify_jwt = false
+  [functions.ai-relocation-scheduler]
+    verify_jwt = false
+  [functions.ai-relocation-webhook]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.create-abaninja-client]
+    verify_jwt = false
+  [functions.create-abaninja-invoice]
+    verify_jwt = false
+  [functions.create-coursier]
+    verify_jwt = false
+  [functions.create-final-invoice]
+    verify_jwt = false
+  [functions.create-proprietaire]
+    verify_jwt = false
+  [functions.create-public-user]
+    verify_jwt = false
+  [functions.extract-poursuites-batch]
+    verify_jwt = true
+  [functions.extract-poursuites-date]
+    verify_jwt = true
+  [functions.fill-rental-form-ai]
+    verify_jwt = true
+  [functions.generate-bail-pdf]
+    verify_jwt = false
+  [functions.generate-brochure-pdf]
+    verify_jwt = false
+  [functions.generate-dossier-complet-pdf]
+    verify_jwt = true
+  [functions.generate-estimation-report-pdf]
+    verify_jwt = false
+  [functions.generate-full-mandat-pdf]
+    verify_jwt = false
+  [functions.generate-share-link]
+    verify_jwt = false
+  [functions.get-google-maps-token]
+    verify_jwt = false
+  [functions.get-mapbox-token]
+    verify_jwt = false
+  [functions.get-shared-files]
+    verify_jwt = false
+  [functions.google-calendar-auth]
+    verify_jwt = false
+  [functions.google-calendar-callback]
+    verify_jwt = false
+  [functions.import-clients-csv]
+    verify_jwt = true
+  [functions.invite-client]
+    verify_jwt = false
+  [functions.invite-proprietaire]
+    verify_jwt = false
+  [functions.mandate-create]
+    verify_jwt = false
+  [functions.mandate-expiry-reminders]
+    verify_jwt = false
+  [functions.mandate-get-status]
+    verify_jwt = false
+  [functions.mandate-renewal-action]
+    verify_jwt = false
+  [functions.mandate-submit-signature]
+    verify_jwt = false
+  [functions.mandate-update-draft]
+    verify_jwt = false
+  [functions.meta-leads-backfill]
+    verify_jwt = true
+  [functions.migrate-documents-to-storage]
+    verify_jwt = false
+  [functions.notify-new-lead]
+    verify_jwt = false
+  [functions.notify-unassigned-clients]
+    verify_jwt = false
+    [functions.notify-unassigned-clients.schedule]
+      cron = "0 */12 * * *"
+  [functions.renovation-analyze-file]
+    verify_jwt = false
+  [functions.renovation-analyze-quote]
+    verify_jwt = false
+  [functions.renovation-close-project]
+    verify_jwt = true
+  [functions.renovation-compare-quotes]
+    verify_jwt = false
+  [functions.renovation-create-project]
+    verify_jwt = false
+  [functions.renovation-create-quote]
+    verify_jwt = false
+  [functions.renovation-create-upload]
+    verify_jwt = false
+  [functions.renovation-dispatch-notifications]
+    verify_jwt = true
+  [functions.renovation-download-file]
+    verify_jwt = false
+  [functions.renovation-generate-alerts]
+    verify_jwt = true
+  [functions.renovation-generate-final-report]
+    verify_jwt = true
+  [functions.renovation-get-history]
+    verify_jwt = true
+  [functions.renovation-register-upload]
+    verify_jwt = false
+  [functions.renovation-score-companies]
+    verify_jwt = false
+  [functions.renovation-update-progress]
+    verify_jwt = false
+  [functions.resend-abaninja-invoice]
+    verify_jwt = false
+  [functions.resend-agent-invitation]
+    verify_jwt = true
+  [functions.resend-proprietaire-invitation]
+    verify_jwt = true
+  [functions.reset-client-password]
+    verify_jwt = true
+  [functions.send-calendar-invite]
+    verify_jwt = false
+  [functions.send-document-update-reminders]
+    verify_jwt = false
+  [functions.send-etat-lieux-reminders]
+    verify_jwt = false
+  [functions.send-followup-campaign]
+    verify_jwt = false
+  [functions.send-invoice-reminders]
+    verify_jwt = false
+  [functions.send-mandat-pdf]
+    verify_jwt = false
+  [functions.send-notification-email]
+    verify_jwt = false
+  [functions.send-payslip-update-reminders]
+    verify_jwt = false
+  [functions.send-pending-notification-emails]
+    verify_jwt = false
+  [functions.send-push-notification]
+    verify_jwt = false
+  [functions.send-recommendation-email]
+    verify_jwt = false
+  [functions.send-signature-reminders]
+    verify_jwt = false
+  [functions.send-smtp-email]
+    verify_jwt = true
+  [functions.send-visit-reminders]
+    verify_jwt = false
+  [functions.send-whatsapp-notification]
+    verify_jwt = false
+  [functions.sync-all-imap-emails]
+    verify_jwt = false
+  [functions.sync-google-calendar]
+    verify_jwt = false
+  [functions.track-email-click]
+    verify_jwt = false
+  [functions.track-email-open]
+    verify_jwt = false
+  [functions.whatsapp-webhook]
+    verify_jwt = false
