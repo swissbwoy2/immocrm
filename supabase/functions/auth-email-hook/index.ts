@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirmez votre adresse email — Logisorama',
+  invite: 'Vous êtes invité(e) sur Logisorama',
+  magiclink: 'Votre lien de connexion Logisorama',
+  recovery: 'Réinitialisation de votre mot de passe Logisorama',
+  email_change: 'Confirmez votre nouvelle adresse email — Logisorama',
+  reauthentication: 'Votre code de vérification Logisorama',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "immocrm"
+const SITE_NAME = "Logisorama"
 const SENDER_DOMAIN = "notify.logisorama.ch"
 const ROOT_DOMAIN = "logisorama.ch"
 const FROM_DOMAIN = "notify.logisorama.ch" // Domain shown in From address (may be root or sender subdomain)

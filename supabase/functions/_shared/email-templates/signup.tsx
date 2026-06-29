@@ -3,15 +3,7 @@
 import * as React from 'npm:react@18.3.1'
 
 import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Text,
+  Body, Button, Container, Head, Heading, Hr, Html, Link, Preview, Section, Text,
 } from 'npm:@react-email/components@0.0.22'
 
 interface SignupEmailProps {
@@ -21,37 +13,37 @@ interface SignupEmailProps {
   confirmationUrl: string
 }
 
-export const SignupEmail = ({
-  siteName,
-  siteUrl,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
+export const SignupEmail = ({ siteName, siteUrl, recipient, confirmationUrl }: SignupEmailProps) => (
+  <Html lang="fr" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Confirmez votre adresse email Logisorama</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Section style={header}><Text style={brand}>Logisorama</Text></Section>
+        <Heading style={h1}>Bienvenue sur Logisorama</Heading>
+        <Text style={text}>Bonjour,</Text>
         <Text style={text}>
-          Thanks for signing up for{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          !
+          Merci d'avoir créé votre compte sur{' '}
+          <Link href={siteUrl} style={link}><strong>{siteName}</strong></Link>,
+          votre plateforme suisse de gestion immobilière.
         </Text>
         <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
+          Pour activer votre espace personnel ({recipient}), confirmez votre adresse email :
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
+        <Section style={{ textAlign: 'center', margin: '32px 0' }}>
+          <Button style={button} href={confirmationUrl}>Confirmer mon email</Button>
+        </Section>
+        <Text style={text}>
+          Ou copiez ce lien dans votre navigateur :<br />
+          <Link href={confirmationUrl} style={link}>{confirmationUrl}</Link>
+        </Text>
+        <Hr style={hr} />
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement cet email.
+        </Text>
+        <Text style={footer}>
+          Logisorama — Immo-rama Sàrl · Lausanne, Suisse ·{' '}
+          <Link href="https://logisorama.ch" style={link}>logisorama.ch</Link>
         </Text>
       </Container>
     </Body>
@@ -60,27 +52,17 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Helvetica, Arial, sans-serif' }
+const container = { padding: '24px', maxWidth: '560px', margin: '0 auto' }
+const header = { paddingBottom: '16px', borderBottom: '1px solid #eaeaea', marginBottom: '24px' }
+const brand = { fontSize: '20px', fontWeight: 'bold' as const, color: 'hsl(158, 55%, 38%)', margin: 0 }
+const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#0f172a', margin: '0 0 16px' }
+const text = { fontSize: '15px', color: '#374151', lineHeight: '1.6', margin: '0 0 16px' }
+const link = { color: 'hsl(158, 55%, 38%)', wordBreak: 'break-all' as const }
 const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
+  backgroundColor: 'hsl(158, 55%, 38%)', color: '#ffffff', fontSize: '15px',
+  fontWeight: 'bold' as const, borderRadius: '8px', padding: '14px 28px',
+  textDecoration: 'none', display: 'inline-block',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const hr = { borderColor: '#eaeaea', margin: '32px 0 16px' }
+const footer = { fontSize: '12px', color: '#6b7280', lineHeight: '1.5', margin: '0 0 8px' }
