@@ -18,6 +18,28 @@ interface Props {
 
 // Inline threshold: ~30 MB. Larger → send link instead of inline attachment.
 const INLINE_MAX = 30 * 1024 * 1024;
+// WhatsApp media hard limit ~16 MB — beyond that we send a link.
+const WHATSAPP_MAX = 16 * 1024 * 1024;
+// Max duration: 3 minutes (+2s tolerance for phone metadata rounding).
+const MAX_DURATION_SEC = 182;
+
+async function probeVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.src = url;
+    v.onloadedmetadata = () => {
+      const d = v.duration || 0;
+      URL.revokeObjectURL(url);
+      resolve(d);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(0); // unknown → allow
+    };
+  });
+}
 
 export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, variant = 'default', size = 'default', className }: Props) {
   const { user } = useAuth();
@@ -27,17 +49,25 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [durationSec, setDurationSec] = useState<number>(0);
 
   const openPicker = () => inputRef.current?.click();
 
-  const onFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
+    e.target.value = '';
     if (!f) return;
+
+    const dur = await probeVideoDuration(f);
+    if (dur && dur > MAX_DURATION_SEC) {
+      toast.error(`Vidéo trop longue (${Math.round(dur)}s). Maximum : 3 minutes.`);
+      return;
+    }
+    setDurationSec(dur);
     setPickedFile(f);
     setOpen(true);
     setDone(false);
     setProgress(0);
-    e.target.value = '';
   };
 
   const doUploadAndShare = async () => {
