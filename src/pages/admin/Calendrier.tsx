@@ -834,6 +834,13 @@ export default function AdminCalendrier() {
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {selectedVisiteGroup && (
+              <VisitVideoShareButton
+                visite={selectedVisiteGroup[0]}
+                visitesGroup={selectedVisiteGroup}
+                variant="outline"
+              />
+            )}
+            {selectedVisiteGroup && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive">
