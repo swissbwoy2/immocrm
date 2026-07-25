@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
+import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 
 interface Agent {
   id: string;
