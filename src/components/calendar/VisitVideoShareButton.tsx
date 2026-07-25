@@ -18,6 +18,28 @@ interface Props {
 
 // Inline threshold: ~30 MB. Larger → send link instead of inline attachment.
 const INLINE_MAX = 30 * 1024 * 1024;
+// WhatsApp media hard limit ~16 MB — beyond that we send a link.
+const WHATSAPP_MAX = 16 * 1024 * 1024;
+// Max duration: 3 minutes (+2s tolerance for phone metadata rounding).
+const MAX_DURATION_SEC = 182;
+
+async function probeVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.src = url;
+    v.onloadedmetadata = () => {
+      const d = v.duration || 0;
+      URL.revokeObjectURL(url);
+      resolve(d);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(0); // unknown → allow
+    };
+  });
+}
 
 export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, variant = 'default', size = 'default', className }: Props) {
   const { user } = useAuth();
@@ -27,17 +49,25 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [durationSec, setDurationSec] = useState<number>(0);
 
   const openPicker = () => inputRef.current?.click();
 
-  const onFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
+    e.target.value = '';
     if (!f) return;
+
+    const dur = await probeVideoDuration(f);
+    if (dur && dur > MAX_DURATION_SEC) {
+      toast.error(`Vidéo trop longue (${Math.round(dur)}s). Maximum : 3 minutes.`);
+      return;
+    }
+    setDurationSec(dur);
     setPickedFile(f);
     setOpen(true);
     setDone(false);
     setProgress(0);
-    e.target.value = '';
   };
 
   const doUploadAndShare = async () => {
@@ -152,7 +182,15 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
             attachment_type: isInline ? 'video' : 'link',
             attachment_name: pickedFile.name,
             attachment_size: pickedFile.size,
-            payload: { type: 'visite_video', visite_id: v.id, inline: isInline, path } as any,
+            offre_id: v.offre_id ?? visite.offre_id ?? null,
+            payload: {
+              type: 'visite_video',
+              visite_id: v.id,
+              offre_id: v.offre_id ?? visite.offre_id ?? null,
+              inline: isInline,
+              path,
+              video_url: videoUrl,
+            } as any,
           });
         }
 
@@ -165,8 +203,47 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
             title: '🎥 Vidéo de visite reçue',
             message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}.`,
             link: convId ? `/dashboard/messagerie?conv=${convId}` : '/dashboard/messagerie',
-            metadata: { visite_id: v.id, inline: isInline } as any,
+            metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, inline: isInline } as any,
           });
+        }
+
+        // WhatsApp notification — always a link (WA media API not wired for freeform uploads).
+        // Text-only template avoids the ~16 MB WA media limit entirely.
+        try {
+          const { data: clientProfile } = await supabase
+            .from('profiles')
+            .select('prenom')
+            .eq('id', clientUserId)
+            .maybeSingle();
+          const { data: agentRow } = agentId
+            ? await supabase
+                .from('agents')
+                .select('user_id, profiles:user_id(prenom, nom)')
+                .eq('id', agentId)
+                .maybeSingle()
+            : { data: null as any };
+          const agentName = agentRow?.profiles
+            ? `${agentRow.profiles.prenom ?? ''} ${agentRow.profiles.nom ?? ''}`.trim() || 'votre agent'
+            : 'votre agent';
+          const sizeNote = pickedFile.size > WHATSAPP_MAX
+            ? ` (vidéo ${(pickedFile.size / (1024 * 1024)).toFixed(0)} Mo)`
+            : '';
+          const waLine = `🎥 Vidéo de visite${sizeNote} pour ${visite.adresse} — ${videoUrl}`;
+          await supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              event_type: 'visit_video_shared',
+              template_key: 'agent_message_alert',
+              client_id: clientId,
+              agent_id: agentId,
+              preference_key: 'agent_messages_enabled',
+              variables: [clientProfile?.prenom || 'client', agentName, waLine],
+              context_type: 'visite',
+              context_ref: v.id,
+              inbox_body_text: waLine,
+            },
+          });
+        } catch (waErr) {
+          console.warn('[VisitVideoShare] WhatsApp send failed (non-blocking)', waErr);
         }
       }
 
@@ -208,8 +285,9 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           <DialogHeader>
             <DialogTitle>Partager une vidéo de visite</DialogTitle>
             <DialogDescription>
-              La vidéo sera envoyée dans la messagerie de tous les clients concernés par cette visite,
-              avec une notification. Les fichiers de plus de 30 Mo sont envoyés sous forme de lien.
+              La vidéo (max 3 min, qualité originale) sera envoyée dans la messagerie de tous les
+              clients concernés avec une notification. Les fichiers &gt; 30 Mo passent en lien.
+              Sur WhatsApp, un lien vers la vidéo pleine qualité est toujours envoyé.
             </DialogDescription>
           </DialogHeader>
 
@@ -218,7 +296,9 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
               <div className="text-sm">
                 <div className="font-medium truncate">{pickedFile.name}</div>
                 <div className="text-muted-foreground text-xs">
-                  {(pickedFile.size / (1024 * 1024)).toFixed(1)} Mo · {pickedFile.type || 'video'}
+                  {(pickedFile.size / (1024 * 1024)).toFixed(1)} Mo
+                  {durationSec > 0 && ` · ${Math.round(durationSec)}s`}
+                  {pickedFile.type && ` · ${pickedFile.type}`}
                 </div>
               </div>
               {(uploading || done) && (

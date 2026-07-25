@@ -622,6 +622,26 @@ const Messagerie = () => {
         ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
         : 'Un client';
 
+      // Helper: notify all admins for this offer response
+      const notifyAdminsOfResponse = async (title: string, message: string, link: string, metadata: any) => {
+        try {
+          const { data: admins } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .eq('role', 'admin' as any);
+          for (const a of admins || []) {
+            await supabase.rpc('create_notification', {
+              p_user_id: a.user_id,
+              p_type: 'client_offer_response',
+              p_title: title,
+              p_message: message,
+              p_link: link,
+              p_metadata: metadata,
+            });
+          }
+        } catch (e) { console.warn('notifyAdminsOfResponse failed', e); }
+      };
+
       switch (action) {
         case 'interesse':
           // Mark as processed to hide buttons immediately
@@ -651,6 +671,12 @@ const Messagerie = () => {
               p_metadata: { offre_id: offreId }
             });
           }
+          await notifyAdminsOfResponse(
+            '💚 Réponse client : Intéressé',
+            `${clientName} est intéressé(e) par ${offre.adresse}`,
+            '/admin/offres-envoyees',
+            { offre_id: offreId, response: 'interesse' }
+          );
 
           toast({ title: "Succès", description: "Agent notifié de votre intérêt" });
           break;
@@ -875,6 +901,24 @@ const Messagerie = () => {
             content: `❌ Cette offre ne correspond pas à mes critères.`,
             offre_id: offreId
           });
+
+          // Notify agent + admins
+          if (agentData?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentData.user_id,
+              p_type: 'client_pas_interesse',
+              p_title: '❌ Client pas intéressé',
+              p_message: `${clientName} n'est pas intéressé(e) par ${offre.adresse}`,
+              p_link: '/agent/offres-envoyees',
+              p_metadata: { offre_id: offreId }
+            });
+          }
+          await notifyAdminsOfResponse(
+            '❌ Réponse client : Pas intéressé',
+            `${clientName} n'est pas intéressé(e) par ${offre.adresse}`,
+            '/admin/offres-envoyees',
+            { offre_id: offreId, response: 'refusee' }
+          );
 
           // Mark as processed
           setProcessedOffreIds(prev => new Set(prev).add(offreId));
