@@ -7083,6 +7083,7 @@ export type Database = {
           description: string | null
           description_marketing: string | null
           disponibilite: string | null
+          envoi_auto: boolean
           equipements: string[] | null
           etage: string | null
           id: string
@@ -7115,6 +7116,7 @@ export type Database = {
           description?: string | null
           description_marketing?: string | null
           disponibilite?: string | null
+          envoi_auto?: boolean
           equipements?: string[] | null
           etage?: string | null
           id?: string
@@ -7147,6 +7149,7 @@ export type Database = {
           description?: string | null
           description_marketing?: string | null
           disponibilite?: string | null
+          envoi_auto?: boolean
           equipements?: string[] | null
           etage?: string | null
           id?: string
