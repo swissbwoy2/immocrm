@@ -15,6 +15,8 @@ import { Loader2, RefreshCw, ExternalLink, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
+
 type Row = {
   id: string;
   created_at: string;
@@ -25,8 +27,8 @@ type Row = {
   commentaires: string | null;
   lien_annonce: string | null;
   client_id: string;
-  clients?: { prenom?: string | null; nom?: string | null; email?: string | null; ville?: string | null } | null;
   visites?: { id: string; date_visite: string | null; statut: string | null }[];
+  _client?: ClientInfo;
 };
 
 const MANUAL_KEYWORDS = ["à fixer", "a fixer", "contacter", "à rappeler", "a rappeler", "manuel"];
@@ -57,20 +59,51 @@ export default function OffresAuto() {
 
   async function load() {
     setLoading(true);
-    let q = supabase
-      .from("offres")
-      .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, clients(prenom, nom, email, ville), visites(id, date_visite, statut)")
-      .eq("envoi_auto", true)
-      .order("created_at", { ascending: false })
-      .limit(1000);
-    if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
-    if (dateTo) {
-      const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-      q = q.lte("created_at", to.toISOString());
+    try {
+      let q = supabase
+        .from("offres")
+        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, visites(id, date_visite, statut)")
+        .eq("envoi_auto", true)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
+      if (dateTo) {
+        const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
+        q = q.lte("created_at", to.toISOString());
+      }
+      const { data, error } = await q;
+      if (error) { console.error("[OffresAuto] load offres", error); setRows([]); return; }
+
+      const offres = (data ?? []) as Row[];
+      const clientIds = Array.from(new Set(offres.map(o => o.client_id).filter(Boolean)));
+
+      if (clientIds.length === 0) { setRows(offres); return; }
+
+      const { data: clientsData } = await supabase
+        .from("clients")
+        .select("id, user_id")
+        .in("id", clientIds);
+
+      const userIds = Array.from(new Set((clientsData ?? []).map(c => c.user_id).filter(Boolean)));
+      const clientToUser = new Map<string, string>((clientsData ?? []).map(c => [c.id, c.user_id as string]));
+
+      let profileByUser = new Map<string, ClientInfo>();
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, prenom, nom, email")
+          .in("id", userIds);
+        profileByUser = new Map((profilesData ?? []).map((p: any) => [p.id as string, { prenom: p.prenom, nom: p.nom, email: p.email }]));
+      }
+
+      const enriched = offres.map(o => ({
+        ...o,
+        _client: profileByUser.get(clientToUser.get(o.client_id) ?? "") ?? {},
+      }));
+      setRows(enriched);
+    } finally {
+      setLoading(false);
     }
-    const { data } = await q;
-    setRows((data as any) ?? []);
-    setLoading(false);
   }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [dateFrom, dateTo]);
@@ -80,7 +113,7 @@ export default function OffresAuto() {
       if (statut !== "all" && (r.statut ?? "") !== statut) return false;
       if (clientQ) {
         const q = clientQ.toLowerCase();
-        const name = `${r.clients?.prenom ?? ""} ${r.clients?.nom ?? ""} ${r.clients?.email ?? ""}`.toLowerCase();
+        const name = `${r._client?.prenom ?? ""} ${r._client?.nom ?? ""} ${r._client?.email ?? ""}`.toLowerCase();
         if (!name.includes(q)) return false;
       }
       return true;
@@ -96,7 +129,7 @@ export default function OffresAuto() {
     const today = rows.filter(r => new Date(r.created_at) >= startToday);
     const last7 = rows.filter(r => new Date(r.created_at) >= start7);
     const interesses = rows.filter(r => r.statut === "interesse").length;
-    const refuses = rows.filter(r => r.statut === "refuse").length;
+    const refuses = rows.filter(r => r.statut === "refuse" || r.statut === "refusee").length;
     const visites = rows.filter(r => (r.visites ?? []).some(v => v.date_visite)).length;
     return { today: today.length, last7: last7.length, interesses, refuses, visites };
   }, [rows]);
@@ -180,6 +213,7 @@ function statutBadge(s: string | null) {
     envoyee: { label: "Envoyée", cls: "bg-blue-100 text-blue-800" },
     interesse: { label: "Intéressé", cls: "bg-emerald-100 text-emerald-800" },
     refuse: { label: "Refusé", cls: "bg-red-100 text-red-800" },
+    refusee: { label: "Refusée", cls: "bg-red-100 text-red-800" },
   };
   const v = map[s ?? ""] ?? { label: s ?? "—", cls: "bg-muted" };
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
@@ -197,7 +231,6 @@ function OffresTable({ rows }: { rows: Row[] }) {
             <TableHead>Date</TableHead>
             <TableHead>Client</TableHead>
             <TableHead>Adresse</TableHead>
-            <TableHead>Ville</TableHead>
             <TableHead>Prix</TableHead>
             <TableHead>Pcs</TableHead>
             <TableHead>Statut</TableHead>
@@ -212,11 +245,10 @@ function OffresTable({ rows }: { rows: Row[] }) {
                 {format(new Date(r.created_at), "dd MMM HH:mm", { locale: fr })}
               </TableCell>
               <TableCell className="text-sm">
-                <div className="font-medium">{r.clients?.prenom} {r.clients?.nom}</div>
-                <div className="text-xs text-muted-foreground">{r.clients?.email}</div>
+                <div className="font-medium">{r._client?.prenom ?? ""} {r._client?.nom ?? ""}</div>
+                <div className="text-xs text-muted-foreground">{r._client?.email ?? ""}</div>
               </TableCell>
               <TableCell className="text-sm">{r.adresse ?? "—"}</TableCell>
-              <TableCell className="text-sm">{r.clients?.ville ?? "—"}</TableCell>
               <TableCell className="text-sm whitespace-nowrap">{r.prix ? `${r.prix} CHF` : "—"}</TableCell>
               <TableCell className="text-sm">{r.pieces ?? "—"}</TableCell>
               <TableCell>{statutBadge(r.statut)}</TableCell>
