@@ -657,6 +657,16 @@ export default function AdminCalendrier() {
           
           {selectedVisiteGroup && selectedVisiteGroup.length > 0 && (
             <div className="space-y-6">
+              {/* AUTO badge */}
+              {selectedVisiteGroup[0].offres?.envoi_auto && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-violet-600/10 border border-violet-600/30">
+                  <Badge className="bg-violet-600 hover:bg-violet-600 text-white">🤖 Offre automatique</Badge>
+                  <span className="text-sm text-violet-900 dark:text-violet-200">
+                    Visite programmée par la recherche automatique
+                  </span>
+                </div>
+              )}
+
               {/* Header with address */}
               <div className="p-4 bg-muted rounded-lg">
                 <AddressLink
