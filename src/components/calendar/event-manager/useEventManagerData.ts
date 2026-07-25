@@ -21,6 +21,7 @@ const visiteTypeLabels: Record<string, string> = {
   visite: 'Visite confirmée',
   visite_proposee: 'Créneau proposé',
   visite_deleguee: 'Visite déléguée',
+  visite_auto: '🤖 Offre automatique',
 };
 
 /**
