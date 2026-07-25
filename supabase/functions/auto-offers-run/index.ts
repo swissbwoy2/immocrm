@@ -402,6 +402,7 @@ Deno.serve(async (req) => {
             statut: "envoyee",
             lien_annonce: cand.listing_url,
             commentaires,
+            envoi_auto: true,
           }).select().single();
 
           if (!offre) continue;
