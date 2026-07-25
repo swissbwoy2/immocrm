@@ -3,6 +3,8 @@ project_id = "ydljsdscdnqrqnjvqela"
 [functions]
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.auto-offers-run]
+    verify_jwt = false
   [functions.abaninja-webhook]
     verify_jwt = false
   [functions.ai-matching]

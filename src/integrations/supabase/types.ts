@@ -1636,6 +1636,148 @@ export type Database = {
           },
         ]
       }
+      auto_offer_candidates: {
+        Row: {
+          adresse: string | null
+          charges: number | null
+          client_id: string
+          created_at: string
+          hard_budget_cap: number | null
+          id: string
+          listing_external_id: string | null
+          listing_url: string | null
+          loyer_cc: number | null
+          loyer_net: number | null
+          npa: string | null
+          offer_id: string | null
+          pieces: number | null
+          reason: string | null
+          regie: string | null
+          run_id: string
+          score: number | null
+          score_breakdown: Json
+          source: string
+          surface: number | null
+          ville: string | null
+          would_send: boolean
+        }
+        Insert: {
+          adresse?: string | null
+          charges?: number | null
+          client_id: string
+          created_at?: string
+          hard_budget_cap?: number | null
+          id?: string
+          listing_external_id?: string | null
+          listing_url?: string | null
+          loyer_cc?: number | null
+          loyer_net?: number | null
+          npa?: string | null
+          offer_id?: string | null
+          pieces?: number | null
+          reason?: string | null
+          regie?: string | null
+          run_id: string
+          score?: number | null
+          score_breakdown?: Json
+          source?: string
+          surface?: number | null
+          ville?: string | null
+          would_send?: boolean
+        }
+        Update: {
+          adresse?: string | null
+          charges?: number | null
+          client_id?: string
+          created_at?: string
+          hard_budget_cap?: number | null
+          id?: string
+          listing_external_id?: string | null
+          listing_url?: string | null
+          loyer_cc?: number | null
+          loyer_net?: number | null
+          npa?: string | null
+          offer_id?: string | null
+          pieces?: number | null
+          reason?: string | null
+          regie?: string | null
+          run_id?: string
+          score?: number | null
+          score_breakdown?: Json
+          source?: string
+          surface?: number | null
+          ville?: string | null
+          would_send?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_offer_candidates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_offer_candidates_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_offer_candidates_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "auto_offer_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_offer_runs: {
+        Row: {
+          clients_servis: number
+          clients_sous_objectif: Json
+          dry_run: boolean
+          error: string | null
+          finished_at: string | null
+          id: string
+          listings_found: number
+          listings_retained: number
+          offers_created: number
+          started_at: string
+          summary: Json
+          triggered_by: string | null
+        }
+        Insert: {
+          clients_servis?: number
+          clients_sous_objectif?: Json
+          dry_run?: boolean
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          listings_found?: number
+          listings_retained?: number
+          offers_created?: number
+          started_at?: string
+          summary?: Json
+          triggered_by?: string | null
+        }
+        Update: {
+          clients_servis?: number
+          clients_sous_objectif?: Json
+          dry_run?: boolean
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          listings_found?: number
+          listings_retained?: number
+          offers_created?: number
+          started_at?: string
+          summary?: Json
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       avis_annonceurs: {
         Row: {
           annonceur_id: string
@@ -4054,6 +4196,69 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          status?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
+      email_send_state: {
+        Row: {
+          auth_email_ttl_minutes: number
+          batch_size: number
+          id: number
+          retry_after_until: string | null
+          send_delay_ms: number
+          transactional_email_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body_template: string
@@ -4090,6 +4295,30 @@ export type Database = {
           updated_at?: string
           user_id?: string
           variables?: Json | null
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
         }
         Relationships: []
       }
@@ -11001,6 +11230,30 @@ export type Database = {
         }
         Relationships: []
       }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
+        }
+        Relationships: []
+      }
       tickets_techniques: {
         Row: {
           agent_id: string | null
@@ -12314,6 +12567,15 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      delete_email: {
+        Args: { message_id: number; queue_name: string }
+        Returns: boolean
+      }
+      email_queue_dispatch: { Args: never; Returns: undefined }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: number
+      }
       generate_parrainage_code: { Args: never; Returns: string }
       get_available_phone_slots: {
         Args: { p_from: string; p_to: string }
@@ -12425,7 +12687,24 @@ export type Database = {
         Returns: string
       }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      move_to_dlq: {
+        Args: {
+          dlq_name: string
+          message_id: number
+          payload: Json
+          source_queue: string
+        }
+        Returns: number
+      }
       purge_old_data: { Args: never; Returns: Json }
+      read_email_batch: {
+        Args: { batch_size: number; queue_name: string; vt: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
+      }
       record_signature_checkpoint: {
         Args: {
           p_checkpoint_key: string
