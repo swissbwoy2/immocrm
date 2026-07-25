@@ -21,6 +21,7 @@ const visiteTypeLabels: Record<string, string> = {
   visite: 'Visite confirmée',
   visite_proposee: 'Créneau proposé',
   visite_deleguee: 'Visite déléguée',
+  visite_auto: '🤖 Offre automatique',
 };
 
 /**
@@ -65,15 +66,19 @@ export function useNormalizedEvents(
 
     visiteGroups.forEach((group, key) => {
       const v = group[0];
+      const isAuto = !!v.offres?.envoi_auto;
       let visiteType = 'visite';
-      if (v.est_deleguee || v.source === 'deleguee') visiteType = 'visite_deleguee';
+      if (isAuto) visiteType = 'visite_auto';
+      else if (v.est_deleguee || v.source === 'deleguee') visiteType = 'visite_deleguee';
       else if (v.statut === 'proposee') visiteType = 'visite_proposee';
+
+      const statutLabel = v.statut === 'proposee' ? ' · proposée' : v.statut === 'confirmee' ? ' · confirmée' : '';
 
       result.push({
         id: `visite-${key}`,
         type: visiteType,
-        typeLabel: visiteTypeLabels[visiteType] || 'Visite',
-        title: v.adresse || 'Visite',
+        typeLabel: (visiteTypeLabels[visiteType] || 'Visite') + (isAuto ? statutLabel : ''),
+        title: (isAuto ? '🤖 ' : '') + (v.adresse || 'Visite'),
         description: group.length > 1 ? `${group.length} client(s)` : undefined,
         date: new Date(v.date_visite),
         allDay: false,

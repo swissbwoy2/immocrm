@@ -252,6 +252,7 @@ export function EventManagerCalendar({
             { type: 'visite_proposee', label: 'Créneau proposé' },
             { type: 'visite', label: 'Visite confirmée' },
             { type: 'visite_deleguee', label: 'Déléguée' },
+            { type: 'visite_auto', label: '🤖 Offre automatique' },
             { type: 'signature', label: 'Signature' },
             { type: 'etat_lieux', label: 'État des lieux' },
             { type: 'rdv_telephonique', label: 'RDV tél.' },
