@@ -1636,6 +1636,148 @@ export type Database = {
           },
         ]
       }
+      auto_offer_candidates: {
+        Row: {
+          adresse: string | null
+          charges: number | null
+          client_id: string
+          created_at: string
+          hard_budget_cap: number | null
+          id: string
+          listing_external_id: string | null
+          listing_url: string | null
+          loyer_cc: number | null
+          loyer_net: number | null
+          npa: string | null
+          offer_id: string | null
+          pieces: number | null
+          reason: string | null
+          regie: string | null
+          run_id: string
+          score: number | null
+          score_breakdown: Json
+          source: string
+          surface: number | null
+          ville: string | null
+          would_send: boolean
+        }
+        Insert: {
+          adresse?: string | null
+          charges?: number | null
+          client_id: string
+          created_at?: string
+          hard_budget_cap?: number | null
+          id?: string
+          listing_external_id?: string | null
+          listing_url?: string | null
+          loyer_cc?: number | null
+          loyer_net?: number | null
+          npa?: string | null
+          offer_id?: string | null
+          pieces?: number | null
+          reason?: string | null
+          regie?: string | null
+          run_id: string
+          score?: number | null
+          score_breakdown?: Json
+          source?: string
+          surface?: number | null
+          ville?: string | null
+          would_send?: boolean
+        }
+        Update: {
+          adresse?: string | null
+          charges?: number | null
+          client_id?: string
+          created_at?: string
+          hard_budget_cap?: number | null
+          id?: string
+          listing_external_id?: string | null
+          listing_url?: string | null
+          loyer_cc?: number | null
+          loyer_net?: number | null
+          npa?: string | null
+          offer_id?: string | null
+          pieces?: number | null
+          reason?: string | null
+          regie?: string | null
+          run_id?: string
+          score?: number | null
+          score_breakdown?: Json
+          source?: string
+          surface?: number | null
+          ville?: string | null
+          would_send?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_offer_candidates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_offer_candidates_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auto_offer_candidates_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "auto_offer_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_offer_runs: {
+        Row: {
+          clients_servis: number
+          clients_sous_objectif: Json
+          dry_run: boolean
+          error: string | null
+          finished_at: string | null
+          id: string
+          listings_found: number
+          listings_retained: number
+          offers_created: number
+          started_at: string
+          summary: Json
+          triggered_by: string | null
+        }
+        Insert: {
+          clients_servis?: number
+          clients_sous_objectif?: Json
+          dry_run?: boolean
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          listings_found?: number
+          listings_retained?: number
+          offers_created?: number
+          started_at?: string
+          summary?: Json
+          triggered_by?: string | null
+        }
+        Update: {
+          clients_servis?: number
+          clients_sous_objectif?: Json
+          dry_run?: boolean
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          listings_found?: number
+          listings_retained?: number
+          offers_created?: number
+          started_at?: string
+          summary?: Json
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       avis_annonceurs: {
         Row: {
           annonceur_id: string
