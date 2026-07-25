@@ -902,6 +902,24 @@ const Messagerie = () => {
             offre_id: offreId
           });
 
+          // Notify agent + admins
+          if (agentData?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentData.user_id,
+              p_type: 'client_pas_interesse',
+              p_title: '❌ Client pas intéressé',
+              p_message: `${clientName} n'est pas intéressé(e) par ${offre.adresse}`,
+              p_link: '/agent/offres-envoyees',
+              p_metadata: { offre_id: offreId }
+            });
+          }
+          await notifyAdminsOfResponse(
+            '❌ Réponse client : Pas intéressé',
+            `${clientName} n'est pas intéressé(e) par ${offre.adresse}`,
+            '/admin/offres-envoyees',
+            { offre_id: offreId, response: 'refusee' }
+          );
+
           // Mark as processed
           setProcessedOffreIds(prev => new Set(prev).add(offreId));
           toast({ title: "Offre refusée" });
