@@ -301,13 +301,6 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
                   {pickedFile.type && ` · ${pickedFile.type}`}
                 </div>
               </div>
-            <div className="space-y-3 py-2">
-              <div className="text-sm">
-                <div className="font-medium truncate">{pickedFile.name}</div>
-                <div className="text-muted-foreground text-xs">
-                  {(pickedFile.size / (1024 * 1024)).toFixed(1)} Mo · {pickedFile.type || 'video'}
-                </div>
-              </div>
               {(uploading || done) && (
                 <>
                   <Progress value={progress} />
