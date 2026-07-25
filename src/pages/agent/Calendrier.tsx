@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
+import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -1541,6 +1542,9 @@ export default function AgentCalendrier() {
           )}
 
           <DialogFooter className="gap-2 pt-4 border-t">
+            {selectedVisite && (
+              <VisitVideoShareButton visite={selectedVisite} variant="outline" />
+            )}
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               Fermer
             </Button>

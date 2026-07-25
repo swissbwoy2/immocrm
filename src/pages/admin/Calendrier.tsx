@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
+import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 
 interface Agent {
   id: string;
@@ -833,6 +834,13 @@ export default function AdminCalendrier() {
           )}
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
+            {selectedVisiteGroup && (
+              <VisitVideoShareButton
+                visite={selectedVisiteGroup[0]}
+                visitesGroup={selectedVisiteGroup}
+                variant="outline"
+              />
+            )}
             {selectedVisiteGroup && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>

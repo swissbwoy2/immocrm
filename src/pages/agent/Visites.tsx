@@ -17,6 +17,7 @@ import {
   Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
+import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { AddressLink } from '@/components/AddressLink';
@@ -1718,6 +1719,9 @@ export default function AgentVisites() {
           )}
 
           <DialogFooter className="p-4 bg-muted/30 border-t border-border/50 gap-2">
+            {selectedVisite && !selectedVisite?.is_shared && (
+              <VisitVideoShareButton visite={selectedVisite} variant="outline" size="sm" />
+            )}
             {selectedVisite?.is_shared && (
               <div className="flex-1 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-sm flex items-center gap-2">
                 <Users className="h-4 w-4 shrink-0" />
