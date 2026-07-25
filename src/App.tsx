@@ -93,6 +93,7 @@ const AdminRemplirPDF = lazy(() => import("./pages/admin/RemplirPDF"));
 const AdminRemplirDemandeIA = lazy(() => import("./pages/admin/RemplirDemandeIA"));
 const AdminLeads = lazy(() => import("./pages/admin/Leads"));
 const AdminAutoOffres = lazy(() => import("./pages/admin/AutoOffres"));
+const AdminOffresAuto = lazy(() => import("./pages/admin/OffresAuto"));
 const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminSalaires = lazy(() => import("./pages/admin/Salaires"));
