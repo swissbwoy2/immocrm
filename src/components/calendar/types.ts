@@ -44,6 +44,7 @@ export const eventTypeCalendarColors: Record<string, string> = {
   visite: 'bg-blue-500',                               // Visite confirmée par client
   visite_proposee: 'bg-gray-400',                      // Créneau proposé par agent (non confirmé)
   visite_deleguee: 'bg-orange-500 ring-2 ring-orange-300', // Visite déléguée (URGENT)
+  visite_auto: 'bg-violet-600 ring-2 ring-violet-300', // Visite issue d'une offre automatique
   rappel: 'bg-amber-500',
   rendez_vous: 'bg-emerald-500',
   tache: 'bg-orange-500',
