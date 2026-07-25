@@ -1541,6 +1541,9 @@ export default function AgentCalendrier() {
           )}
 
           <DialogFooter className="gap-2 pt-4 border-t">
+            {selectedVisite && (
+              <VisitVideoShareButton visite={selectedVisite} variant="outline" />
+            )}
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               Fermer
             </Button>
