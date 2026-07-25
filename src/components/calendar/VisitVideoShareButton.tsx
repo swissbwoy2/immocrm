@@ -182,7 +182,15 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
             attachment_type: isInline ? 'video' : 'link',
             attachment_name: pickedFile.name,
             attachment_size: pickedFile.size,
-            payload: { type: 'visite_video', visite_id: v.id, inline: isInline, path } as any,
+            offre_id: v.offre_id ?? visite.offre_id ?? null,
+            payload: {
+              type: 'visite_video',
+              visite_id: v.id,
+              offre_id: v.offre_id ?? visite.offre_id ?? null,
+              inline: isInline,
+              path,
+              video_url: videoUrl,
+            } as any,
           });
         }
 
@@ -195,8 +203,47 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
             title: '🎥 Vidéo de visite reçue',
             message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}.`,
             link: convId ? `/dashboard/messagerie?conv=${convId}` : '/dashboard/messagerie',
-            metadata: { visite_id: v.id, inline: isInline } as any,
+            metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, inline: isInline } as any,
           });
+        }
+
+        // WhatsApp notification — always a link (WA media API not wired for freeform uploads).
+        // Text-only template avoids the ~16 MB WA media limit entirely.
+        try {
+          const { data: clientProfile } = await supabase
+            .from('profiles')
+            .select('prenom')
+            .eq('id', clientUserId)
+            .maybeSingle();
+          const { data: agentRow } = agentId
+            ? await supabase
+                .from('agents')
+                .select('user_id, profiles:user_id(prenom, nom)')
+                .eq('id', agentId)
+                .maybeSingle()
+            : { data: null as any };
+          const agentName = agentRow?.profiles
+            ? `${agentRow.profiles.prenom ?? ''} ${agentRow.profiles.nom ?? ''}`.trim() || 'votre agent'
+            : 'votre agent';
+          const sizeNote = pickedFile.size > WHATSAPP_MAX
+            ? ` (vidéo ${(pickedFile.size / (1024 * 1024)).toFixed(0)} Mo)`
+            : '';
+          const waLine = `🎥 Vidéo de visite${sizeNote} pour ${visite.adresse} — ${videoUrl}`;
+          await supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              event_type: 'visit_video_shared',
+              template_key: 'agent_message_alert',
+              client_id: clientId,
+              agent_id: agentId,
+              preference_key: 'agent_messages_enabled',
+              variables: [clientProfile?.prenom || 'client', agentName, waLine],
+              context_type: 'visite',
+              context_ref: v.id,
+              inbox_body_text: waLine,
+            },
+          });
+        } catch (waErr) {
+          console.warn('[VisitVideoShare] WhatsApp send failed (non-blocking)', waErr);
         }
       }
 
