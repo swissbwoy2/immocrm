@@ -285,12 +285,22 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           <DialogHeader>
             <DialogTitle>Partager une vidéo de visite</DialogTitle>
             <DialogDescription>
-              La vidéo sera envoyée dans la messagerie de tous les clients concernés par cette visite,
-              avec une notification. Les fichiers de plus de 30 Mo sont envoyés sous forme de lien.
+              La vidéo (max 3 min, qualité originale) sera envoyée dans la messagerie de tous les
+              clients concernés avec une notification. Les fichiers &gt; 30 Mo passent en lien.
+              Sur WhatsApp, un lien vers la vidéo pleine qualité est toujours envoyé.
             </DialogDescription>
           </DialogHeader>
 
           {pickedFile && (
+            <div className="space-y-3 py-2">
+              <div className="text-sm">
+                <div className="font-medium truncate">{pickedFile.name}</div>
+                <div className="text-muted-foreground text-xs">
+                  {(pickedFile.size / (1024 * 1024)).toFixed(1)} Mo
+                  {durationSec > 0 && ` · ${Math.round(durationSec)}s`}
+                  {pickedFile.type && ` · ${pickedFile.type}`}
+                </div>
+              </div>
             <div className="space-y-3 py-2">
               <div className="text-sm">
                 <div className="font-medium truncate">{pickedFile.name}</div>
