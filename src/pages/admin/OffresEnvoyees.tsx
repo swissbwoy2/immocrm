@@ -258,7 +258,7 @@ export default function AdminOffresEnvoyees() {
   // Visites state
   const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
 
-  const INITIAL_LIMIT = 300;
+  const INITIAL_LIMIT = 10000;
 
   useEffect(() => {
     if (!user || userRole !== 'admin') {
