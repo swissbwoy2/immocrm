@@ -7069,6 +7069,7 @@ export type Database = {
       }
       offres: {
         Row: {
+          action_notified_at: string | null
           adresse: string
           agent_id: string | null
           annee_construction: number | null
@@ -7087,10 +7088,13 @@ export type Database = {
           equipements: string[] | null
           etage: string | null
           id: string
+          interesse_notified_at: string | null
           lien_annonce: string | null
           locataire_nom: string | null
           locataire_tel: string | null
           medias_galerie: Json | null
+          missing_info: string | null
+          needs_agent_action: boolean
           orientation: string | null
           pieces: number | null
           prix: number
@@ -7102,6 +7106,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          action_notified_at?: string | null
           adresse: string
           agent_id?: string | null
           annee_construction?: number | null
@@ -7120,10 +7125,13 @@ export type Database = {
           equipements?: string[] | null
           etage?: string | null
           id?: string
+          interesse_notified_at?: string | null
           lien_annonce?: string | null
           locataire_nom?: string | null
           locataire_tel?: string | null
           medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean
           orientation?: string | null
           pieces?: number | null
           prix: number
@@ -7135,6 +7143,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          action_notified_at?: string | null
           adresse?: string
           agent_id?: string | null
           annee_construction?: number | null
@@ -7153,10 +7162,13 @@ export type Database = {
           equipements?: string[] | null
           etage?: string | null
           id?: string
+          interesse_notified_at?: string | null
           lien_annonce?: string | null
           locataire_nom?: string | null
           locataire_tel?: string | null
           medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean
           orientation?: string | null
           pieces?: number | null
           prix?: number
@@ -12542,6 +12554,10 @@ export type Database = {
         Args: { check_email: string }
         Returns: boolean
       }
+      compute_offre_missing_info: {
+        Args: { _offre_id: string }
+        Returns: string
+      }
       create_approval_request: {
         Args: {
           p_ai_agent_id?: string
@@ -12698,6 +12714,15 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      notify_offre_action_required: {
+        Args: {
+          _link_prefix: string
+          _offre_id: string
+          _title: string
+          _type: string
+        }
+        Returns: undefined
       }
       purge_old_data: { Args: never; Returns: Json }
       read_email_batch: {

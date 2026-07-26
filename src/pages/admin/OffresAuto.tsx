@@ -27,19 +27,14 @@ type Row = {
   commentaires: string | null;
   lien_annonce: string | null;
   client_id: string;
+  needs_agent_action?: boolean | null;
+  missing_info?: string | null;
   visites?: { id: string; date_visite: string | null; statut: string | null }[];
   _client?: ClientInfo;
 };
 
-const MANUAL_KEYWORDS = ["à fixer", "a fixer", "contacter", "à rappeler", "a rappeler", "manuel"];
-
 function needsManualAction(row: Row): boolean {
-  const hasVisit = (row.visites ?? []).some(v => v.date_visite);
-  if (hasVisit) {
-    const c = (row.commentaires ?? "").toLowerCase();
-    return MANUAL_KEYWORDS.some(k => c.includes(k));
-  }
-  return true;
+  return !!row.needs_agent_action;
 }
 
 function extractVisitInfo(commentaires: string | null): string {
@@ -48,6 +43,7 @@ function extractVisitInfo(commentaires: string | null): string {
   const visit = lines.find(l => /visite|contact|régie|regie|rappeler|fixer/i.test(l));
   return visit ?? lines[0] ?? "—";
 }
+
 
 export default function OffresAuto() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -62,7 +58,8 @@ export default function OffresAuto() {
     try {
       let q = supabase
         .from("offres")
-        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, visites(id, date_visite, statut)")
+        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
+
         .eq("envoi_auto", true)
         .order("created_at", { ascending: false })
         .limit(2000);
@@ -131,8 +128,10 @@ export default function OffresAuto() {
     const interesses = rows.filter(r => r.statut === "interesse").length;
     const refuses = rows.filter(r => r.statut === "refuse" || r.statut === "refusee").length;
     const visites = rows.filter(r => (r.visites ?? []).some(v => v.date_visite)).length;
-    return { today: today.length, last7: last7.length, interesses, refuses, visites };
+    const aCompleter = rows.filter(r => r.needs_agent_action).length;
+    return { today: today.length, last7: last7.length, interesses, refuses, visites, aCompleter };
   }, [rows]);
+
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -146,13 +145,15 @@ export default function OffresAuto() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <StatCard label="Aujourd'hui" value={stats.today} />
         <StatCard label="7 derniers jours" value={stats.last7} />
         <StatCard label="Intéressés" value={stats.interesses} tone="success" />
         <StatCard label="Refusés" value={stats.refuses} tone="danger" />
         <StatCard label="Visites planifiées" value={stats.visites} tone="info" />
+        <StatCard label="⚠️ À compléter" value={stats.aCompleter} tone="danger" />
       </div>
+
 
       <Card>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -192,7 +193,8 @@ export default function OffresAuto() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all"><OffresTable rows={filtered} /></TabsContent>
-        <TabsContent value="manual"><OffresTable rows={manual} /></TabsContent>
+        <TabsContent value="manual"><OffresTable rows={manual} showMissing /></TabsContent>
+
       </Tabs>
     </div>
   );
@@ -219,7 +221,7 @@ function statutBadge(s: string | null) {
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
 }
 
-function OffresTable({ rows }: { rows: Row[] }) {
+function OffresTable({ rows, showMissing }: { rows: Row[]; showMissing?: boolean }) {
   if (rows.length === 0) {
     return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
   }
@@ -234,13 +236,14 @@ function OffresTable({ rows }: { rows: Row[] }) {
             <TableHead>Prix</TableHead>
             <TableHead>Pcs</TableHead>
             <TableHead>Statut</TableHead>
+            {showMissing && <TableHead>Ce qui manque</TableHead>}
             <TableHead>Info visite</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map(r => (
-            <TableRow key={r.id}>
+            <TableRow key={r.id} className={r.needs_agent_action ? "bg-amber-50" : ""}>
               <TableCell className="whitespace-nowrap text-xs">
                 {format(new Date(r.created_at), "dd MMM HH:mm", { locale: fr })}
               </TableCell>
@@ -252,9 +255,15 @@ function OffresTable({ rows }: { rows: Row[] }) {
               <TableCell className="text-sm whitespace-nowrap">{r.prix ? `${r.prix} CHF` : "—"}</TableCell>
               <TableCell className="text-sm">{r.pieces ?? "—"}</TableCell>
               <TableCell>{statutBadge(r.statut)}</TableCell>
+              {showMissing && (
+                <TableCell className="text-xs text-amber-700 max-w-[220px]">
+                  {r.missing_info ?? "—"}
+                </TableCell>
+              )}
               <TableCell className="text-xs max-w-[280px] truncate" title={r.commentaires ?? ""}>
                 {extractVisitInfo(r.commentaires)}
               </TableCell>
+
               <TableCell>
                 {r.lien_annonce && (
                   <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
