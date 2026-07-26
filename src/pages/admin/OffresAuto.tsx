@@ -58,7 +58,8 @@ export default function OffresAuto() {
     try {
       let q = supabase
         .from("offres")
-        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, visites(id, date_visite, statut)")
+        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
+
         .eq("envoi_auto", true)
         .order("created_at", { ascending: false })
         .limit(2000);
