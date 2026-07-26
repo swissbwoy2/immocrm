@@ -80,8 +80,11 @@ export function GererOffreDialog({
     setPhone("");
     (async () => {
       if (!offre.client_id) return;
-      const { data: c } = await supabase.from("clients").select("telephone, user_id").eq("id", offre.client_id).maybeSingle();
-      if (c?.telephone) setPhone(c.telephone);
+      const { data: c } = await supabase.from("clients").select("user_id").eq("id", offre.client_id).maybeSingle();
+      if (c?.user_id) {
+        const { data: p } = await supabase.from("profiles").select("telephone").eq("id", c.user_id).maybeSingle();
+        if (p?.telephone) setPhone(p.telephone);
+      }
     })();
   }, [offre?.id]);
 
