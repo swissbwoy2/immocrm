@@ -221,7 +221,7 @@ function statutBadge(s: string | null) {
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
 }
 
-function OffresTable({ rows }: { rows: Row[] }) {
+function OffresTable({ rows, showMissing }: { rows: Row[]; showMissing?: boolean }) {
   if (rows.length === 0) {
     return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
   }
@@ -236,13 +236,14 @@ function OffresTable({ rows }: { rows: Row[] }) {
             <TableHead>Prix</TableHead>
             <TableHead>Pcs</TableHead>
             <TableHead>Statut</TableHead>
+            {showMissing && <TableHead>Ce qui manque</TableHead>}
             <TableHead>Info visite</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.map(r => (
-            <TableRow key={r.id}>
+            <TableRow key={r.id} className={r.needs_agent_action ? "bg-amber-50" : ""}>
               <TableCell className="whitespace-nowrap text-xs">
                 {format(new Date(r.created_at), "dd MMM HH:mm", { locale: fr })}
               </TableCell>
@@ -254,9 +255,15 @@ function OffresTable({ rows }: { rows: Row[] }) {
               <TableCell className="text-sm whitespace-nowrap">{r.prix ? `${r.prix} CHF` : "—"}</TableCell>
               <TableCell className="text-sm">{r.pieces ?? "—"}</TableCell>
               <TableCell>{statutBadge(r.statut)}</TableCell>
+              {showMissing && (
+                <TableCell className="text-xs text-amber-700 max-w-[220px]">
+                  {r.missing_info ?? "—"}
+                </TableCell>
+              )}
               <TableCell className="text-xs max-w-[280px] truncate" title={r.commentaires ?? ""}>
                 {extractVisitInfo(r.commentaires)}
               </TableCell>
+
               <TableCell>
                 {r.lien_annonce && (
                   <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
