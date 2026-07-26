@@ -194,10 +194,17 @@ export default function OffresAuto() {
             À gérer manuellement ({manual.length})
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="all"><OffresTable rows={filtered} /></TabsContent>
-        <TabsContent value="manual"><OffresTable rows={manual} showMissing /></TabsContent>
+        <TabsContent value="all"><OffresTable rows={filtered} onEdit={setEditing} /></TabsContent>
+        <TabsContent value="manual"><OffresTable rows={manual} showMissing onEdit={setEditing} /></TabsContent>
 
       </Tabs>
+
+      <GererOffreDialog
+        offre={editing as any}
+        open={!!editing}
+        onOpenChange={v => { if (!v) setEditing(null); }}
+        onSaved={load}
+      />
     </div>
   );
 }
