@@ -193,7 +193,8 @@ export default function OffresAuto() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all"><OffresTable rows={filtered} /></TabsContent>
-        <TabsContent value="manual"><OffresTable rows={manual} /></TabsContent>
+        <TabsContent value="manual"><OffresTable rows={manual} showMissing /></TabsContent>
+
       </Tabs>
     </div>
   );
