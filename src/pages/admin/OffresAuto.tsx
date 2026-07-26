@@ -274,11 +274,18 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
               </TableCell>
 
               <TableCell>
-                {r.lien_annonce && (
-                  <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(r)} title="Gérer l'offre">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {r.lien_annonce && (
+                    <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" title="Ouvrir l'annonce externe">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
