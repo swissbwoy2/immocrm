@@ -230,7 +230,7 @@ function statutBadge(s: string | null) {
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
 }
 
-function OffresTable({ rows, showMissing }: { rows: Row[]; showMissing?: boolean }) {
+function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?: boolean; onEdit?: (r: Row) => void }) {
   if (rows.length === 0) {
     return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
   }
