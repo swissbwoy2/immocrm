@@ -27,19 +27,14 @@ type Row = {
   commentaires: string | null;
   lien_annonce: string | null;
   client_id: string;
+  needs_agent_action?: boolean | null;
+  missing_info?: string | null;
   visites?: { id: string; date_visite: string | null; statut: string | null }[];
   _client?: ClientInfo;
 };
 
-const MANUAL_KEYWORDS = ["à fixer", "a fixer", "contacter", "à rappeler", "a rappeler", "manuel"];
-
 function needsManualAction(row: Row): boolean {
-  const hasVisit = (row.visites ?? []).some(v => v.date_visite);
-  if (hasVisit) {
-    const c = (row.commentaires ?? "").toLowerCase();
-    return MANUAL_KEYWORDS.some(k => c.includes(k));
-  }
-  return true;
+  return !!row.needs_agent_action;
 }
 
 function extractVisitInfo(commentaires: string | null): string {
@@ -48,6 +43,7 @@ function extractVisitInfo(commentaires: string | null): string {
   const visit = lines.find(l => /visite|contact|régie|regie|rappeler|fixer/i.test(l));
   return visit ?? lines[0] ?? "—";
 }
+
 
 export default function OffresAuto() {
   const [rows, setRows] = useState<Row[]>([]);
