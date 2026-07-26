@@ -128,8 +128,10 @@ export default function OffresAuto() {
     const interesses = rows.filter(r => r.statut === "interesse").length;
     const refuses = rows.filter(r => r.statut === "refuse" || r.statut === "refusee").length;
     const visites = rows.filter(r => (r.visites ?? []).some(v => v.date_visite)).length;
-    return { today: today.length, last7: last7.length, interesses, refuses, visites };
+    const aCompleter = rows.filter(r => r.needs_agent_action).length;
+    return { today: today.length, last7: last7.length, interesses, refuses, visites, aCompleter };
   }, [rows]);
+
 
   return (
     <div className="p-4 md:p-6 space-y-6">
