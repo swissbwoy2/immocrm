@@ -53,6 +53,7 @@ export default function OffresAuto() {
   const [clientQ, setClientQ] = useState("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [editing, setEditing] = useState<Row | null>(null);
 
   async function load() {
     setLoading(true);
