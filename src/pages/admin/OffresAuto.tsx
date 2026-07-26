@@ -11,8 +11,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, RefreshCw, ExternalLink, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { GererOffreDialog } from "@/components/offres-auto/GererOffreDialog";
 import { fr } from "date-fns/locale";
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
@@ -52,6 +53,7 @@ export default function OffresAuto() {
   const [clientQ, setClientQ] = useState("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [editing, setEditing] = useState<Row | null>(null);
 
   async function load() {
     setLoading(true);
@@ -192,10 +194,17 @@ export default function OffresAuto() {
             À gérer manuellement ({manual.length})
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="all"><OffresTable rows={filtered} /></TabsContent>
-        <TabsContent value="manual"><OffresTable rows={manual} showMissing /></TabsContent>
+        <TabsContent value="all"><OffresTable rows={filtered} onEdit={setEditing} /></TabsContent>
+        <TabsContent value="manual"><OffresTable rows={manual} showMissing onEdit={setEditing} /></TabsContent>
 
       </Tabs>
+
+      <GererOffreDialog
+        offre={editing as any}
+        open={!!editing}
+        onOpenChange={v => { if (!v) setEditing(null); }}
+        onSaved={load}
+      />
     </div>
   );
 }
@@ -221,7 +230,7 @@ function statutBadge(s: string | null) {
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
 }
 
-function OffresTable({ rows, showMissing }: { rows: Row[]; showMissing?: boolean }) {
+function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?: boolean; onEdit?: (r: Row) => void }) {
   if (rows.length === 0) {
     return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
   }
@@ -265,11 +274,18 @@ function OffresTable({ rows, showMissing }: { rows: Row[]; showMissing?: boolean
               </TableCell>
 
               <TableCell>
-                {r.lien_annonce && (
-                  <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
+                <div className="flex items-center gap-1">
+                  {onEdit && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(r)} title="Gérer l'offre">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {r.lien_annonce && (
+                    <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" title="Ouvrir l'annonce externe">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
