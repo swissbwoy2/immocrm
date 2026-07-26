@@ -145,13 +145,15 @@ export default function OffresAuto() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <StatCard label="Aujourd'hui" value={stats.today} />
         <StatCard label="7 derniers jours" value={stats.last7} />
         <StatCard label="Intéressés" value={stats.interesses} tone="success" />
         <StatCard label="Refusés" value={stats.refuses} tone="danger" />
         <StatCard label="Visites planifiées" value={stats.visites} tone="info" />
+        <StatCard label="⚠️ À compléter" value={stats.aCompleter} tone="danger" />
       </div>
+
 
       <Card>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
