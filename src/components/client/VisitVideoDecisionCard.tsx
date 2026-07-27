@@ -31,7 +31,7 @@ function hasSharedVideo(medias: any): boolean {
 
 export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
   const { user } = useAuth();
-  const [saving, setSaving] = useState<null | 'interesse' | 'refuse'>(null);
+  const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
   const hasVideo = useMemo(() => hasSharedVideo(visite?.medias), [visite?.medias]);
   const decision: 'interesse' | 'refuse' | null = visite?.client_decision ?? null;
   const address = visite?.adresse || visite?.offres?.adresse || '';
