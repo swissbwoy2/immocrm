@@ -182,7 +182,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           convId = conv?.id || null;
         }
 
-        const messageContent = `${inlineNote}\n\n📍 ${visite.adresse}\n\n${isInline ? '' : `Lien : ${videoUrl}`}`;
+        const messageContent = `🎥 Une vidéo de votre visite pour ${visite.adresse} est disponible dans votre espace. Merci d'indiquer si vous souhaitez déposer votre candidature.`;
 
         if (convId) {
           await supabase.from('messages').insert({
