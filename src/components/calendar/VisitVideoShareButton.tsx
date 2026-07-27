@@ -271,17 +271,46 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
   return (
     <>
       <input
-        ref={inputRef}
+        ref={captureInputRef}
         type="file"
         accept="video/*"
         capture="environment"
         className="hidden"
         onChange={onFileChosen}
       />
-      <Button variant={variant} size={size} className={className} onClick={openPicker} type="button">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={onFileChosen}
+      />
+      <Button variant={variant} size={size} className={className} onClick={() => setChooserOpen(true)} type="button">
         <Video className="w-4 h-4 mr-2" />
         🎥 Ajouter une vidéo
       </Button>
+
+      <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ajouter une vidéo de visite</DialogTitle>
+            <DialogDescription>
+              Filmez maintenant avec votre appareil ou importez une vidéo déjà enregistrée (max 3 min).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            <Button onClick={openCapture} className="justify-start" type="button">
+              <Video className="w-4 h-4 mr-2" /> 🎥 Filmer maintenant
+            </Button>
+            <Button onClick={openFile} variant="outline" className="justify-start" type="button">
+              <Video className="w-4 h-4 mr-2" /> 📁 Importer une vidéo
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setChooserOpen(false)}>Annuler</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={(o) => { if (!uploading) setOpen(o); }}>
         <DialogContent className="max-w-md">
