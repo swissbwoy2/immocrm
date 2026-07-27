@@ -59,6 +59,10 @@ export default function AgentOffresAuto() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [tab, setTab] = useState<"all" | "manual">("all");
+  const [pageAll, setPageAll] = useState(1);
+  const [pageManual, setPageManual] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(50);
 
   async function load() {
     if (!user) return;
@@ -83,19 +87,20 @@ export default function AgentOffresAuto() {
       ]));
       if (clientIds.length === 0) { setRows([]); return; }
 
-      let q = supabase
-        .from("offres")
-        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
-        .eq("envoi_auto", true)
-        .in("client_id", clientIds)
-        .order("created_at", { ascending: false })
-        .limit(2000);
-      if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
-      if (dateTo) {
-        const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-        q = q.lte("created_at", to.toISOString());
-      }
-      const { data, error } = await q;
+      const { data, error } = await fetchAllPaginated<Row>(() => {
+        let q = supabase
+          .from("offres")
+          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
+          .eq("envoi_auto", true)
+          .in("client_id", clientIds)
+          .order("created_at", { ascending: false });
+        if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
+        if (dateTo) {
+          const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
+          q = q.lte("created_at", to.toISOString());
+        }
+        return q;
+      });
       if (error) { console.error("[Agent/OffresAuto] load", error); setRows([]); return; }
 
       const offres = (data ?? []) as Row[];
