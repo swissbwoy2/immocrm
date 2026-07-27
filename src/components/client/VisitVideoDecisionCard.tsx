@@ -59,16 +59,20 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
       // 3. Resolve client + agent for messaging + notifications
       const { data: clientRow } = await supabase
         .from('clients')
-        .select('id, agent_id, prenom, nom, profiles:user_id(prenom, nom)')
+        .select('id, agent_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
       const clientId = clientRow?.id;
       const agentId = clientRow?.agent_id || visite.agent_id;
 
-      const prenom =
-        (clientRow?.profiles as any)?.prenom || clientRow?.prenom || '';
-      const nom = (clientRow?.profiles as any)?.nom || clientRow?.nom || '';
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', user.id)
+        .maybeSingle();
+      const prenom = profileRow?.prenom || '';
+      const nom = profileRow?.nom || '';
       const displayName = `${prenom} ${nom}`.trim() || 'Le client';
 
       // 4. Insert message in client<->agent conversation
