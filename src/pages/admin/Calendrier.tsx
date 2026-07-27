@@ -835,8 +835,6 @@ export default function AdminCalendrier() {
               <VisitVideoPlayer medias={selectedVisiteGroup[0].medias} />
             </div>
           )}
-            </div>
-          )}
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {selectedVisiteGroup && (
