@@ -1390,9 +1390,9 @@ const Messagerie = () => {
     <>
       <div className="p-4 border-b border-border/50 space-y-3">
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <SidebarTrigger className="shrink-0" />
-            <h2 className="font-semibold text-lg">Conversations</h2>
+            <h2 className="font-semibold text-lg truncate">Conversations</h2>
           </div>
           {agentId && (
             <div className="grid grid-cols-2 gap-2">
