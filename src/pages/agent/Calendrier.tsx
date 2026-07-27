@@ -358,7 +358,10 @@ export default function AgentCalendrier() {
       setPhoneAppts((phoneApptsData as any) || []);
       setEvents([...eventsWithSharedFlag, ...phoneApptEvents]);
       setVisites(visitesWithProfiles);
-      setClients((clientsRes.data as any) || []);
+      const mergedClientsMap = new Map<string, any>();
+      ((clientsRes.data as any) || []).forEach((c: any) => mergedClientsMap.set(c.id, c));
+      ((ownClientsRes.data as any) || []).forEach((c: any) => mergedClientsMap.set(c.id, c));
+      setClients(Array.from(mergedClientsMap.values()));
     } catch (error: any) {
       console.error('[Calendrier] fatal load error:', error);
       toast.error(`Erreur lors du chargement: ${error?.message || 'inconnue'}`);
