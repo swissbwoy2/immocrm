@@ -33,12 +33,12 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
   const { user } = useAuth();
   const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
   const hasVideo = useMemo(() => hasSharedVideo(visite?.medias), [visite?.medias]);
-  const decision: 'interesse' | 'refuse' | null = visite?.client_decision ?? null;
+  const decision: 'souhaite_postuler' | 'refuse' | null = visite?.client_decision ?? null;
   const address = visite?.adresse || visite?.offres?.adresse || '';
 
   if (!hasVideo) return null;
 
-  const handleDecision = async (choice: 'interesse' | 'refuse') => {
+  const handleDecision = async (choice: 'souhaite_postuler' | 'refuse') => {
     if (!user || decision || saving) return;
     setSaving(choice);
     try {
@@ -52,7 +52,7 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
 
       // 2. Update offre status
       if (visite.offre_id) {
-        const nextStatut = choice === 'interesse' ? 'interesse' : 'refusee';
+        const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';
         await supabase.from('offres').update({ statut: nextStatut }).eq('id', visite.offre_id);
       }
 
@@ -95,7 +95,7 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
         }
         if (convId) {
           const messageContent =
-            choice === 'interesse'
+            choice === 'souhaite_postuler'
               ? `✅ Après visionnage de la vidéo, je souhaite déposer ma candidature pour ${address}.`
               : `❌ Après visionnage de la vidéo, je ne souhaite pas postuler pour ${address}.`;
           await supabase.from('messages').insert({
@@ -110,14 +110,14 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
 
       // 5. In-app + email notifications for agent + admin(s)
       const notifTitle =
-        choice === 'interesse'
+        choice === 'souhaite_postuler'
           ? `✅ ${displayName} souhaite postuler — ${address}`
           : `❌ ${displayName} ne postule pas — ${address}`;
       const notifMessage =
-        choice === 'interesse'
+        choice === 'souhaite_postuler'
           ? `Après avoir visionné la vidéo de visite, le client souhaite déposer sa candidature.`
           : `Après avoir visionné la vidéo de visite, le client ne souhaite pas postuler.`;
-      const notifType = choice === 'interesse' ? 'client_interesse' : 'visit_refused';
+      const notifType = choice === 'souhaite_postuler' ? 'client_souhaite_postuler' : 'visit_refused';
       const notifLink = `/agent/clients/${clientId ?? ''}`;
       const notifMeta = {
         visite_id: visite.id,
@@ -162,7 +162,7 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
       }
 
       toast.success(
-        choice === 'interesse'
+        choice === 'souhaite_postuler'
           ? 'Merci, votre agent a été notifié de votre intérêt.'
           : 'Merci, votre choix a été enregistré.'
       );
@@ -195,7 +195,7 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
 
         {decision ? (
           <div className="flex justify-center">
-            {decision === 'interesse' ? (
+            {decision === 'souhaite_postuler' ? (
               <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 <Check className="w-3.5 h-3.5 mr-1" /> Vous avez indiqué vouloir postuler
               </Badge>
@@ -211,9 +211,9 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
               size="lg"
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
               disabled={!!saving}
-              onClick={() => handleDecision('interesse')}
+              onClick={() => handleDecision('souhaite_postuler')}
             >
-              {saving === 'interesse' ? (
+              {saving === 'souhaite_postuler' ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Check className="w-4 h-4 mr-2" />
