@@ -14,6 +14,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { GererOffreDialog } from "@/components/offres-auto/GererOffreDialog";
+import { TablePagination, type PageSize } from "@/components/offres-auto/TablePagination";
+import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
 import { fr } from "date-fns/locale";
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
