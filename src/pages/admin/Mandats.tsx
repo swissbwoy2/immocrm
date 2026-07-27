@@ -36,6 +36,8 @@ const Mandats = () => {
   
   // Full mandat assembler hook
   const { assembleFullMandat, isAssembling, progress: assemblyProgress, error: assemblyError } = useFullMandatAssembler();
+  const { createInvoice } = useAbaNinjaInvoice();
+  const [relaunchingId, setRelaunchingId] = useState<string | null>(null);
   
   // Filtres et tri
   const [searchTerm, setSearchTerm] = useState("");
