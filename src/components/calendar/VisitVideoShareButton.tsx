@@ -91,7 +91,19 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
       }
 
       // 2. Upload to storage
-      const ext = pickedFile.name.split('.').pop() || 'mp4';
+      const ext = (pickedFile.name.split('.').pop() || 'mp4').toLowerCase();
+      const extMimeMap: Record<string, string> = {
+        mp4: 'video/mp4',
+        webm: 'video/webm',
+        mov: 'video/quicktime',
+        m4v: 'video/x-m4v',
+        ogv: 'video/ogg',
+        ogg: 'video/ogg',
+        mkv: 'video/x-matroska',
+      };
+      const resolvedMime = pickedFile.type && pickedFile.type.startsWith('video/')
+        ? pickedFile.type
+        : (extMimeMap[ext] || 'video/mp4');
       const safeName = pickedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       const path = `videos/${visite.id}/${Date.now()}_${safeName}`;
       setProgress(15);
@@ -99,7 +111,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
       const { error: upErr } = await supabase.storage
         .from('visite-medias')
         .upload(path, pickedFile, {
-          contentType: pickedFile.type || `video/${ext}`,
+          contentType: resolvedMime,
           upsert: false,
         });
       if (upErr) throw upErr;
@@ -119,7 +131,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
         path,
         name: pickedFile.name,
         size: pickedFile.size,
-        mime: pickedFile.type,
+        mime: resolvedMime,
         uploaded_at: new Date().toISOString(),
         uploaded_by: user.id,
         shared_to_clients: true,

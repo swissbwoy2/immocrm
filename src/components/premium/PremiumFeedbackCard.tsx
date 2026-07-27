@@ -373,8 +373,20 @@ export function PremiumFeedbackCard({
           <button className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20" aria-label="Fermer">
             <X className="w-6 h-6" />
           </button>
-          {mediaPreview.type?.startsWith('video') ? (
-            <video src={mediaPreview.url} controls autoPlay className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
+          {mediaPreview.type?.startsWith('video') || (mediaPreview as any).mime?.startsWith?.('video') ? (
+            <video
+              controls
+              autoPlay
+              playsInline
+              preload="metadata"
+              className="max-w-full max-h-full rounded-lg bg-black"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <source
+                src={mediaPreview.url}
+                type={(mediaPreview as any).mime || (mediaPreview.type?.startsWith('video/') ? mediaPreview.type : 'video/mp4')}
+              />
+            </video>
           ) : (
             <img src={mediaPreview.url} alt="" className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
           )}
