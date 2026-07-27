@@ -115,6 +115,7 @@ const AgentSuiviExtraits = lazy(() => import("./pages/agent/SuiviExtraitsPoursui
 const AgentClientDetail = lazy(() => import("./pages/agent/ClientDetail"));
 const AgentEnvoyerOffre = lazy(() => import("./pages/agent/EnvoyerOffre"));
 const AgentOffresEnvoyees = lazy(() => import("./pages/agent/OffresEnvoyees"));
+const AgentOffresAuto = lazy(() => import("./pages/agent/OffresAuto"));
 const Wishlist = lazy(() => import("./pages/shared/Wishlist"));
 const AgentMessagerie = lazy(() => import("./pages/agent/Messagerie"));
 const AgentVisites = lazy(() => import("./pages/agent/Visites"));
