@@ -129,7 +129,7 @@ export const AddClientsToVisiteDialog = ({
             surface: sourceOffre.surface ?? null,
             etage: sourceOffre.etage ?? null,
             disponibilite: sourceOffre.disponibilite ?? null,
-            annee_construction: sourceOffre.annee_construction ?? null,
+            annee_construction: typeof sourceOffre.annee_construction === 'number' ? sourceOffre.annee_construction : null,
             description: sourceOffre.description ?? null,
             lien_annonce: sourceOffre.lien_annonce ?? null,
             type_bien: sourceOffre.type_bien ?? null,
