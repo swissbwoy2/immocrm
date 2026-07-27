@@ -129,6 +129,7 @@ export default function AgentCalendrier() {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [eventDetailDialogOpen, setEventDetailDialogOpen] = useState(false);
+  const [addClientsDialogOpen, setAddClientsDialogOpen] = useState(false);
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
