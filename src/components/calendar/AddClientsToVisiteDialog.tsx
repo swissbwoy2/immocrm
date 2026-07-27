@@ -78,6 +78,7 @@ export const AddClientsToVisiteDialog = ({
   dateVisiteFin,
   existingClientIds,
   availableClients,
+  sourceMedias,
   onSuccess,
 }: Props) => {
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
