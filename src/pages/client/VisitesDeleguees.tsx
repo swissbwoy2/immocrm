@@ -161,6 +161,24 @@ export default function VisitesDeleguees() {
           />
         )}
 
+        {/* Vidéos de visites partagées — décision client */}
+        {visitesAvecVideo.length > 0 && (
+          <PremiumVisiteDelegueSection
+            title="Vidéos de vos visites"
+            description="Visionnez les vidéos partagées par votre agent et indiquez si vous souhaitez postuler"
+            icon={Video}
+            count={visitesAvecVideo.length}
+            variant="confirmed"
+            delay={50}
+          >
+            <div className="space-y-4">
+              {visitesAvecVideo.map((visite) => (
+                <VisitVideoDecisionCard key={visite.id} visite={visite} onUpdated={loadVisites} />
+              ))}
+            </div>
+          </PremiumVisiteDelegueSection>
+        )}
+
         {/* Visites en attente de confirmation */}
         {visitesEnAttente.length > 0 && (
           <PremiumVisiteDelegueSection
