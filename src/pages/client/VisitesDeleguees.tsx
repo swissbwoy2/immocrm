@@ -13,8 +13,9 @@ import {
   PremiumFeedbackCard,
   PremiumCandidatureTimeline
 } from '@/components/premium';
-import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare, FileSignature } from 'lucide-react';
+import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare, FileSignature, Video } from 'lucide-react';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { VisitVideoDecisionCard } from '@/components/client/VisitVideoDecisionCard';
 
 export default function VisitesDeleguees() {
   const { user } = useAuth();
