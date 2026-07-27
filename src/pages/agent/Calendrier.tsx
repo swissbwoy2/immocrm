@@ -1347,10 +1347,15 @@ export default function AgentCalendrier() {
               {/* Client */}
               {selectedVisite.client_profile && (
                 <div className="space-y-2">
-                  <h5 className="font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client'}
-                  </h5>
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-medium flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client concerné'}
+                    </h5>
+                    <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
+                      ➕ Ajouter des clients
+                    </Button>
+                  </div>
                   <div className="p-3 border rounded-lg">
                     <p className="font-medium">
                       {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
