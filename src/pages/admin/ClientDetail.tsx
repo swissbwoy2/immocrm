@@ -818,7 +818,7 @@ export default function ClientDetail() {
           cancellation_requested_at: null,
           refund_status: null,
           derniere_relance_at: nowIso,
-          relance_count: (client as any).relance_count ? (client as any).relance_count + 1 : 1,
+          relance_count: (client.relance_count ?? 0) + 1,
         })
         .eq('id', client.id);
 
