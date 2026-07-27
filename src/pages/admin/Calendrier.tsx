@@ -27,6 +27,7 @@ import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
+import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 
 interface Agent {
   id: string;
