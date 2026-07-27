@@ -450,11 +450,14 @@ export default function Visites() {
 
         {isExpanded && (
           <CardContent className="relative space-y-5 pt-0">
+            <VisitVideoDecisionCard visite={visite} onUpdated={loadVisites} />
+
             <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
               <p className="font-medium text-sm sm:text-base capitalize">
                 {formatDate(visite.date_visite)}
               </p>
             </div>
+
 
             {visite.offres && (
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
