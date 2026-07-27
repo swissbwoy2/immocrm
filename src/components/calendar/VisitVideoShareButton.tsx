@@ -43,7 +43,9 @@ async function probeVideoDuration(file: File): Promise<number> {
 
 export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, variant = 'default', size = 'default', className }: Props) {
   const { user } = useAuth();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const captureInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [chooserOpen, setChooserOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -51,7 +53,8 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [durationSec, setDurationSec] = useState<number>(0);
 
-  const openPicker = () => inputRef.current?.click();
+  const openCapture = () => { setChooserOpen(false); captureInputRef.current?.click(); };
+  const openFile = () => { setChooserOpen(false); fileInputRef.current?.click(); };
 
   const onFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
