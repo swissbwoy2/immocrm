@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
 import { useAuth } from '@/contexts/AuthContext';
