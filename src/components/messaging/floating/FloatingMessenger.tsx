@@ -29,6 +29,7 @@ export function FloatingMessenger() {
   const { user, userRole, loading } = useAuth();
   const { isOpen, close, activeConversationId, setActiveConversation } = useFloatingMessenger();
   const isMobile = useIsMobile();
+  const location = useLocation();
 
   // Reset active conversation when widget closes
   useEffect(() => {
@@ -43,6 +44,10 @@ export function FloatingMessenger() {
   if (loading || !user || !userRole) return null;
   const eligibleRoles = ['admin', 'agent', 'client', 'proprietaire'];
   if (!eligibleRoles.includes(userRole)) return null;
+
+  // Hide floating messenger on the full Messagerie page — it overlaps
+  // the composer's Send button and duplicates the surface the user is already in.
+  if (/\/messagerie(\/|$)/i.test(location.pathname)) return null;
 
   return (
     <>
