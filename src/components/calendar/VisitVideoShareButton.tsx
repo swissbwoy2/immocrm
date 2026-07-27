@@ -79,16 +79,13 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
     setProgress(5);
 
     try {
-      // 1. Resolve group of visites sharing this address + datetime
-      let group = visitesGroup;
-      if (!group || group.length === 0) {
-        const { data } = await supabase
-          .from('visites')
-          .select('id, client_id, agent_id, adresse, date_visite, offre_id, medias, clients!visites_client_id_fkey(id, user_id)')
-          .eq('adresse', visite.adresse)
-          .eq('date_visite', visite.date_visite);
-        group = data || [visite];
-      }
+      // 1. Resolve group of visites sharing this address + datetime (always re-fetch to get client user_ids)
+      const { data: freshGroup } = await supabase
+        .from('visites')
+        .select('id, client_id, agent_id, adresse, date_visite, offre_id, medias, clients!visites_client_id_fkey(id, user_id)')
+        .eq('adresse', visite.adresse)
+        .eq('date_visite', visite.date_visite);
+      const group = (freshGroup && freshGroup.length > 0) ? freshGroup : (visitesGroup && visitesGroup.length > 0 ? visitesGroup : [visite]);
 
       // 2. Upload to storage
       const ext = (pickedFile.name.split('.').pop() || 'mp4').toLowerCase();
