@@ -85,6 +85,8 @@ export const AddClientsToVisiteDialog = ({
   const [sending, setSending] = useState(false);
 
   const agentId = sourceOffre.agent_id || FALLBACK_AGENT_ID;
+  const sharedVideos = useMemo(() => pickSharedVideos(sourceMedias), [sourceMedias]);
+  const hasVideo = sharedVideos.length > 0;
 
   const eligibleClients = useMemo(
     () => availableClients.filter(c => !existingClientIds.includes(c.id)),
