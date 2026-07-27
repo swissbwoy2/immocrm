@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2, Pause, StopCircle } from "lucide-react";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2, Pause, StopCircle, RotateCcw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 import { toast } from "sonner";
 import { useFullMandatAssembler } from "@/hooks/useFullMandatAssembler";
+import { useAbaNinjaInvoice } from "@/hooks/useAbaNinjaInvoice";
 
 type SortField = 'days' | 'name' | 'agent' | 'date';
 type SortOrder = 'asc' | 'desc';
@@ -35,6 +36,8 @@ const Mandats = () => {
   
   // Full mandat assembler hook
   const { assembleFullMandat, isAssembling, progress: assemblyProgress, error: assemblyError } = useFullMandatAssembler();
+  const { createInvoice } = useAbaNinjaInvoice();
+  const [relaunchingId, setRelaunchingId] = useState<string | null>(null);
   
   // Filtres et tri
   const [searchTerm, setSearchTerm] = useState("");
@@ -154,6 +157,90 @@ const Mandats = () => {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error("Erreur lors de la mise à jour du statut");
+    }
+  };
+
+  const handleRelaunchSearch = async (client: any) => {
+    if (!client) return;
+    if (client.refund_status === 'pending' || client.refund_status === 'processed') {
+      toast.error('Impossible de relancer', {
+        description: 'Un remboursement est en cours. Terminez-le avant de relancer une nouvelle recherche.',
+      });
+      return;
+    }
+    setRelaunchingId(client.id);
+    try {
+      const nowIso = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({
+          statut: 'actif',
+          mandat_date_signature: nowIso,
+          date_ajout: nowIso,
+          mandate_pause_days: 0,
+          mandate_paused_at: null,
+          cancellation_requested_at: null,
+          refund_status: null,
+          derniere_relance_at: nowIso,
+          relance_count: (client.relance_count ?? 0) + 1,
+        })
+        .eq('id', client.id);
+      if (updateError) throw updateError;
+
+      const profile = client.profiles || {};
+      const invoiceResult = await createInvoice({
+        clientId: client.id,
+        prenom: profile.prenom || '',
+        nom: profile.nom || '',
+        email: profile.email || '',
+        telephone: profile.telephone || '',
+        adresse: client.adresse || '',
+        typeRecherche: 'Louer',
+      });
+
+      try {
+        if (client.user_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: client.user_id,
+            p_type: 'mandat_relance',
+            p_title: '🔄 Nouvelle recherche activée',
+            p_message: `Votre recherche de logement est réactivée pour 90 jours. Une nouvelle facture d'acompte de CHF 300.- vous a été envoyée par email.`,
+            p_link: '/client/mon-contrat',
+            p_metadata: JSON.stringify({ client_id: client.id }),
+          });
+        }
+        if (client.agent_id) {
+          const { data: agentRow } = await supabase
+            .from('agents')
+            .select('user_id')
+            .eq('id', client.agent_id)
+            .maybeSingle();
+          if (agentRow?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentRow.user_id,
+              p_type: 'mandat_relance',
+              p_title: '🔄 Nouvelle recherche relancée',
+              p_message: `Une nouvelle recherche de 90 jours vient d'être ouverte pour ${profile.prenom || ''} ${profile.nom || ''}.`,
+              p_link: `/admin/clients/${client.id}`,
+              p_metadata: JSON.stringify({ client_id: client.id }),
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.warn('Notification error (non-blocking):', notifErr);
+      }
+
+      toast.success('✅ Nouvelle recherche lancée', {
+        description: invoiceResult.success
+          ? 'Le mandat repart pour 90 jours et la facture CHF 300.- a été envoyée.'
+          : "Le mandat repart pour 90 jours. Attention : la facture AbaNinja n'a pas pu être générée automatiquement.",
+      });
+      await loadData();
+    } catch (error: any) {
+      console.error('Error relaunching search:', error);
+      toast.error('Erreur', { description: error?.message || 'Impossible de relancer la recherche' });
+    } finally {
+      setRelaunchingId(null);
     }
   };
 
@@ -693,6 +780,25 @@ const Mandats = () => {
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Renouveler le mandat
                       </Button>
+                    )}
+
+                    {['reloge', 'inactif', 'stoppe', 'suspendu'].includes(client.statut) && client.journey_type !== 'purchase_search' && (
+                      <ConfirmDialog
+                        trigger={
+                          <Button variant="default" size="sm" disabled={relaunchingId === client.id}>
+                            {relaunchingId === client.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                            )}
+                            Relancer une nouvelle recherche (90 jours)
+                          </Button>
+                        }
+                        title="Relancer une nouvelle recherche"
+                        description={`Un nouveau cycle de 90 jours va démarrer pour ${client.profiles?.prenom} ${client.profiles?.nom}, et une nouvelle facture d'acompte CHF 300.- sera envoyée par email. Continuer ?`}
+                        confirmText="Relancer"
+                        onConfirm={() => handleRelaunchSearch(client)}
+                      />
                     )}
 
                     {!isFrozen && client.statut !== 'reloge' && (
