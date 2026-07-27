@@ -146,6 +146,11 @@ export default function AgentOffresAuto() {
 
   const manual = useMemo(() => filtered.filter(needsManualAction), [filtered]);
 
+  useEffect(() => { setPageAll(1); setPageManual(1); }, [statut, clientQ, dateFrom, dateTo, pageSize]);
+
+  const pagedAll = useMemo(() => filtered.slice((pageAll - 1) * pageSize, pageAll * pageSize), [filtered, pageAll, pageSize]);
+  const pagedManual = useMemo(() => manual.slice((pageManual - 1) * pageSize, pageManual * pageSize), [manual, pageManual, pageSize]);
+
   const stats = useMemo(() => {
     const now = new Date();
     const startToday = new Date(now); startToday.setHours(0, 0, 0, 0);
