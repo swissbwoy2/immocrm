@@ -99,7 +99,14 @@ interface Client {
   abaninja_invoice_id?: string | null;
   abaninja_invoice_ref?: string | null;
   journey_type?: string | null;
+  refund_status?: string | null;
+  mandate_pause_days?: number | null;
+  mandate_paused_at?: string | null;
+  cancellation_requested_at?: string | null;
+  relance_count?: number | null;
+  derniere_relance_at?: string | null;
 }
+
 
 interface Profile {
   nom: string;
@@ -781,6 +788,108 @@ export default function ClientDetail() {
       loadClientData();
     }
   };
+
+  const [relaunching, setRelaunching] = useState(false);
+
+  const handleRelaunchSearch = async () => {
+    if (!client || !profile) return;
+    if (client.refund_status === 'pending' || client.refund_status === 'processed') {
+      toast({
+        title: 'Impossible de relancer',
+        description: 'Un remboursement est en cours. Terminez-le avant de relancer une nouvelle recherche.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRelaunching(true);
+    try {
+      const nowIso = new Date().toISOString();
+
+      // 1. Reset mandate cycle: remet le compteur à J0 / 90
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({
+          statut: 'actif',
+          mandat_date_signature: nowIso,
+          date_ajout: nowIso,
+          mandate_pause_days: 0,
+          mandate_paused_at: null,
+          cancellation_requested_at: null,
+          refund_status: null,
+          derniere_relance_at: nowIso,
+          relance_count: (client.relance_count ?? 0) + 1,
+        })
+        .eq('id', client.id);
+
+      if (updateError) throw updateError;
+
+      // 2. Génération de la nouvelle facture d'acompte CHF 300.-
+      const invoiceResult = await createInvoice({
+        clientId: client.id,
+        prenom: profile.prenom,
+        nom: profile.nom,
+        email: profile.email,
+        telephone: profile.telephone || '',
+        adresse: client.adresse || '',
+        typeRecherche: 'Louer',
+      });
+
+      // 3. Notification in-app au client + agent assigné
+      try {
+        if (client.user_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: client.user_id,
+            p_type: 'mandat_relance',
+            p_title: '🔄 Nouvelle recherche activée',
+            p_message: `Votre recherche de logement est réactivée pour 90 jours. Une nouvelle facture d'acompte de CHF 300.- vous a été envoyée par email.`,
+            p_link: '/client/mon-contrat',
+            p_metadata: JSON.stringify({ client_id: client.id }),
+          });
+        }
+        if (client.agent_id) {
+          const { data: agentRow } = await supabase
+            .from('agents')
+            .select('user_id')
+            .eq('id', client.agent_id)
+            .maybeSingle();
+          if (agentRow?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentRow.user_id,
+              p_type: 'mandat_relance',
+              p_title: '🔄 Nouvelle recherche relancée',
+              p_message: `Une nouvelle recherche de 90 jours vient d'être ouverte pour ${profile.prenom} ${profile.nom}.`,
+              p_link: `/admin/clients/${client.id}`,
+              p_metadata: JSON.stringify({ client_id: client.id }),
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.warn('Notification error (non-blocking):', notifErr);
+      }
+
+      toast({
+        title: '✅ Nouvelle recherche lancée',
+        description: invoiceResult.success
+          ? 'Le mandat repart pour 90 jours et la facture CHF 300.- a été envoyée.'
+          : 'Le mandat repart pour 90 jours. Attention : la facture AbaNinja n\'a pas pu être générée automatiquement.',
+      });
+
+      loadClientData();
+    } catch (error: any) {
+      console.error('Error relaunching search:', error);
+      toast({
+        title: 'Erreur',
+        description: error?.message || 'Impossible de relancer la recherche',
+        variant: 'destructive',
+      });
+    } finally {
+      setRelaunching(false);
+    }
+  };
+
+
+
 
 
   if (loading) {
@@ -2716,7 +2825,71 @@ export default function ClientDetail() {
                       </Button>
                     </div>
                   )}
+
+                  {/* Relance de recherche — pour clients relogé / inactif / stoppé / suspendu */}
+                  {client.journey_type !== 'purchase_search' &&
+                    ['reloge', 'inactif', 'stoppe', 'suspendu'].includes(client.statut || '') && (
+                    <div className="pt-3 border-t border-border/40 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Le client souhaite reprendre une nouvelle recherche :
+                      </p>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full bg-card/50 hover:bg-primary/10 hover:border-primary/40 hover:text-primary"
+                            disabled={relaunching || abaNinjaLoading || client.refund_status === 'pending'}
+                            title={
+                              client.refund_status === 'pending'
+                                ? 'Un remboursement est en cours — impossible de relancer.'
+                                : undefined
+                            }
+                          >
+                            <RotateCcw className={`w-4 h-4 mr-2 ${relaunching ? 'animate-spin' : ''}`} />
+                            {relaunching ? 'Relance en cours…' : 'Relancer une nouvelle recherche (90 jours)'}
+                            {(client.relance_count ?? 0) > 0 && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({client.relance_count} déjà)
+                              </span>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Relancer une nouvelle recherche ?</AlertDialogTitle>
+                            <AlertDialogDescription asChild>
+                              <div className="space-y-2 text-sm">
+                                <p>
+                                  Le compte du client sera <strong>réactivé</strong> et un
+                                  <strong> nouveau mandat de 90 jours</strong> démarrera aujourd'hui.
+                                </p>
+                                <p>
+                                  Une nouvelle <strong>facture d'acompte de CHF 300.-</strong> sera automatiquement
+                                  générée dans AbaNinja et envoyée par email au client.
+                                </p>
+                                <p className="text-muted-foreground">
+                                  Le compteur de jours de recherche repart à zéro.
+                                </p>
+                              </div>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleRelaunchSearch}>
+                              Confirmer la relance
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                      {client.derniere_relance_at && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Dernière relance : {new Date(client.derniere_relance_at).toLocaleDateString('fr-CH')}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </>
+
               ) : (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
