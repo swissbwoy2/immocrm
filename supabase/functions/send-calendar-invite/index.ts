@@ -111,7 +111,7 @@ serve(async (req) => {
       year: 'numeric',
       timeZone: SWISS_TZ,
     });
-    const endDateObj = new Date(event_end_or_start(end_date, start_date));
+    const endDateObj = new Date(end_date || new Date(startDate.getTime() + 3600000).toISOString());
     const timeStr = all_day
       ? 'Journée entière'
       : `${startDate.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} – ${endDateObj.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} (Heure de Zurich)`;
