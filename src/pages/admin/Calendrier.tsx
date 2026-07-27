@@ -921,6 +921,20 @@ export default function AdminCalendrier() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedVisiteGroup && selectedVisiteGroup[0]?.offres && (
+        <AddClientsToVisiteDialog
+          open={addClientsDialogOpen}
+          onOpenChange={setAddClientsDialogOpen}
+          sourceOffre={selectedVisiteGroup[0].offres}
+          adresse={selectedVisiteGroup[0].adresse}
+          dateVisite={selectedVisiteGroup[0].date_visite}
+          dateVisiteFin={selectedVisiteGroup[0].date_visite_fin}
+          existingClientIds={getUniqueVisitesByClient(selectedVisiteGroup).map((v: any) => v.client_id).filter(Boolean)}
+          availableClients={clients as any}
+          onSuccess={() => loadData(true)}
+        />
+      )}
     </div>
   );
 }
