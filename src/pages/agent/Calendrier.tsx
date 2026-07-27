@@ -22,6 +22,7 @@ import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar
 import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
+import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -128,6 +129,7 @@ export default function AgentCalendrier() {
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [eventDetailDialogOpen, setEventDetailDialogOpen] = useState(false);
+  const [addClientsDialogOpen, setAddClientsDialogOpen] = useState(false);
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -222,7 +224,7 @@ export default function AgentCalendrier() {
         eventPromises.push(Promise.resolve(qe));
       }
 
-      const [visitesResults, eventsResults, clientsRes] = await Promise.all([
+      const [visitesResults, eventsResults, clientsRes, ownClientsRes] = await Promise.all([
         Promise.all(visitePromises),
         Promise.all(eventPromises),
         coClientIds.length > 0
@@ -231,6 +233,11 @@ export default function AgentCalendrier() {
               .select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)')
               .in('id', coClientIds)
           : Promise.resolve({ data: [], error: null } as any),
+        supabase
+          .from('clients')
+          .select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)')
+          .eq('agent_id', agentData.id)
+          .limit(15000),
       ]);
 
       // Surface query errors instead of silently showing an empty calendar
@@ -351,7 +358,10 @@ export default function AgentCalendrier() {
       setPhoneAppts((phoneApptsData as any) || []);
       setEvents([...eventsWithSharedFlag, ...phoneApptEvents]);
       setVisites(visitesWithProfiles);
-      setClients((clientsRes.data as any) || []);
+      const mergedClientsMap = new Map<string, any>();
+      ((clientsRes.data as any) || []).forEach((c: any) => mergedClientsMap.set(c.id, c));
+      ((ownClientsRes.data as any) || []).forEach((c: any) => mergedClientsMap.set(c.id, c));
+      setClients(Array.from(mergedClientsMap.values()));
     } catch (error: any) {
       console.error('[Calendrier] fatal load error:', error);
       toast.error(`Erreur lors du chargement: ${error?.message || 'inconnue'}`);
@@ -1347,10 +1357,15 @@ export default function AgentCalendrier() {
               {/* Client */}
               {selectedVisite.client_profile && (
                 <div className="space-y-2">
-                  <h5 className="font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client'}
-                  </h5>
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-medium flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client concerné'}
+                    </h5>
+                    <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
+                      ➕ Ajouter des clients
+                    </Button>
+                  </div>
                   <div className="p-3 border rounded-lg">
                     <p className="font-medium">
                       {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
@@ -1563,6 +1578,23 @@ export default function AgentCalendrier() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedVisite?.offres && (
+        <AddClientsToVisiteDialog
+          open={addClientsDialogOpen}
+          onOpenChange={setAddClientsDialogOpen}
+          sourceOffre={selectedVisite.offres}
+          adresse={selectedVisite.adresse}
+          dateVisite={selectedVisite.date_visite}
+          dateVisiteFin={selectedVisite.date_visite_fin}
+          existingClientIds={visites
+            .filter((v: any) => v.adresse === selectedVisite.adresse && v.date_visite === selectedVisite.date_visite)
+            .map((v: any) => v.client_id)
+            .filter(Boolean)}
+          availableClients={clients as any}
+          onSuccess={() => loadData()}
+        />
+      )}
     </div>
   );
 }

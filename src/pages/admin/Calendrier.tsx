@@ -28,6 +28,7 @@ import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
+import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 
 interface Agent {
   id: string;
@@ -63,6 +64,7 @@ export default function AdminCalendrier() {
   // Visite detail dialog
   const [selectedVisiteGroup, setSelectedVisiteGroup] = useState<any[] | null>(null);
   const [visiteDetailDialogOpen, setVisiteDetailDialogOpen] = useState(false);
+  const [addClientsDialogOpen, setAddClientsDialogOpen] = useState(false);
 
   // Phone appointment detail
   const [phoneAppts, setPhoneAppts] = useState<PhoneAppointmentRaw[]>([]);
@@ -789,9 +791,14 @@ export default function AdminCalendrier() {
                 const uniqueClients = getUniqueVisitesByClient(selectedVisiteGroup);
                 return (
                   <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Clients concernés ({uniqueClients.length})
-                    </Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-medium">
+                        Clients concernés ({uniqueClients.length})
+                      </Label>
+                      <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
+                        ➕ Ajouter des clients
+                      </Button>
+                    </div>
                     <ul className="space-y-2">
                       {uniqueClients.map((visite: any) => (
                         <li key={visite.client_id} className="flex items-center justify-between p-2 border rounded-lg">
@@ -914,6 +921,20 @@ export default function AdminCalendrier() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedVisiteGroup && selectedVisiteGroup[0]?.offres && (
+        <AddClientsToVisiteDialog
+          open={addClientsDialogOpen}
+          onOpenChange={setAddClientsDialogOpen}
+          sourceOffre={selectedVisiteGroup[0].offres}
+          adresse={selectedVisiteGroup[0].adresse}
+          dateVisite={selectedVisiteGroup[0].date_visite}
+          dateVisiteFin={selectedVisiteGroup[0].date_visite_fin}
+          existingClientIds={getUniqueVisitesByClient(selectedVisiteGroup).map((v: any) => v.client_id).filter(Boolean)}
+          availableClients={clients as any}
+          onSuccess={() => loadData(true)}
+        />
+      )}
     </div>
   );
 }
