@@ -103,16 +103,18 @@ serve(async (req) => {
     const icsBase64 = btoa(icsContent);
 
     const startDate = new Date(start_date);
+    const SWISS_TZ = 'Europe/Zurich';
     const dateStr = startDate.toLocaleDateString('fr-CH', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
+      timeZone: SWISS_TZ,
     });
-    const timeStr = all_day ? 'Journée entière' : startDate.toLocaleTimeString('fr-CH', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const endDateObj = new Date(end_date || new Date(startDate.getTime() + 3600000).toISOString());
+    const timeStr = all_day
+      ? 'Journée entière'
+      : `${startDate.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} – ${endDateObj.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} (Heure de Zurich)`;
 
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
