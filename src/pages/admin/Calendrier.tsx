@@ -830,6 +830,11 @@ export default function AdminCalendrier() {
                   <p className="text-sm text-muted-foreground">{selectedVisiteGroup[0].notes}</p>
                 </div>
               )}
+
+              {/* Vidéo(s) de la visite — lecteur inline */}
+              <VisitVideoPlayer medias={selectedVisiteGroup[0].medias} />
+            </div>
+          )}
             </div>
           )}
 
