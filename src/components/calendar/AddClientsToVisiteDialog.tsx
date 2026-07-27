@@ -50,7 +50,23 @@ interface Props {
   dateVisiteFin?: string | null;
   existingClientIds: string[];
   availableClients: AvailableClient[];
+  sourceMedias?: any;
   onSuccess?: () => void;
+}
+
+function pickSharedVideos(medias: any): any[] {
+  if (!Array.isArray(medias)) return [];
+  return medias.filter(
+    (m: any) =>
+      m &&
+      typeof m === 'object' &&
+      m.url &&
+      m.shared_to_clients !== false &&
+      ((typeof m.mime === 'string' && m.mime.startsWith('video/')) ||
+        m.type === 'video' ||
+        (typeof m.type === 'string' && m.type.startsWith('video/')) ||
+        (typeof m.name === 'string' && /\.(mp4|webm|mov|m4v|ogv|ogg|mkv)$/i.test(m.name)))
+  );
 }
 
 export const AddClientsToVisiteDialog = ({
