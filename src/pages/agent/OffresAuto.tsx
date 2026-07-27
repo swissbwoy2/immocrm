@@ -195,6 +195,7 @@ export default function AgentOffresAuto() {
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="envoyee">Envoyée</SelectItem>
                 <SelectItem value="interesse">Intéressé</SelectItem>
+                <SelectItem value="souhaite_postuler">Souhaite postuler</SelectItem>
                 <SelectItem value="refuse">Refusé</SelectItem>
               </SelectContent>
             </Select>

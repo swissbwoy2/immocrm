@@ -111,6 +111,15 @@ const STATUS_CONFIG: Record<string, {
     emoji: '⭐',
     step: 3 
   },
+  souhaite_postuler: {
+    label: 'Souhaite postuler',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50 dark:bg-violet-950/30',
+    borderColor: 'border-violet-200 dark:border-violet-800',
+    icon: Star,
+    emoji: '📝',
+    step: 5.4
+  },
   visite_planifiee: { 
     label: 'Visite planifiée', 
     color: 'text-cyan-600', 
@@ -726,6 +735,7 @@ export default function AdminOffresEnvoyees() {
                   <SelectItem value="envoyee">📤 Envoyée</SelectItem>
                   <SelectItem value="vue">👁️ Vue</SelectItem>
                   <SelectItem value="interesse">⭐ Intéressé</SelectItem>
+                  <SelectItem value="souhaite_postuler">📝 Souhaite postuler</SelectItem>
                   <SelectItem value="visite_planifiee">📅 Visite planifiée</SelectItem>
                   <SelectItem value="visite_effectuee">✅ Visite effectuée</SelectItem>
                   <SelectItem value="candidature_deposee">📋 Candidature déposée</SelectItem>

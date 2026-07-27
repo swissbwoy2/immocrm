@@ -126,6 +126,14 @@ const STATUS_CONFIG: Record<string, {
     icon: TrendingUp,
     step: 3
   },
+  souhaite_postuler: {
+    label: 'Souhaite postuler',
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-500/10',
+    borderColor: 'border-violet-500/30',
+    icon: TrendingUp,
+    step: 5.4
+  },
   visite_planifiee: { 
     label: 'Visite planifiée', 
     color: 'text-cyan-600 dark:text-cyan-400', 

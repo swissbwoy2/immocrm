@@ -230,6 +230,7 @@ export function GererOffreDialog({
                 <SelectContent>
                   <SelectItem value="envoyee">Envoyée</SelectItem>
                   <SelectItem value="interesse">Intéressé</SelectItem>
+                  <SelectItem value="souhaite_postuler">Souhaite postuler</SelectItem>
                   <SelectItem value="refusee">Refusée</SelectItem>
                   <SelectItem value="candidature">Candidature</SelectItem>
                 </SelectContent>

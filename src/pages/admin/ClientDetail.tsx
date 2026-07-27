@@ -978,6 +978,8 @@ export default function ClientDetail() {
       'envoyee': 'Envoyée',
       'vue': 'Vue',
       'interessé': 'Intéressé',
+      'interesse': 'Intéressé',
+      'souhaite_postuler': 'Souhaite postuler',
       'visite_prevue': 'Visite prévue',
       'visite_effectuee': 'Visite effectuée',
       'candidature_deposee': 'Candidature déposée',
