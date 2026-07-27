@@ -131,7 +131,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
         path,
         name: pickedFile.name,
         size: pickedFile.size,
-        mime: pickedFile.type,
+        mime: resolvedMime,
         uploaded_at: new Date().toISOString(),
         uploaded_by: user.id,
         shared_to_clients: true,
