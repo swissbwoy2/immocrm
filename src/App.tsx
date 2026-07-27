@@ -115,6 +115,7 @@ const AgentSuiviExtraits = lazy(() => import("./pages/agent/SuiviExtraitsPoursui
 const AgentClientDetail = lazy(() => import("./pages/agent/ClientDetail"));
 const AgentEnvoyerOffre = lazy(() => import("./pages/agent/EnvoyerOffre"));
 const AgentOffresEnvoyees = lazy(() => import("./pages/agent/OffresEnvoyees"));
+const AgentOffresAuto = lazy(() => import("./pages/agent/OffresAuto"));
 const Wishlist = lazy(() => import("./pages/shared/Wishlist"));
 const AgentMessagerie = lazy(() => import("./pages/agent/Messagerie"));
 const AgentVisites = lazy(() => import("./pages/agent/Visites"));
@@ -392,6 +393,7 @@ const App = () => (
               <Route path="/agent/clients/:id/mandat-prefill" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><StaffMandatPrefill /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/offres-auto" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentOffresAuto /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/wishlist" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><Wishlist /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites/:id/compte-rendu" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCompteRenduVisite /></AppLayout></ProtectedRoute>} />

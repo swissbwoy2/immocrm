@@ -36,11 +36,13 @@ export function GererOffreDialog({
   open,
   onOpenChange,
   onSaved,
+  visitAgentIdOverride,
 }: {
   offre: OffreRow | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
+  visitAgentIdOverride?: string | null;
 }) {
   const [saving, setSaving] = useState(false);
   const [prix, setPrix] = useState<string>("");
@@ -131,7 +133,7 @@ export function GererOffreDialog({
           const { error: eV } = await supabase.from("visites").insert({
             offre_id: offre.id,
             client_id: offre.client_id,
-            agent_id: offre.agent_id ?? null,
+            agent_id: visitAgentIdOverride ?? offre.agent_id ?? null,
             date_visite: dateISO,
             date_visite_fin: endISO,
             adresse: adresse.trim(),
