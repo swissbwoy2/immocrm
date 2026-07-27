@@ -16,6 +16,8 @@ import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { GererOffreDialog } from "@/components/offres-auto/GererOffreDialog";
+import { TablePagination, type PageSize } from "@/components/offres-auto/TablePagination";
+import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
 
