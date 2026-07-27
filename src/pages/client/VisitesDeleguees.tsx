@@ -123,6 +123,16 @@ export default function VisitesDeleguees() {
   const visitesConfirmees = visites.filter(v => v.statut === 'confirmee');
   const visitesEffectuees = visites.filter(v => v.statut === 'effectuee');
   const visitesRefusees = visites.filter(v => v.statut === 'refusee');
+  const visitesAvecVideo = visites.filter(v =>
+    Array.isArray(v.medias) &&
+    v.medias.some((m: any) =>
+      m && m.url && m.shared_to_clients !== false &&
+      ((typeof m.mime === 'string' && m.mime.startsWith('video/')) ||
+        m.type === 'video' ||
+        (typeof m.type === 'string' && m.type.startsWith('video/')) ||
+        (typeof m.name === 'string' && /\.(mp4|webm|mov|m4v|ogv|ogg|mkv)$/i.test(m.name)))
+    )
+  );
 
   return (
     <div className="flex-1 overflow-y-auto relative">
