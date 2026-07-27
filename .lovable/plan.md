@@ -1,81 +1,50 @@
-# Routine automatique de recherche et scoring d'offres
 
-**Sécurité clé** : la routine est livrée **désactivée** et en **mode dry-run**. Aucune offre réelle, aucun email, aucun WhatsApp n'est envoyé tant qu'un admin n'a pas basculé les deux interrupteurs dans `/admin/auto-offres`.
+# Relance de recherche pour un client existant (relogé)
 
-## 1. Base de données (migration)
+## Objectif
+Permettre à l'admin, depuis la fiche d'un client dont le statut est `reloge` (ou `inactif`/`stoppe`), de **relancer une nouvelle recherche de 90 jours** sans recréer le compte, avec régénération de la facture d'acompte CHF 300.– et remise à zéro du compteur de jours.
 
-Nouvelles tables :
+## Où l'ajouter
+- Fiche client admin : `src/pages/admin/ClientDetail.tsx` — nouveau bouton **"🔄 Relancer une nouvelle recherche"** visible uniquement si `statut ∈ { reloge, inactif, stoppe, suspendu }` ET `journey_type ≠ purchase_search` (locataire).
+- Confirmation via `AlertDialog` rappelant : nouveau cycle de 90 jours + nouvelle facture CHF 300.– envoyée par email.
 
-- `auto_offer_runs` — historique de chaque exécution (dry_run, compteurs, résumé JSON, clients sous objectif de 5 offres/jour).
-- `auto_offer_candidates` — chaque annonce évaluée pour un client (score, breakdown, plafond dur budget, would_send, raison).
+## Comportement (une seule action)
+Au clic → appel d'une nouvelle Edge Function `relance-recherche-client` (SECURITY DEFINER côté SQL RPC OK aussi, mais on garde Edge pour orchestrer AbaNinja + email).
 
-Nouveaux flags dans `app_config` :
+Actions séquentielles dans la fonction :
+1. **Reset du mandat** sur `clients` :
+   - `statut = 'actif'`
+   - `mandat_date_signature = now()` (source de vérité utilisée par `getMandatDates` → remet le compteur à 0/90)
+   - `date_ajout = now()` (fallback)
+   - `mandate_pause_days = 0`, `mandate_paused_at = null`
+   - `cancellation_requested_at = null`, `cancellation_reason = null`
+   - `refund_status = null`
+   - Incrémenter un compteur `relance_count` (nouveau, voir schéma) et poser `derniere_relance_at = now()`.
+2. **Facture CHF 300.–** : réutiliser `useAbaNinjaInvoice` / edge existante `create-abaninja-invoice` avec `montant = 300`, libellé "Relance recherche – nouveau mandat 90 jours".
+3. **Email client** : template branded via `notify.logisorama.ch` — "Votre nouvelle recherche est active pour 90 jours" + lien facture + lien dashboard.
+4. **Notification in-app** au client et à l'agent assigné.
+5. **Historique** : insérer une ligne dans `mandate_audit_logs` (event `relance_recherche`).
 
-- `auto_offers_enabled` = `false` (défaut)
-- `auto_offers_dry_run` = `true` (défaut)
+## Schéma DB (petite migration)
+Sur `public.clients` :
+- `relance_count int not null default 0`
+- `derniere_relance_at timestamptz`
 
-RLS : admin lit tout ; service_role écrit (les edge functions utilisent service_role).
+Aucun changement RLS (la fonction Edge utilise le service_role).
 
-## 2. Edge function `auto-offers-run`
+## UI détails
+- Bouton dans le bloc "Mandat" de la fiche client, à côté de "Renouveler".
+- Après succès : toast `"Nouvelle recherche lancée — facture envoyée"` + refetch du client, le tracker 90 jours repart à J1.
+- Bloqué si un `refund_status = 'pending'` existe : afficher un message "Terminer le remboursement en cours avant de relancer".
 
-Périmètre clients : tous SAUF `statut ∈ ('reloge','mandat_annule')`. Les mandats expirés sont inclus. On charge `region_recherche`, `pieces`, `budget_max`, `revenus_mensuels`, `type_bien`, `souhaits_particuliers`, plus l'agent principal via `client_agents.is_primary`.
+## Points techniques
+- La logique 90 jours est déjà pilotée par `mandat_date_signature` dans `src/utils/mandatDates.ts` — remettre cette date à `now()` suffit à réinitialiser le compteur, aucun changement de la lib n'est nécessaire.
+- AbaNinja : réutiliser le même flow que l'onboarding initial (montant paramétrable), pas de nouveau connecteur.
+- Pas d'impact sur les autres parcours (achat / relouer / vente).
 
-Source V1 : `immobilier.ch` (liste rendue serveur, fetch HTTP + parsing HTML). Extraction par annonce : titre, adresse, npa/ville, pièces, surface, loyer net, charges, loyer CC, régie, lien, id.
+## Hors périmètre
+- Pas de refonte du statut `reloge` ailleurs.
+- Pas de self-service côté client (uniquement admin dans un premier temps — à confirmer si on l'ouvre aussi à l'agent assigné).
 
-Dédoublonnage :
-- Global du run : signature `adresse|pièces|surface|loyer_cc` normalisée.
-- Par client : contre `offres` déjà envoyées à ce client sur la même adresse.
-
-Scoring /10 : région (3) + pièces (3) + budget (3) + type bien (1). Seuil de rétention : > 7.
-
-Règles dures inviolables :
-- Loyer CC ≤ `revenus_mensuels / 3`. Si `revenus_mensuels` null → `budget_max` comme plafond dur, mentionné dans `reason`.
-- Pièces annonce ≥ pièces demandées. Jamais moins ; plus = léger malus.
-
-Souple : préférer ≤ `budget_max`.
-
-Objectif 5 offres/jour/client : si moins après dédoublonnage, on élargit d'abord aux localités proches, puis on autorise plus de pièces (jamais moins), toujours sous le plafond dur, jamais sous 7/10.
-
-Détails visite : liste ne suffit pas → placeholder « visite à fixer manuellement » ; régie inscrite si présente dans la carte liste. Champs prévus pour un rendu cloud + IA en phase 2.
-
-## 3. Comportement selon les flags
-
-- `dry_run = true` OU `enabled = false` : on écrit uniquement dans `auto_offer_candidates` + `auto_offer_runs`, avec `would_send = true` pour ceux qui partiraient.
-- `enabled = true` ET `dry_run = false` : on crée les offres réelles en **réutilisant exactement la logique** de `src/pages/agent/EnvoyerOffre.tsx` `handleSubmit` :
-  1. Insert `offres` (client_id, agent_id, adresse, prix = loyer net, surface, pieces, description, disponibilite, statut `envoyee`, lien_annonce, commentaires avec régie/contact/visite).
-  2. `supabase.functions.invoke('wa-send-new-offer', { body: { offre_id }})`.
-  3. Trouver/créer `conversations` du client, insérer `messages` d'offre.
-  4. Si créneau connu, créer `visites` (statut `proposee`).
-  5. Protection anti-doublon existante respectée.
-
-Pour éviter toute divergence future avec `EnvoyerOffre.tsx`, la logique de création est isolée dans un helper partagé côté edge function.
-
-## 4. Cron
-
-7×/jour heure Europe/Zurich (via pg_cron en UTC) : 07:00, 09:30, 12:30, 14:30, 16:30, 18:00, 20:00. Chaque tick appelle l'edge function avec service role.
-
-## 5. Page admin `/admin/auto-offres` (rôle admin)
-
-- Deux `Switch` : « Activer la routine » et « Mode dry-run » (persistés dans `app_config`).
-- Bouton « Lancer un run maintenant » (invoke edge).
-- Table des derniers `auto_offer_runs` (compteurs, dry_run, timings).
-- Table des candidats du run sélectionné : client, bien, score, loyer CC vs plafond dur, would_send, raison.
-- Lien ajouté dans la sidebar admin.
-
-## Détails techniques
-
-- Nouvelle edge function : `supabase/functions/auto-offers-run/index.ts` (Deno, service role, verify_jwt = false ; protégée par un secret partagé `AUTO_OFFERS_CRON_SECRET` requis en header pour les invocations cron et un check admin JWT pour l'invocation manuelle depuis l'UI).
-- Parsing HTML immobilier.ch : `deno-dom` via `npm:linkedom` (léger, éprouvé).
-- Nouveau composant : `src/pages/admin/AutoOffres.tsx`, route ajoutée dans `App.tsx`, item sidebar dans `AppSidebar.tsx`.
-- Aucune modification de `src/pages/agent/EnvoyerOffre.tsx`.
-- pg_cron + pg_net déjà utilisés dans le projet ; on ajoute 7 jobs pointant vers l'URL de la fonction avec l'anon key + le secret.
-
-## Livraison
-
-En un seul lot :
-1. Migration (tables + flags + policies + GRANT).
-2. Cron insert (via insert tool, contient l'anon key et l'URL).
-3. Edge function `auto-offers-run` + secret `AUTO_OFFERS_CRON_SECRET`.
-4. Page admin + route + sidebar.
-
-Aucun envoi réel possible avant bascule manuelle des deux interrupteurs.
+## Question rapide avant build
+Le bouton doit-il être **admin uniquement**, ou également accessible à l'**agent assigné** du client ?
