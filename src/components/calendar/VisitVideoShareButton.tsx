@@ -206,17 +206,39 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           });
         }
 
-        // Notification for the client (+ email via create_notification trigger)
-        const clientUserId = (v as any).clients?.user_id;
+        // Notification for the client (+ email via trigger_notification_email)
+        let clientUserId = (v as any).clients?.user_id as string | undefined;
+        if (!clientUserId && clientId) {
+          const { data: cRow } = await supabase
+            .from('clients')
+            .select('user_id')
+            .eq('id', clientId)
+            .maybeSingle();
+          clientUserId = cRow?.user_id || undefined;
+        }
         if (clientUserId) {
           await supabase.rpc('create_notification', {
             p_user_id: clientUserId,
-            p_type: 'visit_video',
+            p_type: 'visite_video',
             p_title: '🎥 Une vidéo de votre visite est disponible',
-            p_message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}. Connectez-vous à Logisorama pour la visionner et indiquer si vous souhaitez postuler.`,
-            p_link: `/client/visites?visiteId=${v.id}`,
-            p_metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, inline: isInline } as any,
+            p_message: `Visionnez la vidéo de ${visite.adresse} et indiquez si vous souhaitez postuler.`,
+            p_link: '/client/visites',
+            p_metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, path } as any,
           });
+          // Belt-and-suspenders email in case the trigger is disabled
+          try {
+            await supabase.functions.invoke('send-notification-email', {
+              body: {
+                user_id: clientUserId,
+                notification_type: 'visite_video',
+                title: '🎥 Une vidéo de votre visite est disponible',
+                message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}. Connectez-vous à Logisorama pour la visionner et indiquer si vous souhaitez déposer votre candidature.`,
+                link: '/client/visites',
+              },
+            });
+          } catch (mailErr) {
+            console.warn('[VisitVideoShare] email fallback failed (non-blocking)', mailErr);
+          }
         }
 
 
