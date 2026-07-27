@@ -11903,6 +11903,7 @@ export type Database = {
           agent_id: string | null
           client_confirme_visite_at: string | null
           client_decision: string | null
+          client_decision_at: string | null
           client_id: string | null
           coursier_id: string | null
           created_at: string | null
@@ -11933,6 +11934,7 @@ export type Database = {
           agent_id?: string | null
           client_confirme_visite_at?: string | null
           client_decision?: string | null
+          client_decision_at?: string | null
           client_id?: string | null
           coursier_id?: string | null
           created_at?: string | null
@@ -11963,6 +11965,7 @@ export type Database = {
           agent_id?: string | null
           client_confirme_visite_at?: string | null
           client_decision?: string | null
+          client_decision_at?: string | null
           client_id?: string | null
           coursier_id?: string | null
           created_at?: string | null
