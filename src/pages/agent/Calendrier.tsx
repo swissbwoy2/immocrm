@@ -1578,6 +1578,23 @@ export default function AgentCalendrier() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedVisite?.offres && (
+        <AddClientsToVisiteDialog
+          open={addClientsDialogOpen}
+          onOpenChange={setAddClientsDialogOpen}
+          sourceOffre={selectedVisite.offres}
+          adresse={selectedVisite.adresse}
+          dateVisite={selectedVisite.date_visite}
+          dateVisiteFin={selectedVisite.date_visite_fin}
+          existingClientIds={visites
+            .filter((v: any) => v.adresse === selectedVisite.adresse && v.date_visite === selectedVisite.date_visite)
+            .map((v: any) => v.client_id)
+            .filter(Boolean)}
+          availableClients={clients as any}
+          onSuccess={() => loadData()}
+        />
+      )}
     </div>
   );
 }
