@@ -1537,6 +1537,7 @@ export default function AgentCalendrier() {
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="text-sm">{selectedVisite.feedback_agent}</p>
                   </div>
+                </div>
               )}
 
               {/* Vidéo(s) de la visite — lecteur inline */}
