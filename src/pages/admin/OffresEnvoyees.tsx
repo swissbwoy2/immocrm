@@ -111,6 +111,15 @@ const STATUS_CONFIG: Record<string, {
     emoji: '⭐',
     step: 3 
   },
+  souhaite_postuler: {
+    label: 'Souhaite postuler',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50 dark:bg-violet-950/30',
+    borderColor: 'border-violet-200 dark:border-violet-800',
+    icon: Star,
+    emoji: '📝',
+    step: 5.4
+  },
   visite_planifiee: { 
     label: 'Visite planifiée', 
     color: 'text-cyan-600', 
@@ -597,7 +606,7 @@ export default function AdminOffresEnvoyees() {
     const statuses = g.items.map(i => i.statut || 'envoyee');
     if (statuses.includes('acceptee')) return 'acceptee';
     if (statuses.includes('candidature_deposee')) return 'candidature_deposee';
-    if (statuses.some(s => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(s))) return 'interesse';
+    if (statuses.some(s => ['souhaite_postuler', 'interesse', 'visite_planifiee', 'visite_effectuee'].includes(s))) return 'interesse';
     if (statuses.includes('vue')) return 'vue';
     return 'envoyee';
   };
@@ -726,6 +735,7 @@ export default function AdminOffresEnvoyees() {
                   <SelectItem value="envoyee">📤 Envoyée</SelectItem>
                   <SelectItem value="vue">👁️ Vue</SelectItem>
                   <SelectItem value="interesse">⭐ Intéressé</SelectItem>
+                  <SelectItem value="souhaite_postuler">📝 Souhaite postuler</SelectItem>
                   <SelectItem value="visite_planifiee">📅 Visite planifiée</SelectItem>
                   <SelectItem value="visite_effectuee">✅ Visite effectuée</SelectItem>
                   <SelectItem value="candidature_deposee">📋 Candidature déposée</SelectItem>

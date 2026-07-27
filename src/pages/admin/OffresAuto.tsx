@@ -180,6 +180,7 @@ export default function OffresAuto() {
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="envoyee">Envoyée</SelectItem>
                 <SelectItem value="interesse">Intéressé</SelectItem>
+                <SelectItem value="souhaite_postuler">Souhaite postuler</SelectItem>
                 <SelectItem value="refuse">Refusé</SelectItem>
               </SelectContent>
             </Select>
@@ -242,6 +243,7 @@ function statutBadge(s: string | null) {
   const map: Record<string, { label: string; cls: string }> = {
     envoyee: { label: "Envoyée", cls: "bg-blue-100 text-blue-800" },
     interesse: { label: "Intéressé", cls: "bg-emerald-100 text-emerald-800" },
+    souhaite_postuler: { label: "Souhaite postuler", cls: "bg-violet-100 text-violet-800 border border-violet-300" },
     refuse: { label: "Refusé", cls: "bg-red-100 text-red-800" },
     refusee: { label: "Refusée", cls: "bg-red-100 text-red-800" },
   };

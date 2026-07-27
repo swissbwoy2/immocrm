@@ -126,6 +126,14 @@ const STATUS_CONFIG: Record<string, {
     icon: TrendingUp,
     step: 3
   },
+  souhaite_postuler: {
+    label: 'Souhaite postuler',
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-500/10',
+    borderColor: 'border-violet-500/30',
+    icon: TrendingUp,
+    step: 5.4
+  },
   visite_planifiee: { 
     label: 'Visite planifiée', 
     color: 'text-cyan-600 dark:text-cyan-400', 
@@ -382,7 +390,7 @@ export default function OffresEnvoyees() {
   const stats = {
     total: uniqueGroupKeys(offres),
     demandesEnAttente: pendingPostulations.length,
-    enCours: uniqueGroupKeys(offres.filter(o => ['envoyee', 'interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut))),
+    enCours: uniqueGroupKeys(offres.filter(o => ['envoyee', 'interesse', 'souhaite_postuler', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut))),
     acceptees: uniqueGroupKeys(offres.filter(o => o.statut === 'acceptee')),
     refusees: uniqueGroupKeys(offres.filter(o => o.statut === 'refusee')),
   };
