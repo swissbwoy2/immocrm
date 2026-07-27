@@ -782,6 +782,25 @@ const Mandats = () => {
                       </Button>
                     )}
 
+                    {['reloge', 'inactif', 'stoppe', 'suspendu'].includes(client.statut) && client.journey_type !== 'purchase_search' && (
+                      <ConfirmDialog
+                        trigger={
+                          <Button variant="default" size="sm" disabled={relaunchingId === client.id}>
+                            {relaunchingId === client.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                            )}
+                            Relancer une nouvelle recherche (90 jours)
+                          </Button>
+                        }
+                        title="Relancer une nouvelle recherche"
+                        description={`Un nouveau cycle de 90 jours va démarrer pour ${client.profiles?.prenom} ${client.profiles?.nom}, et une nouvelle facture d'acompte CHF 300.- sera envoyée par email. Continuer ?`}
+                        confirmText="Relancer"
+                        onConfirm={() => handleRelaunchSearch(client)}
+                      />
+                    )}
+
                     {!isFrozen && client.statut !== 'reloge' && (
                       <>
                         <ConfirmDialog
