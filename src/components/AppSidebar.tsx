@@ -176,6 +176,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
             { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
             { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: 'client_interesse' },
+            { name: 'Offres automatiques', icon: Bot, path: '/agent/offres-auto', notifKey: null },
             { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/agent/wishlist', notifKey: null },
           ],
         },
