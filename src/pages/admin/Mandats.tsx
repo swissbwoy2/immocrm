@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2, Pause, StopCircle } from "lucide-react";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2, Pause, StopCircle, RotateCcw } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 import { toast } from "sonner";
 import { useFullMandatAssembler } from "@/hooks/useFullMandatAssembler";
+import { useAbaNinjaInvoice } from "@/hooks/useAbaNinjaInvoice";
 
 type SortField = 'days' | 'name' | 'agent' | 'date';
 type SortOrder = 'asc' | 'desc';
