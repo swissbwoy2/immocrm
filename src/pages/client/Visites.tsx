@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { VisitVideoDecisionCard } from '@/components/client/VisitVideoDecisionCard';
 
 export default function Visites() {
   const navigate = useNavigate();
