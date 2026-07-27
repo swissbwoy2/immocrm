@@ -2791,6 +2791,7 @@ export type Database = {
           decouverte_agence: string | null
           demande_mandat_id: string | null
           depuis_le: string | null
+          derniere_relance_at: string | null
           employeur: string | null
           etat_avancement: string | null
           etat_civil: string | null
@@ -2829,6 +2830,7 @@ export type Database = {
           refund_requested_at: string | null
           refund_status: string
           region_recherche: string | null
+          relance_count: number
           residence: string | null
           revenus_mensuels: number | null
           secteur_activite: string | null
@@ -2874,6 +2876,7 @@ export type Database = {
           decouverte_agence?: string | null
           demande_mandat_id?: string | null
           depuis_le?: string | null
+          derniere_relance_at?: string | null
           employeur?: string | null
           etat_avancement?: string | null
           etat_civil?: string | null
@@ -2912,6 +2915,7 @@ export type Database = {
           refund_requested_at?: string | null
           refund_status?: string
           region_recherche?: string | null
+          relance_count?: number
           residence?: string | null
           revenus_mensuels?: number | null
           secteur_activite?: string | null
@@ -2957,6 +2961,7 @@ export type Database = {
           decouverte_agence?: string | null
           demande_mandat_id?: string | null
           depuis_le?: string | null
+          derniere_relance_at?: string | null
           employeur?: string | null
           etat_avancement?: string | null
           etat_civil?: string | null
@@ -2995,6 +3000,7 @@ export type Database = {
           refund_requested_at?: string | null
           refund_status?: string
           region_recherche?: string | null
+          relance_count?: number
           residence?: string | null
           revenus_mensuels?: number | null
           secteur_activite?: string | null
