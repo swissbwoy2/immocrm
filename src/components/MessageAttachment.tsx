@@ -197,18 +197,20 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
       <>
         <Card className="max-w-md overflow-hidden">
           <div className="relative">
-            <video 
-              controls 
-              className="w-full max-h-64 object-contain bg-black"
+            <video
+              controls
+              playsInline
               preload="metadata"
+              className="w-full max-h-64 object-contain bg-black"
               onError={() => setVideoError(true)}
               onLoadedData={() => setVideoLoaded(true)}
             >
               <source src={url} type={videoMimeType} />
+              {isMovFile && <source src={url} type="video/mp4" />}
               Votre navigateur ne supporte pas la lecture vidéo.
             </video>
             {!videoLoaded && !videoError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
                 <div className="text-center text-white">
                   <Video className="h-8 w-8 mx-auto mb-2 animate-pulse" />
                   <p className="text-xs">Chargement...</p>
@@ -216,38 +218,55 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               </div>
             )}
           </div>
-          <div className="p-2 flex items-center justify-between border-t">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium truncate">{name}</p>
-              <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
-            </div>
-            <div className="flex gap-1">
+          <div className="p-2 border-t space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium truncate">{name}</p>
+                <p className="text-xs text-muted-foreground">{formatSize(size)} · {extension}</p>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(true)} title="Plein écran">
                 <Maximize2 className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleDownload} title="Télécharger">
-                <Download className="h-4 w-4" />
-              </Button>
             </div>
+            {isMovFile && (
+              <p className="text-[11px] text-orange-600 dark:text-orange-400">
+                Format .MOV (iPhone) — si la lecture ne démarre pas, téléchargez la vidéo ci-dessous.
+              </p>
+            )}
+            <Button asChild variant="default" size="sm" className="w-full">
+              <a href={url} target="_blank" rel="noreferrer" download={name}>
+                <Download className="h-4 w-4 mr-2" />
+                📥 Télécharger la vidéo
+              </a>
+            </Button>
           </div>
         </Card>
-        
+
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
           <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden" aria-describedby={undefined}>
             <VisuallyHidden>
               <DialogTitle>Lecture vidéo: {name}</DialogTitle>
             </VisuallyHidden>
-            <video 
-              controls 
-              autoPlay
-              className="w-full max-h-[85vh] object-contain bg-black"
-              onError={() => {
-                setVideoError(true);
-                setPreviewOpen(false);
-              }}
-            >
-              <source src={url} type={videoMimeType} />
-            </video>
+            <div className="bg-black">
+              <video
+                controls
+                autoPlay
+                playsInline
+                className="w-full max-h-[80vh] object-contain bg-black"
+                onError={() => setVideoError(true)}
+              >
+                <source src={url} type={videoMimeType} />
+                {isMovFile && <source src={url} type="video/mp4" />}
+              </video>
+              <div className="p-3 flex items-center justify-between bg-background border-t">
+                <p className="text-sm truncate">{name}</p>
+                <Button asChild size="sm">
+                  <a href={url} target="_blank" rel="noreferrer" download={name}>
+                    <Download className="h-4 w-4 mr-2" /> Télécharger
+                  </a>
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </>
