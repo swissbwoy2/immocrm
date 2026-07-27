@@ -33,7 +33,7 @@ interface SourceOffre {
   surface?: number | null;
   etage?: string | null;
   disponibilite?: string | null;
-  annee_construction?: number | string | null;
+  annee_construction?: number | null;
   description?: string | null;
   lien_annonce?: string | null;
   agent_id?: string | null;
