@@ -160,6 +160,90 @@ const Mandats = () => {
     }
   };
 
+  const handleRelaunchSearch = async (client: any) => {
+    if (!client) return;
+    if (client.refund_status === 'pending' || client.refund_status === 'processed') {
+      toast.error('Impossible de relancer', {
+        description: 'Un remboursement est en cours. Terminez-le avant de relancer une nouvelle recherche.',
+      });
+      return;
+    }
+    setRelaunchingId(client.id);
+    try {
+      const nowIso = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({
+          statut: 'actif',
+          mandat_date_signature: nowIso,
+          date_ajout: nowIso,
+          mandate_pause_days: 0,
+          mandate_paused_at: null,
+          cancellation_requested_at: null,
+          refund_status: null,
+          derniere_relance_at: nowIso,
+          relance_count: (client.relance_count ?? 0) + 1,
+        })
+        .eq('id', client.id);
+      if (updateError) throw updateError;
+
+      const profile = client.profiles || {};
+      const invoiceResult = await createInvoice({
+        clientId: client.id,
+        prenom: profile.prenom || '',
+        nom: profile.nom || '',
+        email: profile.email || '',
+        telephone: profile.telephone || '',
+        adresse: client.adresse || '',
+        typeRecherche: 'Louer',
+      });
+
+      try {
+        if (client.user_id) {
+          await supabase.rpc('create_notification', {
+            p_user_id: client.user_id,
+            p_type: 'mandat_relance',
+            p_title: '🔄 Nouvelle recherche activée',
+            p_message: `Votre recherche de logement est réactivée pour 90 jours. Une nouvelle facture d'acompte de CHF 300.- vous a été envoyée par email.`,
+            p_link: '/client/mon-contrat',
+            p_metadata: JSON.stringify({ client_id: client.id }),
+          });
+        }
+        if (client.agent_id) {
+          const { data: agentRow } = await supabase
+            .from('agents')
+            .select('user_id')
+            .eq('id', client.agent_id)
+            .maybeSingle();
+          if (agentRow?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentRow.user_id,
+              p_type: 'mandat_relance',
+              p_title: '🔄 Nouvelle recherche relancée',
+              p_message: `Une nouvelle recherche de 90 jours vient d'être ouverte pour ${profile.prenom || ''} ${profile.nom || ''}.`,
+              p_link: `/admin/clients/${client.id}`,
+              p_metadata: JSON.stringify({ client_id: client.id }),
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.warn('Notification error (non-blocking):', notifErr);
+      }
+
+      toast.success('✅ Nouvelle recherche lancée', {
+        description: invoiceResult.success
+          ? 'Le mandat repart pour 90 jours et la facture CHF 300.- a été envoyée.'
+          : "Le mandat repart pour 90 jours. Attention : la facture AbaNinja n'a pas pu être générée automatiquement.",
+      });
+      await loadData();
+    } catch (error: any) {
+      console.error('Error relaunching search:', error);
+      toast.error('Erreur', { description: error?.message || 'Impossible de relancer la recherche' });
+    } finally {
+      setRelaunchingId(null);
+    }
+  };
+
   const handleCancelRenewal = async () => {
     if (!selectedRenewal || !selectedClient) return;
     
