@@ -60,19 +60,19 @@ export default function OffresAuto() {
   async function load() {
     setLoading(true);
     try {
-      let q = supabase
-        .from("offres")
-        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
-
-        .eq("envoi_auto", true)
-        .order("created_at", { ascending: false })
-        .limit(2000);
-      if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
-      if (dateTo) {
-        const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-        q = q.lte("created_at", to.toISOString());
-      }
-      const { data, error } = await q;
+      const { data, error } = await fetchAllPaginated<Row>(() => {
+        let q = supabase
+          .from("offres")
+          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
+          .eq("envoi_auto", true)
+          .order("created_at", { ascending: false });
+        if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
+        if (dateTo) {
+          const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
+          q = q.lte("created_at", to.toISOString());
+        }
+        return q;
+      });
       if (error) { console.error("[OffresAuto] load offres", error); setRows([]); return; }
 
       const offres = (data ?? []) as Row[];
@@ -106,6 +106,7 @@ export default function OffresAuto() {
       setLoading(false);
     }
   }
+
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [dateFrom, dateTo]);
 
