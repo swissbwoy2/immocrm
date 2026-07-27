@@ -816,7 +816,7 @@ export default function ClientDetail() {
           mandate_pause_days: 0,
           mandate_paused_at: null,
           cancellation_requested_at: null,
-          refund_status: null,
+          refund_status: 'not_applicable',
           derniere_relance_at: nowIso,
           relance_count: (client.relance_count ?? 0) + 1,
         })
