@@ -56,6 +56,10 @@ export default function OffresAuto() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [tab, setTab] = useState<"all" | "manual">("all");
+  const [pageAll, setPageAll] = useState(1);
+  const [pageManual, setPageManual] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(50);
 
   async function load() {
     setLoading(true);
