@@ -932,6 +932,7 @@ export default function AdminCalendrier() {
           dateVisiteFin={selectedVisiteGroup[0].date_visite_fin}
           existingClientIds={getUniqueVisitesByClient(selectedVisiteGroup).map((v: any) => v.client_id).filter(Boolean)}
           availableClients={clients as any}
+          sourceMedias={selectedVisiteGroup[0].medias}
           onSuccess={() => loadData(true)}
         />
       )}

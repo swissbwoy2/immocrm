@@ -1592,6 +1592,7 @@ export default function AgentCalendrier() {
             .map((v: any) => v.client_id)
             .filter(Boolean)}
           availableClients={clients as any}
+          sourceMedias={selectedVisite.medias}
           onSuccess={() => loadData()}
         />
       )}
