@@ -199,7 +199,7 @@ export default function OffresAuto() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "manual")}>
         <TabsList>
           <TabsTrigger value="all">Toutes ({filtered.length})</TabsTrigger>
           <TabsTrigger value="manual">
@@ -207,8 +207,14 @@ export default function OffresAuto() {
             À gérer manuellement ({manual.length})
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="all"><OffresTable rows={filtered} onEdit={setEditing} /></TabsContent>
-        <TabsContent value="manual"><OffresTable rows={manual} showMissing onEdit={setEditing} /></TabsContent>
+        <TabsContent value="all">
+          <OffresTable rows={pagedAll} onEdit={setEditing} />
+          <TablePagination total={filtered.length} page={pageAll} pageSize={pageSize} onPageChange={setPageAll} onPageSizeChange={setPageSize} />
+        </TabsContent>
+        <TabsContent value="manual">
+          <OffresTable rows={pagedManual} showMissing onEdit={setEditing} />
+          <TablePagination total={manual.length} page={pageManual} pageSize={pageSize} onPageChange={setPageManual} onPageSizeChange={setPageSize} />
+        </TabsContent>
 
       </Tabs>
 
