@@ -1692,10 +1692,10 @@ const Messagerie = () => {
       <div className="relative z-10 p-4 border-b border-border/30 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-4">
           <SidebarTrigger className="shrink-0" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-xl gradient-text">Messages</h2>
-              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="font-bold text-xl gradient-text truncate">Messages</h2>
+              <Sparkles className="h-4 w-4 text-primary animate-pulse shrink-0" />
             </div>
             {conversations.length > 0 && (
               <p className="text-xs text-muted-foreground mt-0.5">
