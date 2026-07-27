@@ -791,9 +791,14 @@ export default function AdminCalendrier() {
                 const uniqueClients = getUniqueVisitesByClient(selectedVisiteGroup);
                 return (
                   <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Clients concernés ({uniqueClients.length})
-                    </Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-sm font-medium">
+                        Clients concernés ({uniqueClients.length})
+                      </Label>
+                      <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
+                        ➕ Ajouter des clients
+                      </Button>
+                    </div>
                     <ul className="space-y-2">
                       {uniqueClients.map((visite: any) => (
                         <li key={visite.client_id} className="flex items-center justify-between p-2 border rounded-lg">
