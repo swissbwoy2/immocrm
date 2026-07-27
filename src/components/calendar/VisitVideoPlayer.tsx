@@ -45,6 +45,7 @@ export function VisitVideoPlayer({ medias, title = '🎥 Vidéo(s) de la visite'
       <div className="space-y-3">
         {list.map((m, i) => {
           const mime = resolveMime(m);
+          const isMov = /\.(mov|m4v)$/i.test(m.name || m.url || '');
           return (
             <div key={i} className="rounded-lg overflow-hidden border border-border bg-black/5">
               <video
@@ -52,23 +53,30 @@ export function VisitVideoPlayer({ medias, title = '🎥 Vidéo(s) de la visite'
                 playsInline
                 preload="metadata"
                 className="w-full max-h-[70vh] bg-black rounded-t-lg"
+                onError={(e) => {
+                  const el = e.currentTarget.parentElement?.querySelector('[data-video-error]') as HTMLElement | null;
+                  if (el) el.style.display = 'block';
+                }}
               >
                 <source src={m.url} type={mime} />
+                {isMov && <source src={m.url} type="video/mp4" />}
                 Votre navigateur ne peut pas lire cette vidéo.
               </video>
+              <div
+                data-video-error
+                style={{ display: 'none' }}
+                className="px-3 py-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-500/10 border-t border-orange-500/30"
+              >
+                Format non lisible dans le navigateur — téléchargez la vidéo ci-dessous.
+              </div>
               <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
                 <span className="truncate">
                   {m.name || `Vidéo ${i + 1}`}
                   {typeof m.size === 'number' && ` · ${(m.size / (1024 * 1024)).toFixed(1)} Mo`}
                 </span>
-                <Button
-                  asChild
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2"
-                >
+                <Button asChild size="sm" variant="default" className="h-7 px-2">
                   <a href={m.url} download={m.name || 'visite.mp4'} target="_blank" rel="noreferrer">
-                    <Download className="w-3.5 h-3.5 mr-1" /> Télécharger
+                    <Download className="w-3.5 h-3.5 mr-1" /> 📥 Télécharger
                   </a>
                 </Button>
               </div>
