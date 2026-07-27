@@ -606,7 +606,7 @@ export default function AdminOffresEnvoyees() {
     const statuses = g.items.map(i => i.statut || 'envoyee');
     if (statuses.includes('acceptee')) return 'acceptee';
     if (statuses.includes('candidature_deposee')) return 'candidature_deposee';
-    if (statuses.some(s => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(s))) return 'interesse';
+    if (statuses.some(s => ['souhaite_postuler', 'interesse', 'visite_planifiee', 'visite_effectuee'].includes(s))) return 'interesse';
     if (statuses.includes('vue')) return 'vue';
     return 'envoyee';
   };

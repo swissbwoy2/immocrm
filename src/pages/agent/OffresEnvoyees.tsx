@@ -390,7 +390,7 @@ export default function OffresEnvoyees() {
   const stats = {
     total: uniqueGroupKeys(offres),
     demandesEnAttente: pendingPostulations.length,
-    enCours: uniqueGroupKeys(offres.filter(o => ['envoyee', 'interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut))),
+    enCours: uniqueGroupKeys(offres.filter(o => ['envoyee', 'interesse', 'souhaite_postuler', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut))),
     acceptees: uniqueGroupKeys(offres.filter(o => o.statut === 'acceptee')),
     refusees: uniqueGroupKeys(offres.filter(o => o.statut === 'refusee')),
   };
