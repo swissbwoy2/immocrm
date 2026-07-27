@@ -36,11 +36,13 @@ export function GererOffreDialog({
   open,
   onOpenChange,
   onSaved,
+  visitAgentIdOverride,
 }: {
   offre: OffreRow | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
+  visitAgentIdOverride?: string | null;
 }) {
   const [saving, setSaving] = useState(false);
   const [prix, setPrix] = useState<string>("");
