@@ -99,7 +99,14 @@ interface Client {
   abaninja_invoice_id?: string | null;
   abaninja_invoice_ref?: string | null;
   journey_type?: string | null;
+  refund_status?: string | null;
+  mandate_pause_days?: number | null;
+  mandate_paused_at?: string | null;
+  cancellation_requested_at?: string | null;
+  relance_count?: number | null;
+  derniere_relance_at?: string | null;
 }
+
 
 interface Profile {
   nom: string;
