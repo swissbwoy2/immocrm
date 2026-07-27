@@ -13,8 +13,9 @@ import {
   PremiumFeedbackCard,
   PremiumCandidatureTimeline
 } from '@/components/premium';
-import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare, FileSignature } from 'lucide-react';
+import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare, FileSignature, Video } from 'lucide-react';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { VisitVideoDecisionCard } from '@/components/client/VisitVideoDecisionCard';
 
 export default function VisitesDeleguees() {
   const { user } = useAuth();
@@ -122,6 +123,16 @@ export default function VisitesDeleguees() {
   const visitesConfirmees = visites.filter(v => v.statut === 'confirmee');
   const visitesEffectuees = visites.filter(v => v.statut === 'effectuee');
   const visitesRefusees = visites.filter(v => v.statut === 'refusee');
+  const visitesAvecVideo = visites.filter(v =>
+    Array.isArray(v.medias) &&
+    v.medias.some((m: any) =>
+      m && m.url && m.shared_to_clients !== false &&
+      ((typeof m.mime === 'string' && m.mime.startsWith('video/')) ||
+        m.type === 'video' ||
+        (typeof m.type === 'string' && m.type.startsWith('video/')) ||
+        (typeof m.name === 'string' && /\.(mp4|webm|mov|m4v|ogv|ogg|mkv)$/i.test(m.name)))
+    )
+  );
 
   return (
     <div className="flex-1 overflow-y-auto relative">
@@ -148,6 +159,24 @@ export default function VisitesDeleguees() {
               </Button>
             }
           />
+        )}
+
+        {/* Vidéos de visites partagées — décision client */}
+        {visitesAvecVideo.length > 0 && (
+          <PremiumVisiteDelegueSection
+            title="Vidéos de vos visites"
+            description="Visionnez les vidéos partagées par votre agent et indiquez si vous souhaitez postuler"
+            icon={Video}
+            count={visitesAvecVideo.length}
+            variant="confirmed"
+            delay={50}
+          >
+            <div className="space-y-4">
+              {visitesAvecVideo.map((visite) => (
+                <VisitVideoDecisionCard key={visite.id} visite={visite} onUpdated={loadVisites} />
+              ))}
+            </div>
+          </PremiumVisiteDelegueSection>
         )}
 
         {/* Visites en attente de confirmation */}

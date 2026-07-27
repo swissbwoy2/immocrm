@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { VisitVideoDecisionCard } from '@/components/client/VisitVideoDecisionCard';
 
 export default function Visites() {
   const navigate = useNavigate();
@@ -449,11 +450,14 @@ export default function Visites() {
 
         {isExpanded && (
           <CardContent className="relative space-y-5 pt-0">
+            <VisitVideoDecisionCard visite={visite} onUpdated={loadVisites} />
+
             <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
               <p className="font-medium text-sm sm:text-base capitalize">
                 {formatDate(visite.date_visite)}
               </p>
             </div>
+
 
             {visite.offres && (
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
