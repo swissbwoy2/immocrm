@@ -146,10 +146,6 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
         new Map(group.filter((v: any) => v.client_id).map((v: any) => [v.client_id, v])).values()
       );
 
-      const inlineNote = isInline
-        ? "🎥 Vidéo de la visite disponible ci-dessous."
-        : `🎥 Vidéo de la visite (${(pickedFile.size / (1024 * 1024)).toFixed(0)} Mo) — ouvrez le lien ci-dessous pour la regarder :`;
-
       for (const v of uniqueClients) {
         const clientId = v.client_id;
         const agentId = v.agent_id || visite.agent_id;
@@ -182,7 +178,9 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           convId = conv?.id || null;
         }
 
-        const messageContent = `🎥 Une vidéo de votre visite pour ${visite.adresse} est disponible dans votre espace. Merci d'indiquer si vous souhaitez déposer votre candidature.`;
+        // Same message for BOTH capture and import: always attachment_type='video'
+        // so the messenger renders the inline player. Size is informational only.
+        const messageContent = `🎥 Vidéo de la visite disponible ci-dessous.\n\n📍 ${visite.adresse}`;
 
         if (convId) {
           await supabase.from('messages').insert({
@@ -191,7 +189,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
             sender_type: 'agent',
             content: messageContent,
             attachment_url: videoUrl,
-            attachment_type: isInline ? 'video' : 'link',
+            attachment_type: 'video',
             attachment_name: pickedFile.name,
             attachment_size: pickedFile.size,
             offre_id: v.offre_id ?? visite.offre_id ?? null,
@@ -202,6 +200,15 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
               inline: isInline,
               path,
               video_url: videoUrl,
+              mime: resolvedMime,
+              medias: [{
+                type: 'video',
+                url: videoUrl,
+                name: pickedFile.name,
+                size: pickedFile.size,
+                mime: resolvedMime,
+                path,
+              }],
             } as any,
           });
         }
