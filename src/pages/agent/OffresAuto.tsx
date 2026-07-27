@@ -16,6 +16,8 @@ import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { GererOffreDialog } from "@/components/offres-auto/GererOffreDialog";
+import { TablePagination, type PageSize } from "@/components/offres-auto/TablePagination";
+import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
 
@@ -57,6 +59,10 @@ export default function AgentOffresAuto() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [tab, setTab] = useState<"all" | "manual">("all");
+  const [pageAll, setPageAll] = useState(1);
+  const [pageManual, setPageManual] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(50);
 
   async function load() {
     if (!user) return;
@@ -81,19 +87,20 @@ export default function AgentOffresAuto() {
       ]));
       if (clientIds.length === 0) { setRows([]); return; }
 
-      let q = supabase
-        .from("offres")
-        .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
-        .eq("envoi_auto", true)
-        .in("client_id", clientIds)
-        .order("created_at", { ascending: false })
-        .limit(2000);
-      if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
-      if (dateTo) {
-        const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-        q = q.lte("created_at", to.toISOString());
-      }
-      const { data, error } = await q;
+      const { data, error } = await fetchAllPaginated<Row>(() => {
+        let q = supabase
+          .from("offres")
+          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
+          .eq("envoi_auto", true)
+          .in("client_id", clientIds)
+          .order("created_at", { ascending: false });
+        if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
+        if (dateTo) {
+          const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
+          q = q.lte("created_at", to.toISOString());
+        }
+        return q;
+      });
       if (error) { console.error("[Agent/OffresAuto] load", error); setRows([]); return; }
 
       const offres = (data ?? []) as Row[];
@@ -138,6 +145,11 @@ export default function AgentOffresAuto() {
   }), [rows, statut, clientQ]);
 
   const manual = useMemo(() => filtered.filter(needsManualAction), [filtered]);
+
+  useEffect(() => { setPageAll(1); setPageManual(1); }, [statut, clientQ, dateFrom, dateTo, pageSize]);
+
+  const pagedAll = useMemo(() => filtered.slice((pageAll - 1) * pageSize, pageAll * pageSize), [filtered, pageAll, pageSize]);
+  const pagedManual = useMemo(() => manual.slice((pageManual - 1) * pageSize, pageManual * pageSize), [manual, pageManual, pageSize]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -202,7 +214,7 @@ export default function AgentOffresAuto() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "manual")}>
         <TabsList>
           <TabsTrigger value="all">Toutes ({filtered.length})</TabsTrigger>
           <TabsTrigger value="manual">
@@ -210,8 +222,14 @@ export default function AgentOffresAuto() {
             À gérer manuellement ({manual.length})
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="all"><OffresTable rows={filtered} onEdit={setEditing} /></TabsContent>
-        <TabsContent value="manual"><OffresTable rows={manual} showMissing onEdit={setEditing} /></TabsContent>
+        <TabsContent value="all">
+          <OffresTable rows={pagedAll} onEdit={setEditing} />
+          <TablePagination total={filtered.length} page={pageAll} pageSize={pageSize} onPageChange={setPageAll} onPageSizeChange={setPageSize} />
+        </TabsContent>
+        <TabsContent value="manual">
+          <OffresTable rows={pagedManual} showMissing onEdit={setEditing} />
+          <TablePagination total={manual.length} page={pageManual} pageSize={pageSize} onPageChange={setPageManual} onPageSizeChange={setPageSize} />
+        </TabsContent>
       </Tabs>
 
       <GererOffreDialog
