@@ -28,6 +28,7 @@ import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
+import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 
 interface Agent {
   id: string;
