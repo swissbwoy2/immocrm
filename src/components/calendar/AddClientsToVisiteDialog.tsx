@@ -224,7 +224,7 @@ export const AddClientsToVisiteDialog = ({
           .update({ last_message_at: new Date().toISOString() })
           .eq('id', conversationId);
 
-        // 4) Insert visite
+        // 4) Insert visite (carry medias so the added client sees the video + decision card)
         const { error: visiteError } = await supabase.from('visites').insert({
           offre_id: newOffer.id,
           client_id: clientId,
@@ -235,8 +235,76 @@ export const AddClientsToVisiteDialog = ({
           statut: 'planifiee',
           source: 'manuel',
           medias_coursier: [],
+          medias: hasVideo ? (sourceMedias as any) : null,
         });
         if (visiteError) throw visiteError;
+
+        // 5) If there is a shared video, send the added client the video message + notif + email
+        if (hasVideo) {
+          const firstVideo = sharedVideos[0];
+          const videoContent = `🎥 Vidéo de la visite disponible ci-dessous.\n\n📍 ${adresse}`;
+          const mediasPayload = sharedVideos.map((m: any) => ({
+            url: m.url,
+            name: m.name,
+            mime: m.mime,
+            size: m.size,
+          }));
+
+          await supabase.from('messages').insert({
+            conversation_id: conversationId,
+            sender_id: FALLBACK_AGENT_ID,
+            sender_type: 'agent',
+            content: videoContent,
+            offre_id: newOffer.id,
+            read: false,
+            attachment_type: 'video',
+            attachment_url: firstVideo.url,
+            attachment_name: firstVideo.name ?? null,
+            attachment_size: firstVideo.size ?? null,
+            payload: { medias: mediasPayload },
+          } as any);
+
+          await supabase
+            .from('conversations')
+            .update({ last_message_at: new Date().toISOString() })
+            .eq('id', conversationId);
+
+          // In-app + email notification for the client user
+          const clientRow = availableClients.find(c => c.id === clientId);
+          const clientUserId = clientRow?.user_id;
+          const clientEmail = clientRow?.profiles?.email;
+          const clientPrenom = clientRow?.profiles?.prenom || '';
+
+          if (clientUserId) {
+            try {
+              await supabase.rpc('create_notification', {
+                p_user_id: clientUserId,
+                p_type: 'visite_video',
+                p_title: `🎥 Vidéo de visite disponible — ${adresse}`,
+                p_message: `Votre agent a partagé une vidéo de la visite. Consultez-la dans votre espace.`,
+                p_link: '/client/visites',
+                p_metadata: { adresse, offre_id: newOffer.id },
+              });
+            } catch (e) {
+              console.warn('[AddClientsToVisite] notif error', e);
+            }
+          }
+
+          if (clientEmail) {
+            try {
+              await supabase.functions.invoke('send-notification-email', {
+                body: {
+                  to: clientEmail,
+                  subject: `🎥 Vidéo de votre visite — ${adresse}`,
+                  html: `<p>Bonjour ${clientPrenom},</p><p>Votre agent a partagé une vidéo de la visite pour <strong>${adresse}</strong>.</p><p>Connectez-vous à votre espace pour la visionner et indiquer si vous souhaitez déposer votre candidature.</p><p><a href="https://logisorama.ch/client/visites">Voir la vidéo</a></p>`,
+                },
+              });
+            } catch (e) {
+              console.warn('[AddClientsToVisite] email error', e);
+            }
+          }
+        }
+
 
         added++;
       }
