@@ -209,18 +209,19 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           });
         }
 
-        // Notification for the client
+        // Notification for the client (+ email via create_notification trigger)
         const clientUserId = (v as any).clients?.user_id;
         if (clientUserId) {
-          await supabase.from('notifications').insert({
-            user_id: clientUserId,
-            type: 'visit_video',
-            title: '🎥 Vidéo de visite reçue',
-            message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}.`,
-            link: convId ? `/dashboard/messagerie?conv=${convId}` : '/dashboard/messagerie',
-            metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, inline: isInline } as any,
+          await supabase.rpc('create_notification', {
+            p_user_id: clientUserId,
+            p_type: 'visit_video',
+            p_title: '🎥 Une vidéo de votre visite est disponible',
+            p_message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}. Connectez-vous à Logisorama pour la visionner et indiquer si vous souhaitez postuler.`,
+            p_link: `/client/visites?visiteId=${v.id}`,
+            p_metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, inline: isInline } as any,
           });
         }
+
 
         // WhatsApp notification — always a link (WA media API not wired for freeform uploads).
         // Text-only template avoids the ~16 MB WA media limit entirely.
