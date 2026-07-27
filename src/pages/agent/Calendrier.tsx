@@ -224,7 +224,7 @@ export default function AgentCalendrier() {
         eventPromises.push(Promise.resolve(qe));
       }
 
-      const [visitesResults, eventsResults, clientsRes] = await Promise.all([
+      const [visitesResults, eventsResults, clientsRes, ownClientsRes] = await Promise.all([
         Promise.all(visitePromises),
         Promise.all(eventPromises),
         coClientIds.length > 0
@@ -233,6 +233,11 @@ export default function AgentCalendrier() {
               .select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)')
               .in('id', coClientIds)
           : Promise.resolve({ data: [], error: null } as any),
+        supabase
+          .from('clients')
+          .select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)')
+          .eq('agent_id', agentData.id)
+          .limit(15000),
       ]);
 
       // Surface query errors instead of silently showing an empty calendar
