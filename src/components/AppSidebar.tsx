@@ -464,6 +464,7 @@ export function AppSidebar() {
   const whatsappUnread = useWhatsAppUnreadCount(
     userRole === 'admin' ? 'admin' : userRole === 'agent' ? 'agent' : 'both'
   );
+  const postulationsCount = usePostulationsCount(userRole);
   const [hasDrafts, setHasDrafts] = useState(false);
 
   const handleNavClick = () => {
