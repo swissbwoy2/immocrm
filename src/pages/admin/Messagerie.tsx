@@ -27,6 +27,7 @@ import DateSeparator from "@/components/messaging/DateSeparator";
 import { isSameDay, parseISO } from "date-fns";
 import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
 import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
+import { StoriesBar } from "@/components/stories/StoriesBar";
 
 const ADMIN_TAB_STORAGE_KEY = "messagerie_admin_tab";
 
