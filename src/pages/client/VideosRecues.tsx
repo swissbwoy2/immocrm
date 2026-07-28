@@ -275,6 +275,7 @@ export default function VideosRecues() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
+  const [dialogOffre, setDialogOffre] = useState<OffreData | null>(null);
 
   const load = async () => {
     if (!user) return;
