@@ -1467,6 +1467,16 @@ const Messagerie = () => {
           />
         </div>
       </div>
+      {tabCounts.a_traiter > 0 && activeTab !== 'a_traiter' && (
+        <button
+          type="button"
+          onClick={() => setActiveTab('a_traiter')}
+          className="mx-3 mt-3 rounded-lg border border-red-500/40 bg-red-500/10 hover:bg-red-500/15 transition-colors px-3 py-2 text-left text-xs font-medium text-red-700 dark:text-red-300 flex items-center gap-2"
+        >
+          🔔 {tabCounts.a_traiter} conversation{tabCounts.a_traiter > 1 ? 's' : ''} à traiter aujourd'hui
+        </button>
+      )}
+      <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
       <ScrollArea className="flex-1">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
