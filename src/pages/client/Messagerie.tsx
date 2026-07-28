@@ -47,12 +47,15 @@ import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
 import { StoriesBar } from "@/components/stories/StoriesBar";
+import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
 const Messagerie = () => {
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
@@ -2102,6 +2105,27 @@ const Messagerie = () => {
       Sélectionnez une conversation
     </div>
   );
+
+  if (isMobile) {
+    return (
+      <MobileMessenger
+        conversationsList={conversationsList}
+        chatView={chatView}
+        selectedConversation={selectedConv}
+        onBack={() => setSelectedConv(null)}
+        headerName={currentConversation ? getAgentName(currentConversation.agent_id) : undefined}
+        headerSubtitle={
+          currentConversation
+            ? getAgentInfo(currentConversation.agent_id).isOnline
+              ? "En ligne"
+              : "Hors ligne"
+            : undefined
+        }
+        headerAvatarUrl={null}
+        isOnline={currentConversation ? !!getAgentInfo(currentConversation.agent_id).isOnline : false}
+      />
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
