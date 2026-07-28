@@ -46,6 +46,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
+import { StoriesBar } from "@/components/stories/StoriesBar";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1685,6 +1686,7 @@ const Messagerie = () => {
 
   const conversationsList = (
     <div className="flex flex-col h-full relative overflow-hidden">
+      <StoriesBar />
       {/* Premium background effects */}
       <FloatingParticles count={10} className="opacity-30" />
       

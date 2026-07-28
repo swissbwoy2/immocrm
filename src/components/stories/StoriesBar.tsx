@@ -1,0 +1,88 @@
+import { useState } from "react";
+import { Plus } from "lucide-react";
+import { useStories } from "./useStories";
+import { StoryAvatar } from "./StoryAvatar";
+import { StoryViewer } from "./StoryViewer";
+import { CreateStoryDialog } from "./CreateStoryDialog";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Props {
+  className?: string;
+}
+
+/**
+ * Horizontal stories bar (WhatsApp / Insta style).
+ * - Admin & agent see a "+ Votre story" bubble to create one.
+ * - Everyone sees active stories grouped by author.
+ */
+export function StoriesBar({ className }: Props) {
+  const { userRole } = useAuth();
+  const { groups, loading, refresh } = useStories();
+  const [viewerOpen, setViewerOpen] = useState<number | null>(null);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+
+  const canPublish = userRole === "admin" || userRole === "agent";
+
+  if (!loading && groups.length === 0 && !canPublish) return null;
+
+  return (
+    <div
+      className={"border-b border-border/50 " + (className || "")}
+      style={{ background: "linear-gradient(180deg, hsl(160 30% 94% / 0.5), transparent)" }}
+    >
+      <div className="flex gap-3 overflow-x-auto no-scrollbar px-3 py-3">
+        {canPublish && (
+          <button
+            type="button"
+            onClick={() => setCreatorOpen(true)}
+            className="flex flex-col items-center gap-1 shrink-0 w-16 group"
+          >
+            <div className="relative">
+              <div
+                className="w-[60px] h-[60px] rounded-full flex items-center justify-center border-2 border-dashed"
+                style={{ borderColor: "hsl(158 55% 38%)", background: "hsl(160 30% 94%)" }}
+              >
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-white"
+                  style={{ background: "hsl(158 55% 38%)" }}
+                >
+                  <Plus className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+            <span className="text-[11px] font-medium truncate w-full text-center" style={{ color: "hsl(200 35% 18%)" }}>
+              Votre story
+            </span>
+          </button>
+        )}
+
+        {groups.map((g, idx) => (
+          <button
+            key={g.author.user_id}
+            type="button"
+            onClick={() => setViewerOpen(idx)}
+            className="flex flex-col items-center gap-1 shrink-0 w-16"
+          >
+            <StoryAvatar name={g.author.name} avatarUrl={g.author.avatar_url} viewed={g.allViewed} />
+            <span className="text-[11px] font-medium truncate w-full text-center" style={{ color: "hsl(200 35% 18%)" }}>
+              {g.author.name.split(" ")[0]}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {viewerOpen !== null && groups[viewerOpen] && (
+        <StoryViewer
+          groups={groups}
+          startGroupIndex={viewerOpen}
+          onClose={() => {
+            setViewerOpen(null);
+            refresh();
+          }}
+        />
+      )}
+
+      <CreateStoryDialog open={creatorOpen} onOpenChange={setCreatorOpen} onCreated={refresh} />
+    </div>
+  );
+}

@@ -11251,6 +11251,144 @@ export type Database = {
         }
         Relationships: []
       }
+      stories: {
+        Row: {
+          author_agent_id: string | null
+          author_role: string
+          author_user_id: string
+          background_color: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          media_path: string | null
+          media_url: string | null
+          text_content: string | null
+          type: string
+        }
+        Insert: {
+          author_agent_id?: string | null
+          author_role: string
+          author_user_id: string
+          background_color?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          media_path?: string | null
+          media_url?: string | null
+          text_content?: string | null
+          type: string
+        }
+        Update: {
+          author_agent_id?: string | null
+          author_role?: string
+          author_user_id?: string
+          background_color?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          media_path?: string | null
+          media_url?: string | null
+          text_content?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      story_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_comments_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_reactions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_views: {
+        Row: {
+          id: string
+          story_id: string
+          viewed_at: string
+          viewer_user_id: string
+        }
+        Insert: {
+          id?: string
+          story_id: string
+          viewed_at?: string
+          viewer_user_id: string
+        }
+        Update: {
+          id?: string
+          story_id?: string
+          viewed_at?: string
+          viewer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_views_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string

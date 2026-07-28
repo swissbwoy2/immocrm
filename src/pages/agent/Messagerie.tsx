@@ -43,6 +43,7 @@ import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
 import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
+import { StoriesBar } from "@/components/stories/StoriesBar";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import DateSeparator from "@/components/messaging/DateSeparator";
@@ -1438,6 +1439,7 @@ const Messagerie = () => {
 
   const conversationsList = (
     <>
+      <StoriesBar />
       <div className="p-4 border-b border-border/50 space-y-3">
         <div className="space-y-3">
           <div className="flex items-center gap-2 min-w-0">
