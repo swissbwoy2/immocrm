@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
 
 interface Props {
   visite: any;                 // any visite from the group (must have id, adresse, date_visite, offre_id, agent_id, client_id)
