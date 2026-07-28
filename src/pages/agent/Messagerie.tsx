@@ -110,6 +110,18 @@ const Messagerie = () => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
+  const [lastMetaMap, setLastMetaMap] = useState<Map<string, ConvLastMeta>>(new Map());
+  const [videoConvSet, setVideoConvSet] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<ConversationTabKey>(() => {
+    try {
+      const saved = localStorage.getItem(AGENT_TAB_STORAGE_KEY) as ConversationTabKey | null;
+      if (saved && ["a_traiter", "videos", "clients", "robot", "tout"].includes(saved)) return saved;
+    } catch {}
+    return "a_traiter";
+  });
+  useEffect(() => {
+    try { localStorage.setItem(AGENT_TAB_STORAGE_KEY, activeTab); } catch {}
+  }, [activeTab]);
   const [agentFullName, setAgentFullName] = useState<string>("");
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
