@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { formatSwissDateTime } from '@/lib/dateUtils';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
 
 interface Props {
   visite: any;
