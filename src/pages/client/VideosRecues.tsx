@@ -5,12 +5,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2 } from 'lucide-react';
+import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatSwissDateTime } from '@/lib/dateUtils';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { PremiumEmptyState } from '@/components/premium/PremiumEmptyState';
+import { PremiumOffreDetailsDialog } from '@/components/premium/PremiumOffreDetailsDialog';
 
 interface VideoMessage {
   id: string;
