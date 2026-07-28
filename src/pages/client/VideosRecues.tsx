@@ -44,6 +44,8 @@ interface VisiteRow {
   agent_id: string | null;
   adresse: string | null;
   date_visite: string | null;
+  compte_rendu?: any;
+  compte_rendu_at?: string | null;
 }
 
 interface Item {
