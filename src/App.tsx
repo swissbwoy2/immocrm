@@ -159,6 +159,7 @@ const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
 const ClientDossier = lazy(() => import("./pages/client/Dossier"));
 const ClientMonContrat = lazy(() => import("./pages/client/MonContrat"));
 const ClientOffresRecues = lazy(() => import("./pages/client/OffresRecues"));
+const ClientVideosRecues = lazy(() => import("./pages/client/VideosRecues"));
 const ClientVisites = lazy(() => import("./pages/client/Visites"));
 const ClientCalendrier = lazy(() => import("./pages/client/Calendrier"));
 const ClientMesCandidatures = lazy(() => import("./pages/client/MesCandidatures"));
@@ -432,6 +433,7 @@ const App = () => (
               <Route path="/client/dossier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDossier /></AppLayout></ProtectedRoute>} />
               <Route path="/client/mon-contrat" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMonContrat /></AppLayout></ProtectedRoute>} />
               <Route path="/client/offres-recues" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientOffresRecues /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/videos-recues" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientVideosRecues /></AppLayout></ProtectedRoute>} />
               <Route path="/client/visites" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientVisites /></AppLayout></ProtectedRoute>} />
               <Route path="/client/calendrier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/client/visites-deleguees" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientVisitesDeleguees /></AppLayout></ProtectedRoute>} />

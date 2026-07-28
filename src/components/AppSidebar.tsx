@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -307,6 +307,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Mon logement',
           items: [
             { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
+            { name: '🎥 Vidéos reçues', icon: Video, path: '/client/videos-recues', notifKey: null },
             { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
             { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
             { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },

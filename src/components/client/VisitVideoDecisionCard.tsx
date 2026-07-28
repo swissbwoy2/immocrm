@@ -29,6 +29,125 @@ function hasSharedVideo(medias: any): boolean {
   );
 }
 
+export async function submitVisitVideoDecision(params: {
+  user: { id: string };
+  visiteId: string;
+  offreId?: string | null;
+  agentIdHint?: string | null;
+  address?: string;
+  choice: 'souhaite_postuler' | 'refuse';
+}): Promise<void> {
+  const { user, visiteId, offreId, agentIdHint, address = '', choice } = params;
+
+  const decisionAt = new Date().toISOString();
+  const { error: vErr } = await supabase
+    .from('visites')
+    .update({ client_decision: choice, client_decision_at: decisionAt })
+    .eq('id', visiteId);
+  if (vErr) throw vErr;
+
+  if (offreId) {
+    const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';
+    await supabase.from('offres').update({ statut: nextStatut }).eq('id', offreId);
+  }
+
+  const { data: clientRow } = await supabase
+    .from('clients')
+    .select('id, agent_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  const clientId = clientRow?.id;
+  const agentId = clientRow?.agent_id || agentIdHint || null;
+
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('prenom, nom')
+    .eq('id', user.id)
+    .maybeSingle();
+  const displayName = `${profileRow?.prenom || ''} ${profileRow?.nom || ''}`.trim() || 'Le client';
+
+  if (clientId && agentId) {
+    let convId: string | null = null;
+    const { data: existingConv } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('client_id', clientId)
+      .eq('agent_id', agentId)
+      .maybeSingle();
+    convId = existingConv?.id || null;
+    if (!convId) {
+      const { data: created } = await supabase
+        .from('conversations')
+        .insert({ client_id: clientId, agent_id: agentId, subject: 'Messages' })
+        .select('id')
+        .maybeSingle();
+      convId = created?.id || null;
+    }
+    if (convId) {
+      const messageContent =
+        choice === 'souhaite_postuler'
+          ? `✅ Après visionnage de la vidéo, je souhaite déposer ma candidature pour ${address}.`
+          : `❌ Après visionnage de la vidéo, je ne souhaite pas postuler pour ${address}.`;
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: user.id,
+        sender_type: 'client',
+        content: messageContent,
+        offre_id: offreId ?? null,
+      });
+    }
+  }
+
+  const notifTitle =
+    choice === 'souhaite_postuler'
+      ? `✅ ${displayName} souhaite postuler — ${address}`
+      : `❌ ${displayName} ne postule pas — ${address}`;
+  const notifMessage =
+    choice === 'souhaite_postuler'
+      ? `Après avoir visionné la vidéo de visite, le client souhaite déposer sa candidature.`
+      : `Après avoir visionné la vidéo de visite, le client ne souhaite pas postuler.`;
+  const notifType = choice === 'souhaite_postuler' ? 'client_souhaite_postuler' : 'visit_refused';
+  const notifMeta = {
+    visite_id: visiteId,
+    offre_id: offreId ?? null,
+    client_id: clientId ?? null,
+    adresse: address,
+  };
+
+  if (agentId) {
+    const { data: agentRow } = await supabase
+      .from('agents')
+      .select('user_id')
+      .eq('id', agentId)
+      .maybeSingle();
+    if (agentRow?.user_id) {
+      await supabase.rpc('create_notification', {
+        p_user_id: agentRow.user_id,
+        p_type: notifType,
+        p_title: notifTitle,
+        p_message: notifMessage,
+        p_link: `/agent/clients/${clientId ?? ''}`,
+        p_metadata: notifMeta,
+      });
+    }
+  }
+
+  const { data: admins } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .eq('role', 'admin');
+  for (const a of admins || []) {
+    await supabase.rpc('create_notification', {
+      p_user_id: a.user_id,
+      p_type: `${notifType}_admin`,
+      p_title: notifTitle,
+      p_message: notifMessage,
+      p_link: `/admin/clients/${clientId ?? ''}`,
+      p_metadata: notifMeta,
+    });
+  }
+}
+
 export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
   const { user } = useAuth();
   const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
@@ -42,125 +161,14 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
     if (!user || decision || saving) return;
     setSaving(choice);
     try {
-      // 1. Persist decision on visite
-      const decisionAt = new Date().toISOString();
-      const { error: vErr } = await supabase
-        .from('visites')
-        .update({ client_decision: choice, client_decision_at: decisionAt })
-        .eq('id', visite.id);
-      if (vErr) throw vErr;
-
-      // 2. Update offre status
-      if (visite.offre_id) {
-        const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';
-        await supabase.from('offres').update({ statut: nextStatut }).eq('id', visite.offre_id);
-      }
-
-      // 3. Resolve client + agent for messaging + notifications
-      const { data: clientRow } = await supabase
-        .from('clients')
-        .select('id, agent_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const clientId = clientRow?.id;
-      const agentId = clientRow?.agent_id || visite.agent_id;
-
-      const { data: profileRow } = await supabase
-        .from('profiles')
-        .select('prenom, nom')
-        .eq('id', user.id)
-        .maybeSingle();
-      const prenom = profileRow?.prenom || '';
-      const nom = profileRow?.nom || '';
-      const displayName = `${prenom} ${nom}`.trim() || 'Le client';
-
-      // 4. Insert message in client<->agent conversation
-      if (clientId && agentId) {
-        let convId: string | null = null;
-        const { data: existingConv } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('client_id', clientId)
-          .eq('agent_id', agentId)
-          .maybeSingle();
-        convId = existingConv?.id || null;
-        if (!convId) {
-          const { data: created } = await supabase
-            .from('conversations')
-            .insert({ client_id: clientId, agent_id: agentId, subject: 'Messages' })
-            .select('id')
-            .maybeSingle();
-          convId = created?.id || null;
-        }
-        if (convId) {
-          const messageContent =
-            choice === 'souhaite_postuler'
-              ? `✅ Après visionnage de la vidéo, je souhaite déposer ma candidature pour ${address}.`
-              : `❌ Après visionnage de la vidéo, je ne souhaite pas postuler pour ${address}.`;
-          await supabase.from('messages').insert({
-            conversation_id: convId,
-            sender_id: user.id,
-            sender_type: 'client',
-            content: messageContent,
-            offre_id: visite.offre_id ?? null,
-          });
-        }
-      }
-
-      // 5. In-app + email notifications for agent + admin(s)
-      const notifTitle =
-        choice === 'souhaite_postuler'
-          ? `✅ ${displayName} souhaite postuler — ${address}`
-          : `❌ ${displayName} ne postule pas — ${address}`;
-      const notifMessage =
-        choice === 'souhaite_postuler'
-          ? `Après avoir visionné la vidéo de visite, le client souhaite déposer sa candidature.`
-          : `Après avoir visionné la vidéo de visite, le client ne souhaite pas postuler.`;
-      const notifType = choice === 'souhaite_postuler' ? 'client_souhaite_postuler' : 'visit_refused';
-      const notifLink = `/agent/clients/${clientId ?? ''}`;
-      const notifMeta = {
-        visite_id: visite.id,
-        offre_id: visite.offre_id ?? null,
-        client_id: clientId ?? null,
-        adresse: address,
-      };
-
-      // Agent
-      if (agentId) {
-        const { data: agentRow } = await supabase
-          .from('agents')
-          .select('user_id')
-          .eq('id', agentId)
-          .maybeSingle();
-        if (agentRow?.user_id) {
-          await supabase.rpc('create_notification', {
-            p_user_id: agentRow.user_id,
-            p_type: notifType,
-            p_title: notifTitle,
-            p_message: notifMessage,
-            p_link: notifLink,
-            p_metadata: notifMeta,
-          });
-        }
-      }
-
-      // Admins
-      const { data: admins } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-      for (const a of admins || []) {
-        await supabase.rpc('create_notification', {
-          p_user_id: a.user_id,
-          p_type: `${notifType}_admin`,
-          p_title: notifTitle,
-          p_message: notifMessage,
-          p_link: `/admin/clients/${clientId ?? ''}`,
-          p_metadata: notifMeta,
-        });
-      }
-
+      await submitVisitVideoDecision({
+        user,
+        visiteId: visite.id,
+        offreId: visite.offre_id ?? null,
+        agentIdHint: visite.agent_id ?? null,
+        address,
+        choice,
+      });
       toast.success(
         choice === 'souhaite_postuler'
           ? 'Merci, votre agent a été notifié de votre intérêt.'
