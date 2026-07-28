@@ -540,6 +540,7 @@ export function AppSidebar() {
   const getNotificationCount = (notifKey: string | null): number => {
     if (!notifKey) return 0;
     if (notifKey === 'whatsapp_unread') return whatsappUnread;
+    if (notifKey === 'postulations') return postulationsCount;
     if (notifKey === 'visit_combined') {
       return (counts.new_visit || 0) + (counts.visit_reminder || 0);
     }
