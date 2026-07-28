@@ -588,6 +588,7 @@ const Messagerie = () => {
           />
         </div>
       </div>
+      <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
       <ScrollArea className="flex-1">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
