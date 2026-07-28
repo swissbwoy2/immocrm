@@ -103,6 +103,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
             { name: 'Auto-Offres', icon: Bot, path: '/admin/auto-offres', notifKey: null },
             { name: 'Offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
+            { name: '📮 Postulations', icon: Mailbox, path: '/admin/postulations', notifKey: 'postulations' },
             { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
             { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
             { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
