@@ -47,6 +47,8 @@ import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
 import { StoriesBar } from "@/components/stories/StoriesBar";
+import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
