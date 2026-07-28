@@ -68,7 +68,7 @@ export function useStories() {
         const [profilesRes, viewsRes] = await Promise.all([
           supabase
             .from("profiles")
-            .select("id, first_name, last_name, avatar_url")
+            .select("id, prenom, nom, avatar_url")
             .in("id", authorIds),
           supabase
             .from("story_views")
@@ -92,7 +92,7 @@ export function useStories() {
         for (const [authorId, stories] of byAuthor.entries()) {
           const p = profMap.get(authorId);
           const name = p
-            ? [p.first_name, p.last_name].filter(Boolean).join(" ") || "Utilisateur"
+            ? [p.prenom, p.nom].filter(Boolean).join(" ") || "Utilisateur"
             : "Utilisateur";
           built.push({
             author: {
