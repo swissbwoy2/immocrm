@@ -5,12 +5,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2 } from 'lucide-react';
+import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatSwissDateTime } from '@/lib/dateUtils';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { PremiumEmptyState } from '@/components/premium/PremiumEmptyState';
+import { PremiumOffreDetailsDialog } from '@/components/premium/PremiumOffreDetailsDialog';
 
 interface VideoMessage {
   id: string;
@@ -63,7 +64,7 @@ function InfoPill({ icon: Icon, label }: { icon: any; label: string }) {
   );
 }
 
-function VideoOfferCard({ item, onDecisionSaved }: { item: Item; onDecisionSaved: () => void }) {
+function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; onDecisionSaved: () => void; onViewOffer: (offre: OffreData) => void }) {
   const { user } = useAuth();
   const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
   const { message, offre, visite } = item;
@@ -161,14 +162,21 @@ function VideoOfferCard({ item, onDecisionSaved }: { item: Item; onDecisionSaved
             </div>
           )}
 
-          {offre?.lien_annonce && (
-            <Button asChild variant="outline" size="sm">
-              <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Voir l'annonce
-              </a>
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {offre && (
+              <Button size="sm" onClick={() => onViewOffer(offre)}>
+                <Eye className="w-4 h-4 mr-2" /> Voir l'offre
+              </Button>
+            )}
+            {offre?.lien_annonce && (
+              <Button asChild variant="outline" size="sm">
+                <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Voir l'annonce
+                </a>
+              </Button>
+            )}
+          </div>
 
           <div className="text-xs text-muted-foreground">
             Reçu le {formatSwissDateTime(message.created_at)}
@@ -267,6 +275,7 @@ export default function VideosRecues() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
+  const [dialogOffre, setDialogOffre] = useState<OffreData | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -407,10 +416,24 @@ export default function VideosRecues() {
       ) : (
         <div className="space-y-6">
           {items.map((item) => (
-            <VideoOfferCard key={item.message.id} item={item} onDecisionSaved={load} />
+            <VideoOfferCard key={item.message.id} item={item} onDecisionSaved={load} onViewOffer={setDialogOffre} />
           ))}
         </div>
       )}
+
+      <PremiumOffreDetailsDialog
+        open={!!dialogOffre}
+        onOpenChange={(o) => { if (!o) setDialogOffre(null); }}
+        offre={dialogOffre}
+        candidatures={[]}
+        clientData={{}}
+        documentsStats={{}}
+        visites={[]}
+        onProgressWorkflow={async () => {}}
+        onPlanVisit={() => {}}
+        onPostulerDirect={() => {}}
+        formatStatutOffre={(statut: string) => ({ label: statut || '—', variant: 'default' as any })}
+      />
     </div>
   );
 }

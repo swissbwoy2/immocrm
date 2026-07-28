@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -14,6 +15,8 @@ import { fr } from 'date-fns/locale';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
 import { toast } from 'sonner';
+
+type PostulationTab = 'a_faire' | 'deposees';
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
 
@@ -43,6 +46,7 @@ export function PostulationsPage({ scope, title }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [tab, setTab] = useState<PostulationTab>('a_faire');
 
   async function load() {
     if (!user) return;
@@ -69,7 +73,7 @@ export function PostulationsPage({ scope, title }: Props) {
         let q = supabase
           .from('offres')
           .select('id, created_at, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
-          .eq('statut', 'souhaite_postuler')
+          .in('statut', ['souhaite_postuler', 'candidature_deposee'])
           .order('created_at', { ascending: false });
         if (allowedClientIds) q = q.in('client_id', allowedClientIds);
         return q;
@@ -103,14 +107,21 @@ export function PostulationsPage({ scope, title }: Props) {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id, scope]);
 
+  const counts = useMemo(() => ({
+    a_faire: rows.filter((r) => r.statut === 'souhaite_postuler').length,
+    deposees: rows.filter((r) => r.statut === 'candidature_deposee').length,
+  }), [rows]);
+
   const filtered = useMemo(() => rows.filter((r) => {
+    const targetStatut = tab === 'a_faire' ? 'souhaite_postuler' : 'candidature_deposee';
+    if (r.statut !== targetStatut) return false;
     if (!clientQ) return true;
     const q = clientQ.toLowerCase();
     const name = `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`.toLowerCase();
     return name.includes(q);
-  }), [rows, clientQ]);
+  }), [rows, clientQ, tab]);
 
-  useEffect(() => { setPage(1); }, [clientQ, pageSize]);
+  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab]);
   const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize]);
 
   const markCandidatureDeposee = async (row: Row) => {
@@ -141,7 +152,8 @@ export function PostulationsPage({ scope, title }: Props) {
       }
 
       toast.success('Candidature marquée comme déposée');
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
+      // Keep the row visible: switch its status locally instead of removing it.
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, statut: 'candidature_deposee' } : r));
     } catch (err: any) {
       console.error('[Postulations] mark deposee', err);
       toast.error(err?.message || 'Erreur lors de la mise à jour');
@@ -166,6 +178,19 @@ export function PostulationsPage({ scope, title }: Props) {
         </Button>
       </div>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as PostulationTab)}>
+        <TabsList>
+          <TabsTrigger value="a_faire" className="gap-2">
+            À faire
+            <Badge variant="secondary" className="bg-violet-100 text-violet-800 border-violet-300">{counts.a_faire}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="deposees" className="gap-2">
+            Déposées
+            <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-300">{counts.deposees}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Card>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
@@ -173,8 +198,8 @@ export function PostulationsPage({ scope, title }: Props) {
             <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" />
           </div>
           <div className="flex items-end">
-            <Badge variant="outline" className="bg-violet-100 text-violet-800 border-violet-300">
-              {filtered.length} à traiter
+            <Badge variant="outline" className={tab === 'a_faire' ? 'bg-violet-100 text-violet-800 border-violet-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}>
+              {filtered.length} {tab === 'a_faire' ? 'à traiter' : 'déposée(s)'}
             </Badge>
           </div>
         </CardContent>
@@ -182,7 +207,7 @@ export function PostulationsPage({ scope, title }: Props) {
 
       {paged.length === 0 ? (
         <div className="text-center text-sm text-muted-foreground py-12 border rounded-lg">
-          Aucune postulation en attente.
+          {tab === 'a_faire' ? 'Aucune postulation en attente.' : 'Aucune candidature déposée.'}
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
@@ -195,7 +220,7 @@ export function PostulationsPage({ scope, title }: Props) {
                 <TableHead>Prix (CHF/mois CC)</TableHead>
                 <TableHead>Pcs</TableHead>
                 <TableHead>Annonce</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead className="text-right">{tab === 'a_faire' ? 'Action' : 'Statut'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,19 +245,25 @@ export function PostulationsPage({ scope, title }: Props) {
                     ) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                      disabled={savingId === r.id}
-                      onClick={() => markCandidatureDeposee(r)}
-                    >
-                      {savingId === r.id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                      )}
-                      ✅ Candidature déposée
-                    </Button>
+                    {r.statut === 'candidature_deposee' ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={savingId === r.id}
+                        onClick={() => markCandidatureDeposee(r)}
+                      >
+                        {savingId === r.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                        )}
+                        ✅ Candidature déposée
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

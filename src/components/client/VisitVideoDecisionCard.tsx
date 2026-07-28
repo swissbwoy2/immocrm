@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { formatSwissDateTime } from '@/lib/dateUtils';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
 
 interface Props {
   visite: any;
@@ -66,23 +67,8 @@ export async function submitVisitVideoDecision(params: {
     .maybeSingle();
   const displayName = `${profileRow?.prenom || ''} ${profileRow?.nom || ''}`.trim() || 'Le client';
 
-  if (clientId && agentId) {
-    let convId: string | null = null;
-    const { data: existingConv } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('client_id', clientId)
-      .eq('agent_id', agentId)
-      .maybeSingle();
-    convId = existingConv?.id || null;
-    if (!convId) {
-      const { data: created } = await supabase
-        .from('conversations')
-        .insert({ client_id: clientId, agent_id: agentId, subject: 'Messages' })
-        .select('id')
-        .maybeSingle();
-      convId = created?.id || null;
-    }
+  if (clientId) {
+    const convId = await getOrCreateClientConversation(clientId);
     if (convId) {
       const messageContent =
         choice === 'souhaite_postuler'

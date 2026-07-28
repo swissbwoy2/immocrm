@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Save, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
 
 export interface CompteRenduPayload {
   ascenseur: 'oui' | 'non' | '';
@@ -117,66 +118,15 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
 
       const messageContent = buildMessageContent(visite.adresse || 'Bien visité', form);
 
+      let successCount = 0;
+      let failureCount = 0;
+
       for (const v of uniqueClients) {
         try {
           const clientId = v.client_id;
-          const agentId = v.agent_id || visite.agent_id;
+          const convId = await getOrCreateClientConversation(clientId);
+          if (!convId) { failureCount += 1; continue; }
 
-          // Find (or create) conversation — take most recent if several
-          let convId: string | null = null;
-          if (agentId) {
-            const { data: convs } = await supabase
-              .from('conversations')
-              .select('id, last_message_at, created_at')
-              .eq('client_id', clientId)
-              .eq('agent_id', agentId)
-              .order('last_message_at', { ascending: false, nullsFirst: false })
-              .order('created_at', { ascending: false })
-              .limit(1);
-            if (convs && convs.length > 0) {
-              convId = convs[0].id;
-            } else {
-              const { data: created } = await supabase
-                .from('conversations')
-                .insert({ client_id: clientId, agent_id: agentId })
-                .select('id')
-                .single();
-              convId = created?.id || null;
-            }
-          } else {
-            const { data: convs } = await supabase
-              .from('conversations')
-              .select('id, last_message_at, created_at')
-              .eq('client_id', clientId)
-              .order('last_message_at', { ascending: false, nullsFirst: false })
-              .order('created_at', { ascending: false })
-              .limit(1);
-            convId = convs && convs.length > 0 ? convs[0].id : null;
-          }
-
-          if (!convId) continue;
-
-          // Safety net: ensure current agent of the client is participant
-          try {
-            const { data: cliRow } = await supabase
-              .from('clients')
-              .select('agent_id')
-              .eq('id', clientId)
-              .maybeSingle();
-            const currentAgentId = cliRow?.agent_id;
-            if (currentAgentId) {
-              await supabase
-                .from('conversation_agents')
-                .upsert(
-                  { conversation_id: convId, agent_id: currentAgentId },
-                  { onConflict: 'conversation_id,agent_id', ignoreDuplicates: true },
-                );
-            }
-          } catch (e) {
-            console.warn('[CompteRendu] conversation_agents upsert failed', e);
-          }
-
-          // Insert message — triggers handle notif + email + WhatsApp
           await supabase.from('messages').insert({
             conversation_id: convId,
             sender_id: user.id,
@@ -190,13 +140,19 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
               compte_rendu: form,
             } as any,
           });
+          successCount += 1;
         } catch (perClientErr) {
+          failureCount += 1;
           console.warn('[CompteRendu] send to client failed (non-blocking)', perClientErr);
         }
       }
 
       setSavedAt(nowIso);
-      toast.success(`Compte-rendu envoyé à ${uniqueClients.length} client(s)`);
+      const recap = failureCount > 0
+        ? `Compte-rendu envoyé à ${successCount} client(s) (${failureCount} échec${failureCount > 1 ? 's' : ''})`
+        : `Compte-rendu envoyé à ${successCount} client(s)`;
+      if (failureCount > 0 && successCount === 0) toast.error(recap);
+      else toast.success(recap);
       onSaved?.();
     } catch (err: any) {
       console.error('[CompteRendu] save error', err);
