@@ -307,6 +307,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Mon logement',
           items: [
             { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
+            { name: '🎥 Vidéos reçues', icon: Video, path: '/client/videos-recues', notifKey: null },
             { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
             { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
             { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
