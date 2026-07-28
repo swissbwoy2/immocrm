@@ -178,6 +178,19 @@ export function PostulationsPage({ scope, title }: Props) {
         </Button>
       </div>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as PostulationTab)}>
+        <TabsList>
+          <TabsTrigger value="a_faire" className="gap-2">
+            À faire
+            <Badge variant="secondary" className="bg-violet-100 text-violet-800 border-violet-300">{counts.a_faire}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="deposees" className="gap-2">
+            Déposées
+            <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-300">{counts.deposees}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <Card>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
@@ -185,8 +198,8 @@ export function PostulationsPage({ scope, title }: Props) {
             <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" />
           </div>
           <div className="flex items-end">
-            <Badge variant="outline" className="bg-violet-100 text-violet-800 border-violet-300">
-              {filtered.length} à traiter
+            <Badge variant="outline" className={tab === 'a_faire' ? 'bg-violet-100 text-violet-800 border-violet-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}>
+              {filtered.length} {tab === 'a_faire' ? 'à traiter' : 'déposée(s)'}
             </Badge>
           </div>
         </CardContent>
@@ -194,7 +207,7 @@ export function PostulationsPage({ scope, title }: Props) {
 
       {paged.length === 0 ? (
         <div className="text-center text-sm text-muted-foreground py-12 border rounded-lg">
-          Aucune postulation en attente.
+          {tab === 'a_faire' ? 'Aucune postulation en attente.' : 'Aucune candidature déposée.'}
         </div>
       ) : (
         <div className="border rounded-lg overflow-x-auto">
@@ -207,7 +220,7 @@ export function PostulationsPage({ scope, title }: Props) {
                 <TableHead>Prix (CHF/mois CC)</TableHead>
                 <TableHead>Pcs</TableHead>
                 <TableHead>Annonce</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead className="text-right">{tab === 'a_faire' ? 'Action' : 'Statut'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -232,19 +245,25 @@ export function PostulationsPage({ scope, title }: Props) {
                     ) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                      disabled={savingId === r.id}
-                      onClick={() => markCandidatureDeposee(r)}
-                    >
-                      {savingId === r.id ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                      )}
-                      ✅ Candidature déposée
-                    </Button>
+                    {r.statut === 'candidature_deposee' ? (
+                      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        disabled={savingId === r.id}
+                        onClick={() => markCandidatureDeposee(r)}
+                      >
+                        {savingId === r.id ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                        )}
+                        ✅ Candidature déposée
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
