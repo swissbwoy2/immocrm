@@ -21,6 +21,7 @@ import { CalendarEvent } from '@/components/calendar/types';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
+import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
