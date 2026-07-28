@@ -138,6 +138,18 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
         const currentMedias = Array.isArray(v.medias) ? v.medias : (v.medias ? [v.medias] : []);
         const nextMedias = [...currentMedias, mediaEntry];
         await supabase.from('visites').update({ medias: nextMedias as any }).eq('id', v.id);
+
+        // Auto-advance offre status → 'visite_effectuee' (only from 'envoyee' or 'interesse')
+        const offreId = (v as any).offre_id ?? visite.offre_id;
+        if (offreId) {
+          try {
+            const { data: off } = await supabase
+              .from('offres').select('statut').eq('id', offreId).maybeSingle();
+            if (off && (off.statut === 'envoyee' || off.statut === 'interesse')) {
+              await supabase.from('offres').update({ statut: 'visite_effectuee' }).eq('id', offreId);
+            }
+          } catch (e) { console.warn('[VisitVideoShare] offre statut update failed', e); }
+        }
       }
       setProgress(80);
 
