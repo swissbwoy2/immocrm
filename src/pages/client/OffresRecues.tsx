@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils";
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
+import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
+import { Loader2 } from "lucide-react";
 
 // Skeleton card for loading state
 const OffreSkeletonCard = ({ index }: { index: number }) => (
@@ -90,6 +92,84 @@ const AnimatedValue = ({ value, prefix = "", suffix = "" }: { value: number; pre
   
   return <span>{prefix}{displayValue.toLocaleString()}{suffix}</span>;
 };
+function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; visites: any[]; onDone: () => void }) {
+  const { user } = useAuth();
+  const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
+  const relatedVisites = visites.filter((v) => v.offre_id === offre.id);
+  const latestVisite = relatedVisites.sort((a, b) => {
+    const da = a.date_visite ? new Date(a.date_visite).getTime() : 0;
+    const db = b.date_visite ? new Date(b.date_visite).getTime() : 0;
+    return db - da;
+  })[0];
+  const visitDone = offre.statut === 'visite_effectuee'
+    || offre.statut === 'candidature_deposee'
+    || relatedVisites.some((v) => v.statut === 'effectuee');
+  const decision: 'souhaite_postuler' | 'refuse' | null = latestVisite?.client_decision ?? null;
+
+  const handle = async (choice: 'souhaite_postuler' | 'refuse') => {
+    if (!user || !visitDone || saving || decision) return;
+    setSaving(choice);
+    try {
+      await submitVisitVideoDecision({
+        user,
+        visiteId: latestVisite?.id ?? '',
+        offreId: offre.id,
+        agentIdHint: latestVisite?.agent_id ?? offre.agent_id ?? null,
+        address: offre.adresse || '',
+        choice,
+      });
+      onDone();
+    } catch (err: any) {
+      console.error('[VideoDecisionInlineButtons]', err);
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  if (decision) {
+    return (
+      <div className="w-full pt-2">
+        <Badge className={cn(
+          "px-3 py-1.5",
+          decision === 'souhaite_postuler'
+            ? "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30"
+            : "bg-red-500/15 text-red-700 border border-red-500/30"
+        )}>
+          {decision === 'souhaite_postuler' ? '✅ Vous avez confirmé votre intérêt' : '❌ Vous ne souhaitez pas postuler'}
+        </Badge>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full pt-2 space-y-1.5">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          disabled={!visitDone || !!saving || !latestVisite?.id}
+          onClick={() => handle('souhaite_postuler')}
+        >
+          {saving === 'souhaite_postuler' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+          ✅ Je souhaite déposer ma candidature
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-red-500/40 text-red-700 hover:bg-red-500/10"
+          disabled={!visitDone || !!saving || !latestVisite?.id}
+          onClick={() => handle('refuse')}
+        >
+          {saving === 'refuse' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <X className="w-4 h-4 mr-2" />}
+          ❌ Je ne souhaite pas postuler
+        </Button>
+      </div>
+      {!visitDone && (
+        <div className="text-xs text-muted-foreground italic">Disponible après la visite</div>
+      )}
+    </div>
+  );
+}
 
 const OffresRecues = () => {
   const { toast } = useToast();
@@ -1448,6 +1528,7 @@ const OffresRecues = () => {
                         </>
                       )}
                     </div>
+                    <VideoDecisionInlineButtons offre={offre} visites={visites} onDone={() => { loadOffres(); loadVisites(); }} />
                   </div>
                 </Card>
               );

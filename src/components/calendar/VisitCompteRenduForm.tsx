@@ -96,6 +96,18 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
         } catch (e) {
           console.warn('[CompteRendu] update failed for visite', v.id, e);
         }
+
+        // Auto-advance offre status → 'visite_effectuee' (only from 'envoyee' or 'interesse')
+        const offreId = (v as any).offre_id ?? visite.offre_id;
+        if (offreId) {
+          try {
+            const { data: off } = await supabase
+              .from('offres').select('statut').eq('id', offreId).maybeSingle();
+            if (off && (off.statut === 'envoyee' || off.statut === 'interesse')) {
+              await supabase.from('offres').update({ statut: 'visite_effectuee' }).eq('id', offreId);
+            }
+          } catch (e) { console.warn('[CompteRendu] offre statut update failed', e); }
+        }
       }
 
       // 3. For each unique client, insert one message in their conversation
