@@ -55,6 +55,7 @@ const removeAccents = (str: string) => {
 };
 
 const Messagerie = () => {
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
