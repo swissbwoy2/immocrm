@@ -526,12 +526,25 @@ const Messagerie = () => {
     }
   };
 
-  const filteredConversations = conversations.filter(conv => {
+  const searchedConversations = conversations.filter(conv => {
     const searchTerm = removeAccents(searchQuery.toLowerCase());
     const clientName = removeAccents((conv.clientName || '').toLowerCase());
     const agentName = removeAccents((conv.agentName || '').toLowerCase());
     return clientName.includes(searchTerm) || agentName.includes(searchTerm);
   });
+
+  const { filtered: tabBuckets, counts: tabCounts } = useMemo(
+    () => computeTabBuckets({
+      conversations: searchedConversations,
+      getId: (c: any) => c.id,
+      lastMetaMap,
+      unreadMap: unreadCountsMap,
+      videoConvSet,
+      selfSenderType: 'admin',
+    }),
+    [searchedConversations, lastMetaMap, unreadCountsMap, videoConvSet]
+  );
+  const filteredConversations = tabBuckets[activeTab];
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
   const currentConversation = conversations.find(c => c.id === selectedConv);
