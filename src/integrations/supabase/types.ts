@@ -11905,6 +11905,8 @@ export type Database = {
           client_decision: string | null
           client_decision_at: string | null
           client_id: string | null
+          compte_rendu: Json | null
+          compte_rendu_at: string | null
           coursier_id: string | null
           created_at: string | null
           date_visite: string
@@ -11936,6 +11938,8 @@ export type Database = {
           client_decision?: string | null
           client_decision_at?: string | null
           client_id?: string | null
+          compte_rendu?: Json | null
+          compte_rendu_at?: string | null
           coursier_id?: string | null
           created_at?: string | null
           date_visite: string
@@ -11967,6 +11971,8 @@ export type Database = {
           client_decision?: string | null
           client_decision_at?: string | null
           client_id?: string | null
+          compte_rendu?: Json | null
+          compte_rendu_at?: string | null
           coursier_id?: string | null
           created_at?: string | null
           date_visite?: string
