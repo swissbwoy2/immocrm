@@ -46,6 +46,7 @@ export function PostulationsPage({ scope, title }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [tab, setTab] = useState<PostulationTab>('a_faire');
 
   async function load() {
     if (!user) return;
@@ -72,7 +73,7 @@ export function PostulationsPage({ scope, title }: Props) {
         let q = supabase
           .from('offres')
           .select('id, created_at, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
-          .eq('statut', 'souhaite_postuler')
+          .in('statut', ['souhaite_postuler', 'candidature_deposee'])
           .order('created_at', { ascending: false });
         if (allowedClientIds) q = q.in('client_id', allowedClientIds);
         return q;
@@ -106,14 +107,21 @@ export function PostulationsPage({ scope, title }: Props) {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id, scope]);
 
+  const counts = useMemo(() => ({
+    a_faire: rows.filter((r) => r.statut === 'souhaite_postuler').length,
+    deposees: rows.filter((r) => r.statut === 'candidature_deposee').length,
+  }), [rows]);
+
   const filtered = useMemo(() => rows.filter((r) => {
+    const targetStatut = tab === 'a_faire' ? 'souhaite_postuler' : 'candidature_deposee';
+    if (r.statut !== targetStatut) return false;
     if (!clientQ) return true;
     const q = clientQ.toLowerCase();
     const name = `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`.toLowerCase();
     return name.includes(q);
-  }), [rows, clientQ]);
+  }), [rows, clientQ, tab]);
 
-  useEffect(() => { setPage(1); }, [clientQ, pageSize]);
+  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab]);
   const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize]);
 
   const markCandidatureDeposee = async (row: Row) => {
@@ -144,7 +152,8 @@ export function PostulationsPage({ scope, title }: Props) {
       }
 
       toast.success('Candidature marquée comme déposée');
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
+      // Keep the row visible: switch its status locally instead of removing it.
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, statut: 'candidature_deposee' } : r));
     } catch (err: any) {
       console.error('[Postulations] mark deposee', err);
       toast.error(err?.message || 'Erreur lors de la mise à jour');
