@@ -397,6 +397,27 @@ const Messagerie = () => {
           }
         }
         setLastMessagesMap(lastMsgsMap);
+
+        // Batch: last message metadata (sender_type/sender_id/attachment_type)
+        const { data: allMsgs } = await supabase
+          .from('messages')
+          .select('conversation_id, sender_type, sender_id, attachment_type, created_at')
+          .in('conversation_id', convIds)
+          .order('created_at', { ascending: false });
+        const metaMap = new Map<string, ConvLastMeta>();
+        const videoSet = new Set<string>();
+        (allMsgs || []).forEach((m: any) => {
+          if (!metaMap.has(m.conversation_id)) {
+            metaMap.set(m.conversation_id, {
+              sender_type: m.sender_type,
+              sender_id: m.sender_id,
+              attachment_type: m.attachment_type,
+            });
+          }
+          if (m.attachment_type === 'video') videoSet.add(m.conversation_id);
+        });
+        setLastMetaMap(metaMap);
+        setVideoConvSet(videoSet);
       }
 
       const clientIds = convData?.filter(c => c.client_id).map(c => c.client_id) || [];
