@@ -171,8 +171,41 @@ function VideoOfferCard({ item, onDecisionSaved }: { item: Item; onDecisionSaved
           )}
 
           <div className="text-xs text-muted-foreground">
-            Vidéo reçue le {formatSwissDateTime(message.created_at)}
+            Reçu le {formatSwissDateTime(message.created_at)}
           </div>
+
+          {/* Compte-rendu de visite */}
+          {visite?.compte_rendu && typeof visite.compte_rendu === 'object' && (
+            <div className="border border-primary/20 rounded-lg p-4 bg-muted/30 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <ClipboardList className="w-4 h-4 text-primary" />
+                <h4 className="font-semibold text-sm">Compte-rendu de la visite</h4>
+              </div>
+              <dl className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                {visite.compte_rendu.ascenseur && (
+                  <div><dt className="inline font-medium">🛗 Ascenseur : </dt><dd className="inline">{visite.compte_rendu.ascenseur === 'oui' ? 'Oui' : 'Non'}</dd></div>
+                )}
+                {visite.compte_rendu.type_sol && (
+                  <div><dt className="inline font-medium">🧱 Sol : </dt><dd className="inline">{visite.compte_rendu.type_sol}</dd></div>
+                )}
+                {visite.compte_rendu.etat_general && (
+                  <div className="sm:col-span-2"><dt className="inline font-medium">🏠 État : </dt><dd className="inline">{visite.compte_rendu.etat_general}</dd></div>
+                )}
+                {visite.compte_rendu.contact_regie && (
+                  <div className="sm:col-span-2"><dt className="inline font-medium">🏢 Régie : </dt><dd className="inline">{visite.compte_rendu.contact_regie}</dd></div>
+                )}
+              </dl>
+              {visite.compte_rendu.avantages && (
+                <div className="text-sm"><span className="font-medium">👍 Avantages : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.avantages}</span></div>
+              )}
+              {visite.compte_rendu.inconvenients && (
+                <div className="text-sm"><span className="font-medium">👎 Inconvénients : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.inconvenients}</span></div>
+              )}
+              {visite.compte_rendu.autres_infos && (
+                <div className="text-sm"><span className="font-medium">📝 </span><span className="whitespace-pre-wrap">{visite.compte_rendu.autres_infos}</span></div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Decision */}
