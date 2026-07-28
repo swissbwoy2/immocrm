@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Save, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
 
 export interface CompteRenduPayload {
   ascenseur: 'oui' | 'non' | '';
