@@ -1168,12 +1168,25 @@ const Messagerie = () => {
     return { name: 'Inconnu', type: 'unknown' };
   };
 
-  const filteredConversations = conversations.filter(conv => {
+  const searchedConversations = conversations.filter(conv => {
     const searchTerm = removeAccents(searchQuery.toLowerCase());
     const contactInfo = getContactInfo(conv);
     const contactName = removeAccents(contactInfo.name.toLowerCase());
     return contactName.includes(searchTerm);
   });
+
+  const { filtered: tabBuckets, counts: tabCounts } = useMemo(
+    () => computeTabBuckets({
+      conversations: searchedConversations,
+      getId: (c: any) => c.id,
+      lastMetaMap,
+      unreadMap: unreadCountsMap,
+      videoConvSet,
+      selfSenderType: 'agent',
+    }),
+    [searchedConversations, lastMetaMap, unreadCountsMap, videoConvSet]
+  );
+  const filteredConversations = tabBuckets[activeTab];
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
 
