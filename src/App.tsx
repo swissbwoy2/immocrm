@@ -159,6 +159,7 @@ const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
 const ClientDossier = lazy(() => import("./pages/client/Dossier"));
 const ClientMonContrat = lazy(() => import("./pages/client/MonContrat"));
 const ClientOffresRecues = lazy(() => import("./pages/client/OffresRecues"));
+const ClientVideosRecues = lazy(() => import("./pages/client/VideosRecues"));
 const ClientVisites = lazy(() => import("./pages/client/Visites"));
 const ClientCalendrier = lazy(() => import("./pages/client/Calendrier"));
 const ClientMesCandidatures = lazy(() => import("./pages/client/MesCandidatures"));
