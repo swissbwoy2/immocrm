@@ -25,15 +25,11 @@ if (isPreviewHost || isInIframe) {
 } else {
   const updateSW = registerSW({
     onNeedRefresh() {
-      console.log('[PWA] New version available.');
-      toast('Nouvelle version disponible', {
-        description: 'Rechargez pour appliquer la mise à jour.',
-        duration: Infinity,
-        action: {
-          label: 'Recharger',
-          onClick: () => updateSW(true),
-        },
-      });
+      console.log('[PWA] New version available — auto-updating.');
+      toast('Mise à jour en cours…', { duration: 1000 });
+      setTimeout(() => {
+        void updateSW(true);
+      }, 800);
     },
     onOfflineReady() {
       console.log('[PWA] App ready for offline use');
