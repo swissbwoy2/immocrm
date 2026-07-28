@@ -159,174 +159,136 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
         new Map(group.filter((v: any) => v.client_id).map((v: any) => [v.client_id, v])).values()
       );
 
+      let successCount = 0;
+      let failureCount = 0;
+
       for (const v of uniqueClients) {
         const clientId = v.client_id;
         const agentId = v.agent_id || visite.agent_id;
+        try {
+          // Canonical conversation for this client (creates if missing,
+          // upserts current agent as participant).
+          const convId = await getOrCreateClientConversation(clientId);
 
-        // Find or create conversation (client_id, agent_id)
-        let convId: string | null = null;
-        if (agentId) {
-          const { data: conv } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('client_id', clientId)
-            .eq('agent_id', agentId)
-            .maybeSingle();
-          if (conv) convId = conv.id;
-          else {
-            const { data: created } = await supabase
-              .from('conversations')
-              .insert({ client_id: clientId, agent_id: agentId })
-              .select('id')
-              .single();
-            convId = created?.id || null;
+          const messageContent = `🎥 Vidéo de la visite disponible ci-dessous.\n\n📍 ${visite.adresse}`;
+
+          if (convId) {
+            await supabase.from('messages').insert({
+              conversation_id: convId,
+              sender_id: user.id,
+              sender_type: 'agent',
+              content: messageContent,
+              attachment_url: videoUrl,
+              attachment_type: 'video',
+              attachment_name: pickedFile.name,
+              attachment_size: pickedFile.size,
+              offre_id: v.offre_id ?? visite.offre_id ?? null,
+              payload: {
+                type: 'visite_video',
+                visite_id: v.id,
+                offre_id: v.offre_id ?? visite.offre_id ?? null,
+                inline: isInline,
+                path,
+                video_url: videoUrl,
+                mime: resolvedMime,
+                medias: [{
+                  type: 'video',
+                  url: videoUrl,
+                  name: pickedFile.name,
+                  size: pickedFile.size,
+                  mime: resolvedMime,
+                  path,
+                }],
+              } as any,
+            });
           }
-        } else {
-          const { data: conv } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('client_id', clientId)
-            .limit(1)
-            .maybeSingle();
-          convId = conv?.id || null;
-        }
 
-        // Safety net: ensure current agent of the client is participant of the conversation
-        if (convId) {
-          try {
-            const { data: cliRow } = await supabase
+          // Notification for the client (+ email via trigger_notification_email)
+          let clientUserId = (v as any).clients?.user_id as string | undefined;
+          if (!clientUserId && clientId) {
+            const { data: cRow } = await supabase
               .from('clients')
-              .select('agent_id')
+              .select('user_id')
               .eq('id', clientId)
               .maybeSingle();
-            const currentAgentId = cliRow?.agent_id;
-            if (currentAgentId) {
-              await supabase
-                .from('conversation_agents')
-                .upsert(
-                  { conversation_id: convId, agent_id: currentAgentId },
-                  { onConflict: 'conversation_id,agent_id', ignoreDuplicates: true }
-                );
-            }
-          } catch (e) {
-            console.warn('[VisitVideoShareButton] conversation_agents upsert failed', e);
+            clientUserId = cRow?.user_id || undefined;
           }
-        }
+          if (clientUserId) {
+            await supabase.rpc('create_notification', {
+              p_user_id: clientUserId,
+              p_type: 'visite_video',
+              p_title: '🎥 Une vidéo de votre visite est disponible',
+              p_message: `Visionnez la vidéo de ${visite.adresse} et indiquez si vous souhaitez postuler.`,
+              p_link: '/client/visites',
+              p_metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, path } as any,
+            });
+            try {
+              await supabase.functions.invoke('send-notification-email', {
+                body: {
+                  user_id: clientUserId,
+                  notification_type: 'visite_video',
+                  title: '🎥 Une vidéo de votre visite est disponible',
+                  message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}. Connectez-vous à Logisorama pour la visionner et indiquer si vous souhaitez déposer votre candidature.`,
+                  link: '/client/visites',
+                },
+              });
+            } catch (mailErr) {
+              console.warn('[VisitVideoShare] email fallback failed (non-blocking)', mailErr);
+            }
+          }
 
-        // Same message for BOTH capture and import: always attachment_type='video'
-        // so the messenger renders the inline player. Size is informational only.
-        const messageContent = `🎥 Vidéo de la visite disponible ci-dessous.\n\n📍 ${visite.adresse}`;
-
-        if (convId) {
-          await supabase.from('messages').insert({
-            conversation_id: convId,
-            sender_id: user.id,
-            sender_type: 'agent',
-            content: messageContent,
-            attachment_url: videoUrl,
-            attachment_type: 'video',
-            attachment_name: pickedFile.name,
-            attachment_size: pickedFile.size,
-            offre_id: v.offre_id ?? visite.offre_id ?? null,
-            payload: {
-              type: 'visite_video',
-              visite_id: v.id,
-              offre_id: v.offre_id ?? visite.offre_id ?? null,
-              inline: isInline,
-              path,
-              video_url: videoUrl,
-              mime: resolvedMime,
-              medias: [{
-                type: 'video',
-                url: videoUrl,
-                name: pickedFile.name,
-                size: pickedFile.size,
-                mime: resolvedMime,
-                path,
-              }],
-            } as any,
-          });
-        }
-
-        // Notification for the client (+ email via trigger_notification_email)
-        let clientUserId = (v as any).clients?.user_id as string | undefined;
-        if (!clientUserId && clientId) {
-          const { data: cRow } = await supabase
-            .from('clients')
-            .select('user_id')
-            .eq('id', clientId)
-            .maybeSingle();
-          clientUserId = cRow?.user_id || undefined;
-        }
-        if (clientUserId) {
-          await supabase.rpc('create_notification', {
-            p_user_id: clientUserId,
-            p_type: 'visite_video',
-            p_title: '🎥 Une vidéo de votre visite est disponible',
-            p_message: `Visionnez la vidéo de ${visite.adresse} et indiquez si vous souhaitez postuler.`,
-            p_link: '/client/visites',
-            p_metadata: { visite_id: v.id, offre_id: v.offre_id ?? null, path } as any,
-          });
-          // Belt-and-suspenders email in case the trigger is disabled
+          // WhatsApp notification — always a link.
           try {
-            await supabase.functions.invoke('send-notification-email', {
+            const { data: clientProfile } = await supabase
+              .from('profiles')
+              .select('prenom')
+              .eq('id', clientUserId)
+              .maybeSingle();
+            const { data: agentRow } = agentId
+              ? await supabase
+                  .from('agents')
+                  .select('user_id, profiles:user_id(prenom, nom)')
+                  .eq('id', agentId)
+                  .maybeSingle()
+              : { data: null as any };
+            const agentName = agentRow?.profiles
+              ? `${agentRow.profiles.prenom ?? ''} ${agentRow.profiles.nom ?? ''}`.trim() || 'votre agent'
+              : 'votre agent';
+            const sizeNote = pickedFile.size > WHATSAPP_MAX
+              ? ` (vidéo ${(pickedFile.size / (1024 * 1024)).toFixed(0)} Mo)`
+              : '';
+            const waLine = `🎥 Vidéo de visite${sizeNote} pour ${visite.adresse} — ${videoUrl}`;
+            await supabase.functions.invoke('send-whatsapp-notification', {
               body: {
-                user_id: clientUserId,
-                notification_type: 'visite_video',
-                title: '🎥 Une vidéo de votre visite est disponible',
-                message: `Votre agent a partagé une vidéo de la visite au ${visite.adresse}. Connectez-vous à Logisorama pour la visionner et indiquer si vous souhaitez déposer votre candidature.`,
-                link: '/client/visites',
+                event_type: 'visit_video_shared',
+                template_key: 'agent_message_alert',
+                client_id: clientId,
+                agent_id: agentId,
+                preference_key: 'agent_messages_enabled',
+                variables: [clientProfile?.prenom || 'client', agentName, waLine],
+                context_type: 'visite',
+                context_ref: v.id,
+                inbox_body_text: waLine,
               },
             });
-          } catch (mailErr) {
-            console.warn('[VisitVideoShare] email fallback failed (non-blocking)', mailErr);
+          } catch (waErr) {
+            console.warn('[VisitVideoShare] WhatsApp send failed (non-blocking)', waErr);
           }
-        }
 
-
-        // WhatsApp notification — always a link (WA media API not wired for freeform uploads).
-        // Text-only template avoids the ~16 MB WA media limit entirely.
-        try {
-          const { data: clientProfile } = await supabase
-            .from('profiles')
-            .select('prenom')
-            .eq('id', clientUserId)
-            .maybeSingle();
-          const { data: agentRow } = agentId
-            ? await supabase
-                .from('agents')
-                .select('user_id, profiles:user_id(prenom, nom)')
-                .eq('id', agentId)
-                .maybeSingle()
-            : { data: null as any };
-          const agentName = agentRow?.profiles
-            ? `${agentRow.profiles.prenom ?? ''} ${agentRow.profiles.nom ?? ''}`.trim() || 'votre agent'
-            : 'votre agent';
-          const sizeNote = pickedFile.size > WHATSAPP_MAX
-            ? ` (vidéo ${(pickedFile.size / (1024 * 1024)).toFixed(0)} Mo)`
-            : '';
-          const waLine = `🎥 Vidéo de visite${sizeNote} pour ${visite.adresse} — ${videoUrl}`;
-          await supabase.functions.invoke('send-whatsapp-notification', {
-            body: {
-              event_type: 'visit_video_shared',
-              template_key: 'agent_message_alert',
-              client_id: clientId,
-              agent_id: agentId,
-              preference_key: 'agent_messages_enabled',
-              variables: [clientProfile?.prenom || 'client', agentName, waLine],
-              context_type: 'visite',
-              context_ref: v.id,
-              inbox_body_text: waLine,
-            },
-          });
-        } catch (waErr) {
-          console.warn('[VisitVideoShare] WhatsApp send failed (non-blocking)', waErr);
+          successCount += 1;
+        } catch (perClientErr) {
+          failureCount += 1;
+          console.error('[VisitVideoShare] failed for client', clientId, perClientErr);
         }
       }
 
       setProgress(100);
       setDone(true);
-      toast.success(`Vidéo partagée à ${uniqueClients.length} client(s)`);
+      const recap = failureCount > 0
+        ? `Vidéo envoyée à ${successCount} client(s) (${failureCount} échec${failureCount > 1 ? 's' : ''})`
+        : `Vidéo partagée à ${successCount} client(s)`;
+      if (failureCount > 0 && successCount === 0) toast.error(recap);
+      else toast.success(recap);
       onUploaded?.();
       setTimeout(() => {
         setOpen(false);
