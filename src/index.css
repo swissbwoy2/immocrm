@@ -281,6 +281,65 @@ All colors MUST be HSL.
     --whatsapp-bubble-in: 217 19% 18%;
     --whatsapp-bg: 215 28% 11%;
   }
+
+  /* Immo-rama messaging palette — scoped to .imr-chat, applied on mobile */
+  .imr-chat {
+    --chat-primary: 158 55% 38%;
+    --chat-primary-light: 158 50% 50%;
+    --chat-accent: 200 70% 45%;
+    --chat-bg: 160 30% 97%;
+    --chat-bubble-in: 0 0% 100%;
+    --chat-bubble-out: 158 45% 92%;
+    --chat-ink: 200 35% 18%;
+    --chat-muted: 200 20% 45%;
+  }
+
+  @media (max-width: 1023px) {
+    .imr-chat {
+      --whatsapp-green: 158 55% 38%;
+      --whatsapp-green-dark: 158 60% 30%;
+      --whatsapp-green-darker: 158 65% 24%;
+      --whatsapp-bubble-out: 158 45% 92%;
+      --whatsapp-bubble-in: 0 0% 100%;
+      --whatsapp-bg: 160 30% 97%;
+      --whatsapp-tick: 200 70% 45%;
+      --primary: 158 55% 38%;
+      --primary-foreground: 0 0% 100%;
+    }
+
+    .imr-chat input[placeholder="Rechercher..."] {
+      border-radius: 9999px;
+      background: hsl(160 25% 95%);
+      padding-left: 2.25rem;
+      height: 42px;
+    }
+
+    .imr-chat .chat-background {
+      background:
+        radial-gradient(hsl(var(--chat-primary) / 0.04) 1px, transparent 1px),
+        radial-gradient(hsl(var(--chat-accent) / 0.03) 1px, transparent 1px),
+        hsl(var(--chat-bg));
+      background-size: 28px 28px, 28px 28px;
+      background-position: 0 0, 14px 14px;
+    }
+
+    .imr-chat form textarea[aria-label="Écrire un message"] {
+      background: hsl(0 0% 100%);
+      border-radius: 20px;
+    }
+
+    .imr-chat button[aria-label="Envoyer le message"] {
+      background: hsl(var(--chat-primary));
+      box-shadow: 0 6px 18px -6px hsl(var(--chat-primary) / 0.6);
+    }
+    .imr-chat button[aria-label="Envoyer le message"]:hover:not(:disabled) {
+      background: hsl(var(--chat-primary-light));
+    }
+
+    .imr-chat form {
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.25rem);
+    }
+  }
 }
 
 @layer utilities {

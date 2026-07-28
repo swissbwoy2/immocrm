@@ -59,7 +59,7 @@ export function MessagingLayout({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden relative">
+    <div className="imr-chat flex flex-col lg:flex-row h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden relative">
       {/* Overlay pour mobile */}
       <div
         className={cn(
