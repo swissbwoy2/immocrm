@@ -416,10 +416,24 @@ export default function VideosRecues() {
       ) : (
         <div className="space-y-6">
           {items.map((item) => (
-            <VideoOfferCard key={item.message.id} item={item} onDecisionSaved={load} />
+            <VideoOfferCard key={item.message.id} item={item} onDecisionSaved={load} onViewOffer={setDialogOffre} />
           ))}
         </div>
       )}
+
+      <PremiumOffreDetailsDialog
+        open={!!dialogOffre}
+        onOpenChange={(o) => { if (!o) setDialogOffre(null); }}
+        offre={dialogOffre}
+        candidatures={[]}
+        clientData={{}}
+        documentsStats={{}}
+        visites={[]}
+        onProgressWorkflow={async () => {}}
+        onPlanVisit={() => {}}
+        onPostulerDirect={() => {}}
+        formatStatutOffre={(statut: string) => ({ label: statut || '—', variant: 'default' as any })}
+      />
     </div>
   );
 }
