@@ -568,6 +568,7 @@ const Messagerie = () => {
 
   const conversationsList = (
     <>
+      <StoriesBar />
       <div className="p-4 border-b border-border/50 space-y-3">
         <div className="flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">

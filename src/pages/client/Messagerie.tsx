@@ -1685,6 +1685,7 @@ const Messagerie = () => {
 
   const conversationsList = (
     <div className="flex flex-col h-full relative overflow-hidden">
+      <StoriesBar />
       {/* Premium background effects */}
       <FloatingParticles count={10} className="opacity-30" />
       
