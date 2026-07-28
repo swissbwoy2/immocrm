@@ -332,7 +332,7 @@ export default function VideosRecues() {
       // 5. visites (for client_decision, visite id)
       const { data: visites } = await supabase
         .from('visites')
-        .select('id, offre_id, client_decision, agent_id, adresse, date_visite')
+        .select('id, offre_id, client_decision, agent_id, adresse, date_visite, compte_rendu, compte_rendu_at')
         .eq('client_id', clientId)
         .in('offre_id', offreIds);
       const visiteByOffre = new Map<string, VisiteRow>();
