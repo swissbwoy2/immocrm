@@ -41,9 +41,13 @@ import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
+import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
+import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import DateSeparator from "@/components/messaging/DateSeparator";
+
+const AGENT_TAB_STORAGE_KEY = "messagerie_agent_tab";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -106,6 +110,18 @@ const Messagerie = () => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
+  const [lastMetaMap, setLastMetaMap] = useState<Map<string, ConvLastMeta>>(new Map());
+  const [videoConvSet, setVideoConvSet] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<ConversationTabKey>(() => {
+    try {
+      const saved = localStorage.getItem(AGENT_TAB_STORAGE_KEY) as ConversationTabKey | null;
+      if (saved && ["a_traiter", "videos", "clients", "robot", "tout"].includes(saved)) return saved;
+    } catch {}
+    return "a_traiter";
+  });
+  useEffect(() => {
+    try { localStorage.setItem(AGENT_TAB_STORAGE_KEY, activeTab); } catch {}
+  }, [activeTab]);
   const [agentFullName, setAgentFullName] = useState<string>("");
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
@@ -381,6 +397,27 @@ const Messagerie = () => {
           }
         }
         setLastMessagesMap(lastMsgsMap);
+
+        // Batch: last message metadata (sender_type/sender_id/attachment_type)
+        const { data: allMsgs } = await supabase
+          .from('messages')
+          .select('conversation_id, sender_type, sender_id, attachment_type, created_at')
+          .in('conversation_id', convIds)
+          .order('created_at', { ascending: false });
+        const metaMap = new Map<string, ConvLastMeta>();
+        const videoSet = new Set<string>();
+        (allMsgs || []).forEach((m: any) => {
+          if (!metaMap.has(m.conversation_id)) {
+            metaMap.set(m.conversation_id, {
+              sender_type: m.sender_type,
+              sender_id: m.sender_id,
+              attachment_type: m.attachment_type,
+            });
+          }
+          if (m.attachment_type === 'video') videoSet.add(m.conversation_id);
+        });
+        setLastMetaMap(metaMap);
+        setVideoConvSet(videoSet);
       }
 
       const clientIds = convData?.filter(c => c.client_id).map(c => c.client_id) || [];
@@ -1131,12 +1168,25 @@ const Messagerie = () => {
     return { name: 'Inconnu', type: 'unknown' };
   };
 
-  const filteredConversations = conversations.filter(conv => {
+  const searchedConversations = conversations.filter(conv => {
     const searchTerm = removeAccents(searchQuery.toLowerCase());
     const contactInfo = getContactInfo(conv);
     const contactName = removeAccents(contactInfo.name.toLowerCase());
     return contactName.includes(searchTerm);
   });
+
+  const { filtered: tabBuckets, counts: tabCounts } = useMemo(
+    () => computeTabBuckets({
+      conversations: searchedConversations,
+      getId: (c: any) => c.id,
+      lastMetaMap,
+      unreadMap: unreadCountsMap,
+      videoConvSet,
+      selfSenderType: 'agent',
+    }),
+    [searchedConversations, lastMetaMap, unreadCountsMap, videoConvSet]
+  );
+  const filteredConversations = tabBuckets[activeTab];
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
 
@@ -1417,6 +1467,16 @@ const Messagerie = () => {
           />
         </div>
       </div>
+      {tabCounts.a_traiter > 0 && activeTab !== 'a_traiter' && (
+        <button
+          type="button"
+          onClick={() => setActiveTab('a_traiter')}
+          className="mx-3 mt-3 rounded-lg border border-red-500/40 bg-red-500/10 hover:bg-red-500/15 transition-colors px-3 py-2 text-left text-xs font-medium text-red-700 dark:text-red-300 flex items-center gap-2"
+        >
+          🔔 {tabCounts.a_traiter} conversation{tabCounts.a_traiter > 1 ? 's' : ''} à traiter aujourd'hui
+        </button>
+      )}
+      <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
       <ScrollArea className="flex-1">
         {isLoadingConversations ? (
           <ConversationListSkeleton />

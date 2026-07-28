@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,10 @@ import { FloatingParticles, MeshGradientBackground } from "@/components/messagin
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isSameDay, parseISO } from "date-fns";
+import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
+import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
+
+const ADMIN_TAB_STORAGE_KEY = "messagerie_admin_tab";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -53,6 +57,18 @@ const Messagerie = () => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
+  const [lastMetaMap, setLastMetaMap] = useState<Map<string, ConvLastMeta>>(new Map());
+  const [videoConvSet, setVideoConvSet] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<ConversationTabKey>(() => {
+    try {
+      const saved = localStorage.getItem(ADMIN_TAB_STORAGE_KEY) as ConversationTabKey | null;
+      if (saved && ["a_traiter", "videos", "clients", "robot", "tout"].includes(saved)) return saved;
+    } catch {}
+    return "a_traiter";
+  });
+  useEffect(() => {
+    try { localStorage.setItem(ADMIN_TAB_STORAGE_KEY, activeTab); } catch {}
+  }, [activeTab]);
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
     const viewport = scrollViewportRef.current;
@@ -251,25 +267,35 @@ const Messagerie = () => {
           ? await supabase.from('profiles').select('id, prenom, nom, email, last_seen_at, is_online').in('id', allUserIds)
           : { data: [] as { id: string; prenom: string; nom: string; email: string; last_seen_at: string | null; is_online: boolean | null }[] };
 
-        // Charger les derniers messages de chaque conversation
+        // Charger les derniers messages de chaque conversation (+ meta pour les onglets)
         const { data: lastMessagesData } = conversationIds.length > 0
           ? await supabase
               .from('messages')
-              .select('conversation_id, content, attachment_name, created_at')
+              .select('conversation_id, content, attachment_name, attachment_type, sender_type, sender_id, created_at')
               .in('conversation_id', conversationIds)
               .order('created_at', { ascending: false })
-          : { data: [] as { conversation_id: string; content: string | null; attachment_name: string | null; created_at: string }[] };
+          : { data: [] as any[] };
 
-        // Créer une map du dernier message par conversation
+        // Créer une map du dernier message par conversation + meta + vidéo set
         const lastMessagesMap = new Map<string, { content: string | null; attachment_name: string | null }>();
-        lastMessagesData?.forEach(msg => {
+        const metaMap = new Map<string, ConvLastMeta>();
+        const videoSet = new Set<string>();
+        (lastMessagesData || []).forEach((msg: any) => {
           if (!lastMessagesMap.has(msg.conversation_id)) {
             lastMessagesMap.set(msg.conversation_id, {
               content: msg.content,
               attachment_name: msg.attachment_name
             });
+            metaMap.set(msg.conversation_id, {
+              sender_type: msg.sender_type,
+              sender_id: msg.sender_id,
+              attachment_type: msg.attachment_type,
+            });
           }
+          if (msg.attachment_type === 'video') videoSet.add(msg.conversation_id);
         });
+        setLastMetaMap(metaMap);
+        setVideoConvSet(videoSet);
         
         const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
         const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
@@ -500,12 +526,25 @@ const Messagerie = () => {
     }
   };
 
-  const filteredConversations = conversations.filter(conv => {
+  const searchedConversations = conversations.filter(conv => {
     const searchTerm = removeAccents(searchQuery.toLowerCase());
     const clientName = removeAccents((conv.clientName || '').toLowerCase());
     const agentName = removeAccents((conv.agentName || '').toLowerCase());
     return clientName.includes(searchTerm) || agentName.includes(searchTerm);
   });
+
+  const { filtered: tabBuckets, counts: tabCounts } = useMemo(
+    () => computeTabBuckets({
+      conversations: searchedConversations,
+      getId: (c: any) => c.id,
+      lastMetaMap,
+      unreadMap: unreadCountsMap,
+      videoConvSet,
+      selfSenderType: 'admin',
+    }),
+    [searchedConversations, lastMetaMap, unreadCountsMap, videoConvSet]
+  );
+  const filteredConversations = tabBuckets[activeTab];
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
   const currentConversation = conversations.find(c => c.id === selectedConv);
@@ -549,6 +588,7 @@ const Messagerie = () => {
           />
         </div>
       </div>
+      <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
       <ScrollArea className="flex-1">
         {isLoadingConversations ? (
           <ConversationListSkeleton />

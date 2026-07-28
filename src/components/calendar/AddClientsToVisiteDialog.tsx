@@ -189,6 +189,26 @@ export const AddClientsToVisiteDialog = ({
           conversationId = newConv.id;
         }
 
+        // Safety net: ensure current agent of the client is participant of the conversation
+        try {
+          const { data: cliRow } = await supabase
+            .from('clients')
+            .select('agent_id')
+            .eq('id', clientId)
+            .maybeSingle();
+          const currentAgentId = cliRow?.agent_id;
+          if (currentAgentId && conversationId) {
+            await supabase
+              .from('conversation_agents')
+              .upsert(
+                { conversation_id: conversationId, agent_id: currentAgentId },
+                { onConflict: 'conversation_id,agent_id', ignoreDuplicates: true }
+              );
+          }
+        } catch (e) {
+          console.warn('[AddClientsToVisiteDialog] conversation_agents upsert failed', e);
+        }
+
         // 3) Insert message
         const client = availableClients.find(c => c.id === clientId);
         const prenom = client?.profiles?.prenom || 'Bonjour';

@@ -178,6 +178,28 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
           convId = conv?.id || null;
         }
 
+        // Safety net: ensure current agent of the client is participant of the conversation
+        if (convId) {
+          try {
+            const { data: cliRow } = await supabase
+              .from('clients')
+              .select('agent_id')
+              .eq('id', clientId)
+              .maybeSingle();
+            const currentAgentId = cliRow?.agent_id;
+            if (currentAgentId) {
+              await supabase
+                .from('conversation_agents')
+                .upsert(
+                  { conversation_id: convId, agent_id: currentAgentId },
+                  { onConflict: 'conversation_id,agent_id', ignoreDuplicates: true }
+                );
+            }
+          } catch (e) {
+            console.warn('[VisitVideoShareButton] conversation_agents upsert failed', e);
+          }
+        }
+
         // Same message for BOTH capture and import: always attachment_type='video'
         // so the messenger renders the inline player. Size is informational only.
         const messageContent = `🎥 Vidéo de la visite disponible ci-dessous.\n\n📍 ${visite.adresse}`;
