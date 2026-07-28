@@ -41,9 +41,13 @@ import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
+import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
+import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import DateSeparator from "@/components/messaging/DateSeparator";
+
+const AGENT_TAB_STORAGE_KEY = "messagerie_agent_tab";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
