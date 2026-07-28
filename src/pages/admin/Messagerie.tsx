@@ -25,6 +25,10 @@ import { FloatingParticles, MeshGradientBackground } from "@/components/messagin
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isSameDay, parseISO } from "date-fns";
+import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
+import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
+
+const ADMIN_TAB_STORAGE_KEY = "messagerie_admin_tab";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
