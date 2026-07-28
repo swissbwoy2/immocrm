@@ -1528,6 +1528,7 @@ const OffresRecues = () => {
                         </>
                       )}
                     </div>
+                    <VideoDecisionInlineButtons offre={offre} visites={visites} onDone={() => { loadOffres(); loadVisites(); }} />
                   </div>
                 </Card>
               );
