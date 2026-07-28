@@ -64,7 +64,7 @@ function InfoPill({ icon: Icon, label }: { icon: any; label: string }) {
   );
 }
 
-function VideoOfferCard({ item, onDecisionSaved }: { item: Item; onDecisionSaved: () => void }) {
+function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; onDecisionSaved: () => void; onViewOffer: (offre: OffreData) => void }) {
   const { user } = useAuth();
   const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
   const { message, offre, visite } = item;
