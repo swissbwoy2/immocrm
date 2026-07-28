@@ -163,52 +163,9 @@ export const AddClientsToVisiteDialog = ({
 
         if (offerError) throw offerError;
 
-        // 2) Get / create conversation
-        const { data: existingConv } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('client_id', clientId)
-          .eq('conversation_type', 'client-agent')
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        let conversationId = existingConv?.id;
-        if (!conversationId) {
-          const { data: newConv, error: convError } = await supabase
-            .from('conversations')
-            .insert({
-              agent_id: agentId,
-              client_id: clientId,
-              conversation_type: 'client-agent',
-              subject: `Offre - ${adresse}`,
-              status: 'active',
-            })
-            .select()
-            .single();
-          if (convError) throw convError;
-          conversationId = newConv.id;
-        }
-
-        // Safety net: ensure current agent of the client is participant of the conversation
-        try {
-          const { data: cliRow } = await supabase
-            .from('clients')
-            .select('agent_id')
-            .eq('id', clientId)
-            .maybeSingle();
-          const currentAgentId = cliRow?.agent_id;
-          if (currentAgentId && conversationId) {
-            await supabase
-              .from('conversation_agents')
-              .upsert(
-                { conversation_id: conversationId, agent_id: currentAgentId },
-                { onConflict: 'conversation_id,agent_id', ignoreDuplicates: true }
-              );
-          }
-        } catch (e) {
-          console.warn('[AddClientsToVisiteDialog] conversation_agents upsert failed', e);
-        }
+        // 2) Canonical conversation (helper ensures oldest + agent participant)
+        const conversationId = await getOrCreateClientConversation(clientId);
+        if (!conversationId) throw new Error('Conversation introuvable');
 
         // 3) Insert message
         const client = availableClients.find(c => c.id === clientId);
