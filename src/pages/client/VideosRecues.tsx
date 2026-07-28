@@ -378,9 +378,9 @@ export default function VideosRecues() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-6 space-y-6">
       <PremiumPageHeader
-        title="Vidéos de visite reçues"
-        subtitle={count > 0 ? `${count} vidéo${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}` : 'Retrouvez ici toutes vos vidéos de visite'}
-        icon={Video}
+        title="Offres reçues"
+        subtitle={count > 0 ? `${count} offre${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}` : 'Retrouvez ici toutes vos offres avec la vidéo de visite et le compte-rendu'}
+        icon={Camera}
       />
 
       {loading ? (
@@ -400,9 +400,9 @@ export default function VideosRecues() {
         </div>
       ) : items.length === 0 ? (
         <PremiumEmptyState
-          icon={Video}
-          title="Aucune vidéo de visite pour le moment"
-          description="Dès qu'un agent partagera une vidéo de visite avec vous, elle apparaîtra ici avec le détail complet du bien."
+          icon={Camera}
+          title="Aucune offre reçue pour le moment."
+          description="Dès qu'un agent partagera une offre avec vidéo de visite, elle apparaîtra ici avec le détail complet du bien."
         />
       ) : (
         <div className="space-y-6">
