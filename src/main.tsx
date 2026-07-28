@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
+import { toast } from 'sonner';
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
@@ -22,9 +23,17 @@ if (isPreviewHost || isInIframe) {
     registrations.forEach((registration) => registration.unregister());
   });
 } else {
-  registerSW({
+  const updateSW = registerSW({
     onNeedRefresh() {
-      console.log('[PWA] New version available — will apply on next navigation. Close & reopen the app if a stale screen persists.');
+      console.log('[PWA] New version available.');
+      toast('Nouvelle version disponible', {
+        description: 'Rechargez pour appliquer la mise à jour.',
+        duration: Infinity,
+        action: {
+          label: 'Recharger',
+          onClick: () => updateSW(true),
+        },
+      });
     },
     onOfflineReady() {
       console.log('[PWA] App ready for offline use');

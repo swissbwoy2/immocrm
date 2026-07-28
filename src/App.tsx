@@ -94,6 +94,8 @@ const AdminRemplirDemandeIA = lazy(() => import("./pages/admin/RemplirDemandeIA"
 const AdminLeads = lazy(() => import("./pages/admin/Leads"));
 const AdminAutoOffres = lazy(() => import("./pages/admin/AutoOffres"));
 const AdminOffresAuto = lazy(() => import("./pages/admin/OffresAuto"));
+const AdminPostulations = lazy(() => import("./pages/admin/Postulations"));
+const AgentPostulations = lazy(() => import("./pages/agent/Postulations"));
 const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminSalaires = lazy(() => import("./pages/admin/Salaires"));
@@ -377,6 +379,8 @@ const App = () => (
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/auto-offres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAutoOffres /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/offres-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminOffresAuto /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/postulations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminPostulations /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/postulations" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentPostulations /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/salaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminSalaires /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnalytics /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/meta-leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMetaLeads /></AppLayout></ProtectedRoute>} />

@@ -27,6 +27,7 @@ import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
+import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 
@@ -841,6 +842,13 @@ export default function AdminCalendrier() {
 
               {/* Vidéo(s) de la visite — lecteur inline */}
               <VisitVideoPlayer medias={selectedVisiteGroup[0].medias} />
+
+              {/* Compte-rendu de la visite */}
+              <VisitCompteRenduForm
+                visite={selectedVisiteGroup[0]}
+                visitesGroup={selectedVisiteGroup}
+                onSaved={() => { /* refresh handled by parent effects */ }}
+              />
             </div>
           )}
 

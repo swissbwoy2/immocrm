@@ -1,4 +1,5 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox } from 'lucide-react';
+import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
             { name: 'Auto-Offres', icon: Bot, path: '/admin/auto-offres', notifKey: null },
             { name: 'Offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
+            { name: '📮 Postulations', icon: Mailbox, path: '/admin/postulations', notifKey: 'postulations' },
             { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
             { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
             { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
@@ -177,6 +179,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
             { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: 'client_interesse' },
             { name: 'Offres automatiques', icon: Bot, path: '/agent/offres-auto', notifKey: null },
+            { name: '📮 Postulations', icon: Mailbox, path: '/agent/postulations', notifKey: 'postulations' },
             { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/agent/wishlist', notifKey: null },
           ],
         },
@@ -307,7 +310,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Mon logement',
           items: [
             { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
-            { name: '🎥 Vidéos reçues', icon: Video, path: '/client/videos-recues', notifKey: null },
+            { name: 'Offre reçue', icon: Camera, path: '/client/videos-recues', notifKey: null },
             { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
             { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
             { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
@@ -461,6 +464,7 @@ export function AppSidebar() {
   const whatsappUnread = useWhatsAppUnreadCount(
     userRole === 'admin' ? 'admin' : userRole === 'agent' ? 'agent' : 'both'
   );
+  const postulationsCount = usePostulationsCount(userRole);
   const [hasDrafts, setHasDrafts] = useState(false);
 
   const handleNavClick = () => {
@@ -536,6 +540,7 @@ export function AppSidebar() {
   const getNotificationCount = (notifKey: string | null): number => {
     if (!notifKey) return 0;
     if (notifKey === 'whatsapp_unread') return whatsappUnread;
+    if (notifKey === 'postulations') return postulationsCount;
     if (notifKey === 'visit_combined') {
       return (counts.new_visit || 0) + (counts.visit_reminder || 0);
     }
