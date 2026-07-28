@@ -267,25 +267,35 @@ const Messagerie = () => {
           ? await supabase.from('profiles').select('id, prenom, nom, email, last_seen_at, is_online').in('id', allUserIds)
           : { data: [] as { id: string; prenom: string; nom: string; email: string; last_seen_at: string | null; is_online: boolean | null }[] };
 
-        // Charger les derniers messages de chaque conversation
+        // Charger les derniers messages de chaque conversation (+ meta pour les onglets)
         const { data: lastMessagesData } = conversationIds.length > 0
           ? await supabase
               .from('messages')
-              .select('conversation_id, content, attachment_name, created_at')
+              .select('conversation_id, content, attachment_name, attachment_type, sender_type, sender_id, created_at')
               .in('conversation_id', conversationIds)
               .order('created_at', { ascending: false })
-          : { data: [] as { conversation_id: string; content: string | null; attachment_name: string | null; created_at: string }[] };
+          : { data: [] as any[] };
 
-        // Créer une map du dernier message par conversation
+        // Créer une map du dernier message par conversation + meta + vidéo set
         const lastMessagesMap = new Map<string, { content: string | null; attachment_name: string | null }>();
-        lastMessagesData?.forEach(msg => {
+        const metaMap = new Map<string, ConvLastMeta>();
+        const videoSet = new Set<string>();
+        (lastMessagesData || []).forEach((msg: any) => {
           if (!lastMessagesMap.has(msg.conversation_id)) {
             lastMessagesMap.set(msg.conversation_id, {
               content: msg.content,
               attachment_name: msg.attachment_name
             });
+            metaMap.set(msg.conversation_id, {
+              sender_type: msg.sender_type,
+              sender_id: msg.sender_id,
+              attachment_type: msg.attachment_type,
+            });
           }
+          if (msg.attachment_type === 'video') videoSet.add(msg.conversation_id);
         });
+        setLastMetaMap(metaMap);
+        setVideoConvSet(videoSet);
         
         const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
         const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
