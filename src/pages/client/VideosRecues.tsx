@@ -162,14 +162,21 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
             </div>
           )}
 
-          {offre?.lien_annonce && (
-            <Button asChild variant="outline" size="sm">
-              <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Voir l'annonce
-              </a>
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {offre && (
+              <Button size="sm" onClick={() => onViewOffer(offre)}>
+                <Eye className="w-4 h-4 mr-2" /> Voir l'offre
+              </Button>
+            )}
+            {offre?.lien_annonce && (
+              <Button asChild variant="outline" size="sm">
+                <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Voir l'annonce
+                </a>
+              </Button>
+            )}
+          </div>
 
           <div className="text-xs text-muted-foreground">
             Reçu le {formatSwissDateTime(message.created_at)}
