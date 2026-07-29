@@ -29,6 +29,7 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   const [comment, setComment] = useState("");
   const [insights, setInsights] = useState<{
     views: number;
+    viewers: { user_id: string; viewed_at: string; name: string; avatar_url: string | null }[];
     reactions: { emoji: string; count: number }[];
     comments: { id: string; content: string; user_id: string; created_at: string }[];
   } | null>(null);
@@ -76,7 +77,11 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
 
       if (user.id === story.author_user_id) {
         const [v, r, c] = await Promise.all([
-          supabase.from("story_views").select("id", { count: "exact", head: true }).eq("story_id", story.id),
+          supabase
+            .from("story_views")
+            .select("viewer_user_id, viewed_at")
+            .eq("story_id", story.id)
+            .order("viewed_at", { ascending: false }),
           supabase.from("story_reactions").select("emoji").eq("story_id", story.id),
           supabase
             .from("story_comments")
@@ -89,8 +94,29 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
         for (const row of (r.data ?? []) as any[]) {
           emojiMap.set(row.emoji, (emojiMap.get(row.emoji) ?? 0) + 1);
         }
+        const viewerRows = (v.data ?? []) as { viewer_user_id: string; viewed_at: string }[];
+        const uniqueViewerIds = Array.from(new Set(viewerRows.map((x) => x.viewer_user_id)));
+        let profMap = new Map<string, { prenom?: string; nom?: string; avatar_url?: string | null }>();
+        if (uniqueViewerIds.length > 0) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, prenom, nom, avatar_url")
+            .in("id", uniqueViewerIds);
+          for (const p of (profs ?? []) as any[]) profMap.set(p.id, p);
+        }
+        const viewers = viewerRows.map((row) => {
+          const p = profMap.get(row.viewer_user_id);
+          const name = p ? [p.prenom, p.nom].filter(Boolean).join(" ") || "Utilisateur" : "Utilisateur";
+          return {
+            user_id: row.viewer_user_id,
+            viewed_at: row.viewed_at,
+            name,
+            avatar_url: p?.avatar_url ?? null,
+          };
+        });
         setInsights({
-          views: v.count ?? 0,
+          views: viewerRows.length,
+          viewers,
           reactions: Array.from(emojiMap.entries()).map(([emoji, count]) => ({ emoji, count })),
           comments: (c.data ?? []) as any,
         });
@@ -267,7 +293,7 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
       {/* Bottom bar */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-black/70 to-transparent">
         {isAuthor && insights ? (
-          <div className="text-white space-y-2 max-h-56 overflow-y-auto">
+          <div className="text-white space-y-2 max-h-64 overflow-y-auto">
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1"><Eye className="h-4 w-4" />{insights.views}</span>
               {insights.reactions.map((r) => (
@@ -277,8 +303,32 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
                 </span>
               ))}
             </div>
+            {insights.viewers.length > 0 && (
+              <div className="space-y-1 bg-white/10 rounded-md p-2">
+                <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1">Vu par</p>
+                {insights.viewers.map((v) => (
+                  <div key={`${v.user_id}-${v.viewed_at}`} className="flex items-center gap-2 text-xs">
+                    {v.avatar_url ? (
+                      <img src={v.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold"
+                        style={{ background: "linear-gradient(135deg, hsl(158 55% 38%), hsl(200 70% 45%))" }}
+                      >
+                        {v.name.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="flex-1 truncate">{v.name}</span>
+                    <span className="opacity-70">
+                      {formatDistanceToNow(new Date(v.viewed_at), { locale: fr, addSuffix: true })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {insights.comments.length > 0 && (
               <div className="space-y-1 text-xs bg-white/10 rounded-md p-2">
+                <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1">Réponses</p>
                 {insights.comments.map((c) => (
                   <div key={c.id} className="truncate">
                     <span className="opacity-70">•</span> {c.content}
