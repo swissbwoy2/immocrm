@@ -71,6 +71,9 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
   const { message, offre, visite } = item;
   const address = offre?.adresse || visite?.adresse || 'Adresse non renseignée';
   const decision = visite?.client_decision ?? null;
+  // Une vidéo existe forcément ici, donc canDecide est en pratique toujours vrai —
+  // on garde le même critère partagé que l'onglet « Offres reçues ».
+  const canDecide = canDecideOnOffre(offre, visite ? [visite] : []) || !!message?.attachment_url;
 
   const infos: { icon: any; label: string }[] = [];
   if (offre?.pieces) infos.push({ icon: Home, label: `${offre.pieces} pièces` });
