@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { canDecideOnOffre } from '@/lib/visitDecision';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -218,9 +219,9 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
 
         {/* Decision */}
         <div className="p-5 pt-0">
-          {!visite?.id ? (
+          {!canDecide ? (
             <div className="text-xs text-muted-foreground italic text-center py-2">
-              La confirmation d'intérêt sera disponible dès que la visite associée sera enregistrée.
+              Disponible après la visite
             </div>
           ) : decision ? (
             <div className="flex justify-center">
