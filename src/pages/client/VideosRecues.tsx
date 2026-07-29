@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { canDecideOnOffre } from '@/lib/visitDecision';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -70,6 +71,9 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
   const { message, offre, visite } = item;
   const address = offre?.adresse || visite?.adresse || 'Adresse non renseignée';
   const decision = visite?.client_decision ?? null;
+  // Une vidéo existe forcément ici, donc canDecide est en pratique toujours vrai —
+  // on garde le même critère partagé que l'onglet « Offres reçues ».
+  const canDecide = canDecideOnOffre(offre, visite ? [visite] : []) || !!message?.attachment_url;
 
   const infos: { icon: any; label: string }[] = [];
   if (offre?.pieces) infos.push({ icon: Home, label: `${offre.pieces} pièces` });
@@ -218,9 +222,9 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
 
         {/* Decision */}
         <div className="p-5 pt-0">
-          {!visite?.id ? (
+          {!canDecide ? (
             <div className="text-xs text-muted-foreground italic text-center py-2">
-              La confirmation d'intérêt sera disponible dès que la visite associée sera enregistrée.
+              Disponible après la visite
             </div>
           ) : decision ? (
             <div className="flex justify-center">

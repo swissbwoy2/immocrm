@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { canDecideOnOffre } from '@/lib/visitDecision';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -101,13 +102,11 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
     const db = b.date_visite ? new Date(b.date_visite).getTime() : 0;
     return db - da;
   })[0];
-  const visitDone = offre.statut === 'visite_effectuee'
-    || offre.statut === 'candidature_deposee'
-    || relatedVisites.some((v) => v.statut === 'effectuee');
+  const canDecide = canDecideOnOffre(offre, relatedVisites);
   const decision: 'souhaite_postuler' | 'refuse' | null = latestVisite?.client_decision ?? null;
 
   const handle = async (choice: 'souhaite_postuler' | 'refuse') => {
-    if (!user || !visitDone || saving || decision) return;
+    if (!user || !canDecide || saving || decision) return;
     setSaving(choice);
     try {
       await submitVisitVideoDecision({
@@ -147,7 +146,7 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
         <Button
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          disabled={!visitDone || !!saving}
+          disabled={!canDecide || !!saving}
           onClick={() => handle('souhaite_postuler')}
         >
           {saving === 'souhaite_postuler' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
@@ -157,14 +156,14 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
           size="sm"
           variant="outline"
           className="border-red-500/40 text-red-700 hover:bg-red-500/10"
-          disabled={!visitDone || !!saving}
+          disabled={!canDecide || !!saving}
           onClick={() => handle('refuse')}
         >
           {saving === 'refuse' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <X className="w-4 h-4 mr-2" />}
           ❌ Je ne souhaite pas postuler
         </Button>
       </div>
-      {!visitDone && (
+      {!canDecide && (
         <div className="text-xs text-muted-foreground italic">Disponible après la visite</div>
       )}
     </div>
