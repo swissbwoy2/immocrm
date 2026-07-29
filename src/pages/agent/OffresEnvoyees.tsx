@@ -36,6 +36,7 @@ import { PremiumAgentOffreDetailsDialog } from '@/components/PremiumAgentOffreDe
 import { EditOffreDialog } from '@/components/EditOffreDialog';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { cn } from '@/lib/utils';
+import { updateOffreStatut } from '@/lib/offreStatus';
 
 // Animated counter component
 const AnimatedValue = ({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) => {
