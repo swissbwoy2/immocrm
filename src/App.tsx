@@ -11,6 +11,7 @@ import { PageLoader } from "./components/PageLoader";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { TikTokPixelProvider } from "./components/TikTokPixelProvider";
 import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
+import { IOSAppInterstitial } from "./components/IOSAppInterstitial";
 
 // Eager load critical pages
 import Login from "./pages/Login";
@@ -266,6 +267,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
+      <IOSAppInterstitial />
       <ScrollToTop />
       <BrowserRouter
         future={{

@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["F98S9X7L62.ch.logisorama.app"],
+        "components": [{ "/": "*" }]
+      }
+    ]
+  }
+}
