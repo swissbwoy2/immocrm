@@ -38,14 +38,47 @@ export async function submitVisitVideoDecision(params: {
   address?: string;
   choice: 'souhaite_postuler' | 'refuse';
 }): Promise<void> {
-  const { user, visiteId, offreId, agentIdHint, address = '', choice } = params;
+  const { user, visiteId: initialVisiteId, offreId, agentIdHint, address = '', choice } = params;
 
   const decisionAt = new Date().toISOString();
-  const { error: vErr } = await supabase
-    .from('visites')
-    .update({ client_decision: choice, client_decision_at: decisionAt })
-    .eq('id', visiteId);
-  if (vErr) throw vErr;
+  let visiteId = initialVisiteId;
+
+  // If no linked visite exists, create one so the decision can be recorded.
+  if (!visiteId) {
+    const { data: clientRow } = await supabase
+      .from('clients')
+      .select('id, agent_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const clientIdForVisite = clientRow?.id ?? null;
+    const agentIdForVisite = clientRow?.agent_id ?? agentIdHint ?? null;
+
+    if (clientIdForVisite) {
+      const { data: newVisite, error: createErr } = await supabase
+        .from('visites')
+        .insert({
+          offre_id: offreId ?? null,
+          client_id: clientIdForVisite,
+          agent_id: agentIdForVisite,
+          adresse: address,
+          date_visite: decisionAt,
+          statut: 'effectuee',
+          client_decision: choice,
+          client_decision_at: decisionAt,
+        })
+        .select('id')
+        .maybeSingle();
+      if (createErr) throw createErr;
+      visiteId = newVisite?.id ?? '';
+    }
+  } else {
+    const { error: vErr } = await supabase
+      .from('visites')
+      .update({ client_decision: choice, client_decision_at: decisionAt })
+      .eq('id', visiteId);
+    if (vErr) throw vErr;
+  }
 
   if (offreId) {
     const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';

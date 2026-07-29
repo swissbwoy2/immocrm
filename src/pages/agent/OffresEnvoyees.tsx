@@ -36,6 +36,7 @@ import { PremiumAgentOffreDetailsDialog } from '@/components/PremiumAgentOffreDe
 import { EditOffreDialog } from '@/components/EditOffreDialog';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { cn } from '@/lib/utils';
+import { updateOffreStatut } from '@/lib/offreStatus';
 
 // Animated counter component
 const AnimatedValue = ({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) => {
@@ -314,24 +315,19 @@ export default function OffresEnvoyees() {
       toast.error('Ce statut ne peut être atteint qu\'en déposant le dossier via "Déposer une candidature"');
       return;
     }
-    
-    try {
-      const { error } = await supabase
-        .from('offres')
-        .update({ statut: newStatut })
-        .eq('id', offreId);
 
-      if (error) throw error;
-
-      setOffres(offres.map(o => 
-        o.id === offreId ? { ...o, statut: newStatut } : o
-      ));
-      
-      toast.success(`Statut changé en "${STATUS_CONFIG[newStatut]?.label || newStatut}"`);
-    } catch (error) {
+    const { ok, error } = await updateOffreStatut(offreId, newStatut, { senderId: user?.id ?? null });
+    if (!ok) {
       console.error('Error updating status:', error);
       toast.error('Impossible de mettre à jour le statut');
+      return;
     }
+
+    setOffres(offres.map(o =>
+      o.id === offreId ? { ...o, statut: newStatut } : o
+    ));
+
+    toast.success(`Statut changé en "${STATUS_CONFIG[newStatut]?.label || newStatut}"`);
   };
 
   const handleDeleteOffer = async () => {

@@ -147,7 +147,7 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
         <Button
           size="sm"
           className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          disabled={!visitDone || !!saving || !latestVisite?.id}
+          disabled={!visitDone || !!saving}
           onClick={() => handle('souhaite_postuler')}
         >
           {saving === 'souhaite_postuler' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
@@ -157,7 +157,7 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
           size="sm"
           variant="outline"
           className="border-red-500/40 text-red-700 hover:bg-red-500/10"
-          disabled={!visitDone || !!saving || !latestVisite?.id}
+          disabled={!visitDone || !!saving}
           onClick={() => handle('refuse')}
         >
           {saving === 'refuse' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <X className="w-4 h-4 mr-2" />}

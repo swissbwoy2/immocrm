@@ -292,8 +292,17 @@ export function PremiumAgentDayEvents({
                   return (
                     <div
                       key={`visite-group-${firstVisite.id}-${idx}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onOpenDetail(firstVisite)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onOpenDetail(firstVisite);
+                        }
+                      }}
                       className={cn(
-                        'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300',
+                        'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300 cursor-pointer',
                         isShared ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02]' :
                         timeInfo.urgent ? 'border-destructive/50 hover:border-destructive' : 
                         hasDeleguee ? 'border-green-500/50 hover:border-green-500' : 
