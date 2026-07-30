@@ -244,19 +244,27 @@ export default function AdminCalendrier() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [rangeStartIso, rangeEndIso]);
+
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
+  // Recharge à chaque changement de fenêtre de dates (navigation de mois)
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Debounced reload for realtime events (silent — no spinner)
   const debouncedReload = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      loadData(true);
+      loadDataRef.current(true);
     }, 2500);
-  }, [loadData]);
+  }, []);
 
-  // Initial load + realtime subscriptions + polling fallback
+  // Realtime subscriptions + polling fallback
   useEffect(() => {
-    loadData();
+
 
     // Realtime subscriptions
     const channel = supabase
