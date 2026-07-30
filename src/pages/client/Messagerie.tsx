@@ -1335,12 +1335,12 @@ const Messagerie = () => {
 
   // Offer card component
   const OffreCard = ({ offre }: { offre: any }) => (
-    <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+    <div className="mt-2 p-3 sm:p-4 w-full max-w-full min-w-0 box-border overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
       <div className="flex items-start gap-2 mb-2">
         <Home className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-        <div className="flex-1">
-          <p className="font-semibold text-sm">{offre.adresse}</p>
-          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm break-words [overflow-wrap:anywhere]">{offre.adresse}</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground min-w-0">
             <span>💰 {offre.prix?.toLocaleString()} CHF</span>
             {offre.surface && <span>📐 {offre.surface} m²</span>}
             {offre.pieces && <span>🏠 {offre.pieces} pcs</span>}
@@ -1348,7 +1348,7 @@ const Messagerie = () => {
         </div>
       </div>
       {offre.lien_annonce && (
-        <div className="mt-2">
+        <div className="mt-2 min-w-0 max-w-full overflow-hidden">
           <LinkPreviewCard url={offre.lien_annonce} />
         </div>
       )}
