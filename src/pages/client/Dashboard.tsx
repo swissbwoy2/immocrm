@@ -27,7 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsDemoAccount } from '@/hooks/useIsDemoAccount';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
-import { getMandatDates } from '@/utils/mandatDates';
+import { getMandatDates, MANDAT_DURATION_DAYS } from '@/utils/mandatDates';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
