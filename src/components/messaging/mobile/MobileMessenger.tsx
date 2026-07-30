@@ -40,6 +40,9 @@ export function MobileMessenger({
     edgeThreshold: 40,
   });
 
+  // Conversation ouverte → plein écran (header app + bottom nav masqués)
+  useImmersiveMode(!!selectedConversation);
+
   if (!selectedConversation) {
     return (
       <div
@@ -53,7 +56,7 @@ export function MobileMessenger({
 
   return (
     <div
-      className="imr-chat flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden"
+      className="imr-chat flex flex-col h-full min-h-0 overflow-hidden"
       style={{ background: "hsl(160 30% 97%)" }}
     >
       {/* Sticky mobile chat header */}
