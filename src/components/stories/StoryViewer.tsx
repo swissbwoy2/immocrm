@@ -136,6 +136,8 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   useEffect(() => {
     if (!story || paused) return;
     if (story.type === "video") return;
+    // Ne démarre le timer image qu'une fois le média chargé (évite un flash noir + avance immédiate)
+    if (story.type === "image" && !mediaReady && !mediaError) return;
 
     const duration = IMAGE_DURATION_MS;
     startRef.current = Date.now() - (progressRef.current / 100) * duration;
@@ -156,7 +158,8 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id, story?.type, paused, goNext]);
+  }, [story?.id, story?.type, paused, goNext, mediaReady, mediaError]);
+
 
   // Pause / reprise de la vidéo
   useEffect(() => {
