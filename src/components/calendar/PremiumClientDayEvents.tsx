@@ -474,12 +474,23 @@ export function PremiumClientDayEvents({
                             </div>
                           )}
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
+                            {onOpenDetail && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => onOpenDetail(data, 'visite')}
+                                className="flex-1 min-w-0"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Voir le détail
+                              </Button>
+                            )}
                             <Button 
                               variant="outline"
                               size="sm"
                               onClick={onVoirOffre}
-                              className="flex-1 group/btn border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                              className="flex-1 min-w-0 group/btn border-border/50 hover:border-primary/50 hover:bg-primary/5"
                             >
                               <Eye className="mr-2 h-4 w-4 group-hover/btn:text-primary transition-colors" />
                               Voir l'offre
