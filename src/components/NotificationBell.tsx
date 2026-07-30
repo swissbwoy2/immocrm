@@ -95,7 +95,7 @@ export function NotificationBell() {
   const recentNotifications = notifications.slice(0, 10);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button 
           variant="ghost" 
