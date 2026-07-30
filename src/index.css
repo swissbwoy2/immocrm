@@ -294,6 +294,25 @@ All colors MUST be HSL.
     --chat-muted: 200 20% 45%;
   }
 
+  /* Garde-fou anti débordement horizontal dans la messagerie mobile */
+  @media (max-width: 1023px) {
+    .imr-chat,
+    .imr-chat * {
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+    .imr-chat {
+      overflow-x: hidden;
+    }
+    .imr-chat [data-radix-scroll-area-viewport] > div {
+      display: block !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+  }
+
+
+
   @media (max-width: 1023px) {
     .imr-chat {
       --whatsapp-green: 158 55% 38%;
