@@ -36,6 +36,8 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(Date.now());
+  const progressRef = useRef<number>(0);
+
 
   const group = groups[gi];
   const story: StoryRow | undefined = group?.stories[si];
