@@ -1610,7 +1610,7 @@ const Messagerie = () => {
         <div className="space-y-2 max-w-4xl mx-auto min-w-0">
           {/* Header qui défile avec les messages */}
           {/* Header qui défile avec les messages */}
-          {currentConversation && (
+          {currentConversation && !isMobile && (
             <div className="mb-4 pb-3 border-b border-border/30">
               <ChatHeader
                 name={getContactInfo(currentConversation).name}
