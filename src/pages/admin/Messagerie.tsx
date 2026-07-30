@@ -40,6 +40,7 @@ const removeAccents = (str: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const { markTypeAsRead } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
