@@ -711,8 +711,39 @@ const Messagerie = () => {
     </div>
   );
 
+  if (isMobile) {
+    const contactName = currentConversation
+      ? currentConversation.conversation_type === 'admin-agent'
+        ? currentConversation.agentName
+        : `${currentConversation.clientName ?? 'Client'} ↔ ${currentConversation.agentName ?? ''}`.trim()
+      : undefined;
+    return (
+      <MobileMessenger
+        conversationsList={conversationsList}
+        chatView={chatView}
+        selectedConversation={selectedConv}
+        onBack={() => setSelectedConv(null)}
+        headerName={contactName}
+        headerSubtitle={
+          currentConversation
+            ? currentConversation.conversation_type !== 'admin-agent' && currentConversation.clientIsOnline
+              ? 'En ligne'
+              : currentConversation.subject || 'Conversation'
+            : undefined
+        }
+        headerAvatarUrl={null}
+        isOnline={
+          currentConversation?.conversation_type !== 'admin-agent'
+            ? !!currentConversation?.clientIsOnline
+            : false
+        }
+      />
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
+
       <MessagingLayout
         conversationsList={conversationsList}
         chatView={chatView}
