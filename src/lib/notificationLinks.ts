@@ -228,6 +228,34 @@ const NOTIFICATION_ROUTES: Record<string, Partial<Record<UserRole, string>>> = {
   commission_earned: {
     apporteur: '/apporteur/commissions',
   },
+
+  // Offer status / video / client interest
+  offre_status_change: {
+    client: '/client/offres-recues',
+    agent: '/agent/offres-envoyees',
+    admin: '/admin/offres-envoyees',
+  },
+  client_interesse: {
+    agent: '/agent/offres-envoyees',
+    admin: '/admin/offres-envoyees',
+  },
+  client_souhaite_postuler: {
+    agent: '/agent/postulations',
+    admin: '/admin/postulations',
+  },
+  visite_video: {
+    client: '/client/videos-recues',
+    agent: '/agent/visites',
+    admin: '/admin/calendrier',
+  },
+
+  // Document reminders (client side)
+  payslip_reminder_soft: { client: '/client/documents' },
+  payslip_reminder_insistent: { client: '/client/documents' },
+  payslip_reminder_urgent: { client: '/client/documents' },
+  extrait_poursuites_missing: { client: '/client/documents' },
+  extrait_poursuites_warning: { client: '/client/documents' },
+  extrait_poursuites_expired: { client: '/client/documents' },
 };
 
 /**
