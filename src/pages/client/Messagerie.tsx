@@ -1380,23 +1380,23 @@ const Messagerie = () => {
     if (statut === 'envoyee' || statut === 'vue') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1">
+          <div className="flex flex-wrap gap-2 min-w-0">
+            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <Heart className="h-4 w-4 mr-1" /> Intéressé(e)
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1">
+          <div className="flex flex-wrap gap-2 min-w-0">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1">
+            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <FileText className="h-4 w-4 mr-1" /> Postuler
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-w-0">
             <Button size="sm" variant="ghost" onClick={() => onAction('details')} disabled={isProcessingAction}>
               <ExternalLink className="h-4 w-4 mr-1" /> Détails
             </Button>
@@ -1417,11 +1417,11 @@ const Messagerie = () => {
               <Check className="h-3 w-3" /> Vous êtes intéressé(e) par cette offre
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1">
+          <div className="flex flex-wrap gap-2 min-w-0">
+            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1 min-w-[45%] basis-0">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1 min-w-[45%] basis-0">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
           </div>
@@ -1470,7 +1470,7 @@ const Messagerie = () => {
               <Check className="h-3 w-3" /> Visite effectuée
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-w-0">
             <Button size="sm" onClick={() => onAction('deposer_candidature')} className="flex-1">
               <FileText className="h-4 w-4 mr-1" /> Déposer candidature
             </Button>
@@ -1650,7 +1650,7 @@ const Messagerie = () => {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-w-0">
             <Button size="sm" variant="outline" onClick={() => onAction('avis_google')} className="flex-1">
               <Star className="h-4 w-4 mr-1" /> Laisser un avis Google
             </Button>
