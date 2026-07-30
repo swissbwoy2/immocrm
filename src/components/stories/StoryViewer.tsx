@@ -30,6 +30,8 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   const [si, setSi] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [mediaReady, setMediaReady] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const [comment, setComment] = useState("");
   const [insights, setInsights] = useState<{
     views: number;
