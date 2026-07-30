@@ -427,10 +427,10 @@ function ClientDashboardLocation() {
       }
       
       await loadData();
-      toast.success('✅ Votre mandat a été renouvelé pour 90 jours !');
-    } catch (error) {
+      toast.success(`✅ Mandat renouvelé jusqu'au ${newEnd.toLocaleDateString('fr-CH')}`);
+    } catch (error: any) {
       console.error('Error renewing mandate:', error);
-      toast.error('❌ Erreur lors du renouvellement');
+      toast.error(`❌ Erreur lors du renouvellement${error?.message ? ` : ${error.message}` : ''}`);
     }
   };
 
