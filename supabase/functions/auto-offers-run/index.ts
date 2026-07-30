@@ -2,6 +2,8 @@
 // Sécurisée par un secret cron (AUTO_OFFERS_CRON_SECRET) OU un JWT admin.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseHTML } from "npm:linkedom@0.18.5";
+import { buildOffreMessage, cleanValue } from "../_shared/offre-message.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
