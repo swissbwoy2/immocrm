@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const limit: number = Math.min(Number(body.limit) || 500, 1000);
+  const offset: number = Math.max(Number(body.offset) || 0, 0);
   const dryRun: boolean = body.dry_run === true;
 
   const supabase = createClient(
@@ -41,7 +42,8 @@ Deno.serve(async (req) => {
     .not("lien_annonce", "is", null)
     .neq("lien_annonce", "")
     .or("surface.is.null,etage.is.null,disponibilite.is.null,contact_gerance.is.null")
-    .limit(limit);
+    .order("created_at", { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), {
