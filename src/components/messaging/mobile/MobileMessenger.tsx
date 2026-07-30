@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
+import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
 
 interface MobileMessengerProps {
   conversationsList: ReactNode;
