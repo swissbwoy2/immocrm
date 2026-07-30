@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
   ] as const;
 
   const list = offres ?? [];
-  const CONCURRENCY = 6;
+  const CONCURRENCY = 2;
   let cursor = 0;
 
   async function processOne(offre: any) {
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     while (cursor < list.length) {
       const offre = list[cursor++];
       await processOne(offre);
-      await sleep(150); // throttle léger
+      await sleep(500); // throttle léger
     }
   }
 
