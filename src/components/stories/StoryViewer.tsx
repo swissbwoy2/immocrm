@@ -300,7 +300,7 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
             key={story.id}
             ref={videoRef}
             src={mediaUrl}
-            poster={story.thumbnail_url || undefined}
+            poster={(story as any).thumbnail_url || undefined}
             className="relative z-[1] w-full h-full max-w-full max-h-full object-contain bg-black"
             autoPlay
             playsInline
