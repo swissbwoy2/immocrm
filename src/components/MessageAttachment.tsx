@@ -18,21 +18,21 @@ interface MessageAttachmentProps {
   size: number;
 }
 
-export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentProps) => {
+export const MessageAttachment = ({ url, type: rawType, name: rawName, size: rawSize }: MessageAttachmentProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
 
-  // Défensif : certains payloads legacy n'ont pas de type/nom → ne jamais crasher la messagerie
-  const safeType = typeof type === 'string' ? type : '';
-  const safeName = typeof name === 'string' && name ? name : 'Fichier joint';
-  const safeSize = typeof size === 'number' && !isNaN(size) ? size : 0;
+  // Défensif : certains payloads legacy n'ont pas de type/nom/taille → ne jamais crasher la messagerie
+  const type = typeof rawType === 'string' ? rawType : '';
+  const name = typeof rawName === 'string' && rawName ? rawName : 'Fichier joint';
+  const size = typeof rawSize === 'number' && !isNaN(rawSize) ? rawSize : 0;
 
   const handleDownload = () => {
     const a = document.createElement('a');
     a.href = url;
-    a.download = safeName;
+    a.download = name;
     a.target = '_blank';
     a.click();
   };
@@ -44,11 +44,11 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
     return `${bytes} B`;
   };
 
-  const isPDF = safeType === 'application/pdf' || safeName.toLowerCase().endsWith('.pdf') || (safeType === 'document' && safeName.toLowerCase().endsWith('.pdf'));
-  const isOfficeDoc = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(safeName);
-  const isImage = safeType.startsWith('image/') || safeType === 'image';
-  const isVideo = safeType.startsWith('video/') || safeType === 'video' || /\.(mov|mp4|webm|avi|mkv)$/i.test(safeName);
-  const isAudio = safeType.startsWith('audio/') || safeType === 'audio' || /\.(mp3|wav|ogg|m4a|webm)$/i.test(safeName);
+  const isPDF = type === 'application/pdf' || name.toLowerCase().endsWith('.pdf') || (type === 'document' && name.toLowerCase().endsWith('.pdf'));
+  const isOfficeDoc = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(name);
+  const isImage = type.startsWith('image/') || type === 'image';
+  const isVideo = type.startsWith('video/') || type === 'video' || /\.(mov|mp4|webm|avi|mkv)$/i.test(name);
+  const isAudio = type.startsWith('audio/') || type === 'audio' || /\.(mp3|wav|ogg|m4a|webm)$/i.test(name);
 
   // Image
   if (isImage) {
