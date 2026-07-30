@@ -49,6 +49,16 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   const story: StoryRow | undefined = group?.stories[si];
   const isAuthor = story && user?.id === story.author_user_id;
 
+  // URL du média : media_url si présent, sinon reconstruite depuis media_path (bucket public)
+  const mediaUrl = story
+    ? story.media_url ||
+      (story.media_path
+        ? supabase.storage.from("message-attachments").getPublicUrl(story.media_path).data.publicUrl
+        : null)
+    : null;
+
+
+
   const goNext = useCallback(() => {
     if (!group) return;
     if (si + 1 < group.stories.length) {
