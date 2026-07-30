@@ -13,10 +13,15 @@ import { FloatingMessenger } from '@/components/messaging/floating/FloatingMesse
 import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { DemoWriteGuard } from '@/components/DemoWriteGuard';
 import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
+import { MobileAppShell } from '@/components/mobile/MobileAppShell';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Capacitor } from '@capacitor/core';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
+
 
 function AppLayoutContent({ children }: AppLayoutProps) {
   const { setOpenMobile, isMobile, openMobile } = useSidebar();
