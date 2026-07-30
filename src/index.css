@@ -1669,6 +1669,15 @@ All colors MUST be HSL.
 body.imr-immersive [data-floating-widget],
 body.imr-immersive .imr-floating-bubble,
 body.imr-immersive #whatsapp-widget,
-body.imr-immersive .whatsapp-float {
+body.imr-immersive .whatsapp-float,
+/* Widget WhatsApp flottant Elfsight (« Discuter sur WhatsApp ») */
+body.imr-immersive [class*="elfsight-app-"],
+body.imr-immersive [class*="eapps-widget"],
+body.imr-immersive [class*="eapps-whatsapp"],
+body.imr-immersive iframe[src*="elfsight"],
+body.imr-immersive iframe[src*="whatsapp"] {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
+
