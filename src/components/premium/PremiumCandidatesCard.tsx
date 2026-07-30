@@ -238,7 +238,34 @@ export function PremiumCandidatesCard({
                               )}
                             </div>
 
+                            {/* Coordonnées */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1 min-w-0">
+                                <Mail className="w-3.5 h-3.5 shrink-0" />
+                                {candidate.email ? (
+                                  <a href={`mailto:${candidate.email}`} className="truncate hover:underline">{candidate.email}</a>
+                                ) : (
+                                  <span className="text-warning">E-mail manquant</span>
+                                )}
+                              </span>
+                              <span className="flex items-center gap-1 min-w-0">
+                                <Phone className="w-3.5 h-3.5 shrink-0" />
+                                {candidate.telephone ? (
+                                  <a href={`tel:${candidate.telephone}`} className="truncate hover:underline">{candidate.telephone}</a>
+                                ) : (
+                                  <span className="text-warning">Téléphone manquant</span>
+                                )}
+                              </span>
+                              {candidate.nationalite && (
+                                <span className="flex items-center gap-1">
+                                  <Globe className="w-3.5 h-3.5 shrink-0" />
+                                  {candidate.nationalite}
+                                </span>
+                              )}
+                            </div>
+
                             {/* Info contribution */}
+
                             <div className="pt-1">
                               {contributes ? (
                                 <p className="text-xs text-success flex items-center gap-1.5 font-medium">
