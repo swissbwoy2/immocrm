@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { SendEmailDialog } from '@/components/SendEmailDialog';
@@ -237,6 +238,7 @@ export default function ClientDetail() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [newDocumentType, setNewDocumentType] = useState<string>('autre');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
