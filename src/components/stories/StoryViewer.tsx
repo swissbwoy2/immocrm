@@ -237,7 +237,11 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
       </div>
 
       {/* Header */}
-      <div className="absolute top-4 left-0 right-0 z-10 flex items-center justify-between px-3 pt-4">
+      <div
+        className="absolute left-0 right-0 z-10 flex items-center justify-between px-3 pt-3"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      >
+
         <div className="flex items-center gap-2 text-white">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
