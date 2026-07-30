@@ -10,6 +10,8 @@ export interface MandatClientLike {
   created_at?: string | null;
   mandate_pause_days?: number | null;
   mandate_paused_at?: string | null;
+  mandate_official_end_date?: string | null;
+  mandat_renewal_count?: number | null;
   refund_status?: string | null;
   statut?: string | null;
   cancellation_requested_at?: string | null;
