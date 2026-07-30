@@ -14,13 +14,15 @@ import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 export function MobileAppShell({ children }: { children: ReactNode }) {
   const { setOpenMobile } = useSidebar();
   const { userRole } = useAuth();
+  const { immersive } = useMobileImmersive();
 
   return (
     <div
       className="flex w-full flex-col overflow-hidden bg-background"
       style={{ height: '100dvh', maxHeight: '100dvh' }}
     >
-      {/* HEADER FIXE */}
+      {/* HEADER FIXE (masqué en mode immersif : conversation plein écran) */}
+      {!immersive && (
       <header
         className="z-30 flex shrink-0 items-center gap-2 border-b bg-background px-3"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
