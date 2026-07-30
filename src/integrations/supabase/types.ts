@@ -7085,6 +7085,9 @@ export type Database = {
           commentaires: string | null
           concierge_nom: string | null
           concierge_tel: string | null
+          contact_annonceur: string | null
+          contact_gerance: string | null
+          contact_visite: string | null
           created_at: string | null
           date_envoi: string | null
           description: string | null
@@ -7122,6 +7125,9 @@ export type Database = {
           commentaires?: string | null
           concierge_nom?: string | null
           concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
           created_at?: string | null
           date_envoi?: string | null
           description?: string | null
@@ -7159,6 +7165,9 @@ export type Database = {
           commentaires?: string | null
           concierge_nom?: string | null
           concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
           created_at?: string | null
           date_envoi?: string | null
           description?: string | null
