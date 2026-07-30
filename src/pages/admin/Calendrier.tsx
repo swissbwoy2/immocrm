@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { isSameDay, format, isToday, isThisWeek, isThisMonth, isFuture } from 'date-fns';
+import { isSameDay, format, isToday, isThisWeek, isThisMonth, isFuture, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
@@ -79,31 +79,54 @@ export default function AdminCalendrier() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Fenêtre de dates affichée (mois courant ± 1 mois) — évite de charger tout l'historique
+  const [visibleDate, setVisibleDate] = useState<Date>(new Date());
+  const rangeStartIso = useMemo(
+    () => startOfMonth(subMonths(visibleDate, 1)).toISOString(),
+    [visibleDate],
+  );
+  const rangeEndIso = useMemo(
+    () => endOfMonth(addMonths(visibleDate, 1)).toISOString(),
+    [visibleDate],
+  );
+
   const loadData = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
 
-      // Use paginated fetch to bypass 1000-row server limit
+      const rangeStartDate = rangeStartIso.slice(0, 10);
+      const rangeEndDate = rangeEndIso.slice(0, 10);
+
+      // Requêtes filtrées CÔTÉ DB sur la fenêtre de dates affichée
       const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
         fetchAllPaginated(() =>
-          supabase.from('calendar_events').select('*').order('event_date', { ascending: true })
+          supabase.from('calendar_events').select('*')
+            .gte('event_date', rangeStartIso)
+            .lte('event_date', rangeEndIso)
+            .order('event_date', { ascending: true })
         ),
         fetchAllPaginated(() =>
-          supabase.from('visites').select('*, offres(*)').order('date_visite', { ascending: true })
+          supabase.from('visites').select('*, offres(*)')
+            .gte('date_visite', rangeStartIso)
+            .lte('date_visite', rangeEndIso)
+            .order('date_visite', { ascending: true })
         ),
         supabase.from('agents').select('id, user_id, profiles!agents_user_id_fkey(prenom, nom)'),
         supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)').limit(15000),
         fetchAllPaginated(() =>
           supabase.from('candidatures')
             .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
-            .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
+            .or(`and(date_etat_lieux.gte.${rangeStartDate},date_etat_lieux.lte.${rangeEndDate}),and(date_signature_choisie.gte.${rangeStartDate},date_signature_choisie.lte.${rangeEndDate})`)
         ),
         supabase.from('lead_phone_appointments')
           .select('id, lead_id, slot_start, slot_end, status, appointment_type, prospect_name, prospect_email, prospect_phone, assigned_agent_id, leads(prenom, nom, email, telephone)')
           .in('status', ['confirme', 'en_attente'])
+          .gte('slot_start', rangeStartIso)
+          .lte('slot_start', rangeEndIso)
           .order('slot_start', { ascending: true })
           .limit(5000),
       ]);
+
 
       // Log results for debugging
       console.log('📅 Calendar data loaded (paginated):', {
