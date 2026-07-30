@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { AddressLink } from '@/components/AddressLink';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { VisitCompteRenduAttachments } from '@/components/calendar/VisitCompteRenduAttachments';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { buildVisiteICSDescription } from '@/utils/generateICS';
@@ -166,6 +167,9 @@ export function ClientEventDetailDialog({
 
             {/* Vidéo(s) de la visite */}
             <VisitVideoPlayer medias={visite.medias} />
+
+            {/* Pièces jointes du compte-rendu (lecture seule) */}
+            <VisitCompteRenduAttachments visite={visite} readOnly />
 
             {/* Compte-rendu (lecture seule côté client) */}
             {cr && (
