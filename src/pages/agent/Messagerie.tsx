@@ -1159,14 +1159,16 @@ const Messagerie = () => {
     }
   };
 
-  const getContactInfo = (conv: any) => {
+  const getContactInfo = (conv: any): { name: string; type: string; clientId?: string; lastSeenAt?: string | null; isOnline?: boolean | null } => {
+    // Résilient : une conversation absente/orpheline ne doit jamais faire planter la page
+    if (!conv) return { name: 'Conversation', type: 'unknown' };
     if (conv.conversation_type === 'admin-agent' && conv.admin_user_id) {
       return contactsMap[conv.admin_user_id] || { name: 'Admin', type: 'admin' };
     }
     if (conv.client_id) {
-      return contactsMap[conv.client_id] || { name: 'Inconnu', type: 'client' };
+      return contactsMap[conv.client_id] || { name: conv.client_name || 'Client', type: 'client', clientId: conv.client_id };
     }
-    return { name: 'Inconnu', type: 'unknown' };
+    return { name: 'Conversation', type: 'unknown' };
   };
 
   const searchedConversations = conversations.filter(conv => {
