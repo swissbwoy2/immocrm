@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
+import { ClientEventDetailDialog } from '@/components/calendar/ClientEventDetailDialog';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
