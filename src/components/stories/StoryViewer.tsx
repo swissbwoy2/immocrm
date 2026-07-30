@@ -9,6 +9,8 @@ import { X, Trash2, Eye, Send, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
+
 
 const QUICK_EMOJIS = ["❤️", "🔥", "😍", "👍", "😮", "👏"];
 const IMAGE_DURATION_MS = 5000;
