@@ -14,6 +14,7 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { NotificationBadge } from './NotificationBadge';
 import { getCorrectNotificationLink, detectRoleFromPath } from '@/lib/notificationLinks';
+import { useAuth } from '@/contexts/AuthContext';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
