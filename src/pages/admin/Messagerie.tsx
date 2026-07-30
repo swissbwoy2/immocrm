@@ -650,7 +650,7 @@ const Messagerie = () => {
       <ScrollArea 
         className="flex-1 relative z-10 min-w-0"
         viewportRef={scrollViewportRef}
-        viewportClassName="p-2 sm:p-4"
+        viewportClassName="p-2 sm:p-4 [&>div]:!block [&>div]:!min-w-0 [&>div]:max-w-full"
         onScroll={handleScroll}
       >
         {isLoadingMessages ? (

@@ -1335,12 +1335,12 @@ const Messagerie = () => {
 
   // Offer card component
   const OffreCard = ({ offre }: { offre: any }) => (
-    <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+    <div className="mt-2 p-3 sm:p-4 w-full max-w-full min-w-0 box-border overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
       <div className="flex items-start gap-2 mb-2">
         <Home className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-        <div className="flex-1">
-          <p className="font-semibold text-sm">{offre.adresse}</p>
-          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm break-words [overflow-wrap:anywhere]">{offre.adresse}</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground min-w-0">
             <span>💰 {offre.prix?.toLocaleString()} CHF</span>
             {offre.surface && <span>📐 {offre.surface} m²</span>}
             {offre.pieces && <span>🏠 {offre.pieces} pcs</span>}
@@ -1348,7 +1348,7 @@ const Messagerie = () => {
         </div>
       </div>
       {offre.lien_annonce && (
-        <div className="mt-2">
+        <div className="mt-2 min-w-0 max-w-full overflow-hidden">
           <LinkPreviewCard url={offre.lien_annonce} />
         </div>
       )}
@@ -1380,23 +1380,23 @@ const Messagerie = () => {
     if (statut === 'envoyee' || statut === 'vue') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1">
+          <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
+            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <Heart className="h-4 w-4 mr-1" /> Intéressé(e)
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1">
+          <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1">
+            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
               <FileText className="h-4 w-4 mr-1" /> Postuler
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
             <Button size="sm" variant="ghost" onClick={() => onAction('details')} disabled={isProcessingAction}>
               <ExternalLink className="h-4 w-4 mr-1" /> Détails
             </Button>
@@ -1417,11 +1417,11 @@ const Messagerie = () => {
               <Check className="h-3 w-3" /> Vous êtes intéressé(e) par cette offre
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1">
+          <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
+            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1 min-w-[45%] basis-0">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1 min-w-[45%] basis-0">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
           </div>
@@ -1470,7 +1470,7 @@ const Messagerie = () => {
               <Check className="h-3 w-3" /> Visite effectuée
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
             <Button size="sm" onClick={() => onAction('deposer_candidature')} className="flex-1">
               <FileText className="h-4 w-4 mr-1" /> Déposer candidature
             </Button>
@@ -1650,7 +1650,7 @@ const Messagerie = () => {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
             <Button size="sm" variant="outline" onClick={() => onAction('avis_google')} className="flex-1">
               <Star className="h-4 w-4 mr-1" /> Laisser un avis Google
             </Button>
@@ -1806,7 +1806,7 @@ const Messagerie = () => {
       <ScrollArea 
         className="flex-1 relative z-10 min-w-0"
         viewportRef={scrollViewportRef}
-        viewportClassName="p-2 sm:p-4"
+        viewportClassName="p-2 sm:p-4 [&>div]:!block [&>div]:!min-w-0 [&>div]:max-w-full"
         onScroll={handleScroll}
       >
         {isLoadingMessages ? (
@@ -1850,7 +1850,7 @@ const Messagerie = () => {
                     index={index}
                   />
                   {isLastMessageForOffre && offresMap[msg.offre_id!] && (
-                    <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[80%] md:max-w-[65%] animate-slide-up`}>
+                    <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} w-full max-w-[92%] sm:max-w-[80%] md:max-w-[65%] min-w-0 animate-slide-up`}>
                       <PremiumOffreCard offre={offresMap[msg.offre_id!]} mode={isBuyer ? 'achat' : 'location'} />
                       <OffreActions 
                         offre={offresMap[msg.offre_id!]} 

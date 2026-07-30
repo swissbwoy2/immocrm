@@ -50,12 +50,12 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   return (
     <div
       className={cn(
-        'flex w-full mb-1.5 min-w-0 animate-wa-bubble',
+        'flex w-full max-w-full mb-1.5 min-w-0 animate-wa-bubble',
         isSent ? 'justify-end' : 'justify-start',
         className,
       )}
     >
-      <div className="flex flex-col max-w-[85%] sm:max-w-[75%] md:max-w-[65%] min-w-0">
+      <div className="flex flex-col max-w-[88%] sm:max-w-[75%] md:max-w-[65%] min-w-0">
         {!isSent && senderName && (
           <span className="text-[11px] text-muted-foreground mb-0.5 ml-3 font-medium">
             {senderName}
@@ -64,7 +64,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
 
         <div
           className={cn(
-            'relative px-3 py-1.5 text-sm shadow-sm break-words',
+            'relative px-3 py-1.5 text-sm shadow-sm break-words max-w-full min-w-0 overflow-hidden',
             isSent
               ? 'rounded-2xl rounded-br-md bg-[hsl(var(--whatsapp-bubble-out))] text-foreground'
               : 'rounded-2xl rounded-bl-md bg-[hsl(var(--whatsapp-bubble-in))] text-foreground border border-border/40',
@@ -72,7 +72,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
         >
           {/* Multiple medias */}
           {payload?.medias && payload.medias.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="grid grid-cols-2 gap-2 mb-2 min-w-0">
               {payload.medias.map((media: any, idx) => (
                 <MessageAttachment
                   key={idx}

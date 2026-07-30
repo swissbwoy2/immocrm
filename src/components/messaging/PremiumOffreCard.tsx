@@ -15,7 +15,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
   return (
     <div 
       className={cn(
-        'relative mt-3 p-5 rounded-2xl overflow-hidden',
+        'relative mt-3 p-4 sm:p-5 rounded-2xl overflow-hidden w-full max-w-full min-w-0 box-border',
         'bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/40',
         'dark:from-blue-950/60 dark:via-indigo-950/40 dark:to-purple-950/30',
         'border-2 border-blue-200/50 dark:border-blue-800/50',
@@ -26,6 +26,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
         className
       )}
     >
+
       {/* Animated gradient border */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <div 
@@ -41,7 +42,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
       {/* Glassmorphism overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 rounded-2xl pointer-events-none" />
 
-      <div className="relative z-10">
+      <div className="relative z-10 min-w-0">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
           <div className={cn(
@@ -55,32 +56,33 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
           <div className="flex-1 min-w-0">
             <AddressLink 
               address={offre.adresse}
-              className="font-bold text-foreground truncate block"
+              className="font-bold text-foreground block break-words [overflow-wrap:anywhere]"
               showIcon={false}
             />
-            <div className="text-muted-foreground text-xs mt-0.5">
+            <div className="text-muted-foreground text-xs mt-0.5 break-words">
               <span>{offre.type_bien || 'Appartement'}</span>
             </div>
           </div>
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4 min-w-0">
           <div className={cn(
-            'p-3 rounded-xl text-center',
+            'p-3 rounded-xl text-center min-w-0',
             'bg-white/60 dark:bg-white/5',
             'border border-white/50 dark:border-white/10',
             'transition-all duration-300 hover:scale-105 hover:shadow-md'
           )}>
-            <p className="text-lg font-bold text-primary">
+            <p className="text-base sm:text-lg font-bold text-primary break-words [overflow-wrap:anywhere]">
               {offre.prix?.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{isAchat ? 'CHF prix de vente' : 'CHF/mois'}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider break-words">{isAchat ? 'CHF prix de vente' : 'CHF/mois'}</p>
           </div>
+
           
           {offre.surface && (
             <div className={cn(
-              'p-3 rounded-xl text-center',
+              'p-3 rounded-xl text-center min-w-0',
               'bg-white/60 dark:bg-white/5',
               'border border-white/50 dark:border-white/10',
               'transition-all duration-300 hover:scale-105 hover:shadow-md'
@@ -95,7 +97,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
           
           {offre.pieces && (
             <div className={cn(
-              'p-3 rounded-xl text-center',
+              'p-3 rounded-xl text-center min-w-0',
               'bg-white/60 dark:bg-white/5',
               'border border-white/50 dark:border-white/10',
               'transition-all duration-300 hover:scale-105 hover:shadow-md'
@@ -117,7 +119,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
 
         {/* Link preview */}
         {offre.lien_annonce && (
-          <div className="mt-3">
+          <div className="mt-3 min-w-0 max-w-full overflow-hidden">
             <LinkPreviewCard url={offre.lien_annonce} />
           </div>
         )}
