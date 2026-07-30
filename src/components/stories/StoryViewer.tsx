@@ -268,9 +268,21 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
             autoPlay
             playsInline
             controls={false}
-            onLoadedMetadata={() => setProgress(0)}
+            onLoadedMetadata={() => {
+              progressRef.current = 0;
+              setProgress(0);
+            }}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget;
+              if (!v.duration || !isFinite(v.duration)) return;
+              const p = Math.min(100, (v.currentTime / v.duration) * 100);
+              progressRef.current = p;
+              setProgress(p);
+            }}
+            onEnded={goNext}
           />
         )}
+
         {story.type === "text" && (
           <div
             className="w-full h-full flex items-center justify-center p-8 text-white text-center text-2xl font-semibold"
