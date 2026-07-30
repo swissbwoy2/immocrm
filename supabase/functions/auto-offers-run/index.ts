@@ -474,6 +474,24 @@ Deno.serve(async (req) => {
             .eq("surface", cand.surface);
           if (dup && dup.length) continue;
 
+          // Enrichissement depuis la page détail de l'annonce
+          const details = await fetchListingDetails(cand.listing_url);
+
+          const surface = cand.surface ?? details.surface;
+          const pieces = cand.pieces ?? details.pieces;
+          const description = details.description
+            ?? `Annonce automatique (score ${cand.score}/10)`;
+
+          const missing = [
+            !surface ? "surface" : null,
+            !pieces ? "pièces" : null,
+            !details.etage ? "étage" : null,
+            !details.disponibilite ? "disponibilité" : null,
+            !details.description ? "description" : null,
+            !details.contact_gerance ? "contact gérance" : null,
+            !details.contact_visite ? "contact visite" : null,
+          ].filter(Boolean) as string[];
+
           const commentaires = [
             cand.regie ? `Régie : ${cand.regie}` : null,
             "Visite à fixer manuellement",
@@ -485,14 +503,21 @@ Deno.serve(async (req) => {
             agent_id: agentId,
             adresse: cand.adresse,
             prix: cand.loyer_net ?? cand.loyer_cc,
-            surface: cand.surface,
-            pieces: cand.pieces,
-            description: `Annonce automatique (score ${cand.score}/10)`,
-            disponibilite: "À convenir",
+            surface,
+            pieces,
+            etage: details.etage,
+            disponibilite: details.disponibilite,
+            type_bien: details.type_bien,
+            description,
             statut: "envoyee",
             lien_annonce: cand.listing_url,
+            contact_gerance: details.contact_gerance ?? (cand.regie || null),
+            contact_annonceur: details.contact_annonceur ?? (cand.regie || null),
+            contact_visite: details.contact_visite,
             commentaires,
             envoi_auto: true,
+            needs_agent_action: missing.length > 0,
+            missing_info: missing.length ? missing.join(", ") : null,
           }).select().single();
 
           if (!offre) continue;
@@ -521,7 +546,11 @@ Deno.serve(async (req) => {
             if (!agentLink) {
               await supabase.from("conversation_agents").insert({ conversation_id: conversationId, agent_id: agentId });
             }
-            const msg = `Nouvelle Offre pour Votre Recherche d'Appartement\n\n📍 ${cand.adresse}\n💰 ${cand.loyer_cc} CHF (CC)\n📐 ${cand.surface ?? "?"} m²\n🏠 ${cand.pieces ?? "?"} pièces\n\n${cand.listing_url ? `🔗 ${cand.listing_url}` : ""}`;
+            const { data: clientProfile } = client.user_id
+              ? await supabase.from("profiles").select("prenom, nom").eq("id", client.user_id).maybeSingle()
+              : { data: null as any };
+            const msg = buildOffreMessage(offre, clientProfile);
+
             await supabase.from("messages").insert({
               conversation_id: conversationId, sender_id: agentId, sender_type: "agent",
               content: msg, offre_id: offre.id,
