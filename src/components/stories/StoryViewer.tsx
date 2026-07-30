@@ -22,7 +22,9 @@ interface Props {
 
 export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Props) {
   const { user } = useAuth();
+  useImmersiveMode(true);
   const [gi, setGi] = useState(startGroupIndex);
+
   const [si, setSi] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
