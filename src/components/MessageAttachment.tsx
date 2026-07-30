@@ -55,7 +55,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
     return (
       <>
         <div 
-          className="cursor-pointer group relative overflow-hidden rounded-lg max-w-xs"
+          className="cursor-pointer group relative overflow-hidden rounded-lg w-full max-w-full sm:max-w-xs"
           onClick={() => setLightboxOpen(true)}
         >
           <img 
@@ -111,7 +111,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
     if (videoError) {
       return (
         <>
-          <Card className="p-4 max-w-sm">
+          <Card className="p-4 w-full max-w-full sm:max-w-sm">
             <div className="flex items-center gap-3">
               <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                 <Video className="h-7 w-7 text-white" />
@@ -200,7 +200,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
 
     return (
       <>
-        <Card className="max-w-md overflow-hidden">
+        <Card className="w-full max-w-full sm:max-w-md overflow-hidden">
           <div className="relative">
             <video
               controls
@@ -288,7 +288,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
       'audio/webm';
 
     return (
-      <Card className="p-4 max-w-sm">
+      <Card className="p-4 w-full max-w-full sm:max-w-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
             <Music className="h-5 w-5 text-primary" />
@@ -313,7 +313,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
   if (isPDF) {
     return (
       <>
-        <Card className="p-4 max-w-sm">
+        <Card className="p-4 w-full max-w-full sm:max-w-sm">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
               <FileText className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -363,7 +363,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
     
     return (
       <>
-        <Card className="p-4 max-w-sm">
+        <Card className="p-4 w-full max-w-full sm:max-w-sm">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
               <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -409,7 +409,7 @@ export const MessageAttachment = ({ url, type: rawType, name: rawName, size: raw
 
   // Other documents - Download only
   return (
-    <Card className="p-4 max-w-sm">
+    <Card className="p-4 w-full max-w-full sm:max-w-sm">
       <div className="flex items-center gap-3">
         <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
           <FileText className="h-6 w-6 text-muted-foreground" />
