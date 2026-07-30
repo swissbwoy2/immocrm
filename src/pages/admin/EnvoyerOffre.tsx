@@ -13,6 +13,7 @@ import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
+import { buildOffreMessage, formatDateVisite } from "@/lib/offreMessage";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
@@ -294,18 +295,19 @@ const AdminEnvoyerOffre = () => {
       }
 
       // Send message with offer
-      const formatDateVisite = (dateStr: string): string => {
-        return new Date(dateStr).toLocaleString('fr-FR', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
-      };
-      
-      const messageContent = `Nouvelle Offre pour Votre Recherche d'Appartement\n\nBonjour ${selectedClient?.profiles?.prenom} ${selectedClient?.profiles?.nom} 👋,\n\nNous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :\n\n📍 Localisation : ${formData.localisation}\n💰 Prix : ${formData.prix} CHF\n📐 Surface : ${formData.surface} m²\n🏠 Nombre de pièces : ${formData.nombrePieces}\n🏢 Étage : ${formData.etage}\n📅 Disponibilité : ${formData.disponibilite}\n\nDescription :\n${formData.description}${formData.datesVisite.filter(d => d).length > 0 ? `\n\nDates de visite proposées :\n${formData.datesVisite.filter(d => d).map((d) => `• ${formatDateVisite(d)}`).join('\n')}` : ''}${formData.lienAnnonce ? `\n\n🔗 Voir l'annonce complète : ${formData.lienAnnonce}` : ''}${attachments.length > 0 ? `\n\n📎 ${attachments.length} pièce(s) jointe(s)` : ''}\n\nPour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à cet email.\n\nCordialement,\nL'équipe Immo-rama.ch`;
+            
+      const messageContent = buildOffreMessage({
+        adresse: formData.localisation,
+        prix: formData.prix,
+        surface: formData.surface,
+        pieces: formData.nombrePieces,
+        etage: formData.etage,
+        disponibilite: formData.disponibilite,
+        description: formData.description,
+        lien_annonce: formData.lienAnnonce,
+        datesVisite: formData.datesVisite.filter((d: string) => d).map((d: string) => formatDateVisite(d)),
+        attachmentsCount: attachments.length,
+      }, { prenom: selectedClient?.profiles?.prenom, nom: selectedClient?.profiles?.nom });
 
       // If we have attachments, send each as a separate message
       if (attachments.length > 0) {

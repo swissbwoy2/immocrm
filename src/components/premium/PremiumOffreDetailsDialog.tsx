@@ -65,12 +65,16 @@ export function PremiumOffreDetailsDialog({
   const showChances = ['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee'].includes(offre.statut);
 
   const characteristics = [
-    { icon: Home, label: 'Pièces', value: offre.pieces },
-    { icon: Square, label: 'Surface', value: `${offre.surface} m²` },
-    { icon: MapPin, label: 'Étage', value: offre.etage },
+    offre.pieces && { icon: Home, label: 'Pièces', value: offre.pieces },
+    offre.surface && { icon: Square, label: 'Surface', value: `${offre.surface} m²` },
+    offre.etage && { icon: MapPin, label: 'Étage', value: offre.etage },
     offre.type_bien && { icon: Building2, label: 'Type', value: offre.type_bien },
-    offre.disponibilite && { icon: Calendar, label: 'Disponibilité', value: offre.disponibilite }
+    offre.disponibilite && { icon: Calendar, label: 'Disponibilité', value: offre.disponibilite },
+    offre.contact_gerance && { icon: Building2, label: 'Contact gérance', value: offre.contact_gerance },
+    offre.contact_annonceur && { icon: Building2, label: 'Contact annonceur', value: offre.contact_annonceur },
+    offre.contact_visite && { icon: Calendar, label: 'Contact visite', value: offre.contact_visite },
   ].filter(Boolean);
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

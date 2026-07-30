@@ -134,8 +134,33 @@ export function AgentOffreDetailsDialog({
               <div className="mt-3 space-y-1">
                 <InfoRow icon={Building} label="Type de bien" value={offre.type_bien} />
                 <InfoRow icon={Calendar} label="Disponibilité" value={offre.disponibilite} />
+                <InfoRow icon={Layers} label="Étage" value={offre.etage} />
+                <InfoRow icon={Maximize} label="Surface" value={offre.surface ? `${offre.surface} m²` : null} />
+                <InfoRow icon={Building} label="Année de construction" value={offre.annee_construction} />
+                <InfoRow icon={Home} label="Orientation" value={offre.orientation} />
+                <InfoRow icon={Home} label="Chauffage" value={offre.type_chauffage} />
+                <InfoRow icon={Home} label="Classe énergétique" value={offre.classe_energetique} />
               </div>
             </div>
+
+            {/* Contacts */}
+            {(offre.contact_gerance || offre.contact_annonceur || offre.contact_visite) && (
+              <>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contacts
+                  </h4>
+                  <div className="space-y-1">
+                    <InfoRow icon={Building} label="Contact gérance" value={offre.contact_gerance} />
+                    <InfoRow icon={User} label="Contact annonceur" value={offre.contact_annonceur} />
+                    <InfoRow icon={Calendar} label="Contact visite" value={offre.contact_visite} />
+                  </div>
+                </div>
+              </>
+            )}
+
 
             {/* Description */}
             {offre.description && (

@@ -2,6 +2,8 @@
 // Sécurisée par un secret cron (AUTO_OFFERS_CRON_SECRET) OU un JWT admin.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { parseHTML } from "npm:linkedom@0.18.5";
+import { buildOffreMessage, cleanValue } from "../_shared/offre-message.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -134,7 +136,95 @@ function parseListings(html: string, sourceLocality: string): any[] {
   return results;
 }
 
+// ---------- Enrichissement : page détail de l'annonce ----------
+
+export interface ListingDetails {
+  surface: number | null;
+  pieces: number | null;
+  etage: string | null;
+  disponibilite: string | null;
+  description: string | null;
+  type_bien: string | null;
+  contact_gerance: string | null;
+  contact_annonceur: string | null;
+  contact_visite: string | null;
+}
+
+const EMPTY_DETAILS: ListingDetails = {
+  surface: null, pieces: null, etage: null, disponibilite: null,
+  description: null, type_bien: null,
+  contact_gerance: null, contact_annonceur: null, contact_visite: null,
+};
+
+export function parseListingDetails(html: string): ListingDetails {
+  const { document } = parseHTML(html);
+  const body = document.querySelector("main") ?? document.body;
+  const text = (body?.textContent ?? "").replace(/\u00a0|\u202f/g, " ").replace(/[ \t]+/g, " ");
+
+  const pick = (re: RegExp): string | null => {
+    const m = text.match(re);
+    return m?.[1] ? m[1].trim() : null;
+  };
+
+  const surfaceRaw = pick(/surface[^\d]{0,20}(\d+(?:[.,]\d+)?)\s*m/i) ?? pick(/(\d+(?:[.,]\d+)?)\s*m(?:²|2)\b/i);
+  const piecesRaw = pick(/(\d+(?:[.,]\d+)?)\s*(?:pièces|pieces|pcs)/i);
+  const etage = pick(/étage\s*[:\-]?\s*([^\n.;]{1,30})/i) ?? pick(/(rez[- ]de[- ]chauss[ée]e)/i);
+  const disponibilite = pick(/disponib(?:ilité|le)\s*(?:dès|à partir du)?\s*[:\-]?\s*([^\n.;]{1,40})/i);
+  const typeBien = pick(/(appartement|studio|maison|villa|duplex|attique|loft|chambre)/i);
+
+  // Description : bloc le plus long parmi les candidats
+  const descNodes = Array.from(
+    body?.querySelectorAll?.("[class*='description'], [class*='detail-text'], [itemprop='description'], article p") ?? [],
+  ) as any[];
+  let description: string | null = null;
+  for (const n of descNodes) {
+    const t = (n.textContent ?? "").replace(/\s+/g, " ").trim();
+    if (t.length > (description?.length ?? 0)) description = t;
+  }
+  if (description && description.length < 40) description = null;
+
+  const regie = pick(/(?:régie|gérance|agence)\s*[:\-]?\s*([^\n;]{2,60})/i);
+  const phones = Array.from(text.matchAll(/(\+41[\s.\-]?\d[\d\s.\-]{7,}|0\d{2}[\s.\-]?\d{3}[\s.\-]?\d{2}[\s.\-]?\d{2})/g))
+    .map(m => m[1].replace(/\s+/g, " ").trim());
+  const uniquePhones = Array.from(new Set(phones));
+  const email = pick(/([\w.\-+]+@[\w\-]+\.[\w.\-]+)/);
+
+  const contact_gerance = [regie, uniquePhones[0]].filter(Boolean).join(" — ") || null;
+  const contact_annonceur = [regie, email].filter(Boolean).join(" — ") || null;
+  const contact_visite = uniquePhones[1] ?? uniquePhones[0] ?? null;
+
+  return {
+    surface: surfaceRaw ? parseNumber(surfaceRaw) : null,
+    pieces: piecesRaw ? parseNumber(piecesRaw) : null,
+    etage: cleanValue(etage),
+    disponibilite: cleanValue(disponibilite),
+    description: cleanValue(description),
+    type_bien: cleanValue(typeBien),
+    contact_gerance: cleanValue(contact_gerance),
+    contact_annonceur: cleanValue(contact_annonceur),
+    contact_visite: cleanValue(contact_visite),
+  };
+}
+
+async function fetchListingDetails(url: string): Promise<ListingDetails> {
+  if (!url) return { ...EMPTY_DETAILS };
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; LogisoramaBot/1.0; +https://logisorama.ch)",
+        "Accept-Language": "fr-CH,fr;q=0.9",
+      },
+    });
+    if (!res.ok) return { ...EMPTY_DETAILS };
+    return parseListingDetails(await res.text());
+  } catch (e) {
+    console.warn("fetchListingDetails failed", url, e);
+    return { ...EMPTY_DETAILS };
+  }
+}
+
 // ---------- Scoring ----------
+
 
 function computeScore(client: any, listing: any) {
   const breakdown: Record<string, number> = { region: 0, pieces: 0, budget: 0, type_bien: 0 };
@@ -384,6 +474,24 @@ Deno.serve(async (req) => {
             .eq("surface", cand.surface);
           if (dup && dup.length) continue;
 
+          // Enrichissement depuis la page détail de l'annonce
+          const details = await fetchListingDetails(cand.listing_url);
+
+          const surface = cand.surface ?? details.surface;
+          const pieces = cand.pieces ?? details.pieces;
+          const description = details.description
+            ?? `Annonce automatique (score ${cand.score}/10)`;
+
+          const missing = [
+            !surface ? "surface" : null,
+            !pieces ? "pièces" : null,
+            !details.etage ? "étage" : null,
+            !details.disponibilite ? "disponibilité" : null,
+            !details.description ? "description" : null,
+            !details.contact_gerance ? "contact gérance" : null,
+            !details.contact_visite ? "contact visite" : null,
+          ].filter(Boolean) as string[];
+
           const commentaires = [
             cand.regie ? `Régie : ${cand.regie}` : null,
             "Visite à fixer manuellement",
@@ -395,14 +503,21 @@ Deno.serve(async (req) => {
             agent_id: agentId,
             adresse: cand.adresse,
             prix: cand.loyer_net ?? cand.loyer_cc,
-            surface: cand.surface,
-            pieces: cand.pieces,
-            description: `Annonce automatique (score ${cand.score}/10)`,
-            disponibilite: "À convenir",
+            surface,
+            pieces,
+            etage: details.etage,
+            disponibilite: details.disponibilite,
+            type_bien: details.type_bien,
+            description,
             statut: "envoyee",
             lien_annonce: cand.listing_url,
+            contact_gerance: details.contact_gerance ?? (cand.regie || null),
+            contact_annonceur: details.contact_annonceur ?? (cand.regie || null),
+            contact_visite: details.contact_visite,
             commentaires,
             envoi_auto: true,
+            needs_agent_action: missing.length > 0,
+            missing_info: missing.length ? missing.join(", ") : null,
           }).select().single();
 
           if (!offre) continue;
@@ -431,7 +546,11 @@ Deno.serve(async (req) => {
             if (!agentLink) {
               await supabase.from("conversation_agents").insert({ conversation_id: conversationId, agent_id: agentId });
             }
-            const msg = `Nouvelle Offre pour Votre Recherche d'Appartement\n\n📍 ${cand.adresse}\n💰 ${cand.loyer_cc} CHF (CC)\n📐 ${cand.surface ?? "?"} m²\n🏠 ${cand.pieces ?? "?"} pièces\n\n${cand.listing_url ? `🔗 ${cand.listing_url}` : ""}`;
+            const { data: clientProfile } = client.user_id
+              ? await supabase.from("profiles").select("prenom, nom").eq("id", client.user_id).maybeSingle()
+              : { data: null as any };
+            const msg = buildOffreMessage(offre, clientProfile);
+
             await supabase.from("messages").insert({
               conversation_id: conversationId, sender_id: agentId, sender_type: "agent",
               content: msg, offre_id: offre.id,
