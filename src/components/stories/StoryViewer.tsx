@@ -67,9 +67,11 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   // Record view + fetch insights for author
   useEffect(() => {
     if (!story || !user) return;
+    progressRef.current = 0;
     setProgress(0);
     setInsights(null);
     startRef.current = Date.now();
+
 
     (async () => {
       await supabase
