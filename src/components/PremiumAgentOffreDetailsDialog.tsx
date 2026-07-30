@@ -317,7 +317,11 @@ export function PremiumAgentOffreDetailsDialog({
               <div className="grid grid-cols-2 gap-2">
                 <InfoRow icon={Building} label="Type de bien" value={offre.type_bien} />
                 <InfoRow icon={Calendar} label="Disponibilité" value={offre.disponibilite} />
+                <InfoRow icon={Building} label="Contact gérance" value={offre.contact_gerance} />
+                <InfoRow icon={Building} label="Contact annonceur" value={offre.contact_annonceur} />
+                <InfoRow icon={Calendar} label="Contact visite" value={offre.contact_visite} />
               </div>
+
             </div>
 
             {/* Section Visite */}
