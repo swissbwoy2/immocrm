@@ -49,6 +49,28 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     enableHaptics: true,
   });
 
+  const isMobileViewport = useIsMobile();
+  const { userRole } = useAuth();
+  const isNative = Capacitor.isNativePlatform();
+  const shellRoles = ['admin', 'agent', 'client'];
+  const useAppShell = (isMobileViewport || isNative) && shellRoles.includes(userRole || '');
+
+  if (useAppShell) {
+    return (
+      <>
+        <OfflineIndicator />
+        <DemoWriteGuard />
+        <AppSidebar />
+        <MobileAppShell>
+          <DemoModeBanner />
+          <OpenInBrowserBanner />
+          <PageTransition>{children}</PageTransition>
+        </MobileAppShell>
+        <FloatingMessenger />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen flex w-full bg-background">
       <OfflineIndicator />
@@ -93,6 +115,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     </div>
   );
 }
+
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
