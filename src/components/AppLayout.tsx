@@ -120,9 +120,11 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <FloatingMessengerProvider>
-        <AppLayoutContent>{children}</AppLayoutContent>
-      </FloatingMessengerProvider>
+      <MobileImmersiveProvider>
+        <FloatingMessengerProvider>
+          <AppLayoutContent>{children}</AppLayoutContent>
+        </FloatingMessengerProvider>
+      </MobileImmersiveProvider>
     </SidebarProvider>
   );
 }
