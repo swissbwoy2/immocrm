@@ -1675,7 +1675,7 @@ const Messagerie = () => {
                   />
                   {/* Bouton Déposer candidature si tag présent dans message client */}
                   {deposerButtonData && msg.sender_type === 'client' && (
-                    <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                    <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} w-full max-w-[88%] sm:max-w-[75%] md:max-w-[60%] min-w-0`}>
                       <Button 
                         className="w-full"
                         onClick={() => navigate(`/agent/deposer-candidature?clientId=${deposerButtonData.clientId}&offreId=${deposerButtonData.offreId}`)}
@@ -1686,7 +1686,7 @@ const Messagerie = () => {
                     </div>
                   )}
                   {isLastMessageForOffre && offresMap[msg.offre_id!] && (
-                    <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                    <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} w-full max-w-[88%] sm:max-w-[75%] md:max-w-[60%] min-w-0`}>
                       <OffreCard offre={offresMap[msg.offre_id!]} />
                       <OffreActions 
                         offre={offresMap[msg.offre_id!]} 
