@@ -18,11 +18,16 @@ interface MessageAttachmentProps {
   size: number;
 }
 
-export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentProps) => {
+export const MessageAttachment = ({ url, type: rawType, name: rawName, size: rawSize }: MessageAttachmentProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
+
+  // Défensif : certains payloads legacy n'ont pas de type/nom/taille → ne jamais crasher la messagerie
+  const type = typeof rawType === 'string' ? rawType : '';
+  const name = typeof rawName === 'string' && rawName ? rawName : 'Fichier joint';
+  const size = typeof rawSize === 'number' && !isNaN(rawSize) ? rawSize : 0;
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -39,7 +44,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
     return `${bytes} B`;
   };
 
-  const isPDF = type === 'application/pdf' || name.toLowerCase().endsWith('.pdf') || type === 'document' && name.toLowerCase().endsWith('.pdf');
+  const isPDF = type === 'application/pdf' || name.toLowerCase().endsWith('.pdf') || (type === 'document' && name.toLowerCase().endsWith('.pdf'));
   const isOfficeDoc = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(name);
   const isImage = type.startsWith('image/') || type === 'image';
   const isVideo = type.startsWith('video/') || type === 'video' || /\.(mov|mp4|webm|avi|mkv)$/i.test(name);

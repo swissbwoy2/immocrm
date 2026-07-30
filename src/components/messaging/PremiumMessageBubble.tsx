@@ -73,13 +73,13 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
           {/* Multiple medias */}
           {payload?.medias && payload.medias.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mb-2">
-              {payload.medias.map((media, idx) => (
+              {payload.medias.map((media: any, idx) => (
                 <MessageAttachment
                   key={idx}
-                  url={media.url}
-                  type={media.type}
-                  name={media.name}
-                  size={media.size}
+                  url={media?.url || ''}
+                  type={media?.type || media?.mime || 'application/octet-stream'}
+                  name={media?.name || 'Fichier joint'}
+                  size={media?.size || 0}
                 />
               ))}
             </div>

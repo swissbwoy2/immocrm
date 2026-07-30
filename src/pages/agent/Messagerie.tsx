@@ -201,16 +201,82 @@ const Messagerie = () => {
   // Auto-select conversation from URL parameter
   useEffect(() => {
     const conversationId = searchParams.get('conversationId');
-    if (conversationId && conversations.length > 0) {
-      const exists = conversations.find(c => c.id === conversationId);
-      if (exists) {
-        setSelectedConv(conversationId);
-        // Clean URL
-        searchParams.delete('conversationId');
-        setSearchParams(searchParams, { replace: true });
-      }
+    if (conversationId) {
+      // On sélectionne même si la conversation n'est pas (encore) dans la liste :
+      // le fallback ci-dessous ira la charger directement.
+      setSelectedConv(conversationId);
+      searchParams.delete('conversationId');
+      setSearchParams(searchParams, { replace: true });
     }
-  }, [conversations, searchParams]);
+  }, [searchParams]);
+
+  // Fallback : si la conversation sélectionnée n'est pas dans la liste
+  // (deep link, client retiré de client_agents, co-assignation partielle...),
+  // on la charge directement au lieu de crasher la page.
+  useEffect(() => {
+    if (!selectedConv || isLoadingConversations) return;
+    if (conversations.some(c => c.id === selectedConv)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: conv, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', selectedConv)
+          .maybeSingle();
+        if (error || !conv || cancelled) return;
+        setConversations(prev => (prev.some(c => c.id === conv.id) ? prev : [conv, ...prev]));
+
+        // Résolution du contact (sans planter si une ligne est orpheline)
+        if (conv.client_id) {
+          const { data: cli } = await supabase
+            .from('clients')
+            .select('id, user_id')
+            .eq('id', conv.client_id)
+            .maybeSingle();
+          let name = (conv as any).client_name || 'Client';
+          let lastSeenAt: string | null = null;
+          let isOnline: boolean | null = null;
+          if (cli?.user_id) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('prenom, nom, last_seen_at, is_online')
+              .eq('id', cli.user_id)
+              .maybeSingle();
+            if (prof) {
+              name = `${prof.prenom || ''} ${prof.nom || ''}`.trim() || name;
+              lastSeenAt = prof.last_seen_at;
+              isOnline = prof.is_online;
+            }
+          }
+          if (!cancelled) {
+            setContactsMap(prev => ({
+              ...prev,
+              [conv.client_id as string]: { name, type: 'client', clientId: conv.client_id as string, lastSeenAt, isOnline },
+            }));
+          }
+        } else if (conv.admin_user_id) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('prenom, nom')
+            .eq('id', conv.admin_user_id)
+            .maybeSingle();
+          if (prof && !cancelled) {
+            setContactsMap(prev => ({
+              ...prev,
+              [conv.admin_user_id as string]: {
+                name: `${prof.prenom || ''} ${prof.nom || ''}`.trim() || 'Admin',
+                type: 'admin',
+              },
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn('[Messagerie Agent] fallback conversation load failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedConv, conversations, isLoadingConversations]);
 
   useEffect(() => {
     if (selectedConv) {
@@ -1159,14 +1225,16 @@ const Messagerie = () => {
     }
   };
 
-  const getContactInfo = (conv: any) => {
+  const getContactInfo = (conv: any): { name: string; type: string; clientId?: string; lastSeenAt?: string | null; isOnline?: boolean | null } => {
+    // Résilient : une conversation absente/orpheline ne doit jamais faire planter la page
+    if (!conv) return { name: 'Conversation', type: 'unknown' };
     if (conv.conversation_type === 'admin-agent' && conv.admin_user_id) {
       return contactsMap[conv.admin_user_id] || { name: 'Admin', type: 'admin' };
     }
     if (conv.client_id) {
-      return contactsMap[conv.client_id] || { name: 'Inconnu', type: 'client' };
+      return contactsMap[conv.client_id] || { name: conv.client_name || 'Client', type: 'client', clientId: conv.client_id };
     }
-    return { name: 'Inconnu', type: 'unknown' };
+    return { name: 'Conversation', type: 'unknown' };
   };
 
   const searchedConversations = conversations.filter(conv => {
