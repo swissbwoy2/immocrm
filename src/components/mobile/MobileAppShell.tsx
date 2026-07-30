@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMobileImmersive } from '@/contexts/MobileImmersiveContext';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SilentErrorBoundary } from '@/components/SilentErrorBoundary';
