@@ -210,6 +210,7 @@ export function NotificationBell() {
               className="text-xs w-full hover:bg-primary/10 transition-colors"
               onClick={() => {
                 const path = window.location.pathname.split('/')[1];
+                setOpen(false);
                 navigate(`/${path}/notifications`);
               }}
             >
