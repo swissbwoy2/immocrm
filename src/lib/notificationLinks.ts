@@ -280,9 +280,19 @@ export function getCorrectNotificationLink(
 ): string {
   // Get the correct base URL for this notification type and role
   const correctBaseUrl = NOTIFICATION_ROUTES[notificationType]?.[role];
-  
+
+  // If the stored link already targets the mapped section (with a deeper path or
+  // query params, e.g. ?offreId=...), keep it: it is more precise.
+  const linkPath = currentLink?.split('?')[0];
+  const preferStoredLink =
+    !!currentLink &&
+    !!correctBaseUrl &&
+    !!linkPath &&
+    (linkPath === correctBaseUrl || linkPath.startsWith(`${correctBaseUrl}/`)) &&
+    currentLink !== correctBaseUrl;
+
   // If we have a mapped route, use it; otherwise use the provided link or fallback
-  let baseUrl = correctBaseUrl || currentLink || `/${role}`;
+  let baseUrl = (preferStoredLink ? currentLink : correctBaseUrl) || currentLink || `/${role}`;
   
   // Build query params from metadata
   const params = new URLSearchParams();
