@@ -237,27 +237,32 @@ export function CreateStoryDialog({ open, onOpenChange, onCreated }: Props) {
           </div>
         )}
 
+        {conversionProgress && (saving || isConverting) && (
+          <p className="text-xs text-muted-foreground">{conversionProgress.message}</p>
+        )}
+
         <div className="flex justify-between items-center pt-2">
-          <Button variant="ghost" onClick={close} disabled={saving}>
+          <Button variant="ghost" onClick={close} disabled={saving || isConverting}>
             <X className="h-4 w-4 mr-1" />
             Annuler
           </Button>
           {mode !== "choose" && (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => reset()} disabled={saving}>
+              <Button variant="outline" onClick={() => reset()} disabled={saving || isConverting}>
                 Retour
               </Button>
               <Button
                 onClick={publish}
-                disabled={saving}
+                disabled={saving || isConverting}
                 style={{ background: "hsl(158 55% 38%)", color: "white" }}
               >
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {(saving || isConverting) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Publier 24h
               </Button>
             </div>
           )}
         </div>
+
       </DialogContent>
     </Dialog>
   );
