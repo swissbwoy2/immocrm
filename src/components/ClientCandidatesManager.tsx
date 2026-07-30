@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, FileText, CheckCircle, XCircle, Ban } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, FileText, CheckCircle, XCircle, Ban, Mail, Phone, Globe } from 'lucide-react';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS, CUMULATIVE_TYPES, useClientCandidates } from '@/hooks/useClientCandidates';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { hasStableStatus } from '@/hooks/useSolvabilityCheck';
@@ -206,7 +206,34 @@ export function ClientCandidatesManager({
                             )}
                           </div>
 
+                          {/* Coordonnées */}
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Mail className="w-3 h-3 shrink-0" />
+                              {candidate.email ? (
+                                <a href={`mailto:${candidate.email}`} className="truncate hover:underline">{candidate.email}</a>
+                              ) : (
+                                <span className="text-orange-600">E-mail manquant</span>
+                              )}
+                            </span>
+                            <span className="flex items-center gap-1 min-w-0">
+                              <Phone className="w-3 h-3 shrink-0" />
+                              {candidate.telephone ? (
+                                <a href={`tel:${candidate.telephone}`} className="truncate hover:underline">{candidate.telephone}</a>
+                              ) : (
+                                <span className="text-orange-600">Téléphone manquant</span>
+                              )}
+                            </span>
+                            {candidate.nationalite && (
+                              <span className="flex items-center gap-1">
+                                <Globe className="w-3 h-3 shrink-0" />
+                                {candidate.nationalite}
+                              </span>
+                            )}
+                          </div>
+
                           {/* Info contribution */}
+
                           <div className="mt-2">
                             {contributes ? (
                               <p className="text-xs text-green-600 flex items-center gap-1">

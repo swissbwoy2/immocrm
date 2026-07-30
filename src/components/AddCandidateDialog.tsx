@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, User, DollarSign, Briefcase, Home, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ClientCandidate, CandidateType, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
+import { toast } from 'sonner';
 
 const TABS = ['type', 'personal', 'financial', 'professional', 'housing'] as const;
 type TabValue = typeof TABS[number];
@@ -54,9 +55,17 @@ const initialFormData = {
   lien_avec_client: '',
 };
 
+const FIELD_TAB: Record<string, TabValue> = {
+  prenom: 'personal', nom: 'personal', email: 'personal', telephone: 'personal',
+  date_naissance: 'personal', nationalite: 'personal', type_permis: 'personal',
+  revenus_mensuels: 'financial',
+  profession: 'professional', employeur: 'professional', type_contrat: 'professional', source_revenus: 'professional',
+};
+
 export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }: AddCandidateDialogProps) {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabValue>('type');
 
   const currentTabIndex = TABS.indexOf(activeTab);
@@ -78,6 +87,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
   useEffect(() => {
     if (open) {
       setActiveTab('type');
+      setErrors({});
       if (editCandidate) {
         setFormData({
           type: editCandidate.type,
@@ -118,10 +128,45 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
     }
   }, [open, editCandidate]);
 
+  const validate = () => {
+    const e: Record<string, string> = {};
+    const req = (key: keyof typeof formData, msg: string) => {
+      const v = formData[key];
+      if (typeof v !== 'string' || !v.trim()) e[key as string] = msg;
+    };
+    req('prenom', 'Le prénom est obligatoire');
+    req('nom', 'Le nom est obligatoire');
+    req('email', "L'e-mail est obligatoire (signature SMS Flatfox)");
+    req('telephone', 'Le téléphone est obligatoire (signature SMS Flatfox)');
+    req('date_naissance', 'La date de naissance est obligatoire');
+    req('nationalite', 'La nationalité est obligatoire');
+    req('type_permis', 'Le type de permis est obligatoire');
+    req('profession', 'La profession est obligatoire');
+    req('employeur', "L'employeur est obligatoire");
+    req('type_contrat', 'Le type de contrat est obligatoire');
+    req('source_revenus', 'La source de revenus est obligatoire');
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      e.email = 'Adresse e-mail invalide';
+    }
+    if (formData.telephone.trim() && formData.telephone.replace(/\D/g, '').length < 9) {
+      e.telephone = 'Numéro de téléphone invalide';
+    }
+    if (!formData.revenus_mensuels || Number(formData.revenus_mensuels) <= 0) {
+      e.revenus_mensuels = 'Les revenus mensuels sont obligatoires';
+    }
+    return e;
+  };
+
   const handleSave = async () => {
-    if (!formData.prenom.trim() || !formData.nom.trim()) {
+    const e = validate();
+    setErrors(e);
+    const firstKey = Object.keys(e)[0];
+    if (firstKey) {
+      setActiveTab(FIELD_TAB[firstKey] || 'personal');
+      toast.error('Veuillez compléter tous les champs obligatoires');
       return;
     }
+
 
     setSaving(true);
     try {
@@ -224,6 +269,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     value={formData.prenom}
                     onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                   />
+                  {errors.prenom && <p className="text-xs text-destructive mt-1">{errors.prenom}</p>}
                 </div>
                 <div>
                   <Label>Nom *</Label>
@@ -231,34 +277,38 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     value={formData.nom}
                     onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                   />
+                  {errors.nom && <p className="text-xs text-destructive mt-1">{errors.nom}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Email</Label>
+                  <Label>Email *</Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
+                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email}</p>}
                 </div>
                 <div>
-                  <Label>Téléphone</Label>
+                  <Label>Téléphone *</Label>
                   <Input
                     value={formData.telephone}
                     onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
                     placeholder="+41 XX XXX XX XX"
                   />
+                  {errors.telephone && <p className="text-xs text-destructive mt-1">{errors.telephone}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Date de naissance</Label>
+                  <Label>Date de naissance *</Label>
                   <Input
                     type="date"
                     value={formData.date_naissance}
                     onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
                   />
+                  {errors.date_naissance && <p className="text-xs text-destructive mt-1">{errors.date_naissance}</p>}
                 </div>
                 <div>
                   <Label>Adresse</Label>
@@ -270,15 +320,16 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nationalité</Label>
+                  <Label>Nationalité *</Label>
                   <Input
                     value={formData.nationalite}
                     onChange={(e) => setFormData({ ...formData, nationalite: e.target.value })}
                     placeholder="Suisse, France, etc."
                   />
+                  {errors.nationalite && <p className="text-xs text-destructive mt-1">{errors.nationalite}</p>}
                 </div>
                 <div>
-                  <Label>Type de permis</Label>
+                  <Label>Type de permis *</Label>
                   <Select
                     value={formData.type_permis}
                     onValueChange={(value) => setFormData({ ...formData, type_permis: value })}
@@ -296,6 +347,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                       <SelectItem value="Autre">Autre</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.type_permis && <p className="text-xs text-destructive mt-1">{errors.type_permis}</p>}
                 </div>
               </div>
               <div>
@@ -322,13 +374,14 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
             <TabsContent value="financial" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Revenus mensuels nets (CHF)</Label>
+                  <Label>Revenus mensuels nets (CHF) *</Label>
                   <Input
                     type="number"
                     value={formData.revenus_mensuels}
                     onChange={(e) => setFormData({ ...formData, revenus_mensuels: e.target.value })}
                     placeholder="0"
                   />
+                  {errors.revenus_mensuels && <p className="text-xs text-destructive mt-1">{errors.revenus_mensuels}</p>}
                 </div>
                 <div>
                   <Label>Charges mensuelles (CHF)</Label>
@@ -391,18 +444,20 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
             <TabsContent value="professional" className="space-y-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Profession</Label>
+                  <Label>Profession *</Label>
                   <Input
                     value={formData.profession}
                     onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
                   />
+                  {errors.profession && <p className="text-xs text-destructive mt-1">{errors.profession}</p>}
                 </div>
                 <div>
-                  <Label>Employeur</Label>
+                  <Label>Employeur *</Label>
                   <Input
                     value={formData.employeur}
                     onChange={(e) => setFormData({ ...formData, employeur: e.target.value })}
                   />
+                  {errors.employeur && <p className="text-xs text-destructive mt-1">{errors.employeur}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -414,7 +469,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   />
                 </div>
                 <div>
-                  <Label>Type de contrat</Label>
+                  <Label>Type de contrat *</Label>
                   <Select
                     value={formData.type_contrat}
                     onValueChange={(value) => setFormData({ ...formData, type_contrat: value })}
@@ -433,11 +488,12 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                       <SelectItem value="Sans emploi">Sans emploi</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.type_contrat && <p className="text-xs text-destructive mt-1">{errors.type_contrat}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Source de revenus</Label>
+                  <Label>Source de revenus *</Label>
                   <Select
                     value={formData.source_revenus}
                     onValueChange={(value) => setFormData({ ...formData, source_revenus: value })}
@@ -455,6 +511,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                       <SelectItem value="Autre">Autre</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.source_revenus && <p className="text-xs text-destructive mt-1">{errors.source_revenus}</p>}
                 </div>
                 <div>
                   <Label>Date d'engagement</Label>
@@ -567,7 +624,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
               Annuler
             </Button>
-            <Button onClick={handleSave} disabled={saving || !formData.prenom.trim() || !formData.nom.trim()}>
+            <Button onClick={handleSave} disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
