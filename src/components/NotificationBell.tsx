@@ -52,6 +52,8 @@ export function NotificationBell() {
   const { notifications, counts, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
+  const { userRole } = useAuth();
+  const [open, setOpen] = React.useState(false);
   const [isAnimating, setIsAnimating] = React.useState(false);
   const prevCount = React.useRef(counts.total);
 
@@ -69,10 +71,13 @@ export function NotificationBell() {
     if (!notification.read) {
       markAsRead(notification.id);
     }
-    
-    // Detect current user role from URL
-    const role = detectRoleFromPath(location.pathname);
-    
+
+    // Prefer the authenticated role, fall back to the current URL
+    const pathRole = detectRoleFromPath(location.pathname);
+    const role = (['admin', 'agent', 'client', 'apporteur'].includes(userRole || '')
+      ? (userRole as 'admin' | 'agent' | 'client' | 'apporteur')
+      : pathRole);
+
     // Get the correct link using centralized logic
     const url = getCorrectNotificationLink(
       notification.type,
@@ -80,7 +85,9 @@ export function NotificationBell() {
       role,
       notification.metadata as Record<string, string> | null
     );
-    
+
+    // Close the popover so the navigation is actually visible
+    setOpen(false);
     navigate(url);
   };
 
