@@ -10,6 +10,8 @@ export interface MandatClientLike {
   created_at?: string | null;
   mandate_pause_days?: number | null;
   mandate_paused_at?: string | null;
+  mandate_official_end_date?: string | null;
+  mandat_renewal_count?: number | null;
   refund_status?: string | null;
   statut?: string | null;
   cancellation_requested_at?: string | null;
@@ -59,7 +61,13 @@ export function getMandatDates(client: MandatClientLike | null | undefined): Man
     client.statut === 'stoppe' ||
     client.statut === 'suspendu';
 
-  let end = baseEnd;
+  // Une échéance officielle (renouvellement manuel persisté) prime si elle est postérieure
+  const officialEndRaw = client.mandate_official_end_date;
+  const officialEnd = officialEndRaw ? new Date(officialEndRaw) : null;
+  let end =
+    officialEnd && !isNaN(officialEnd.getTime()) && officialEnd.getTime() > baseEnd.getTime()
+      ? officialEnd
+      : baseEnd;
   let renewalCount = 0;
   if (!blockRenewal) {
     while (now.getTime() > end.getTime()) {

@@ -27,7 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsDemoAccount } from '@/hooks/useIsDemoAccount';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
-import { getMandatDates } from '@/utils/mandatDates';
+import { getMandatDates, MANDAT_DURATION_DAYS } from '@/utils/mandatDates';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -296,6 +296,12 @@ function ClientDashboardLocation() {
     try {
       const oldDate = client.date_ajout || client.created_at;
       const newDate = new Date().toISOString();
+
+      // Nouvelle échéance = (échéance courante si future, sinon aujourd'hui) + 90 jours
+      const currentEnd = getMandatDates(client as any).end;
+      const base = currentEnd && currentEnd.getTime() > Date.now() ? new Date(currentEnd) : new Date();
+      const newEnd = new Date(base);
+      newEnd.setDate(newEnd.getDate() + MANDAT_DURATION_DAYS);
       
       const { error: historyError } = await supabase
         .from('renouvellements_mandat')
@@ -309,12 +315,19 @@ function ClientDashboardLocation() {
       
       if (historyError) throw historyError;
       
-      const { error: updateError } = await supabase
+      const { data: updatedRows, error: updateError } = await supabase
         .from('clients')
-        .update({ date_ajout: newDate })
-        .eq('id', client.id);
+        .update({
+          mandate_official_end_date: newEnd.toISOString(),
+          mandat_renewal_count: (client.mandat_renewal_count ?? 0) + 1,
+        })
+        .eq('id', client.id)
+        .select('id, mandate_official_end_date, mandat_renewal_count');
       
       if (updateError) throw updateError;
+      if (!updatedRows || updatedRows.length === 0) {
+        throw new Error("Le renouvellement n'a pas pu être enregistré (accès refusé).");
+      }
       
       const { data: clientProfileData } = await supabase
         .from('profiles')
@@ -414,10 +427,10 @@ function ClientDashboardLocation() {
       }
       
       await loadData();
-      toast.success('✅ Votre mandat a été renouvelé pour 90 jours !');
-    } catch (error) {
+      toast.success(`✅ Mandat renouvelé jusqu'au ${newEnd.toLocaleDateString('fr-CH')}`);
+    } catch (error: any) {
       console.error('Error renewing mandate:', error);
-      toast.error('❌ Erreur lors du renouvellement');
+      toast.error(`❌ Erreur lors du renouvellement${error?.message ? ` : ${error.message}` : ''}`);
     }
   };
 

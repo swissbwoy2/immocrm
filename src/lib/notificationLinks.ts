@@ -228,6 +228,34 @@ const NOTIFICATION_ROUTES: Record<string, Partial<Record<UserRole, string>>> = {
   commission_earned: {
     apporteur: '/apporteur/commissions',
   },
+
+  // Offer status / video / client interest
+  offre_status_change: {
+    client: '/client/offres-recues',
+    agent: '/agent/offres-envoyees',
+    admin: '/admin/offres-envoyees',
+  },
+  client_interesse: {
+    agent: '/agent/offres-envoyees',
+    admin: '/admin/offres-envoyees',
+  },
+  client_souhaite_postuler: {
+    agent: '/agent/postulations',
+    admin: '/admin/postulations',
+  },
+  visite_video: {
+    client: '/client/videos-recues',
+    agent: '/agent/visites',
+    admin: '/admin/calendrier',
+  },
+
+  // Document reminders (client side)
+  payslip_reminder_soft: { client: '/client/documents' },
+  payslip_reminder_insistent: { client: '/client/documents' },
+  payslip_reminder_urgent: { client: '/client/documents' },
+  extrait_poursuites_missing: { client: '/client/documents' },
+  extrait_poursuites_warning: { client: '/client/documents' },
+  extrait_poursuites_expired: { client: '/client/documents' },
 };
 
 /**
@@ -252,9 +280,19 @@ export function getCorrectNotificationLink(
 ): string {
   // Get the correct base URL for this notification type and role
   const correctBaseUrl = NOTIFICATION_ROUTES[notificationType]?.[role];
-  
+
+  // If the stored link already targets the mapped section (with a deeper path or
+  // query params, e.g. ?offreId=...), keep it: it is more precise.
+  const linkPath = currentLink?.split('?')[0];
+  const preferStoredLink =
+    !!currentLink &&
+    !!correctBaseUrl &&
+    !!linkPath &&
+    (linkPath === correctBaseUrl || linkPath.startsWith(`${correctBaseUrl}/`)) &&
+    currentLink !== correctBaseUrl;
+
   // If we have a mapped route, use it; otherwise use the provided link or fallback
-  let baseUrl = correctBaseUrl || currentLink || `/${role}`;
+  let baseUrl = (preferStoredLink ? currentLink : correctBaseUrl) || currentLink || `/${role}`;
   
   // Build query params from metadata
   const params = new URLSearchParams();
