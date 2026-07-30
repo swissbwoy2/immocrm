@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNativeCamera } from "@/hooks/useNativeCamera";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Image, Video, FileText, Mic, X, Loader2 } from "lucide-react";
@@ -24,6 +25,8 @@ interface AttachmentData {
 interface MessageAttachmentUploaderProps {
   onAttachmentReady: (attachment: AttachmentData | null) => void;
   conversationId: string;
+  /** Optionnel : rend l'aperçu contrôlé par le parent (vidé automatiquement après envoi). */
+  value?: AttachmentData | null;
 }
 
 const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
@@ -33,16 +36,20 @@ const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'documen
   return 'document'; // Par défaut pour PDF, DOC, XLSX, etc.
 };
 
-export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }: MessageAttachmentUploaderProps) => {
+export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, value }: MessageAttachmentUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [preview, setPreview] = useState<AttachmentData | null>(null);
+  const [internalPreview, setInternalPreview] = useState<AttachmentData | null>(null);
+  const isControlled = value !== undefined;
+  const preview = isControlled ? value : internalPreview;
+  const setPreview = (a: AttachmentData | null) => setInternalPreview(a);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'document'; result: ConversionResult } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
+  const { takePhoto, isNative } = useNativeCamera();
   const { convertToMp4, isConverting, conversionProgress, needsConversion, resetProgress } = useVideoConverter();
 
   const uploadFile = async (fileToUpload: File) => {
@@ -225,7 +232,13 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
     }
   };
 
-  const triggerCamera = (mode: 'image' | 'video') => {
+  const triggerCamera = async (mode: 'image' | 'video') => {
+    // Natif (Capacitor) : la caméra système pour la photo
+    if (isNative && mode === 'image') {
+      const file = await takePhoto();
+      if (file) await handleFileSelect(file, 'image');
+      return;
+    }
     if (cameraInputRef.current) {
       cameraInputRef.current.accept = mode === 'video' ? 'video/*' : 'image/*';
       cameraInputRef.current.setAttribute('capture', 'environment');
