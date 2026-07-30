@@ -54,9 +54,17 @@ const initialFormData = {
   lien_avec_client: '',
 };
 
+const FIELD_TAB: Record<string, TabValue> = {
+  prenom: 'personal', nom: 'personal', email: 'personal', telephone: 'personal',
+  date_naissance: 'personal', nationalite: 'personal', type_permis: 'personal',
+  revenus_mensuels: 'financial',
+  profession: 'professional', employeur: 'professional', type_contrat: 'professional', source_revenus: 'professional',
+};
+
 export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }: AddCandidateDialogProps) {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabValue>('type');
 
   const currentTabIndex = TABS.indexOf(activeTab);
