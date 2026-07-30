@@ -73,6 +73,7 @@ const cleanMessageContent = (content: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
