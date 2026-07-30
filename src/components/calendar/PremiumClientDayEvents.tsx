@@ -510,8 +510,22 @@ export function PremiumClientDayEvents({
                 return (
                   <div
                     key={`event-${data.id}-${idx}`}
+                    role={onOpenDetail ? 'button' : undefined}
+                    tabIndex={onOpenDetail ? 0 : undefined}
+                    onClick={onOpenDetail ? () => onOpenDetail(data, 'event') : undefined}
+                    onKeyDown={
+                      onOpenDetail
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onOpenDetail(data, 'event');
+                            }
+                          }
+                        : undefined
+                    }
                     className={cn(
                       'p-4 rounded-xl border bg-gradient-to-br animate-fade-in',
+                      onOpenDetail && 'cursor-pointer hover:border-primary/40 transition-colors',
                       eventTypeColors[item.eventType]
                     )}
                     style={{ animationDelay: `${idx * 50}ms` }}
