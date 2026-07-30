@@ -70,6 +70,12 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
     }
   }, [gi, si, groups]);
 
+  // Reset media state on story change
+  useEffect(() => {
+    setMediaReady(false);
+    setMediaError(false);
+  }, [story?.id]);
+
   // Record view + fetch insights for author
   useEffect(() => {
     if (!story || !user) return;
