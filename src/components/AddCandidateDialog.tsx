@@ -118,10 +118,45 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
     }
   }, [open, editCandidate]);
 
+  const validate = () => {
+    const e: Record<string, string> = {};
+    const req = (key: keyof typeof formData, msg: string) => {
+      const v = formData[key];
+      if (typeof v !== 'string' || !v.trim()) e[key as string] = msg;
+    };
+    req('prenom', 'Le prénom est obligatoire');
+    req('nom', 'Le nom est obligatoire');
+    req('email', "L'e-mail est obligatoire (signature SMS Flatfox)");
+    req('telephone', 'Le téléphone est obligatoire (signature SMS Flatfox)');
+    req('date_naissance', 'La date de naissance est obligatoire');
+    req('nationalite', 'La nationalité est obligatoire');
+    req('type_permis', 'Le type de permis est obligatoire');
+    req('profession', 'La profession est obligatoire');
+    req('employeur', "L'employeur est obligatoire");
+    req('type_contrat', 'Le type de contrat est obligatoire');
+    req('source_revenus', 'La source de revenus est obligatoire');
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      e.email = 'Adresse e-mail invalide';
+    }
+    if (formData.telephone.trim() && formData.telephone.replace(/\D/g, '').length < 9) {
+      e.telephone = 'Numéro de téléphone invalide';
+    }
+    if (!formData.revenus_mensuels || Number(formData.revenus_mensuels) <= 0) {
+      e.revenus_mensuels = 'Les revenus mensuels sont obligatoires';
+    }
+    return e;
+  };
+
   const handleSave = async () => {
-    if (!formData.prenom.trim() || !formData.nom.trim()) {
+    const e = validate();
+    setErrors(e);
+    const firstKey = Object.keys(e)[0];
+    if (firstKey) {
+      setActiveTab(FIELD_TAB[firstKey] || 'personal');
+      toast.error('Veuillez compléter tous les champs obligatoires');
       return;
     }
+
 
     setSaving(true);
     try {
