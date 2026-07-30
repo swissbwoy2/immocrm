@@ -7,6 +7,8 @@ import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, Fil
 import { ClientCandidate, CANDIDATE_TYPE_LABELS, CUMULATIVE_TYPES, useClientCandidates } from '@/hooks/useClientCandidates';
 import { AddCandidateDialog } from './AddCandidateDialog';
 import { hasStableStatus } from '@/hooks/useSolvabilityCheck';
+import { CandidateFullDetails } from './candidates/CandidateFullDetails';
+
 
 interface ClientCandidatesManagerProps {
   clientId: string;
@@ -267,7 +269,10 @@ export function ClientCandidatesManager({
                               </p>
                             ) : null}
                           </div>
+
+                          <CandidateFullDetails candidate={candidate} />
                         </div>
+
                       </div>
                       
                       <div className="flex items-center gap-1">

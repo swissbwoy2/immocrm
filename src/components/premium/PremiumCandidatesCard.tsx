@@ -7,6 +7,8 @@ import { ClientCandidate, CANDIDATE_TYPE_LABELS, CUMULATIVE_TYPES, useClientCand
 import { AddCandidateDialog } from '@/components/AddCandidateDialog';
 import { hasStableStatus } from '@/hooks/useSolvabilityCheck';
 import { cn } from '@/lib/utils';
+import { CandidateFullDetails } from '@/components/candidates/CandidateFullDetails';
+
 
 interface PremiumCandidatesCardProps {
   clientId: string;
@@ -299,7 +301,10 @@ export function PremiumCandidatesCard({
                                 </p>
                               ) : null}
                             </div>
+
+                            <CandidateFullDetails candidate={candidate} />
                           </div>
+
                         </div>
                         
                         <div className="flex items-center gap-0.5">
