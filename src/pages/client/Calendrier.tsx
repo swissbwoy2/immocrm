@@ -24,6 +24,21 @@ export default function ClientCalendrier() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [detailVisite, setDetailVisite] = useState<any | null>(null);
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const handleOpenDetail = (data: any, type: 'event' | 'visite') => {
+    if (type === 'visite') {
+      setDetailVisite(data);
+      setDetailEvent(null);
+    } else {
+      setDetailEvent(data as CalendarEvent);
+      setDetailVisite(null);
+    }
+    setDetailOpen(true);
+  };
+
 
   useEffect(() => {
     loadData();
