@@ -15,7 +15,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
   return (
     <div 
       className={cn(
-        'relative mt-3 p-5 rounded-2xl overflow-hidden',
+        'relative mt-3 p-4 sm:p-5 rounded-2xl overflow-hidden w-full max-w-full min-w-0 box-border',
         'bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/40',
         'dark:from-blue-950/60 dark:via-indigo-950/40 dark:to-purple-950/30',
         'border-2 border-blue-200/50 dark:border-blue-800/50',
@@ -26,6 +26,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
         className
       )}
     >
+
       {/* Animated gradient border */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <div 
