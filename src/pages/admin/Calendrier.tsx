@@ -639,6 +639,7 @@ export default function AdminCalendrier() {
             visites={filteredVisites}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            onVisibleDateChange={setVisibleDate}
             onEventClick={(item, type) => {
               if (type === 'visite') {
                 handleVisiteGroupClick(item.groupedClients || [item]);
