@@ -23,11 +23,13 @@ interface PremiumClientDayEventsProps {
   onAccepterOffre: (visite: any) => void;
   onRefuserOffre: (visite: any) => void;
   onVoirOffre: () => void;
+  /** Opens the full detail dialog for a visite or an event */
+  onOpenDetail?: (data: any, type: 'event' | 'visite') => void;
 }
 
 export function PremiumClientDayEvents({ 
   date, events, visites, 
-  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre 
+  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre, onOpenDetail
 }: PremiumClientDayEventsProps) {
   if (!date) {
     return (
