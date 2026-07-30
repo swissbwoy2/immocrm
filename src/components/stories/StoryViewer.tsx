@@ -5,7 +5,7 @@ import type { StoryGroup, StoryRow } from "./useStories";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { X, Trash2, Eye, Send, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Trash2, Eye, Send, ChevronLeft, ChevronRight, PlayCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
