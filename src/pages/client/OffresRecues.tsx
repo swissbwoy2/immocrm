@@ -215,9 +215,9 @@ const OffresRecues = () => {
     markTypeAsRead('new_offer');
   }, [user?.id]);
 
-  // Auto-open offer details from query param
+  // Auto-open offer details from query param (?offre= ou ?offreId= depuis les notifications)
   useEffect(() => {
-    const offreId = searchParams.get('offre');
+    const offreId = searchParams.get('offre') || searchParams.get('offreId');
     if (offreId && offres.length > 0 && !loading) {
       const offre = offres.find(o => o.id === offreId);
       if (offre) {
