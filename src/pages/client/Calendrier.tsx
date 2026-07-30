@@ -318,6 +318,7 @@ export default function ClientCalendrier() {
             visites={visites}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            onEventClick={(item, type) => handleOpenDetail(item, type)}
             availableTypes={['visite', 'visite_proposee', 'signature', 'etat_lieux', 'rdv_telephonique', 'rendez_vous']}
           />
         </div>
@@ -332,9 +333,18 @@ export default function ClientCalendrier() {
             onAccepterOffre={accepterOffre}
             onRefuserOffre={refuserOffre}
             onVoirOffre={() => navigate('/client/offres-recues')}
+            onOpenDetail={handleOpenDetail}
           />
         </div>
       </div>
+
+      <ClientEventDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        visite={detailVisite}
+        event={detailEvent}
+        onVoirOffre={() => navigate('/client/offres-recues')}
+      />
 
       {/* Empty state when no visites */}
       {visites.length === 0 && (
