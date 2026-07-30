@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
+import { ClientEventDetailDialog } from '@/components/calendar/ClientEventDetailDialog';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -23,6 +24,21 @@ export default function ClientCalendrier() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [detailVisite, setDetailVisite] = useState<any | null>(null);
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const handleOpenDetail = (data: any, type: 'event' | 'visite') => {
+    if (type === 'visite') {
+      setDetailVisite(data);
+      setDetailEvent(null);
+    } else {
+      setDetailEvent(data as CalendarEvent);
+      setDetailVisite(null);
+    }
+    setDetailOpen(true);
+  };
+
 
   useEffect(() => {
     loadData();
@@ -302,6 +318,7 @@ export default function ClientCalendrier() {
             visites={visites}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            onEventClick={(item, type) => handleOpenDetail(item, type)}
             availableTypes={['visite', 'visite_proposee', 'signature', 'etat_lieux', 'rdv_telephonique', 'rendez_vous']}
           />
         </div>
@@ -316,9 +333,18 @@ export default function ClientCalendrier() {
             onAccepterOffre={accepterOffre}
             onRefuserOffre={refuserOffre}
             onVoirOffre={() => navigate('/client/offres-recues')}
+            onOpenDetail={handleOpenDetail}
           />
         </div>
       </div>
+
+      <ClientEventDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        visite={detailVisite}
+        event={detailEvent}
+        onVoirOffre={() => navigate('/client/offres-recues')}
+      />
 
       {/* Empty state when no visites */}
       {visites.length === 0 && (

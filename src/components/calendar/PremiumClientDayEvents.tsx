@@ -23,11 +23,13 @@ interface PremiumClientDayEventsProps {
   onAccepterOffre: (visite: any) => void;
   onRefuserOffre: (visite: any) => void;
   onVoirOffre: () => void;
+  /** Opens the full detail dialog for a visite or an event */
+  onOpenDetail?: (data: any, type: 'event' | 'visite') => void;
 }
 
 export function PremiumClientDayEvents({ 
   date, events, visites, 
-  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre 
+  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre, onOpenDetail
 }: PremiumClientDayEventsProps) {
   if (!date) {
     return (
@@ -472,12 +474,23 @@ export function PremiumClientDayEvents({
                             </div>
                           )}
 
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
+                            {onOpenDetail && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => onOpenDetail(data, 'visite')}
+                                className="flex-1 min-w-0"
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Voir le détail
+                              </Button>
+                            )}
                             <Button 
                               variant="outline"
                               size="sm"
                               onClick={onVoirOffre}
-                              className="flex-1 group/btn border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                              className="flex-1 min-w-0 group/btn border-border/50 hover:border-primary/50 hover:bg-primary/5"
                             >
                               <Eye className="mr-2 h-4 w-4 group-hover/btn:text-primary transition-colors" />
                               Voir l'offre
@@ -497,8 +510,22 @@ export function PremiumClientDayEvents({
                 return (
                   <div
                     key={`event-${data.id}-${idx}`}
+                    role={onOpenDetail ? 'button' : undefined}
+                    tabIndex={onOpenDetail ? 0 : undefined}
+                    onClick={onOpenDetail ? () => onOpenDetail(data, 'event') : undefined}
+                    onKeyDown={
+                      onOpenDetail
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onOpenDetail(data, 'event');
+                            }
+                          }
+                        : undefined
+                    }
                     className={cn(
                       'p-4 rounded-xl border bg-gradient-to-br animate-fade-in',
+                      onOpenDetail && 'cursor-pointer hover:border-primary/40 transition-colors',
                       eventTypeColors[item.eventType]
                     )}
                     style={{ animationDelay: `${idx * 50}ms` }}
