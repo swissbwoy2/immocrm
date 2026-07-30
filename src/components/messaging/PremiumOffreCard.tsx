@@ -56,28 +56,29 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
           <div className="flex-1 min-w-0">
             <AddressLink 
               address={offre.adresse}
-              className="font-bold text-foreground truncate block"
+              className="font-bold text-foreground block break-words [overflow-wrap:anywhere]"
               showIcon={false}
             />
-            <div className="text-muted-foreground text-xs mt-0.5">
+            <div className="text-muted-foreground text-xs mt-0.5 break-words">
               <span>{offre.type_bien || 'Appartement'}</span>
             </div>
           </div>
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4 min-w-0">
           <div className={cn(
-            'p-3 rounded-xl text-center',
+            'p-3 rounded-xl text-center min-w-0',
             'bg-white/60 dark:bg-white/5',
             'border border-white/50 dark:border-white/10',
             'transition-all duration-300 hover:scale-105 hover:shadow-md'
           )}>
-            <p className="text-lg font-bold text-primary">
+            <p className="text-base sm:text-lg font-bold text-primary break-words [overflow-wrap:anywhere]">
               {offre.prix?.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{isAchat ? 'CHF prix de vente' : 'CHF/mois'}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider break-words">{isAchat ? 'CHF prix de vente' : 'CHF/mois'}</p>
           </div>
+
           
           {offre.surface && (
             <div className={cn(
