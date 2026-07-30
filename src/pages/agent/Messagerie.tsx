@@ -1845,8 +1845,33 @@ const Messagerie = () => {
     </div>
   );
 
+  if (isMobile) {
+    const contact = currentConversation ? getContactInfo(currentConversation) : null;
+    return (
+      <MobileMessenger
+        conversationsList={conversationsList}
+        chatView={chatView}
+        selectedConversation={selectedConv}
+        onBack={() => setSelectedConv(null)}
+        headerName={contact?.name}
+        headerSubtitle={
+          contact
+            ? contact.isOnline
+              ? 'En ligne'
+              : contact.type === 'admin'
+                ? 'Admin'
+                : 'Client'
+            : undefined
+        }
+        headerAvatarUrl={null}
+        isOnline={!!contact?.isOnline}
+      />
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
+
       <MessagingLayout
         conversationsList={conversationsList}
         chatView={chatView}
