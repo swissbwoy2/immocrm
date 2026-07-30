@@ -67,14 +67,17 @@ Deno.serve(async (req) => {
     "type_bien", "contact_gerance", "contact_annonceur", "contact_visite",
   ] as const;
 
-  for (const offre of offres ?? []) {
+  const list = offres ?? [];
+  const CONCURRENCY = 6;
+  let cursor = 0;
+
+  async function processOne(offre: any) {
     report.processed += 1;
     const { details, status } = await fetchListingDetails(offre.lien_annonce as string);
     if (status !== "ok") {
       report.failed += 1;
       report.failures_by_status[status] = (report.failures_by_status[status] ?? 0) + 1;
-      await sleep(400);
-      continue;
+      return;
     }
 
     const patch: Record<string, unknown> = {};
@@ -88,7 +91,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Recalcul de l'état d'action requise à partir des valeurs finales
     const merged = { ...offre, ...patch } as any;
     const missing = [
       !merged.surface ? "surface" : null,
@@ -102,8 +104,7 @@ Deno.serve(async (req) => {
     patch.needs_agent_action = missing.length > 0;
     patch.missing_info = missing.length ? missing.join(", ") : null;
 
-    const hasFieldFill = Object.keys(patch).length > 2;
-    if (hasFieldFill) report.enriched += 1; else report.unchanged += 1;
+    if (Object.keys(patch).length > 2) report.enriched += 1; else report.unchanged += 1;
 
     if (!dryRun) {
       const { error: upErr } = await supabase.from("offres").update(patch).eq("id", offre.id);
@@ -112,9 +113,17 @@ Deno.serve(async (req) => {
         report.failures_by_status["update_error"] = (report.failures_by_status["update_error"] ?? 0) + 1;
       }
     }
-
-    await sleep(400);
   }
+
+  async function worker() {
+    while (cursor < list.length) {
+      const offre = list[cursor++];
+      await processOne(offre);
+      await sleep(150); // throttle léger
+    }
+  }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
   return new Response(JSON.stringify(report), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
