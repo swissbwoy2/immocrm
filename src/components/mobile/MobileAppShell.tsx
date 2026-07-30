@@ -51,6 +51,7 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
           </SilentErrorBoundary>
         </div>
       </header>
+      )}
 
       {/* ZONE SCROLLABLE UNIQUE */}
       <main
@@ -60,8 +61,8 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {/* BOTTOM NAV FIXE */}
-      <MobileBottomNav role={userRole} />
+      {/* BOTTOM NAV FIXE (masquée en mode immersif) */}
+      {!immersive && <MobileBottomNav role={userRole} />}
     </div>
   );
 }
