@@ -213,9 +213,17 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center touch-none">
+    <div
+      className="fixed inset-0 z-[100] bg-black flex items-center justify-center touch-none"
+      style={{ height: '100dvh' }}
+      data-immersive-overlay
+    >
       {/* Progress bars */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex gap-1 p-2">
+      <div
+        className="absolute left-0 right-0 z-10 flex gap-1 p-2"
+        style={{ top: 'env(safe-area-inset-top, 0px)' }}
+      >
+
         {group.stories.map((_, i) => (
           <div key={i} className="flex-1 h-1 rounded-full bg-white/25 overflow-hidden">
             <div
