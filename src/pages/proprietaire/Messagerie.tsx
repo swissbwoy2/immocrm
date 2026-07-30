@@ -458,6 +458,7 @@ export default function Messagerie() {
                 attachmentSlot={
                   <MessageAttachmentUploader
                     conversationId={selectedConv}
+                    value={pendingAttachment}
                     onAttachmentReady={(attachment) => {
                       setPendingAttachment(attachment);
                     }}

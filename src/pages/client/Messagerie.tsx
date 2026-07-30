@@ -1880,6 +1880,7 @@ const Messagerie = () => {
           attachmentSlot={
             <MessageAttachmentUploader
               conversationId={selectedConv}
+              value={pendingAttachment}
               onAttachmentReady={setPendingAttachment}
             />
           }
