@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, List, Clock, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,8 @@ interface EventManagerCalendarProps {
   showFilters?: boolean;
   /** Optional title slot at top-right (e.g., a "+ New event" button) */
   headerActions?: React.ReactNode;
+  /** Called whenever the displayed period changes (used to fetch only the relevant date window) */
+  onVisibleDateChange?: (date: Date) => void;
 }
 
 const DEFAULT_TYPES = [
@@ -69,11 +71,18 @@ export function EventManagerCalendar({
   availableTypes = DEFAULT_TYPES,
   showFilters = true,
   headerActions,
+  onVisibleDateChange,
 }: EventManagerCalendarProps) {
   const [currentDate, setCurrentDate] = useState<Date>(selectedDate ?? new Date());
   const [view, setView] = useState<ViewMode>(defaultView);
   const [search, setSearch] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+
+  useEffect(() => {
+    onVisibleDateChange?.(currentDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
+
 
   const normalizedAll = useNormalizedEvents(events, visites);
 
