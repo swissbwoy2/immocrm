@@ -285,7 +285,7 @@ export default function AdminCalendrier() {
 
     // Polling fallback (silent) every 120s
     const pollInterval = setInterval(() => {
-      loadData(true);
+      loadDataRef.current(true);
     }, 120000);
 
     return () => {
