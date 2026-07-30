@@ -13,10 +13,15 @@ import { FloatingMessenger } from '@/components/messaging/floating/FloatingMesse
 import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { DemoWriteGuard } from '@/components/DemoWriteGuard';
 import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
+import { MobileAppShell } from '@/components/mobile/MobileAppShell';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Capacitor } from '@capacitor/core';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
+
 
 function AppLayoutContent({ children }: AppLayoutProps) {
   const { setOpenMobile, isMobile, openMobile } = useSidebar();
@@ -43,6 +48,28 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     edgeThreshold: 40,
     enableHaptics: true,
   });
+
+  const isMobileViewport = useIsMobile();
+  const { userRole } = useAuth();
+  const isNative = Capacitor.isNativePlatform();
+  const shellRoles = ['admin', 'agent', 'client'];
+  const useAppShell = (isMobileViewport || isNative) && shellRoles.includes(userRole || '');
+
+  if (useAppShell) {
+    return (
+      <>
+        <OfflineIndicator />
+        <DemoWriteGuard />
+        <AppSidebar />
+        <MobileAppShell>
+          <DemoModeBanner />
+          <OpenInBrowserBanner />
+          <PageTransition>{children}</PageTransition>
+        </MobileAppShell>
+        <FloatingMessenger />
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -88,6 +115,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     </div>
   );
 }
+
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
