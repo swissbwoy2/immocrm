@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, User, DollarSign, Briefcase, Home, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ClientCandidate, CandidateType, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
+import { toast } from 'sonner';
 
 const TABS = ['type', 'personal', 'financial', 'professional', 'housing'] as const;
 type TabValue = typeof TABS[number];
