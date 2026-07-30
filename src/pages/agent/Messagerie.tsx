@@ -44,6 +44,8 @@ import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
 import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
 import { StoriesBar } from "@/components/stories/StoriesBar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import DateSeparator from "@/components/messaging/DateSeparator";
@@ -71,6 +73,7 @@ const cleanMessageContent = (content: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
@@ -1607,7 +1610,7 @@ const Messagerie = () => {
         <div className="space-y-2 max-w-4xl mx-auto min-w-0">
           {/* Header qui défile avec les messages */}
           {/* Header qui défile avec les messages */}
-          {currentConversation && (
+          {currentConversation && !isMobile && (
             <div className="mb-4 pb-3 border-b border-border/30">
               <ChatHeader
                 name={getContactInfo(currentConversation).name}
@@ -1842,8 +1845,33 @@ const Messagerie = () => {
     </div>
   );
 
+  if (isMobile) {
+    const contact = currentConversation ? getContactInfo(currentConversation) : null;
+    return (
+      <MobileMessenger
+        conversationsList={conversationsList}
+        chatView={chatView}
+        selectedConversation={selectedConv}
+        onBack={() => setSelectedConv(null)}
+        headerName={contact?.name}
+        headerSubtitle={
+          contact
+            ? contact.isOnline
+              ? 'En ligne'
+              : contact.type === 'admin'
+                ? 'Admin'
+                : 'Client'
+            : undefined
+        }
+        headerAvatarUrl={null}
+        isOnline={!!contact?.isOnline}
+      />
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
+
       <MessagingLayout
         conversationsList={conversationsList}
         chatView={chatView}

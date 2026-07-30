@@ -28,6 +28,8 @@ import { isSameDay, parseISO } from "date-fns";
 import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
 import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
 import { StoriesBar } from "@/components/stories/StoriesBar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 
 const ADMIN_TAB_STORAGE_KEY = "messagerie_admin_tab";
 
@@ -38,6 +40,7 @@ const removeAccents = (str: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const { markTypeAsRead } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -708,8 +711,39 @@ const Messagerie = () => {
     </div>
   );
 
+  if (isMobile) {
+    const contactName = currentConversation
+      ? currentConversation.conversation_type === 'admin-agent'
+        ? currentConversation.agentName
+        : `${currentConversation.clientName ?? 'Client'} ↔ ${currentConversation.agentName ?? ''}`.trim()
+      : undefined;
+    return (
+      <MobileMessenger
+        conversationsList={conversationsList}
+        chatView={chatView}
+        selectedConversation={selectedConv}
+        onBack={() => setSelectedConv(null)}
+        headerName={contactName}
+        headerSubtitle={
+          currentConversation
+            ? currentConversation.conversation_type !== 'admin-agent' && currentConversation.clientIsOnline
+              ? 'En ligne'
+              : currentConversation.subject || 'Conversation'
+            : undefined
+        }
+        headerAvatarUrl={null}
+        isOnline={
+          currentConversation?.conversation_type !== 'admin-agent'
+            ? !!currentConversation?.clientIsOnline
+            : false
+        }
+      />
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
+
       <MessagingLayout
         conversationsList={conversationsList}
         chatView={chatView}
