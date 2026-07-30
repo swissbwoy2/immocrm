@@ -87,6 +87,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
   useEffect(() => {
     if (open) {
       setActiveTab('type');
+      setErrors({});
       if (editCandidate) {
         setFormData({
           type: editCandidate.type,
@@ -623,7 +624,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
               Annuler
             </Button>
-            <Button onClick={handleSave} disabled={saving || !formData.prenom.trim() || !formData.nom.trim()}>
+            <Button onClick={handleSave} disabled={saving}>
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
