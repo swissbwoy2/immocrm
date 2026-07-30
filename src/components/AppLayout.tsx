@@ -17,6 +17,7 @@ import { MobileAppShell } from '@/components/mobile/MobileAppShell';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/contexts/AuthContext';
+import { MobileImmersiveProvider } from '@/contexts/MobileImmersiveContext';
 
 interface AppLayoutProps {
   children: ReactNode;
