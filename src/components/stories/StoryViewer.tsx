@@ -124,15 +124,18 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
     })();
   }, [story?.id, user, onViewed, story]);
 
-  // Auto-advance
+  // Auto-advance (images/text only : la vidéo pilote sa propre progression)
   useEffect(() => {
     if (!story || paused) return;
-    const duration = story.type === "video" ? (videoRef.current?.duration ? videoRef.current.duration * 1000 : IMAGE_DURATION_MS) : IMAGE_DURATION_MS;
-    startRef.current = Date.now() - (progress / 100) * duration;
+    if (story.type === "video") return;
+
+    const duration = IMAGE_DURATION_MS;
+    startRef.current = Date.now() - (progressRef.current / 100) * duration;
 
     const tick = () => {
       const elapsed = Date.now() - startRef.current;
       const p = Math.min(100, (elapsed / duration) * 100);
+      progressRef.current = p;
       setProgress(p);
       if (p >= 100) {
         goNext();
@@ -145,7 +148,16 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id, paused, goNext]);
+  }, [story?.id, story?.type, paused, goNext]);
+
+  // Pause / reprise de la vidéo
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || story?.type !== "video") return;
+    if (paused) v.pause();
+    else void v.play().catch(() => {});
+  }, [paused, story?.id, story?.type]);
+
 
   // Keyboard nav
   useEffect(() => {
