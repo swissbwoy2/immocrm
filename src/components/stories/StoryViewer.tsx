@@ -286,21 +286,33 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
         onPointerUp={() => setPaused(false)}
         onPointerLeave={() => setPaused(false)}
       >
-        {story.type === "image" && story.media_url && (
-          <img src={story.media_url} className="max-w-full max-h-full object-contain" alt="story" />
+        {story.type === "image" && mediaUrl && !mediaError && (
+          <img
+            src={mediaUrl}
+            className="relative z-[1] w-full h-full max-w-full max-h-full object-contain"
+            alt="story"
+            onLoad={() => setMediaReady(true)}
+            onError={() => setMediaError(true)}
+          />
         )}
-        {story.type === "video" && story.media_url && (
+        {story.type === "video" && mediaUrl && !mediaError && (
           <video
+            key={story.id}
             ref={videoRef}
-            src={story.media_url}
-            className="max-w-full max-h-full"
+            src={mediaUrl}
+            poster={story.thumbnail_url || undefined}
+            className="relative z-[1] w-full h-full max-w-full max-h-full object-contain bg-black"
             autoPlay
             playsInline
+            muted={false}
             controls={false}
+            preload="auto"
             onLoadedMetadata={() => {
               progressRef.current = 0;
               setProgress(0);
+              setMediaReady(true);
             }}
+            onError={() => setMediaError(true)}
             onTimeUpdate={(e) => {
               const v = e.currentTarget;
               if (!v.duration || !isFinite(v.duration)) return;
@@ -311,6 +323,43 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
             onEnded={goNext}
           />
         )}
+
+        {/* Chargement */}
+        {story.type !== "text" && mediaUrl && !mediaReady && !mediaError && (
+          <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none">
+            <div className="h-10 w-10 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          </div>
+        )}
+
+        {/* Repli si le média ne peut pas être lu (ex. vidéo iPhone .MOV/HEVC) */}
+        {story.type !== "text" && (!mediaUrl || mediaError) && (
+          <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center gap-4 px-8 text-center text-white">
+            <div
+              className="h-20 w-20 rounded-2xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, hsl(158 55% 38%), hsl(200 70% 45%))" }}
+            >
+              <PlayCircle className="h-10 w-10" />
+            </div>
+            <div>
+              <p className="font-semibold">Média non lisible dans le navigateur</p>
+              <p className="text-sm opacity-80 mt-1">
+                Ce format (ex. vidéo iPhone .MOV) n'est pas supporté ici.
+              </p>
+            </div>
+            {mediaUrl && (
+              <Button
+                variant="secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(mediaUrl, "_blank", "noopener");
+                }}
+              >
+                Ouvrir / télécharger
+              </Button>
+            )}
+          </div>
+        )}
+
 
         {story.type === "text" && (
           <div
