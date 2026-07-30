@@ -299,7 +299,10 @@ export function PremiumCandidatesCard({
                                 </p>
                               ) : null}
                             </div>
+
+                            <CandidateFullDetails candidate={candidate} />
                           </div>
+
                         </div>
                         
                         <div className="flex items-center gap-0.5">
