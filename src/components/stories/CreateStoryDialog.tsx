@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Camera, Video, Type, Loader2, X } from "lucide-react";
+import { useVideoConverter } from "@/hooks/useVideoConverter";
 
 interface Props {
   open: boolean;
@@ -33,6 +34,7 @@ export function CreateStoryDialog({ open, onOpenChange, onCreated }: Props) {
   const [bg, setBg] = useState(TEXT_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const { convertToMp4, needsConversion, isConverting, conversionProgress } = useVideoConverter();
 
   const authorRole: "admin" | "agent" | null =
     userRole === "admin" ? "admin" : userRole === "agent" ? "agent" : null;
@@ -69,12 +71,21 @@ export function CreateStoryDialog({ open, onOpenChange, onCreated }: Props) {
           return;
         }
         storyType = file.type.startsWith("video/") ? "video" : "image";
-        const ext = file.name.split(".").pop() || (storyType === "video" ? "mp4" : "jpg");
+        // Convertit les vidéos non lisibles par les navigateurs (iPhone .MOV/HEVC) en MP4/H.264
+        let uploadFile = file;
+        if (storyType === "video" && needsConversion(file)) {
+          toast.info("Conversion de la vidéo en cours...");
+          const res = await convertToMp4(file);
+          uploadFile = res.file;
+          if (res.skipped && res.reason) toast.warning(res.reason);
+        }
+        const ext = uploadFile.name.split(".").pop() || (storyType === "video" ? "mp4" : "jpg");
         const path = `stories/${user.id}/${Date.now()}.${ext}`;
         const up = await supabase.storage
           .from("message-attachments")
-          .upload(path, file, { cacheControl: "3600", upsert: false });
+          .upload(path, uploadFile, { cacheControl: "3600", upsert: false, contentType: uploadFile.type });
         if (up.error) throw up.error;
+
         mediaPath = path;
         mediaUrl = supabase.storage.from("message-attachments").getPublicUrl(path).data.publicUrl;
       } else {
