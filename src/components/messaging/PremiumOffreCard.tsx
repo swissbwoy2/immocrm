@@ -42,7 +42,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
       {/* Glassmorphism overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 rounded-2xl pointer-events-none" />
 
-      <div className="relative z-10">
+      <div className="relative z-10 min-w-0">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
           <div className={cn(
@@ -82,7 +82,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
           
           {offre.surface && (
             <div className={cn(
-              'p-3 rounded-xl text-center',
+              'p-3 rounded-xl text-center min-w-0',
               'bg-white/60 dark:bg-white/5',
               'border border-white/50 dark:border-white/10',
               'transition-all duration-300 hover:scale-105 hover:shadow-md'
@@ -97,7 +97,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
           
           {offre.pieces && (
             <div className={cn(
-              'p-3 rounded-xl text-center',
+              'p-3 rounded-xl text-center min-w-0',
               'bg-white/60 dark:bg-white/5',
               'border border-white/50 dark:border-white/10',
               'transition-all duration-300 hover:scale-105 hover:shadow-md'
@@ -119,7 +119,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
 
         {/* Link preview */}
         {offre.lien_annonce && (
-          <div className="mt-3">
+          <div className="mt-3 min-w-0 max-w-full overflow-hidden">
             <LinkPreviewCard url={offre.lien_annonce} />
           </div>
         )}
