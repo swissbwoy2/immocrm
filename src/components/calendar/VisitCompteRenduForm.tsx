@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Save, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getOrCreateClientConversation } from '@/lib/clientConversation';
+import { VisitCompteRenduAttachments } from '@/components/calendar/VisitCompteRenduAttachments';
 
 export interface CompteRenduPayload {
   ascenseur: 'oui' | 'non' | '';
@@ -251,6 +252,8 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
           />
         </div>
       </div>
+
+      <VisitCompteRenduAttachments visite={visite} visitesGroup={visitesGroup} onChanged={() => onSaved?.()} />
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
