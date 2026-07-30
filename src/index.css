@@ -1644,3 +1644,12 @@ All colors MUST be HSL.
 }
 
 /* ===== Google Translate Widget Customization ===== */
+
+/* ==== Mode immersif mobile (conversation plein écran) ==== */
+/* Aucun bouton flottant global ne doit recouvrir la barre de saisie. */
+body.imr-immersive [data-floating-widget],
+body.imr-immersive .imr-floating-bubble,
+body.imr-immersive #whatsapp-widget,
+body.imr-immersive .whatsapp-float {
+  display: none !important;
+}
