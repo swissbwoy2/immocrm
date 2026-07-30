@@ -139,6 +139,7 @@ export default function Landing() {
 
         {/* WhatsApp Widget */}
         <div
+          data-floating-widget
           className="fixed bottom-4 left-4 md:bottom-6 md:left-6 z-40 opacity-70 hover:opacity-100 transition-opacity"
           style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
         >

@@ -9,6 +9,8 @@ import { X, Trash2, Eye, Send, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
+
 
 const QUICK_EMOJIS = ["❤️", "🔥", "😍", "👍", "😮", "👏"];
 const IMAGE_DURATION_MS = 5000;
@@ -22,7 +24,9 @@ interface Props {
 
 export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Props) {
   const { user } = useAuth();
+  useImmersiveMode(true);
   const [gi, setGi] = useState(startGroupIndex);
+
   const [si, setSi] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -36,6 +40,8 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(Date.now());
+  const progressRef = useRef<number>(0);
+
 
   const group = groups[gi];
   const story: StoryRow | undefined = group?.stories[si];
@@ -65,9 +71,11 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   // Record view + fetch insights for author
   useEffect(() => {
     if (!story || !user) return;
+    progressRef.current = 0;
     setProgress(0);
     setInsights(null);
     startRef.current = Date.now();
+
 
     (async () => {
       await supabase
@@ -124,15 +132,18 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
     })();
   }, [story?.id, user, onViewed, story]);
 
-  // Auto-advance
+  // Auto-advance (images/text only : la vidéo pilote sa propre progression)
   useEffect(() => {
     if (!story || paused) return;
-    const duration = story.type === "video" ? (videoRef.current?.duration ? videoRef.current.duration * 1000 : IMAGE_DURATION_MS) : IMAGE_DURATION_MS;
-    startRef.current = Date.now() - (progress / 100) * duration;
+    if (story.type === "video") return;
+
+    const duration = IMAGE_DURATION_MS;
+    startRef.current = Date.now() - (progressRef.current / 100) * duration;
 
     const tick = () => {
       const elapsed = Date.now() - startRef.current;
       const p = Math.min(100, (elapsed / duration) * 100);
+      progressRef.current = p;
       setProgress(p);
       if (p >= 100) {
         goNext();
@@ -145,7 +156,16 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [story?.id, paused, goNext]);
+  }, [story?.id, story?.type, paused, goNext]);
+
+  // Pause / reprise de la vidéo
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || story?.type !== "video") return;
+    if (paused) v.pause();
+    else void v.play().catch(() => {});
+  }, [paused, story?.id, story?.type]);
+
 
   // Keyboard nav
   useEffect(() => {
@@ -193,9 +213,17 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   }
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center touch-none">
+    <div
+      className="fixed inset-0 z-[100] bg-black flex items-center justify-center touch-none"
+      style={{ height: '100dvh' }}
+      data-immersive-overlay
+    >
       {/* Progress bars */}
-      <div className="absolute top-0 left-0 right-0 z-10 flex gap-1 p-2">
+      <div
+        className="absolute left-0 right-0 z-10 flex gap-1 p-2"
+        style={{ top: 'env(safe-area-inset-top, 0px)' }}
+      >
+
         {group.stories.map((_, i) => (
           <div key={i} className="flex-1 h-1 rounded-full bg-white/25 overflow-hidden">
             <div
@@ -209,7 +237,11 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
       </div>
 
       {/* Header */}
-      <div className="absolute top-4 left-0 right-0 z-10 flex items-center justify-between px-3 pt-4">
+      <div
+        className="absolute left-0 right-0 z-10 flex items-center justify-between px-3 pt-3"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      >
+
         <div className="flex items-center gap-2 text-white">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -254,9 +286,21 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
             autoPlay
             playsInline
             controls={false}
-            onLoadedMetadata={() => setProgress(0)}
+            onLoadedMetadata={() => {
+              progressRef.current = 0;
+              setProgress(0);
+            }}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget;
+              if (!v.duration || !isFinite(v.duration)) return;
+              const p = Math.min(100, (v.currentTime / v.duration) * 100);
+              progressRef.current = p;
+              setProgress(p);
+            }}
+            onEnded={goNext}
           />
         )}
+
         {story.type === "text" && (
           <div
             className="w-full h-full flex items-center justify-center p-8 text-white text-center text-2xl font-semibold"

@@ -70,6 +70,7 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
 
       {/* WhatsApp / Google Reviews Widget — desktop only to avoid overlapping mobile sticky CTA */}
       <div
+        data-floating-widget
         className="hidden md:block fixed left-6 bottom-6 z-[60] opacity-90 hover:opacity-100 transition-opacity"
       >
         <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
