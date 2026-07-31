@@ -149,6 +149,7 @@ export default function ClientDetail() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [newDocumentType, setNewDocumentType] = useState<string>('autre');
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -397,24 +398,26 @@ export default function ClientDetail() {
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ nom: newDocumentName.trim() })
+        .update({ nom: newDocumentName.trim(), type_document: newDocumentType })
         .eq('id', documentToRename.id);
 
       if (error) throw error;
 
       // Update local state
       setDocuments(documents.map(d => 
-        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim() } : d
+        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim(), type_document: newDocumentType } : d
       ));
 
       toast({
-        title: 'Document renommé',
-        description: 'Le nom du document a été mis à jour',
+        title: 'Document mis à jour',
+        description: 'Le nom et la catégorie du document ont été mis à jour',
       });
 
       setRenameDialogOpen(false);
       setDocumentToRename(null);
       setNewDocumentName('');
+      setNewDocumentType('autre');
+      setDocumentsRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error renaming document:', error);
       toast({
@@ -428,6 +431,7 @@ export default function ClientDetail() {
   const openRenameDialog = (doc: any) => {
     setDocumentToRename(doc);
     setNewDocumentName(doc.nom);
+    setNewDocumentType(doc.type_document || 'autre');
     setRenameDialogOpen(true);
   };
 
@@ -1907,7 +1911,7 @@ export default function ClientDetail() {
           <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Renommer le document</DialogTitle>
+                <DialogTitle>Renommer / reclasser le document</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -1919,6 +1923,27 @@ export default function ClientDetail() {
                     placeholder="Nom du document"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-doc-type">Catégorie / type de document</Label>
+                  <select
+                    id="new-doc-type"
+                    value={newDocumentType}
+                    onChange={(e) => setNewDocumentType(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="fiche_salaire">💰 Fiche de salaire</option>
+                    <option value="extrait_poursuites">📋 Extrait des poursuites</option>
+                    <option value="piece_identite">🪪 Pièce d'identité</option>
+                    <option value="attestation_domicile">🏠 Attestation de domicile</option>
+                    <option value="rc_menage">🛡️ RC Ménage</option>
+                    <option value="contrat_travail">📝 Contrat de travail</option>
+                    <option value="attestation_employeur">👔 Attestation employeur</option>
+                    <option value="copie_bail">📋 Copie du bail</option>
+                    <option value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</option>
+                    <option value="dossier_complet">📎 Dossier complet</option>
+                    <option value="autre">📄 Autre</option>
+                  </select>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
@@ -1926,6 +1951,7 @@ export default function ClientDetail() {
                       setRenameDialogOpen(false);
                       setDocumentToRename(null);
                       setNewDocumentName('');
+                      setNewDocumentType('autre');
                     }}
                   >
                     Annuler
@@ -1934,7 +1960,7 @@ export default function ClientDetail() {
                     onClick={handleRenameDocument}
                     disabled={!newDocumentName.trim()}
                   >
-                    Renommer
+                    Enregistrer
                   </Button>
                 </div>
               </div>

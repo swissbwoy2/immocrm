@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { SendEmailDialog } from '@/components/SendEmailDialog';
@@ -199,6 +200,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [client, setClient] = useState<Client | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -237,6 +239,7 @@ export default function ClientDetail() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [newDocumentType, setNewDocumentType] = useState<string>('autre');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
@@ -553,20 +556,22 @@ export default function ClientDetail() {
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ nom: newDocumentName.trim() })
+        .update({ nom: newDocumentName.trim(), type_document: newDocumentType })
         .eq('id', documentToRename.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Document renommé',
-        description: 'Le document a été renommé avec succès',
+        title: 'Document mis à jour',
+        description: 'Le nom et la catégorie du document ont été mis à jour',
       });
 
       setRenameDialogOpen(false);
       setDocumentToRename(null);
       setNewDocumentName('');
+      setNewDocumentType('autre');
       loadDocuments();
+      setDocumentsRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error renaming document:', error);
       toast({
@@ -2120,7 +2125,7 @@ export default function ClientDetail() {
         </div>
 
         {/* Candidate Documents - chercheur only */}
-        {!isReletter && candidates.length > 0 && (
+        {!isReletter && (
           <div 
             className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
             style={{ animationDelay: '250ms' }}
@@ -2137,7 +2142,11 @@ export default function ClientDetail() {
             <CandidateDocumentsSection 
               clientId={client.id}
               clientUserId={client.user_id}
+              clientName={`${profile.prenom} ${profile.nom}`}
               candidates={candidates}
+              agentUserId={user?.id}
+              agentId={client.agent_id || undefined}
+              onDocumentsChange={loadDocuments}
               key={documentsRefreshKey}
             />
           </div>
@@ -3023,6 +3032,7 @@ export default function ClientDetail() {
                             onClick={() => {
                               setDocumentToRename(doc);
                               setNewDocumentName(doc.nom);
+                              setNewDocumentType(doc.type_document || 'autre');
                               setRenameDialogOpen(true);
                             }}
                             className="hover:bg-primary/10 hover:text-primary"
@@ -3229,7 +3239,7 @@ export default function ClientDetail() {
               <div className="p-2 rounded-xl bg-primary/10">
                 <Pencil className="w-5 h-5 text-primary" />
               </div>
-              Renommer le document
+              Renommer / reclasser le document
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -3242,6 +3252,27 @@ export default function ClientDetail() {
                 className="bg-card/50 backdrop-blur-sm border-border/50"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Catégorie / type de document</Label>
+              <Select value={newDocumentType} onValueChange={setNewDocumentType}>
+                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                  <SelectValue placeholder="Choisir une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                  <SelectItem value="dossier_complet">📎 Dossier complet</SelectItem>
+                  <SelectItem value="autre">📄 Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
@@ -3252,7 +3283,7 @@ export default function ClientDetail() {
               disabled={!newDocumentName.trim()}
               className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
-              Renommer
+              Enregistrer
             </Button>
           </div>
         </DialogContent>
