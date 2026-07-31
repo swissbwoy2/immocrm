@@ -200,6 +200,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [client, setClient] = useState<Client | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [agent, setAgent] = useState<Agent | null>(null);
@@ -555,20 +556,22 @@ export default function ClientDetail() {
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ nom: newDocumentName.trim() })
+        .update({ nom: newDocumentName.trim(), type_document: newDocumentType })
         .eq('id', documentToRename.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Document renommé',
-        description: 'Le document a été renommé avec succès',
+        title: 'Document mis à jour',
+        description: 'Le nom et la catégorie du document ont été mis à jour',
       });
 
       setRenameDialogOpen(false);
       setDocumentToRename(null);
       setNewDocumentName('');
+      setNewDocumentType('autre');
       loadDocuments();
+      setDocumentsRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error renaming document:', error);
       toast({
