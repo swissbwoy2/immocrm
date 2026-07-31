@@ -124,11 +124,7 @@ export function usePushNotifications() {
       }
 
       setIsSupported(true);
-      console.log("[Push] Push notifications supported, registering...");
-
-      // Register with Apple / Google
-      await PushNotifications.register();
-      console.log("[Push] Registration initiated");
+      console.log("[Push] Push notifications supported");
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -138,15 +134,16 @@ export function usePushNotifications() {
       }
       console.log("[Push] User authenticated:", user.id);
 
+      // IMPORTANT: attach listeners BEFORE calling register()
       // Listen for registration success
-      PushNotifications.addListener("registration", (pushToken: PushNotificationToken) => {
+      await PushNotifications.addListener("registration", (pushToken: PushNotificationToken) => {
         console.log("[Push] Registration successful, token received");
         console.log("[Push] Token length:", pushToken.value.length);
         registerToken(pushToken.value, user.id);
       });
 
       // Listen for registration errors
-      PushNotifications.addListener("registrationError", (error: any) => {
+      await PushNotifications.addListener("registrationError", (error: any) => {
         console.error("[Push] Registration error:", error);
         setRegistrationError(`Registration failed: ${JSON.stringify(error)}`);
         
@@ -157,12 +154,16 @@ export function usePushNotifications() {
       });
 
       // Listen for push notifications received (foreground)
-      PushNotifications.addListener("pushNotificationReceived", handleNotificationReceived);
+      await PushNotifications.addListener("pushNotificationReceived", handleNotificationReceived);
 
       // Listen for notification actions (tap)
-      PushNotifications.addListener("pushNotificationActionPerformed", handleNotificationAction);
+      await PushNotifications.addListener("pushNotificationActionPerformed", handleNotificationAction);
 
       console.log("[Push] All listeners registered");
+
+      // Register with Apple / Google (after listeners are ready)
+      await PushNotifications.register();
+      console.log("[Push] Registration initiated");
 
     } catch (error) {
       // Push notifications not available (web or plugin not installed)
