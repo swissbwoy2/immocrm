@@ -180,11 +180,18 @@ export function MergeDocumentsDialog({
         console.error('Error merging documents:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         const isMissingFiles = errorMessage.includes('introuvable') || errorMessage.includes('stockage');
+        const isTransient = /failed to fetch|network|timeout|503|502|504|unavailable/i.test(errorMessage);
         toast({
-          title: isMissingFiles ? '⚠️ Fichiers manquants dans le stockage' : 'Erreur de création du dossier',
+          title: isMissingFiles
+            ? '⚠️ Fichiers manquants dans le stockage'
+            : isTransient
+              ? 'Service momentanément indisponible'
+              : 'Erreur de création du dossier',
           description: isMissingFiles
             ? errorMessage.substring(0, 400)
-            : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
+            : isTransient
+              ? 'La génération du dossier a échoué, réessayez dans un instant. Votre session reste active.'
+              : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
           variant: 'destructive',
         });
       } finally {
@@ -222,11 +229,18 @@ export function MergeDocumentsDialog({
         console.error('Error merging documents:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         const isMissingFiles = errorMessage.includes('introuvable') || errorMessage.includes('stockage');
+        const isTransient = /failed to fetch|network|timeout|503|502|504|unavailable/i.test(errorMessage);
         toast({
-          title: isMissingFiles ? '⚠️ Fichiers manquants dans le stockage' : 'Erreur de création du dossier',
+          title: isMissingFiles
+            ? '⚠️ Fichiers manquants dans le stockage'
+            : isTransient
+              ? 'Service momentanément indisponible'
+              : 'Erreur de création du dossier',
           description: isMissingFiles
             ? errorMessage.substring(0, 400)
-            : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
+            : isTransient
+              ? 'La génération du dossier a échoué, réessayez dans un instant. Votre session reste active.'
+              : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
           variant: 'destructive',
         });
       } finally {
