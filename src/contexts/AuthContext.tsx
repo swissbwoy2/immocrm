@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +21,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const pendingClearRef = useRef(false);
+  const intentionalSignOutRef = useRef(false);
 
   useEffect(() => {
     // Set up auth state listener
@@ -128,6 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    intentionalSignOutRef.current = true;
+    pendingClearRef.current = false;
     try {
       // Try global signout first
       const { error } = await supabase.auth.signOut({ scope: 'global' });
@@ -145,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setUserRole(null);
       navigate('/login');
+      intentionalSignOutRef.current = false;
     }
   };
 
