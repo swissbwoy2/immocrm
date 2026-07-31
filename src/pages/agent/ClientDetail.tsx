@@ -1963,7 +1963,6 @@ export default function ClientDetail() {
                     Enregistrer
                   </Button>
                 </div>
-                </div>
               </div>
             </DialogContent>
           </Dialog>
