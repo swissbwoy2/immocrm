@@ -3239,7 +3239,7 @@ export default function ClientDetail() {
               <div className="p-2 rounded-xl bg-primary/10">
                 <Pencil className="w-5 h-5 text-primary" />
               </div>
-              Renommer le document
+              Renommer / reclasser le document
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -3283,7 +3283,7 @@ export default function ClientDetail() {
               disabled={!newDocumentName.trim()}
               className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
-              Renommer
+              Enregistrer
             </Button>
           </div>
         </DialogContent>
