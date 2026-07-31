@@ -2125,7 +2125,7 @@ export default function ClientDetail() {
         </div>
 
         {/* Candidate Documents - chercheur only */}
-        {!isReletter && candidates.length > 0 && (
+        {!isReletter && (
           <div 
             className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
             style={{ animationDelay: '250ms' }}
@@ -2142,7 +2142,11 @@ export default function ClientDetail() {
             <CandidateDocumentsSection 
               clientId={client.id}
               clientUserId={client.user_id}
+              clientName={`${profile.prenom} ${profile.nom}`}
               candidates={candidates}
+              agentUserId={user?.id}
+              agentId={client.agent_id || undefined}
+              onDocumentsChange={loadDocuments}
               key={documentsRefreshKey}
             />
           </div>
@@ -3028,6 +3032,7 @@ export default function ClientDetail() {
                             onClick={() => {
                               setDocumentToRename(doc);
                               setNewDocumentName(doc.nom);
+                              setNewDocumentType(doc.type_document || 'autre');
                               setRenameDialogOpen(true);
                             }}
                             className="hover:bg-primary/10 hover:text-primary"
