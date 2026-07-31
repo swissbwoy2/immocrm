@@ -24,19 +24,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Fetch user role after session is established
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (newSession) {
+        // Session valide reçue : on annule toute vérification de perte en cours
+        pendingClearRef.current = false;
+        setSession(newSession);
+        setUser(newSession.user ?? null);
         setTimeout(() => {
-          fetchUserRole(session.user.id);
+          fetchUserRole(newSession.user.id);
         }, 0);
-      } else {
+        return;
+      }
+
+      // Déconnexion explicite demandée par l'utilisateur : on nettoie tout de suite
+      if (intentionalSignOutRef.current) {
+        setSession(null);
+        setUser(null);
         setUserRole(null);
         setLoading(false);
+        return;
       }
+
+      // Session nulle "transitoire" (échec ponctuel de refresh pendant une tâche
+      // lourde : fusion PDF, upload, appel edge function…).
+      // On NE déconnecte PAS immédiatement : on revérifie auprès de Supabase.
+      pendingClearRef.current = true;
+      setTimeout(async () => {
+        if (!pendingClearRef.current) return;
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            // La session est en réalité toujours valide → on ignore l'événement
+            pendingClearRef.current = false;
+            setSession(data.session);
+            setUser(data.session.user ?? null);
+            return;
+          }
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          if (refreshed.session) {
+            pendingClearRef.current = false;
+            setSession(refreshed.session);
+            setUser(refreshed.session.user ?? null);
+            return;
+          }
+        } catch (e) {
+          console.warn('Auth re-check failed, keeping current session state:', e);
+          return; // en cas d'erreur réseau, on garde la session en place
+        }
+        // Perte de session réellement confirmée
+        if (!pendingClearRef.current) return;
+        pendingClearRef.current = false;
+        setSession(null);
+        setUser(null);
+        setUserRole(null);
+        setLoading(false);
+      }, 1500);
     });
 
     // Check for existing session
@@ -53,6 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+
 
   const fetchUserRole = async (userId: string) => {
     try {
