@@ -28,13 +28,27 @@ interface ServiceAccountKey {
   client_x509_cert_url: string;
 }
 
-// Generate JWT for Google OAuth2
-async function createJWT(serviceAccount: ServiceAccountKey): Promise<string> {
-  const header = {
-    alg: "RS256",
-    typ: "JWT",
-  };
+function b64url(bytes: Uint8Array | string): string {
+  const raw = typeof bytes === "string" ? bytes : String.fromCharCode(...bytes);
+  return btoa(raw).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
 
+function pemToDer(pem: string): Uint8Array {
+  const contents = pem
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\\n/g, "")
+    .replace(/\s/g, "")
+    .trim();
+  return Uint8Array.from(atob(contents), (c) => c.charCodeAt(0));
+}
+
+/* ------------------------------------------------------------------ */
+/* FCM (Android)                                                       */
+/* ------------------------------------------------------------------ */
+
+async function createJWT(serviceAccount: ServiceAccountKey): Promise<string> {
+  const header = { alg: "RS256", typ: "JWT" };
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: serviceAccount.client_email,
@@ -46,30 +60,14 @@ async function createJWT(serviceAccount: ServiceAccountKey): Promise<string> {
   };
 
   const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-
+  const headerB64 = b64url(JSON.stringify(header));
+  const payloadB64 = b64url(JSON.stringify(payload));
   const signatureInput = `${headerB64}.${payloadB64}`;
-
-  // Import the private key
-  const pemHeader = "-----BEGIN PRIVATE KEY-----";
-  const pemFooter = "-----END PRIVATE KEY-----";
-  const pemContents = serviceAccount.private_key
-    .replace(pemHeader, "")
-    .replace(pemFooter, "")
-    .replace(/\\n/g, "")
-    .replace(/\n/g, "")
-    .trim();
-
-  const binaryDer = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
 
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
-    binaryDer,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
+    pemToDer(serviceAccount.private_key),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"]
   );
@@ -80,23 +78,15 @@ async function createJWT(serviceAccount: ServiceAccountKey): Promise<string> {
     encoder.encode(signatureInput)
   );
 
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
-  return `${headerB64}.${payloadB64}.${signatureB64}`;
+  return `${signatureInput}.${b64url(new Uint8Array(signature))}`;
 }
 
-// Get OAuth2 access token
 async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
   const jwt = await createJWT(serviceAccount);
 
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion: jwt,
@@ -113,7 +103,6 @@ async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string
   return data.access_token;
 }
 
-// Send FCM message
 async function sendFCMMessage(
   accessToken: string,
   projectId: string,
@@ -121,29 +110,15 @@ async function sendFCMMessage(
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; invalidToken?: boolean }> {
   const message = {
     message: {
       token,
-      notification: {
-        title,
-        body,
-      },
+      notification: { title, body },
       data: data || {},
       android: {
         priority: "high",
-        notification: {
-          sound: "default",
-          click_action: "FLUTTER_NOTIFICATION_CLICK",
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: "default",
-            badge: 1,
-          },
-        },
+        notification: { sound: "default", click_action: "FLUTTER_NOTIFICATION_CLICK" },
       },
     },
   };
@@ -163,52 +138,133 @@ async function sendFCMMessage(
   if (!response.ok) {
     const error = await response.text();
     console.error("FCM send error:", error);
-    return { success: false, error };
+    return {
+      success: false,
+      error,
+      invalidToken: error.includes("UNREGISTERED") || error.includes("INVALID_ARGUMENT"),
+    };
   }
 
   return { success: true };
 }
 
+/* ------------------------------------------------------------------ */
+/* APNs (iOS)                                                          */
+/* ------------------------------------------------------------------ */
+
+let cachedApnsJwt: { token: string; createdAt: number } | null = null;
+
+async function getApnsJwt(keyId: string, teamId: string, privateKeyPem: string): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedApnsJwt && now - cachedApnsJwt.createdAt < 50 * 60) {
+    return cachedApnsJwt.token;
+  }
+
+  const header = { alg: "ES256", kid: keyId };
+  const payload = { iss: teamId, iat: now };
+  const signingInput = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToDer(privateKeyPem),
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  // WebCrypto returns the JOSE r||s (64 bytes) signature directly.
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    cryptoKey,
+    new TextEncoder().encode(signingInput)
+  );
+
+  const token = `${signingInput}.${b64url(new Uint8Array(signature))}`;
+  cachedApnsJwt = { token, createdAt: now };
+  return token;
+}
+
+async function sendAPNsMessage(
+  jwt: string,
+  base: string,
+  bundleId: string,
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<{ success: boolean; error?: string; invalidToken?: boolean }> {
+  const payload = {
+    aps: {
+      alert: { title, body },
+      sound: "default",
+      badge: 1,
+    },
+    ...(data || {}),
+  };
+
+  const response = await fetch(`${base}/3/device/${token}`, {
+    method: "POST",
+    headers: {
+      authorization: `bearer ${jwt}`,
+      "apns-topic": bundleId,
+      "apns-push-type": "alert",
+      "apns-priority": "10",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.ok) return { success: true };
+
+  const errorText = await response.text();
+  console.error(`APNs send error (${response.status}):`, errorText);
+
+  let reason = "";
+  try {
+    reason = JSON.parse(errorText)?.reason ?? "";
+  } catch {
+    // ignore
+  }
+
+  const invalidToken =
+    response.status === 410 ||
+    (response.status === 400 &&
+      ["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"].includes(reason));
+
+  return { success: false, error: errorText, invalidToken };
+}
+
+/* ------------------------------------------------------------------ */
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
-    if (!serviceAccountJson) {
-      throw new Error("FIREBASE_SERVICE_ACCOUNT not configured");
-    }
-
-    const serviceAccount: ServiceAccountKey = JSON.parse(serviceAccountJson);
-    const projectId = serviceAccount.project_id;
-
-    const { user_id, user_ids, title, body, data, link } = await req.json() as PushNotificationRequest;
+    const { user_id, user_ids, title, body, data, link } =
+      (await req.json()) as PushNotificationRequest;
 
     if (!title || !body) {
-      return new Response(
-        JSON.stringify({ error: "title and body are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "title and body are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Get target user IDs
     const targetUserIds = user_ids || (user_id ? [user_id] : []);
-    
     if (targetUserIds.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "user_id or user_ids required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "user_id or user_ids required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
-    // Get device tokens for target users
     const { data: deviceTokens, error: tokensError } = await supabase
       .from("device_tokens")
       .select("token, platform, user_id")
@@ -222,49 +278,110 @@ serve(async (req) => {
     if (!deviceTokens || deviceTokens.length === 0) {
       console.log("No device tokens found for users:", targetUserIds);
       return new Response(
-        JSON.stringify({ success: true, sent: 0, message: "No device tokens found" }),
+        JSON.stringify({ success: true, sent: 0, failed: 0, total: 0, message: "No device tokens found" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Found ${deviceTokens.length} device tokens for ${targetUserIds.length} users`);
-
-    // Get access token
-    const accessToken = await getAccessToken(serviceAccount);
-
-    // Prepare notification data
     const notificationData: Record<string, string> = {
       ...data,
       ...(link ? { link } : {}),
     };
 
-    // Send notifications
-    const results = await Promise.all(
-      deviceTokens.map(async (device) => {
-        const result = await sendFCMMessage(
-          accessToken,
-          projectId,
-          device.token,
-          title,
-          body,
-          notificationData
-        );
+    const iosTokens = deviceTokens.filter((d) => d.platform === "ios");
+    const androidTokens = deviceTokens.filter((d) => d.platform !== "ios");
 
-        // If token is invalid, delete it
-        if (!result.success && result.error?.includes("UNREGISTERED")) {
-          console.log(`Removing invalid token for user ${device.user_id}`);
-          await supabase
-            .from("device_tokens")
-            .delete()
-            .eq("token", device.token);
-        }
-
-        return result;
-      })
+    console.log(
+      `Found ${deviceTokens.length} device tokens (${iosTokens.length} iOS / ${androidTokens.length} Android)`
     );
 
+    const deleteToken = async (token: string) => {
+      await supabase.from("device_tokens").delete().eq("token", token);
+    };
+
+    const results: { success: boolean }[] = [];
+
+    /* ---------------- iOS via APNs ---------------- */
+    if (iosTokens.length > 0) {
+      const keyId = Deno.env.get("APNS_KEY_ID");
+      const teamId = Deno.env.get("APNS_TEAM_ID");
+      const privateKey = Deno.env.get("APNS_PRIVATE_KEY");
+      const bundleId = Deno.env.get("APNS_BUNDLE_ID") || "ch.logisorama.app";
+      const production = (Deno.env.get("APNS_PRODUCTION") ?? "true") === "true";
+      const base = production ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
+
+      if (!keyId || !teamId || !privateKey) {
+        console.error(
+          "APNs secrets missing (APNS_KEY_ID / APNS_TEAM_ID / APNS_PRIVATE_KEY) — skipping iOS tokens"
+        );
+        iosTokens.forEach(() => results.push({ success: false }));
+      } else {
+        try {
+          const jwt = await getApnsJwt(keyId, teamId, privateKey);
+          const iosResults = await Promise.all(
+            iosTokens.map(async (device) => {
+              const r = await sendAPNsMessage(
+                jwt,
+                base,
+                bundleId,
+                device.token,
+                title,
+                body,
+                notificationData
+              );
+              if (r.invalidToken) {
+                console.log(`Removing invalid iOS token for user ${device.user_id}`);
+                await deleteToken(device.token);
+              }
+              return { success: r.success };
+            })
+          );
+          results.push(...iosResults);
+        } catch (e) {
+          console.error("APNs dispatch failed:", e);
+          cachedApnsJwt = null;
+          iosTokens.forEach(() => results.push({ success: false }));
+        }
+      }
+    }
+
+    /* ---------------- Android via FCM ---------------- */
+    if (androidTokens.length > 0) {
+      const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
+      if (!serviceAccountJson) {
+        console.error("FIREBASE_SERVICE_ACCOUNT not configured — skipping Android tokens");
+        androidTokens.forEach(() => results.push({ success: false }));
+      } else {
+        try {
+          const serviceAccount: ServiceAccountKey = JSON.parse(serviceAccountJson);
+          const accessToken = await getAccessToken(serviceAccount);
+          const androidResults = await Promise.all(
+            androidTokens.map(async (device) => {
+              const r = await sendFCMMessage(
+                accessToken,
+                serviceAccount.project_id,
+                device.token,
+                title,
+                body,
+                notificationData
+              );
+              if (r.invalidToken) {
+                console.log(`Removing invalid Android token for user ${device.user_id}`);
+                await deleteToken(device.token);
+              }
+              return { success: r.success };
+            })
+          );
+          results.push(...androidResults);
+        } catch (e) {
+          console.error("FCM dispatch failed:", e);
+          androidTokens.forEach(() => results.push({ success: false }));
+        }
+      }
+    }
+
     const successCount = results.filter((r) => r.success).length;
-    const failCount = results.filter((r) => !r.success).length;
+    const failCount = results.length - successCount;
 
     console.log(`Push notifications sent: ${successCount} success, ${failCount} failed`);
 
@@ -279,10 +396,10 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in send-push-notification:", error);
-    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
