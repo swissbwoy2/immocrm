@@ -3252,6 +3252,27 @@ export default function ClientDetail() {
                 className="bg-card/50 backdrop-blur-sm border-border/50"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Catégorie / type de document</Label>
+              <Select value={newDocumentType} onValueChange={setNewDocumentType}>
+                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                  <SelectValue placeholder="Choisir une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                  <SelectItem value="dossier_complet">📎 Dossier complet</SelectItem>
+                  <SelectItem value="autre">📄 Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
