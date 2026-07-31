@@ -57,13 +57,20 @@ export function RequestDocumentsDialog({
 
   const targetName = candidate ? `${candidate.prenom} ${candidate.nom}` : clientName;
 
-  // Check if document type already exists for this target
-  const hasDocument = (type: string) => {
-    return existingDocuments.some(doc => 
-      doc.type_document === type && 
-      (candidate ? doc.candidate_id === candidate.id : !doc.candidate_id)
-    );
+  // Nombre minimum de documents requis par type (aligné sur l'indicateur X/6)
+  const MIN_REQUIRED_BY_TYPE: Record<string, number> = {
+    fiche_salaire: 3,
   };
+
+  // Check if document type is complete for this target
+  const hasDocument = (type: string) => {
+    const count = existingDocuments.filter(doc =>
+      doc.type_document === type &&
+      (candidate ? doc.candidate_id === candidate.id : !doc.candidate_id)
+    ).length;
+    return count >= (MIN_REQUIRED_BY_TYPE[type] ?? 1);
+  };
+
 
   const toggleType = (type: string) => {
     setSelectedTypes(prev => 
