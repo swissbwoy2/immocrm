@@ -149,6 +149,7 @@ export default function ClientDetail() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [newDocumentType, setNewDocumentType] = useState<string>('autre');
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -397,24 +398,26 @@ export default function ClientDetail() {
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ nom: newDocumentName.trim() })
+        .update({ nom: newDocumentName.trim(), type_document: newDocumentType })
         .eq('id', documentToRename.id);
 
       if (error) throw error;
 
       // Update local state
       setDocuments(documents.map(d => 
-        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim() } : d
+        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim(), type_document: newDocumentType } : d
       ));
 
       toast({
-        title: 'Document renommé',
-        description: 'Le nom du document a été mis à jour',
+        title: 'Document mis à jour',
+        description: 'Le nom et la catégorie du document ont été mis à jour',
       });
 
       setRenameDialogOpen(false);
       setDocumentToRename(null);
       setNewDocumentName('');
+      setNewDocumentType('autre');
+      setDocumentsRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error renaming document:', error);
       toast({
@@ -428,6 +431,7 @@ export default function ClientDetail() {
   const openRenameDialog = (doc: any) => {
     setDocumentToRename(doc);
     setNewDocumentName(doc.nom);
+    setNewDocumentType(doc.type_document || 'autre');
     setRenameDialogOpen(true);
   };
 
