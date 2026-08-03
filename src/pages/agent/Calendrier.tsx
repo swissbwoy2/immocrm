@@ -1568,6 +1568,12 @@ export default function AgentCalendrier() {
 
           <DialogFooter className="gap-2 pt-4 border-t">
             {selectedVisite && (
+              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Modifier la visite
+              </Button>
+            )}
+            {selectedVisite && (
               <VisitVideoShareButton visite={selectedVisite} variant="outline" />
             )}
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
