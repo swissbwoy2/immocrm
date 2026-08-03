@@ -24,6 +24,7 @@ import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButt
 import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
+import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -131,6 +132,7 @@ export default function AgentCalendrier() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [eventDetailDialogOpen, setEventDetailDialogOpen] = useState(false);
   const [addClientsDialogOpen, setAddClientsDialogOpen] = useState(false);
+  const [editVisiteOpen, setEditVisiteOpen] = useState(false);
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -1566,6 +1568,12 @@ export default function AgentCalendrier() {
 
           <DialogFooter className="gap-2 pt-4 border-t">
             {selectedVisite && (
+              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Modifier la visite
+              </Button>
+            )}
+            {selectedVisite && (
               <VisitVideoShareButton visite={selectedVisite} variant="outline" />
             )}
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
@@ -1600,6 +1608,26 @@ export default function AgentCalendrier() {
           onSuccess={() => loadData()}
         />
       )}
+
+      <EditVisiteDialog
+        open={editVisiteOpen}
+        onOpenChange={setEditVisiteOpen}
+        visite={selectedVisite}
+        visitesGroup={
+          selectedVisite
+            ? visites.filter(
+                (v: any) =>
+                  v.adresse === selectedVisite.adresse &&
+                  v.date_visite === selectedVisite.date_visite,
+              )
+            : undefined
+        }
+        onSaved={() => {
+          setDetailDialogOpen(false);
+          setSelectedVisite(null);
+          loadData();
+        }}
+      />
     </div>
   );
 }

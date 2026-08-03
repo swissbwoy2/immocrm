@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { isSameDay, format, isToday, isThisWeek, isThisMonth, isFuture, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download, Pencil } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { buildVisiteICSDescription, downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
@@ -30,6 +30,7 @@ import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButt
 import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
+import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 
 interface Agent {
   id: string;
@@ -66,6 +67,7 @@ export default function AdminCalendrier() {
   const [selectedVisiteGroup, setSelectedVisiteGroup] = useState<any[] | null>(null);
   const [visiteDetailDialogOpen, setVisiteDetailDialogOpen] = useState(false);
   const [addClientsDialogOpen, setAddClientsDialogOpen] = useState(false);
+  const [editVisiteOpen, setEditVisiteOpen] = useState(false);
 
   // Phone appointment detail
   const [phoneAppts, setPhoneAppts] = useState<PhoneAppointmentRaw[]>([]);
@@ -886,6 +888,12 @@ export default function AdminCalendrier() {
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {selectedVisiteGroup && (
+              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Modifier la visite
+              </Button>
+            )}
+            {selectedVisiteGroup && (
               <VisitVideoShareButton
                 visite={selectedVisiteGroup[0]}
                 visitesGroup={selectedVisiteGroup}
@@ -976,6 +984,18 @@ export default function AdminCalendrier() {
           onSuccess={() => loadData(true)}
         />
       )}
+
+      <EditVisiteDialog
+        open={editVisiteOpen}
+        onOpenChange={setEditVisiteOpen}
+        visite={selectedVisiteGroup?.[0] || null}
+        visitesGroup={selectedVisiteGroup || undefined}
+        onSaved={() => {
+          setVisiteDetailDialogOpen(false);
+          setSelectedVisiteGroup(null);
+          loadData(true);
+        }}
+      />
     </div>
   );
 }
