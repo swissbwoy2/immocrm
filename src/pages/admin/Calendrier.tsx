@@ -30,6 +30,7 @@ import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButt
 import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
+import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 
 interface Agent {
   id: string;
