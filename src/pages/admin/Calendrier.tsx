@@ -984,6 +984,18 @@ export default function AdminCalendrier() {
           onSuccess={() => loadData(true)}
         />
       )}
+
+      <EditVisiteDialog
+        open={editVisiteOpen}
+        onOpenChange={setEditVisiteOpen}
+        visite={selectedVisiteGroup?.[0] || null}
+        visitesGroup={selectedVisiteGroup || undefined}
+        onSaved={() => {
+          setVisiteDetailDialogOpen(false);
+          setSelectedVisiteGroup(null);
+          loadData(true);
+        }}
+      />
     </div>
   );
 }
