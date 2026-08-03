@@ -24,6 +24,7 @@ import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButt
 import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
+import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
