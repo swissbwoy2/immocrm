@@ -888,6 +888,12 @@ export default function AdminCalendrier() {
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {selectedVisiteGroup && (
+              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Modifier la visite
+              </Button>
+            )}
+            {selectedVisiteGroup && (
               <VisitVideoShareButton
                 visite={selectedVisiteGroup[0]}
                 visitesGroup={selectedVisiteGroup}
