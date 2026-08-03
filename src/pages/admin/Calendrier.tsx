@@ -67,6 +67,7 @@ export default function AdminCalendrier() {
   const [selectedVisiteGroup, setSelectedVisiteGroup] = useState<any[] | null>(null);
   const [visiteDetailDialogOpen, setVisiteDetailDialogOpen] = useState(false);
   const [addClientsDialogOpen, setAddClientsDialogOpen] = useState(false);
+  const [editVisiteOpen, setEditVisiteOpen] = useState(false);
 
   // Phone appointment detail
   const [phoneAppts, setPhoneAppts] = useState<PhoneAppointmentRaw[]>([]);
