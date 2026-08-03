@@ -1608,6 +1608,26 @@ export default function AgentCalendrier() {
           onSuccess={() => loadData()}
         />
       )}
+
+      <EditVisiteDialog
+        open={editVisiteOpen}
+        onOpenChange={setEditVisiteOpen}
+        visite={selectedVisite}
+        visitesGroup={
+          selectedVisite
+            ? visites.filter(
+                (v: any) =>
+                  v.adresse === selectedVisite.adresse &&
+                  v.date_visite === selectedVisite.date_visite,
+              )
+            : undefined
+        }
+        onSaved={() => {
+          setDetailDialogOpen(false);
+          setSelectedVisite(null);
+          loadData();
+        }}
+      />
     </div>
   );
 }
