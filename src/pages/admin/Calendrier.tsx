@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { isSameDay, format, isToday, isThisWeek, isThisMonth, isFuture, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download, Pencil } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { buildVisiteICSDescription, downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
