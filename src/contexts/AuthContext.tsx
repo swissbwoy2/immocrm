@@ -40,12 +40,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mountedRef.current = true;
 
     const applySession = (next: Session) => {
+      // Copie de secours persistante (résiste aux purges du SDK sur panne serveur).
+      mirrorSession({ access_token: next.access_token, refresh_token: next.refresh_token });
       if (!mountedRef.current) return;
       setSession(next);
       setUser(next.user ?? null);
       setRecovering(false);
+      setLoading(false);
       setTimeout(() => fetchUserRole(next.user.id), 0);
     };
+
 
     const clearSession = (raison: string) => {
       // Purge du stockage : uniquement pour un verdict définitif ou une action manuelle.
