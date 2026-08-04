@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { readPersistedTokens } from '@/lib/authStorageGuard';
+import { readPersistedTokens, getStorageKeyNames } from '@/lib/authStorageGuard';
 import type { Session } from '@supabase/supabase-js';
 
 /**
