@@ -96,11 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (outcome.status === 'definitif') {
           clearSession('refresh_token_invalide_confirme_par_serveur');
         } else {
-          // Erreur temporaire : on conserve la session persistante et l'état courant.
+          // Erreur temporaire : session persistante conservée, on reste en
+          // récupération tant que des jetons existent dans ce profil.
           authLog('session.conservee_erreur_temporaire', { classification: outcome.kind });
-          setRecovering(false);
+          setRecovering(hasPersistedAuthEntry());
+          setLoading(false);
         }
       });
+
     });
 
     // 2) Amorçage explicite : lecture du stockage persistant + récupération silencieuse
@@ -141,10 +144,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (outcome.status === 'definitif') {
           clearSession('refresh_token_invalide_confirme_au_demarrage');
         } else {
+          // Panne temporaire au démarrage : on garde les jetons et on reste en
+          // récupération (nouvelle tentative au retour réseau / prochain réveil).
           authLog('amorcage.recuperation_differee', { classification: outcome.kind });
-          setRecovering(false);
+          setRecovering(hasPersistedAuthEntry());
           setLoading(false);
         }
+
       } catch (e) {
         if (!mountedRef.current) return;
         authLog('amorcage.exception', { classification: classifyAuthError(e) });
