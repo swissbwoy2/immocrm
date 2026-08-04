@@ -21,8 +21,15 @@ export const BACKUP_KEY = 'logisorama.auth.backup';
 type Tokens = { access_token: string; refresh_token: string };
 
 export function installAuthStorageGuard() {
-  authLog('stockage.sauvegarde_active', { cle_sauvegarde: BACKUP_KEY });
+  // Amorce la copie de secours dès le démarrage, avant toute panne possible.
+  const sdk = readSdkTokens();
+  if (sdk && !readBackupTokens()) mirrorSession(sdk);
+  authLog('stockage.sauvegarde_active', {
+    cle_sauvegarde: BACKUP_KEY,
+    sauvegarde_presente: readBackupTokens() !== null,
+  });
 }
+
 
 export function mirrorSession(tokens: Tokens) {
   try {
