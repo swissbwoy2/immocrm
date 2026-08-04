@@ -52,26 +52,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // On NE déconnecte PAS immédiatement : on revérifie auprès de Supabase.
       pendingClearRef.current = true;
       setTimeout(async () => {
-        if (!pendingClearRef.current) return;
-        try {
-          const { data } = await supabase.auth.getSession();
-          if (data.session) {
-            // La session est en réalité toujours valide → on ignore l'événement
+        // 3 tentatives espacées : on ne vide la session que si le serveur
+        // confirme que le refresh token n'est plus valide.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (!pendingClearRef.current) return;
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
             pendingClearRef.current = false;
-            setSession(data.session);
-            setUser(data.session.user ?? null);
-            return;
+            return; // hors ligne : on garde la session
           }
-          const { data: refreshed } = await supabase.auth.refreshSession();
-          if (refreshed.session) {
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              // La session est en réalité toujours valide → on ignore l'événement
+              pendingClearRef.current = false;
+              setSession(data.session);
+              setUser(data.session.user ?? null);
+              return;
+            }
+            const { data: refreshed, error } = await supabase.auth.refreshSession();
+            if (refreshed.session) {
+              pendingClearRef.current = false;
+              setSession(refreshed.session);
+              setUser(refreshed.session.user ?? null);
+              return;
+            }
+            // Refresh token explicitement rejeté par le serveur → vraie déconnexion
+            const status = (error as { status?: number } | null)?.status;
+            if (status && status >= 400 && status < 500) break;
+          } catch (e) {
+            console.warn('Auth re-check failed, keeping current session state:', e);
             pendingClearRef.current = false;
-            setSession(refreshed.session);
-            setUser(refreshed.session.user ?? null);
-            return;
+            return; // en cas d'erreur réseau, on garde la session en place
           }
-        } catch (e) {
-          console.warn('Auth re-check failed, keeping current session state:', e);
-          return; // en cas d'erreur réseau, on garde la session en place
+          await new Promise((r) => setTimeout(r, 2000));
         }
         // Perte de session réellement confirmée
         if (!pendingClearRef.current) return;
@@ -80,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setUserRole(null);
         setLoading(false);
-      }, 1500);
+      }, 2000);
     });
 
     // Check for existing session
