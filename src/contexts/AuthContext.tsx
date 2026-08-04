@@ -52,26 +52,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // On NE déconnecte PAS immédiatement : on revérifie auprès de Supabase.
       pendingClearRef.current = true;
       setTimeout(async () => {
-        if (!pendingClearRef.current) return;
-        try {
-          const { data } = await supabase.auth.getSession();
-          if (data.session) {
-            // La session est en réalité toujours valide → on ignore l'événement
+        // 3 tentatives espacées : on ne vide la session que si le serveur
+        // confirme que le refresh token n'est plus valide.
+        for (let attempt = 0; attempt < 3; attempt++) {
+          if (!pendingClearRef.current) return;
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
             pendingClearRef.current = false;
-            setSession(data.session);
-            setUser(data.session.user ?? null);
-            return;
+            return; // hors ligne : on garde la session
           }
-          const { data: refreshed } = await supabase.auth.refreshSession();
-          if (refreshed.session) {
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              // La session est en réalité toujours valide → on ignore l'événement
+              pendingClearRef.current = false;
+              setSession(data.session);
+              setUser(data.session.user ?? null);
+              return;
+            }
+            const { data: refreshed, error } = await supabase.auth.refreshSession();
+            if (refreshed.session) {
+              pendingClearRef.current = false;
+              setSession(refreshed.session);
+              setUser(refreshed.session.user ?? null);
+              return;
+            }
+            // Refresh token explicitement rejeté par le serveur → vraie déconnexion
+            const status = (error as { status?: number } | null)?.status;
+            if (status && status >= 400 && status < 500) break;
+          } catch (e) {
+            console.warn('Auth re-check failed, keeping current session state:', e);
             pendingClearRef.current = false;
-            setSession(refreshed.session);
-            setUser(refreshed.session.user ?? null);
-            return;
+            return; // en cas d'erreur réseau, on garde la session en place
           }
-        } catch (e) {
-          console.warn('Auth re-check failed, keeping current session state:', e);
-          return; // en cas d'erreur réseau, on garde la session en place
+          await new Promise((r) => setTimeout(r, 2000));
         }
         // Perte de session réellement confirmée
         if (!pendingClearRef.current) return;
@@ -80,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setUserRole(null);
         setLoading(false);
-      }, 1500);
+      }, 2000);
     });
 
     // Check for existing session
@@ -95,7 +108,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Session longue durée : les timers de rafraîchissement sont gelés quand
+    // l'onglet est en arrière-plan ou l'app mobile en veille. On force donc un
+    // renouvellement dès le retour au premier plan pour ne jamais expirer.
+    const revalidate = async () => {
+      if (document.hidden) return;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const expiresAt = data.session?.expires_at ?? 0;
+        if (!data.session) return;
+        // Renouvelle si le jeton expire dans moins de 10 minutes
+        if (expiresAt * 1000 - Date.now() < 10 * 60 * 1000) {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          if (refreshed.session) {
+            pendingClearRef.current = false;
+            setSession(refreshed.session);
+            setUser(refreshed.session.user ?? null);
+          }
+        }
+      } catch (e) {
+        // Erreur réseau : on garde la session en place
+        console.warn('Session revalidation skipped:', e);
+      }
+    };
+
+    document.addEventListener('visibilitychange', revalidate);
+    window.addEventListener('focus', revalidate);
+    window.addEventListener('online', revalidate);
+    const keepAliveId = setInterval(revalidate, 5 * 60 * 1000);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', revalidate);
+      window.removeEventListener('focus', revalidate);
+      window.removeEventListener('online', revalidate);
+      clearInterval(keepAliveId);
+    };
   }, []);
 
 

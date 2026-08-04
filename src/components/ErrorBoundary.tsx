@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCcw, Home, LogOut } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, Home, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -56,21 +56,10 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
-  private handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error('Sign out failed', e);
-    }
-    // Nettoyage défensif des clés Supabase locales
-    try {
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch {}
-    window.location.href = '/login';
+  // Recharge l'application SANS toucher à la session : une erreur d'affichage
+  // ne doit jamais déconnecter l'utilisateur.
+  private handleHardReload = () => {
+    window.location.href = '/';
   };
 
   public render() {
@@ -136,11 +125,11 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
 
               <Button 
-                onClick={this.handleSignOut}
+                onClick={this.handleHardReload}
                 className="gap-2"
               >
-                <LogOut className="h-4 w-4" />
-                Se déconnecter
+                <RotateCcw className="h-4 w-4" />
+                Redémarrer l'application
               </Button>
             </div>
           </div>
