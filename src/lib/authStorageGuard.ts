@@ -1,70 +1,62 @@
 /**
- * Protection du stockage d'authentification persistant.
+ * Sauvegarde de session résistante aux pannes temporaires.
  *
- * Constat mesuré : le SDK d'authentification supprime l'entrée persistante dès
+ * Constat mesuré : le SDK d'authentification supprime son entrée persistante dès
  * qu'une requête de renouvellement échoue avec une erreur HTTP non réseau
  * (500, 429, 403…). L'utilisateur perd alors sa session pour une panne
  * temporaire, sans qu'aucun refresh token n'ait été révoqué.
  *
- * Ce module intercepte la suppression de cette entrée : elle n'est autorisée
- * que lors d'une déconnexion manuelle ou d'un rejet définitif confirmé.
+ * On conserve donc une copie de secours indépendante, utilisée uniquement pour
+ * réhydrater le SDK. Elle n'est effacée que sur déconnexion manuelle ou rejet
+ * définitif confirmé par le serveur.
  *
- * Aucun jeton n'est journalisé : uniquement le NOM de la clé.
+ * Aucun jeton n'est journalisé : uniquement le NOM des clés.
  */
 
 import { authLog } from './authSession';
 
-const AUTH_KEY_RE = /^sb-.*-auth-token$/;
+const SDK_KEY_RE = /^sb-.*-auth-token$/;
+export const BACKUP_KEY = 'logisorama.auth.backup';
 
-let removalAllowed = false;
-let patched = false;
+type Tokens = { access_token: string; refresh_token: string };
 
 export function installAuthStorageGuard() {
-  if (patched || typeof window === 'undefined' || !window.Storage) return;
-  patched = true;
-
-  const originalRemoveItem = Storage.prototype.removeItem;
-  Storage.prototype.removeItem = function (key: string) {
-    if (this === window.localStorage && AUTH_KEY_RE.test(key) && !removalAllowed) {
-      authLog('stockage.suppression_bloquee', { cle_stockage: key, raison: 'erreur_temporaire_non_definitive' });
-      return;
-    }
-    return originalRemoveItem.call(this, key);
-  };
-
-  authLog('stockage.protection_active', {});
+  authLog('stockage.sauvegarde_active', { cle_sauvegarde: BACKUP_KEY });
 }
 
-/** Autorise explicitement la suppression (déconnexion manuelle / rejet définitif). */
+export function mirrorSession(tokens: Tokens) {
+  try {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(tokens));
+  } catch {
+    /* noop */
+  }
+}
+
+/** Autorise une déconnexion volontaire : purge aussi la copie de secours. */
 export async function withAuthStorageRemoval<T>(fn: () => Promise<T> | T): Promise<T> {
-  removalAllowed = true;
   try {
     return await fn();
   } finally {
-    removalAllowed = false;
+    purgePersistedAuth('deconnexion_volontaire');
   }
 }
 
 export function purgePersistedAuth(reason: string) {
-  removalAllowed = true;
   try {
     Object.keys(localStorage)
-      .filter((k) => AUTH_KEY_RE.test(k))
+      .filter((k) => SDK_KEY_RE.test(k) || k === BACKUP_KEY)
       .forEach((k) => {
         localStorage.removeItem(k);
         authLog('stockage.purge', { cle_stockage: k, raison: reason });
       });
   } catch {
     /* noop */
-  } finally {
-    removalAllowed = false;
   }
 }
 
-/** Lit les jetons persistés pour réhydrater le SDK. Les valeurs ne sont jamais journalisées. */
-export function readPersistedTokens(): { access_token: string; refresh_token: string } | null {
+function readSdkTokens(): Tokens | null {
   try {
-    const key = Object.keys(localStorage).find((k) => AUTH_KEY_RE.test(k));
+    const key = Object.keys(localStorage).find((k) => SDK_KEY_RE.test(k));
     if (!key) return null;
     const raw = localStorage.getItem(key);
     if (!raw) return null;
@@ -76,5 +68,34 @@ export function readPersistedTokens(): { access_token: string; refresh_token: st
     return null;
   } catch {
     return null;
+  }
+}
+
+function readBackupTokens(): Tokens | null {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.access_token && parsed?.refresh_token) {
+      return { access_token: parsed.access_token, refresh_token: parsed.refresh_token };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Jetons persistés (entrée SDK, sinon copie de secours). Valeurs jamais journalisées. */
+export function readPersistedTokens(): Tokens | null {
+  return readSdkTokens() ?? readBackupTokens();
+}
+
+export function getStorageKeyNames(): string {
+  try {
+    const sdk = Object.keys(localStorage).find((k) => SDK_KEY_RE.test(k)) ?? 'sb-<projet>-auth-token (absent)';
+    const backup = localStorage.getItem(BACKUP_KEY) ? BACKUP_KEY : `${BACKUP_KEY} (absent)`;
+    return `${sdk} + ${backup}`;
+  } catch {
+    return 'indisponible';
   }
 }
