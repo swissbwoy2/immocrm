@@ -23,23 +23,16 @@ export function authLog(event: string, details?: Record<string, string | number 
   }
 }
 
-/** Nom (jamais la valeur) de la clé de stockage persistante utilisée par le SDK. */
+/** Noms (jamais les valeurs) des clés de stockage persistantes utilisées. */
 export function getAuthStorageKeyName(): string {
-  try {
-    const key = Object.keys(localStorage).find((k) => /^sb-.*-auth-token$/.test(k));
-    return key ?? 'sb-<projet>-auth-token (absent)';
-  } catch {
-    return 'indisponible';
-  }
+  return getStorageKeyNames();
 }
 
+/** Vrai si des jetons persistés existent (entrée SDK ou copie de secours). */
 export function hasPersistedAuthEntry(): boolean {
-  try {
-    return Object.keys(localStorage).some((k) => /^sb-.*-auth-token$/.test(k));
-  } catch {
-    return false;
-  }
+  return readPersistedTokens() !== null;
 }
+
 
 export type AuthFailureKind =
   | 'refresh_token_invalide' // définitif : refresh token absent/invalide/révoqué, session introuvable
