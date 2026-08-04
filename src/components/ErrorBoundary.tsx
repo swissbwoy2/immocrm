@@ -125,11 +125,11 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
 
               <Button 
-                onClick={this.handleSignOut}
+                onClick={this.handleHardReload}
                 className="gap-2"
               >
-                <LogOut className="h-4 w-4" />
-                Se déconnecter
+                <RotateCcw className="h-4 w-4" />
+                Redémarrer l'application
               </Button>
             </div>
           </div>
