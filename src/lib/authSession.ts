@@ -166,15 +166,29 @@ export function ensureFreshSession(reason: string): Promise<RefreshOutcome> {
               return { status: 'session', session: restored.session };
             }
             const setKind = classifyAuthError(setErr);
-            lastKind = setKind;
             authLog('refresh.rehydratation_echouee', { reason, attempt, classification: setKind });
             if (setKind === 'refresh_token_invalide') {
+              return { status: 'definitif', kind: 'refresh_token_invalide' };
+            }
+            // Verdict autoritatif : on interroge le serveur avec le refresh token persisté.
+            const { data: rot, error: rotErr } = await supabase.auth.refreshSession({
+              refresh_token: persisted.refresh_token,
+            });
+            if (rot?.session) {
+              authLog('refresh.resultat', { reason, attempt, resultat: 'renouvele_depuis_sauvegarde' });
+              return { status: 'session', session: rot.session };
+            }
+            const rotKind = classifyAuthError(rotErr);
+            lastKind = rotKind;
+            authLog('refresh.tentative_echouee', { reason, attempt, classification: rotKind });
+            if (rotKind === 'refresh_token_invalide') {
               return { status: 'definitif', kind: 'refresh_token_invalide' };
             }
             if (attempt < 3) await sleep(attempt * 1500);
             continue;
           }
         }
+
 
         const { data, error } = await supabase.auth.refreshSession();
         if (data?.session) {
