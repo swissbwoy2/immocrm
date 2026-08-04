@@ -9,7 +9,7 @@ import {
   getAuthStorageKeyName,
   hasPersistedAuthEntry,
 } from '@/lib/authSession';
-import { purgePersistedAuth, withAuthStorageRemoval } from '@/lib/authStorageGuard';
+import { purgePersistedAuth, withAuthStorageRemoval, mirrorSession } from '@/lib/authStorageGuard';
 
 type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur';
 
