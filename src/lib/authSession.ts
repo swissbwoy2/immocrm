@@ -112,13 +112,16 @@ export type RefreshOutcome =
   | { status: 'definitif'; kind: 'refresh_token_invalide' };
 
 let inFlight: Promise<RefreshOutcome> | null = null;
+let cooldownUntil = 0;
+const COOLDOWN_MS = 30_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Refresh « single flight » : une seule opération de renouvellement à la fois par
  * onglet, en complément du verrou multi-onglets (Web Locks) du SDK.
- * Jusqu'à 3 tentatives espacées pour les erreurs temporaires.
+ * Jusqu'à 3 tentatives espacées pour les erreurs temporaires, puis période de
+ * repos pour éviter toute boucle de renouvellement.
  */
 export function ensureFreshSession(reason: string): Promise<RefreshOutcome> {
   if (inFlight) {
@@ -126,7 +129,12 @@ export function ensureFreshSession(reason: string): Promise<RefreshOutcome> {
     return inFlight;
   }
 
+  if (Date.now() < cooldownUntil && reason !== 'online' && reason !== 'manuel') {
+    return Promise.resolve({ status: 'temporaire', kind: 'temporaire_autre' } as RefreshOutcome);
+  }
+
   inFlight = (async (): Promise<RefreshOutcome> => {
+
     authLog('refresh.debut', { reason, en_ligne: typeof navigator === 'undefined' ? true : navigator.onLine });
 
     let lastKind: AuthFailureKind = 'temporaire_autre';
