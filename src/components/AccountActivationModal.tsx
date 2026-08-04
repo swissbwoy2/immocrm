@@ -5,6 +5,7 @@ import { AlertTriangle, Send, CheckCircle, Loader2, LogOut, ExternalLink } from 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
 
 interface AccountActivationModalProps {
   isOpen: boolean;
@@ -106,7 +107,7 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await withAuthStorageRemoval(() => supabase.auth.signOut());
     navigate('/login');
   };
 

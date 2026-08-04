@@ -2,6 +2,14 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import {
+  authLog,
+  classifyAuthError,
+  ensureFreshSession,
+  getAuthStorageKeyName,
+  hasPersistedAuthEntry,
+} from '@/lib/authSession';
+import { purgePersistedAuth, withAuthStorageRemoval } from '@/lib/authStorageGuard';
 
 type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur';
 
@@ -9,7 +17,10 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: UserRole | null;
+  /** true tant que l'amorçage (lecture stockage + récupération silencieuse) n'est pas terminé */
   loading: boolean;
+  /** true quand une récupération de session est en cours après une erreur temporaire */
+  recovering: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -20,133 +31,172 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recovering, setRecovering] = useState(false);
   const navigate = useNavigate();
-  const pendingClearRef = useRef(false);
   const intentionalSignOutRef = useRef(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    // Set up auth state listener
+    mountedRef.current = true;
+
+    const applySession = (next: Session) => {
+      if (!mountedRef.current) return;
+      setSession(next);
+      setUser(next.user ?? null);
+      setRecovering(false);
+      setTimeout(() => fetchUserRole(next.user.id), 0);
+    };
+
+    const clearSession = (raison: string) => {
+      // Purge du stockage : uniquement pour un verdict définitif ou une action manuelle.
+      purgePersistedAuth(raison);
+      if (!mountedRef.current) return;
+      authLog('session.effacee', { raison, redirection_login: true });
+      setSession(null);
+      setUser(null);
+      setUserRole(null);
+      setRecovering(false);
+      setLoading(false);
+    };
+
+
+    authLog('amorcage.debut', {
+      origine: typeof window !== 'undefined' ? window.location.origin : 'n/a',
+      cle_stockage: getAuthStorageKeyName(),
+      entree_persistante_presente: hasPersistedAuthEntry(),
+    });
+
+    // 1) Écoute des changements d'état
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (newSession) {
-        // Session valide reçue : on annule toute vérification de perte en cours
-        pendingClearRef.current = false;
-        setSession(newSession);
-        setUser(newSession.user ?? null);
-        setTimeout(() => {
-          fetchUserRole(newSession.user.id);
-        }, 0);
+        authLog('evenement', { event, session_presente: true });
+        applySession(newSession);
+        setLoading(false);
         return;
       }
 
-      // Déconnexion explicite demandée par l'utilisateur : on nettoie tout de suite
+      authLog('evenement', { event, session_presente: false });
+
       if (intentionalSignOutRef.current) {
-        setSession(null);
-        setUser(null);
-        setUserRole(null);
-        setLoading(false);
+        clearSession('deconnexion_manuelle');
         return;
       }
 
-      // Session nulle "transitoire" (échec ponctuel de refresh pendant une tâche
-      // lourde : fusion PDF, upload, appel edge function…).
-      // On NE déconnecte PAS immédiatement : on revérifie auprès de Supabase.
-      pendingClearRef.current = true;
-      setTimeout(async () => {
-        // 3 tentatives espacées : on ne vide la session que si le serveur
-        // confirme que le refresh token n'est plus valide.
-        for (let attempt = 0; attempt < 3; attempt++) {
-          if (!pendingClearRef.current) return;
-          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            pendingClearRef.current = false;
-            return; // hors ligne : on garde la session
-          }
-          try {
-            const { data } = await supabase.auth.getSession();
-            if (data.session) {
-              // La session est en réalité toujours valide → on ignore l'événement
-              pendingClearRef.current = false;
-              setSession(data.session);
-              setUser(data.session.user ?? null);
-              return;
-            }
-            const { data: refreshed, error } = await supabase.auth.refreshSession();
-            if (refreshed.session) {
-              pendingClearRef.current = false;
-              setSession(refreshed.session);
-              setUser(refreshed.session.user ?? null);
-              return;
-            }
-            // Refresh token explicitement rejeté par le serveur → vraie déconnexion
-            const status = (error as { status?: number } | null)?.status;
-            if (status && status >= 400 && status < 500) break;
-          } catch (e) {
-            console.warn('Auth re-check failed, keeping current session state:', e);
-            pendingClearRef.current = false;
-            return; // en cas d'erreur réseau, on garde la session en place
-          }
-          await new Promise((r) => setTimeout(r, 2000));
-        }
-        // Perte de session réellement confirmée
-        if (!pendingClearRef.current) return;
-        pendingClearRef.current = false;
-        setSession(null);
-        setUser(null);
-        setUserRole(null);
-        setLoading(false);
-      }, 2000);
-    });
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      } else {
-        setLoading(false);
+      if (event === 'INITIAL_SESSION') {
+        // Traité par l'amorçage explicite ci-dessous.
+        return;
       }
+
+      // Session nulle non demandée : on ne déconnecte JAMAIS directement.
+      setRecovering(true);
+      void ensureFreshSession(`evenement_${event}`).then((outcome) => {
+        if (!mountedRef.current || intentionalSignOutRef.current) return;
+        if (outcome.status === 'session') {
+          applySession(outcome.session);
+        } else if (outcome.status === 'definitif') {
+          clearSession('refresh_token_invalide_confirme_par_serveur');
+        } else {
+          // Erreur temporaire : on conserve la session persistante et l'état courant.
+          authLog('session.conservee_erreur_temporaire', { classification: outcome.kind });
+          setRecovering(false);
+        }
+      });
     });
 
-    // Session longue durée : les timers de rafraîchissement sont gelés quand
-    // l'onglet est en arrière-plan ou l'app mobile en veille. On force donc un
-    // renouvellement dès le retour au premier plan pour ne jamais expirer.
-    const revalidate = async () => {
-      if (document.hidden) return;
+    // 2) Amorçage explicite : lecture du stockage persistant + récupération silencieuse
+    const bootstrap = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        const expiresAt = data.session?.expires_at ?? 0;
-        if (!data.session) return;
-        // Renouvelle si le jeton expire dans moins de 10 minutes
-        if (expiresAt * 1000 - Date.now() < 10 * 60 * 1000) {
-          const { data: refreshed } = await supabase.auth.refreshSession();
-          if (refreshed.session) {
-            pendingClearRef.current = false;
-            setSession(refreshed.session);
-            setUser(refreshed.session.user ?? null);
+        const { data, error } = await supabase.auth.getSession();
+        if (!mountedRef.current) return;
+
+        if (data.session) {
+          authLog('amorcage.session_lue', { session_presente: true });
+          applySession(data.session);
+          setLoading(false);
+          return;
+        }
+
+        if (error) {
+          const kind = classifyAuthError(error);
+          authLog('amorcage.erreur_lecture', { classification: kind });
+          if (kind === 'refresh_token_invalide') {
+            clearSession('refresh_token_invalide_au_demarrage');
+            return;
           }
+        }
+
+        if (!hasPersistedAuthEntry()) {
+          authLog('amorcage.aucun_stockage_persistant', { session_presente: false });
+          clearSession('aucune_session_persistante_dans_ce_profil');
+          return;
+        }
+
+        setRecovering(true);
+        const outcome = await ensureFreshSession('amorcage');
+        if (!mountedRef.current) return;
+
+        if (outcome.status === 'session') {
+          applySession(outcome.session);
+          setLoading(false);
+        } else if (outcome.status === 'definitif') {
+          clearSession('refresh_token_invalide_confirme_au_demarrage');
+        } else {
+          authLog('amorcage.recuperation_differee', { classification: outcome.kind });
+          setRecovering(false);
+          setLoading(false);
         }
       } catch (e) {
-        // Erreur réseau : on garde la session en place
-        console.warn('Session revalidation skipped:', e);
+        if (!mountedRef.current) return;
+        authLog('amorcage.exception', { classification: classifyAuthError(e) });
+        setRecovering(false);
+        setLoading(false);
       }
     };
 
-    document.addEventListener('visibilitychange', revalidate);
-    window.addEventListener('focus', revalidate);
-    window.addEventListener('online', revalidate);
-    const keepAliveId = setInterval(revalidate, 5 * 60 * 1000);
+    void bootstrap();
 
+    // 3) Revalidation : timer + focus/visibilité/retour réseau, tous en single flight
+    const revalidate = (reason: string) => {
+      if (intentionalSignOutRef.current) return;
+      if (typeof document !== 'undefined' && document.hidden && reason !== 'online') return;
+
+      void (async () => {
+        const { data } = await supabase.auth.getSession();
+        const expiresAt = (data.session?.expires_at ?? 0) * 1000;
+        const needsRefresh = !data.session || expiresAt - Date.now() < 10 * 60 * 1000;
+        if (!needsRefresh) return;
+
+        const outcome = await ensureFreshSession(reason);
+        if (!mountedRef.current || intentionalSignOutRef.current) return;
+        if (outcome.status === 'session') {
+          applySession(outcome.session);
+        } else if (outcome.status === 'definitif') {
+          clearSession('refresh_token_invalide_confirme_pendant_revalidation');
+        } else {
+          authLog('revalidation.reportee', { reason, classification: outcome.kind });
+        }
+      })();
+    };
+
+    const onVisibility = () => revalidate('visibilitychange');
+    const onFocus = () => revalidate('focus');
+    const onOnline = () => revalidate('online');
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('online', onOnline);
+    const keepAliveId = window.setInterval(() => revalidate('timer'), 5 * 60 * 1000);
+
+    // Nettoyage complet : compatible double montage du mode Strict de React.
     return () => {
+      mountedRef.current = false;
       subscription.unsubscribe();
-      document.removeEventListener('visibilitychange', revalidate);
-      window.removeEventListener('focus', revalidate);
-      window.removeEventListener('online', revalidate);
-      clearInterval(keepAliveId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('online', onOnline);
+      window.clearInterval(keepAliveId);
     };
   }, []);
-
-
 
   const fetchUserRole = async (userId: string) => {
     try {
@@ -157,9 +207,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
+      if (!mountedRef.current) return;
       setUserRole(data.role as UserRole);
 
-      // Activate user on first login via SECURITY DEFINER RPC (bypasses RLS)
       if (data.role === 'agent') {
         await supabase.rpc('activate_agent_on_login');
       } else if (data.role === 'apporteur') {
@@ -171,38 +221,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
-      setUserRole(null);
+      if (mountedRef.current) setUserRole(null);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
   const signOut = async () => {
     intentionalSignOutRef.current = true;
-    pendingClearRef.current = false;
+    authLog('deconnexion.manuelle', { session_presente: !!session });
     try {
-      // Try global signout first
-      const { error } = await supabase.auth.signOut({ scope: 'global' });
-      
-      if (error) {
-        console.warn('Global signout failed, trying local:', error.message);
-        // If global fails, try local signout
-        await supabase.auth.signOut({ scope: 'local' });
-      }
+      await withAuthStorageRemoval(async () => {
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
+        if (error) {
+          console.warn('Global signout failed, trying local:', error.message);
+          await supabase.auth.signOut({ scope: 'local' });
+        }
+      });
     } catch (error) {
       console.warn('SignOut error (continuing with local cleanup):', error);
     } finally {
-      // Always clean up local state, even if API failed
+      purgePersistedAuth('deconnexion_manuelle');
       setUser(null);
       setSession(null);
       setUserRole(null);
+      setRecovering(false);
       navigate('/login');
       intentionalSignOutRef.current = false;
     }
+
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userRole, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, userRole, loading, recovering, signOut }}>
       {children}
     </AuthContext.Provider>
   );

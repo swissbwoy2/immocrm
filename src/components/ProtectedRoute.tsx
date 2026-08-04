@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle } from 'lucide-react';
+import { authLog } from '@/lib/authSession';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,9 +11,10 @@ interface ProtectedRouteProps {
 const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier', 'agent_ia', 'closeur'] as const;
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, userRole, loading, session } = useAuth();
+  const { user, userRole, loading, recovering, session } = useAuth();
 
-  if (loading) {
+  // Ne jamais rediriger tant que l'amorçage ou une récupération silencieuse est en cours.
+  if (loading || recovering) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -20,10 +22,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  // Vérifier à la fois user et session pour détecter les sessions expirées
+  // Verdict définitif uniquement : aucune session récupérable.
   if (!user || !session) {
+    authLog('redirection.login', { raison: 'aucune_session_apres_controle_complet' });
     return <Navigate to="/login" replace />;
   }
+
 
   // Gestion des rôles inconnus ou manquants
   if (!userRole || !VALID_ROLES.includes(userRole)) {

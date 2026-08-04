@@ -7,6 +7,7 @@ import { Lock, Eye, EyeOff, Loader2, MailWarning, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
 
 type Phase = 'checking' | 'ready' | 'expired';
 
@@ -111,7 +112,7 @@ export default function FirstLogin() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       toast({ title: 'Succès', description: 'Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.' });
-      await supabase.auth.signOut();
+      await withAuthStorageRemoval(() => supabase.auth.signOut());
       navigate('/login');
     } catch (error: any) {
       const msg = (error?.message || '').toLowerCase();
