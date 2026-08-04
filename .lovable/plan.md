@@ -1,50 +1,36 @@
+# Session longue durée (365 jours) avec renouvellement automatique sécurisé
 
-# Relance de recherche pour un client existant (relogé)
+Objectif : un utilisateur qui se connecte reste connecté pendant un an, sans reconnexion, avec un renouvellement de jeton automatique et sécurisé (rotation des refresh tokens).
 
-## Objectif
-Permettre à l'admin, depuis la fiche d'un client dont le statut est `reloge` (ou `inactif`/`stoppe`), de **relancer une nouvelle recherche de 90 jours** sans recréer le compte, avec régénération de la facture d'acompte CHF 300.– et remise à zéro du compteur de jours.
+## Ce qui change
 
-## Où l'ajouter
-- Fiche client admin : `src/pages/admin/ClientDetail.tsx` — nouveau bouton **"🔄 Relancer une nouvelle recherche"** visible uniquement si `statut ∈ { reloge, inactif, stoppe, suspendu }` ET `journey_type ≠ purchase_search` (locataire).
-- Confirmation via `AlertDialog` rappelant : nouveau cycle de 90 jours + nouvelle facture CHF 300.– envoyée par email.
+### 1. Configuration d'authentification (backend)
+- Durée de vie du jeton d'accès : 1 heure (renouvelé automatiquement en arrière-plan).
+- Refresh token : rotation activée, pas d'expiration par inactivité, boîte de temps de session portée à 365 jours.
+- Aucune déconnexion forcée tant que l'utilisateur revient au moins une fois dans l'année.
 
-## Comportement (une seule action)
-Au clic → appel d'une nouvelle Edge Function `relance-recherche-client` (SECURITY DEFINER côté SQL RPC OK aussi, mais on garde Edge pour orchestrer AbaNinja + email).
+### 2. Client d'authentification
+- Persistance de la session activée avec détection du renouvellement au retour d'onglet/app (`persistSession`, `autoRefreshToken`, reprise du refresh à la reprise de visibilité).
+- Sur mobile (Capacitor), relancer explicitement le rafraîchissement quand l'app repasse au premier plan, car les timers sont gelés en arrière-plan.
 
-Actions séquentielles dans la fonction :
-1. **Reset du mandat** sur `clients` :
-   - `statut = 'actif'`
-   - `mandat_date_signature = now()` (source de vérité utilisée par `getMandatDates` → remet le compteur à 0/90)
-   - `date_ajout = now()` (fallback)
-   - `mandate_pause_days = 0`, `mandate_paused_at = null`
-   - `cancellation_requested_at = null`, `cancellation_reason = null`
-   - `refund_status = null`
-   - Incrémenter un compteur `relance_count` (nouveau, voir schéma) et poser `derniere_relance_at = now()`.
-2. **Facture CHF 300.–** : réutiliser `useAbaNinjaInvoice` / edge existante `create-abaninja-invoice` avec `montant = 300`, libellé "Relance recherche – nouveau mandat 90 jours".
-3. **Email client** : template branded via `notify.logisorama.ch` — "Votre nouvelle recherche est active pour 90 jours" + lien facture + lien dashboard.
-4. **Notification in-app** au client et à l'agent assigné.
-5. **Historique** : insérer une ligne dans `mandate_audit_logs` (event `relance_recherche`).
+### 3. Robustesse anti-déconnexion accidentelle
+- Renforcer la logique de « période de grâce » déjà présente dans le contexte d'authentification : ne jamais vider la session sur une erreur réseau, seulement quand le serveur confirme l'invalidité du refresh token.
+- Ne déconnecter que sur : déconnexion volontaire, refresh token révoqué/expiré confirmé, changement de mot de passe.
+- Retirer la déconnexion automatique déclenchée par la barrière d'erreur applicative (elle éjecte l'utilisateur sur un simple bug d'affichage) : remplacer par un rechargement de page.
 
-## Schéma DB (petite migration)
-Sur `public.clients` :
-- `relance_count int not null default 0`
-- `derniere_relance_at timestamptz`
+### 4. Sécurité conservée
+- Rotation des refresh tokens : un jeton volé devient invalide dès la première réutilisation.
+- Déconnexion globale toujours disponible (bouton « Se déconnecter »), qui invalide toutes les sessions de l'appareil.
+- Sur les rôles administrateur/agent, la session longue reste couverte par les mêmes contrôles RLS côté base.
 
-Aucun changement RLS (la fonction Edge utilise le service_role).
+## Détails techniques
 
-## UI détails
-- Bouton dans le bloc "Mandat" de la fiche client, à côté de "Renouveler".
-- Après succès : toast `"Nouvelle recherche lancée — facture envoyée"` + refetch du client, le tracker 90 jours repart à J1.
-- Bloqué si un `refund_status = 'pending'` existe : afficher un message "Terminer le remboursement en cours avant de relancer".
+- `configure_auth` / paramètres du projet : `jwt_expiry = 3600`, `refresh_token_rotation_enabled = true`, `security_refresh_token_reuse_interval = 10`, `sessions.timebox = 8760h` (365 j), pas d'`inactivity_timeout`.
+- `src/contexts/AuthContext.tsx` : conserver `pendingClearRef`, ajouter un `refreshSession()` sur `visibilitychange`/`resume` et allonger la fenêtre de vérification avant nettoyage.
+- `src/components/ErrorBoundary.tsx` : supprimer l'appel `supabase.auth.signOut()`.
+- `src/integrations/supabase/client.ts` est auto-généré : aucune modification.
 
-## Points techniques
-- La logique 90 jours est déjà pilotée par `mandat_date_signature` dans `src/utils/mandatDates.ts` — remettre cette date à `now()` suffit à réinitialiser le compteur, aucun changement de la lib n'est nécessaire.
-- AbaNinja : réutiliser le même flow que l'onboarding initial (montant paramétrable), pas de nouveau connecteur.
-- Pas d'impact sur les autres parcours (achat / relouer / vente).
+## Limites
 
-## Hors périmètre
-- Pas de refonte du statut `reloge` ailleurs.
-- Pas de self-service côté client (uniquement admin dans un premier temps — à confirmer si on l'ouvre aussi à l'agent assigné).
-
-## Question rapide avant build
-Le bouton doit-il être **admin uniquement**, ou également accessible à l'**agent assigné** du client ?
+- Une session ne peut pas survivre à un effacement des données du navigateur ni à une navigation privée.
+- Sur iOS Safari (web), le stockage local peut être purgé après ~7 jours d'inactivité totale ; l'app native Capacitor n'est pas concernée.
