@@ -209,12 +209,18 @@ export function ensureFreshSession(reason: string): Promise<RefreshOutcome> {
     }
 
     authLog('refresh.resultat', { reason, resultat: 'temporaire_non_resolu', classification: lastKind });
+    cooldownUntil = Date.now() + COOLDOWN_MS;
     return { status: 'temporaire', kind: lastKind };
   })();
 
-  void inFlight.finally(() => {
-    inFlight = null;
-  });
+  void inFlight
+    .then((outcome) => {
+      if (outcome.status === 'temporaire') cooldownUntil = Date.now() + COOLDOWN_MS;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+
 
   return inFlight;
 }
