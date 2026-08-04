@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/auth/PremiumAuthLayout';
 import { Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
 
 export default function ConnexionAnnonceur() {
   const navigate = useNavigate();
@@ -29,12 +30,12 @@ export default function ConnexionAnnonceur() {
         .single();
 
       if (annonceurError || !annonceur) {
-        await supabase.auth.signOut();
+        await withAuthStorageRemoval(() => supabase.auth.signOut());
         throw new Error("Ce compte n'est pas un compte annonceur");
       }
 
       if (annonceur.statut === 'suspendu') {
-        await supabase.auth.signOut();
+        await withAuthStorageRemoval(() => supabase.auth.signOut());
         throw new Error('Votre compte a été suspendu. Contactez le support.');
       }
 

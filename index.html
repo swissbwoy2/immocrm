@@ -136,6 +136,19 @@
 
     <!-- Elfsight Google Reviews Widget -->
     <script src="https://elfsightcdn.com/platform.js" async></script>
+    <script>
+      // Copie de secours de la session AVANT le chargement du SDK d'authentification.
+      try {
+        var k = Object.keys(localStorage).find(function (x) { return /^sb-.*-auth-token$/.test(x); });
+        if (k && !localStorage.getItem('logisorama.auth.backup')) {
+          var p = JSON.parse(localStorage.getItem(k) || 'null');
+          var s = (p && p.currentSession) || p;
+          if (s && s.access_token && s.refresh_token) {
+            localStorage.setItem('logisorama.auth.backup', JSON.stringify({ access_token: s.access_token, refresh_token: s.refresh_token }));
+          }
+        }
+      } catch (e) {}
+    </script>
   </head>
 
   <body>

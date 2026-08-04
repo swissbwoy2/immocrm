@@ -7,6 +7,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroBg from '@/assets/hero-bg.jpg';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -71,7 +72,7 @@ export default function ResetPassword() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       toast({ title: 'Succès', description: 'Votre mot de passe a été réinitialisé avec succès.' });
-      await supabase.auth.signOut();
+      await withAuthStorageRemoval(() => supabase.auth.signOut());
       navigate(redirectPath);
     } catch (error: any) {
       toast({ title: 'Erreur', description: error.message || 'Une erreur est survenue lors de la réinitialisation.', variant: 'destructive' });

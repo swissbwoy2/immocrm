@@ -1,9 +1,25 @@
 import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
 import { toast } from 'sonner';
+import { installAuthStorageGuard } from "./lib/authStorageGuard";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
+
+// Protège la session persistante contre les suppressions déclenchées par des
+// erreurs temporaires (500, 429, timeout) — doit être installé très tôt.
+installAuthStorageGuard();
+
+// Domaine canonique : www.logisorama.ch et logisorama.ch sont deux origines
+// distinctes côté stockage navigateur. On normalise très tôt pour qu'une seule
+// origine détienne la session persistante.
+if (window.location.hostname === "www.logisorama.ch") {
+  window.location.replace(
+    `https://logisorama.ch${window.location.pathname}${window.location.search}${window.location.hash}`,
+  );
+}
+
+
 
 const isInIframe = (() => {
   try {
