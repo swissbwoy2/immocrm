@@ -56,21 +56,10 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
-  private handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error('Sign out failed', e);
-    }
-    // Nettoyage défensif des clés Supabase locales
-    try {
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('sb-') || key.startsWith('supabase.auth.')) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch {}
-    window.location.href = '/login';
+  // Recharge l'application SANS toucher à la session : une erreur d'affichage
+  // ne doit jamais déconnecter l'utilisateur.
+  private handleHardReload = () => {
+    window.location.href = '/';
   };
 
   public render() {
