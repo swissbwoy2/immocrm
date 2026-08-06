@@ -308,6 +308,7 @@ const App = () => (
               <Route path="/chasseur-appartement" element={<ChasseurAppartement />} />
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
               <Route path="/first-login" element={<FirstLogin />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/bot-login" element={<BotLogin />} />
 
               {/* Legal Routes */}
