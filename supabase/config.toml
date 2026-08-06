@@ -3,6 +3,10 @@ project_id = "ydljsdscdnqrqnjvqela"
 [functions]
   [functions.process-email-queue]
     verify_jwt = true
+  [functions.automation-auth-exchange]
+    verify_jwt = false
+  [functions.automation-auth-consume]
+    verify_jwt = false
   [functions.auto-offers-run]
     verify_jwt = false
   [functions.auto-offers-daily-digest]
