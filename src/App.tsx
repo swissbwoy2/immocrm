@@ -42,6 +42,8 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const BotLoginCode = lazy(() => import("./pages/BotLoginCode"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+
 
 // Public portal pages
 // Portail annonces en maintenance — composants Annonces/RechercheAnnonces/AnnonceDetail retirés du routing public
@@ -310,6 +312,8 @@ const App = () => (
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/bot-login-code" element={<BotLoginCode />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
 
               {/* Legal Routes */}
               <Route path="/mentions-legales" element={<MentionsLegales />} />

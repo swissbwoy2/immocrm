@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,14 +20,20 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
 
+  // Redirection post-connexion (ex. page de consentement OAuth) : uniquement un chemin relatif same-origin
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && /^\/(?!\/)/.test(rawNext) ? rawNext : null;
+
   useEffect(() => {
     if (user && userRole) {
-      navigate(`/${userRole}`);
+      navigate(nextPath ?? `/${userRole}`);
     }
-  }, [user, userRole, navigate]);
+  }, [user, userRole, navigate, nextPath]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +51,7 @@ export default function Login() {
       if (roleError) throw roleError;
 
       toast({ title: 'Connexion réussie', description: 'Bienvenue !' });
-      navigate(`/${roleData.role}`);
+      navigate(nextPath ?? `/${roleData.role}`);
     } catch (error: any) {
       toast({ title: 'Erreur de connexion', description: error.message || 'Email ou mot de passe incorrect', variant: 'destructive' });
     } finally {

@@ -1829,6 +1829,45 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_mcp_audit: {
+        Row: {
+          actor_user_id: string
+          client_id: string | null
+          created_at: string
+          detail: string | null
+          document_id: string | null
+          filename: string | null
+          id: string
+          outcome: string
+          size_bytes: number | null
+          tool: string
+        }
+        Insert: {
+          actor_user_id: string
+          client_id?: string | null
+          created_at?: string
+          detail?: string | null
+          document_id?: string | null
+          filename?: string | null
+          id?: string
+          outcome: string
+          size_bytes?: number | null
+          tool: string
+        }
+        Update: {
+          actor_user_id?: string
+          client_id?: string | null
+          created_at?: string
+          detail?: string | null
+          document_id?: string | null
+          filename?: string | null
+          id?: string
+          outcome?: string
+          size_bytes?: number | null
+          tool?: string
+        }
+        Relationships: []
+      }
       avis_annonceurs: {
         Row: {
           annonceur_id: string

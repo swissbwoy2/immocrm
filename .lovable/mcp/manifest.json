@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ydljsdscdnqrqnjvqela.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "logisorama-logiciel-crm-immo-rama",
+      "version": "1.0.0",
+      "title": "Logisorama - Logiciel CRM Immo-rama"
+    },
+    "tools": [
+      {
+        "name": "list_pending_postulations",
+        "title": "Postulations à faire",
+        "description": "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Nombre maximum de postulations à retourner (défaut 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_postulation_context",
+        "title": "Contexte d'une postulation",
+        "description": "Retourne le dossier borné d'UNE postulation : l'offre, le client, ses co-candidats et les documents liés. Aucun autre dossier n'est accessible.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postulation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'offre (postulation)."
+            }
+          },
+          "required": [
+            "postulation_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_document_download_link",
+        "title": "Lien de téléchargement temporaire",
+        "description": "Crée une URL signée de 60 secondes pour UN SEUL document du dossier client. Aucun binaire ni lien permanent n'est renvoyé.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant du document à télécharger."
+            }
+          },
+          "required": [
+            "document_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "upload_prepared_pdf",
+        "title": "Déposer un PDF préparé",
+        "description": "Ajoute (INSERT uniquement) un PDF préparé au dossier du client d'une postulation. Valide la signature %PDF, la taille, le nom de fichier et détecte les doublons.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postulation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de l'offre (postulation) concernée."
+            },
+            "filename": {
+              "type": "string",
+              "description": "Nom du fichier PDF, par ex. dossier_candidature.pdf."
+            },
+            "content_base64": {
+              "type": "string",
+              "description": "Contenu du PDF encodé en base64."
+            },
+            "type_document": {
+              "type": "string",
+              "description": "Catégorie du document dans le CRM (défaut : dossier_candidature)."
+            }
+          },
+          "required": [
+            "postulation_id",
+            "filename",
+            "content_base64"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
