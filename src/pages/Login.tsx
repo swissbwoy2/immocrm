@@ -20,14 +20,20 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
 
+  // Redirection post-connexion (ex. page de consentement OAuth) : uniquement un chemin relatif same-origin
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && /^\/(?!\/)/.test(rawNext) ? rawNext : null;
+
   useEffect(() => {
     if (user && userRole) {
-      navigate(`/${userRole}`);
+      navigate(nextPath ?? `/${userRole}`);
     }
-  }, [user, userRole, navigate]);
+  }, [user, userRole, navigate, nextPath]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
