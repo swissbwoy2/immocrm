@@ -33,8 +33,10 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      mcpPlugin(),
       mode === "development" && componentTagger(),
       VitePWA({
+
         registerType: "autoUpdate",
         includeAssets: ["favicon.png", "app-icon.png"],
         manifest: {
