@@ -1,67 +1,85 @@
-# Persistance de connexion robuste et vérifiable
+# Serveur MCP distant pour ChatGPT — évaluation de faisabilité (aucun code)
 
-## Constat confirmé
+## 1) Transport MCP « Streamable HTTP » sur les Edge Functions de ce projet
 
-- Le client d’authentification conserve actuellement la session dans `localStorage`, avec `persistSession: true` et `autoRefreshToken: true`. Ce stockage survit à la fermeture des onglets et de Chrome. La clé par défaut, dérivée du projet, est stable.
-- La bibliothèque d’authentification installée utilise déjà le Web Locks API de Chrome pour sérialiser ses opérations entre onglets.
-- Le contexte applicatif ajoute néanmoins plusieurs appels explicites à `refreshSession()` (`focus`, `visibilitychange`, retour en ligne et timer), sans « single flight » applicatif.
-- Défaut critique confirmé dans `AuthContext.tsx` : après trois tentatives sans session, le code efface l’état local même si les réponses sont des timeouts, erreurs réseau ou erreurs serveur 5xx. Seul un refus définitif 4xx devrait autoriser ce nettoyage.
-- Les journaux disponibles autour de l’incident montrent une rotation réussie du refresh token sur `logisorama.ch` (`token_revoked`, puis `token_refreshed`, statut 200), et non un rejet. Ils ne permettent donc pas d’attribuer la redirection observée à un token révoqué. Il faudra vérifier si l’automatisation a réellement réutilisé le même répertoire de profil Chrome et la même origine canonique.
-- Un cookie `HttpOnly` ne peut pas être créé ni renouvelé par cette application React côté navigateur. Il faudrait un backend d’authentification même-origine/BFF, absent de l’architecture actuelle. Le mécanisme compatible est donc le stockage persistant du SDK dans `localStorage`; le mot de passe n’y est jamais enregistré.
+**OUI, faisable et fiable — à condition de rester sur des outils courts.**
 
-## Correctif
+Constats vérifiés dans ce projet : le backend tourne déjà sur des Edge Functions Deno, `supabase/config.toml` permet déjà `verify_jwt = false` par fonction (nécessaire pour que le serveur MCP valide lui-même le jeton OAuth), et aucun module MCP n'existe encore (`src/lib/mcp` absent, pas de dépendance MCP dans `package.json`).
 
-### 1. État d’initialisation fiable
+Le SDK Lovable `@lovable.dev/mcp-js` génère une fonction Deno unique qui sert le transport Streamable HTTP (`initialize`, `tools/list`, `tools/call`, réponses SSE) sur une URL se terminant par `/mcp`. C'est le chemin supporté ; écrire le transport JSON-RPC à la main n'est pas nécessaire.
 
-- Transformer `AuthContext` en contrôle d’amorçage explicite : conserver `loading=true` pendant la lecture de la session persistante et la tentative silencieuse de récupération.
-- Ne rendre les routes protégées décisionnelles qu’après la fin réelle de ce contrôle.
-- Conserver la session connue et l’interface de chargement pendant une indisponibilité réseau au démarrage, puis reprendre automatiquement le contrôle au retour en ligne.
+Limites concrètes à accepter :
 
-### 2. Rafraîchissement unique et résilient
+| Sujet | Réalité |
+| --- | --- |
+| Timeout | Un appel d'outil est un aller-retour synchrone avec timeout côté client (quelques dizaines de secondes). Les 5 outils visés sont courts, donc OK. Une génération PDF lourde ou un scraping ne doit PAS être exposé comme outil synchrone. |
+| Streaming | SSE fonctionne, mais l'infrastructure Edge peut couper une connexion longue. Ne pas concevoir d'outil qui streame pendant des minutes. |
+| Cold start | Quelques centaines de ms à ~2 s sur la première requête après inactivité. Sans impact pour une routine 4×/jour. |
+| Sessions | Pas d'état en mémoire entre invocations. Chaque requête doit être auto-portante (jeton + arguments). C'est le mode nominal de MCP ici. |
+| Taille de réponse | Retourner des résumés et des URLs signées, jamais des fichiers en base64. `create_document_download_link` doit rendre une URL signée courte durée, pas le PDF. |
+| Upload | `upload_prepared_pdf` doit recevoir une URL source ou un petit contenu, sinon passer par une URL d'upload signée générée par l'outil. |
 
-- Centraliser tout refresh explicite dans une fonction « single flight » : un seul Promise partagé par onglet, en complément du verrou multi-onglets déjà fourni par le SDK.
-- Faire passer le timer, `visibilitychange`, `focus`, `online` et la récupération après événement de session nul par cette fonction unique.
-- Jusqu’à trois tentatives avec délai progressif pour les erreurs réseau, timeouts, 429 et 5xx.
-- Ne jamais effacer la session persistante après ces erreurs temporaires ; garder l’état en attente et réessayer au retour réseau/prochain réveil.
-- Ne nettoyer la session que pour une déconnexion manuelle ou une réponse d’authentification définitive indiquant un refresh token absent, invalide, révoqué ou refusé.
+## 2) Écrire soi-même un serveur d'AUTORISATION OAuth 2.1 complet
 
-### 3. Stockage et domaine
+**Non recommandé, et inutile ici.**
 
-- Documenter et contrôler au démarrage la clé de stockage persistante réellement utilisée, sans jamais journaliser son contenu.
-- Conserver le stockage `localStorage` du SDK : persistant après fermeture complète de Chrome et compatible avec la rotation sécurisée des refresh tokens.
-- Ajouter une redirection très précoce de `www.logisorama.ch` vers `https://logisorama.ch`, en conservant chemin, paramètres et fragment, afin d’éviter deux stockages d’origine distincts.
-- Ne pas ajouter `credentials: "include"` aux appels du SDK : cette authentification transmet les jetons par en-tête et non par cookie. L’option ne serait utile que pour un futur backend même-origine à cookies.
+Implémenter à la main `/authorize` + PKCE S256, `/token` avec rotation et révocation de refresh tokens, JWKS et rotation de clés, DCR ou Client ID Metadata Documents, plus les deux documents `.well-known`, représente un composant de sécurité à part entière. Ce que je ne peux honnêtement pas garantir dans une implémentation maison sur Edge Functions : la conformité stricte RFC (8414, 9728, 7636, 8707), la gestion correcte des codes à usage unique en environnement concurrent, la rotation/révocation propre des refresh tokens, la rotation des clés de signature, et la résistance aux erreurs subtiles (redirect_uri, binding audience, replay).
 
-### 4. Routes protégées et déconnexions
+**Ce projet n'en a pas besoin** : Supabase Auth est déjà l'autorité d'authentification et sait jouer le rôle de serveur d'autorisation OAuth 2.1 avec PKCE et enregistrement dynamique de client. L'app n'a alors qu'à être *resource server* (valider le jeton) plus une page de consentement. Aucun serveur d'autorisation externe dédié n'est requis.
 
-- Renforcer `ProtectedRoute` pour afficher le chargement tant que l’authentification est en cours de récupération et ne rediriger qu’après un verdict définitif.
-- Auditer les appels `signOut()` restants et conserver uniquement ceux liés à une action utilisateur explicite, à une suppression de compte, à une réinitialisation de mot de passe ou à un rejet métier volontaire lors d’une connexion dédiée.
-- Aucun timeout, 500, perte réseau, suspension d’application ou erreur d’affichage ne déclenchera de déconnexion.
+## 3) Alternatives
 
-## Fichiers prévus
+| Option | Compatible connecteur ChatGPT | Sécurité | Effort |
+| --- | --- | --- | --- |
+| A. MCP sur Edge Function + OAuth délégué à Supabase Auth (activation du serveur OAuth managé, page de consentement dans l'app) | Oui — c'est le flux attendu par ChatGPT (découverte, DCR, PKCE) | Élevée : jetons par utilisateur, RLS appliquée, révocable | Moyen |
+| B. Serveur d'autorisation OAuth écrit à la main sur Edge Functions | Oui en théorie | Risquée : surface cryptographique et RFC à maintenir soi-même | Élevé |
+| C. Service externe dédié (Auth0/Clerk/WorkOS ou hébergement Node) devant le MCP | Oui | Élevée | Élevé + nouveau composant à opérer et à payer |
+| D. Jeton bearer statique stocké dans le connecteur, sans OAuth | Partiellement : le mode développeur/connecteur de ChatGPT privilégie OAuth ou « pas d'auth » ; le bearer fixe n'est pas un chemin propre et durable | Faible : secret longue durée, non lié à un utilisateur, non rotatif | Faible |
+| E. MCP public sans authentification | Oui | Inacceptable ici : les données clients seraient lisibles par n'importe qui | Faible |
 
-- `src/contexts/AuthContext.tsx` — machine d’état d’amorçage, classification des erreurs, retries et single flight.
-- `src/components/ProtectedRoute.tsx` — attente du verdict définitif avant redirection.
-- `src/main.tsx` — normalisation précoce du domaine `www` vers le domaine canonique.
-- Tests ciblés d’authentification à ajouter selon la structure de test disponible, sans enregistrer de secret.
+Option retenue : **A**.
 
-Le client auto-généré `src/integrations/supabase/client.ts` ne sera pas modifié ; sa configuration persistante existante sera utilisée comme source d’autorité.
+## 4) Architecture recommandée (unique)
 
-## Validation obligatoire
+```text
+ChatGPT (connecteur MCP)
+   │  découverte OAuth + PKCE + DCR
+   ▼
+Supabase Auth  ── serveur d'autorisation (managé)
+   │  redirige vers la page de consentement de l'app
+   ▼
+logisorama.ch/.lovable/oauth/consent  (page React, connexion du compte robot)
+   │  approbation → code → jeton d'accès utilisateur
+   ▼
+Edge Function « mcp » (resource server, verify_jwt = false, validation OAuth par le SDK)
+   │  requêtes exécutées avec le jeton du compte robot
+   ▼
+Base de données — RLS appliquée avec le rôle automation_operator existant
+```
 
-1. **Persistance navigateur** : avec un profil Chromium persistant authentifié, fermer toutes les pages et le navigateur, relancer le même profil et ouvrir directement `/admin`; vérifier le tableau de bord sans passage par `/login`.
-2. **Expiration simulée** : rendre le jeton d’accès expiré tout en conservant le refresh token, relancer l’app et confirmer le renouvellement silencieux.
-3. **Hors ligne** : ouvrir `/admin` hors connexion, vérifier l’absence de nettoyage, rétablir le réseau et confirmer la reprise automatique.
-4. **Erreur 500/timeout** : intercepter le refresh avec trois réponses temporaires, confirmer l’absence de redirection et la conservation du stockage.
-5. **Multi-onglets** : ouvrir plusieurs onglets et déclencher simultanément timer/visibilité; confirmer un seul refresh actif et aucune rotation conflictuelle.
-6. **Révocation réelle** : révoquer le refresh token de la session de test, confirmer que le refus définitif mène à `/login`.
-7. **Confidentialité** : inspecter console, requêtes et code pour confirmer qu’aucun mot de passe ni refresh token n’est journalisé.
-8. **24 heures et plusieurs jours** : fournir les vérifications immédiates et la procédure reproductible; les durées réelles ne peuvent être déclarées réussies qu’après leur écoulement dans le même profil Chrome persistant.
+Répartition :
 
-## Limite incontournable
+- **Faisable dans Lovable/Supabase** : le serveur MCP et ses 5 outils, l'activation du serveur d'autorisation OAuth managé, la page de consentement, la validation des jetons, le cloisonnement par RLS via `automation_operator`.
+- **Exige un composant externe** : rien, sauf si le connecteur exigeait un fournisseur d'identité tiers ou des scopes OAuth granulaires (Supabase émet des jetons sans scopes applicatifs ; les permissions restent portées par RLS et par le code des outils).
 
-Un profil Chrome neuf, invité, éphémère ou lancé avec un autre `--user-data-dir` ne contient ni session ni refresh token. Aucun correctif du site ne peut reconstituer cette authentification. La tâche automatique devra impérativement réutiliser un profil Chrome persistant, ou utiliser une authentification/API dédiée conçue pour l’automatisation.
+Sur l'objectif « travailler 4×/jour sans dépendre des cookies du navigateur » : oui, c'est précisément ce que ce montage résout. Le connecteur détient un refresh token OAuth et renouvelle son accès sans navigateur. Une seule action humaine est nécessaire : l'approbation initiale du consentement, connecté avec le compte robot. Les mécanismes actuels (`automation-auth-exchange` / `automation-auth-consume`, page `/bot-login-code`) deviennent alors redondants pour ChatGPT et devraient être supprimés une fois le MCP validé, pour ne pas laisser deux portes d'entrée.
 
-## Rapport final
+## 5) Risques concrets et points de non-conformité probable
 
-Après implémentation, le rapport indiquera la cause démontrée (en distinguant défaut applicatif et profil d’automatisation), les fichiers réellement modifiés, le stockage retenu, le résultat individuel de chaque test exécutable, les tests longue durée restant à observer, ainsi que les confirmations suivantes : aucun mot de passe stocké, aucun token journalisé, refresh tokens toujours rotatifs et révocables.
+1. **Émetteur (issuer) mal configuré** : l'émetteur doit être l'hôte Supabase direct, pas l'URL proxy. Une erreur ici fait échouer toute vérification de jeton — cause d'échec la plus fréquente.
+2. **Retour de consentement perdu** : si la page de connexion ne renvoie pas l'utilisateur vers l'URL de consentement complète (y compris après un login social), le connecteur échoue silencieusement.
+3. **Confusion de rôle** : si un outil utilisait une clé privilégiée au lieu du jeton de l'appelant, la RLS serait contournée et toutes les données clients exposées. Tous les outils doivent agir avec l'identité vérifiée.
+4. **Fuite via un outil trop généreux** : `get_postulation_context` doit renvoyer un périmètre borné, pas des dossiers arbitraires. À cadrer explicitement.
+5. **Liens de téléchargement** : URLs signées à durée très courte, jamais d'URL publique persistante ni de contenu binaire dans la réponse.
+6. **`get_robot_login_link`** : cet outil rendrait un lien de session par-dessus le canal ChatGPT. À mon avis il ne devrait pas exister dans un MCP authentifié — il recrée le risque que l'OAuth supprime. Recommandation : le retirer du périmètre.
+7. **Écritures** : `upload_prepared_pdf` est le seul outil mutant. Il exige des policies d'INSERT ciblées, une validation stricte du type de fichier et de la taille, et un `destructiveHint: false`.
+8. **Timeouts** : tout traitement long exposé comme outil synchrone apparaîtra « interrompu » côté ChatGPT même s'il réussit côté serveur.
+9. **Non-conformité probable d'un AS maison** : usage unique des codes en concurrence, rotation/révocation des refresh tokens, rotation des clés JWKS, validation exacte des `redirect_uri`, binding d'audience — c'est exactement ce que l'option A évite.
+
+## Étapes proposées si vous validez
+
+1. Activer le serveur d'autorisation OAuth managé du backend.
+2. Ajouter la page de consentement dans l'app, avec préservation du retour après connexion.
+3. Créer le module MCP et les outils (4, sans `get_robot_login_link`), chacun agissant sous l'identité du jeton.
+4. Déployer la fonction `mcp`, connecter ChatGPT, vérifier la découverte, le consentement, `tools/list` et un appel réel.
+5. Vérifier la RLS avec le compte robot, puis retirer l'ancien mécanisme de code de connexion.
