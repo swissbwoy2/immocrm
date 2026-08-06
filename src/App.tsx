@@ -42,6 +42,8 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const BotLoginCode = lazy(() => import("./pages/BotLoginCode"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+
 
 // Public portal pages
 // Portail annonces en maintenance — composants Annonces/RechercheAnnonces/AnnonceDetail retirés du routing public
