@@ -55,8 +55,15 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // Vérifier si le rôle de l'utilisateur est autorisé pour cette route
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to={`/${userRole}`} replace />;
+  // Le rôle robot « automation_operator » peut OUVRIR les écrans réservés à « admin »
+  // (affichage uniquement — ses droits réels restent limités par les policies RLS).
+  const roleAllowed =
+    !allowedRoles ||
+    allowedRoles.includes(userRole) ||
+    (userRole === 'automation_operator' && allowedRoles.includes('admin'));
+
+  if (!roleAllowed) {
+    return <Navigate to={userRole === 'automation_operator' ? '/admin' : `/${userRole}`} replace />;
   }
 
   return <>{children}</>;
