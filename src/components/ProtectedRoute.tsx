@@ -5,10 +5,10 @@ import { authLog } from '@/lib/authSession';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur')[];
+  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator')[];
 }
 
-const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier', 'agent_ia', 'closeur'] as const;
+const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier', 'agent_ia', 'closeur', 'automation_operator'] as const;
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, userRole, loading, recovering, session } = useAuth();
@@ -55,8 +55,15 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // Vérifier si le rôle de l'utilisateur est autorisé pour cette route
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
-    return <Navigate to={`/${userRole}`} replace />;
+  // Le rôle robot « automation_operator » peut OUVRIR les écrans réservés à « admin »
+  // (affichage uniquement — ses droits réels restent limités par les policies RLS).
+  const roleAllowed =
+    !allowedRoles ||
+    allowedRoles.includes(userRole) ||
+    (userRole === 'automation_operator' && allowedRoles.includes('admin'));
+
+  if (!roleAllowed) {
+    return <Navigate to={userRole === 'automation_operator' ? '/admin' : `/${userRole}`} replace />;
   }
 
   return <>{children}</>;
