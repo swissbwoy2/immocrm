@@ -51,7 +51,7 @@ export default function Login() {
       if (roleError) throw roleError;
 
       toast({ title: 'Connexion réussie', description: 'Bienvenue !' });
-      navigate(`/${roleData.role}`);
+      navigate(nextPath ?? `/${roleData.role}`);
     } catch (error: any) {
       toast({ title: 'Erreur de connexion', description: error.message || 'Email ou mot de passe incorrect', variant: 'destructive' });
     } finally {
