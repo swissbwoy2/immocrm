@@ -11,7 +11,7 @@ import {
 } from '@/lib/authSession';
 import { purgePersistedAuth, withAuthStorageRemoval, mirrorSession } from '@/lib/authStorageGuard';
 
-type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator';
+type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur';
 
 interface AuthContextType {
   user: User | null;
