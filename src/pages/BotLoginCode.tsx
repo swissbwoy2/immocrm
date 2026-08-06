@@ -2,32 +2,44 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Point d'entrée d'automatisation : /bot-login?key=<BOT_LOGIN_KEY>
- * Aucune donnée sensible n'est affichée.
+ * Consommation d'un code d'automatisation à usage unique (durée de vie 60 s).
+ * URL : /bot-login-code?code=<CODE>
+ * Aucune valeur sensible n'est affichée ni journalisée.
  */
-export default function BotLogin() {
+export default function BotLoginCode() {
   const [state, setState] = useState<'pending' | 'error'>('pending');
 
   useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
-      const key = new URLSearchParams(window.location.search).get('key');
-      if (!key) {
+      const code = new URLSearchParams(window.location.search).get('code');
+      if (!code) {
         if (!cancelled) setState('error');
         return;
       }
 
+      // Le code est retiré de la barre d'adresse immédiatement.
+      window.history.replaceState({}, '', '/bot-login-code');
+
       try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bot-login?key=${encodeURIComponent(key)}`;
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-        });
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/automation-auth-consume`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ code }),
+          },
+        );
+
         if (!res.ok) {
           if (!cancelled) setState('error');
           return;
         }
+
         const data = await res.json();
         if (!data?.access_token || !data?.refresh_token) {
           if (!cancelled) setState('error');

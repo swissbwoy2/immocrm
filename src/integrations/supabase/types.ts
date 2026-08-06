@@ -1778,6 +1778,57 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_auth_log: {
+        Row: {
+          created_at: string
+          id: string
+          ip: string | null
+          outcome: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          outcome: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip?: string | null
+          outcome?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      automation_login_codes: {
+        Row: {
+          bot_user_id: string
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          used_at: string | null
+        }
+        Insert: {
+          bot_user_id: string
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+        }
+        Update: {
+          bot_user_id?: string
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       avis_annonceurs: {
         Row: {
           annonceur_id: string
@@ -13095,6 +13146,7 @@ export type Database = {
         | "coursier"
         | "agent_ia"
         | "closeur"
+        | "automation_operator"
       approval_status: "pending" | "approved" | "rejected" | "modified"
       approval_type: "offer" | "visit" | "external_action"
       connector_type:
@@ -13358,6 +13410,7 @@ export const Constants = {
         "coursier",
         "agent_ia",
         "closeur",
+        "automation_operator",
       ],
       approval_status: ["pending", "approved", "rejected", "modified"],
       approval_type: ["offer", "visit", "external_action"],
