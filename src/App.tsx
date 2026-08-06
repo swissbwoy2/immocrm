@@ -41,6 +41,7 @@ const MentionsLegalesDE = lazy(() => import("./pages/legal/MentionsLegales.de"))
 const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueConfidentialite.de"));
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const BotLogin = lazy(() => import("./pages/BotLogin"));
 
 // Public portal pages
 // Portail annonces en maintenance — composants Annonces/RechercheAnnonces/AnnonceDetail retirés du routing public
