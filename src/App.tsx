@@ -312,6 +312,8 @@ const App = () => (
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/bot-login-code" element={<BotLoginCode />} />
+              <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
 
               {/* Legal Routes */}
               <Route path="/mentions-legales" element={<MentionsLegales />} />
