@@ -1,85 +1,57 @@
-# Serveur MCP distant pour ChatGPT — évaluation de faisabilité (aucun code)
+# Mot de passe initial envoyé par email (code aléatoire)
 
-## 1) Transport MCP « Streamable HTTP » sur les Edge Functions de ce projet
+## Objectif
+À la création d'un compte client, ne plus envoyer un lien vers une page de création de mot de passe.
+Le client reçoit directement un **mot de passe provisoire aléatoire** par email, se connecte avec
+email + ce mot de passe, puis le change lui-même dans **Paramètres → Changer le mot de passe**
+(la carte existe déjà côté client).
 
-**OUI, faisable et fiable — à condition de rester sur des outils courts.**
+Réponse courte : **oui, c'est faisable**, et **non, aucun nouveau build iOS n'est nécessaire** si on
+se limite au périmètre ci-dessous (voir section « Build iOS »).
 
-Constats vérifiés dans ce projet : le backend tourne déjà sur des Edge Functions Deno, `supabase/config.toml` permet déjà `verify_jwt = false` par fonction (nécessaire pour que le serveur MCP valide lui-même le jeton OAuth), et aucun module MCP n'existe encore (`src/lib/mcp` absent, pas de dépendance MCP dans `package.json`).
+## Ce qui change
 
-Le SDK Lovable `@lovable.dev/mcp-js` génère une fonction Deno unique qui sert le transport Streamable HTTP (`initialize`, `tools/list`, `tools/call`, réponses SSE) sur une URL se terminant par `/mcp`. C'est le chemin supporté ; écrire le transport JSON-RPC à la main n'est pas nécessaire.
+1. **Création du compte (fonction `invite-client`)**
+   - Au lieu de `inviteUserByEmail` (lien → `/first-login`), on crée l'utilisateur avec
+     `admin.createUser({ email, password: <code aléatoire>, email_confirm: true })`.
+   - Code généré côté serveur : 10 caractères, alphabet sans ambiguïté (pas de O/0/I/l), jamais journalisé.
+   - Marqueur `must_change_password: true` dans les métadonnées utilisateur.
+   - Cas « utilisateur déjà existant » : on régénère un nouveau code provisoire et on renvoie le même email
+     (au lieu de l'email de réinitialisation actuel).
 
-Limites concrètes à accepter :
+2. **Email « Vos identifiants de connexion »**
+   - Nouveau template email applicatif aux couleurs Logisorama : email de connexion,
+     code provisoire bien visible, bouton « Se connecter », rappel de changer le mot de passe
+     dans Paramètres.
+   - Envoi via l'infrastructure email du projet (domaine `notify.logisorama.ch` déjà configuré).
+     L'infrastructure d'emails applicatifs n'existe pas encore dans ce projet : il faut l'initialiser
+     (file d'envoi + fonction d'envoi + page de désinscription). C'est une étape technique automatique.
 
-| Sujet | Réalité |
-| --- | --- |
-| Timeout | Un appel d'outil est un aller-retour synchrone avec timeout côté client (quelques dizaines de secondes). Les 5 outils visés sont courts, donc OK. Une génération PDF lourde ou un scraping ne doit PAS être exposé comme outil synchrone. |
-| Streaming | SSE fonctionne, mais l'infrastructure Edge peut couper une connexion longue. Ne pas concevoir d'outil qui streame pendant des minutes. |
-| Cold start | Quelques centaines de ms à ~2 s sur la première requête après inactivité. Sans impact pour une routine 4×/jour. |
-| Sessions | Pas d'état en mémoire entre invocations. Chaque requête doit être auto-portante (jeton + arguments). C'est le mode nominal de MCP ici. |
-| Taille de réponse | Retourner des résumés et des URLs signées, jamais des fichiers en base64. `create_document_download_link` doit rendre une URL signée courte durée, pas le PDF. |
-| Upload | `upload_prepared_pdf` doit recevoir une URL source ou un petit contenu, sinon passer par une URL d'upload signée générée par l'outil. |
+3. **Après la première connexion**
+   - Si `must_change_password` est vrai, le client est invité à définir son mot de passe
+     (bandeau + redirection douce vers Paramètres). Le marqueur est retiré après changement.
+   - La page `/first-login` reste en place pour les invitations déjà envoyées (rétrocompatibilité).
 
-## 2) Écrire soi-même un serveur d'AUTORISATION OAuth 2.1 complet
+4. **Côté admin**
+   - Le texte du dialogue « Créer un compte client » est adapté : « recevra ses identifiants par email »
+     au lieu de « définir son mot de passe ».
 
-**Non recommandé, et inutile ici.**
+## Sécurité
+- Code aléatoire cryptographique, à usage unique de fait (le client doit le remplacer).
+- Jamais renvoyé dans la réponse HTTP de la fonction, jamais dans les logs.
+- Aucune modification du login humain existant ni des règles d'accès (RLS).
 
-Implémenter à la main `/authorize` + PKCE S256, `/token` avec rotation et révocation de refresh tokens, JWKS et rotation de clés, DCR ou Client ID Metadata Documents, plus les deux documents `.well-known`, représente un composant de sécurité à part entière. Ce que je ne peux honnêtement pas garantir dans une implémentation maison sur Edge Functions : la conformité stricte RFC (8414, 9728, 7636, 8707), la gestion correcte des codes à usage unique en environnement concurrent, la rotation/révocation propre des refresh tokens, la rotation des clés de signature, et la résistance aux erreurs subtiles (redirect_uri, binding audience, replay).
+## Build iOS
+Aucun nouveau build iOS requis **pour la partie email + création de compte** : tout se passe côté serveur.
+Les seuls changements front sont : le texte du dialogue admin (écran admin) et l'incitation à changer
+le mot de passe après première connexion. Comme l'app iOS embarque le front (pas de rechargement distant),
+ces deux améliorations d'écran n'apparaîtront dans l'app native qu'au prochain build — mais **le flux
+fonctionne sans** : le client peut se connecter avec son code et changer son mot de passe dans Paramètres,
+carte déjà présente dans la version publiée.
 
-**Ce projet n'en a pas besoin** : Supabase Auth est déjà l'autorité d'authentification et sait jouer le rôle de serveur d'autorisation OAuth 2.1 avec PKCE et enregistrement dynamique de client. L'app n'a alors qu'à être *resource server* (valider le jeton) plus une page de consentement. Aucun serveur d'autorisation externe dédié n'est requis.
-
-## 3) Alternatives
-
-| Option | Compatible connecteur ChatGPT | Sécurité | Effort |
-| --- | --- | --- | --- |
-| A. MCP sur Edge Function + OAuth délégué à Supabase Auth (activation du serveur OAuth managé, page de consentement dans l'app) | Oui — c'est le flux attendu par ChatGPT (découverte, DCR, PKCE) | Élevée : jetons par utilisateur, RLS appliquée, révocable | Moyen |
-| B. Serveur d'autorisation OAuth écrit à la main sur Edge Functions | Oui en théorie | Risquée : surface cryptographique et RFC à maintenir soi-même | Élevé |
-| C. Service externe dédié (Auth0/Clerk/WorkOS ou hébergement Node) devant le MCP | Oui | Élevée | Élevé + nouveau composant à opérer et à payer |
-| D. Jeton bearer statique stocké dans le connecteur, sans OAuth | Partiellement : le mode développeur/connecteur de ChatGPT privilégie OAuth ou « pas d'auth » ; le bearer fixe n'est pas un chemin propre et durable | Faible : secret longue durée, non lié à un utilisateur, non rotatif | Faible |
-| E. MCP public sans authentification | Oui | Inacceptable ici : les données clients seraient lisibles par n'importe qui | Faible |
-
-Option retenue : **A**.
-
-## 4) Architecture recommandée (unique)
-
-```text
-ChatGPT (connecteur MCP)
-   │  découverte OAuth + PKCE + DCR
-   ▼
-Supabase Auth  ── serveur d'autorisation (managé)
-   │  redirige vers la page de consentement de l'app
-   ▼
-logisorama.ch/.lovable/oauth/consent  (page React, connexion du compte robot)
-   │  approbation → code → jeton d'accès utilisateur
-   ▼
-Edge Function « mcp » (resource server, verify_jwt = false, validation OAuth par le SDK)
-   │  requêtes exécutées avec le jeton du compte robot
-   ▼
-Base de données — RLS appliquée avec le rôle automation_operator existant
-```
-
-Répartition :
-
-- **Faisable dans Lovable/Supabase** : le serveur MCP et ses 5 outils, l'activation du serveur d'autorisation OAuth managé, la page de consentement, la validation des jetons, le cloisonnement par RLS via `automation_operator`.
-- **Exige un composant externe** : rien, sauf si le connecteur exigeait un fournisseur d'identité tiers ou des scopes OAuth granulaires (Supabase émet des jetons sans scopes applicatifs ; les permissions restent portées par RLS et par le code des outils).
-
-Sur l'objectif « travailler 4×/jour sans dépendre des cookies du navigateur » : oui, c'est précisément ce que ce montage résout. Le connecteur détient un refresh token OAuth et renouvelle son accès sans navigateur. Une seule action humaine est nécessaire : l'approbation initiale du consentement, connecté avec le compte robot. Les mécanismes actuels (`automation-auth-exchange` / `automation-auth-consume`, page `/bot-login-code`) deviennent alors redondants pour ChatGPT et devraient être supprimés une fois le MCP validé, pour ne pas laisser deux portes d'entrée.
-
-## 5) Risques concrets et points de non-conformité probable
-
-1. **Émetteur (issuer) mal configuré** : l'émetteur doit être l'hôte Supabase direct, pas l'URL proxy. Une erreur ici fait échouer toute vérification de jeton — cause d'échec la plus fréquente.
-2. **Retour de consentement perdu** : si la page de connexion ne renvoie pas l'utilisateur vers l'URL de consentement complète (y compris après un login social), le connecteur échoue silencieusement.
-3. **Confusion de rôle** : si un outil utilisait une clé privilégiée au lieu du jeton de l'appelant, la RLS serait contournée et toutes les données clients exposées. Tous les outils doivent agir avec l'identité vérifiée.
-4. **Fuite via un outil trop généreux** : `get_postulation_context` doit renvoyer un périmètre borné, pas des dossiers arbitraires. À cadrer explicitement.
-5. **Liens de téléchargement** : URLs signées à durée très courte, jamais d'URL publique persistante ni de contenu binaire dans la réponse.
-6. **`get_robot_login_link`** : cet outil rendrait un lien de session par-dessus le canal ChatGPT. À mon avis il ne devrait pas exister dans un MCP authentifié — il recrée le risque que l'OAuth supprime. Recommandation : le retirer du périmètre.
-7. **Écritures** : `upload_prepared_pdf` est le seul outil mutant. Il exige des policies d'INSERT ciblées, une validation stricte du type de fichier et de la taille, et un `destructiveHint: false`.
-8. **Timeouts** : tout traitement long exposé comme outil synchrone apparaîtra « interrompu » côté ChatGPT même s'il réussit côté serveur.
-9. **Non-conformité probable d'un AS maison** : usage unique des codes en concurrence, rotation/révocation des refresh tokens, rotation des clés JWKS, validation exacte des `redirect_uri`, binding d'audience — c'est exactement ce que l'option A évite.
-
-## Étapes proposées si vous validez
-
-1. Activer le serveur d'autorisation OAuth managé du backend.
-2. Ajouter la page de consentement dans l'app, avec préservation du retour après connexion.
-3. Créer le module MCP et les outils (4, sans `get_robot_login_link`), chacun agissant sous l'identité du jeton.
-4. Déployer la fonction `mcp`, connecter ChatGPT, vérifier la découverte, le consentement, `tools/list` et un appel réel.
-5. Vérifier la RLS avec le compte robot, puis retirer l'ancien mécanisme de code de connexion.
+## Détails techniques
+- `supabase/functions/invite-client/index.ts` : remplacement de `inviteUserByEmail` /
+  `resetPasswordForEmail` par `admin.createUser` / `admin.updateUserById` + envoi de l'email d'identifiants.
+- Initialisation de l'infrastructure d'emails applicatifs + template `client-credentials`.
+- `src/components/clients/CreateClientAccountDialog.tsx` : texte mis à jour.
+- Détection `must_change_password` au chargement de l'espace client → bandeau vers `/client/parametres`.
