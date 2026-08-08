@@ -43,6 +43,7 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const BotLoginCode = lazy(() => import("./pages/BotLoginCode"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 
 // Public portal pages
