@@ -312,6 +312,7 @@ const App = () => (
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/bot-login-code" element={<BotLoginCode />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
