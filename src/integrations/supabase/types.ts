@@ -12789,6 +12789,10 @@ export type Database = {
       }
     }
     Functions: {
+      __oneoff_reset_pwd: {
+        Args: { _email: string; _prenom: string; _user_id: string }
+        Returns: string
+      }
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
