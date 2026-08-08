@@ -89,7 +89,7 @@ export const CreateClientAccountDialog = ({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <p className="text-sm text-muted-foreground">
-            Le client recevra un email d'invitation pour <strong>définir son mot de passe</strong>, compléter son profil, signer son mandat et joindre les documents demandés.
+            Le client recevra un email avec ses <strong>identifiants de connexion</strong> (email + mot de passe provisoire). Il devra changer son mot de passe dès sa première connexion dans les paramètres.
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
