@@ -306,44 +306,69 @@ serve(async (req) => {
     let message: string;
     let isNewUser = false;
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const tempPassword = generateTempPassword();
+
     if (existingUser) {
-      // User exists - send password reset email instead
-      console.log('User exists, sending password reset email');
-      
-      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
-        email,
+      // User exists - set a new temporary password and mark as must-change
+      console.log('User exists, setting temporary password and sending credentials');
+
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        existingUser.id,
         {
-          redirectTo,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            ...(existingUser.user_metadata || {}),
+            must_change_password: true,
+          },
         }
       );
 
-      if (resetError) {
-        console.error('Error sending reset email:', resetError);
-        throw resetError;
+      if (updateError) {
+        console.error('Error updating existing user password:', updateError);
+        throw updateError;
+      }
+
+      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, email, tempPassword, prenom);
+      if (!emailRes.success) {
+        console.error('Failed to send credentials email for existing user:', emailRes.error);
       }
 
       userId = existingUser.id;
-      message = 'Email de réinitialisation envoyé avec succès';
+      message = 'Identifiants de connexion envoyés avec succès';
+      isNewUser = false;
     } else {
-      // New user - invite them (only if demandeMandat is present, validated above)
-      console.log('New user with complete data, sending invitation');
-      
-      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-        email,
-        {
-          redirectTo,
-        }
-      );
+      // New user - create with a temporary password and mark as must-change
+      console.log('New user with complete data, creating user with temporary password');
 
-      if (inviteError) {
-        console.error('Error inviting user:', inviteError);
-        throw inviteError;
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          must_change_password: true,
+        },
+      });
+
+      if (createError || !newUser?.user) {
+        console.error('Error creating user:', createError);
+        throw createError || new Error('Échec de la création utilisateur');
       }
 
-      userId = inviteData.user.id;
-      message = 'Invitation envoyée avec succès';
+      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, email, tempPassword, prenom);
+      if (!emailRes.success) {
+        console.error('Failed to send credentials email for new user:', emailRes.error);
+      }
+
+      userId = newUser.user.id;
+      message = 'Compte créé et identifiants envoyés avec succès';
       isNewUser = true;
     }
+
+    // redirectTo is no longer used for password links; keep the helper available for other flows.
+    void redirectTo;
 
     // Check if profile exists, if not create it
     const { data: existingProfile } = await supabaseAdmin
