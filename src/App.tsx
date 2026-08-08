@@ -43,6 +43,7 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const BotLoginCode = lazy(() => import("./pages/BotLoginCode"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
+const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 
 // Public portal pages
@@ -311,6 +312,7 @@ const App = () => (
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/bot-login-code" element={<BotLoginCode />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 

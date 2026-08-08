@@ -38,6 +38,60 @@ const getAppBaseUrl = (req: Request) => {
   return DEFAULT_APP_URL;
 };
 
+// Génère un mot de passe temporaire aléatoire (10 caractères, sans caractères ambigus)
+function generateTempPassword(length = 10): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars[bytes[i] % chars.length];
+  }
+  return password;
+}
+
+// Envoie un email transactionnel via la fonction send-transactional-email
+async function sendClientCredentialsEmail(
+  supabaseUrl: string,
+  serviceKey: string,
+  recipient: string,
+  tempPassword: string,
+  prenom?: string | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+        'apikey': serviceKey,
+      },
+      body: JSON.stringify({
+        templateName: 'client-credentials',
+        recipientEmail: recipient,
+        idempotencyKey: `client-credentials-${recipient}-${Date.now()}`,
+        templateData: {
+          siteUrl: DEFAULT_APP_URL,
+          recipient,
+          tempPassword,
+          prenom: prenom || '',
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => 'Unknown error');
+      console.error('send-transactional-email failed', { status: res.status, body: text });
+      return { success: false, error: text };
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.error('sendClientCredentialsEmail error:', e);
+    return { success: false, error: (e instanceof Error ? e.message : String(e)) };
+  }
+}
+
 // Types acceptés par le CHECK CONSTRAINT sur public.documents.type_document
 const VALID_DOC_TYPES = new Set([
   'fiche_salaire', 'extrait_poursuites', 'piece_identite', 'attestation_domicile',
@@ -252,44 +306,69 @@ serve(async (req) => {
     let message: string;
     let isNewUser = false;
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const tempPassword = generateTempPassword();
+
     if (existingUser) {
-      // User exists - send password reset email instead
-      console.log('User exists, sending password reset email');
-      
-      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
-        email,
+      // User exists - set a new temporary password and mark as must-change
+      console.log('User exists, setting temporary password and sending credentials');
+
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        existingUser.id,
         {
-          redirectTo,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            ...(existingUser.user_metadata || {}),
+            must_change_password: true,
+          },
         }
       );
 
-      if (resetError) {
-        console.error('Error sending reset email:', resetError);
-        throw resetError;
+      if (updateError) {
+        console.error('Error updating existing user password:', updateError);
+        throw updateError;
+      }
+
+      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, email, tempPassword, prenom);
+      if (!emailRes.success) {
+        console.error('Failed to send credentials email for existing user:', emailRes.error);
       }
 
       userId = existingUser.id;
-      message = 'Email de réinitialisation envoyé avec succès';
+      message = 'Identifiants de connexion envoyés avec succès';
+      isNewUser = false;
     } else {
-      // New user - invite them (only if demandeMandat is present, validated above)
-      console.log('New user with complete data, sending invitation');
-      
-      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-        email,
-        {
-          redirectTo,
-        }
-      );
+      // New user - create with a temporary password and mark as must-change
+      console.log('New user with complete data, creating user with temporary password');
 
-      if (inviteError) {
-        console.error('Error inviting user:', inviteError);
-        throw inviteError;
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          must_change_password: true,
+        },
+      });
+
+      if (createError || !newUser?.user) {
+        console.error('Error creating user:', createError);
+        throw createError || new Error('Échec de la création utilisateur');
       }
 
-      userId = inviteData.user.id;
-      message = 'Invitation envoyée avec succès';
+      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, email, tempPassword, prenom);
+      if (!emailRes.success) {
+        console.error('Failed to send credentials email for new user:', emailRes.error);
+      }
+
+      userId = newUser.user.id;
+      message = 'Compte créé et identifiants envoyés avec succès';
       isNewUser = true;
     }
+
+    // redirectTo is no longer used for password links; keep the helper available for other flows.
+    void redirectTo;
 
     // Check if profile exists, if not create it
     const { data: existingProfile } = await supabaseAdmin

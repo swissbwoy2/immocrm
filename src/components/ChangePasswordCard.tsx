@@ -56,11 +56,24 @@ export function ChangePasswordCard() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      const { error, data } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { must_change_password: false }
       });
 
       if (error) throw error;
+
+      // Mettre à jour le contexte auth local sans recharger la page
+      if (data?.user) {
+        try {
+          await supabase.auth.updateUser({
+            data: { must_change_password: false }
+          });
+        } catch (e) {
+          // Non bloquant
+          console.warn('Échec rafraîchissement metadata:', e);
+        }
+      }
 
       toast.success('Mot de passe modifié avec succès');
       setCurrentPassword('');

@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
 import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
+import { MustChangePasswordBanner } from '@/components/MustChangePasswordBanner';
 
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
@@ -544,6 +545,7 @@ function ClientDashboardLocation() {
       <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
         <FloatingParticles count={8} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
         <PremiumPageShellV2 className="relative z-10">
+          <MustChangePasswordBanner />
           {/* Premium Dashboard Header */}
           <SectionErrorBoundary sectionName="DashboardHeader">
             <PremiumDashboardHeader
