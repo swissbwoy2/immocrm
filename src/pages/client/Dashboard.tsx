@@ -34,6 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
 import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
+import { MustChangePasswordBanner } from '@/components/MustChangePasswordBanner';
 
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
