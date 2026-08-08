@@ -38,6 +38,60 @@ const getAppBaseUrl = (req: Request) => {
   return DEFAULT_APP_URL;
 };
 
+// Génère un mot de passe temporaire aléatoire (10 caractères, sans caractères ambigus)
+function generateTempPassword(length = 10): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars[bytes[i] % chars.length];
+  }
+  return password;
+}
+
+// Envoie un email transactionnel via la fonction send-transactional-email
+async function sendClientCredentialsEmail(
+  supabaseUrl: string,
+  serviceKey: string,
+  recipient: string,
+  tempPassword: string,
+  prenom?: string | null,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+        'apikey': serviceKey,
+      },
+      body: JSON.stringify({
+        templateName: 'client-credentials',
+        recipientEmail: recipient,
+        idempotencyKey: `client-credentials-${recipient}-${Date.now()}`,
+        templateData: {
+          siteUrl: DEFAULT_APP_URL,
+          recipient,
+          tempPassword,
+          prenom: prenom || '',
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => 'Unknown error');
+      console.error('send-transactional-email failed', { status: res.status, body: text });
+      return { success: false, error: text };
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.error('sendClientCredentialsEmail error:', e);
+    return { success: false, error: (e instanceof Error ? e.message : String(e)) };
+  }
+}
+
 // Types acceptés par le CHECK CONSTRAINT sur public.documents.type_document
 const VALID_DOC_TYPES = new Set([
   'fiche_salaire', 'extrait_poursuites', 'piece_identite', 'attestation_domicile',
