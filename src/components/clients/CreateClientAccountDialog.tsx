@@ -64,8 +64,8 @@ export const CreateClientAccountDialog = ({
       });
       if (error) throw error;
       toast({
-        title: 'Invitation envoyée',
-        description: `${form.prenom} ${form.nom} recevra un email pour activer son compte, signer son mandat et joindre ses documents.`,
+        title: 'Identifiants envoyés',
+        description: `${form.prenom} ${form.nom} recevra un email avec son mot de passe provisoire pour se connecter.`,
       });
       reset();
       onOpenChange(false);
