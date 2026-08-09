@@ -192,7 +192,7 @@ async function sendAPNsMessage(
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<{ success: boolean; error?: string; invalidToken?: boolean }> {
+): Promise<{ success: boolean; error?: string; invalidToken?: boolean; environmentMismatch?: boolean }> {
   const payload = {
     aps: {
       alert: { title, body },
@@ -350,7 +350,8 @@ serve(async (req) => {
       const privateKey = Deno.env.get("APNS_PRIVATE_KEY");
       const bundleId = Deno.env.get("APNS_BUNDLE_ID") || "ch.logisorama.app";
       const production = (Deno.env.get("APNS_PRODUCTION") ?? "true") === "true";
-      const base = production ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
+      const base = production ? APNS_PRODUCTION_URL : APNS_SANDBOX_URL;
+      console.log(`APNs preferred environment: ${production ? "production" : "sandbox"}`);
 
       if (!keyId || !teamId || !privateKey) {
         console.error(
@@ -362,7 +363,7 @@ serve(async (req) => {
           const jwt = await getApnsJwt(keyId, teamId, privateKey);
           const iosResults = await Promise.all(
             iosTokens.map(async (device) => {
-              const r = await sendAPNsMessage(
+              const r = await sendAPNsWithFallback(
                 jwt,
                 base,
                 bundleId,
