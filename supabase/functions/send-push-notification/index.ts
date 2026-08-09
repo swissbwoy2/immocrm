@@ -214,10 +214,15 @@ async function sendAPNsMessage(
     body: JSON.stringify(payload),
   });
 
-  if (response.ok) return { success: true };
+  const envLabel = base.includes("sandbox") ? "sandbox" : "production";
+
+  if (response.ok) {
+    console.log(`APNs send OK on ${envLabel} endpoint`);
+    return { success: true };
+  }
 
   const errorText = await response.text();
-  console.error(`APNs send error (${response.status}):`, errorText);
+  console.error(`APNs send error on ${envLabel} (${response.status}):`, errorText);
 
   let reason = "";
   try {
@@ -231,8 +236,45 @@ async function sendAPNsMessage(
     (response.status === 400 &&
       ["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"].includes(reason));
 
-  return { success: false, error: errorText, invalidToken };
+  const environmentMismatch =
+    response.status === 400 && ["BadDeviceToken", "DeviceTokenNotForTopic"].includes(reason);
+
+  return { success: false, error: errorText, invalidToken, environmentMismatch };
 }
+
+const APNS_PRODUCTION_URL = "https://api.push.apple.com";
+const APNS_SANDBOX_URL = "https://api.sandbox.push.apple.com";
+
+async function sendAPNsWithFallback(
+  jwt: string,
+  preferredBase: string,
+  bundleId: string,
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<{ success: boolean; error?: string; invalidToken?: boolean }> {
+  const otherBase =
+    preferredBase === APNS_PRODUCTION_URL ? APNS_SANDBOX_URL : APNS_PRODUCTION_URL;
+
+  const first = await sendAPNsMessage(jwt, preferredBase, bundleId, token, title, body, data);
+  if (first.success) return { success: true };
+
+  if (first.environmentMismatch) {
+    const otherLabel = otherBase.includes("sandbox") ? "sandbox" : "production";
+    console.log(`APNs environment mismatch — retrying on ${otherLabel} endpoint`);
+    const second = await sendAPNsMessage(jwt, otherBase, bundleId, token, title, body, data);
+    if (second.success) return { success: true };
+    return {
+      success: false,
+      error: second.error ?? first.error,
+      invalidToken: Boolean(first.invalidToken && second.invalidToken),
+    };
+  }
+
+  return { success: false, error: first.error, invalidToken: first.invalidToken };
+}
+
 
 /* ------------------------------------------------------------------ */
 
