@@ -157,6 +157,7 @@ const CoursierCarte = lazy(() => import("./pages/coursier/Carte"));
 const CoursierCalendrier = lazy(() => import("./pages/coursier/Calendrier"));
 const CoursierHistorique = lazy(() => import("./pages/coursier/Historique"));
 const CoursierParametres = lazy(() => import("./pages/coursier/Parametres"));
+const CoursierCompteRenduVisite = lazy(() => import("./pages/coursier/CompteRenduVisite"));
 
 // Closeur pages
 const CloseurDashboard = lazy(() => import("./pages/closeur/Dashboard"));
