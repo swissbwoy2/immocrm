@@ -14,7 +14,7 @@ import { ArrowLeft, Loader2, Send, Save, X, Plus, Image as ImageIcon, Video, Fil
 
 type Media = { url: string; type: string; name: string; size: number };
 
-export default function CompteRenduVisite() {
+export default function CompteRenduVisite({ role = "agent" }: { role?: "agent" | "coursier" } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
