@@ -12920,6 +12920,7 @@ export type Database = {
         Args: { _profile_id: string }
         Returns: boolean
       }
+      is_coursier_of_visite: { Args: { _visite_id: string }; Returns: boolean }
       is_demo_account: { Args: { _user_id: string }; Returns: boolean }
       is_demo_user: { Args: { _user_id: string }; Returns: boolean }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }

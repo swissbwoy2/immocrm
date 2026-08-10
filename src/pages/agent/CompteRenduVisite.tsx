@@ -14,7 +14,7 @@ import { ArrowLeft, Loader2, Send, Save, X, Plus, Image as ImageIcon, Video, Fil
 
 type Media = { url: string; type: string; name: string; size: number };
 
-export default function CompteRenduVisite() {
+export default function CompteRenduVisite({ role = "agent" }: { role?: "agent" | "coursier" } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -142,6 +142,17 @@ export default function CompteRenduVisite() {
     setSending(true);
     try {
       const id = await upsertCR();
+
+      if (role === "coursier") {
+        const { error } = await supabase.functions.invoke("coursier-send-compte-rendu", {
+          body: { visite_id: visite.id },
+        });
+        if (error) throw error;
+        setEnvoyeAt(new Date().toISOString());
+        toast({ title: "Compte-rendu envoyé au client", description: "Le client reçoit le récap, la vidéo et les fichiers dans son espace." });
+        return;
+      }
+
       // Build récap text
       const lines: string[] = [];
       lines.push(`Compte-rendu de la visite — ${visite.adresse}`);

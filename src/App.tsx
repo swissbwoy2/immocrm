@@ -157,6 +157,7 @@ const CoursierCarte = lazy(() => import("./pages/coursier/Carte"));
 const CoursierCalendrier = lazy(() => import("./pages/coursier/Calendrier"));
 const CoursierHistorique = lazy(() => import("./pages/coursier/Historique"));
 const CoursierParametres = lazy(() => import("./pages/coursier/Parametres"));
+const CoursierCompteRenduVisite = lazy(() => import("./pages/coursier/CompteRenduVisite"));
 
 // Closeur pages
 const CloseurDashboard = lazy(() => import("./pages/closeur/Dashboard"));
@@ -504,6 +505,8 @@ const App = () => (
               <Route path="/coursier/calendrier" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/coursier/historique" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierHistorique /></AppLayout></ProtectedRoute>} />
               <Route path="/coursier/parametres" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierParametres /></AppLayout></ProtectedRoute>} />
+              <Route path="/coursier/visites/:id/compte-rendu" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierCompteRenduVisite /></AppLayout></ProtectedRoute>} />
+
 
               {/* Closeur Routes */}
               <Route path="/closeur" element={<ProtectedRoute allowedRoles={['closeur']}><AppLayout><CloseurDashboard /></AppLayout></ProtectedRoute>} />

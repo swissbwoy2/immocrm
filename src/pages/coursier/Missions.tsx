@@ -17,9 +17,11 @@ import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
+import { useNavigate } from 'react-router-dom';
 
 export default function CoursierMissions() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -661,6 +663,18 @@ export default function CoursierMissions() {
                     Terminer la visite
                   </Button>
                 )}
+                {selectedMission.coursier_id === coursierId &&
+                  ['accepte', 'termine'].includes(selectedMission.statut_coursier) && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate(`/coursier/visites/${selectedMission.id}/compte-rendu`)}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Compte-rendu détaillé & envoi au client
+                    </Button>
+                  )}
+
               </div>
             )}
           </ScrollArea>
