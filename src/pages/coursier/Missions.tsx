@@ -17,9 +17,11 @@ import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
+import { useNavigate } from 'react-router-dom';
 
 export default function CoursierMissions() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
