@@ -132,15 +132,25 @@ export default function CoursierCalendrier() {
                         <span>{Number(m.offres.prix).toLocaleString('fr-CH')} CHF</span>
                       )}
                     </div>
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(m.adresse)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      <MapPin className="h-3 w-3" />
-                      Itinéraire Google Maps
-                    </a>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(m.adresse)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <MapPin className="h-3 w-3" />
+                        Itinéraire Google Maps
+                      </a>
+                      <Link
+                        to={`/coursier/visites/${m.id}/compte-rendu`}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <FileText className="h-3 w-3" />
+                        Compte-rendu
+                      </Link>
+                    </div>
+
                   </CardContent>
                 </Card>
               ))
