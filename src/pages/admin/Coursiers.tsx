@@ -98,12 +98,12 @@ export default function AdminCoursiers() {
     }
   };
 
-  const handleMarkPaid = async (visiteId: string) => {
+  const handleMarkPaidGroup = async (ids: string[]) => {
     try {
       const { error } = await supabase
         .from('visites')
         .update({ paye_coursier: true })
-        .eq('id', visiteId);
+        .in('id', ids);
       if (error) throw error;
       toast.success('Visite marquée comme payée');
       loadData();
@@ -113,51 +113,63 @@ export default function AdminCoursiers() {
   };
 
   const handleMarkAllPaidForAgent = async (agentId: string) => {
-    const agentUnpaid = unpaidMissions.filter(m => (m.agent_id || 'unknown') === agentId);
+    const ids = unpaidMissions.filter(m => (m.agent_id || 'unknown') === agentId).map(m => m.id);
+    const groupCount = unpaidGroups.filter(g => ((g.representative as any).agent_id || 'unknown') === agentId).length;
     try {
-      for (const m of agentUnpaid) {
-        await supabase.from('visites').update({ paye_coursier: true }).eq('id', m.id);
-      }
-      toast.success(`${agentUnpaid.length} visite(s) marquée(s) comme payée(s)`);
+      const { error } = await supabase.from('visites').update({ paye_coursier: true }).in('id', ids);
+      if (error) throw error;
+      toast.success(`${groupCount} visite(s) marquée(s) comme payée(s)`);
       loadData();
     } catch (error) {
       toast.error('Erreur');
     }
   };
 
-  const unpaidMissions = missions.filter(m => m.statut_coursier === 'termine' && !m.paye_coursier);
-  const totalUnpaid = unpaidMissions.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
-  const pendingMissions = missions.filter(m => m.statut_coursier === 'en_attente');
-  const activeMissions = missions.filter(m => m.statut_coursier === 'accepte');
-  const completedMissions = missions.filter(m => m.statut_coursier === 'termine');
+  const clientsCountOf = (items: any[]) =>
+    new Set(items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || items.length;
 
-  // Group unpaid missions by agent
+  const unpaidMissions = missions.filter(m => m.statut_coursier === 'termine' && !m.paye_coursier);
+
+  /** Missions regroupées par visite physique (adresse + date/heure + agent) */
+  const missionGroups = useMemo(() => groupVisitesByPhysiqueAgent(missions as any[]), [missions]);
+  const pendingGroups = useMemo(() => missionGroups.filter(g => (g.representative as any).statut_coursier === 'en_attente'), [missionGroups]);
+  const activeGroups = useMemo(() => missionGroups.filter(g => (g.representative as any).statut_coursier === 'accepte'), [missionGroups]);
+  const completedGroups = useMemo(() => missionGroups.filter(g => (g.representative as any).statut_coursier === 'termine'), [missionGroups]);
+  const unpaidGroups = useMemo(
+    () => completedGroups.filter(g => g.items.some((m: any) => !m.paye_coursier)),
+    [completedGroups],
+  );
+  const totalUnpaid = unpaidMissions.reduce((sum, m) => sum + (m.remuneration_coursier || 0), 0);
+
+  // Group unpaid visits (physical) by agent
   const unpaidByAgent = useMemo(() => {
-    return unpaidMissions.reduce((acc: Record<string, { name: string; count: number; total: number; missions: any[] }>, m) => {
-      const agentId = m.agent_id || 'unknown';
-      const agentName = m.agents?.profiles?.prenom 
-        ? `${m.agents.profiles.prenom} ${m.agents.profiles.nom || ''}`.trim()
+    return unpaidGroups.reduce((acc: Record<string, { name: string; count: number; total: number; clients: number; groups: any[] }>, g) => {
+      const rep: any = g.representative;
+      const agentId = rep.agent_id || 'unknown';
+      const agentName = rep.agents?.profiles?.prenom
+        ? `${rep.agents.profiles.prenom} ${rep.agents.profiles.nom || ''}`.trim()
         : 'Agent inconnu';
-      if (!acc[agentId]) acc[agentId] = { name: agentName, count: 0, total: 0, missions: [] };
+      if (!acc[agentId]) acc[agentId] = { name: agentName, count: 0, total: 0, clients: 0, groups: [] };
       acc[agentId].count += 1;
-      acc[agentId].total += (m.remuneration_coursier || 5);
-      acc[agentId].missions.push(m);
+      acc[agentId].clients += clientsCountOf(g.items);
+      acc[agentId].total += g.items.reduce((s: number, m: any) => s + (m.paye_coursier ? 0 : (m.remuneration_coursier || 0)), 0);
+      acc[agentId].groups.push(g);
       return acc;
     }, {});
-  }, [unpaidMissions]);
+  }, [unpaidGroups]);
   const agentBalances = Object.entries(unpaidByAgent);
 
-  // Coursier stats
+  // Coursier stats (basés sur les visites physiques)
   const coursierStats = useMemo(() => {
     return coursiers.map(c => {
-      const coursierMissions = missions.filter(m => m.coursier_id === c.id);
-      const completed = coursierMissions.filter(m => m.statut_coursier === 'termine');
-      const active = coursierMissions.filter(m => m.statut_coursier === 'accepte');
-      const earnings = completed.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
-      const unpaid = completed.filter(m => !m.paye_coursier).reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
-      return { ...c, completedCount: completed.length, activeCount: active.length, earnings, unpaid };
+      const cGroups = missionGroups.filter(g => (g.representative as any).coursier_id === c.id);
+      const completed = cGroups.filter(g => (g.representative as any).statut_coursier === 'termine');
+      const active = cGroups.filter(g => (g.representative as any).statut_coursier === 'accepte');
+      const sum = (gs: any[], onlyUnpaid = false) =>
+        gs.reduce((s, g) => s + g.items.reduce((s2: number, m: any) => s2 + ((onlyUnpaid && m.paye_coursier) ? 0 : (m.remuneration_coursier || 0)), 0), 0);
+      return { ...c, completedCount: completed.length, activeCount: active.length, earnings: sum(completed), unpaid: sum(completed, true) };
     });
-  }, [coursiers, missions]);
+  }, [coursiers, missionGroups]);
 
   const filteredEligible = eligibleVisites.filter(v => {
     if (!searchQuery) return true;
@@ -167,6 +179,14 @@ export default function AdminCoursiers() {
            (v.clients?.profiles?.prenom || '').toLowerCase().includes(q) ||
            (v.clients?.profiles?.nom || '').toLowerCase().includes(q);
   });
+
+  /** Visites éligibles regroupées par visite physique */
+  const eligibleGroups = useMemo(() => groupVisitesByPhysiqueAgent(eligibleVisites as any[]), [eligibleVisites]);
+  const filteredEligibleGroups = useMemo(
+    () => groupVisitesByPhysiqueAgent(filteredEligible as any[]),
+    [filteredEligible],
+  );
+
 
   const getCoursierName = (c: any) => {
     return `${c.profiles?.prenom || c.prenom || ''} ${c.profiles?.nom || c.nom || ''}`.trim() || 'Coursier';
