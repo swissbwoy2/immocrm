@@ -126,10 +126,11 @@ export default function CoursierMissions() {
           medias_coursier: feedbackMedias,
           recommandation_agent: recommandation,
         })
-        .eq('id', selectedMission.id);
+        .in('id', (selectedMission._group || [selectedMission]).map((v: any) => v.id));
 
       if (error) throw error;
-      toast.success('Mission terminée ! Rémunération de 5.- CHF enregistrée');
+      toast.success('Visite terminée pour tous les clients concernés ✅');
+
       setCompleteOpen(false);
       setFeedback('');
       setFeedbackMedias([]);
