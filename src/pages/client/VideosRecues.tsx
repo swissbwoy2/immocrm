@@ -567,7 +567,7 @@ export default function VideosRecues() {
       ) : (
         <div className="space-y-6">
           {items.map((item) => (
-            <VideoOfferCard key={item.message.id} item={item} onDecisionSaved={load} onViewOffer={setDialogOffre} />
+            <VideoOfferCard key={item.key} item={item} onDecisionSaved={load} onViewOffer={setDialogOffre} />
           ))}
         </div>
       )}
