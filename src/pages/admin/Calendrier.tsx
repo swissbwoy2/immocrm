@@ -103,6 +103,7 @@ export default function AdminCalendrier() {
       const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
         fetchAllPaginated(() =>
           supabase.from('calendar_events').select('*')
+            .is('visite_id', null)
             .gte('event_date', rangeStartIso)
             .lte('event_date', rangeEndIso)
             .order('event_date', { ascending: true })

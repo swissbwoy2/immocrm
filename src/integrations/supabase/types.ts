@@ -2121,6 +2121,7 @@ export type Database = {
           status: string | null
           title: string
           updated_at: string | null
+          visite_id: string | null
         }
         Insert: {
           agent_id?: string | null
@@ -2138,6 +2139,7 @@ export type Database = {
           status?: string | null
           title: string
           updated_at?: string | null
+          visite_id?: string | null
         }
         Update: {
           agent_id?: string | null
@@ -2155,6 +2157,7 @@ export type Database = {
           status?: string | null
           title?: string
           updated_at?: string | null
+          visite_id?: string | null
         }
         Relationships: [
           {
@@ -2169,6 +2172,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_visite_id_fkey"
+            columns: ["visite_id"]
+            isOneToOne: false
+            referencedRelation: "visites"
             referencedColumns: ["id"]
           },
         ]
