@@ -286,7 +286,7 @@ export default function AdminCoursiers() {
                 />
               </div>
             )}
-            {filteredEligible.length === 0 ? (
+            {filteredEligibleGroups.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <Send className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
@@ -297,8 +297,12 @@ export default function AdminCoursiers() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {filteredEligible.map((v) => (
-                  <Card key={v.id} className="border-border/50 hover:border-primary/20 transition-all">
+                {filteredEligibleGroups.map((g) => {
+                  const v: any = g.representative;
+                  const nbClients = clientsCountOf(g.items);
+                  const ids = g.items.map((i: any) => i.id);
+                  return (
+                  <Card key={g.key} className="border-border/50 hover:border-primary/20 transition-all">
                     <CardContent className="py-3">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 min-w-0">
@@ -310,30 +314,30 @@ export default function AdminCoursiers() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3 shrink-0" />
                               {format(new Date(v.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
-                              {v.clients?.profiles?.prenom && (
-                                <span className="truncate">• {v.clients.profiles.prenom} {v.clients.profiles.nom || ''}</span>
-                              )}
+                              <span className="truncate">• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
                             </div>
                           </div>
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => handleDelegateVisite(v.id)}
-                          disabled={delegating === v.id}
+                          onClick={() => handleDelegateGroup(g.key, ids)}
+                          disabled={delegating === g.key}
                           className="shrink-0"
                         >
-                          {delegating === v.id ? (
+                          {delegating === g.key ? (
                             <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                           ) : (
                             <Bike className="mr-1.5 h-3.5 w-3.5" />
                           )}
-                          Déléguer (5.-)
+                          Déléguer
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
+
             )}
           </TabsContent>
 
