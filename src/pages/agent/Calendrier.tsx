@@ -1561,8 +1561,9 @@ export default function AgentCalendrier() {
               {/* Vidéo(s) de la visite — lecteur inline */}
               <VisitVideoPlayer medias={selectedVisite.medias} />
 
-              {/* Compte-rendu de la visite */}
-              <VisitCompteRenduForm visite={selectedVisite} onSaved={() => loadData()} />
+              {/* Compte-rendu de la visite (formulaire partagé admin/agent/coursier) */}
+              <CompteRenduVisiteForm role="agent" visiteId={selectedVisite.id} embedded onSent={() => loadData()} />
+
             </div>
           )}
 
