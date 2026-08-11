@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog, Layers, Calendar } from 'lucide-react';
+import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, Users, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog, Layers, Calendar } from 'lucide-react';
+import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -64,14 +66,16 @@ export default function CoursierMissions() {
     }
   };
 
-  const handleAccept = async (missionId: string) => {
-    if (!coursierId) return;
+  /** Accepte toutes les lignes de la visite physique (tous les clients) */
+  const handleAccept = async (group: any[]) => {
+    if (!coursierId || !group?.length) return;
     try {
       const { error } = await supabase
         .from('visites')
         .update({ coursier_id: coursierId, statut_coursier: 'accepte' })
-        .eq('id', missionId)
+        .in('id', group.map((v) => v.id))
         .eq('statut_coursier', 'en_attente');
+
 
       if (error) throw error;
       toast.success('Mission acceptée !');
@@ -124,10 +128,11 @@ export default function CoursierMissions() {
           medias_coursier: feedbackMedias,
           recommandation_agent: recommandation,
         })
-        .eq('id', selectedMission.id);
+        .in('id', (selectedMission._group || [selectedMission]).map((v: any) => v.id));
 
       if (error) throw error;
-      toast.success('Mission terminée ! Rémunération de 5.- CHF enregistrée');
+      toast.success('Visite terminée pour tous les clients concernés ✅');
+
       setCompleteOpen(false);
       setFeedback('');
       setFeedbackMedias([]);
@@ -140,9 +145,16 @@ export default function CoursierMissions() {
     }
   };
 
-  const available = missions.filter(m => m.statut_coursier === 'en_attente');
-  const myActive = missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte');
-  const myCompleted = missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine');
+  const toCards = (items: any[]) =>
+    groupVisitesByPhysiqueAgent(items as any[]).map((g) => ({
+      ...(g.representative as any),
+      _group: g.items,
+      _count: new Set(g.items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || g.count,
+    }));
+
+  const available = toCards(missions.filter(m => m.statut_coursier === 'en_attente'));
+  const myActive = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte'));
+  const myCompleted = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine'));
 
   const renderMissionCard = (mission: any, type: 'available' | 'active' | 'completed') => (
     <Card 
@@ -154,17 +166,22 @@ export default function CoursierMissions() {
       onClick={() => { setSelectedMission(mission); setDetailOpen(true); }}
     >
       <CardContent className="pt-6 space-y-3">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
-          <Badge className={
-            type === 'available' ? 'bg-primary/10 text-primary border-primary/30' :
-            type === 'active' ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
-            'bg-green-500/10 text-green-600 border-green-500/30'
-          }>
-            {type === 'available' ? `${(mission.remuneration_coursier || 5).toFixed(0)} CHF` :
-             type === 'active' ? 'En cours' : 'Terminée'}
-          </Badge>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge variant="secondary" className="gap-1">
+              <Users className="h-3 w-3" />{mission._count}
+            </Badge>
+            <Badge className={
+              type === 'available' ? 'bg-primary/10 text-primary border-primary/30' :
+              type === 'active' ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
+              'bg-green-500/10 text-green-600 border-green-500/30'
+            }>
+              {type === 'available' ? 'Disponible' : type === 'active' ? 'En cours' : 'Terminée'}
+            </Badge>
+          </div>
         </div>
+
         
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
@@ -203,11 +220,12 @@ export default function CoursierMissions() {
         )}
 
         {type === 'available' && (
-          <Button onClick={(e) => { e.stopPropagation(); handleAccept(mission.id); }} className="w-full" size="sm">
+          <Button onClick={(e) => { e.stopPropagation(); handleAccept(mission._group); }} className="w-full" size="sm">
             <CheckCircle className="mr-2 h-4 w-4" />
-            Accepter la mission (5.-)
+            Accepter la mission
           </Button>
         )}
+
         {type === 'active' && (
           <Button 
             onClick={(e) => { e.stopPropagation(); setSelectedMission(mission); setCompleteOpen(true); }} 
@@ -326,8 +344,10 @@ export default function CoursierMissions() {
                   </p>
                 </div>
                 <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
-                  {(selectedMission.remuneration_coursier || 5).toFixed(0)} CHF
+                  <Users className="h-3 w-3 mr-1" />
+                  {selectedMission._count || 1} client{(selectedMission._count || 1) > 1 ? 's' : ''}
                 </Badge>
+
               </div>
             )}
           </DialogHeader>
@@ -639,17 +659,10 @@ export default function CoursierMissions() {
                   </>
                 )}
 
-                {/* Rémunération */}
-                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                  <span className="text-sm font-medium">Rémunération</span>
-                  <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-base">
-                    {(selectedMission.remuneration_coursier || 5).toFixed(2)} CHF
-                  </Badge>
-                </div>
-
                 {/* Actions */}
                 {selectedMission.statut_coursier === 'en_attente' && (
-                  <Button onClick={() => { handleAccept(selectedMission.id); setDetailOpen(false); }} className="w-full">
+                  <Button onClick={() => { handleAccept(selectedMission._group || [selectedMission]); setDetailOpen(false); }} className="w-full">
+
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Accepter la mission
                   </Button>

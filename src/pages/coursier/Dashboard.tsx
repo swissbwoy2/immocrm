@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarCheck, Wallet, TrendingUp, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, AlertTriangle, ArrowRight, Sparkles, Navigation } from 'lucide-react';
+import { CalendarCheck, Wallet, TrendingUp, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, ArrowRight, Sparkles, Navigation, Users, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -11,21 +11,23 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
+import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
+import { CoursierClockCard } from '@/components/coursier/CoursierClockCard';
+import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
 
 export default function CoursierDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const time = useCoursierTime();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     completedThisMonth: 0,
-    earningsThisMonth: 0,
-    totalEarnings: 0,
-    unpaidEarnings: 0,
     inProgress: 0,
     available: 0,
   });
+
 
   useEffect(() => {
     if (user) loadData();
@@ -50,29 +52,26 @@ export default function CoursierDashboard() {
         .from('visites')
         .select('*, offres(pieces, surface, prix, adresse)')
         .or(`statut_coursier.eq.en_attente,coursier_id.eq.${coursierData.id}`)
-        .order('date_visite', { ascending: true });
+        .order('date_visite', { ascending: true })
+        .limit(15000);
 
       setMissions(allMissions || []);
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
+
       const myMissions = (allMissions || []).filter(m => m.coursier_id === coursierData.id);
-      const completedThisMonth = myMissions.filter(m => 
+      const completedThisMonth = myMissions.filter(m =>
         m.statut_coursier === 'termine' && new Date(m.updated_at) >= startOfMonth
       );
-      const totalCompleted = myMissions.filter(m => m.statut_coursier === 'termine');
-      const unpaid = totalCompleted.filter(m => !m.paye_coursier);
       const inProgress = myMissions.filter(m => m.statut_coursier === 'accepte');
       const available = (allMissions || []).filter(m => m.statut_coursier === 'en_attente');
 
+      // Compteurs sur les visites REGROUPÉES (adresse + date/heure + agent)
       setStats({
-        completedThisMonth: completedThisMonth.length,
-        earningsThisMonth: completedThisMonth.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0),
-        totalEarnings: totalCompleted.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0),
-        unpaidEarnings: unpaid.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0),
-        inProgress: inProgress.length,
-        available: available.length,
+        completedThisMonth: groupVisitesByPhysiqueAgent(completedThisMonth as any[]).length,
+        inProgress: groupVisitesByPhysiqueAgent(inProgress as any[]).length,
+        available: groupVisitesByPhysiqueAgent(available as any[]).length,
       });
     } catch (error) {
       console.error('Error loading coursier data:', error);
@@ -81,13 +80,14 @@ export default function CoursierDashboard() {
     }
   };
 
-  const handleAcceptMission = async (visiteId: string) => {
+  /** Accepte TOUTES les lignes de la visite physique (tous les clients concernés) */
+  const handleAcceptMission = async (group: any[]) => {
     if (!coursierId) return;
     try {
       const { error } = await supabase
         .from('visites')
         .update({ coursier_id: coursierId, statut_coursier: 'accepte' })
-        .eq('id', visiteId)
+        .in('id', group.map((v) => v.id))
         .eq('statut_coursier', 'en_attente');
 
       if (error) throw error;
@@ -99,8 +99,17 @@ export default function CoursierDashboard() {
     }
   };
 
-  const availableMissions = missions.filter(m => m.statut_coursier === 'en_attente');
-  const myActiveMissions = missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte');
+  const availableGroups = useMemo(
+    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.statut_coursier === 'en_attente') as any[]),
+    [missions],
+  );
+  const activeGroups = useMemo(
+    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte') as any[]),
+    [missions, coursierId],
+  );
+  const availableMissions = availableGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
+  const myActiveMissions = activeGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
+
 
   // Next upcoming mission (active, sorted by date)
   const nextMission = myActiveMissions.length > 0
@@ -202,40 +211,20 @@ export default function CoursierDashboard() {
           </Card>
         )}
 
-        {/* Alerte gains impayés */}
-        {stats.unpaidEarnings > 0 && (
-          <Card className="border-amber-500/30 bg-amber-500/5">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/15">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Gains en attente de paiement</p>
-                    <p className="text-xs text-muted-foreground">Contactez l'agence pour le règlement</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-amber-600">{stats.unpaidEarnings.toFixed(0)} CHF</span>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/coursier/historique')} className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10">
-                    Détails
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Pointage global (arrivée / départ) */}
+        <CoursierClockCard time={time} />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
-            { icon: Wallet, label: 'Gains ce mois', value: `${stats.earningsThisMonth.toFixed(0)} CHF`, color: 'text-green-600', bg: 'bg-green-500/10' },
+            { icon: Wallet, label: 'Gains ce mois', value: `${time.earningsThisMonth.toFixed(0)} CHF`, color: 'text-green-600', bg: 'bg-green-500/10' },
+            { icon: Timer, label: 'Temps ce mois', value: formatDuration(time.minutesThisMonth), color: 'text-sky-600', bg: 'bg-sky-500/10' },
+            { icon: TrendingUp, label: 'Gains totaux', value: `${time.earningsTotal.toFixed(0)} CHF`, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
             { icon: CheckCircle, label: 'Terminées ce mois', value: stats.completedThisMonth, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: TrendingUp, label: 'Gains totaux', value: `${stats.totalEarnings.toFixed(0)} CHF`, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
             { icon: Clock, label: 'En cours', value: stats.inProgress, color: 'text-amber-600', bg: 'bg-amber-500/10' },
             { icon: CalendarCheck, label: 'Disponibles', value: stats.available, color: 'text-blue-600', bg: 'bg-blue-500/10' },
           ].map((kpi, i) => (
+
             <Card key={i} className="border-border/50 bg-card/80 backdrop-blur-sm hover:shadow-md transition-all">
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-center gap-3">
@@ -276,9 +265,10 @@ export default function CoursierDashboard() {
                         <MapPin className="h-4 w-4 text-primary shrink-0" />
                         <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
                       </div>
-                      <Badge className="shrink-0 bg-green-500/10 text-green-600 border-green-500/30 font-bold">
-                        {(mission.remuneration_coursier || 5).toFixed(0)}.-
+                      <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
+                        <Users className="h-3 w-3 mr-1" />{mission._count} client{mission._count > 1 ? 's' : ''}
                       </Badge>
+
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -308,7 +298,7 @@ export default function CoursierDashboard() {
                     )}
 
                     <Button 
-                      onClick={() => handleAcceptMission(mission.id)}
+                      onClick={() => handleAcceptMission(mission._group)}
                       className="w-full mt-1 group-hover:shadow-md transition-all"
                       size="sm"
                     >
@@ -347,7 +337,11 @@ export default function CoursierDashboard() {
                       <Clock className="h-3.5 w-3.5" />
                       {format(new Date(mission.date_visite), "HH:mm")}
                       {mission.date_visite_fin && ` → ${format(new Date(mission.date_visite_fin), "HH:mm")}`}
+                      <span className="inline-flex items-center gap-1 text-xs bg-muted/60 px-2 py-0.5 rounded">
+                        <Users className="h-3 w-3" />{mission._count}
+                      </span>
                     </div>
+
                     <div className="flex gap-2">
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mission.adresse)}`}

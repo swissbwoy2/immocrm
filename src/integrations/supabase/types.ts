@@ -3515,6 +3515,47 @@ export type Database = {
         }
         Relationships: []
       }
+      coursier_time_entries: {
+        Row: {
+          coursier_id: string
+          created_at: string
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          note: string | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          coursier_id: string
+          created_at?: string
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          coursier_id?: string
+          created_at?: string
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coursier_time_entries_coursier_id_fkey"
+            columns: ["coursier_id"]
+            isOneToOne: false
+            referencedRelation: "coursiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coursiers: {
         Row: {
           created_at: string
@@ -3524,6 +3565,7 @@ export type Database = {
           nom: string
           prenom: string
           statut: string
+          tarif_horaire: number
           telephone: string | null
           updated_at: string
           user_id: string
@@ -3536,6 +3578,7 @@ export type Database = {
           nom?: string
           prenom?: string
           statut?: string
+          tarif_horaire?: number
           telephone?: string | null
           updated_at?: string
           user_id: string
@@ -3548,6 +3591,7 @@ export type Database = {
           nom?: string
           prenom?: string
           statut?: string
+          tarif_horaire?: number
           telephone?: string | null
           updated_at?: string
           user_id?: string
@@ -12924,6 +12968,7 @@ export type Database = {
       is_demo_account: { Args: { _user_id: string }; Returns: boolean }
       is_demo_user: { Args: { _user_id: string }; Returns: boolean }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
+      is_my_coursier: { Args: { _coursier_id: string }; Returns: boolean }
       is_proprietaire_owner: {
         Args: { _proprietaire_id: string }
         Returns: boolean

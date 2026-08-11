@@ -14,9 +14,23 @@ import { ArrowLeft, Loader2, Send, Save, X, Plus, Image as ImageIcon, Video, Fil
 
 type Media = { url: string; type: string; name: string; size: number };
 
-export default function CompteRenduVisite({ role = "agent" }: { role?: "agent" | "coursier" } = {}) {
-  const { id } = useParams<{ id: string }>();
+export default function CompteRenduVisite({
+  role = "agent",
+  visiteId,
+  embedded = false,
+  onSent,
+}: {
+  role?: "agent" | "coursier";
+  /** Force l'id de visite (usage embarqué dans un dialog) au lieu de l'URL */
+  visiteId?: string;
+  /** Masque le bouton retour et le container plein écran */
+  embedded?: boolean;
+  onSent?: () => void;
+} = {}) {
+  const params = useParams<{ id: string }>();
+  const id = visiteId ?? params.id;
   const navigate = useNavigate();
+
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -150,7 +164,9 @@ export default function CompteRenduVisite({ role = "agent" }: { role?: "agent" |
         if (error) throw error;
         setEnvoyeAt(new Date().toISOString());
         toast({ title: "Compte-rendu envoyé au client", description: "Le client reçoit le récap, la vidéo et les fichiers dans son espace." });
+        onSent?.();
         return;
+
       }
 
       // Build récap text
@@ -220,6 +236,7 @@ export default function CompteRenduVisite({ role = "agent" }: { role?: "agent" |
 
       setEnvoyeAt(new Date().toISOString());
       toast({ title: "Compte-rendu envoyé au client", description: "Le client recevra le récap + médias dans la messagerie et sur WhatsApp." });
+      onSent?.();
     } catch (e: any) {
       toast({ title: "Erreur envoi", description: e.message, variant: "destructive" });
     } finally {
@@ -235,13 +252,16 @@ export default function CompteRenduVisite({ role = "agent" }: { role?: "agent" |
   }
 
   return (
-    <div className="container max-w-3xl mx-auto p-4 space-y-4 pb-24">
+    <div className={embedded ? "space-y-4" : "container max-w-3xl mx-auto p-4 space-y-4 pb-24"}>
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Retour
-        </Button>
+        {embedded ? <span /> : (
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Retour
+          </Button>
+        )}
         {envoyeAt && <Badge variant="secondary">Envoyé au client</Badge>}
       </div>
+
 
       <Card>
         <CardHeader>
