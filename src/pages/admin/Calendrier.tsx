@@ -877,12 +877,13 @@ export default function AdminCalendrier() {
               {/* Vidéo(s) de la visite — lecteur inline */}
               <VisitVideoPlayer medias={selectedVisiteGroup[0].medias} />
 
-              {/* Compte-rendu de la visite */}
-              <VisitCompteRenduForm
-                visite={selectedVisiteGroup[0]}
-                visitesGroup={selectedVisiteGroup}
-                onSaved={() => { /* refresh handled by parent effects */ }}
+              {/* Compte-rendu de la visite (formulaire partagé admin/agent/coursier) */}
+              <CompteRenduVisiteForm
+                role="admin"
+                visiteId={selectedVisiteGroup[0].id}
+                embedded
               />
+
             </div>
           )}
 
