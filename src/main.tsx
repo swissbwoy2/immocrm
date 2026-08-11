@@ -39,36 +39,62 @@ if (isPreviewHost || isInIframe) {
     registrations.forEach((registration) => registration.unregister());
   });
 } else {
+  // Un seul rechargement quand le nouveau SW prend le contrôle.
+  let reloadedOnControllerChange = false;
+  navigator.serviceWorker?.addEventListener('controllerchange', () => {
+    if (reloadedOnControllerChange) return;
+    reloadedOnControllerChange = true;
+    window.location.reload();
+  });
+
+  const isUserBusy = () => {
+    const el = document.activeElement as HTMLElement | null;
+    if (!el) return false;
+    return (
+      el.tagName === 'INPUT' ||
+      el.tagName === 'TEXTAREA' ||
+      el.tagName === 'SELECT' ||
+      el.isContentEditable === true
+    );
+  };
+
   const updateSW = registerSW({
+    immediate: true,
     onNeedRefresh() {
-      console.log('[PWA] New version available — auto-updating.');
-      toast('Mise à jour en cours…', { duration: 1000 });
-      setTimeout(() => {
-        void updateSW(true);
-      }, 800);
+      console.log('[PWA] New version available.');
+      if (!isUserBusy()) {
+        toast('Mise à jour en cours…', { duration: 1200 });
+        setTimeout(() => void updateSW(true), 800);
+        return;
+      }
+      toast('Nouvelle version disponible', {
+        duration: Infinity,
+        action: { label: 'Actualiser', onClick: () => void updateSW(true) },
+      });
     },
     onOfflineReady() {
       console.log('[PWA] App ready for offline use');
     },
     onRegisteredSW(swUrl, registration) {
       console.log('[PWA] Service Worker registered:', swUrl);
+      if (!registration) return;
 
-      if (registration) {
-        // Check for updates more aggressively (every 60s when tab is visible)
-        setInterval(() => {
-          if (!document.hidden) {
-            registration.update().catch((err) => {
-              console.warn('[PWA] update check failed:', err);
-            });
-          }
-        }, 60 * 1000);
-      }
+      const checkForUpdate = () => {
+        if (document.hidden) return;
+        registration.update().catch((err) => console.warn('[PWA] update check failed:', err));
+      };
+
+      checkForUpdate();
+      setInterval(checkForUpdate, 60 * 1000);
+      document.addEventListener('visibilitychange', checkForUpdate);
+      window.addEventListener('online', checkForUpdate);
     },
     onRegisterError(error) {
       console.error('[PWA] Service Worker registration error:', error);
     }
   });
 }
+
 
 // Global safety net: stale lazy chunks after a redeploy → force one clean reload.
 const CHUNK_RELOAD_KEY = '__lovable_chunk_reload_at';
