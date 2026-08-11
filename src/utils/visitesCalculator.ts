@@ -181,3 +181,16 @@ export function groupVisitesByPhysique<T extends { adresse: string; date_visite:
 ): GroupedItem<T>[] {
   return groupBy(visites, v => buildVisiteGroupKey(v.adresse, v.date_visite));
 }
+
+/**
+ * Regroupe les visites par visite PHYSIQUE côté coursier :
+ * même adresse + même date/heure + même agent (une ligne `visites` par client).
+ */
+export function groupVisitesByPhysiqueAgent<
+  T extends { adresse: string; date_visite: string; agent_id?: string | null }
+>(visites: T[]): GroupedItem<T>[] {
+  return groupBy(
+    visites,
+    v => `${v.agent_id || 'na'}__${buildVisiteGroupKey(v.adresse, v.date_visite)}`,
+  );
+}

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarCheck, Wallet, TrendingUp, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, AlertTriangle, ArrowRight, Sparkles, Navigation } from 'lucide-react';
+import { CalendarCheck, Wallet, TrendingUp, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, ArrowRight, Sparkles, Navigation, Users, Timer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -11,21 +11,23 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
+import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
+import { CoursierClockCard } from '@/components/coursier/CoursierClockCard';
+import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
 
 export default function CoursierDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const time = useCoursierTime();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     completedThisMonth: 0,
-    earningsThisMonth: 0,
-    totalEarnings: 0,
-    unpaidEarnings: 0,
     inProgress: 0,
     available: 0,
   });
+
 
   useEffect(() => {
     if (user) loadData();
@@ -50,29 +52,26 @@ export default function CoursierDashboard() {
         .from('visites')
         .select('*, offres(pieces, surface, prix, adresse)')
         .or(`statut_coursier.eq.en_attente,coursier_id.eq.${coursierData.id}`)
-        .order('date_visite', { ascending: true });
+        .order('date_visite', { ascending: true })
+        .limit(15000);
 
       setMissions(allMissions || []);
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
+
       const myMissions = (allMissions || []).filter(m => m.coursier_id === coursierData.id);
-      const completedThisMonth = myMissions.filter(m => 
+      const completedThisMonth = myMissions.filter(m =>
         m.statut_coursier === 'termine' && new Date(m.updated_at) >= startOfMonth
       );
-      const totalCompleted = myMissions.filter(m => m.statut_coursier === 'termine');
-      const unpaid = totalCompleted.filter(m => !m.paye_coursier);
       const inProgress = myMissions.filter(m => m.statut_coursier === 'accepte');
       const available = (allMissions || []).filter(m => m.statut_coursier === 'en_attente');
 
+      // Compteurs sur les visites REGROUPÉES (adresse + date/heure + agent)
       setStats({
-        completedThisMonth: completedThisMonth.length,
-        earningsThisMonth: completedThisMonth.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0),
-        totalEarnings: totalCompleted.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0),
-        unpaidEarnings: unpaid.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0),
-        inProgress: inProgress.length,
-        available: available.length,
+        completedThisMonth: groupVisitesByPhysiqueAgent(completedThisMonth as any[]).length,
+        inProgress: groupVisitesByPhysiqueAgent(inProgress as any[]).length,
+        available: groupVisitesByPhysiqueAgent(available as any[]).length,
       });
     } catch (error) {
       console.error('Error loading coursier data:', error);
@@ -81,13 +80,14 @@ export default function CoursierDashboard() {
     }
   };
 
-  const handleAcceptMission = async (visiteId: string) => {
+  /** Accepte TOUTES les lignes de la visite physique (tous les clients concernés) */
+  const handleAcceptMission = async (group: any[]) => {
     if (!coursierId) return;
     try {
       const { error } = await supabase
         .from('visites')
         .update({ coursier_id: coursierId, statut_coursier: 'accepte' })
-        .eq('id', visiteId)
+        .in('id', group.map((v) => v.id))
         .eq('statut_coursier', 'en_attente');
 
       if (error) throw error;
@@ -99,8 +99,17 @@ export default function CoursierDashboard() {
     }
   };
 
-  const availableMissions = missions.filter(m => m.statut_coursier === 'en_attente');
-  const myActiveMissions = missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte');
+  const availableGroups = useMemo(
+    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.statut_coursier === 'en_attente') as any[]),
+    [missions],
+  );
+  const activeGroups = useMemo(
+    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte') as any[]),
+    [missions, coursierId],
+  );
+  const availableMissions = availableGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
+  const myActiveMissions = activeGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
+
 
   // Next upcoming mission (active, sorted by date)
   const nextMission = myActiveMissions.length > 0
