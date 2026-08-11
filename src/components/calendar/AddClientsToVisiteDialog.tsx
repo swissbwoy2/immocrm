@@ -306,19 +306,19 @@ export const AddClientsToVisiteDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!sending) onOpenChange(o); }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl flex flex-col max-h-[92dvh] p-0 gap-0">
+        <DialogHeader className="p-6 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Ajouter des clients à cette visite
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="hidden sm:block">
             Les clients sélectionnés recevront l'offre (message + notifications) avec la date de visite,
             et apparaîtront comme concernés dans le calendrier.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4 space-y-4">
           <div className="p-4 border rounded-lg space-y-2">
             <h4 className="font-semibold">{adresse}</h4>
             <div className="flex flex-wrap gap-2">
@@ -333,7 +333,9 @@ export const AddClientsToVisiteDialog = ({
             <label className="text-sm font-medium mb-2 block">
               Clients à ajouter ({eligibleClients.length} disponibles)
             </label>
+            {/* inline = liste toujours visible et scrollable au-dessus du clavier mobile */}
             <ClientMultiSelect
+              inline
               clients={eligibleClients as any}
               selectedClientIds={selectedClientIds}
               onSelectionChange={setSelectedClientIds}
@@ -342,7 +344,7 @@ export const AddClientsToVisiteDialog = ({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Annuler
           </Button>
@@ -353,5 +355,6 @@ export const AddClientsToVisiteDialog = ({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
   );
 };
