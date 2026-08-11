@@ -639,17 +639,10 @@ export default function CoursierMissions() {
                   </>
                 )}
 
-                {/* Rémunération */}
-                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                  <span className="text-sm font-medium">Rémunération</span>
-                  <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-base">
-                    {(selectedMission.remuneration_coursier || 5).toFixed(2)} CHF
-                  </Badge>
-                </div>
-
                 {/* Actions */}
                 {selectedMission.statut_coursier === 'en_attente' && (
-                  <Button onClick={() => { handleAccept(selectedMission.id); setDetailOpen(false); }} className="w-full">
+                  <Button onClick={() => { handleAccept(selectedMission._group || [selectedMission]); setDetailOpen(false); }} className="w-full">
+
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Accepter la mission
                   </Button>
