@@ -70,8 +70,24 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
           globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          // Le HTML ne doit jamais être servi depuis un cache figé :
+          // on force le réseau d'abord pour récupérer les nouveaux hashes de bundle.
+          navigateFallback: "index.html",
+          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
           runtimeCaching: [
+            {
+              urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "html-cache",
+                networkTimeoutSeconds: 5,
+                expiration: { maxEntries: 10 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
               handler: "NetworkFirst",
