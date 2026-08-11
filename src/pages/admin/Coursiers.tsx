@@ -524,31 +524,35 @@ export default function AdminCoursiers() {
             )}
 
             {/* Missions impayées */}
-            {unpaidMissions.length > 0 ? (
+            {unpaidGroups.length > 0 ? (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Wallet className="h-5 w-5 text-amber-600" />
-                    Détail des missions impayées ({unpaidMissions.length})
+                    Détail des missions impayées ({unpaidGroups.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {unpaidMissions.map((m) => {
+                    {unpaidGroups.map((g) => {
+                      const m: any = g.representative;
+                      const nbClients = clientsCountOf(g.items);
+                      const amount = g.items.reduce((s: number, i: any) => s + (i.paye_coursier ? 0 : (i.remuneration_coursier || 0)), 0);
+                      const ids = g.items.filter((i: any) => !i.paye_coursier).map((i: any) => i.id);
                       return (
-                        <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                        <div key={g.key} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
                           <div className="flex items-center gap-3 min-w-0">
                             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">{m.adresse}</p>
                               <p className="text-xs text-muted-foreground">
-                                {getMissionCoursierName(m)} • {format(new Date(m.date_visite), "dd MMM yyyy", { locale: fr })}
+                                {getMissionCoursierName(m)} • {format(new Date(m.date_visite), "dd MMM yyyy", { locale: fr })} • {nbClients} client{nbClients > 1 ? 's' : ''}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-medium text-amber-600">{(m.remuneration_coursier || 5).toFixed(0)} CHF</span>
-                            <Button size="sm" variant="outline" onClick={() => handleMarkPaid(m.id)} className="border-green-500/30 text-green-600 hover:bg-green-500/10">
+                            <span className="font-medium text-amber-600">{amount.toFixed(0)} CHF</span>
+                            <Button size="sm" variant="outline" onClick={() => handleMarkPaidGroup(ids)} className="border-green-500/30 text-green-600 hover:bg-green-500/10">
                               <CheckCircle className="mr-1 h-3.5 w-3.5" />
                               Payé
                             </Button>
@@ -558,6 +562,7 @@ export default function AdminCoursiers() {
                     })}
                   </div>
                 </CardContent>
+
               </Card>
             ) : (
               <Card className="border-dashed">
