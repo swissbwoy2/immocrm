@@ -160,6 +160,42 @@ Deno.serve(async (req) => {
         const agentId = v.agent_id ?? visite.agent_id;
         const conversationId = await resolveConversation(String(clientId), agentId ? String(agentId) : null);
 
+        // Le compte-rendu doit exister pour CHAQUE client du groupe
+        // (visible dans « Visite effectuée par votre agent »).
+        if (v.id !== cr.visite_id) {
+          const { data: existingCr } = await admin
+            .from("visite_comptes_rendus")
+            .select("id")
+            .eq("visite_id", v.id)
+            .maybeSingle();
+          const clone = {
+            visite_id: v.id,
+            client_id: String(clientId),
+            agent_id: agentId,
+            offre_id: v.offre_id ?? null,
+            appreciation_globale: cr.appreciation_globale,
+            etat_general: cr.etat_general,
+            interet_client: cr.interet_client,
+            cuisine_type: cr.cuisine_type ?? null,
+            cuisine_description: cr.cuisine_description ?? null,
+            ascenseur: cr.ascenseur ?? null,
+            balcon: cr.balcon ?? null,
+            parking: cr.parking ?? null,
+            points_forts: cr.points_forts,
+            points_faibles: cr.points_faibles,
+            commentaire_libre: cr.commentaire_libre,
+            prochaines_etapes: cr.prochaines_etapes,
+            medias: cr.medias,
+            envoye_au_client_at: new Date().toISOString(),
+            created_by: cr.created_by,
+          };
+          if (existingCr?.id) {
+            await admin.from("visite_comptes_rendus").update(clone).eq("id", existingCr.id);
+          } else {
+            await admin.from("visite_comptes_rendus").insert(clone);
+          }
+        }
+
 
         await admin.from("messages").insert({
           conversation_id: conversationId,
