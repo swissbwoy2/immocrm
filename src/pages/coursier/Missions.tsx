@@ -217,11 +217,12 @@ export default function CoursierMissions() {
         )}
 
         {type === 'available' && (
-          <Button onClick={(e) => { e.stopPropagation(); handleAccept(mission.id); }} className="w-full" size="sm">
+          <Button onClick={(e) => { e.stopPropagation(); handleAccept(mission._group); }} className="w-full" size="sm">
             <CheckCircle className="mr-2 h-4 w-4" />
-            Accepter la mission (5.-)
+            Accepter la mission
           </Button>
         )}
+
         {type === 'active' && (
           <Button 
             onClick={(e) => { e.stopPropagation(); setSelectedMission(mission); setCompleteOpen(true); }} 
