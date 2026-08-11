@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog, Layers, Calendar } from 'lucide-react';
+import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, Users, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog, Layers, Calendar } from 'lucide-react';
+import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
