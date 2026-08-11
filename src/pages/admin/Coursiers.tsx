@@ -264,7 +264,7 @@ export default function AdminCoursiers() {
         <Tabs defaultValue="deleguer" className="space-y-4">
           <TabsList className="grid grid-cols-4 w-full max-w-xl">
             <TabsTrigger value="deleguer">
-              Déléguer {eligibleVisites.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px]">{eligibleVisites.length}</Badge>}
+              Déléguer {eligibleGroups.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px]">{eligibleGroups.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="coursiers">Coursiers</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
