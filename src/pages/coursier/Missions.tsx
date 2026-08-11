@@ -66,14 +66,16 @@ export default function CoursierMissions() {
     }
   };
 
-  const handleAccept = async (missionId: string) => {
-    if (!coursierId) return;
+  /** Accepte toutes les lignes de la visite physique (tous les clients) */
+  const handleAccept = async (group: any[]) => {
+    if (!coursierId || !group?.length) return;
     try {
       const { error } = await supabase
         .from('visites')
         .update({ coursier_id: coursierId, statut_coursier: 'accepte' })
-        .eq('id', missionId)
+        .in('id', group.map((v) => v.id))
         .eq('statut_coursier', 'en_attente');
+
 
       if (error) throw error;
       toast.success('Mission acceptée !');
