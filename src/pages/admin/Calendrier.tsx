@@ -27,7 +27,7 @@ import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
-import { VisitCompteRenduForm } from '@/components/calendar/VisitCompteRenduForm';
+import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
