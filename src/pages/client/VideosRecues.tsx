@@ -50,11 +50,35 @@ interface VisiteRow {
   compte_rendu_at?: string | null;
 }
 
+export interface CompteRenduRow {
+  id: string;
+  visite_id: string | null;
+  offre_id: string | null;
+  appreciation_globale: string | null;
+  etat_general: string | null;
+  interet_client: string | null;
+  cuisine_type: string | null;
+  cuisine_description: string | null;
+  ascenseur: boolean | null;
+  balcon: boolean | null;
+  parking: boolean | null;
+  points_forts: string[] | null;
+  points_faibles: string[] | null;
+  commentaire_libre: string | null;
+  prochaines_etapes: string | null;
+  medias: any;
+  envoye_au_client_at: string | null;
+  created_at?: string | null;
+}
+
 interface Item {
-  message: VideoMessage;
+  key: string;
+  message: VideoMessage | null;
   offre: OffreData | null;
   visite: VisiteRow | null;
+  cr: CompteRenduRow | null;
 }
+
 
 function InfoPill({ icon: Icon, label }: { icon: any; label: string }) {
   return (
