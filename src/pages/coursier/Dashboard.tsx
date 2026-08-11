@@ -337,7 +337,11 @@ export default function CoursierDashboard() {
                       <Clock className="h-3.5 w-3.5" />
                       {format(new Date(mission.date_visite), "HH:mm")}
                       {mission.date_visite_fin && ` → ${format(new Date(mission.date_visite_fin), "HH:mm")}`}
+                      <span className="inline-flex items-center gap-1 text-xs bg-muted/60 px-2 py-0.5 rounded">
+                        <Users className="h-3 w-3" />{mission._count}
+                      </span>
                     </div>
+
                     <div className="flex gap-2">
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mission.adresse)}`}
