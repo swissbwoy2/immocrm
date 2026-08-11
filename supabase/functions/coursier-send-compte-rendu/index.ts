@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     if (targets.size === 0) return json({ error: "Aucun client lié à cette visite" }, 400);
 
     const label = (map: Record<string, string>, v: string | null) => (v ? map[v] ?? v : null);
-    const lines: string[] = [`Compte-rendu de la visite — ${visite.adresse}`];
+    const lines: string[] = [`📋 Compte-rendu de la visite — ${visite.adresse}`];
     const a = label(
       { tres_positif: "Très positif", positif: "Positif", mitige: "Mitigé", negatif: "Négatif" },
       cr.appreciation_globale,
@@ -98,8 +98,17 @@ Deno.serve(async (req) => {
       { excellent: "Excellent", bon: "Bon", moyen: "Moyen", a_renover: "À rénover" },
       cr.etat_general,
     );
+    const cui = label(
+      { agencee: "Agencée", equipee: "Équipée", simple: "Simple", a_renover: "À rénover" },
+      cr.cuisine_type,
+    );
     if (a) lines.push(`• Appréciation : ${a}`);
     if (e) lines.push(`• État : ${e}`);
+    if (cui) lines.push(`• Cuisine : ${cui}`);
+    if (cr.cuisine_description) lines.push(`• Détail cuisine : ${cr.cuisine_description}`);
+    if (cr.ascenseur !== null && cr.ascenseur !== undefined) lines.push(`• Ascenseur : ${cr.ascenseur ? "Oui" : "Non"}`);
+    if (cr.balcon !== null && cr.balcon !== undefined) lines.push(`• Balcon / terrasse : ${cr.balcon ? "Oui" : "Non"}`);
+    if (cr.parking !== null && cr.parking !== undefined) lines.push(`• Parking : ${cr.parking ? "Oui" : "Non"}`);
     if (cr.points_forts?.length) lines.push(`• Points forts : ${cr.points_forts.join(", ")}`);
     if (cr.points_faibles?.length) lines.push(`• Points faibles : ${cr.points_faibles.join(", ")}`);
     if (cr.commentaire_libre) lines.push(`\n${cr.commentaire_libre}`);
@@ -107,35 +116,86 @@ Deno.serve(async (req) => {
     const recap = lines.join("\n");
     const medias: any[] = Array.isArray(cr.medias) ? cr.medias : [];
 
+    // Conversation UNIQUE du client (même résolution que la messagerie in-app :
+    // la plus ancienne conversation client-agent, créée si absente).
+    const resolveConversation = async (clientId: string, agentId: string | null) => {
+      const { data: convs } = await admin
+        .from("conversations")
+        .select("id")
+        .eq("client_id", clientId)
+        .eq("conversation_type", "client-agent")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      let conversationId: string | null = convs?.[0]?.id ?? null;
+
+      if (!conversationId) {
+        const { data: newConv, error: convErr } = await admin
+          .from("conversations")
+          .insert({
+            client_id: clientId,
+            agent_id: agentId,
+            conversation_type: "client-agent",
+            status: "active",
+          })
+          .select("id")
+          .single();
+        if (convErr) throw convErr;
+        conversationId = newConv.id;
+      }
+
+      if (conversationId && agentId) {
+        await admin
+          .from("conversation_agents")
+          .upsert(
+            { conversation_id: conversationId, agent_id: agentId },
+            { onConflict: "conversation_id,agent_id", ignoreDuplicates: true },
+          );
+      }
+      return conversationId;
+    };
+
     let sent = 0;
     for (const [clientId, v] of targets) {
       try {
         const agentId = v.agent_id ?? visite.agent_id;
-        let conversationId: string | null = null;
+        const conversationId = await resolveConversation(String(clientId), agentId ? String(agentId) : null);
 
-        const { data: conv } = await admin
-          .from("conversations")
-          .select("id")
-          .eq("client_id", String(clientId))
-          .eq("agent_id", String(agentId))
-          .eq("conversation_type", "client-agent")
-          .maybeSingle();
-        conversationId = conv?.id ?? null;
-
-        if (!conversationId) {
-          const { data: newConv, error: convErr } = await admin
-            .from("conversations")
-            .insert({
-              client_id: String(clientId),
-              agent_id: String(agentId),
-              conversation_type: "client-agent",
-              subject: `Compte-rendu visite ${visite.adresse}`,
-            })
+        // Le compte-rendu doit exister pour CHAQUE client du groupe
+        // (visible dans « Visite effectuée par votre agent »).
+        if (v.id !== cr.visite_id) {
+          const { data: existingCr } = await admin
+            .from("visite_comptes_rendus")
             .select("id")
-            .single();
-          if (convErr) throw convErr;
-          conversationId = newConv.id;
+            .eq("visite_id", v.id)
+            .maybeSingle();
+          const clone = {
+            visite_id: v.id,
+            client_id: String(clientId),
+            agent_id: agentId,
+            offre_id: v.offre_id ?? null,
+            appreciation_globale: cr.appreciation_globale,
+            etat_general: cr.etat_general,
+            interet_client: cr.interet_client,
+            cuisine_type: cr.cuisine_type ?? null,
+            cuisine_description: cr.cuisine_description ?? null,
+            ascenseur: cr.ascenseur ?? null,
+            balcon: cr.balcon ?? null,
+            parking: cr.parking ?? null,
+            points_forts: cr.points_forts,
+            points_faibles: cr.points_faibles,
+            commentaire_libre: cr.commentaire_libre,
+            prochaines_etapes: cr.prochaines_etapes,
+            medias: cr.medias,
+            envoye_au_client_at: new Date().toISOString(),
+            created_by: cr.created_by,
+          };
+          if (existingCr?.id) {
+            await admin.from("visite_comptes_rendus").update(clone).eq("id", existingCr.id);
+          } else {
+            await admin.from("visite_comptes_rendus").insert(clone);
+          }
         }
+
 
         await admin.from("messages").insert({
           conversation_id: conversationId,

@@ -31,6 +31,11 @@ interface ClientMultiSelectProps {
   selectedClientIds: string[];
   onSelectionChange: (clientIds: string[]) => void;
   disabled?: boolean;
+  /**
+   * Affiche la liste en ligne (sans popover). Recommandé dans les dialogs :
+   * la liste reste visible et scrollable même quand le clavier mobile est ouvert.
+   */
+  inline?: boolean;
 }
 
 export const ClientMultiSelect = ({
@@ -38,6 +43,7 @@ export const ClientMultiSelect = ({
   selectedClientIds,
   onSelectionChange,
   disabled = false,
+  inline = false,
 }: ClientMultiSelectProps) => {
   const [open, setOpen] = useState(false);
 
@@ -62,6 +68,65 @@ export const ClientMultiSelect = ({
 
   const selectedClients = clients.filter((c) => selectedClientIds.includes(c.id));
 
+  const list = (
+    <Command className="bg-transparent">
+      <CommandInput placeholder="Rechercher un client..." />
+      <CommandEmpty>Aucun client trouvé.</CommandEmpty>
+      <CommandGroup
+        className={cn(
+          'overflow-y-auto overscroll-contain',
+          inline ? 'max-h-[32vh] min-h-[120px]' : 'max-h-64'
+        )}
+      >
+        {clients.map((client) => (
+          <CommandItem
+            key={client.id}
+            value={getClientName(client)}
+            onSelect={() => toggleClient(client.id)}
+            className="min-h-11"
+          >
+            <Check
+              className={cn(
+                'mr-2 h-4 w-4',
+                selectedClientIds.includes(client.id) ? 'opacity-100' : 'opacity-0'
+              )}
+            />
+            {getClientName(client)}
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </Command>
+  );
+
+  const badges = selectedClients.length > 0 && (
+    <div className="flex flex-wrap gap-2">
+      {selectedClients.map((client) => (
+        <Badge key={client.id} variant="secondary" className="pl-3 pr-1">
+          {getClientName(client)}
+          <button
+            onClick={() => removeClient(client.id)}
+            className="ml-2 hover:bg-muted rounded-full p-0.5"
+            disabled={disabled}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </Badge>
+      ))}
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="space-y-2">
+        <div className="rounded-md border">{list}</div>
+        <div className="text-xs text-muted-foreground">
+          {selectedClientIds.length} client(s) sélectionné(s)
+        </div>
+        {badges}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
@@ -79,47 +144,11 @@ export const ClientMultiSelect = ({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
-          <Command>
-            <CommandInput placeholder="Rechercher un client..." />
-            <CommandEmpty>Aucun client trouvé.</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-auto">
-              {clients.map((client) => (
-                <CommandItem
-                  key={client.id}
-                  value={getClientName(client)}
-                  onSelect={() => toggleClient(client.id)}
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      selectedClientIds.includes(client.id) ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  {getClientName(client)}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </PopoverContent>
+        <PopoverContent className="w-full p-0">{list}</PopoverContent>
       </Popover>
 
-      {selectedClients.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {selectedClients.map((client) => (
-            <Badge key={client.id} variant="secondary" className="pl-3 pr-1">
-              {getClientName(client)}
-              <button
-                onClick={() => removeClient(client.id)}
-                className="ml-2 hover:bg-muted rounded-full p-0.5"
-                disabled={disabled}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
+      {badges}
     </div>
   );
 };
+
