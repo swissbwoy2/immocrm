@@ -89,6 +89,86 @@ function InfoPill({ icon: Icon, label }: { icon: any; label: string }) {
   );
 }
 
+const L_APPRECIATION: Record<string, string> = { tres_positif: 'Très positif', positif: 'Positif', mitige: 'Mitigé', negatif: 'Négatif' };
+const L_ETAT: Record<string, string> = { excellent: 'Excellent', bon: 'Bon', moyen: 'Moyen', a_renover: 'À rénover' };
+const L_INTERET: Record<string, string> = { tres_interesse: 'Très intéressé', interesse: 'Intéressé', hesitant: 'Hésitant', non_interesse: 'Non intéressé' };
+const L_CUISINE: Record<string, string> = { agencee: 'Agencée', equipee: 'Équipée', simple: 'Simple', a_renover: 'À rénover' };
+
+function CompteRenduBlock({ cr }: { cr: CompteRenduRow }) {
+  const medias: any[] = Array.isArray(cr.medias) ? cr.medias : [];
+  const rows: { label: string; value: string }[] = [];
+  if (cr.appreciation_globale) rows.push({ label: '⭐ Appréciation', value: L_APPRECIATION[cr.appreciation_globale] || cr.appreciation_globale });
+  if (cr.etat_general) rows.push({ label: '🏠 État du bien', value: L_ETAT[cr.etat_general] || cr.etat_general });
+  if (cr.interet_client) rows.push({ label: '💡 Intérêt', value: L_INTERET[cr.interet_client] || cr.interet_client });
+  if (cr.cuisine_type) rows.push({ label: '🍳 Cuisine', value: L_CUISINE[cr.cuisine_type] || cr.cuisine_type });
+  if (cr.ascenseur !== null && cr.ascenseur !== undefined) rows.push({ label: '🛗 Ascenseur', value: cr.ascenseur ? 'Oui' : 'Non' });
+  if (cr.balcon !== null && cr.balcon !== undefined) rows.push({ label: '🌿 Balcon / terrasse', value: cr.balcon ? 'Oui' : 'Non' });
+  if (cr.parking !== null && cr.parking !== undefined) rows.push({ label: '🚗 Parking', value: cr.parking ? 'Oui' : 'Non' });
+
+  return (
+    <div className="border border-primary/20 rounded-lg p-4 bg-muted/30 space-y-3">
+      <div className="flex items-center gap-2">
+        <ClipboardList className="w-4 h-4 text-primary" />
+        <h4 className="font-semibold text-sm">Compte-rendu de la visite</h4>
+      </div>
+
+      {rows.length > 0 && (
+        <dl className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+          {rows.map((r) => (
+            <div key={r.label}>
+              <dt className="inline font-medium">{r.label} : </dt>
+              <dd className="inline">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {cr.cuisine_description && (
+        <div className="text-sm"><span className="font-medium">🍽 Cuisine : </span><span className="whitespace-pre-wrap">{cr.cuisine_description}</span></div>
+      )}
+      {cr.points_forts?.length ? (
+        <div className="text-sm"><span className="font-medium">👍 Points forts : </span>{cr.points_forts.join(', ')}</div>
+      ) : null}
+      {cr.points_faibles?.length ? (
+        <div className="text-sm"><span className="font-medium">👎 Points faibles : </span>{cr.points_faibles.join(', ')}</div>
+      ) : null}
+      {cr.commentaire_libre && (
+        <div className="text-sm whitespace-pre-wrap">{cr.commentaire_libre}</div>
+      )}
+      {cr.prochaines_etapes && (
+        <div className="text-sm"><span className="font-medium">➡️ Prochaines étapes : </span><span className="whitespace-pre-wrap">{cr.prochaines_etapes}</span></div>
+      )}
+
+      {medias.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-sm font-medium">📎 Photos, vidéos & fichiers</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {medias.map((m: any, i: number) => (
+              <a
+                key={i}
+                href={m.url}
+                target="_blank"
+                rel="noreferrer"
+                className="block border rounded-lg overflow-hidden bg-background hover:border-primary transition-colors"
+              >
+                {m.type === 'image' ? (
+                  <img src={m.url} alt={m.name} className="w-full h-24 object-cover" />
+                ) : m.type === 'video' ? (
+                  <video src={m.url} controls playsInline className="w-full h-24 object-cover bg-black" />
+                ) : (
+                  <div className="h-24 flex items-center justify-center text-xs text-muted-foreground">📄 Fichier</div>
+                )}
+                <div className="px-2 py-1 text-[11px] truncate">{m.name}</div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; onDecisionSaved: () => void; onViewOffer: (offre: OffreData) => void }) {
   const { user } = useAuth();
   const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
