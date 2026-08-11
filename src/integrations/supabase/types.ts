@@ -12090,16 +12090,21 @@ export type Database = {
         Row: {
           agent_id: string | null
           appreciation_globale: string | null
+          ascenseur: boolean | null
+          balcon: boolean | null
           client_id: string | null
           commentaire_libre: string | null
           created_at: string
           created_by: string | null
+          cuisine_description: string | null
+          cuisine_type: string | null
           envoye_au_client_at: string | null
           etat_general: string | null
           id: string
           interet_client: string | null
           medias: Json
           offre_id: string | null
+          parking: boolean | null
           points_faibles: string[] | null
           points_forts: string[] | null
           prochaines_etapes: string | null
@@ -12110,16 +12115,21 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           appreciation_globale?: string | null
+          ascenseur?: boolean | null
+          balcon?: boolean | null
           client_id?: string | null
           commentaire_libre?: string | null
           created_at?: string
           created_by?: string | null
+          cuisine_description?: string | null
+          cuisine_type?: string | null
           envoye_au_client_at?: string | null
           etat_general?: string | null
           id?: string
           interet_client?: string | null
           medias?: Json
           offre_id?: string | null
+          parking?: boolean | null
           points_faibles?: string[] | null
           points_forts?: string[] | null
           prochaines_etapes?: string | null
@@ -12130,16 +12140,21 @@ export type Database = {
         Update: {
           agent_id?: string | null
           appreciation_globale?: string | null
+          ascenseur?: boolean | null
+          balcon?: boolean | null
           client_id?: string | null
           commentaire_libre?: string | null
           created_at?: string
           created_by?: string | null
+          cuisine_description?: string | null
+          cuisine_type?: string | null
           envoye_au_client_at?: string | null
           etat_general?: string | null
           id?: string
           interet_client?: string | null
           medias?: Json
           offre_id?: string | null
+          parking?: boolean | null
           points_faibles?: string[] | null
           points_forts?: string[] | null
           prochaines_etapes?: string | null
