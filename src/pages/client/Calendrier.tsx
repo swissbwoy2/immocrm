@@ -85,6 +85,7 @@ export default function ClientCalendrier() {
         supabase
           .from('calendar_events')
           .select('*')
+          .is('visite_id', null)
           .eq('client_id', clientData.id)
           .order('event_date', { ascending: true }),
         supabase
