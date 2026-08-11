@@ -140,9 +140,16 @@ export default function CoursierMissions() {
     }
   };
 
-  const available = missions.filter(m => m.statut_coursier === 'en_attente');
-  const myActive = missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte');
-  const myCompleted = missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine');
+  const toCards = (items: any[]) =>
+    groupVisitesByPhysiqueAgent(items as any[]).map((g) => ({
+      ...(g.representative as any),
+      _group: g.items,
+      _count: new Set(g.items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || g.count,
+    }));
+
+  const available = toCards(missions.filter(m => m.statut_coursier === 'en_attente'));
+  const myActive = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte'));
+  const myCompleted = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine'));
 
   const renderMissionCard = (mission: any, type: 'available' | 'active' | 'completed') => (
     <Card 
@@ -154,17 +161,22 @@ export default function CoursierMissions() {
       onClick={() => { setSelectedMission(mission); setDetailOpen(true); }}
     >
       <CardContent className="pt-6 space-y-3">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
-          <Badge className={
-            type === 'available' ? 'bg-primary/10 text-primary border-primary/30' :
-            type === 'active' ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
-            'bg-green-500/10 text-green-600 border-green-500/30'
-          }>
-            {type === 'available' ? `${(mission.remuneration_coursier || 5).toFixed(0)} CHF` :
-             type === 'active' ? 'En cours' : 'Terminée'}
-          </Badge>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge variant="secondary" className="gap-1">
+              <Users className="h-3 w-3" />{mission._count}
+            </Badge>
+            <Badge className={
+              type === 'available' ? 'bg-primary/10 text-primary border-primary/30' :
+              type === 'active' ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
+              'bg-green-500/10 text-green-600 border-green-500/30'
+            }>
+              {type === 'available' ? 'Disponible' : type === 'active' ? 'En cours' : 'Terminée'}
+            </Badge>
+          </div>
         </div>
+
         
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
