@@ -238,10 +238,11 @@ export default function AdminCoursiers() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             { icon: Users, label: 'Coursiers', value: coursiers.length, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: Clock, label: 'En attente', value: pendingMissions.length, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-            { icon: Bike, label: 'En cours', value: activeMissions.length, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-            { icon: CheckCircle, label: 'Terminées', value: completedMissions.length, color: 'text-green-600', bg: 'bg-green-500/10' },
-            { icon: Send, label: 'À déléguer', value: eligibleVisites.length, color: 'text-purple-600', bg: 'bg-purple-500/10' },
+            { icon: Clock, label: 'En attente', value: pendingGroups.length, color: 'text-amber-600', bg: 'bg-amber-500/10' },
+            { icon: Bike, label: 'En cours', value: activeGroups.length, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+            { icon: CheckCircle, label: 'Terminées', value: completedGroups.length, color: 'text-green-600', bg: 'bg-green-500/10' },
+            { icon: Send, label: 'À déléguer', value: eligibleGroups.length, color: 'text-purple-600', bg: 'bg-purple-500/10' },
+
             { icon: AlertTriangle, label: 'À payer', value: `${totalUnpaid.toFixed(0)} CHF`, color: 'text-red-600', bg: 'bg-red-500/10' },
           ].map((kpi, i) => (
             <Card key={i} className="border-border/50">
