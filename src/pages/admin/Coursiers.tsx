@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
+
 
 export default function AdminCoursiers() {
   const [coursiers, setCoursiers] = useState<any[]>([]);
