@@ -298,7 +298,7 @@ export default function CoursierDashboard() {
                     )}
 
                     <Button 
-                      onClick={() => handleAcceptMission(mission.id)}
+                      onClick={() => handleAcceptMission(mission._group)}
                       className="w-full mt-1 group-hover:shadow-md transition-all"
                       size="sm"
                     >
