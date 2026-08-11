@@ -326,8 +326,10 @@ export default function CoursierMissions() {
                   </p>
                 </div>
                 <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
-                  {(selectedMission.remuneration_coursier || 5).toFixed(0)} CHF
+                  <Users className="h-3 w-3 mr-1" />
+                  {selectedMission._count || 1} client{(selectedMission._count || 1) > 1 ? 's' : ''}
                 </Badge>
+
               </div>
             )}
           </DialogHeader>
