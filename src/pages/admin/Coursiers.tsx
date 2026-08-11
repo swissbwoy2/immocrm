@@ -492,7 +492,7 @@ export default function AdminCoursiers() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number; missions: any[] }]) => (
+                    {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number; clients: number; groups: any[] }]) => (
                       <div key={agentId} className="flex items-center justify-between p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-700 font-bold text-xs">
@@ -500,7 +500,8 @@ export default function AdminCoursiers() {
                           </div>
                           <div>
                             <p className="text-sm font-medium">{data.name}</p>
-                            <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''}</p>
+                            <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''} • {data.clients} client{data.clients > 1 ? 's' : ''}</p>
+
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
