@@ -202,7 +202,7 @@ export default function AgentCalendrier() {
         return q;
       };
       const buildEventsQuery = (filter: 'mine' | 'co') => {
-        let q = supabase.from('calendar_events').select(eventsSelect).order('event_date', { ascending: true }).limit(15000);
+        let q = supabase.from('calendar_events').select(eventsSelect).is('visite_id', null).order('event_date', { ascending: true }).limit(15000);
         if (filter === 'mine') q = q.eq('agent_id', agentData.id);
         else q = q.in('client_id', coClientIds).neq('agent_id', agentData.id);
         if (!showFullHistory) q = q.gte('event_date', pastIso).lte('event_date', futureIso);
