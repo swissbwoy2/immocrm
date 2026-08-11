@@ -136,6 +136,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
     <Card className="overflow-hidden border-primary/20">
       <CardContent className="p-0">
         {/* Video */}
+        {message?.attachment_url && (
         <div className="bg-black">
           <video
             controls
@@ -161,6 +162,8 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
             </a>
           </div>
         </div>
+        )}
+
 
         {/* Offer details */}
         <div className="p-5 space-y-4">
