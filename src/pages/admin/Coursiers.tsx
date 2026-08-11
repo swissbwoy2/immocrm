@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
+
 
 export default function AdminCoursiers() {
   const [coursiers, setCoursiers] = useState<any[]>([]);
@@ -45,15 +47,16 @@ export default function AdminCoursiers() {
     }
   };
 
-  const handleDelegateVisite = async (visiteId: string) => {
-    setDelegating(visiteId);
+  /** Délègue TOUTES les lignes visites du groupe (une par client) en une fois */
+  const handleDelegateGroup = async (groupKey: string, ids: string[]) => {
+    setDelegating(groupKey);
     try {
       const { error } = await supabase
         .from('visites')
-        .update({ statut_coursier: 'en_attente', remuneration_coursier: 5 })
-        .eq('id', visiteId);
+        .update({ statut_coursier: 'en_attente' })
+        .in('id', ids);
       if (error) throw error;
-      toast.success('Visite envoyée dans le pool coursier');
+      toast.success(`Visite envoyée dans le pool coursier (${ids.length} client${ids.length > 1 ? 's' : ''})`);
       loadData();
     } catch (error) {
       console.error('Error delegating:', error);
@@ -62,6 +65,7 @@ export default function AdminCoursiers() {
       setDelegating(null);
     }
   };
+
 
   const handleCreateCoursier = async () => {
     if (!newCoursier.email || !newCoursier.prenom) {
@@ -94,12 +98,12 @@ export default function AdminCoursiers() {
     }
   };
 
-  const handleMarkPaid = async (visiteId: string) => {
+  const handleMarkPaidGroup = async (ids: string[]) => {
     try {
       const { error } = await supabase
         .from('visites')
         .update({ paye_coursier: true })
-        .eq('id', visiteId);
+        .in('id', ids);
       if (error) throw error;
       toast.success('Visite marquée comme payée');
       loadData();
@@ -109,51 +113,63 @@ export default function AdminCoursiers() {
   };
 
   const handleMarkAllPaidForAgent = async (agentId: string) => {
-    const agentUnpaid = unpaidMissions.filter(m => (m.agent_id || 'unknown') === agentId);
+    const ids = unpaidMissions.filter(m => (m.agent_id || 'unknown') === agentId).map(m => m.id);
+    const groupCount = unpaidGroups.filter(g => ((g.representative as any).agent_id || 'unknown') === agentId).length;
     try {
-      for (const m of agentUnpaid) {
-        await supabase.from('visites').update({ paye_coursier: true }).eq('id', m.id);
-      }
-      toast.success(`${agentUnpaid.length} visite(s) marquée(s) comme payée(s)`);
+      const { error } = await supabase.from('visites').update({ paye_coursier: true }).in('id', ids);
+      if (error) throw error;
+      toast.success(`${groupCount} visite(s) marquée(s) comme payée(s)`);
       loadData();
     } catch (error) {
       toast.error('Erreur');
     }
   };
 
-  const unpaidMissions = missions.filter(m => m.statut_coursier === 'termine' && !m.paye_coursier);
-  const totalUnpaid = unpaidMissions.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
-  const pendingMissions = missions.filter(m => m.statut_coursier === 'en_attente');
-  const activeMissions = missions.filter(m => m.statut_coursier === 'accepte');
-  const completedMissions = missions.filter(m => m.statut_coursier === 'termine');
+  const clientsCountOf = (items: any[]) =>
+    new Set(items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || items.length;
 
-  // Group unpaid missions by agent
+  const unpaidMissions = missions.filter(m => m.statut_coursier === 'termine' && !m.paye_coursier);
+
+  /** Missions regroupées par visite physique (adresse + date/heure + agent) */
+  const missionGroups = useMemo(() => groupVisitesByPhysiqueAgent(missions as any[]), [missions]);
+  const pendingGroups = useMemo(() => missionGroups.filter(g => (g.representative as any).statut_coursier === 'en_attente'), [missionGroups]);
+  const activeGroups = useMemo(() => missionGroups.filter(g => (g.representative as any).statut_coursier === 'accepte'), [missionGroups]);
+  const completedGroups = useMemo(() => missionGroups.filter(g => (g.representative as any).statut_coursier === 'termine'), [missionGroups]);
+  const unpaidGroups = useMemo(
+    () => completedGroups.filter(g => g.items.some((m: any) => !m.paye_coursier)),
+    [completedGroups],
+  );
+  const totalUnpaid = unpaidMissions.reduce((sum, m) => sum + (m.remuneration_coursier || 0), 0);
+
+  // Group unpaid visits (physical) by agent
   const unpaidByAgent = useMemo(() => {
-    return unpaidMissions.reduce((acc: Record<string, { name: string; count: number; total: number; missions: any[] }>, m) => {
-      const agentId = m.agent_id || 'unknown';
-      const agentName = m.agents?.profiles?.prenom 
-        ? `${m.agents.profiles.prenom} ${m.agents.profiles.nom || ''}`.trim()
+    return unpaidGroups.reduce((acc: Record<string, { name: string; count: number; total: number; clients: number; groups: any[] }>, g) => {
+      const rep: any = g.representative;
+      const agentId = rep.agent_id || 'unknown';
+      const agentName = rep.agents?.profiles?.prenom
+        ? `${rep.agents.profiles.prenom} ${rep.agents.profiles.nom || ''}`.trim()
         : 'Agent inconnu';
-      if (!acc[agentId]) acc[agentId] = { name: agentName, count: 0, total: 0, missions: [] };
+      if (!acc[agentId]) acc[agentId] = { name: agentName, count: 0, total: 0, clients: 0, groups: [] };
       acc[agentId].count += 1;
-      acc[agentId].total += (m.remuneration_coursier || 5);
-      acc[agentId].missions.push(m);
+      acc[agentId].clients += clientsCountOf(g.items);
+      acc[agentId].total += g.items.reduce((s: number, m: any) => s + (m.paye_coursier ? 0 : (m.remuneration_coursier || 0)), 0);
+      acc[agentId].groups.push(g);
       return acc;
     }, {});
-  }, [unpaidMissions]);
+  }, [unpaidGroups]);
   const agentBalances = Object.entries(unpaidByAgent);
 
-  // Coursier stats
+  // Coursier stats (basés sur les visites physiques)
   const coursierStats = useMemo(() => {
     return coursiers.map(c => {
-      const coursierMissions = missions.filter(m => m.coursier_id === c.id);
-      const completed = coursierMissions.filter(m => m.statut_coursier === 'termine');
-      const active = coursierMissions.filter(m => m.statut_coursier === 'accepte');
-      const earnings = completed.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
-      const unpaid = completed.filter(m => !m.paye_coursier).reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
-      return { ...c, completedCount: completed.length, activeCount: active.length, earnings, unpaid };
+      const cGroups = missionGroups.filter(g => (g.representative as any).coursier_id === c.id);
+      const completed = cGroups.filter(g => (g.representative as any).statut_coursier === 'termine');
+      const active = cGroups.filter(g => (g.representative as any).statut_coursier === 'accepte');
+      const sum = (gs: any[], onlyUnpaid = false) =>
+        gs.reduce((s, g) => s + g.items.reduce((s2: number, m: any) => s2 + ((onlyUnpaid && m.paye_coursier) ? 0 : (m.remuneration_coursier || 0)), 0), 0);
+      return { ...c, completedCount: completed.length, activeCount: active.length, earnings: sum(completed), unpaid: sum(completed, true) };
     });
-  }, [coursiers, missions]);
+  }, [coursiers, missionGroups]);
 
   const filteredEligible = eligibleVisites.filter(v => {
     if (!searchQuery) return true;
@@ -163,6 +179,14 @@ export default function AdminCoursiers() {
            (v.clients?.profiles?.prenom || '').toLowerCase().includes(q) ||
            (v.clients?.profiles?.nom || '').toLowerCase().includes(q);
   });
+
+  /** Visites éligibles regroupées par visite physique */
+  const eligibleGroups = useMemo(() => groupVisitesByPhysiqueAgent(eligibleVisites as any[]), [eligibleVisites]);
+  const filteredEligibleGroups = useMemo(
+    () => groupVisitesByPhysiqueAgent(filteredEligible as any[]),
+    [filteredEligible],
+  );
+
 
   const getCoursierName = (c: any) => {
     return `${c.profiles?.prenom || c.prenom || ''} ${c.profiles?.nom || c.nom || ''}`.trim() || 'Coursier';
@@ -214,10 +238,11 @@ export default function AdminCoursiers() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             { icon: Users, label: 'Coursiers', value: coursiers.length, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: Clock, label: 'En attente', value: pendingMissions.length, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-            { icon: Bike, label: 'En cours', value: activeMissions.length, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-            { icon: CheckCircle, label: 'Terminées', value: completedMissions.length, color: 'text-green-600', bg: 'bg-green-500/10' },
-            { icon: Send, label: 'À déléguer', value: eligibleVisites.length, color: 'text-purple-600', bg: 'bg-purple-500/10' },
+            { icon: Clock, label: 'En attente', value: pendingGroups.length, color: 'text-amber-600', bg: 'bg-amber-500/10' },
+            { icon: Bike, label: 'En cours', value: activeGroups.length, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+            { icon: CheckCircle, label: 'Terminées', value: completedGroups.length, color: 'text-green-600', bg: 'bg-green-500/10' },
+            { icon: Send, label: 'À déléguer', value: eligibleGroups.length, color: 'text-purple-600', bg: 'bg-purple-500/10' },
+
             { icon: AlertTriangle, label: 'À payer', value: `${totalUnpaid.toFixed(0)} CHF`, color: 'text-red-600', bg: 'bg-red-500/10' },
           ].map((kpi, i) => (
             <Card key={i} className="border-border/50">
@@ -239,12 +264,12 @@ export default function AdminCoursiers() {
         <Tabs defaultValue="deleguer" className="space-y-4">
           <TabsList className="grid grid-cols-4 w-full max-w-xl">
             <TabsTrigger value="deleguer">
-              Déléguer {eligibleVisites.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px]">{eligibleVisites.length}</Badge>}
+              Déléguer {eligibleGroups.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px]">{eligibleGroups.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="coursiers">Coursiers</TabsTrigger>
             <TabsTrigger value="missions">Missions</TabsTrigger>
             <TabsTrigger value="paiements">
-              Paiements {unpaidMissions.length > 0 && <Badge variant="destructive" className="ml-1.5 text-[10px]">{unpaidMissions.length}</Badge>}
+              Paiements {unpaidGroups.length > 0 && <Badge variant="destructive" className="ml-1.5 text-[10px]">{unpaidGroups.length}</Badge>}
             </TabsTrigger>
           </TabsList>
 
@@ -261,7 +286,7 @@ export default function AdminCoursiers() {
                 />
               </div>
             )}
-            {filteredEligible.length === 0 ? (
+            {filteredEligibleGroups.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <Send className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
@@ -272,8 +297,12 @@ export default function AdminCoursiers() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {filteredEligible.map((v) => (
-                  <Card key={v.id} className="border-border/50 hover:border-primary/20 transition-all">
+                {filteredEligibleGroups.map((g) => {
+                  const v: any = g.representative;
+                  const nbClients = clientsCountOf(g.items);
+                  const ids = g.items.map((i: any) => i.id);
+                  return (
+                  <Card key={g.key} className="border-border/50 hover:border-primary/20 transition-all">
                     <CardContent className="py-3">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 min-w-0">
@@ -285,30 +314,30 @@ export default function AdminCoursiers() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3 shrink-0" />
                               {format(new Date(v.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
-                              {v.clients?.profiles?.prenom && (
-                                <span className="truncate">• {v.clients.profiles.prenom} {v.clients.profiles.nom || ''}</span>
-                              )}
+                              <span className="truncate">• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
                             </div>
                           </div>
                         </div>
                         <Button
                           size="sm"
-                          onClick={() => handleDelegateVisite(v.id)}
-                          disabled={delegating === v.id}
+                          onClick={() => handleDelegateGroup(g.key, ids)}
+                          disabled={delegating === g.key}
                           className="shrink-0"
                         >
-                          {delegating === v.id ? (
+                          {delegating === g.key ? (
                             <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                           ) : (
                             <Bike className="mr-1.5 h-3.5 w-3.5" />
                           )}
-                          Déléguer (5.-)
+                          Déléguer
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
+
             )}
           </TabsContent>
 
@@ -381,7 +410,7 @@ export default function AdminCoursiers() {
 
           {/* Tab: Missions */}
           <TabsContent value="missions" className="space-y-4">
-            {missions.length === 0 ? (
+            {missionGroups.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <Bike className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
@@ -390,7 +419,10 @@ export default function AdminCoursiers() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {missions.slice(0, 30).map((m) => {
+                {missionGroups.slice(0, 30).map((g) => {
+                  const m: any = g.representative;
+                  const nbClients = clientsCountOf(g.items);
+                  const allPaid = g.items.every((i: any) => i.paye_coursier);
                   const statusConfig: Record<string, { label: string; class: string }> = {
                     en_attente: { label: 'En attente', class: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
                     accepte: { label: 'Acceptée', class: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
@@ -399,7 +431,7 @@ export default function AdminCoursiers() {
                   const status = statusConfig[m.statut_coursier] || { label: m.statut_coursier, class: 'bg-muted text-muted-foreground' };
                   
                   return (
-                    <Card key={m.id} className="border-border/50">
+                    <Card key={g.key} className="border-border/50">
                       <CardContent className="py-3">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3 min-w-0">
@@ -415,6 +447,7 @@ export default function AdminCoursiers() {
                               <p className="text-sm font-medium truncate">{m.adresse || m.offres?.adresse || '-'}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                                 <span>{format(new Date(m.date_visite), "dd MMM yyyy HH:mm", { locale: fr })}</span>
+                                <span>• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
                                 {m.agents?.profiles?.prenom && (
                                   <span>• Agent: {m.agents.profiles.prenom}</span>
                                 )}
@@ -425,10 +458,10 @@ export default function AdminCoursiers() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            {m.statut_coursier === 'termine' && !m.paye_coursier && (
+                            {m.statut_coursier === 'termine' && !allPaid && (
                               <Badge className="bg-red-500/10 text-red-600 border-red-500/30 text-[10px]">Impayé</Badge>
                             )}
-                            {m.statut_coursier === 'termine' && m.paye_coursier && (
+                            {m.statut_coursier === 'termine' && allPaid && (
                               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">Payé</Badge>
                             )}
                             <Badge className={status.class}>{status.label}</Badge>
@@ -439,6 +472,7 @@ export default function AdminCoursiers() {
                   );
                 })}
               </div>
+
             )}
           </TabsContent>
 
@@ -458,7 +492,7 @@ export default function AdminCoursiers() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number; missions: any[] }]) => (
+                    {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number; clients: number; groups: any[] }]) => (
                       <div key={agentId} className="flex items-center justify-between p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-700 font-bold text-xs">
@@ -466,7 +500,8 @@ export default function AdminCoursiers() {
                           </div>
                           <div>
                             <p className="text-sm font-medium">{data.name}</p>
-                            <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''}</p>
+                            <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''} • {data.clients} client{data.clients > 1 ? 's' : ''}</p>
+
                           </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -489,31 +524,35 @@ export default function AdminCoursiers() {
             )}
 
             {/* Missions impayées */}
-            {unpaidMissions.length > 0 ? (
+            {unpaidGroups.length > 0 ? (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Wallet className="h-5 w-5 text-amber-600" />
-                    Détail des missions impayées ({unpaidMissions.length})
+                    Détail des missions impayées ({unpaidGroups.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {unpaidMissions.map((m) => {
+                    {unpaidGroups.map((g) => {
+                      const m: any = g.representative;
+                      const nbClients = clientsCountOf(g.items);
+                      const amount = g.items.reduce((s: number, i: any) => s + (i.paye_coursier ? 0 : (i.remuneration_coursier || 0)), 0);
+                      const ids = g.items.filter((i: any) => !i.paye_coursier).map((i: any) => i.id);
                       return (
-                        <div key={m.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                        <div key={g.key} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
                           <div className="flex items-center gap-3 min-w-0">
                             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">{m.adresse}</p>
                               <p className="text-xs text-muted-foreground">
-                                {getMissionCoursierName(m)} • {format(new Date(m.date_visite), "dd MMM yyyy", { locale: fr })}
+                                {getMissionCoursierName(m)} • {format(new Date(m.date_visite), "dd MMM yyyy", { locale: fr })} • {nbClients} client{nbClients > 1 ? 's' : ''}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-medium text-amber-600">{(m.remuneration_coursier || 5).toFixed(0)} CHF</span>
-                            <Button size="sm" variant="outline" onClick={() => handleMarkPaid(m.id)} className="border-green-500/30 text-green-600 hover:bg-green-500/10">
+                            <span className="font-medium text-amber-600">{amount.toFixed(0)} CHF</span>
+                            <Button size="sm" variant="outline" onClick={() => handleMarkPaidGroup(ids)} className="border-green-500/30 text-green-600 hover:bg-green-500/10">
                               <CheckCircle className="mr-1 h-3.5 w-3.5" />
                               Payé
                             </Button>
@@ -523,6 +562,7 @@ export default function AdminCoursiers() {
                     })}
                   </div>
                 </CardContent>
+
               </Card>
             ) : (
               <Card className="border-dashed">
