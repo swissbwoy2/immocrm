@@ -210,11 +210,14 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Reçu le {formatSwissDateTime(message.created_at)}
+            Reçu le {formatSwissDateTime(message?.created_at || item.cr?.envoye_au_client_at || item.visite?.date_visite || new Date().toISOString())}
           </div>
 
-          {/* Compte-rendu de visite */}
-          {visite?.compte_rendu && typeof visite.compte_rendu === 'object' && (
+          {/* Compte-rendu structuré (visite_comptes_rendus) */}
+          {item.cr && <CompteRenduBlock cr={item.cr} />}
+
+          {/* Ancien compte-rendu libre (legacy visites.compte_rendu) */}
+          {!item.cr && visite?.compte_rendu && typeof visite.compte_rendu === 'object' && (
             <div className="border border-primary/20 rounded-lg p-4 bg-muted/30 space-y-2">
               <div className="flex items-center gap-2 mb-1">
                 <ClipboardList className="w-4 h-4 text-primary" />
@@ -245,6 +248,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
               )}
             </div>
           )}
+
         </div>
 
         {/* Decision */}
