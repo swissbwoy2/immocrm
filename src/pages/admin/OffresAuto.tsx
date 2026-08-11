@@ -67,7 +67,7 @@ export default function OffresAuto() {
       const { data, error } = await fetchAllPaginated<Row>(() => {
         let q = supabase
           .from("offres")
-          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, needs_agent_action, missing_info, visites(id, date_visite, statut)")
+          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut)")
           .eq("envoi_auto", true)
           .order("created_at", { ascending: false });
         if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
