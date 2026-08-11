@@ -47,15 +47,16 @@ export default function AdminCoursiers() {
     }
   };
 
-  const handleDelegateVisite = async (visiteId: string) => {
-    setDelegating(visiteId);
+  /** Délègue TOUTES les lignes visites du groupe (une par client) en une fois */
+  const handleDelegateGroup = async (groupKey: string, ids: string[]) => {
+    setDelegating(groupKey);
     try {
       const { error } = await supabase
         .from('visites')
-        .update({ statut_coursier: 'en_attente', remuneration_coursier: 5 })
-        .eq('id', visiteId);
+        .update({ statut_coursier: 'en_attente' })
+        .in('id', ids);
       if (error) throw error;
-      toast.success('Visite envoyée dans le pool coursier');
+      toast.success(`Visite envoyée dans le pool coursier (${ids.length} client${ids.length > 1 ? 's' : ''})`);
       loadData();
     } catch (error) {
       console.error('Error delegating:', error);
@@ -64,6 +65,7 @@ export default function AdminCoursiers() {
       setDelegating(null);
     }
   };
+
 
   const handleCreateCoursier = async () => {
     if (!newCoursier.email || !newCoursier.prenom) {
