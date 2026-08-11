@@ -408,82 +408,118 @@ export default function VideosRecues() {
       }
       const clientId = clientRow.id;
 
-      // 2. conversations
+      // 2. comptes-rendus envoyés au client
+      const { data: crs } = await supabase
+        .from('visite_comptes_rendus')
+        .select('*')
+        .eq('client_id', clientId)
+        .not('envoye_au_client_at', 'is', null)
+        .order('envoye_au_client_at', { ascending: false });
+      const crList = ((crs || []) as any[]) as CompteRenduRow[];
+
+      // 3. conversations → messages vidéo
       const { data: convs } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', clientId);
       const convIds = (convs || []).map((c) => c.id);
-      if (convIds.length === 0) {
+
+      let uniqueMsgs: VideoMessage[] = [];
+      if (convIds.length > 0) {
+        const { data: msgs } = await supabase
+          .from('messages')
+          .select('id, offre_id, attachment_url, attachment_thumbnail_url, attachment_name, created_at, payload')
+          .eq('attachment_type', 'video')
+          .in('conversation_id', convIds)
+          .not('attachment_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(500);
+
+        const videoMsgs = (msgs || []).filter((m: any) => m.offre_id && m.attachment_url) as VideoMessage[];
+        const seen = new Set<string>();
+        for (const m of videoMsgs) {
+          if (seen.has(m.offre_id)) continue;
+          seen.add(m.offre_id);
+          uniqueMsgs.push(m);
+        }
+      }
+
+      if (uniqueMsgs.length === 0 && crList.length === 0) {
         setItems([]);
         return;
       }
 
-      // 3. video messages
-      const { data: msgs } = await supabase
-        .from('messages')
-        .select('id, offre_id, attachment_url, attachment_thumbnail_url, attachment_name, created_at, payload')
-        .eq('attachment_type', 'video')
-        .in('conversation_id', convIds)
-        .not('attachment_url', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(500);
-
-      const videoMsgs = (msgs || []).filter((m: any) => m.offre_id && m.attachment_url) as VideoMessage[];
-
-      // dedupe by offre_id (keep latest = first)
-      const seen = new Set<string>();
-      const uniqueMsgs: VideoMessage[] = [];
-      for (const m of videoMsgs) {
-        if (seen.has(m.offre_id)) continue;
-        seen.add(m.offre_id);
-        uniqueMsgs.push(m);
-      }
-      if (uniqueMsgs.length === 0) {
-        setItems([]);
-        return;
-      }
-
-      const offreIds = uniqueMsgs.map((m) => m.offre_id);
+      const offreIds = Array.from(
+        new Set([
+          ...uniqueMsgs.map((m) => m.offre_id),
+          ...crList.map((c) => c.offre_id).filter(Boolean) as string[],
+        ])
+      );
 
       // 4. offres
-      const { data: offres } = await supabase
-        .from('offres')
-        .select('id, adresse, prix, pieces, surface, etage, disponibilite, annee_construction, description, lien_annonce, statut, agent_id')
-        .in('id', offreIds);
-      const offreMap = new Map<string, OffreData>((offres || []).map((o: any) => [o.id, o]));
+      const offreMap = new Map<string, OffreData>();
+      if (offreIds.length > 0) {
+        const { data: offres } = await supabase
+          .from('offres')
+          .select('id, adresse, prix, pieces, surface, etage, disponibilite, annee_construction, description, lien_annonce, statut, agent_id')
+          .in('id', offreIds);
+        for (const o of (offres || []) as any[]) offreMap.set(o.id, o);
+      }
 
-      // 5. visites (for client_decision, visite id)
-      const { data: visites } = await supabase
-        .from('visites')
-        .select('id, offre_id, client_decision, agent_id, adresse, date_visite, compte_rendu, compte_rendu_at')
-        .eq('client_id', clientId)
-        .in('offre_id', offreIds);
+      // 5. visites (décision client + rattachement des CR)
+      const crVisiteIds = crList.map((c) => c.visite_id).filter(Boolean) as string[];
+      const orFilters: string[] = [];
+      if (offreIds.length > 0) orFilters.push(`offre_id.in.(${offreIds.join(',')})`);
+      if (crVisiteIds.length > 0) orFilters.push(`id.in.(${crVisiteIds.join(',')})`);
+      let visites: VisiteRow[] = [];
+      if (orFilters.length > 0) {
+        const { data } = await supabase
+          .from('visites')
+          .select('id, offre_id, client_decision, agent_id, adresse, date_visite, compte_rendu, compte_rendu_at')
+          .eq('client_id', clientId)
+          .or(orFilters.join(','));
+        visites = (data || []) as VisiteRow[];
+      }
+      const visiteById = new Map<string, VisiteRow>(visites.map((v) => [v.id, v]));
       const visiteByOffre = new Map<string, VisiteRow>();
-      for (const v of (visites || []) as VisiteRow[]) {
+      for (const v of visites) {
         if (!v.offre_id) continue;
         const existing = visiteByOffre.get(v.offre_id);
         if (!existing || (v.date_visite && (!existing.date_visite || v.date_visite > existing.date_visite))) {
           visiteByOffre.set(v.offre_id, v);
         }
       }
+      const crByVisite = new Map<string, CompteRenduRow>();
+      for (const c of crList) if (c.visite_id) crByVisite.set(c.visite_id, c);
 
+      const usedCrIds = new Set<string>();
       const built: Item[] = uniqueMsgs.map((m) => {
-        // Try to match via payload.visite_id first
         const payloadVisiteId = m.payload?.visite_id;
         let visite = visiteByOffre.get(m.offre_id) || null;
         if (payloadVisiteId && (!visite || visite.id !== payloadVisiteId)) {
-          const found = (visites || []).find((v: any) => v.id === payloadVisiteId) as VisiteRow | undefined;
+          const found = visiteById.get(payloadVisiteId);
           if (found) visite = found;
         }
-        return {
-          message: m,
-          offre: offreMap.get(m.offre_id) || null,
-          visite,
-        };
+        const cr = visite ? crByVisite.get(visite.id) ?? null : null;
+        if (cr) usedCrIds.add(cr.id);
+        return { key: m.id, message: m, offre: offreMap.get(m.offre_id) || null, visite, cr };
       });
 
+      // Comptes-rendus sans vidéo associée → carte dédiée
+      for (const c of crList) {
+        if (usedCrIds.has(c.id)) continue;
+        const visite = c.visite_id ? visiteById.get(c.visite_id) ?? null : null;
+        built.push({
+          key: `cr-${c.id}`,
+          message: null,
+          offre: c.offre_id ? offreMap.get(c.offre_id) ?? null : null,
+          visite,
+          cr: c,
+        });
+      }
+
       setItems(built);
+
     } catch (err: any) {
       console.error('[VideosRecues]', err);
       toast.error("Impossible de charger les vidéos");
