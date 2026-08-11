@@ -410,7 +410,7 @@ export default function AdminCoursiers() {
 
           {/* Tab: Missions */}
           <TabsContent value="missions" className="space-y-4">
-            {missions.length === 0 ? (
+            {missionGroups.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <Bike className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
@@ -419,7 +419,10 @@ export default function AdminCoursiers() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {missions.slice(0, 30).map((m) => {
+                {missionGroups.slice(0, 30).map((g) => {
+                  const m: any = g.representative;
+                  const nbClients = clientsCountOf(g.items);
+                  const allPaid = g.items.every((i: any) => i.paye_coursier);
                   const statusConfig: Record<string, { label: string; class: string }> = {
                     en_attente: { label: 'En attente', class: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
                     accepte: { label: 'Acceptée', class: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
@@ -428,7 +431,7 @@ export default function AdminCoursiers() {
                   const status = statusConfig[m.statut_coursier] || { label: m.statut_coursier, class: 'bg-muted text-muted-foreground' };
                   
                   return (
-                    <Card key={m.id} className="border-border/50">
+                    <Card key={g.key} className="border-border/50">
                       <CardContent className="py-3">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3 min-w-0">
@@ -444,6 +447,7 @@ export default function AdminCoursiers() {
                               <p className="text-sm font-medium truncate">{m.adresse || m.offres?.adresse || '-'}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                                 <span>{format(new Date(m.date_visite), "dd MMM yyyy HH:mm", { locale: fr })}</span>
+                                <span>• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
                                 {m.agents?.profiles?.prenom && (
                                   <span>• Agent: {m.agents.profiles.prenom}</span>
                                 )}
@@ -454,10 +458,10 @@ export default function AdminCoursiers() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            {m.statut_coursier === 'termine' && !m.paye_coursier && (
+                            {m.statut_coursier === 'termine' && !allPaid && (
                               <Badge className="bg-red-500/10 text-red-600 border-red-500/30 text-[10px]">Impayé</Badge>
                             )}
-                            {m.statut_coursier === 'termine' && m.paye_coursier && (
+                            {m.statut_coursier === 'termine' && allPaid && (
                               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">Payé</Badge>
                             )}
                             <Badge className={status.class}>{status.label}</Badge>
@@ -468,6 +472,7 @@ export default function AdminCoursiers() {
                   );
                 })}
               </div>
+
             )}
           </TabsContent>
 
