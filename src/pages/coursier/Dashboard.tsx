@@ -211,40 +211,20 @@ export default function CoursierDashboard() {
           </Card>
         )}
 
-        {/* Alerte gains impayés */}
-        {stats.unpaidEarnings > 0 && (
-          <Card className="border-amber-500/30 bg-amber-500/5">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/15">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Gains en attente de paiement</p>
-                    <p className="text-xs text-muted-foreground">Contactez l'agence pour le règlement</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-bold text-amber-600">{stats.unpaidEarnings.toFixed(0)} CHF</span>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/coursier/historique')} className="border-amber-500/30 text-amber-600 hover:bg-amber-500/10">
-                    Détails
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Pointage global (arrivée / départ) */}
+        <CoursierClockCard time={time} />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
-            { icon: Wallet, label: 'Gains ce mois', value: `${stats.earningsThisMonth.toFixed(0)} CHF`, color: 'text-green-600', bg: 'bg-green-500/10' },
+            { icon: Wallet, label: 'Gains ce mois', value: `${time.earningsThisMonth.toFixed(0)} CHF`, color: 'text-green-600', bg: 'bg-green-500/10' },
+            { icon: Timer, label: 'Temps ce mois', value: formatDuration(time.minutesThisMonth), color: 'text-sky-600', bg: 'bg-sky-500/10' },
+            { icon: TrendingUp, label: 'Gains totaux', value: `${time.earningsTotal.toFixed(0)} CHF`, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
             { icon: CheckCircle, label: 'Terminées ce mois', value: stats.completedThisMonth, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: TrendingUp, label: 'Gains totaux', value: `${stats.totalEarnings.toFixed(0)} CHF`, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
             { icon: Clock, label: 'En cours', value: stats.inProgress, color: 'text-amber-600', bg: 'bg-amber-500/10' },
             { icon: CalendarCheck, label: 'Disponibles', value: stats.available, color: 'text-blue-600', bg: 'bg-blue-500/10' },
           ].map((kpi, i) => (
+
             <Card key={i} className="border-border/50 bg-card/80 backdrop-blur-sm hover:shadow-md transition-all">
               <CardContent className="pt-5 pb-4">
                 <div className="flex items-center gap-3">
