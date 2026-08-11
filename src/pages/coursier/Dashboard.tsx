@@ -265,9 +265,10 @@ export default function CoursierDashboard() {
                         <MapPin className="h-4 w-4 text-primary shrink-0" />
                         <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
                       </div>
-                      <Badge className="shrink-0 bg-green-500/10 text-green-600 border-green-500/30 font-bold">
-                        {(mission.remuneration_coursier || 5).toFixed(0)}.-
+                      <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
+                        <Users className="h-3 w-3 mr-1" />{mission._count} client{mission._count > 1 ? 's' : ''}
                       </Badge>
+
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
