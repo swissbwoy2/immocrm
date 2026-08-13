@@ -1404,6 +1404,17 @@ const OffresRecues = () => {
                       </div>
                     )}
 
+                    {/* Intérêt client — question claire */}
+                    {['envoyee', 'vue', 'interesse', 'refusee', 'visite_planifiee'].includes(offre.statut) && (
+                      <OffreInteretPrompt
+                        offre={offre}
+                        visites={visites}
+                        onRespond={(statut) => updateStatut(offre.id, statut)}
+                      />
+                    )}
+
+
+
                     {/* Chance Indicator */}
                     {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 
                       offre.statut === 'visite_effectuee' || offre.statut === 'candidature_deposee') && (
