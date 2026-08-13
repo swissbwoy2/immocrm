@@ -115,7 +115,11 @@ Deno.serve(async (req) => {
             metadata: { client_id: client.id, level },
           });
 
-          if (resendApiKey && profile?.email) {
+          const emailOptOut = await canSendNotificationEmail(supabase, {
+            userId: client.user_id,
+            email: profile?.email,
+          });
+          if (resendApiKey && profile?.email && emailOptOut.allowed) {
             try {
               await fetch('https://api.resend.com/emails', {
                 method: 'POST',
