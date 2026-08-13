@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AddressLink } from '@/components/AddressLink';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -102,6 +103,7 @@ const priorityLabels: Record<string, string> = {
 
 export default function AgentCalendrier() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { markTypeAsRead } = useNotifications();
   const { syncEvent } = useGoogleCalendarSync();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -808,6 +810,20 @@ export default function AgentCalendrier() {
     setSelectedVisite(visite);
     setDetailDialogOpen(true);
   };
+
+  // Deep link: /agent/calendrier?visiteId=<id> -> ouvre la fiche de cette visite
+  useEffect(() => {
+    const visiteId = searchParams.get('visiteId');
+    if (!visiteId || visites.length === 0) return;
+    const target = visites.find((v: any) => v.id === visiteId);
+    if (!target) return;
+    setSelectedDate(new Date(target.date_visite));
+    setSelectedVisite(target);
+    setDetailDialogOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('visiteId');
+    setSearchParams(next, { replace: true });
+  }, [visites, searchParams, setSearchParams]);
 
   const handleDeleteVisite = async (visiteId: string, cascade: boolean = false) => {
     try {

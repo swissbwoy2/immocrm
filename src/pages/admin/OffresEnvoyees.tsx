@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -258,6 +258,7 @@ export default function AdminOffresEnvoyees() {
   // Dialog state
   const [selectedOffre, setSelectedOffre] = useState<Offre | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Transfer dialog state
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -268,6 +269,19 @@ export default function AdminOffresEnvoyees() {
   const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
 
   const INITIAL_LIMIT = 10000;
+
+  // Deep link: /admin/offres-envoyees?offreId=<id>
+  useEffect(() => {
+    const offreId = searchParams.get('offreId');
+    if (!offreId || offres.length === 0) return;
+    const target = offres.find((o) => o.id === offreId);
+    if (!target) return;
+    setSelectedOffre(target);
+    setDetailDialogOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('offreId');
+    setSearchParams(next, { replace: true });
+  }, [offres, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!user || userRole !== 'admin') {
