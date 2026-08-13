@@ -34,6 +34,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
+import { getInteretState } from '@/lib/offreInteret';
 
 const candidatureStatusLabels: Record<string, string> = {
   en_attente: 'En attente',
