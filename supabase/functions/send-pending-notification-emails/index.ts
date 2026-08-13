@@ -256,9 +256,13 @@ serve(async (req) => {
         continue;
       }
 
-      // Check if user has email notifications enabled
-      if (profile.notifications_email === false) {
-        console.log(`User ${notification.user_id} has email notifications disabled, marking as sent`);
+      // Vérifie les préférences email (profil + désinscriptions)
+      const optOut = await canSendNotificationEmail(supabase, {
+        userId: notification.user_id,
+        email: profile.email,
+      });
+      if (!optOut.allowed) {
+        console.log(`Email skipped for ${notification.user_id} (${optOut.reason})`);
         processedIds.push(notification.id);
         skippedCount++;
         continue;
