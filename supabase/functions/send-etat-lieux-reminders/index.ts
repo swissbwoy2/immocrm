@@ -189,7 +189,8 @@ serve(async (req) => {
       const lieuSignature = candidature.lieu_signature || "Chemin de l'Esparcette 5, 1023 Crissier";
 
       // Send email if Resend is configured
-      if (resend) {
+      const emailOptOut = await canSendNotificationEmail(supabase, { userId: recipientUserId, email: recipientEmail });
+      if (resend && emailOptOut.allowed) {
         try {
           const emailHtml = `
             <!DOCTYPE html>
