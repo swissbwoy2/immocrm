@@ -12965,6 +12965,21 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      ir_build_msg: {
+        Args: {
+          addr: string
+          descr: string
+          dispo: string
+          etage: string
+          lien: string
+          pieces: string
+          prenom: string
+          prix: number
+          surface: number
+          visitline: string
+        }
+        Returns: string
+      }
       is_agent_of_client: { Args: { profile_id: string }; Returns: boolean }
       is_agent_of_client_record: {
         Args: { _client_id: string }
