@@ -278,25 +278,32 @@ export function getCorrectNotificationLink(
   role: UserRole,
   metadata?: NotificationMetadata | null
 ): string {
-  // Get the correct base URL for this notification type and role
-  const correctBaseUrl = NOTIFICATION_ROUTES[notificationType]?.[role];
+  const stored = currentLink?.trim() || null;
 
-  // If the stored link already targets the mapped section (with a deeper path or
-  // query params, e.g. ?offreId=...), keep it: it is more precise.
-  const linkPath = currentLink?.split('?')[0];
-  const preferStoredLink =
-    !!currentLink &&
-    !!correctBaseUrl &&
-    !!linkPath &&
-    (linkPath === correctBaseUrl || linkPath.startsWith(`${correctBaseUrl}/`)) &&
-    currentLink !== correctBaseUrl;
+  // 1) The stored link is authoritative: it is generated with the right
+  //    deep-link params (?visiteId=, ?offreId=, ?conversationId=, ?offre=...).
+  //    We only rewrite it when it targets another role space.
+  if (stored && stored.startsWith('/')) {
+    const [storedPath, storedQuery] = stored.split('?');
+    const linkRole = roleOfPath(storedPath);
 
-  // If we have a mapped route, use it; otherwise use the provided link or fallback
-  let baseUrl = (preferStoredLink ? currentLink : correctBaseUrl) || currentLink || `/${role}`;
-  
-  // Build query params from metadata
+    if (!linkRole || linkRole === role) {
+      return stored;
+    }
+
+    // Role mismatch: keep the params but move to the current role's space.
+    const mapped = NOTIFICATION_ROUTES[notificationType]?.[role];
+    if (mapped) {
+      return storedQuery ? `${mapped}?${storedQuery}` : mapped;
+    }
+    const swapped = storedPath.replace(/^\/(admin|agent|client|apporteur)/, `/${role}`);
+    return storedQuery ? `${swapped}?${storedQuery}` : swapped;
+  }
+
+  // 2) No usable stored link: rebuild one from the type mapping + metadata.
+  let baseUrl = NOTIFICATION_ROUTES[notificationType]?.[role] || `/${role}`;
+
   const params = new URLSearchParams();
-  
   if (metadata) {
     if (metadata.visite_id) params.set('visiteId', metadata.visite_id);
     if (metadata.conversation_id) params.set('conversationId', metadata.conversation_id);
@@ -306,14 +313,20 @@ export function getCorrectNotificationLink(
     if (metadata.client_user_id) params.set('clientId', metadata.client_user_id);
     if (metadata.demande_id) params.set('demandeId', metadata.demande_id);
   }
-  
-  // Append params to URL if any
+
   const paramsStr = params.toString();
   if (paramsStr) {
-    // Check if URL already has params
-    const hasParams = baseUrl.includes('?');
-    baseUrl += (hasParams ? '&' : '?') + paramsStr;
+    baseUrl += (baseUrl.includes('?') ? '&' : '?') + paramsStr;
   }
-  
+
   return baseUrl;
 }
+
+function roleOfPath(path: string): UserRole | null {
+  if (path.startsWith('/admin')) return 'admin';
+  if (path.startsWith('/agent')) return 'agent';
+  if (path.startsWith('/client')) return 'client';
+  if (path.startsWith('/apporteur')) return 'apporteur';
+  return null;
+}
+
