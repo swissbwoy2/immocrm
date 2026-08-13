@@ -316,14 +316,25 @@ serve(async (req) => {
       throw new Error("User profile not found");
     }
 
-    // Check if user has email notifications enabled
-    if (profile.notifications_email === false) {
-      console.log(`User ${user_id} has email notifications disabled, skipping`);
+    // Vérifie les préférences email (profiles.notifications_email + désinscriptions)
+    const optOut = await canSendNotificationEmail(supabase, {
+      userId: user_id,
+      email: profile.email,
+    });
+
+    if (!optOut.allowed) {
+      console.log(`Email notification skipped for ${user_id} (${optOut.reason}) — push still sent`);
+      // On coupe UNIQUEMENT l'email : le push reste envoyé.
+      try {
+        await sendPushNotification(supabaseUrl, supabaseServiceKey, user_id, title, message, link);
+      } catch (e) {
+        console.error("Push error:", e);
+      }
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Email notifications disabled for this user",
-          skipped: true 
+        JSON.stringify({
+          success: true,
+          message: `Email skipped: ${optOut.reason}`,
+          skipped: true,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
