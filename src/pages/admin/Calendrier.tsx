@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
@@ -53,6 +53,7 @@ interface Client {
 export default function AdminCalendrier() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { syncEvent } = useGoogleCalendarSync();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
@@ -496,6 +497,24 @@ export default function AdminCalendrier() {
     setSelectedVisiteGroup(visiteGroup);
     setVisiteDetailDialogOpen(true);
   };
+
+  // Deep link: /admin/calendrier?visiteId=<id> -> ouvre la fiche de cette visite
+  useEffect(() => {
+    const visiteId = searchParams.get('visiteId');
+    if (!visiteId || visites.length === 0) return;
+    const target = visites.find((v: any) => v.id === visiteId);
+    if (!target) return;
+    const group = visites.filter(
+      (v: any) => v.adresse === target.adresse && v.date_visite === target.date_visite,
+    );
+    setSelectedDate(new Date(target.date_visite));
+    setVisibleDate(new Date(target.date_visite));
+    setSelectedVisiteGroup(group.length > 0 ? group : [target]);
+    setVisiteDetailDialogOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('visiteId');
+    setSearchParams(next, { replace: true });
+  }, [visites, searchParams, setSearchParams]);
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return null;

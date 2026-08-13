@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,10 +60,24 @@ export default function AgentOffresAuto() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<"all" | "manual">("all");
   const [pageAll, setPageAll] = useState(1);
   const [pageManual, setPageManual] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
+
+  // Deep link: ?offre=<id> (ou ?offreId=<id>) -> ouvre l'offre à traiter
+  useEffect(() => {
+    const offreId = searchParams.get("offre") || searchParams.get("offreId");
+    if (!offreId || rows.length === 0) return;
+    const target = rows.find((r) => r.id === offreId);
+    if (!target) return;
+    setEditing(target);
+    const next = new URLSearchParams(searchParams);
+    next.delete("offre");
+    next.delete("offreId");
+    setSearchParams(next, { replace: true });
+  }, [rows, searchParams, setSearchParams]);
 
   async function load() {
     if (!user) return;

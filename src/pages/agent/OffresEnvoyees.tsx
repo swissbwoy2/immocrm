@@ -214,6 +214,20 @@ export default function OffresEnvoyees() {
   const [pendingPostulations, setPendingPostulations] = useState<any[]>([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [offreToEdit, setOffreToEdit] = useState<any>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Deep link: /agent/offres-envoyees?offreId=<id>
+  useEffect(() => {
+    const offreId = searchParams.get('offreId');
+    if (!offreId || offres.length === 0) return;
+    const target = offres.find((o: any) => o.id === offreId);
+    if (!target) return;
+    setOffreToView(target);
+    setDetailsDialogOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('offreId');
+    setSearchParams(next, { replace: true });
+  }, [offres, searchParams, setSearchParams]);
 
   useEffect(() => {
     loadData();
