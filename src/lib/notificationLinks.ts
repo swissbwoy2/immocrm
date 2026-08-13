@@ -269,6 +269,56 @@ export function detectRoleFromPath(pathname: string): UserRole {
   return 'client'; // Default fallback
 }
 
+function hasQueryParam(params: URLSearchParams, key: string): boolean {
+  return params.has(key) && params.get(key)?.trim() !== '';
+}
+
+function mergeMetadataIntoQuery(
+  path: string,
+  query: string | undefined,
+  metadata: NotificationMetadata | null | undefined
+): string {
+  const params = new URLSearchParams(query || '');
+
+  if (
+    metadata?.offre_id &&
+    !hasQueryParam(params, 'offre') &&
+    !hasQueryParam(params, 'offreId')
+  ) {
+    if (path.includes('/offres-auto')) {
+      params.set('offre', metadata.offre_id);
+    } else if (path.includes('/offres-recues') || path.includes('/offres-envoyees')) {
+      params.set('offreId', metadata.offre_id);
+    }
+  }
+
+  if (
+    metadata?.visite_id &&
+    !hasQueryParam(params, 'visiteId') &&
+    (path.includes('/calendrier') || path.includes('/visites'))
+  ) {
+    params.set('visiteId', metadata.visite_id);
+  }
+
+  if (
+    metadata?.conversation_id &&
+    !hasQueryParam(params, 'conversationId') &&
+    path.includes('/messagerie')
+  ) {
+    params.set('conversationId', metadata.conversation_id);
+  }
+
+  if (
+    metadata?.candidature_id &&
+    !hasQueryParam(params, 'candidatureId') &&
+    path.includes('/mes-candidatures')
+  ) {
+    params.set('candidatureId', metadata.candidature_id);
+  }
+
+  return params.toString();
+}
+
 /**
  * Get the correct notification link based on type, role, and metadata
  */
