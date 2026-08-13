@@ -1373,7 +1373,19 @@ export default function AgentCalendrier() {
                 </div>
               </div>
 
+              {/* Intérêt client */}
+              <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium">Intérêt du client :</span>
+                <ClientInteretBadge statutOffre={selectedVisite.offres?.statut} />
+                {getInteretState(selectedVisite.offres?.statut).key === 'attente' && (
+                  <span className="text-xs text-amber-700">
+                    À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
+                  </span>
+                )}
+              </div>
+
               {/* Client */}
+
               {selectedVisite.client_profile && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
