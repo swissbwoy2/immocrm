@@ -16,6 +16,8 @@ interface PushNotificationActionPerformed {
   notification: {
     data?: {
       link?: string;
+      type?: string;
+      metadata?: string | Record<string, string>;
     };
   };
 }
