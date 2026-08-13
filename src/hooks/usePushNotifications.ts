@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCorrectNotificationLink, detectRoleFromPath } from "@/lib/notificationLinks";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
