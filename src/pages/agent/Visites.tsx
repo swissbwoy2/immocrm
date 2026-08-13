@@ -1398,20 +1398,35 @@ export default function AgentVisites() {
               </div>
             )}
 
-            {/* Normal planned visits (excluding urgent ones) */}
-            {visitesAVenir.filter(v => !urgentIds.has(v.id)).length > 0 && (
+            {/* Visites confirmées (client intéressé) */}
+            {visitesAVenirConfirmees.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <span>📅 Visites planifiées</span>
-                  <Badge variant="secondary">{visitesAVenir.filter(v => !urgentIds.has(v.id)).length}</Badge>
+                  <span>✅ Visites confirmées (client intéressé)</span>
+                  <Badge variant="secondary">{visitesAVenirConfirmees.length}</Badge>
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {visitesAVenir
-                    .filter(v => !urgentIds.has(v.id))
-                    .map((visite, index) => renderPremiumVisiteCard(visite, index))}
+                  {visitesAVenirConfirmees.map((visite, index) => renderPremiumVisiteCard(visite, index))}
                 </div>
               </div>
             )}
+
+            {/* Visites à confirmer (pas de réponse du client) */}
+            {visitesAVenirAConfirmer.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                  <span>⏳ À CONFIRMER (en attente réponse client)</span>
+                  <Badge variant="secondary">{visitesAVenirAConfirmer.length}</Badge>
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Le client n'a pas encore confirmé son intérêt : ces visites ne sont pas fermes.
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 opacity-90">
+                  {visitesAVenirAConfirmer.map((visite, index) => renderPremiumVisiteCard(visite, index))}
+                </div>
+              </div>
+            )}
+
 
             {toutesVisitesAVenir.length === 0 && visitesDelegueesPending.length === 0 && (
               <Card className="border-dashed border-2 border-border/50 bg-card/50 backdrop-blur-sm">
