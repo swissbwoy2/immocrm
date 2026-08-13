@@ -311,12 +311,14 @@ export default function AdminCoursiers() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{v.adresse || v.offres?.adresse || 'Adresse non renseignée'}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                               <Calendar className="h-3 w-3 shrink-0" />
                               {format(new Date(v.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
                               <span className="truncate">• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
+                              <ClientInteretBadge statutOffre={v.offres?.statut} />
                             </div>
                           </div>
+
                         </div>
                         <Button
                           size="sm"
