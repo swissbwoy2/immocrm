@@ -27,7 +27,7 @@ import {
   TrendingUp, CheckCircle, XCircle, ExternalLink, Home, Sparkles,
   Building2, User, ArrowRight, Clock, Pencil
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
