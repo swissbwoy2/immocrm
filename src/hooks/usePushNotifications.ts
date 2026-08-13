@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getCorrectNotificationLink, detectRoleFromPath } from "@/lib/notificationLinks";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
@@ -15,6 +16,8 @@ interface PushNotificationActionPerformed {
   notification: {
     data?: {
       link?: string;
+      type?: string;
+      metadata?: string | Record<string, string>;
     };
   };
 }
@@ -74,11 +77,20 @@ export function usePushNotifications() {
 
   const handleNotificationAction = useCallback((action: PushNotificationActionPerformed) => {
     console.log("[Push] Notification action performed:", action);
-    const link = action.notification.data?.link;
-    if (link) {
-      console.log("[Push] Navigating to:", link);
-      navigate(link);
+    const data = action.notification.data || {};
+    const link = data.link || null;
+    const role = detectRoleFromPath(link || '');
+    let metadata: Record<string, string> | null = null;
+    if (data.metadata) {
+      try {
+        metadata = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata;
+      } catch (e) {
+        console.error('[Push] Failed to parse metadata:', e);
+      }
     }
+    const url = getCorrectNotificationLink(data.type || '', link, role, metadata);
+    console.log("[Push] Navigating to:", url);
+    navigate(url);
   }, [navigate]);
 
   const initializePushNotifications = useCallback(async () => {
