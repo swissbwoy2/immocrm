@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
+import { getInteretState } from '@/lib/offreInteret';
 import { 
   Calendar, Clock, User, Users, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, 
   Bell, History, CheckCircle, XCircle, Trash2, Upload, X, Image, Video, 
@@ -671,7 +673,16 @@ export default function AgentVisites() {
     delegueesPending: visitesDelegueesPending.length,
   };
 
+  const visitesAVenirNonUrgentes = visitesAVenir.filter(v => !urgentIds.has(v.id));
+  const visitesAVenirConfirmees = visitesAVenirNonUrgentes.filter(
+    v => getInteretState(v.offres?.statut).key !== 'attente'
+  );
+  const visitesAVenirAConfirmer = visitesAVenirNonUrgentes.filter(
+    v => getInteretState(v.offres?.statut).key === 'attente'
+  );
+
   if (loading) {
+
     return (
       <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
         <div className="p-4 md:p-8 space-y-6">
@@ -847,12 +858,24 @@ export default function AgentVisites() {
             </div>
           )}
 
+          {/* Intérêt client */}
+          <div className="mb-3">
+            <ClientInteretBadge statutOffre={visite.offres?.statut} />
+            {getInteretState(visite.offres?.statut).key === 'attente' && (
+              <p className="text-[11px] text-amber-700 mt-1">
+                À CONFIRMER — en attente de la réponse du client
+              </p>
+            )}
+          </div>
+
           {/* Notes */}
           {visite.notes && (
             <p className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2 rounded-lg mb-4 line-clamp-2">
               💡 {visite.notes}
             </p>
           )}
+          
+
           
           {/* Date/time footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border/50">
@@ -1384,20 +1407,35 @@ export default function AgentVisites() {
               </div>
             )}
 
-            {/* Normal planned visits (excluding urgent ones) */}
-            {visitesAVenir.filter(v => !urgentIds.has(v.id)).length > 0 && (
+            {/* Visites confirmées (client intéressé) */}
+            {visitesAVenirConfirmees.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <span>📅 Visites planifiées</span>
-                  <Badge variant="secondary">{visitesAVenir.filter(v => !urgentIds.has(v.id)).length}</Badge>
+                  <span>✅ Visites confirmées (client intéressé)</span>
+                  <Badge variant="secondary">{visitesAVenirConfirmees.length}</Badge>
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {visitesAVenir
-                    .filter(v => !urgentIds.has(v.id))
-                    .map((visite, index) => renderPremiumVisiteCard(visite, index))}
+                  {visitesAVenirConfirmees.map((visite, index) => renderPremiumVisiteCard(visite, index))}
                 </div>
               </div>
             )}
+
+            {/* Visites à confirmer (pas de réponse du client) */}
+            {visitesAVenirAConfirmer.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                  <span>⏳ À CONFIRMER (en attente réponse client)</span>
+                  <Badge variant="secondary">{visitesAVenirAConfirmer.length}</Badge>
+                </h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Le client n'a pas encore confirmé son intérêt : ces visites ne sont pas fermes.
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 opacity-90">
+                  {visitesAVenirAConfirmer.map((visite, index) => renderPremiumVisiteCard(visite, index))}
+                </div>
+              </div>
+            )}
+
 
             {toutesVisitesAVenir.length === 0 && visitesDelegueesPending.length === 0 && (
               <Card className="border-dashed border-2 border-border/50 bg-card/50 backdrop-blur-sm">

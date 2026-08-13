@@ -31,6 +31,8 @@ import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
+import { getInteretState } from '@/lib/offreInteret';
 
 interface Agent {
   id: string;
@@ -725,6 +727,17 @@ export default function AdminCalendrier() {
                   </span>
                 </div>
               )}
+
+              {/* Intérêt client */}
+              <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium">Intérêt du client :</span>
+                <ClientInteretBadge statutOffre={selectedVisiteGroup[0].offres?.statut} />
+                {getInteretState(selectedVisiteGroup[0].offres?.statut).key === 'attente' && (
+                  <span className="text-xs text-amber-700">
+                    À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
+                  </span>
+                )}
+              </div>
 
               {/* Header with address */}
               <div className="p-4 bg-muted rounded-lg">

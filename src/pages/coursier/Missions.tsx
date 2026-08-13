@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
+import { getInteretState } from '@/lib/offreInteret';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -182,7 +184,13 @@ export default function CoursierMissions() {
           </div>
         </div>
 
-        
+        <div className="flex items-center gap-2 flex-wrap">
+          <ClientInteretBadge statutOffre={mission.offres?.statut} />
+          {getInteretState(mission.offres?.statut).key === 'attente' && (
+            <span className="text-[11px] text-amber-700">À CONFIRMER — réponse client en attente</span>
+          )}
+        </div>
+
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
           {format(new Date(mission.date_visite), "EEE dd MMM", { locale: fr })}{' '}

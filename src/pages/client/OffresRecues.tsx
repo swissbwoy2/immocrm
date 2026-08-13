@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { OffreInteretPrompt } from "@/components/client/OffreInteretPrompt";
 import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
 import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
 import { Loader2 } from "lucide-react";
@@ -1403,6 +1404,17 @@ const OffresRecues = () => {
                         <span>Disponible dès le <strong>{offre.disponibilite}</strong></span>
                       </div>
                     )}
+
+                    {/* Intérêt client — question claire */}
+                    {['envoyee', 'vue', 'interesse', 'refusee', 'visite_planifiee'].includes(offre.statut) && (
+                      <OffreInteretPrompt
+                        offre={offre}
+                        visites={visites}
+                        onRespond={(statut) => updateStatut(offre.id, statut)}
+                      />
+                    )}
+
+
 
                     {/* Chance Indicator */}
                     {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 

@@ -13,6 +13,7 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 
 
 export default function AdminCoursiers() {
@@ -34,8 +35,8 @@ export default function AdminCoursiers() {
     try {
       const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
         supabase.from('coursiers').select('*, profiles:user_id(prenom, nom, email, telephone)').order('created_at', { ascending: false }),
-        supabase.from('visites').select('*, offres(adresse), agents:agent_id(id, user_id, profiles:user_id(prenom, nom)), coursiers:coursier_id(prenom, nom, profiles:user_id(prenom, nom))').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(100),
-        supabase.from('visites').select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).in('statut', ['planifiee', 'confirmee', 'proposee']).gte('date_visite', new Date().toISOString()).order('date_visite', { ascending: true }).limit(50),
+        supabase.from('visites').select('*, offres(adresse, statut), agents:agent_id(id, user_id, profiles:user_id(prenom, nom)), coursiers:coursier_id(prenom, nom, profiles:user_id(prenom, nom))').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(100),
+        supabase.from('visites').select('*, offres(adresse, statut), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).in('statut', ['planifiee', 'confirmee', 'proposee']).gte('date_visite', new Date().toISOString()).order('date_visite', { ascending: true }).limit(50),
       ]);
       setCoursiers(coursiersData || []);
       setMissions(missionsData || []);
@@ -311,12 +312,14 @@ export default function AdminCoursiers() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{v.adresse || v.offres?.adresse || 'Adresse non renseignée'}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                               <Calendar className="h-3 w-3 shrink-0" />
                               {format(new Date(v.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
                               <span className="truncate">• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
+                              <ClientInteretBadge statutOffre={v.offres?.statut} />
                             </div>
                           </div>
+
                         </div>
                         <Button
                           size="sm"
