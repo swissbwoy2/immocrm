@@ -849,12 +849,24 @@ export default function AgentVisites() {
             </div>
           )}
 
+          {/* Intérêt client */}
+          <div className="mb-3">
+            <ClientInteretBadge statutOffre={visite.offres?.statut} />
+            {getInteretState(visite.offres?.statut).key === 'attente' && (
+              <p className="text-[11px] text-amber-700 mt-1">
+                À CONFIRMER — en attente de la réponse du client
+              </p>
+            )}
+          </div>
+
           {/* Notes */}
           {visite.notes && (
             <p className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2 rounded-lg mb-4 line-clamp-2">
               💡 {visite.notes}
             </p>
           )}
+          
+
           
           {/* Date/time footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border/50">
