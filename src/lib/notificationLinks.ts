@@ -334,20 +334,24 @@ export function getCorrectNotificationLink(
   //    deep-link params (?visiteId=, ?offreId=, ?conversationId=, ?offre=...).
   //    We only rewrite it when it targets another role space.
   if (stored && stored.startsWith('/')) {
-    const [storedPath, storedQuery] = stored.split('?');
+    const qIndex = stored.indexOf('?');
+    const storedPath = qIndex >= 0 ? stored.slice(0, qIndex) : stored;
+    const storedQuery = qIndex >= 0 ? stored.slice(qIndex + 1) : '';
     const linkRole = roleOfPath(storedPath);
+    const mergedQuery = mergeMetadataIntoQuery(storedPath, storedQuery, metadata);
 
     if (!linkRole || linkRole === role) {
-      return stored;
+      return mergedQuery ? `${storedPath}?${mergedQuery}` : storedPath;
     }
 
     // Role mismatch: keep the params but move to the current role's space.
     const mapped = NOTIFICATION_ROUTES[notificationType]?.[role];
     if (mapped) {
-      return storedQuery ? `${mapped}?${storedQuery}` : mapped;
+      const mappedPath = mapped.split('?')[0];
+      return mergedQuery ? `${mappedPath}?${mergedQuery}` : mappedPath;
     }
     const swapped = storedPath.replace(/^\/(admin|agent|client|apporteur)/, `/${role}`);
-    return storedQuery ? `${swapped}?${storedQuery}` : swapped;
+    return mergedQuery ? `${swapped}?${mergedQuery}` : swapped;
   }
 
   // 2) No usable stored link: rebuild one from the type mapping + metadata.
@@ -357,7 +361,10 @@ export function getCorrectNotificationLink(
   if (metadata) {
     if (metadata.visite_id) params.set('visiteId', metadata.visite_id);
     if (metadata.conversation_id) params.set('conversationId', metadata.conversation_id);
-    if (metadata.offre_id) params.set('offreId', metadata.offre_id);
+    if (metadata.offre_id) {
+      if (baseUrl.includes('/offres-auto')) params.set('offre', metadata.offre_id);
+      else params.set('offreId', metadata.offre_id);
+    }
     if (metadata.candidature_id) params.set('candidatureId', metadata.candidature_id);
     if (metadata.client_id) params.set('clientId', metadata.client_id);
     if (metadata.client_user_id) params.set('clientId', metadata.client_user_id);
