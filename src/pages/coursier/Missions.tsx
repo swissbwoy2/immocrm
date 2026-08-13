@@ -182,7 +182,13 @@ export default function CoursierMissions() {
           </div>
         </div>
 
-        
+        <div className="flex items-center gap-2 flex-wrap">
+          <ClientInteretBadge statutOffre={mission.offres?.statut} />
+          {getInteretState(mission.offres?.statut).key === 'attente' && (
+            <span className="text-[11px] text-amber-700">À CONFIRMER — réponse client en attente</span>
+          )}
+        </div>
+
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
           {format(new Date(mission.date_visite), "EEE dd MMM", { locale: fr })}{' '}
