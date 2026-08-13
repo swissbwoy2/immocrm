@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,7 +177,8 @@ serve(async (req) => {
       const lieuSignature = candidature.lieu_signature || "Chemin de l'Esparcette 5, 1023 Crissier";
 
       // Send email if Resend is configured
-      if (resend) {
+      const emailOptOut = await canSendNotificationEmail(supabase, { userId: recipientUserId, email: recipientEmail });
+      if (resend && emailOptOut.allowed) {
         try {
           const emailHtml = `
             <!DOCTYPE html>

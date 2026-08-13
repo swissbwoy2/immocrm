@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -256,9 +257,13 @@ serve(async (req) => {
         continue;
       }
 
-      // Check if user has email notifications enabled
-      if (profile.notifications_email === false) {
-        console.log(`User ${notification.user_id} has email notifications disabled, marking as sent`);
+      // Vérifie les préférences email (profil + désinscriptions)
+      const optOut = await canSendNotificationEmail(supabase, {
+        userId: notification.user_id,
+        email: profile.email,
+      });
+      if (!optOut.allowed) {
+        console.log(`Email skipped for ${notification.user_id} (${optOut.reason})`);
         processedIds.push(notification.id);
         skippedCount++;
         continue;
