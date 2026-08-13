@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { OffreInteretPrompt } from "@/components/client/OffreInteretPrompt";
 import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
 import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
 import { Loader2 } from "lucide-react";
