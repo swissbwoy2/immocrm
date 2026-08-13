@@ -5,7 +5,7 @@
 
 type UserRole = 'admin' | 'agent' | 'client' | 'apporteur';
 
-interface NotificationMetadata {
+export interface NotificationMetadata {
   visite_id?: string;
   conversation_id?: string;
   offre_id?: string;
