@@ -673,7 +673,16 @@ export default function AgentVisites() {
     delegueesPending: visitesDelegueesPending.length,
   };
 
+  const visitesAVenirNonUrgentes = visitesAVenir.filter(v => !urgentIds.has(v.id));
+  const visitesAVenirConfirmees = visitesAVenirNonUrgentes.filter(
+    v => getInteretState(v.offres?.statut).key !== 'attente'
+  );
+  const visitesAVenirAConfirmer = visitesAVenirNonUrgentes.filter(
+    v => getInteretState(v.offres?.statut).key === 'attente'
+  );
+
   if (loading) {
+
     return (
       <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
         <div className="p-4 md:p-8 space-y-6">
