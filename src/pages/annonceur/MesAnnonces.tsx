@@ -29,7 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
+import {
   Plus, 
   Search, 
   Eye, 
@@ -39,7 +39,12 @@ import {
   Copy, 
   Trash2,
   ExternalLink,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Pause,
+  Play,
+  RefreshCw,
+  MessageSquare,
+  AlertCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -52,6 +57,7 @@ const statusColors: Record<string, string> = {
   brouillon: 'bg-gray-500/20 text-gray-700 border-gray-500/30',
   refuse: 'bg-red-500/20 text-red-700 border-red-500/30',
   expire: 'bg-purple-500/20 text-purple-700 border-purple-500/30',
+  suspendu: 'bg-orange-500/20 text-orange-700 border-orange-500/30',
 };
 
 const statusLabels: Record<string, string> = {
@@ -60,6 +66,7 @@ const statusLabels: Record<string, string> = {
   brouillon: 'Brouillon',
   refuse: 'Refusée',
   expire: 'Expirée',
+  suspendu: 'En pause',
 };
 
 export default function MesAnnonces() {
@@ -152,6 +159,47 @@ export default function MesAnnonces() {
     },
   });
 
+  // Pause / réactivation
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, statut }: { id: string; statut: 'publie' | 'suspendu' }) => {
+      const { error } = await supabase
+        .from('annonces_publiques')
+        .update({ statut })
+        .eq('id', id);
+      if (error) throw error;
+      return statut;
+    },
+    onSuccess: (statut) => {
+      queryClient.invalidateQueries({ queryKey: ['mes-annonces'] });
+      toast.success(statut === 'suspendu' ? 'Annonce mise en pause' : 'Annonce réactivée');
+    },
+    onError: () => toast.error('Erreur lors de la mise à jour'),
+  });
+
+  // Renouvellement (repousse la date d'expiration)
+  const renewMutation = useMutation({
+    mutationFn: async (annonce: any) => {
+      const days = annonce.duree_publication || 60;
+      const base = annonce.date_expiration && new Date(annonce.date_expiration) > new Date()
+        ? new Date(annonce.date_expiration)
+        : new Date();
+      base.setDate(base.getDate() + days);
+      const { error } = await supabase
+        .from('annonces_publiques')
+        .update({
+          date_expiration: base.toISOString(),
+          statut: annonce.statut === 'expire' ? 'publie' : annonce.statut,
+        })
+        .eq('id', annonce.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mes-annonces'] });
+      toast.success('Annonce renouvelée');
+    },
+    onError: () => toast.error('Erreur lors du renouvellement'),
+  });
+
   const getMainPhoto = (photos: any[]) => {
     if (!photos || photos.length === 0) return null;
     const main = photos.find(p => p.est_principale);
@@ -206,6 +254,7 @@ export default function MesAnnonces() {
               <SelectItem value="en_attente">En attente</SelectItem>
               <SelectItem value="brouillon">Brouillons</SelectItem>
               <SelectItem value="refuse">Refusées</SelectItem>
+              <SelectItem value="suspendu">En pause</SelectItem>
               <SelectItem value="expire">Expirées</SelectItem>
             </SelectContent>
           </Select>
@@ -226,6 +275,9 @@ export default function MesAnnonces() {
                 <TableHead className="text-center">
                   <Heart className="h-4 w-4 inline" />
                 </TableHead>
+                <TableHead className="text-center">
+                  <MessageSquare className="h-4 w-4 inline" />
+                </TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -240,13 +292,14 @@ export default function MesAnnonces() {
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                   </TableRow>
                 ))
               ) : annonces?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={9} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <ImageIcon className="h-8 w-8" />
                       <p>Aucune annonce trouvée</p>
@@ -291,8 +344,19 @@ export default function MesAnnonces() {
                           variant="outline" 
                           className={statusColors[annonce.statut || 'brouillon']}
                         >
-                          {statusLabels[annonce.statut || 'brouillon']}
+                          {statusLabels[annonce.statut || 'brouillon'] || annonce.statut}
                         </Badge>
+                        {annonce.statut === 'refuse' && annonce.motif_refus && (
+                          <p className="mt-1 flex items-start gap-1 text-xs text-destructive max-w-[220px]">
+                            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span className="line-clamp-2">{annonce.motif_refus}</span>
+                          </p>
+                        )}
+                        {annonce.statut === 'publie' && annonce.date_expiration && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Expire le {format(new Date(annonce.date_expiration), 'dd MMM yyyy', { locale: fr })}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {annonce.prix?.toLocaleString('fr-CH')} CHF
@@ -303,6 +367,9 @@ export default function MesAnnonces() {
                       </TableCell>
                       <TableCell className="text-center">
                         {annonce.nb_favoris || 0}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {annonce.nb_contacts || 0}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {format(new Date(annonce.created_at || ''), 'dd MMM yyyy', { locale: fr })}
@@ -335,6 +402,28 @@ export default function MesAnnonces() {
                               <Copy className="h-4 w-4 mr-2" />
                               Dupliquer
                             </DropdownMenuItem>
+                            {annonce.statut === 'publie' && (
+                              <DropdownMenuItem
+                                onClick={() => toggleStatusMutation.mutate({ id: annonce.id, statut: 'suspendu' })}
+                              >
+                                <Pause className="h-4 w-4 mr-2" />
+                                Mettre en pause
+                              </DropdownMenuItem>
+                            )}
+                            {annonce.statut === 'suspendu' && (
+                              <DropdownMenuItem
+                                onClick={() => toggleStatusMutation.mutate({ id: annonce.id, statut: 'publie' })}
+                              >
+                                <Play className="h-4 w-4 mr-2" />
+                                Réactiver
+                              </DropdownMenuItem>
+                            )}
+                            {(annonce.statut === 'publie' || annonce.statut === 'expire') && (
+                              <DropdownMenuItem onClick={() => renewMutation.mutate(annonce)}>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Renouveler
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-destructive"

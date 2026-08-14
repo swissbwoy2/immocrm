@@ -87,23 +87,34 @@ export function StepLocalisation({ formData, updateFormData }: StepLocalisationP
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label>Canton *</Label>
-        <Select
-          value={formData.canton}
-          onValueChange={(value) => updateFormData({ canton: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionner un canton" />
-          </SelectTrigger>
-          <SelectContent>
-            {cantons.map((canton) => (
-              <SelectItem key={canton} value={canton}>
-                {canton}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Canton *</Label>
+          <Select
+            value={formData.canton}
+            onValueChange={(value) => updateFormData({ canton: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionner un canton" />
+            </SelectTrigger>
+            <SelectContent>
+              {cantons.map((canton) => (
+                <SelectItem key={canton} value={canton}>
+                  {canton}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="quartier">Quartier</Label>
+          <Input
+            id="quartier"
+            placeholder="Ex : Sous-Gare, Chailly..."
+            value={formData.quartier}
+            onChange={(e) => updateFormData({ quartier: e.target.value })}
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
