@@ -225,7 +225,7 @@ export default function AnnonceDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
         <div className="pt-20 pb-12">
           <div className="container mx-auto px-4">
@@ -248,7 +248,7 @@ export default function AnnonceDetail() {
 
   if (error || !annonce) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
         <div className="pt-32 pb-12 text-center">
           <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -263,7 +263,7 @@ export default function AnnonceDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
 
       {/* Breadcrumb */}

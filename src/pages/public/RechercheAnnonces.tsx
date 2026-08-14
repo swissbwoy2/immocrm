@@ -332,7 +332,7 @@ export default function RechercheAnnonces() {
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
 
       {/* Search Bar - Sticky */}
