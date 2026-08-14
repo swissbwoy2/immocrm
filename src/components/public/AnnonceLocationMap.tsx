@@ -36,20 +36,31 @@ export function AnnonceLocationMap({
   // Geocode address if no coordinates provided
   useEffect(() => {
     if (!isLoaded || isFallback) return;
-    if (latitude !== null && longitude !== null) {
-      setGeocodedPosition({ lat: latitude, lng: longitude });
+
+    const lat = latitude === null || latitude === undefined ? NaN : Number(latitude);
+    const lng = longitude === null || longitude === undefined ? NaN : Number(longitude);
+    const valid =
+      Number.isFinite(lat) && Number.isFinite(lng) &&
+      Math.abs(lat) <= 90 && Math.abs(lng) <= 180 &&
+      !(lat === 0 && lng === 0);
+
+    if (valid) {
+      setGeocodedPosition({ lat, lng });
       return;
     }
 
     // Try to geocode the address
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: fullAddress }, (results, status) => {
+    geocoder.geocode({ address: fullAddress, region: 'ch' }, (results, status) => {
       if (status === 'OK' && results && results[0]) {
         const location = results[0].geometry.location;
         setGeocodedPosition({ lat: location.lat(), lng: location.lng() });
+      } else {
+        setGeocodedPosition(null);
       }
     });
   }, [isLoaded, isFallback, latitude, longitude, fullAddress]);
+
 
   // Initialize map
   useEffect(() => {
