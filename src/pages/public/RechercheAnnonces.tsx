@@ -660,7 +660,9 @@ export default function RechercheAnnonces() {
                   <SelectItem value="surface">Surface</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
             </div>
+
           </div>
 
           {/* Scrollable list */}
