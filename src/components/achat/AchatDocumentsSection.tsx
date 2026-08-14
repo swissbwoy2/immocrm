@@ -89,9 +89,9 @@ export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps)
   });
 
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-        <FileText className="h-5 w-5 text-sky-600" />
+        <FileText className="h-5 w-5 text-primary" />
         Documents pour la tenue des charges
       </h2>
       <p className="text-xs text-muted-foreground mb-5">

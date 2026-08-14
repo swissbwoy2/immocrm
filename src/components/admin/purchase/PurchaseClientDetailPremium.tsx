@@ -118,12 +118,12 @@ export function PurchaseClientDetailPremium({
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 flex items-center gap-3 animate-fade-in">
+          <div className="rounded-xl border border-primary/20/30 bg-sky-500/10 p-4 flex items-center gap-3 animate-fade-in">
             <div className="p-2 rounded-full bg-sky-500/20">
-              <CheckCircle2 className="w-5 h-5 text-sky-600" />
+              <CheckCircle2 className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-sky-600 dark:text-sky-400">✅ Parcours achat actif</p>
+              <p className="font-semibold text-primary dark:text-primary">✅ Parcours achat actif</p>
               <p className="text-sm text-muted-foreground">
                 {prog ? `Mandat achat : 6 mois · ${doneSteps}/${steps.length} étapes complétées` : 'Mandat achat : 6 mois'}
               </p>
@@ -154,7 +154,7 @@ export function PurchaseClientDetailPremium({
                     {profile.prenom} {profile.nom}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <Badge className="bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30 backdrop-blur-sm">
+                    <Badge className="bg-sky-500/20 text-primary dark:text-primary border-primary/20/30 backdrop-blur-sm">
                       <Key className="w-3 h-3 mr-1" />
                       Acheteur
                     </Badge>
@@ -174,13 +174,13 @@ export function PurchaseClientDetailPremium({
                       </Badge>
                     )}
                     {financing?.statut_bancaire && (
-                      <Badge className="bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 backdrop-blur-sm text-xs">
+                      <Badge className="bg-indigo-500/20 text-primary dark:text-primary border-primary/20/30 backdrop-blur-sm text-xs">
                         <Shield className="w-3 h-3 mr-1" />
                         Banque : {financing.statut_bancaire}
                       </Badge>
                     )}
                     {!profile.actif && (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 backdrop-blur-sm animate-pulse-soft text-xs">
+                      <Badge variant="outline" className="bg-blue-500/10 text-primary border-primary/20/30 backdrop-blur-sm animate-pulse-soft text-xs">
                         <Mail className="w-3 h-3 mr-1" />
                         Non activé
                       </Badge>
@@ -218,7 +218,7 @@ export function PurchaseClientDetailPremium({
                     </div>
                     <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
                       prog.jourActuel < 90
-                        ? 'bg-sky-500/20 text-sky-600 dark:text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)]'
+                        ? 'bg-sky-500/20 text-primary dark:text-primary shadow-[0_0_15px_rgba(14,165,233,0.2)]'
                         : prog.jourActuel < 150
                         ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
                         : 'bg-red-500/20 text-red-600 dark:text-red-400 animate-pulse'
@@ -256,7 +256,7 @@ export function PurchaseClientDetailPremium({
                 variant="outline"
                 className={`w-full sm:w-auto group backdrop-blur-sm border-border/50 transition-all duration-300 ${
                   !profile.actif
-                    ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 hover:bg-blue-500/20 animate-pulse-soft'
+                    ? 'bg-blue-500/10 border-primary/20/30 text-primary hover:bg-blue-500/20 animate-pulse-soft'
                     : 'bg-card/50 hover:bg-primary/10 hover:border-primary/30'
                 }`}
                 onClick={onInvite}

@@ -108,6 +108,10 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
         .maybeSingle();
       prj = data;
     }
+    // Parcours achat : la durée du mandat est verrouillée à 180 jours minimum (6 mois).
+    if (prj) {
+      prj = { ...prj, duree_progression_jours: Math.max(180, Number((prj as any).duree_progression_jours) || 0) };
+    }
     setProject(prj as any);
 
     if (!prj) {
@@ -169,7 +173,21 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
 
   useEffect(() => { void reload(); }, [reload]);
 
-  const computed = financing ? computeFinancing(financing, settings) : null;
+  // Les revenus et fonds propres des co-acquéreurs entrent dans la capacité d'achat.
+  const coAcheteurs: any[] = Array.isArray((project as any)?.co_acheteurs) ? (project as any).co_acheteurs : [];
+  const coRevenus = coAcheteurs.reduce((acc, c) => acc + (Number(c?.revenu_annuel) || 0), 0);
+  const coFondsPropres = coAcheteurs.reduce((acc, c) => acc + (Number(c?.fonds_propres) || 0), 0);
+
+  const computed = financing
+    ? computeFinancing(
+        {
+          ...financing,
+          autres_revenus: (Number(financing.autres_revenus) || 0) + coRevenus,
+          placements: (Number(financing.placements) || 0) + coFondsPropres,
+        },
+        settings,
+      )
+    : null;
 
   const createProject = useCallback(async (clientId: string, userId: string | null, agentId: string | null) => {
     // idempotent: skip if a project already exists for this client OR user.
@@ -226,7 +244,11 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
 
   const updateProject = useCallback(async (patch: Partial<PurchaseProject>) => {
     if (!project) return;
-    await supabase.from('purchase_projects').update(patch).eq('id', project.id);
+    const safePatch: Partial<PurchaseProject> = { ...patch };
+    if (safePatch.duree_progression_jours !== undefined) {
+      safePatch.duree_progression_jours = Math.max(180, Number(safePatch.duree_progression_jours) || 0);
+    }
+    await supabase.from('purchase_projects').update(safePatch).eq('id', project.id);
     await reload();
   }, [project, reload]);
 

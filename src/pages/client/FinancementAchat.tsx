@@ -17,7 +17,7 @@ export default function FinancementAchat() {
   }, []);
 
   if (loading) {
-    return <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-sky-600" /></div>;
+    return <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   if (!project) {
@@ -30,7 +30,7 @@ export default function FinancementAchat() {
     <PremiumPageShellV2>
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Banknote className="h-6 w-6 text-sky-600" /> Financement de votre projet d'achat
+          <Banknote className="h-6 w-6 text-primary" /> Financement de votre projet d'achat
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Capacité d'achat, fonds propres, statut bancaire et prochaines étapes.
@@ -40,7 +40,7 @@ export default function FinancementAchat() {
       <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
 
       {!computed && (
-        <Card className="p-6 mt-4 border-sky-100">
+        <Card className="p-6 mt-4 border-primary/20">
           <p className="text-sm text-muted-foreground">
             Votre profil de financement sera complété par votre conseiller après vos premiers échanges.
           </p>

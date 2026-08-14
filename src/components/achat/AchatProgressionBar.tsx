@@ -15,16 +15,16 @@ export function AchatProgressionBar({ dateDebut, dureeJours = 180, stepsDone = 0
 
   const countdownColor =
     jourRestant > 60
-      ? 'bg-sky-100 text-sky-700 border-sky-200'
+      ? 'bg-primary/10 text-primary border-primary/20'
       : jourRestant > 21
       ? 'bg-amber-100 text-amber-700 border-amber-200'
       : 'bg-red-100 text-red-700 border-red-200';
 
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-sky-600" />
+          <ShieldCheck className="h-5 w-5 text-primary" />
           Progression de votre accompagnement achat
         </h2>
         <Badge variant="outline" className={`border ${countdownColor}`}>

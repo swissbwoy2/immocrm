@@ -763,7 +763,7 @@ serve(async (req) => {
               statut_acompte: 'a_payer',
               montant_acompte: 2499,
               montant_mandat: 4999,
-              duree_progression_jours: 60,
+              duree_progression_jours: 180,
               date_debut_progression: null,
               // date_debut_progression: NULL — démarre seulement à l'activation admin
             })
@@ -788,7 +788,7 @@ serve(async (req) => {
               statut_mandat: purchaseMandateStatus,
               montant_acompte: 2499,
               montant_mandat: 4999,
-              duree_progression_jours: 60,
+              duree_progression_jours: 180,
             })
             .eq('id', projectId);
         }

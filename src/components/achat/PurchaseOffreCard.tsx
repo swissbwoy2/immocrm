@@ -14,11 +14,11 @@ interface PurchaseOffreCardProps {
 }
 
 const STATUT_LABEL: Record<string, { label: string; color: string }> = {
-  envoyee:              { label: 'Bien proposé', color: 'bg-sky-100 text-sky-700 border-sky-200' },
+  envoyee:              { label: 'Bien proposé', color: 'bg-primary/10 text-primary border-primary/20' },
   vue:                  { label: 'Vu', color: 'bg-zinc-100 text-zinc-700 border-zinc-200' },
   interesse:            { label: 'Intéressé', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  visite_planifiee:     { label: 'Visite planifiée', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
-  visite_effectuee:     { label: 'Visite effectuée', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  visite_planifiee:     { label: 'Visite planifiée', color: 'bg-primary/10 text-primary border-primary/20' },
+  visite_effectuee:     { label: 'Visite effectuée', color: 'bg-primary/10 text-primary border-primary/20' },
   offre_envisagee:      { label: 'Offre d\'achat envisagée', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   refusee:              { label: 'Écarté', color: 'bg-zinc-100 text-zinc-600 border-zinc-200' },
 };
@@ -29,13 +29,13 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
   const isRefused = offre.statut === 'refusee';
 
   return (
-    <Card className="overflow-hidden border-sky-100 bg-gradient-to-br from-white via-sky-50/30 to-white hover:border-sky-200 hover:shadow-md transition">
+    <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-white via-accent/5 to-white hover:border-primary/20 hover:shadow-md transition">
       <div className="p-5 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1.5">
-              <div className="h-9 w-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                 <Home className="h-4.5 w-4.5" />
               </div>
               <div className="min-w-0">
@@ -51,12 +51,12 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
         </div>
 
         {/* Prix de vente */}
-        <div className="rounded-xl bg-sky-600/5 border border-sky-200 px-4 py-3 flex items-center justify-between">
+        <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 flex items-center justify-between">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-sky-700 font-semibold">Prix de vente</div>
-            <div className="text-2xl font-bold text-sky-700">{formatCHF(Number(offre.prix) || 0)}</div>
+            <div className="text-[10px] uppercase tracking-wider text-primary font-semibold">Prix de vente</div>
+            <div className="text-2xl font-bold text-primary">{formatCHF(Number(offre.prix) || 0)}</div>
           </div>
-          <Banknote className="h-7 w-7 text-sky-600/60" />
+          <Banknote className="h-7 w-7 text-primary/60" />
         </div>
 
         {/* Stats */}
@@ -80,7 +80,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
             href={offre.lien_annonce}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-sky-700 hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
           >
             Annonce originale <ExternalLink className="h-3 w-3" />
           </a>
@@ -88,7 +88,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
 
         {/* Carte Google Maps */}
         {!compact && offre.adresse && (
-          <div className="rounded-xl overflow-hidden border border-sky-100 shadow-sm">
+          <div className="rounded-xl overflow-hidden border border-primary/20 shadow-sm">
             <iframe
               title={`Carte ${offre.adresse}`}
               src={`https://www.google.com/maps?q=${encodeURIComponent(offre.adresse)}&output=embed`}
@@ -103,7 +103,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(offre.adresse)}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-1.5 text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 py-2 transition"
+              className="flex items-center justify-center gap-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 py-2 transition"
             >
               <MapPin className="h-3.5 w-3.5" /> Ouvrir dans Google Maps
             </a>
@@ -127,7 +127,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
               </Button>
             )}
             {onRequestVisit && (
-              <Button size="sm" variant="outline" onClick={onRequestVisit} className="border-sky-300 text-sky-700 hover:bg-sky-50">
+              <Button size="sm" variant="outline" onClick={onRequestVisit} className="border-primary/20 text-primary hover:bg-primary/10">
                 <CalendarCheck className="h-4 w-4 mr-1.5" /> Demander une visite
               </Button>
             )}
@@ -145,7 +145,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
 
 function Stat({ icon: Icon, label, value }: any) {
   return (
-    <div className="rounded-lg bg-white border border-sky-100 px-3 py-2">
+    <div className="rounded-lg bg-white border border-primary/20 px-3 py-2">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         <Icon className="h-3 w-3" /> {label}
       </div>
