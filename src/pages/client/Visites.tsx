@@ -25,7 +25,7 @@ export default function Visites() {
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [submittingVisiteId, setSubmittingVisiteId] = useState<string | null>(null);
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Set());
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Handle URL parameter for auto-expanding visite
   useEffect(() => {
