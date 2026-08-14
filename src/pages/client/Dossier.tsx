@@ -952,7 +952,7 @@ export default function Dossier() {
               { icon: Home, label: 'Type de bien', value: client.type_bien || 'Non renseigné' },
               { icon: Home, label: 'Nombre de pièces souhaité', value: client.pieces ? `${client.pieces} pièces` : 'Non renseigné' },
               { icon: DollarSign, label: isAcheteur ? "Prix d'achat recherché" : 'Budget maximum', value: `${(client.budget_max || 0).toLocaleString('fr-CH')} CHF` },
-              { icon: MapPin, label: parseZones(client.region_recherche).length > 1 ? 'Zones recherchées' : 'Zone recherchée', value: formatZones(client.region_recherche) },
+              { icon: MapPin, label: parseZones(client.region_recherche).length > 1 ? 'Zones recherchées' : 'Zone recherchée', value: formatZones(parseZones(client.region_recherche)) || 'Non renseigné' },
             ]}
           />
 
