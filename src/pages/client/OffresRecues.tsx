@@ -851,8 +851,8 @@ const OffresRecues = () => {
         dossier_complet: false
       });
 
-      // NE PAS modifier le statut de l'offre ici !
-      // L'offre reste à son statut actuel jusqu'à ce que l'agent envoie réellement le dossier
+      // L'offre passe en 'souhaite_postuler' pour apparaître dans l'onglet Postulations (admin/agent)
+      await supabase.from('offres').update({ statut: 'souhaite_postuler' }).eq('id', offre.id);
 
       if (clientData.agent_id) {
         let { data: conv } = await supabase
