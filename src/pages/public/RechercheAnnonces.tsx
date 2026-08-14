@@ -289,6 +289,48 @@ export default function RechercheAnnonces() {
     return count;
   }, [transactionType, searchLocation, category, prixMin, prixMax, piecesMin, piecesMax, surfaceMin]);
 
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
+
+  const saveSearchAlert = async () => {
+    if (!user) {
+      toast.info('Connectez-vous pour créer une alerte e-mail');
+      return;
+    }
+    setIsSavingSearch(true);
+    try {
+      const nom = [
+        transactionType === 'location' ? 'Location' : transactionType === 'vente' ? 'Vente' : 'Tous biens',
+        searchLocation || 'Suisse',
+      ].join(' — ');
+
+      const { error } = await supabase.from('recherches_sauvegardees').insert({
+        user_id: user.id,
+        nom,
+        type_transaction: transactionType || null,
+        categorie_id: category ? categories.find((c) => c.slug === category)?.id ?? null : null,
+        ville: searchLocation || null,
+        rayon_km: radiusKm,
+        latitude: searchCoords?.lat ?? null,
+        longitude: searchCoords?.lng ?? null,
+        prix_min: prixMin ? parseInt(prixMin) : null,
+        prix_max: prixMax ? parseInt(prixMax) : null,
+        pieces_min: piecesMin ? parseFloat(piecesMin) : null,
+        pieces_max: piecesMax ? parseFloat(piecesMax) : null,
+        surface_min: surfaceMin ? parseInt(surfaceMin) : null,
+        alerte_active: true,
+        frequence_alerte: 'quotidien',
+      });
+      if (error) throw error;
+      toast.success('Alerte créée : vous serez averti des nouvelles annonces');
+    } catch {
+      toast.error("Impossible de créer l'alerte");
+    } finally {
+      setIsSavingSearch(false);
+    }
+  };
+
+
+
   return (
     <div className="min-h-screen bg-background">
       <PublicHeader />
