@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Save, User, DollarSign, Briefcase, Home, Heart } from 'lucide-react';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
+import { annualToMonthly, getBuyerAnnualIncome, monthlyToAnnual } from '@/lib/buyerProfile';
 
 interface EditClientProfileDialogProps {
   open: boolean;
@@ -19,10 +20,17 @@ interface EditClientProfileDialogProps {
   client: any;
   profile: any;
   onSaved: () => void;
+  /** Parcours ACHETEUR : le revenu de référence devient ANNUEL et les champs location sont masqués. */
+  isAcheteur?: boolean;
+  financing?: any;
+  onSaveFinancing?: (patch: Record<string, any>) => Promise<void>;
 }
 
-export function EditClientProfileDialog({ open, onOpenChange, client, profile, onSaved }: EditClientProfileDialogProps) {
+export function EditClientProfileDialog({ open, onOpenChange, client, profile, onSaved, isAcheteur = false, financing, onSaveFinancing }: EditClientProfileDialogProps) {
   const [saving, setSaving] = useState(false);
+  // Acheteur : source de vérité unique = revenu ANNUEL. Le mensuel est toujours dérivé.
+  const [revenuAnnuel, setRevenuAnnuel] = useState(0);
+  const [fondsPropres, setFondsPropres] = useState(0);
   const [profileData, setProfileData] = useState({
     prenom: '',
     nom: '',
@@ -111,8 +119,12 @@ export function EditClientProfileDialog({ open, onOpenChange, client, profile, o
         contact_gerance: client.contact_gerance || '',
         motif_changement: client.motif_changement || ''
       });
+      setRevenuAnnuel(getBuyerAnnualIncome(financing, client));
+      setFondsPropres(
+        Number(financing?.fonds_propres_cash) || Number(client.apport_personnel) || 0,
+      );
     }
-  }, [client, profile, open]);
+  }, [client, profile, financing, open]);
 
   const handleSave = async () => {
     if (!profileData.prenom.trim() || !profileData.nom.trim()) {
@@ -134,13 +146,28 @@ export function EditClientProfileDialog({ open, onOpenChange, client, profile, o
 
       if (profileError) throw profileError;
 
-      // Update client
+      // Update client — acheteur : revenus_mensuels est TOUJOURS dérivé du revenu annuel
+      const clientPayload: any = { ...clientData };
+      if (isAcheteur) {
+        clientPayload.revenus_mensuels = annualToMonthly(revenuAnnuel);
+        clientPayload.apport_personnel = fondsPropres;
+      }
+
       const { error: clientError } = await supabase
         .from('clients')
-        .update(clientData)
+        .update(clientPayload)
         .eq('id', client.id);
 
       if (clientError) throw clientError;
+
+      // Acheteur : synchroniser le profil de financement (recalcule la capacité d'achat)
+      if (isAcheteur && onSaveFinancing) {
+        await onSaveFinancing({
+          revenu_annuel_retenu: revenuAnnuel || null,
+          fonds_propres_cash: fondsPropres || null,
+          prix_cible: clientData.budget_max || null,
+        });
+      }
 
       toast.success('Vos informations ont été mises à jour');
       onSaved();
