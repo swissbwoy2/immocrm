@@ -143,15 +143,16 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             <Heart className={cn("h-4 w-4", isFavorite && "fill-current")} />
           </Button>
 
-          {/* Category badge - Bottom left */}
+          {/* Category badge */}
           {annonce.categories_annonces && !compact && (
-            <div className="absolute bottom-3 left-3">
+            <div className="absolute top-14 left-3">
               <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-xs font-medium shadow-sm">
                 <Building2 className="h-3 w-3 mr-1.5" />
                 {annonce.categories_annonces.nom}
               </Badge>
             </div>
           )}
+
 
           {/* Photo count indicator */}
           {!compact && annonce.photos_annonces_publiques && annonce.photos_annonces_publiques.length > 1 && (
