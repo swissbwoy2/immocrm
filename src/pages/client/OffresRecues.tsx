@@ -34,6 +34,7 @@ import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { OffreInteretPrompt } from "@/components/client/OffreInteretPrompt";
 import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
 import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
+import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
 import { Loader2 } from "lucide-react";
 
 // Skeleton card for loading state
