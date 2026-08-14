@@ -341,6 +341,35 @@ export default function Visites() {
     }
   };
 
+  const deposerCandidature = async (visite: any) => {
+    if (!user || submittingVisiteId) return;
+    setSubmittingVisiteId(visite.id);
+    try {
+      await submitVisitVideoDecision({
+        user,
+        visiteId: visite.id,
+        offreId: visite.offre_id ?? null,
+        agentIdHint: visite.agent_id ?? null,
+        address: visite.adresse || visite.offres?.adresse || '',
+        choice: 'souhaite_postuler',
+      });
+      toast({
+        title: 'Candidature transmise',
+        description: 'Votre demande de candidature a été transmise à votre agent.',
+      });
+      await loadVisites();
+    } catch (error: any) {
+      console.error('[Visites] deposerCandidature error:', error);
+      toast({
+        title: 'Erreur',
+        description: error?.message || 'Impossible de transmettre votre demande de candidature',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmittingVisiteId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
