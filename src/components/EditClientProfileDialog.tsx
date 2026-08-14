@@ -323,50 +323,98 @@ export function EditClientProfileDialog({ open, onOpenChange, client, profile, o
 
             {/* Situation financière */}
             <TabsContent value="financial" className="space-y-4 mt-0">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Revenu mensuel net (CHF)</Label>
-                  <Input
-                    type="number"
-                    value={clientData.revenus_mensuels}
-                    onChange={(e) => setClientData({ ...clientData, revenus_mensuels: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label>Budget maximum loyer (CHF)</Label>
-                  <Input
-                    type="number"
-                    value={clientData.budget_max}
-                    onChange={(e) => setClientData({ ...clientData, budget_max: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Loyer actuel (CHF)</Label>
-                  <Input
-                    type="number"
-                    value={clientData.loyer_actuel}
-                    onChange={(e) => setClientData({ ...clientData, loyer_actuel: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label>Charges mensuelles (CHF)</Label>
-                  <Input
-                    type="number"
-                    value={clientData.charges_mensuelles}
-                    onChange={(e) => setClientData({ ...clientData, charges_mensuelles: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Apport personnel disponible (CHF)</Label>
-                <Input
-                  type="number"
-                  value={clientData.apport_personnel}
-                  onChange={(e) => setClientData({ ...clientData, apport_personnel: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
+              {isAcheteur ? (
+                <>
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+                    Pour un achat, la banque raisonne en <strong>revenu annuel</strong>. Les deux champs
+                    ci-dessous restent toujours synchronisés (annuel = mensuel × 12).
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Revenu annuel du ménage (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={revenuAnnuel || ''}
+                        onChange={(e) => setRevenuAnnuel(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Revenu mensuel (dérivé, CHF)</Label>
+                      <Input
+                        type="number"
+                        value={revenuAnnuel ? annualToMonthly(revenuAnnuel) : ''}
+                        onChange={(e) => setRevenuAnnuel(monthlyToAnnual(parseFloat(e.target.value) || 0))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Prix d'achat cible (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={clientData.budget_max}
+                        onChange={(e) => setClientData({ ...clientData, budget_max: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Fonds propres disponibles (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={fondsPropres || ''}
+                        onChange={(e) => setFondsPropres(parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Revenu mensuel net (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={clientData.revenus_mensuels}
+                        onChange={(e) => setClientData({ ...clientData, revenus_mensuels: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Budget maximum loyer (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={clientData.budget_max}
+                        onChange={(e) => setClientData({ ...clientData, budget_max: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Loyer actuel (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={clientData.loyer_actuel}
+                        onChange={(e) => setClientData({ ...clientData, loyer_actuel: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Charges mensuelles (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={clientData.charges_mensuelles}
+                        onChange={(e) => setClientData({ ...clientData, charges_mensuelles: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Apport personnel disponible (CHF)</Label>
+                    <Input
+                      type="number"
+                      value={clientData.apport_personnel}
+                      onChange={(e) => setClientData({ ...clientData, apport_personnel: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
