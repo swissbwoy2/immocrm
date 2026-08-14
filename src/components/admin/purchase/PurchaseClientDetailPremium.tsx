@@ -475,16 +475,18 @@ export function PurchaseClientDetailPremium({
                     {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
-                {(financing?.revenu_annuel_retenu || client.revenus_mensuels) ? (
+                {getBuyerAnnualIncome(financing, client) > 0 ? (
                   <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 backdrop-blur-sm">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {financing?.revenu_annuel_retenu ? 'Revenu annuel retenu' : 'Revenus mensuels nets'}
-                    </p>
+                    <p className="text-xs text-muted-foreground mb-1">Revenu annuel retenu</p>
                     <p className="font-bold text-green-600 dark:text-green-400">
-                      CHF {(financing?.revenu_annuel_retenu || client.revenus_mensuels).toLocaleString('fr-CH')}
+                      CHF {getBuyerAnnualIncome(financing, client).toLocaleString('fr-CH')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      soit CHF {getBuyerMonthlyIncome(financing, client).toLocaleString('fr-CH')} / mois
                     </p>
                   </div>
                 ) : null}
+
               </div>
             </CardContent>
           </PremiumCard>
