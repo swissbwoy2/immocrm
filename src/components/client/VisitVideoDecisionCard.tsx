@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { formatSwissDateTime } from '@/lib/dateUtils';
 import { getOrCreateClientConversation } from '@/lib/clientConversation';
+import { notifyPostulationRequest, getClientDisplayName } from '@/lib/postulationRequest';
 
 interface Props {
   visite: any;
