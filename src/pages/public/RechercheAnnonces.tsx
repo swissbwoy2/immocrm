@@ -354,14 +354,15 @@ export default function RechercheAnnonces() {
                     <div className="space-y-2">
                       <Label>Type de bien</Label>
                       <Select 
-                        value={localFilters.categorie} 
-                        onValueChange={(v) => setLocalFilters(prev => ({ ...prev, categorie: v }))}
+                        value={localFilters.categorie || 'all'} 
+                        onValueChange={(v) => setLocalFilters(prev => ({ ...prev, categorie: v === 'all' ? '' : v }))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Tous les types" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Tous les types</SelectItem>
+                          <SelectItem value="all">Tous les types</SelectItem>
+
                           {categories.map(cat => (
                             <SelectItem key={cat.id} value={cat.slug}>{cat.nom}</SelectItem>
                           ))}
