@@ -96,6 +96,7 @@ const AnimatedValue = ({ value, prefix = "", suffix = "" }: { value: number; pre
 };
 function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; visites: any[]; onDone: () => void }) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [saving, setSaving] = useState<null | 'souhaite_postuler' | 'refuse'>(null);
   const relatedVisites = visites.filter((v) => v.offre_id === offre.id);
   const latestVisite = relatedVisites.sort((a, b) => {
@@ -118,9 +119,20 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
         address: offre.adresse || '',
         choice,
       });
+      toast({
+        title: choice === 'souhaite_postuler' ? 'Candidature transmise' : 'Choix enregistré',
+        description: choice === 'souhaite_postuler'
+          ? 'Votre demande de candidature a été transmise à votre agent.'
+          : 'Votre choix a été enregistré.',
+      });
       onDone();
     } catch (err: any) {
       console.error('[VideoDecisionInlineButtons]', err);
+      toast({
+        title: 'Erreur',
+        description: err?.message || 'Impossible d\'enregistrer votre choix',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(null);
     }

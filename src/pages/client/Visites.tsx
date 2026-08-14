@@ -6,13 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Calendar, Clock, MapPin, Home, 
-  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck, Eye, EyeOff, ThumbsUp, Users, Sparkles
+  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck, Eye, EyeOff, ThumbsUp, Users, Sparkles,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
-import { VisitVideoDecisionCard } from '@/components/client/VisitVideoDecisionCard';
+import { VisitVideoDecisionCard, submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 
 export default function Visites() {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export default function Visites() {
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [submittingVisiteId, setSubmittingVisiteId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Handle URL parameter for auto-expanding visite
@@ -339,6 +341,35 @@ export default function Visites() {
     }
   };
 
+  const deposerCandidature = async (visite: any) => {
+    if (!user || submittingVisiteId) return;
+    setSubmittingVisiteId(visite.id);
+    try {
+      await submitVisitVideoDecision({
+        user,
+        visiteId: visite.id,
+        offreId: visite.offre_id ?? null,
+        agentIdHint: visite.agent_id ?? null,
+        address: visite.adresse || visite.offres?.adresse || '',
+        choice: 'souhaite_postuler',
+      });
+      toast({
+        title: 'Candidature transmise',
+        description: 'Votre demande de candidature a été transmise à votre agent.',
+      });
+      await loadVisites();
+    } catch (error: any) {
+      console.error('[Visites] deposerCandidature error:', error);
+      toast({
+        title: 'Erreur',
+        description: error?.message || 'Impossible de transmettre votre demande de candidature',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmittingVisiteId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
@@ -627,9 +658,14 @@ export default function Visites() {
                       variant="outline"
                       size="lg"
                       className="w-full touch-target border-primary/30 hover:bg-primary/10"
-                      onClick={() => navigate('/client/offres-recues')}
+                      disabled={submittingVisiteId === visite.id}
+                      onClick={() => deposerCandidature(visite)}
                     >
-                      <FileCheck className="mr-2 h-5 w-5" />
+                      {submittingVisiteId === visite.id ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      ) : (
+                        <FileCheck className="mr-2 h-5 w-5" />
+                      )}
                       Déposer candidature
                     </Button>
                     <Button 
