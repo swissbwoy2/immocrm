@@ -12965,6 +12965,10 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      increment_annonce_vue: {
+        Args: { _annonce_id: string }
+        Returns: undefined
+      }
       ir_build_msg: {
         Args: {
           addr: string

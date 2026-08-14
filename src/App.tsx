@@ -47,7 +47,8 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 
 // Public portal pages
-// Portail annonces en maintenance — composants Annonces/RechercheAnnonces/AnnonceDetail retirés du routing public
+const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
+const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
@@ -327,10 +328,10 @@ const App = () => (
               <Route path="/de/datenschutz" element={<PolitiqueConfidentialiteDE />} />
 
 
-              {/* Portail annonces — en maintenance */}
-              <Route path="/annonces" element={<PortailMaintenance />} />
-              <Route path="/annonces/recherche" element={<PortailMaintenance />} />
-              <Route path="/annonces/:slug" element={<PortailMaintenance />} />
+              {/* Portail annonces public */}
+              <Route path="/annonces" element={<RechercheAnnonces />} />
+              <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
+              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
               <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
               <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
               
