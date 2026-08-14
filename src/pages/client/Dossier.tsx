@@ -40,6 +40,7 @@ import { useClientCandidates, ClientCandidate } from '@/hooks/useClientCandidate
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { usePurchaseProject, computeProgression } from '@/hooks/usePurchaseProject';
+import { getBuyerAnnualIncome, getBuyerMonthlyIncome, parseZones, formatZones } from '@/lib/buyerProfile';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { formatCHF } from '@/lib/purchaseFinancing';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
@@ -936,7 +937,9 @@ export default function Dossier() {
               { icon: Calendar, label: "Date d'engagement", value: client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : '-' },
               { icon: Calendar, label: 'Ancienneté', value: calculateAnciennete(client.date_engagement, client.anciennete_mois) || '-' },
               { icon: DollarSign, label: 'Source des revenus', value: client.source_revenus || '-' },
-              { icon: DollarSign, label: 'Revenu mensuel net', value: `${(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF` },
+              isAcheteur
+                ? { icon: DollarSign, label: 'Revenu annuel retenu', value: `${getBuyerAnnualIncome(purchaseHook.financing, client).toLocaleString('fr-CH')} CHF (soit ${getBuyerMonthlyIncome(purchaseHook.financing, client).toLocaleString('fr-CH')} CHF/mois)` }
+                : { icon: DollarSign, label: 'Revenu mensuel net', value: `${(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF` },
             ]}
           />
         </PremiumDossierSection>
@@ -949,7 +952,7 @@ export default function Dossier() {
               { icon: Home, label: 'Type de bien', value: client.type_bien || 'Non renseigné' },
               { icon: Home, label: 'Nombre de pièces souhaité', value: client.pieces ? `${client.pieces} pièces` : 'Non renseigné' },
               { icon: DollarSign, label: isAcheteur ? "Prix d'achat recherché" : 'Budget maximum', value: `${(client.budget_max || 0).toLocaleString('fr-CH')} CHF` },
-              { icon: MapPin, label: 'Région recherchée', value: client.region_recherche || 'Non renseigné' },
+              { icon: MapPin, label: parseZones(client.region_recherche).length > 1 ? 'Zones recherchées' : 'Zone recherchée', value: formatZones(client.region_recherche) },
             ]}
           />
 
