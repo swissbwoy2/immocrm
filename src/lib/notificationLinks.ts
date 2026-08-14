@@ -258,6 +258,30 @@ const NOTIFICATION_ROUTES: Record<string, Partial<Record<UserRole, string>>> = {
   extrait_poursuites_expired: { client: '/client/documents' },
 };
 
+/** Parcours du client connecté ('achat', 'location', ...) — utilisé pour router vers les bons écrans. */
+let currentClientParcoursType: string | null = null;
+
+export function setClientParcoursType(parcours: string | null) {
+  currentClientParcoursType = parcours;
+}
+
+export function getClientParcoursType(): string | null {
+  return currentClientParcoursType;
+}
+
+/** Remappe les chemins client "location" vers leurs équivalents "achat". */
+export function remapClientPathForParcours(path: string, parcours?: string | null): string {
+  const p = parcours ?? currentClientParcoursType;
+  if (p !== 'achat' || !path.startsWith('/client')) return path;
+  if (path.startsWith('/client/offres-recues')) return '/client/biens-proposes';
+  if (path.startsWith('/client/videos-recues')) return '/client/biens-selectionnes';
+  if (path.startsWith('/client/visites-deleguees')) return '/client/calendrier';
+  if (path.startsWith('/client/visites')) return '/client/calendrier';
+  if (path.startsWith('/client/mes-candidatures')) return '/client/biens-selectionnes';
+  if (path.startsWith('/client/mon-contrat')) return '/client/dossier';
+  return path;
+}
+
 /**
  * Detect user role from current URL path
  */
@@ -341,21 +365,26 @@ export function getCorrectNotificationLink(
     const mergedQuery = mergeMetadataIntoQuery(storedPath, storedQuery, metadata);
 
     if (!linkRole || linkRole === role) {
-      return mergedQuery ? `${storedPath}?${mergedQuery}` : storedPath;
+      const finalPath = role === 'client' ? remapClientPathForParcours(storedPath) : storedPath;
+      return mergedQuery ? `${finalPath}?${mergedQuery}` : finalPath;
     }
 
     // Role mismatch: keep the params but move to the current role's space.
     const mapped = NOTIFICATION_ROUTES[notificationType]?.[role];
     if (mapped) {
-      const mappedPath = mapped.split('?')[0];
+      const mappedPath = role === 'client'
+        ? remapClientPathForParcours(mapped.split('?')[0])
+        : mapped.split('?')[0];
       return mergedQuery ? `${mappedPath}?${mergedQuery}` : mappedPath;
     }
     const swapped = storedPath.replace(/^\/(admin|agent|client|apporteur)/, `/${role}`);
-    return mergedQuery ? `${swapped}?${mergedQuery}` : swapped;
+    const finalSwapped = role === 'client' ? remapClientPathForParcours(swapped) : swapped;
+    return mergedQuery ? `${finalSwapped}?${mergedQuery}` : finalSwapped;
   }
 
   // 2) No usable stored link: rebuild one from the type mapping + metadata.
   let baseUrl = NOTIFICATION_ROUTES[notificationType]?.[role] || `/${role}`;
+  if (role === 'client') baseUrl = remapClientPathForParcours(baseUrl);
 
   const params = new URLSearchParams();
   if (metadata) {

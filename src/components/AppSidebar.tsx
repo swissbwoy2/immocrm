@@ -32,6 +32,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useWhatsAppUnreadCount } from '@/hooks/useWhatsAppUnreadCount';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
 import { isPurchaseBuyer } from '@/lib/journey';
+import { setClientParcoursType } from '@/lib/notificationLinks';
+
 
 interface MenuItem {
   name: string;
@@ -221,7 +223,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           {
             label: null,
             items: [
-              { name: 'Mon projet achat', icon: LayoutDashboard, path: '/client', notifKey: null },
+              { name: 'Tableau de bord', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
               { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
               { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
@@ -230,10 +232,17 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           {
             label: 'Mon achat',
             items: [
-              { name: 'Biens proposés', icon: Home, path: '/client/biens-proposes', notifKey: null },
+              { name: 'Biens proposés', icon: Home, path: '/client/biens-proposes', notifKey: 'new_offer' },
               { name: 'Biens sélectionnés', icon: Building2, path: '/client/biens-selectionnes', notifKey: null },
               { name: 'Financement', icon: Banknote, path: '/client/financement', notifKey: null },
-              { name: 'Documents achat', icon: FileText, path: '/client/dossier', notifKey: null },
+              { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
+            ],
+          },
+          {
+            label: 'Mon dossier',
+            items: [
+              { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
+              { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
             ],
           },
           {
@@ -244,6 +253,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           },
         ];
       }
+
       if (parcoursType === 'renovation') {
         return [
           {
@@ -520,7 +530,10 @@ export function AppSidebar() {
       purchaseProject = byClient;
     }
 
-    setProfile({ ...data, parcours_type: isPurchaseBuyer(client, purchaseProject) ? 'achat' : data.parcours_type });
+    const resolvedParcours = isPurchaseBuyer(client, purchaseProject) ? 'achat' : data.parcours_type;
+    setClientParcoursType(resolvedParcours || null);
+    setProfile({ ...data, parcours_type: resolvedParcours });
+
   };
 
   const sections = useMemo(

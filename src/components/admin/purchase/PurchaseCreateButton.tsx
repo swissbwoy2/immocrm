@@ -16,10 +16,10 @@ export function PurchaseCreateButton({ clientId, userId, assignedAgentId, onCrea
   const { createProject } = usePurchaseProject({ clientId });
   const [busy, setBusy] = useState(false);
   return (
-    <Card className="p-5 border-sky-200 bg-sky-50/40">
+    <Card className="p-5 border-primary/20 bg-primary/5/40">
       <div className="flex items-start gap-3 flex-wrap">
-        <div className="p-2 rounded-full bg-sky-100">
-          <Sparkles className="h-5 w-5 text-sky-600" />
+        <div className="p-2 rounded-full bg-primary/10">
+          <Sparkles className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold">Client identifié comme acheteur</h3>

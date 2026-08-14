@@ -89,9 +89,9 @@ export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps)
   });
 
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-        <FileText className="h-5 w-5 text-sky-600" />
+        <FileText className="h-5 w-5 text-primary" />
         Documents pour la tenue des charges
       </h2>
       <p className="text-xs text-muted-foreground mb-5">
@@ -133,7 +133,7 @@ export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps)
                 <ul className="space-y-1 mt-1">
                   {cat.items.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <X className="h-3 w-3 text-zinc-300 mt-0.5 flex-shrink-0" />
+                      <X className="h-3 w-3 text-muted-foreground/50 mt-0.5 flex-shrink-0" />
                       {item}
                     </li>
                   ))}

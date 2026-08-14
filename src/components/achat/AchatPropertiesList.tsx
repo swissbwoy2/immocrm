@@ -9,18 +9,18 @@ interface AchatPropertiesListProps {
 
 const STATUT_LABEL: Record<string, { label: string; color: string }> = {
   a_analyser:           { label: 'À analyser', color: 'bg-amber-100 text-amber-700' },
-  visite_planifiee:     { label: 'Visite planifiée', color: 'bg-sky-100 text-sky-700' },
-  visite_effectuee:     { label: 'Visite effectuée', color: 'bg-indigo-100 text-indigo-700' },
+  visite_planifiee:     { label: 'Visite planifiée', color: 'bg-primary/10 text-primary' },
+  visite_effectuee:     { label: 'Visite effectuée', color: 'bg-primary/10 text-primary' },
   offre_recommandee:    { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
-  refuse:               { label: 'Écarté', color: 'bg-zinc-100 text-zinc-700' },
+  refuse:               { label: 'Écarté', color: 'bg-muted text-muted-foreground' },
   offre_envoyee:        { label: 'Offre envoyée', color: 'bg-purple-100 text-purple-700' },
 };
 
 export function AchatPropertiesList({ properties }: AchatPropertiesListProps) {
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-        <Home className="h-5 w-5 text-sky-600" />
+        <Home className="h-5 w-5 text-primary" />
         Biens sélectionnés pour votre projet
       </h2>
       {properties.length === 0 ? (
@@ -30,9 +30,9 @@ export function AchatPropertiesList({ properties }: AchatPropertiesListProps) {
       ) : (
         <div className="space-y-3">
           {properties.map((p) => {
-            const s = STATUT_LABEL[p.statut] || { label: p.statut, color: 'bg-zinc-100 text-zinc-700' };
+            const s = STATUT_LABEL[p.statut] || { label: p.statut, color: 'bg-muted text-muted-foreground' };
             return (
-              <div key={p.id} className="rounded-xl border border-border bg-card/40 p-4 hover:border-sky-200 transition">
+              <div key={p.id} className="rounded-xl border border-border bg-card/40 p-4 hover:border-primary/20 transition">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -52,12 +52,12 @@ export function AchatPropertiesList({ properties }: AchatPropertiesListProps) {
                       {p.etage != null && <span className="flex items-center gap-1"><Hash className="h-3 w-3" /> Étage {p.etage}</span>}
                     </div>
                     {p.prochaine_action && (
-                      <div className="text-xs mt-2 text-sky-700">→ {p.prochaine_action}</div>
+                      <div className="text-xs mt-2 text-primary">→ {p.prochaine_action}</div>
                     )}
                   </div>
                   {p.lien_annonce && (
                     <a href={p.lien_annonce} target="_blank" rel="noreferrer"
-                       className="text-xs text-sky-700 hover:underline flex items-center gap-1">
+                       className="text-xs text-primary hover:underline flex items-center gap-1">
                       Annonce <ExternalLink className="h-3 w-3" />
                     </a>
                   )}

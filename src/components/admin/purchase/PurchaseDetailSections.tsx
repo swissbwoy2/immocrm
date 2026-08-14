@@ -22,8 +22,8 @@ interface Props {
 
 const STATUT_PROP: Record<string, { label: string; color: string }> = {
   a_analyser: { label: 'À analyser', color: 'bg-amber-100 text-amber-700' },
-  visite_planifiee: { label: 'Visite planifiée', color: 'bg-sky-100 text-sky-700' },
-  visite_effectuee: { label: 'Visite effectuée', color: 'bg-indigo-100 text-indigo-700' },
+  visite_planifiee: { label: 'Visite planifiée', color: 'bg-primary/10 text-primary' },
+  visite_effectuee: { label: 'Visite effectuée', color: 'bg-primary/10 text-primary' },
   offre_recommandee: { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
   offre_envoyee: { label: 'Offre envoyée', color: 'bg-purple-100 text-purple-700' },
   refuse: { label: 'Écarté', color: 'bg-zinc-100 text-zinc-700' },
@@ -31,7 +31,7 @@ const STATUT_PROP: Record<string, { label: string; color: string }> = {
 
 const STATUT_VISIT: Record<string, { label: string; color: string }> = {
   a_analyser: { label: 'À analyser', color: 'bg-amber-100 text-amber-700' },
-  valide_contre_visite: { label: 'Contre-visite', color: 'bg-sky-100 text-sky-700' },
+  valide_contre_visite: { label: 'Contre-visite', color: 'bg-primary/10 text-primary' },
   refuse: { label: 'Refusé', color: 'bg-zinc-100 text-zinc-700' },
   offre_recommandee: { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
 };
@@ -78,7 +78,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
         <CardContent className="pb-5">
           <div className="flex items-start justify-between flex-wrap gap-3 mb-2">
             <div className="flex items-center gap-2">
-              <Badge className="bg-sky-100 text-sky-700 border-0 dark:bg-sky-900/40 dark:text-sky-300">{h.project.statut}</Badge>
+              <Badge className="bg-primary/10 text-primary border-0 dark:bg-sky-900/40 dark:text-sky-300">{h.project.statut}</Badge>
             </div>
             {mode === 'admin' && <ProjectMetaEditorDialog project={h.project} onSave={h.updateProject} />}
           </div>
@@ -133,7 +133,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                   : h.financing?.statut_bancaire === 'refuse' || h.financing?.statut_bancaire === 'bloque'
                   ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-0'
                   : h.financing?.statut_bancaire === 'prevalidé' || h.financing?.statut_bancaire === 'en_analyse'
-                  ? 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border-0'
+                  ? 'bg-sky-500/20 text-primary dark:text-sky-300 border-0'
                   : 'bg-muted text-muted-foreground border-0'
               }
               variant="outline"
@@ -194,12 +194,12 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                           {p.etage != null && <span className="flex items-center gap-1"><Hash className="h-3 w-3" /> Ét. {p.etage}</span>}
                           {p.annee_construction && <span>{p.annee_construction}</span>}
                         </div>
-                        {p.prochaine_action && <div className="text-xs mt-2 text-sky-600 dark:text-sky-400 font-medium">→ {p.prochaine_action}</div>}
+                        {p.prochaine_action && <div className="text-xs mt-2 text-primary dark:text-primary font-medium">→ {p.prochaine_action}</div>}
                         {p.notes && <div className="text-xs mt-1 text-muted-foreground italic">{p.notes}</div>}
                       </div>
                       <div className="flex items-center gap-2">
                         {p.lien_annonce && (
-                          <a href={p.lien_annonce} target="_blank" rel="noreferrer" className="text-xs text-sky-600 hover:underline flex items-center gap-1">
+                          <a href={p.lien_annonce} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
                             <ExternalLink className="h-3 w-3" /> Annonce
                           </a>
                         )}
@@ -252,8 +252,8 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                       {r.points_forts && <Mini icon={CheckCircle2} color="text-emerald-600" label="Points forts" text={r.points_forts} />}
                       {r.points_faibles && <Mini icon={AlertTriangle} color="text-amber-600" label="Points faibles" text={r.points_faibles} />}
                       {r.risques && <Mini icon={AlertTriangle} color="text-red-600" label="Risques" text={r.risques} />}
-                      {r.estimation_prix > 0 && <Mini icon={TrendingUp} color="text-sky-600" label="Estimation" text={formatCHF(r.estimation_prix)} />}
-                      {r.recommandation && <Mini icon={MessageSquare} color="text-indigo-600" label="Recommandation" text={r.recommandation} />}
+                      {r.estimation_prix > 0 && <Mini icon={TrendingUp} color="text-primary" label="Estimation" text={formatCHF(r.estimation_prix)} />}
+                      {r.recommandation && <Mini icon={MessageSquare} color="text-primary" label="Recommandation" text={r.recommandation} />}
                     </div>
                   </div>
                 );
@@ -461,14 +461,14 @@ function DocActionRow({ doc, onChange }: { doc: any; onChange: () => Promise<voi
     valide: 'bg-emerald-100 text-emerald-700',
     refuse: 'bg-red-100 text-red-700',
     manquant: 'bg-amber-100 text-amber-700',
-    demande: 'bg-sky-100 text-sky-700',
+    demande: 'bg-primary/10 text-primary',
   };
 
   return (
     <div className="rounded-lg border border-border p-3 flex flex-col gap-2">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <FileText className="h-4 w-4 text-sky-600 shrink-0" />
+          <FileText className="h-4 w-4 text-primary shrink-0" />
           <span className="text-sm truncate">{doc.nom}</span>
           {doc.purchase_category && <Badge variant="outline" className="text-[10px]">{doc.purchase_category}</Badge>}
           {doc.statut && <Badge className={`text-[10px] border-0 ${statutColor[doc.statut] || 'bg-zinc-100 text-zinc-700'}`}>{doc.statut}</Badge>}

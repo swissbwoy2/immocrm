@@ -1,14 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
-import { ACHAT_STEPS } from '@/lib/purchaseFinancing';
-import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
+import { formatCHF } from '@/lib/purchaseFinancing';
+
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
+import { PremiumAgentCard } from '@/components/premium/PremiumAgentCard';
+import { PremiumStatusCard } from '@/components/premium/PremiumStatusCard';
+import { PremiumEmptyState } from '@/components/premium/PremiumEmptyState';
+import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffresKPI';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { MustChangePasswordBanner } from '@/components/MustChangePasswordBanner';
+
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, Phone, Clock, Sparkles, MapPin, Home, Banknote, FileText, Eye, Handshake, Scale } from 'lucide-react';
+import {
+  Loader2, Home, Building2, Banknote, FolderOpen, Calendar, MessageSquare, MapPin, Edit,
+} from 'lucide-react';
+
 import { AchatProgressionBar } from '@/components/achat/AchatProgressionBar';
 import { AchatStepsTimeline } from '@/components/achat/AchatStepsTimeline';
 import { AchatFinancingCard } from '@/components/achat/AchatFinancingCard';
@@ -17,34 +30,38 @@ import { AchatVisitReportsList } from '@/components/achat/AchatVisitReportsList'
 import { AchatNegotiationCard } from '@/components/achat/AchatNegotiationCard';
 import { AchatNotarySection } from '@/components/achat/AchatNotarySection';
 import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection';
-import { PurchaseOffreCard } from '@/components/achat/PurchaseOffreCard';
+import { AchatDocumentsChecklist } from '@/components/achat/AchatDocumentsChecklist';
 import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
 import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
-import { Edit } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface DashboardAchatProps {
   profile?: { prenom?: string; nom?: string } | null;
 }
 
+const SELECTED_STATUTS = ['interesse', 'visite_planifiee', 'visite_effectuee', 'offre_envisagee'];
+
 export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const hook = usePurchaseProject({ userId: user?.id || null });
-  const { loading, project, financing, computed, settings, properties, visitReports, negotiations, notary, steps, documents, agent, updateFinancing, updateProject } = hook;
+  const {
+    loading, project, financing, computed, settings, properties, visitReports,
+    negotiations, notary, steps, documents, agent, updateFinancing, updateProject, reload,
+  } = hook;
 
   const [offres, setOffres] = useState<any[]>([]);
   const [clientRow, setClientRow] = useState<any | null>(null);
   const [profileRow, setProfileRow] = useState<any | null>(null);
+  const [clientDocuments, setClientDocuments] = useState<any[]>([]);
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
-    document.title = 'Mon projet d\'achat | Immo-Rama';
+    document.title = "Mon projet d'achat | Immo-Rama";
   }, []);
 
-  const reloadClient = async () => {
+  const reloadClient = useCallback(async () => {
     if (!project?.client_id) return;
     const { data: c } = await supabase.from('clients').select('*').eq('id', project.client_id).maybeSingle();
     setClientRow(c);
@@ -52,176 +69,248 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', c.user_id).maybeSingle();
       setProfileRow(p);
     }
-  };
-
-  useEffect(() => {
-    (async () => {
-      if (!project?.client_id) return;
-      const { data } = await supabase
-        .from('offres')
-        .select('*')
-        .eq('client_id', project.client_id)
-        .order('created_at', { ascending: false });
-      setOffres(data || []);
-      await reloadClient();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.client_id]);
 
-  if (loading) {
-    return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-sky-600" /></div>;
-  }
+  const loadOffres = useCallback(async () => {
+    if (!project?.client_id) return;
+    const { data } = await supabase
+      .from('offres')
+      .select('*')
+      .eq('client_id', project.client_id)
+      .order('created_at', { ascending: false });
+    setOffres(data || []);
+    if (user?.id) {
+      const { data: docs } = await supabase.from('documents').select('id, type_document').eq('user_id', user.id);
+      setClientDocuments(docs || []);
+    }
+  }, [project?.client_id, user?.id]);
 
-  if (!project) {
+  useEffect(() => {
+    void loadOffres();
+    void reloadClient();
+  }, [loadOffres, reloadClient]);
+
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([reload(), loadOffres(), reloadClient()]);
+  }, [reload, loadOffres, reloadClient]);
+
+  const stats = useMemo(() => {
+    const selectionnes = offres.filter((o) => SELECTED_STATUTS.includes(o.statut));
+    const nouveaux = offres.filter((o) => o.statut === 'envoyee');
+    return {
+      proposes: offres.length,
+      selectionnes: selectionnes.length,
+      nouveaux: nouveaux.length,
+    };
+  }, [offres]);
+
+  if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
-        <Card className="p-8 border-sky-100">
-          <Home className="h-10 w-10 text-sky-600 mx-auto mb-3" />
-          <h1 className="text-xl font-bold mb-2">Aucun projet d'achat actif</h1>
-          <p className="text-sm text-muted-foreground mb-4">
-            Aucun projet d'accompagnement à l'achat n'est encore associé à votre compte.
-          </p>
-          <Button onClick={() => navigate('/accompagnement-achat')}>
-            Découvrir l'accompagnement achat
-          </Button>
-        </Card>
+      <div className="p-12 flex justify-center">
+        <Loader2 className="animate-spin h-8 w-8 text-primary" />
       </div>
     );
   }
 
-  const stepsDone = steps.filter((s: any) => s.statut === 'fait').length;
-  const initials = (profile?.prenom?.[0] || '?') + (profile?.nom?.[0] || '');
-  const fullName = `${profile?.prenom || ''} ${profile?.nom || ''}`.trim() || 'Acheteur';
-
-  return (
-    <PremiumPageShellV2 className="relative z-10">
-      <PremiumDashboardHeader
-        userName={profile?.prenom}
-        parcoursType="achat"
-        onMessagesClick={() => navigate('/client/messagerie')}
-      />
-
-      {/* HERO RESUME */}
-      <Card className="p-6 mb-6 border-sky-100 bg-gradient-to-br from-sky-50/60 via-blue-50/40 to-indigo-50/60">
-        <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white shadow-md text-sky-700 flex items-center justify-center font-bold flex-shrink-0">
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <Badge className="bg-sky-600 hover:bg-sky-600 text-white border-0 mb-1.5">
-                <Home className="h-3 w-3 mr-1" /> Accompagnement achat
-              </Badge>
-              <h1 className="text-2xl font-bold">{fullName}</h1>
-              <div className="text-sm text-muted-foreground mt-1">
-                Statut : <span className="font-medium text-foreground">{project.statut.replace(/_/g, ' ')}</span>
-              </div>
-            </div>
-          </div>
-
-          {agent ? (
-            <Card className="p-3 bg-white/80 backdrop-blur border-sky-100 flex items-center gap-3 min-w-[240px]">
-              <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-semibold">
-                {(agent.prenom?.[0] || '?') + (agent.nom?.[0] || '')}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[10px] uppercase tracking-wide text-sky-700 font-semibold">Votre conseiller</div>
-                <div className="text-sm font-semibold truncate">{agent.prenom} {agent.nom}</div>
-                {agent.telephone && (
-                  <a href={`tel:${agent.telephone}`} className="text-xs text-muted-foreground hover:text-sky-600">{agent.telephone}</a>
-                )}
-              </div>
-            </Card>
-          ) : (
-            <Card className="p-3 bg-white/80 backdrop-blur border-amber-200 text-sm text-amber-800 flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Un conseiller vous sera bientôt assigné
-            </Card>
-          )}
-        </div>
-      </Card>
-
-      {/* KPIs */}
-      {(() => {
-        const SEL = ['interesse', 'visite_planifiee', 'visite_effectuee', 'offre_envisagee'];
-        const biensProposes = offres.length;
-        const biensSelectionnes = offres.filter((o: any) => SEL.includes(o.statut)).length;
-        return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <Kpi icon={Home} label="Biens proposés" value={biensProposes} color="text-sky-600" />
-            <Kpi icon={Sparkles} label="Biens sélectionnés" value={biensSelectionnes} color="text-emerald-600" />
-            <Kpi icon={Eye} label="Visites courtier" value={visitReports.length} color="text-indigo-600" />
-            <Kpi icon={Banknote} label="Capacité d'achat" value={computed ? `CHF ${Math.round(computed.capaciteAchatMax).toLocaleString('fr-CH')}` : '—'} color="text-amber-600" small />
-          </div>
-        );
-      })()}
-
-      {/* PROGRESSION MANDAT ACHAT (6 mois) */}
-      <div className="mb-6">
-        <AchatProgressionBar
-          dateDebut={project.date_debut_progression || project.created_at}
-          dureeJours={project.duree_progression_jours || 180}
-          stepsDone={stepsDone}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-end gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-              <Edit className="h-4 w-4 mr-1" /> Modifier mon dossier
+  if (!project) {
+    return (
+      <PremiumPageShellV2>
+        <PremiumEmptyState
+          icon={Home}
+          title="Aucun projet d'achat actif"
+          description="Aucun projet d'accompagnement à l'achat n'est encore associé à votre compte."
+          action={
+            <Button className="bg-gradient-to-r from-primary to-primary/80" onClick={() => navigate('/accompagnement-achat')}>
+              Découvrir l'accompagnement achat
             </Button>
-            <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
-          </div>
-          <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
-          {clientRow && <SwissRomandeMapGoogle client={clientRow} />}
-          <CoAcheteursEditor
-            value={(project as any).co_acheteurs || []}
-            onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
-          />
-          {offres.length > 0 && (
-            <Card className="p-5 border-sky-100">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2"><Home className="h-4 w-4 text-sky-600" /> Derniers biens proposés</h3>
-                <Button size="sm" variant="ghost" onClick={() => navigate('/client/biens-proposes')}>Tout voir</Button>
-              </div>
-              <div className="space-y-3">
-                {offres.slice(0, 2).map((o) => (
-                  <PurchaseOffreCard key={o.id} offre={o} compact />
-                ))}
-              </div>
-            </Card>
-          )}
-          <AchatPropertiesList properties={properties} />
-          <AchatVisitReportsList reports={visitReports} properties={properties} />
-          <AchatNegotiationCard negotiations={negotiations} />
-          <AchatNotarySection notary={notary} />
-        </div>
-        <div className="space-y-6">
-          <AchatStepsTimeline steps={steps} />
-          <AchatDocumentsSection documents={documents} />
-        </div>
-      </div>
-      {clientRow && profileRow && (
-        <EditClientProfileDialog
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          client={clientRow}
-          profile={profileRow}
-          onSaved={reloadClient}
+          }
         />
-      )}
-    </PremiumPageShellV2>
-  );
-}
+      </PremiumPageShellV2>
+    );
+  }
 
-function Kpi({ icon: Icon, label, value, color, small }: any) {
+  const stepsDone = steps.filter((s: any) => s.statut === 'fait').length;
+  const dureeJours = Math.max(180, project.duree_progression_jours || 180);
+
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className={`h-4 w-4 ${color}`} />
-        <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-      </div>
-      <div className={`font-bold ${small ? 'text-base' : 'text-2xl'}`}>{value}</div>
-    </Card>
+    <>
+      <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
+        <FloatingParticles count={8} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
+        <PremiumPageShellV2 className="relative z-10">
+          <MustChangePasswordBanner />
+
+          <PremiumDashboardHeader
+            userName={profile?.prenom}
+            parcoursType="achat"
+            isAcheteur
+            messageCount={0}
+            offerCount={stats.nouveaux}
+            onMessagesClick={() => navigate('/client/messagerie')}
+            onOffersClick={() => navigate('/client/biens-proposes')}
+          />
+
+          {/* Alerte : conseiller non assigné */}
+          {!agent && (
+            <div className="mb-6 animate-fade-in">
+              <PremiumStatusCard
+                variant="waiting"
+                title="Conseiller en cours d'attribution"
+                description="Un conseiller achat vous sera attribué très prochainement pour piloter votre recherche."
+              />
+            </div>
+          )}
+
+          {/* Progression du mandat achat (180 jours minimum) */}
+          <div className="mb-6">
+            <AchatProgressionBar
+              dateDebut={project.date_debut_progression || project.created_at}
+              dureeJours={dureeJours}
+              stepsDone={stepsDone}
+            />
+          </div>
+
+          {/* Derniers biens proposés */}
+          <div className="mb-6">
+            {offres.length > 0 ? (
+              <DernieresOffresKPI
+                offres={offres}
+                onSeeAll={() => navigate('/client/biens-proposes')}
+                onOffreClick={(id) => navigate(`/client/biens-proposes?offreId=${id}`)}
+              />
+            ) : (
+              <Card className="p-2">
+                <PremiumEmptyState
+                  icon={Home}
+                  title="Aucun bien proposé pour le moment"
+                  description="Votre conseiller analyse le marché et vous proposera prochainement des biens correspondant à votre capacité d'achat."
+                />
+              </Card>
+            )}
+          </div>
+
+          {/* Tuiles d'action */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+            <QuickTileXL
+              icon={Home}
+              title="Biens proposés"
+              subtitle={stats.nouveaux > 0 ? `${stats.nouveaux} nouveau${stats.nouveaux > 1 ? 'x' : ''}` : `${stats.proposes} au total`}
+              badge={stats.nouveaux || undefined}
+              badgeVariant={stats.nouveaux > 0 ? 'destructive' : 'default'}
+              onClick={() => navigate('/client/biens-proposes')}
+              index={0}
+            />
+            <QuickTileXL
+              icon={Building2}
+              title="Biens sélectionnés"
+              subtitle={`${stats.selectionnes} bien${stats.selectionnes > 1 ? 's' : ''}`}
+              badge={stats.selectionnes || undefined}
+              onClick={() => navigate('/client/biens-selectionnes')}
+              index={1}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 mb-8">
+            <QuickTileXL
+              icon={Banknote}
+              variant="wide"
+              title="Ma capacité d'achat"
+              subtitle={computed ? `Jusqu'à ${formatCHF(computed.capaciteAchatMax)}` : 'À évaluer avec votre conseiller'}
+              onClick={() => navigate('/client/financement')}
+              index={2}
+            />
+            <QuickTileXL
+              icon={Calendar}
+              variant="wide"
+              title="Calendrier"
+              subtitle="Vos visites et rendez-vous"
+              onClick={() => navigate('/client/calendrier')}
+              index={3}
+            />
+            <QuickTileXL
+              icon={FolderOpen}
+              variant="wide"
+              title="Mon dossier"
+              subtitle={`${clientDocuments.length} document${clientDocuments.length > 1 ? 's' : ''}`}
+              onClick={() => navigate('/client/dossier')}
+              index={4}
+            />
+            <QuickTileXL
+              icon={MessageSquare}
+              variant="wide"
+              title="Messagerie"
+              subtitle={agent ? `Votre conseiller : ${agent.prenom} ${agent.nom}` : 'Aucun conseiller assigné'}
+              onClick={() => navigate('/client/messagerie')}
+              index={5}
+            />
+            <QuickTileXL
+              icon={MapPin}
+              variant="wide"
+              title="Carte des biens"
+              subtitle="Visualiser les biens proposés"
+              onClick={() => navigate('/client/carte')}
+              index={6}
+            />
+          </div>
+
+          {/* Financement + Conseiller */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="space-y-4">
+              <div className="flex items-center justify-end gap-2 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                  <Edit className="h-4 w-4 mr-1" /> Modifier mon dossier
+                </Button>
+                <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
+              </div>
+              <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+            </div>
+            <div className="space-y-6">
+              {agent ? (
+                <PremiumAgentCard agent={agent as any} onMessage={() => navigate('/client/messagerie')} />
+              ) : (
+                <Card className="p-6">
+                  <PremiumEmptyState
+                    title="Aucun conseiller assigné"
+                    description="Un conseiller achat vous sera bientôt attribué."
+                  />
+                </Card>
+              )}
+              <AchatDocumentsChecklist
+                documents={clientDocuments}
+                onUpload={() => navigate('/client/documents')}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="lg:col-span-2 space-y-6">
+              {clientRow && <SwissRomandeMapGoogle client={clientRow} />}
+              <CoAcheteursEditor
+                title="Co-acquéreur(s)"
+                value={(project as any).co_acheteurs || []}
+                onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
+              />
+              <AchatPropertiesList properties={properties} />
+              <AchatVisitReportsList reports={visitReports} properties={properties} />
+              <AchatNegotiationCard negotiations={negotiations} />
+              <AchatNotarySection notary={notary} />
+            </div>
+            <div className="space-y-6">
+              <AchatStepsTimeline steps={steps} />
+              <AchatDocumentsSection documents={documents} />
+            </div>
+          </div>
+
+          {clientRow && profileRow && (
+            <EditClientProfileDialog
+              open={editOpen}
+              onOpenChange={setEditOpen}
+              client={clientRow}
+              profile={profileRow}
+              onSaved={reloadClient}
+            />
+          )}
+        </PremiumPageShellV2>
+      </PullToRefresh>
+    </>
   );
 }

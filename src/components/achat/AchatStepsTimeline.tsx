@@ -26,12 +26,12 @@ export function AchatStepsTimeline({ steps }: AchatStepsTimelineProps) {
   });
 
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <h2 className="text-lg font-semibold mb-4">Les 17 étapes de votre parcours d'achat</h2>
       <div className="space-y-5">
         {Object.entries(groups).map(([group, stepsInGroup]) => (
           <div key={group}>
-            <div className="text-xs uppercase tracking-wider text-sky-700 font-semibold mb-2">
+            <div className="text-xs uppercase tracking-wider text-primary font-semibold mb-2">
               {GROUP_LABEL[group as AchatStep['group']]}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -45,18 +45,18 @@ export function AchatStepsTimeline({ steps }: AchatStepsTimelineProps) {
                     className={cn(
                       'flex items-center gap-2 p-3 rounded-xl border transition',
                       done ? 'bg-emerald-50/40 border-emerald-100'
-                        : enCours ? 'bg-sky-50/40 border-sky-100'
+                        : enCours ? 'bg-primary/5/40 border-primary/20'
                         : 'bg-muted/30 border-border',
                     )}
                   >
                     {done ? <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                      : enCours ? <Clock className="h-4 w-4 text-sky-600 flex-shrink-0" />
+                      : enCours ? <Clock className="h-4 w-4 text-primary flex-shrink-0" />
                       : <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                     <span
                       className={cn(
                         'text-sm',
                         done ? 'text-emerald-900 font-medium'
-                          : enCours ? 'text-sky-900 font-medium'
+                          : enCours ? 'text-primary font-medium'
                           : 'text-muted-foreground',
                       )}
                     >

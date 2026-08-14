@@ -22,7 +22,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
   useEffect(() => { document.title = "Parcours d'achat en attente d'activation | Immo-Rama"; }, []);
 
   if (loading) {
-    return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-sky-600" /></div>;
+    return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
 
   const initials = (profile?.prenom?.[0] || '?') + (profile?.nom?.[0] || '');
@@ -53,7 +53,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-500" /> Mandat signé électroniquement ✓</li>
                 <li className="flex items-center gap-2"><Banknote className="h-4 w-4 text-amber-500" /> Acompte CHF 2&apos;499.– en attente de règlement</li>
-                <li className="flex items-center gap-2"><FileText className="h-4 w-4 text-sky-500" /> Documents financiers à compléter au besoin</li>
+                <li className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /> Documents financiers à compléter au besoin</li>
               </ul>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
           <Card className="p-6">
             <h3 className="font-semibold mb-3">Votre conseiller</h3>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-semibold">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
                 {(agent.prenom?.[0] || '') + (agent.nom?.[0] || '')}
               </div>
               <div className="flex-1">

@@ -9,17 +9,17 @@ interface AchatNegotiationCardProps {
 
 const STATUT_LABEL: Record<string, { label: string; color: string }> = {
   en_preparation:    { label: 'En préparation', color: 'bg-amber-100 text-amber-700' },
-  envoyee:           { label: 'Offre envoyée', color: 'bg-sky-100 text-sky-700' },
-  contre_offre:     { label: 'Contre-offre reçue', color: 'bg-indigo-100 text-indigo-700' },
+  envoyee:           { label: 'Offre envoyée', color: 'bg-primary/10 text-primary' },
+  contre_offre:     { label: 'Contre-offre reçue', color: 'bg-primary/10 text-primary' },
   acceptee:          { label: 'Acceptée', color: 'bg-emerald-100 text-emerald-700' },
   refusee:           { label: 'Refusée', color: 'bg-red-100 text-red-700' },
 };
 
 export function AchatNegotiationCard({ negotiations }: AchatNegotiationCardProps) {
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-        <Handshake className="h-5 w-5 text-sky-600" />
+        <Handshake className="h-5 w-5 text-primary" />
         Offre d'achat & négociation
       </h2>
       {negotiations.length === 0 ? (
@@ -30,7 +30,7 @@ export function AchatNegotiationCard({ negotiations }: AchatNegotiationCardProps
       ) : (
         <div className="space-y-3">
           {negotiations.map((n) => {
-            const s = STATUT_LABEL[n.statut] || { label: n.statut, color: 'bg-zinc-100 text-zinc-700' };
+            const s = STATUT_LABEL[n.statut] || { label: n.statut, color: 'bg-muted text-muted-foreground' };
             return (
               <div key={n.id} className="rounded-xl border border-border bg-card/40 p-4">
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">

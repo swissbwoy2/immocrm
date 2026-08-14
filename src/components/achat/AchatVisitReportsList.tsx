@@ -10,8 +10,8 @@ interface AchatVisitReportsListProps {
 
 const STATUT_LABEL: Record<string, { label: string; color: string }> = {
   a_analyser:           { label: 'À analyser', color: 'bg-amber-100 text-amber-700' },
-  valide_contre_visite: { label: 'Contre-visite recommandée', color: 'bg-sky-100 text-sky-700' },
-  refuse:               { label: 'Écarté', color: 'bg-zinc-100 text-zinc-700' },
+  valide_contre_visite: { label: 'Contre-visite recommandée', color: 'bg-primary/10 text-primary' },
+  refuse:               { label: 'Écarté', color: 'bg-muted text-muted-foreground' },
   offre_recommandee:    { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
 };
 
@@ -19,9 +19,9 @@ export function AchatVisitReportsList({ reports, properties }: AchatVisitReports
   const propMap = new Map(properties.map((p) => [p.id, p]));
 
   return (
-    <Card className="p-6 border-sky-100">
+    <Card className="p-6 border-primary/20">
       <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-        <Eye className="h-5 w-5 text-sky-600" />
+        <Eye className="h-5 w-5 text-primary" />
         Rapports de visite courtier
       </h2>
       {reports.length === 0 ? (
@@ -33,7 +33,7 @@ export function AchatVisitReportsList({ reports, properties }: AchatVisitReports
         <div className="space-y-3">
           {reports.map((r) => {
             const p = propMap.get(r.property_id);
-            const s = STATUT_LABEL[r.statut] || { label: r.statut, color: 'bg-zinc-100 text-zinc-700' };
+            const s = STATUT_LABEL[r.statut] || { label: r.statut, color: 'bg-muted text-muted-foreground' };
             return (
               <div key={r.id} className="rounded-xl border border-border bg-card/40 p-4">
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
@@ -57,13 +57,13 @@ export function AchatVisitReportsList({ reports, properties }: AchatVisitReports
                     <Item icon={AlertTriangle} color="text-red-600" title="Risques" content={r.risques} />
                   )}
                   {r.estimation_prix > 0 && (
-                    <Item icon={TrendingUp} color="text-sky-600" title="Estimation prix" content={formatCHF(r.estimation_prix)} />
+                    <Item icon={TrendingUp} color="text-primary" title="Estimation prix" content={formatCHF(r.estimation_prix)} />
                   )}
                 </div>
                 {r.recommandation && (
-                  <div className="mt-3 text-sm bg-sky-50/50 border border-sky-100 rounded-lg p-3">
-                    <span className="font-semibold text-sky-900">Recommandation : </span>
-                    <span className="text-sky-800">{r.recommandation}</span>
+                  <div className="mt-3 text-sm bg-primary/5/50 border border-primary/20 rounded-lg p-3">
+                    <span className="font-semibold text-primary">Recommandation : </span>
+                    <span className="text-primary">{r.recommandation}</span>
                   </div>
                 )}
               </div>

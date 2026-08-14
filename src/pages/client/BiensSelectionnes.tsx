@@ -4,10 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumOffreRecueCard } from '@/components/premium/PremiumOffreRecueCard';
+import { PremiumEmptyState } from '@/components/premium/PremiumEmptyState';
 import { Card } from '@/components/ui/card';
 import { Loader2, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { PurchaseOffreCard } from '@/components/achat/PurchaseOffreCard';
+import { AchatBienDetailsDialog } from '@/components/achat/AchatBienDetailsDialog';
 import { isPurchaseBuyer } from '@/lib/journey';
 
 const SELECTED_STATUTS = ['interesse', 'visite_planifiee', 'visite_effectuee', 'offre_envisagee'];
@@ -18,6 +20,7 @@ export default function BiensSelectionnes() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [offres, setOffres] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -71,8 +74,10 @@ export default function BiensSelectionnes() {
     }
     if (!SELECTED_STATUTS.includes(newStatut)) {
       setOffres((prev) => prev.filter((o) => o.id !== id));
+      setSelected(null);
     } else {
       setOffres((prev) => prev.map((o) => (o.id === id ? { ...o, statut: newStatut } : o)));
+      setSelected((prev: any) => (prev && prev.id === id ? { ...prev, statut: newStatut } : prev));
     }
     toast({ title: 'Statut mis à jour' });
   };
@@ -82,39 +87,55 @@ export default function BiensSelectionnes() {
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-sky-600" /> Biens sélectionnés
+            <Building2 className="h-6 w-6 text-primary" /> Biens sélectionnés
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Les biens à l'achat qui ont retenu votre attention.
           </p>
         </div>
-        <Badge className="bg-sky-600 hover:bg-sky-600 text-white border-0 text-sm px-3 py-1">
+        <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 text-sm px-3 py-1">
           {offres.length} bien{offres.length > 1 ? 's' : ''}
         </Badge>
       </div>
 
       {loading ? (
-        <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-sky-600" /></div>
+        <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : offres.length === 0 ? (
-        <Card className="p-10 text-center border-sky-100">
-          <Building2 className="h-10 w-10 text-sky-600 mx-auto mb-3 opacity-60" />
-          <h2 className="text-lg font-semibold mb-1">Aucun bien sélectionné pour le moment</h2>
-          <p className="text-sm text-muted-foreground">
-            Marquez un bien comme « Intéressé » dans Biens proposés pour le retrouver ici.
-          </p>
+        <Card className="p-2">
+          <PremiumEmptyState
+            icon={Building2}
+            title="Aucun bien sélectionné pour le moment"
+            description="Marquez un bien comme « Intéressé » dans Biens proposés pour le retrouver ici."
+          />
         </Card>
       ) : (
-        <div className="space-y-4">
-          {offres.map((o) => (
-            <PurchaseOffreCard
+        <div className="grid grid-cols-1 gap-4">
+          {offres.map((o, i) => (
+            <PremiumOffreRecueCard
               key={o.id}
-              offre={o}
-              onRequestVisit={() => updateStatut(o.id, 'visite_planifiee')}
-              onNotInterested={() => updateStatut(o.id, 'refusee')}
+              index={i}
+              offre={{
+                id: o.id,
+                adresse: o.adresse,
+                pieces: o.nombre_pieces ?? o.pieces,
+                surface: o.surface,
+                prix: o.prix,
+                statut: o.statut,
+                date_envoi: o.date_envoi || o.created_at,
+              }}
+              onClick={() => setSelected(o)}
             />
           ))}
         </div>
       )}
+
+      <AchatBienDetailsDialog
+        open={!!selected}
+        onOpenChange={(o) => !o && setSelected(null)}
+        offre={selected}
+        onRequestVisit={() => selected && updateStatut(selected.id, 'visite_planifiee')}
+        onNotInterested={() => selected && updateStatut(selected.id, 'refusee')}
+      />
     </PremiumPageShellV2>
   );
 }

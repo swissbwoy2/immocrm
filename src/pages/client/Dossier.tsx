@@ -451,7 +451,7 @@ export default function Dossier() {
   if (isBuyerClient) {
     const project = purchaseHook.project;
     const isActive = project?.statut === 'actif';
-    const progression = computeProgression(project?.date_debut_progression, project?.duree_progression_jours || 60);
+    const progression = computeProgression(project?.date_debut_progression, Math.max(180, project?.duree_progression_jours || 180));
     const financing = purchaseHook.financing;
     const computed = purchaseHook.computed;
     const financingComplete = !!computed && (financing?.revenu_annuel_retenu || 0) > 0 && (financing?.prix_cible || 0) > 0;
@@ -531,8 +531,8 @@ export default function Dossier() {
 
           <PremiumDossierSection title="Financement achat" icon={Wallet} delay={100}>
             {!financingComplete ? (
-              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
-                <p className="font-semibold text-blue-700 dark:text-blue-300">Financement à compléter</p>
+              <div className="rounded-xl border border-primary/20/20 bg-blue-500/10 p-4">
+                <p className="font-semibold text-primary dark:text-blue-300">Financement à compléter</p>
                 <p className="text-sm text-muted-foreground mt-1">Votre conseiller complétera votre capacité d'achat, vos fonds propres et votre statut bancaire.</p>
               </div>
             ) : (
@@ -786,9 +786,9 @@ export default function Dossier() {
 
           {/* Section Capacité d'achat pour les acheteurs */}
           {isAcheteur && (
-            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 mb-6">
+            <div className="p-4 rounded-xl bg-blue-500/5 border border-primary/20/20 mb-6">
               <h4 className="font-medium flex items-center gap-2 mb-4">
-                <Home className="w-5 h-5 text-blue-500" />
+                <Home className="w-5 h-5 text-primary" />
                 Capacité d'achat
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

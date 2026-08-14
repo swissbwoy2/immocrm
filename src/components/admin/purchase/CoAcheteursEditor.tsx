@@ -17,6 +17,7 @@ export interface CoAcheteur {
   date_naissance?: string;
   nationalite?: string;
   type_permis?: string;
+  etat_civil?: string;
   lien?: string; // conjoint, parent, partenaire, autre
   revenu_annuel?: number | null;
   fonds_propres?: number | null;
@@ -32,10 +33,10 @@ interface Props {
 export function CoAcheteursEditor({ value, onSave, readOnly, title = 'Co-acheteurs / co-propriétaires' }: Props) {
   const list = Array.isArray(value) ? value : [];
   return (
-    <Card className="border-sky-100">
+    <Card className="border-primary/20">
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <h3 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-sky-600" /> {title}</h3>
+          <h3 className="font-semibold flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> {title}</h3>
           {!readOnly && (
             <CoAcheteurDialog
               onSubmit={async (co) => { await onSave([...list, { ...co, id: crypto.randomUUID() }]); toast.success('Co-acheteur ajouté'); }}
@@ -51,7 +52,11 @@ export function CoAcheteursEditor({ value, onSave, readOnly, title = 'Co-acheteu
               <div key={co.id || idx} className="flex items-center justify-between gap-3 rounded-lg border p-3">
                 <div className="min-w-0">
                   <div className="font-medium truncate">{co.prenom} {co.nom} {co.lien && <Badge variant="outline" className="ml-2">{co.lien}</Badge>}</div>
-                  <div className="text-xs text-muted-foreground truncate">{co.email || '—'}{co.telephone ? ` · ${co.telephone}` : ''}</div>
+                  <div className="text-xs text-muted-foreground truncate">{co.email || '—'}{co.telephone ? ` · ${co.telephone}` : ''}{co.etat_civil ? ` · ${co.etat_civil}` : ''}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    Revenu annuel : <span className="font-medium text-foreground">{co.revenu_annuel ? `CHF ${Number(co.revenu_annuel).toLocaleString('fr-CH')}` : '—'}</span>
+                    {' · '}Fonds propres : <span className="font-medium text-foreground">{co.fonds_propres ? `CHF ${Number(co.fonds_propres).toLocaleString('fr-CH')}` : '—'}</span>
+                  </div>
                 </div>
                 {!readOnly && (
                   <div className="flex gap-1 shrink-0">
@@ -97,6 +102,7 @@ function CoAcheteurDialog({ initial, onSubmit, trigger }: { initial?: CoAcheteur
           <Field label="Téléphone"><Input value={c.telephone || ''} onChange={set('telephone')} /></Field>
           <Field label="Date de naissance"><Input type="date" value={c.date_naissance || ''} onChange={set('date_naissance')} /></Field>
           <Field label="Nationalité"><Input value={c.nationalite || ''} onChange={set('nationalite')} /></Field>
+          <Field label="État civil"><Input value={c.etat_civil || ''} onChange={set('etat_civil')} placeholder="Célibataire, Marié(e)…" /></Field>
           <Field label="Type de permis"><Input value={c.type_permis || ''} onChange={set('type_permis')} /></Field>
           <Field label="Lien (conjoint, parent, partenaire…)"><Input value={c.lien || ''} onChange={set('lien')} /></Field>
           <Field label="Revenu annuel (CHF)"><Input type="number" value={c.revenu_annuel ?? ''} onChange={(e) => setC((p) => ({ ...p, revenu_annuel: e.target.value === '' ? null : Number(e.target.value) }))} /></Field>
@@ -104,7 +110,7 @@ function CoAcheteurDialog({ initial, onSubmit, trigger }: { initial?: CoAcheteur
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-          <Button disabled={saving} onClick={async () => {
+          <Button className="bg-gradient-to-r from-primary to-primary/80" disabled={saving} onClick={async () => {
             setSaving(true);
             try { await onSubmit(c); setOpen(false); }
             catch (e: any) { toast.error(e?.message || 'Erreur'); }

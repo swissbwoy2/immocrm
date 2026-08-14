@@ -133,7 +133,7 @@ export function FinancingEditorDialog({ financing, onSave }: { financing: any; o
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-          <Button disabled={saving} onClick={async () => {
+          <Button className="bg-gradient-to-r from-primary to-primary/80" disabled={saving} onClick={async () => {
             setSaving(true);
             try { await onSave(f); toast.success('Financement enregistré'); setOpen(false); }
             catch (e: any) { toast.error(e?.message || 'Erreur'); }
