@@ -10,6 +10,8 @@ import { PurchaseDetailSections } from './PurchaseDetailSections';
 import { computeProgression, formatCHF } from '@/lib/purchaseFinancing';
 import type { UsePurchaseProjectResult } from '@/hooks/usePurchaseProject';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
+import { getBuyerAnnualIncome, getBuyerMonthlyIncome, parseZones } from '@/lib/buyerProfile';
+
 
 const PremiumStatCard = ({
   label, value, prefix = '', animated = false, variant = 'default', icon: Icon,
