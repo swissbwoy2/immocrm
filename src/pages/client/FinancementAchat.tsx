@@ -6,11 +6,14 @@ import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { Card } from '@/components/ui/card';
 import { Loader2, Banknote } from 'lucide-react';
 import { AchatFinancingCard } from '@/components/achat/AchatFinancingCard';
+import { AchatDocumentsChecklist } from '@/components/achat/AchatDocumentsChecklist';
+import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
+import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor';
 
 export default function FinancementAchat() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { loading, project, financing, computed, settings } = usePurchaseProject({ userId: user?.id || null });
+  const { loading, project, financing, computed, settings, documents, updateFinancing, updateProject } = usePurchaseProject({ userId: user?.id || null });
 
   useEffect(() => {
     document.title = 'Financement | Immo-Rama';
@@ -37,7 +40,23 @@ export default function FinancementAchat() {
         </p>
       </div>
 
+      <div className="flex justify-end mb-4">
+        <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
+      </div>
+
       <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <CoAcheteursEditor
+          title="Co-acquéreur(s)"
+          value={(project as any).co_acheteurs || []}
+          onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
+        />
+        <AchatDocumentsChecklist
+          documents={documents}
+          onUpload={() => navigate('/client/documents')}
+        />
+      </div>
 
       {!computed && (
         <Card className="p-6 mt-4 border-primary/20">
