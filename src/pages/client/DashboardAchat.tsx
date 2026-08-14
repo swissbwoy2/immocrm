@@ -34,6 +34,7 @@ import { AchatDocumentsChecklist } from '@/components/achat/AchatDocumentsCheckl
 import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
 import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { parseZones, formatZones } from '@/lib/buyerProfile';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
 
 interface DashboardAchatProps {
@@ -243,12 +244,24 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
               index={5}
             />
             <QuickTileXL
+              icon={Edit}
+              variant="wide"
+              title="Mes critères d'achat"
+              subtitle={
+                parseZones(clientRow?.region_recherche).length > 0
+                  ? formatZones(parseZones(clientRow?.region_recherche))
+                  : 'Villes, pièces, budget — à compléter'
+              }
+              onClick={() => setEditOpen(true)}
+              index={6}
+            />
+            <QuickTileXL
               icon={MapPin}
               variant="wide"
               title="Carte des biens"
               subtitle="Visualiser les biens proposés"
               onClick={() => navigate('/client/carte')}
-              index={6}
+              index={7}
             />
           </div>
 
