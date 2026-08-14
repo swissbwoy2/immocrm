@@ -3,9 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { 
   Search, MapPin, Filter, List, Map as MapIcon, 
-  ChevronDown, X, SlidersHorizontal, Building2, Circle
+  ChevronDown, X, SlidersHorizontal, Building2, Circle, BellPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,14 +18,27 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PublicHeader } from '@/components/public/PublicHeader';
+import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
+
+const setMeta = (name: string, content: string) => {
+  let tag = document.querySelector(`meta[name="${name}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute('name', name);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+};
 
 export default function RechercheAnnonces() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
+  const { user } = useAuth();
+
 
   // View state
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
