@@ -6,13 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Calendar, Clock, MapPin, Home, 
-  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck, Eye, EyeOff, ThumbsUp, Users, Sparkles
+  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck, Eye, EyeOff, ThumbsUp, Users, Sparkles,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
-import { VisitVideoDecisionCard } from '@/components/client/VisitVideoDecisionCard';
+import { VisitVideoDecisionCard, submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 
 export default function Visites() {
   const navigate = useNavigate();
