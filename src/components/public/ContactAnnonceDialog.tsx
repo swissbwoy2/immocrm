@@ -39,22 +39,21 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
 
   const sendMessageMutation = useMutation({
     mutationFn: async () => {
-      // Log the contact form submission
-      // In production, this would create a conversation record and send email notification
-      console.log('Contact form submitted:', {
-        annonceId: annonce.id,
-        annonceurId: annonce.annonceurs?.id,
-        nom: formData.nom,
-        email: formData.email,
-        telephone: formData.telephone,
-        message: formData.message,
+      const { data, error } = await supabase.functions.invoke('contact-annonce', {
+        body: {
+          annonce_id: annonce.id,
+          nom: formData.nom,
+          email: formData.email,
+          telephone: formData.telephone,
+          message: formData.message,
+        },
       });
 
-      // TODO: Implement edge function to send email to annonceur
-      // and optionally create conversation record
-      
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
       return true;
     },
+
     onSuccess: () => {
       toast.success('Message envoyé avec succès !');
       onOpenChange(false);
