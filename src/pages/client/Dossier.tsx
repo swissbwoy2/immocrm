@@ -1147,6 +1147,9 @@ export default function Dossier() {
         onOpenChange={setEditProfileDialogOpen}
         client={client}
         profile={profile}
+        isAcheteur={isAcheteur}
+        financing={purchaseHook.financing}
+        onSaveFinancing={purchaseHook.updateFinancing}
         onSaved={loadData}
       />
 

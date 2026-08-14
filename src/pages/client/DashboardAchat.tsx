@@ -306,6 +306,9 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
               onOpenChange={setEditOpen}
               client={clientRow}
               profile={profileRow}
+              isAcheteur
+              financing={financing}
+              onSaveFinancing={updateFinancing}
               onSaved={reloadClient}
             />
           )}
