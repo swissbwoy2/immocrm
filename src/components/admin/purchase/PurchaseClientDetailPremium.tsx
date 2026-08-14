@@ -446,9 +446,22 @@ export function PurchaseClientDetailPremium({
               </div>
               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50" />
               <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
-                <p className="text-xs text-muted-foreground mb-2">Zone(s) recherchée(s)</p>
-                <p className="font-medium text-sm text-primary">{client.region_recherche || 'Non renseigné'}</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {parseZones(client.region_recherche).length > 1 ? 'Zones recherchées' : 'Zone(s) recherchée(s)'}
+                </p>
+                {parseZones(client.region_recherche).length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {parseZones(client.region_recherche).map((z) => (
+                      <Badge key={z} variant="secondary" className="bg-primary/15 text-primary border-primary/30">
+                        <MapPin className="h-3 w-3 mr-1" />{z}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-medium text-sm text-primary">Non renseigné</p>
+                )}
               </div>
+
               {client.souhaits_particuliers && (
                 <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 transition-all duration-300">
                   <p className="text-xs text-muted-foreground mb-2">Souhaits particuliers</p>
