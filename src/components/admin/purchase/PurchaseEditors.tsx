@@ -75,8 +75,23 @@ export function FinancingEditorDialog({ financing, onSave }: { financing: any; o
         <DialogHeader><DialogTitle>Financement & tenue des charges</DialogTitle></DialogHeader>
 
         <h3 className="font-semibold text-sm mt-2">Revenus</h3>
+        <p className="text-xs text-muted-foreground -mt-1">
+          Le revenu annuel est la référence bancaire. Le champ mensuel est synchronisé automatiquement (annuel ÷ 12).
+        </p>
         <FieldGrid>
-          <NumField label="Revenu annuel retenu" value={f.revenu_annuel_retenu} onChange={set('revenu_annuel_retenu')} suffix="CHF" />
+          <NumField
+            label="Revenu annuel retenu"
+            value={f.revenu_annuel_retenu}
+            onChange={(v: number | null) => setF((p: any) => ({ ...p, revenu_annuel_retenu: v }))}
+            suffix="CHF/an"
+          />
+          <NumField
+            label="Revenu mensuel (dérivé)"
+            value={f.revenu_annuel_retenu == null ? null : annualToMonthly(f.revenu_annuel_retenu)}
+            onChange={(v: number | null) => setF((p: any) => ({ ...p, revenu_annuel_retenu: v == null ? null : monthlyToAnnual(v) }))}
+            suffix="CHF/mois"
+          />
+
           <NumField label="Bonus / commissions (moy. 3 ans)" value={f.bonus_3ans_moyenne} onChange={set('bonus_3ans_moyenne')} suffix="CHF" />
           <NumField label="Allocations familiales" value={f.allocations_familiales} onChange={set('allocations_familiales')} suffix="CHF" />
           <NumField label="Pensions reçues" value={f.pensions_recues} onChange={set('pensions_recues')} suffix="CHF" />
