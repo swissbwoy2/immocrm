@@ -136,20 +136,8 @@ export function PublicAnnoncesMap({
     }
   }, [mapReady, searchCenter, radiusKm, annonces.length]);
 
-  // Create price marker element
-  const createMarkerElement = useCallback((annonce: Annonce, isHovered: boolean) => {
-    const container = document.createElement('div');
-    container.className = `
-      px-2 py-1 rounded-lg font-semibold text-xs cursor-pointer
-      transition-all duration-200 shadow-md
-      ${isHovered 
-        ? 'bg-primary text-primary-foreground scale-110 z-50' 
-        : 'bg-background text-foreground border border-border hover:bg-primary hover:text-primary-foreground'
-      }
-    `;
-    container.innerHTML = `CHF ${formatPrice(annonce.prix, annonce.type_transaction)}`;
-    return container;
-  }, []);
+
+
 
   // Create/update markers
   useEffect(() => {
