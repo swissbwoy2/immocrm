@@ -624,7 +624,20 @@ export default function RechercheAnnonces() {
                 </p>
               </div>
 
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  onClick={saveSearchAlert}
+                  disabled={isSavingSearch}
+                >
+                  <BellPlus className="h-4 w-4 mr-2" />
+                  Créer une alerte
+                </Button>
+
               {/* Sort */}
+
               <Select 
                 value={sortBy} 
                 onValueChange={(v) => {
