@@ -80,7 +80,7 @@ const AnnoncesPubliques = () => {
   const [annonces, setAnnonces] = useState<AnnoncePublique[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statutFilter, setStatutFilter] = useState<string>('all');
+  const [statutFilter, setStatutFilter] = useState<string>('en_attente');
   const [selectedAnnonce, setSelectedAnnonce] = useState<AnnoncePublique | null>(null);
   const [showRefusDialog, setShowRefusDialog] = useState(false);
   const [motifRefus, setMotifRefus] = useState('');
