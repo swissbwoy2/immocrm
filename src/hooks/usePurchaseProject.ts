@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { annualToMonthly } from '@/lib/buyerProfile';
+
 import {
   DEFAULT_FINANCING_SETTINGS,
   FinancingSettings,
