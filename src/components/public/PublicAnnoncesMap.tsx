@@ -50,10 +50,23 @@ export function PublicAnnoncesMap({
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
 
-  // Filter annonces with valid coordinates
-  const annoncesWithCoords = annonces.filter(
-    a => a.latitude !== null && a.longitude !== null
-  );
+  // Filter annonces with valid numeric coordinates (values may arrive as strings from the DB)
+  const annoncesWithCoords = useMemo(() => {
+    return annonces
+      .map((a) => {
+        const lat = a.latitude === null || a.latitude === undefined ? NaN : Number(a.latitude);
+        const lng = a.longitude === null || a.longitude === undefined ? NaN : Number(a.longitude);
+        return { annonce: a, lat, lng };
+      })
+      .filter(
+        ({ lat, lng }) =>
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 &&
+          Math.abs(lng) <= 180 &&
+          !(lat === 0 && lng === 0)
+      );
+  }, [annonces]);
 
   // Initialize map with error handling
   useEffect(() => {
@@ -63,7 +76,6 @@ export function PublicAnnoncesMap({
       const map = new google.maps.Map(mapRef.current, {
         center: { lat: 46.8, lng: 7.0 }, // Suisse romande center
         zoom: 9,
-        mapId: 'public-annonces-map',
         disableDefaultUI: false,
         zoomControl: true,
         mapTypeControl: false,
@@ -90,6 +102,7 @@ export function PublicAnnoncesMap({
       setMapReady(false);
     };
   }, [isLoaded]);
+
 
   // Draw search radius circle
   useEffect(() => {
