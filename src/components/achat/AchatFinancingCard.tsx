@@ -10,7 +10,7 @@ interface AchatFinancingCardProps {
 }
 
 const STATUT_BANCAIRE_LABEL: Record<string, { label: string; color: string }> = {
-  a_evaluer:        { label: 'À évaluer', color: 'bg-zinc-100 text-zinc-700' },
+  a_evaluer:        { label: 'À évaluer', color: 'bg-muted text-muted-foreground' },
   en_cours:         { label: 'En cours d\'analyse', color: 'bg-amber-100 text-amber-700' },
   validation_orale: { label: 'Validation orale reçue', color: 'bg-primary/10 text-primary' },
   valide:           { label: 'Validation bancaire confirmée', color: 'bg-emerald-100 text-emerald-700' },

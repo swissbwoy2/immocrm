@@ -28,7 +28,7 @@ export function AchatNotarySection({ notary }: AchatNotarySectionProps) {
     );
   }
 
-  const s = STATUT_LABEL[notary.statut] || { label: notary.statut, color: 'bg-zinc-100 text-zinc-700' };
+  const s = STATUT_LABEL[notary.statut] || { label: notary.statut, color: 'bg-muted text-muted-foreground' };
 
   return (
     <Card className="p-6 border-primary/20">

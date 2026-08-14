@@ -30,7 +30,7 @@ export function AchatNegotiationCard({ negotiations }: AchatNegotiationCardProps
       ) : (
         <div className="space-y-3">
           {negotiations.map((n) => {
-            const s = STATUT_LABEL[n.statut] || { label: n.statut, color: 'bg-zinc-100 text-zinc-700' };
+            const s = STATUT_LABEL[n.statut] || { label: n.statut, color: 'bg-muted text-muted-foreground' };
             return (
               <div key={n.id} className="rounded-xl border border-border bg-card/40 p-4">
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">

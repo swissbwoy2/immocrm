@@ -15,16 +15,16 @@ interface PurchaseOffreCardProps {
 
 const STATUT_LABEL: Record<string, { label: string; color: string }> = {
   envoyee:              { label: 'Bien proposé', color: 'bg-primary/10 text-primary border-primary/20' },
-  vue:                  { label: 'Vu', color: 'bg-zinc-100 text-zinc-700 border-zinc-200' },
+  vue:                  { label: 'Vu', color: 'bg-muted text-muted-foreground border-border' },
   interesse:            { label: 'Intéressé', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   visite_planifiee:     { label: 'Visite planifiée', color: 'bg-primary/10 text-primary border-primary/20' },
   visite_effectuee:     { label: 'Visite effectuée', color: 'bg-primary/10 text-primary border-primary/20' },
   offre_envisagee:      { label: 'Offre d\'achat envisagée', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  refusee:              { label: 'Écarté', color: 'bg-zinc-100 text-zinc-600 border-zinc-200' },
+  refusee:              { label: 'Écarté', color: 'bg-muted text-muted-foreground border-border' },
 };
 
 export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequestVisit, compact }: PurchaseOffreCardProps) {
-  const statut = STATUT_LABEL[offre.statut] || { label: offre.statut || 'Proposé', color: 'bg-zinc-100 text-zinc-700 border-zinc-200' };
+  const statut = STATUT_LABEL[offre.statut] || { label: offre.statut || 'Proposé', color: 'bg-muted text-muted-foreground border-border' };
   const isInterested = ['interesse', 'visite_planifiee', 'visite_effectuee', 'offre_envisagee'].includes(offre.statut);
   const isRefused = offre.statut === 'refusee';
 
@@ -122,7 +122,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
         {(onInterested || onNotInterested || onRequestVisit) && (
           <div className="flex flex-wrap gap-2 pt-1">
             {onInterested && !isInterested && (
-              <Button size="sm" onClick={onInterested} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={onInterested} className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
                 <Heart className="h-4 w-4 mr-1.5" /> Intéressé
               </Button>
             )}
@@ -145,7 +145,7 @@ export function PurchaseOffreCard({ offre, onInterested, onNotInterested, onRequ
 
 function Stat({ icon: Icon, label, value }: any) {
   return (
-    <div className="rounded-lg bg-white border border-primary/20 px-3 py-2">
+    <div className="rounded-lg bg-card border border-border px-3 py-2">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         <Icon className="h-3 w-3" /> {label}
       </div>

@@ -12,7 +12,7 @@ const STATUT_LABEL: Record<string, { label: string; color: string }> = {
   visite_planifiee:     { label: 'Visite planifiée', color: 'bg-primary/10 text-primary' },
   visite_effectuee:     { label: 'Visite effectuée', color: 'bg-primary/10 text-primary' },
   offre_recommandee:    { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
-  refuse:               { label: 'Écarté', color: 'bg-zinc-100 text-zinc-700' },
+  refuse:               { label: 'Écarté', color: 'bg-muted text-muted-foreground' },
   offre_envoyee:        { label: 'Offre envoyée', color: 'bg-purple-100 text-purple-700' },
 };
 
@@ -30,7 +30,7 @@ export function AchatPropertiesList({ properties }: AchatPropertiesListProps) {
       ) : (
         <div className="space-y-3">
           {properties.map((p) => {
-            const s = STATUT_LABEL[p.statut] || { label: p.statut, color: 'bg-zinc-100 text-zinc-700' };
+            const s = STATUT_LABEL[p.statut] || { label: p.statut, color: 'bg-muted text-muted-foreground' };
             return (
               <div key={p.id} className="rounded-xl border border-border bg-card/40 p-4 hover:border-primary/20 transition">
                 <div className="flex items-start justify-between gap-3 flex-wrap">

@@ -133,7 +133,7 @@ export function AchatDocumentsSection({ documents }: AchatDocumentsSectionProps)
                 <ul className="space-y-1 mt-1">
                   {cat.items.map((item) => (
                     <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground">
-                      <X className="h-3 w-3 text-zinc-300 mt-0.5 flex-shrink-0" />
+                      <X className="h-3 w-3 text-muted-foreground/50 mt-0.5 flex-shrink-0" />
                       {item}
                     </li>
                   ))}

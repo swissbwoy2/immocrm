@@ -11,7 +11,7 @@ interface AchatVisitReportsListProps {
 const STATUT_LABEL: Record<string, { label: string; color: string }> = {
   a_analyser:           { label: 'À analyser', color: 'bg-amber-100 text-amber-700' },
   valide_contre_visite: { label: 'Contre-visite recommandée', color: 'bg-primary/10 text-primary' },
-  refuse:               { label: 'Écarté', color: 'bg-zinc-100 text-zinc-700' },
+  refuse:               { label: 'Écarté', color: 'bg-muted text-muted-foreground' },
   offre_recommandee:    { label: 'Offre recommandée', color: 'bg-emerald-100 text-emerald-700' },
 };
 
@@ -33,7 +33,7 @@ export function AchatVisitReportsList({ reports, properties }: AchatVisitReports
         <div className="space-y-3">
           {reports.map((r) => {
             const p = propMap.get(r.property_id);
-            const s = STATUT_LABEL[r.statut] || { label: r.statut, color: 'bg-zinc-100 text-zinc-700' };
+            const s = STATUT_LABEL[r.statut] || { label: r.statut, color: 'bg-muted text-muted-foreground' };
             return (
               <div key={r.id} className="rounded-xl border border-border bg-card/40 p-4">
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
