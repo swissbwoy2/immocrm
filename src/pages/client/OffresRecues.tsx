@@ -34,6 +34,7 @@ import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { OffreInteretPrompt } from "@/components/client/OffreInteretPrompt";
 import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
 import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
+import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
 import { Loader2 } from "lucide-react";
 
 // Skeleton card for loading state
@@ -851,8 +852,8 @@ const OffresRecues = () => {
         dossier_complet: false
       });
 
-      // NE PAS modifier le statut de l'offre ici !
-      // L'offre reste à son statut actuel jusqu'à ce que l'agent envoie réellement le dossier
+      // L'offre passe en 'souhaite_postuler' pour apparaître dans l'onglet Postulations (admin/agent)
+      await supabase.from('offres').update({ statut: 'souhaite_postuler' }).eq('id', offre.id);
 
       if (clientData.agent_id) {
         let { data: conv } = await supabase
@@ -898,6 +899,15 @@ const OffresRecues = () => {
           });
         }
       }
+
+      await notifyPostulationRequest({
+        clientId: clientData.id,
+        agentId: clientData.agent_id,
+        offreId: offre.id,
+        address: offre.adresse || '',
+        displayName: await getClientDisplayName(user!.id),
+        choice: 'souhaite_postuler',
+      });
 
       await loadOffres();
       refreshData();
