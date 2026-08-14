@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { annualToMonthly, monthlyToAnnual } from '@/lib/buyerProfile';
+
 
 // ---------- Generic field grid ----------
 export function FieldGrid({ children }: { children: React.ReactNode }) {
