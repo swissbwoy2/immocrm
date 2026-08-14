@@ -156,6 +156,7 @@ export default function RechercheAnnonces() {
         // Fetch related data for the results
         if (radiusData && radiusData.length > 0) {
           const ids = radiusData.map((a: any) => a.id);
+          const nowIso = new Date().toISOString();
           const { data: fullData, error: fullError } = await supabase
             .from('annonces_publiques')
             .select(`
@@ -164,7 +165,9 @@ export default function RechercheAnnonces() {
               categories_annonces(nom, slug, icone),
               photos_annonces_publiques(url, est_principale)
             `)
-            .in('id', ids);
+            .in('id', ids)
+            .eq('statut', 'publie')
+            .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`);
 
           if (fullError) throw fullError;
           
@@ -176,6 +179,7 @@ export default function RechercheAnnonces() {
       }
 
       // Fallback to standard query when no coordinates
+      const nowIso = new Date().toISOString();
       let query = supabase
         .from('annonces_publiques')
         .select(`
@@ -184,7 +188,9 @@ export default function RechercheAnnonces() {
           categories_annonces(nom, slug, icone),
           photos_annonces_publiques(url, est_principale)
         `)
-        .eq('statut', 'publie');
+        .eq('statut', 'publie')
+        .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`);
+
 
       // Apply filters
       if (transactionType) {
