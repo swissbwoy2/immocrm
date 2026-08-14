@@ -658,9 +658,14 @@ export default function Visites() {
                       variant="outline"
                       size="lg"
                       className="w-full touch-target border-primary/30 hover:bg-primary/10"
-                      onClick={() => navigate('/client/offres-recues')}
+                      disabled={submittingVisiteId === visite.id}
+                      onClick={() => deposerCandidature(visite)}
                     >
-                      <FileCheck className="mr-2 h-5 w-5" />
+                      {submittingVisiteId === visite.id ? (
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      ) : (
+                        <FileCheck className="mr-2 h-5 w-5" />
+                      )}
                       Déposer candidature
                     </Button>
                     <Button 
