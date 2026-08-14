@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Maximize2, Building2, Heart, Star, Eye } from 'lucide-react';
+import { MapPin, Bed, Maximize2, Building2, Heart, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -72,16 +72,15 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
     await toggleFavorite(annonce.id);
   };
 
-
   const advertiserName = annonce.annonceurs?.nom_entreprise || annonce.annonceurs?.nom || 'Annonceur';
 
   return (
     <Link to={`/annonces/${annonce.slug || annonce.id}`}>
       <Card 
         className={cn(
-          "group overflow-hidden transition-all duration-300 hover:shadow-xl border-border/50 bg-card",
+          "group overflow-hidden transition-all duration-200 hover:shadow-lg border-border/50 bg-card",
           featured && "ring-2 ring-primary/20 shadow-md",
-          compact ? "flex flex-row h-32" : "hover:-translate-y-1"
+          compact ? "flex flex-row h-28" : "hover:-translate-y-0.5"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -89,7 +88,7 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
         {/* Image Container */}
         <div className={cn(
           "relative overflow-hidden bg-muted",
-          compact ? "w-36 h-full shrink-0" : "aspect-[4/3]"
+          compact ? "w-32 h-full shrink-0" : "aspect-[4/3]"
         )}>
           <img
             src={mainPhoto}
@@ -98,34 +97,33 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
 
-          {/* Prix en surimpression */}
+          {/* Gradient + Price overlay */}
           {!compact && (
             <>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-foreground/70 to-transparent" />
-              <span className="absolute bottom-3 left-3 rounded-lg bg-background/95 backdrop-blur-sm px-3 py-1.5 text-base font-bold text-primary shadow-sm">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
+              <span className="absolute bottom-2 left-2 rounded-md bg-background/95 backdrop-blur-sm px-2 py-1 text-sm font-bold text-primary shadow-sm">
                 {formatPrice(annonce.prix, annonce.type_transaction)}
               </span>
             </>
           )}
 
-          
           {/* Overlay badges */}
-          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
+          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
             <Badge 
               variant={annonce.type_transaction === 'vente' ? 'default' : 'secondary'}
-              className="text-xs font-semibold px-2.5 py-1 shadow-sm"
+              className="text-[10px] font-semibold px-1.5 py-0.5 shadow-sm"
             >
               {annonce.type_transaction === 'vente' ? 'À vendre' : 'À louer'}
             </Badge>
             {featured && annonce.est_mise_en_avant && (
-              <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white text-xs shadow-sm">
-                <Star className="h-3 w-3 mr-1 fill-current" />
+              <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] shadow-sm px-1.5 py-0.5">
+                <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
                 Vedette
               </Badge>
             )}
             {annonce.disponible_immediatement && (
-              <Badge variant="outline" className="bg-emerald-500/90 text-white border-0 text-xs shadow-sm">
-                Disponible
+              <Badge variant="outline" className="bg-emerald-500/90 text-white border-0 text-[10px] shadow-sm px-1.5 py-0.5">
+                Dispo
               </Badge>
             )}
           </div>
@@ -135,127 +133,95 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             variant="ghost"
             size="icon"
             className={cn(
-              "absolute top-3 right-3 h-9 w-9 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-sm transition-all",
+              "absolute top-2 right-2 h-7 w-7 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-sm transition-all",
               isFavorite && "text-red-500"
             )}
             onClick={handleFavoriteClick}
           >
-            <Heart className={cn("h-4 w-4", isFavorite && "fill-current")} />
+            <Heart className={cn("h-3.5 w-3.5", isFavorite && "fill-current")} />
           </Button>
-
-          {/* Category badge */}
-          {annonce.categories_annonces && !compact && (
-            <div className="absolute top-14 left-3">
-              <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-xs font-medium shadow-sm">
-                <Building2 className="h-3 w-3 mr-1.5" />
-                {annonce.categories_annonces.nom}
-              </Badge>
-            </div>
-          )}
-
 
           {/* Photo count indicator */}
           {!compact && annonce.photos_annonces_publiques && annonce.photos_annonces_publiques.length > 1 && (
-            <div className="absolute bottom-3 right-3">
-              <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-xs font-medium shadow-sm">
-                {annonce.photos_annonces_publiques.length} photos
+            <div className="absolute bottom-2 right-2">
+              <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-[10px] font-medium shadow-sm px-1.5 py-0.5">
+                {annonce.photos_annonces_publiques.length}
               </Badge>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <CardContent className={cn("flex-1", compact ? "p-3 flex flex-col justify-center" : "p-5")}>
-          {/* Price - Large and prominent */}
-          <div className="flex items-baseline justify-between mb-2">
-            <span className={cn(
-              "font-bold text-primary",
-              compact ? "text-lg" : "text-2xl"
-            )}>
+        <CardContent className={cn("flex-1", compact ? "p-2.5 flex flex-col justify-center" : "p-3")}>
+          {/* Price - compact mode only */}
+          {compact && (
+            <span className="font-bold text-primary text-base mb-0.5">
               {formatPrice(annonce.prix, annonce.type_transaction)}
             </span>
-            {annonce.charges_mensuelles && annonce.type_transaction === 'location' && !compact && (
-              <span className="text-sm text-muted-foreground">
-                + {annonce.charges_mensuelles} CHF/mois
-              </span>
-            )}
-          </div>
+          )}
 
           {/* Title */}
           <h3 className={cn(
-            "font-semibold text-foreground group-hover:text-primary transition-colors",
-            compact ? "text-sm line-clamp-1 mb-1" : "text-lg line-clamp-2 mb-2"
+            "font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2",
+            compact ? "text-xs mb-0.5" : "text-sm mb-1"
           )}>
             {annonce.titre}
           </h3>
 
           {/* Location */}
           <div className={cn(
-            "flex items-center gap-1.5 text-muted-foreground",
-            compact ? "text-xs mb-1" : "text-sm mb-4"
+            "flex items-center gap-1 text-muted-foreground",
+            compact ? "text-[10px] mb-1" : "text-xs mb-2"
           )}>
-            <MapPin className="h-4 w-4 shrink-0 text-primary/70" />
+            <MapPin className="h-3 w-3 shrink-0 text-primary/70" />
             <span className="line-clamp-1">
               {annonce.ville}{annonce.canton && `, ${annonce.canton}`}
             </span>
           </div>
 
-          {/* Features - Key info in pills */}
+          {/* Features - compact inline pills */}
           {!compact && (
-            <div className="flex items-center flex-wrap gap-3 mb-4">
+            <div className="flex items-center flex-wrap gap-2">
               {annonce.nombre_pieces && (
-                <div className="flex items-center gap-1.5 bg-muted/60 rounded-full px-3 py-1.5">
-                  <Bed className="h-4 w-4 text-primary/80" />
-                  <span className="text-sm font-medium">{annonce.nombre_pieces} pièces</span>
+                <div className="flex items-center gap-1 bg-muted/60 rounded-full px-2 py-0.5">
+                  <Bed className="h-3 w-3 text-primary/80" />
+                  <span className="text-[11px] font-medium">{annonce.nombre_pieces} p.</span>
                 </div>
               )}
               {annonce.surface_habitable && (
-                <div className="flex items-center gap-1.5 bg-muted/60 rounded-full px-3 py-1.5">
-                  <Maximize2 className="h-4 w-4 text-primary/80" />
-                  <span className="text-sm font-medium">{annonce.surface_habitable} m²</span>
+                <div className="flex items-center gap-1 bg-muted/60 rounded-full px-2 py-0.5">
+                  <Maximize2 className="h-3 w-3 text-primary/80" />
+                  <span className="text-[11px] font-medium">{annonce.surface_habitable} m²</span>
                 </div>
               )}
               {annonce.nb_chambres && (
-                <div className="flex items-center gap-1.5 bg-muted/60 rounded-full px-3 py-1.5">
-                  <span className="text-sm font-medium">{annonce.nb_chambres} ch.</span>
+                <div className="flex items-center gap-1 bg-muted/60 rounded-full px-2 py-0.5">
+                  <span className="text-[11px] font-medium">{annonce.nb_chambres} ch.</span>
                 </div>
+              )}
+              {annonce.charges_mensuelles && annonce.type_transaction === 'location' && (
+                <span className="text-[10px] text-muted-foreground">
+                  + {annonce.charges_mensuelles} CHF/mois
+                </span>
               )}
             </div>
           )}
 
-          {/* Footer - Advertiser info */}
-          {!compact && (
-            <div className="flex items-center justify-between pt-4 border-t border-border/50">
-              <div className="flex items-center gap-2.5">
-                {annonce.annonceurs?.logo_url ? (
-                  <img 
-                    src={annonce.annonceurs.logo_url} 
-                    alt={advertiserName}
-                    className="h-8 w-8 rounded-full object-cover border border-border"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Building2 className="h-4 w-4 text-primary" />
-                  </div>
-                )}
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium line-clamp-1">
-                    {advertiserName}
-                  </span>
-                  {annonce.annonceurs?.note_moyenne && annonce.annonceurs.note_moyenne > 0 && (
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                      <span className="text-xs text-muted-foreground">{annonce.annonceurs.note_moyenne.toFixed(1)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {annonce.nb_vues && annonce.nb_vues > 0 && (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Eye className="h-4 w-4" />
-                  <span className="text-sm">{annonce.nb_vues} vues</span>
+          {/* Compact mode footer */}
+          {compact && (
+            <div className="flex items-center gap-1.5 mt-auto">
+              {annonce.annonceurs?.logo_url ? (
+                <img 
+                  src={annonce.annonceurs.logo_url} 
+                  alt={advertiserName}
+                  className="h-5 w-5 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-3 w-3 text-primary" />
                 </div>
               )}
+              <span className="text-[10px] text-muted-foreground line-clamp-1">{advertiserName}</span>
             </div>
           )}
         </CardContent>
