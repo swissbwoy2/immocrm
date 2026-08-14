@@ -3,9 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { 
   Search, MapPin, Filter, List, Map as MapIcon, 
-  ChevronDown, X, SlidersHorizontal, Building2, Circle
+  ChevronDown, X, SlidersHorizontal, Building2, Circle, BellPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,14 +18,27 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PublicHeader } from '@/components/public/PublicHeader';
+import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
+
+const setMeta = (name: string, content: string) => {
+  let tag = document.querySelector(`meta[name="${name}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute('name', name);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+};
 
 export default function RechercheAnnonces() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
+  const { user } = useAuth();
+
 
   // View state
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
@@ -59,7 +74,27 @@ export default function RechercheAnnonces() {
     rayon: radiusKm.toString(),
   });
 
+  // SEO
+  useEffect(() => {
+    const label =
+      transactionType === 'location' ? 'Location' : transactionType === 'vente' ? 'Vente' : 'Immobilier';
+    const lieu = searchLocation ? ` à ${searchLocation}` : ' en Suisse romande';
+    document.title = `${label} — Annonces immobilières${lieu} | Logisorama`;
+    setMeta(
+      'description',
+      `Découvrez les annonces immobilières${lieu} : appartements, maisons et locaux à louer ou à vendre. Recherche par carte, filtres et alertes — Logisorama.`,
+    );
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `${window.location.origin}/annonces`;
+  }, [transactionType, searchLocation]);
+
   // Geocode the search location when it changes
+
   useEffect(() => {
     if (!searchLocation || !mapsLoaded || !window.google?.maps) {
       setSearchCoords(null);
@@ -121,6 +156,7 @@ export default function RechercheAnnonces() {
         // Fetch related data for the results
         if (radiusData && radiusData.length > 0) {
           const ids = radiusData.map((a: any) => a.id);
+          const nowIso = new Date().toISOString();
           const { data: fullData, error: fullError } = await supabase
             .from('annonces_publiques')
             .select(`
@@ -129,7 +165,9 @@ export default function RechercheAnnonces() {
               categories_annonces(nom, slug, icone),
               photos_annonces_publiques(url, est_principale)
             `)
-            .in('id', ids);
+            .in('id', ids)
+            .eq('statut', 'publie')
+            .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`);
 
           if (fullError) throw fullError;
           
@@ -141,6 +179,7 @@ export default function RechercheAnnonces() {
       }
 
       // Fallback to standard query when no coordinates
+      const nowIso = new Date().toISOString();
       let query = supabase
         .from('annonces_publiques')
         .select(`
@@ -149,7 +188,9 @@ export default function RechercheAnnonces() {
           categories_annonces(nom, slug, icone),
           photos_annonces_publiques(url, est_principale)
         `)
-        .eq('statut', 'publie');
+        .eq('statut', 'publie')
+        .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`);
+
 
       // Apply filters
       if (transactionType) {
@@ -248,8 +289,50 @@ export default function RechercheAnnonces() {
     return count;
   }, [transactionType, searchLocation, category, prixMin, prixMax, piecesMin, piecesMax, surfaceMin]);
 
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
+
+  const saveSearchAlert = async () => {
+    if (!user) {
+      toast.info('Connectez-vous pour créer une alerte e-mail');
+      return;
+    }
+    setIsSavingSearch(true);
+    try {
+      const nom = [
+        transactionType === 'location' ? 'Location' : transactionType === 'vente' ? 'Vente' : 'Tous biens',
+        searchLocation || 'Suisse',
+      ].join(' — ');
+
+      const { error } = await supabase.from('recherches_sauvegardees').insert({
+        user_id: user.id,
+        nom,
+        type_transaction: transactionType || null,
+        categorie_id: category ? categories.find((c) => c.slug === category)?.id ?? null : null,
+        ville: searchLocation || null,
+        rayon_km: radiusKm,
+        latitude: searchCoords?.lat ?? null,
+        longitude: searchCoords?.lng ?? null,
+        prix_min: prixMin ? parseInt(prixMin) : null,
+        prix_max: prixMax ? parseInt(prixMax) : null,
+        pieces_min: piecesMin ? parseFloat(piecesMin) : null,
+        pieces_max: piecesMax ? parseFloat(piecesMax) : null,
+        surface_min: surfaceMin ? parseInt(surfaceMin) : null,
+        alerte_active: true,
+        frequence_alerte: 'quotidien',
+      });
+      if (error) throw error;
+      toast.success('Alerte créée : vous serez averti des nouvelles annonces');
+    } catch {
+      toast.error("Impossible de créer l'alerte");
+    } finally {
+      setIsSavingSearch(false);
+    }
+  };
+
+
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
 
       {/* Search Bar - Sticky */}
@@ -313,14 +396,15 @@ export default function RechercheAnnonces() {
                     <div className="space-y-2">
                       <Label>Type de bien</Label>
                       <Select 
-                        value={localFilters.categorie} 
-                        onValueChange={(v) => setLocalFilters(prev => ({ ...prev, categorie: v }))}
+                        value={localFilters.categorie || 'all'} 
+                        onValueChange={(v) => setLocalFilters(prev => ({ ...prev, categorie: v === 'all' ? '' : v }))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Tous les types" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Tous les types</SelectItem>
+                          <SelectItem value="all">Tous les types</SelectItem>
+
                           {categories.map(cat => (
                             <SelectItem key={cat.id} value={cat.slug}>{cat.nom}</SelectItem>
                           ))}
@@ -540,7 +624,20 @@ export default function RechercheAnnonces() {
                 </p>
               </div>
 
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  onClick={saveSearchAlert}
+                  disabled={isSavingSearch}
+                >
+                  <BellPlus className="h-4 w-4 mr-2" />
+                  Créer une alerte
+                </Button>
+
               {/* Sort */}
+
               <Select 
                 value={sortBy} 
                 onValueChange={(v) => {
@@ -563,7 +660,9 @@ export default function RechercheAnnonces() {
                   <SelectItem value="surface">Surface</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
             </div>
+
           </div>
 
           {/* Scrollable list */}
@@ -643,6 +742,8 @@ export default function RechercheAnnonces() {
           </div>
         )}
       </div>
+
+      <PublicFooter />
     </div>
   );
 }

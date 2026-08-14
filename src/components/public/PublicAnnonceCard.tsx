@@ -5,9 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { usePublicFavoris } from '@/hooks/usePublicFavoris';
+
 
 interface AnnonceData {
   id: string;
@@ -49,9 +48,9 @@ interface PublicAnnonceCardProps {
 }
 
 export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceCardProps) {
-  const { user } = useAuth();
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const { isFavorite: isFav, toggleFavorite } = usePublicFavoris();
+  const [, setIsHovered] = useState(false);
+  const isFavorite = isFav(annonce.id);
 
   const mainPhoto = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url 
     || annonce.photos_annonces_publiques?.[0]?.url
@@ -70,32 +69,9 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!user) {
-      toast.info('Connectez-vous pour ajouter des favoris');
-      return;
-    }
-
-    try {
-      if (isFavorite) {
-        await supabase
-          .from('favoris_annonces')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('annonce_id', annonce.id);
-        setIsFavorite(false);
-        toast.success('Retiré des favoris');
-      } else {
-        await supabase
-          .from('favoris_annonces')
-          .insert({ user_id: user.id, annonce_id: annonce.id });
-        setIsFavorite(true);
-        toast.success('Ajouté aux favoris');
-      }
-    } catch (error) {
-      toast.error('Erreur lors de la mise à jour des favoris');
-    }
+    await toggleFavorite(annonce.id);
   };
+
 
   const advertiserName = annonce.annonceurs?.nom_entreprise || annonce.annonceurs?.nom || 'Annonceur';
 
@@ -113,13 +89,25 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
         {/* Image Container */}
         <div className={cn(
           "relative overflow-hidden bg-muted",
-          compact ? "w-36 h-full shrink-0" : "aspect-[16/10]"
+          compact ? "w-36 h-full shrink-0" : "aspect-[4/3]"
         )}>
           <img
             src={mainPhoto}
-            alt={annonce.titre}
+            alt={`${annonce.titre} — ${annonce.ville}`}
+            loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
+
+          {/* Prix en surimpression */}
+          {!compact && (
+            <>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-foreground/70 to-transparent" />
+              <span className="absolute bottom-3 left-3 rounded-lg bg-background/95 backdrop-blur-sm px-3 py-1.5 text-base font-bold text-primary shadow-sm">
+                {formatPrice(annonce.prix, annonce.type_transaction)}
+              </span>
+            </>
+          )}
+
           
           {/* Overlay badges */}
           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
@@ -155,15 +143,16 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             <Heart className={cn("h-4 w-4", isFavorite && "fill-current")} />
           </Button>
 
-          {/* Category badge - Bottom left */}
+          {/* Category badge */}
           {annonce.categories_annonces && !compact && (
-            <div className="absolute bottom-3 left-3">
+            <div className="absolute top-14 left-3">
               <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-xs font-medium shadow-sm">
                 <Building2 className="h-3 w-3 mr-1.5" />
                 {annonce.categories_annonces.nom}
               </Badge>
             </div>
           )}
+
 
           {/* Photo count indicator */}
           {!compact && annonce.photos_annonces_publiques && annonce.photos_annonces_publiques.length > 1 && (

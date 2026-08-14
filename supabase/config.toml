@@ -177,3 +177,5 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.whatsapp-webhook]
     verify_jwt = false
+  [functions.contact-annonce]
+    verify_jwt = false

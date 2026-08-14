@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { usePublicFavoris } from '@/hooks/usePublicFavoris';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,42 +23,74 @@ import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const setMetaTag = (attr: 'name' | 'property', key: string, content: string) => {
+  let tag = document.querySelector(`meta[${attr}="${key}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attr, key);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+};
+
 export default function AnnonceDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isFavorite: isFav, toggleFavorite } = usePublicFavoris();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
 
-  // Fetch annonce details
+  // Fetch annonce details (slug, fallback sur l'id)
   const { data: annonce, isLoading, error } = useQuery({
     queryKey: ['annonce-detail', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('annonces_publiques')
-        .select(`
+      const select = `
           *,
-          annonceurs(id, nom, prenom, nom_entreprise, type_annonceur, logo_url, note_moyenne, nb_avis, telephone, email, est_verifie),
+          annonceurs(id, nom, prenom, nom_entreprise, type_annonceur, logo_url, note_moyenne, nb_avis, est_verifie),
           categories_annonces(nom, slug, icone),
           photos_annonces_publiques(id, url, est_principale, ordre)
-        `)
+        `;
+      const nowIso = new Date().toISOString();
+
+      let { data, error } = await supabase
+        .from('annonces_publiques')
+        .select(select)
         .eq('slug', slug)
         .eq('statut', 'publie')
-        .single();
-      
+        .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`)
+        .maybeSingle();
+
+      if (!data && slug && UUID_RE.test(slug)) {
+        const fallback = await supabase
+          .from('annonces_publiques')
+          .select(select)
+          .eq('id', slug)
+          .eq('statut', 'publie')
+          .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`)
+          .maybeSingle();
+        data = fallback.data;
+        error = fallback.error;
+      }
+
       if (error) throw error;
-      return data;
+      if (!data) throw new Error('not-found');
+      return data as any;
     },
     enabled: !!slug
   });
+
+  const isFavorite = annonce ? isFav(annonce.id) : false;
 
   // Fetch similar listings
   const { data: similarAnnonces = [] } = useQuery({
     queryKey: ['similar-annonces', annonce?.id, annonce?.type_transaction, annonce?.canton],
     queryFn: async () => {
       if (!annonce) return [];
+      const nowIso = new Date().toISOString();
       const { data, error } = await supabase
         .from('annonces_publiques')
         .select(`
@@ -66,6 +99,7 @@ export default function AnnonceDetail() {
           photos_annonces_publiques(url, est_principale)
         `)
         .eq('statut', 'publie')
+        .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`)
         .eq('type_transaction', annonce.type_transaction)
         .eq('canton', annonce.canton)
         .neq('id', annonce.id)
@@ -78,19 +112,64 @@ export default function AnnonceDetail() {
   });
 
   // Track view
-  useQuery({
-    queryKey: ['track-view', annonce?.id],
-    queryFn: async () => {
-      if (!annonce) return null;
-      await supabase.from('vues_annonces').insert({
-        annonce_id: annonce.id,
-        ip_address: 'anonymous'
-      });
-      return true;
-    },
-    enabled: !!annonce,
-    staleTime: Infinity
-  });
+  useEffect(() => {
+    if (!annonce?.id) return;
+    supabase.from('vues_annonces').insert({ annonce_id: annonce.id }).then(() => {});
+    supabase.rpc('increment_annonce_vue', { _annonce_id: annonce.id }).then(() => {});
+  }, [annonce?.id]);
+
+  // SEO
+  useEffect(() => {
+    if (!annonce) return;
+    const title = (annonce.meta_title || `${annonce.titre} — ${annonce.ville}`).slice(0, 65);
+    const description = (
+      annonce.meta_description ||
+      annonce.description_courte ||
+      `${annonce.titre} à ${annonce.ville}. Découvrez cette annonce sur le portail Logisorama.`
+    ).slice(0, 158);
+
+    document.title = `${title} | Logisorama`;
+    setMetaTag('name', 'description', description);
+    setMetaTag('property', 'og:title', title);
+    setMetaTag('property', 'og:description', description);
+    setMetaTag('property', 'og:type', 'article');
+    setMetaTag('name', 'twitter:card', 'summary_large_image');
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `${window.location.origin}/annonces/${annonce.slug || annonce.id}`;
+
+    const ld = document.createElement('script');
+    ld.type = 'application/ld+json';
+    ld.text = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'RealEstateListing',
+      name: annonce.titre,
+      description,
+      url: canonical.href,
+      datePosted: annonce.date_publication,
+      image: annonce.photos_annonces_publiques?.map((p: any) => p.url).slice(0, 5),
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: annonce.ville,
+        postalCode: annonce.code_postal,
+        addressRegion: annonce.canton,
+        addressCountry: 'CH',
+      },
+      offers: {
+        '@type': 'Offer',
+        price: annonce.prix,
+        priceCurrency: 'CHF',
+        availability: 'https://schema.org/InStock',
+      },
+    });
+    document.head.appendChild(ld);
+    return () => { ld.remove(); };
+  }, [annonce]);
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -107,9 +186,11 @@ export default function AnnonceDetail() {
   };
 
   const handleFavorite = async () => {
-    setIsFavorite(!isFavorite);
-    toast.success(isFavorite ? 'Retiré des favoris' : 'Ajouté aux favoris');
+    if (!annonce) return;
+    await toggleFavorite(annonce.id);
+    queryClient.invalidateQueries({ queryKey: ['annonce-detail', slug] });
   };
+
 
   const handleReport = () => {
     toast.info('Signalement envoyé. Merci de votre vigilance.');
@@ -144,7 +225,7 @@ export default function AnnonceDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
         <div className="pt-20 pb-12">
           <div className="container mx-auto px-4">
@@ -167,7 +248,7 @@ export default function AnnonceDetail() {
 
   if (error || !annonce) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
         <div className="pt-32 pb-12 text-center">
           <Building2 className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -182,7 +263,7 @@ export default function AnnonceDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
 
       {/* Breadcrumb */}

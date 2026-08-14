@@ -12862,6 +12862,10 @@ export type Database = {
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
+      annonceur_has_published_annonce: {
+        Args: { _annonceur_id: string }
+        Returns: boolean
+      }
       assert_not_demo: { Args: never; Returns: boolean }
       calculate_match_score: {
         Args: { p_criteria: Json; p_property_result_id: string }
@@ -12963,6 +12967,10 @@ export type Database = {
       }
       increment_agent_clients: {
         Args: { agent_uuid: string }
+        Returns: undefined
+      }
+      increment_annonce_vue: {
+        Args: { _annonce_id: string }
         Returns: undefined
       }
       ir_build_msg: {
