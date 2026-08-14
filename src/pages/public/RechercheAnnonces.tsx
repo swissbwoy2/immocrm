@@ -742,6 +742,8 @@ export default function RechercheAnnonces() {
           </div>
         )}
       </div>
+
+      <PublicFooter />
     </div>
   );
 }
