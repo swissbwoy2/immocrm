@@ -36,31 +36,41 @@ export function AnnonceLocationMap({
   // Geocode address if no coordinates provided
   useEffect(() => {
     if (!isLoaded || isFallback) return;
-    if (latitude !== null && longitude !== null) {
-      setGeocodedPosition({ lat: latitude, lng: longitude });
+
+    const lat = latitude === null || latitude === undefined ? NaN : Number(latitude);
+    const lng = longitude === null || longitude === undefined ? NaN : Number(longitude);
+    const valid =
+      Number.isFinite(lat) && Number.isFinite(lng) &&
+      Math.abs(lat) <= 90 && Math.abs(lng) <= 180 &&
+      !(lat === 0 && lng === 0);
+
+    if (valid) {
+      setGeocodedPosition({ lat, lng });
       return;
     }
 
     // Try to geocode the address
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: fullAddress }, (results, status) => {
+    geocoder.geocode({ address: fullAddress, region: 'ch' }, (results, status) => {
       if (status === 'OK' && results && results[0]) {
         const location = results[0].geometry.location;
         setGeocodedPosition({ lat: location.lat(), lng: location.lng() });
+      } else {
+        setGeocodedPosition(null);
       }
     });
   }, [isLoaded, isFallback, latitude, longitude, fullAddress]);
+
 
   // Initialize map
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !geocodedPosition) return;
 
-    const zoomLevel = afficher_adresse_exacte ? 16 : 13;
+    const zoomLevel = afficher_adresse_exacte ? 15 : 13;
     
     const map = new google.maps.Map(mapRef.current, {
       center: geocodedPosition,
       zoom: zoomLevel,
-      mapId: 'annonce-detail-map',
       disableDefaultUI: false,
       zoomControl: true,
       mapTypeControl: true,
@@ -69,54 +79,15 @@ export function AnnonceLocationMap({
     });
 
     mapInstanceRef.current = map;
+    map.setCenter(geocodedPosition);
 
     // Create marker only if showing exact address
     if (afficher_adresse_exacte) {
-      const priceLabel = prix 
-        ? `CHF ${new Intl.NumberFormat('fr-CH', { maximumFractionDigits: 0 }).format(prix)}${type_transaction === 'location' ? '/mois' : ''}` 
-        : 'Emplacement';
-
-      // Check if AdvancedMarkerElement is available, otherwise use classic Marker
-      if (google.maps.marker?.AdvancedMarkerElement) {
-        const markerContent = document.createElement('div');
-        markerContent.innerHTML = `
-          <div class="bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg font-semibold text-sm flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-            ${priceLabel}
-          </div>
-        `;
-
-        markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-          map,
-          position: geocodedPosition,
-          content: markerContent,
-          title: address,
-        });
-      } else {
-        // Fallback to classic Marker
-        markerRef.current = new google.maps.Marker({
-          map,
-          position: geocodedPosition,
-          title: address,
-          label: {
-            text: priceLabel,
-            color: '#ffffff',
-            fontWeight: 'bold',
-            fontSize: '12px',
-          },
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: '#3b82f6',
-            fillOpacity: 1,
-            strokeColor: '#1d4ed8',
-            strokeWeight: 2,
-          },
-        });
-      }
+      markerRef.current = new google.maps.Marker({
+        map,
+        position: geocodedPosition,
+        title: address,
+      });
     } else {
       // Show approximate area with a circle
       new google.maps.Circle({
