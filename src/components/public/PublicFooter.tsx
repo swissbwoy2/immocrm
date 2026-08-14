@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Building2, Mail, Phone, MapPin, Facebook, Instagram, Linkedin } from 'lucide-react';
+import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function PublicFooter() {
@@ -51,9 +52,10 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/inscription-annonceur" className="text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors">
-                  Déposer une annonce
-                </Link>
+                <DeposerAnnonceButton
+                  asLink
+                  className="text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
+                />
               </li>
             </ul>
           </div>

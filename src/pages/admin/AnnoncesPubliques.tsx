@@ -19,13 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Eye, 
@@ -42,7 +36,8 @@ import {
   Clock, 
   Building2,
   AlertTriangle,
-  FileText
+  FileText,
+  Star
 } from 'lucide-react';
 
 interface AnnoncePublique {
@@ -58,6 +53,11 @@ interface AnnoncePublique {
   statut: string;
   created_at: string;
   date_soumission: string | null;
+  date_expiration?: string | null;
+  duree_publication?: number | null;
+  motif_refus?: string | null;
+  slug?: string | null;
+  est_mise_en_avant?: boolean | null;
   nb_vues: number;
   nb_favoris: number;
   annonceur_id: string;
@@ -73,7 +73,7 @@ const AnnoncesPubliques = () => {
   const [annonces, setAnnonces] = useState<AnnoncePublique[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statutFilter, setStatutFilter] = useState<string>('all');
+  const [statutFilter, setStatutFilter] = useState<string>('en_attente');
   const [selectedAnnonce, setSelectedAnnonce] = useState<AnnoncePublique | null>(null);
   const [showRefusDialog, setShowRefusDialog] = useState(false);
   const [motifRefus, setMotifRefus] = useState('');
@@ -88,29 +88,24 @@ const AnnoncesPubliques = () => {
 
   useEffect(() => {
     loadAnnonces();
-  }, [statutFilter]);
+  }, []);
 
   const loadAnnonces = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('annonces_publiques')
         .select(`
           *,
           annonceur:annonceurs(nom, prenom, email, type_annonceur)
         `)
-        .order('created_at', { ascending: false });
-
-      if (statutFilter !== 'all') {
-        query = query.eq('statut', statutFilter);
-      }
-
-      const { data, error } = await query;
+        .order('created_at', { ascending: false })
+        .limit(2000);
 
       if (error) throw error;
 
       setAnnonces(data || []);
-      
+
       const allAnnonces = data || [];
       setStats({
         total: allAnnonces.length,
@@ -129,16 +124,28 @@ const AnnoncesPubliques = () => {
   const handleApprouver = async (annonce: AnnoncePublique) => {
     setProcessing(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const days = annonce.duree_publication || 60;
+      const expiration = new Date();
+      expiration.setDate(expiration.getDate() + days);
+
       const { error } = await supabase
         .from('annonces_publiques')
         .update({
           statut: 'publie',
           date_publication: new Date().toISOString(),
-          date_moderation: new Date().toISOString()
+          date_moderation: new Date().toISOString(),
+          date_expiration: expiration.toISOString(),
+          motif_refus: null,
+          modere_par: user?.id ?? null,
         })
         .eq('id', annonce.id);
 
       if (error) throw error;
+
+      supabase.functions.invoke('annonce-moderation-notify', {
+        body: { annonce_id: annonce.id, action: 'approved' },
+      }).catch((e) => console.error('Notification annonceur échouée', e));
 
       toast.success('Annonce approuvée et publiée');
       loadAnnonces();
@@ -150,6 +157,29 @@ const AnnoncesPubliques = () => {
     }
   };
 
+  const handleToggleMiseEnAvant = async (annonce: AnnoncePublique) => {
+    const next = !annonce.est_mise_en_avant;
+    const now = new Date();
+    const fin = new Date();
+    fin.setDate(fin.getDate() + 30);
+
+    const { error } = await supabase
+      .from('annonces_publiques')
+      .update({
+        est_mise_en_avant: next,
+        date_mise_en_avant_debut: next ? now.toISOString() : null,
+        date_mise_en_avant_fin: next ? fin.toISOString() : null,
+      })
+      .eq('id', annonce.id);
+
+    if (error) {
+      toast.error('Erreur lors de la mise en avant');
+      return;
+    }
+    toast.success(next ? 'Annonce mise en avant (30 jours)' : 'Mise en avant retirée');
+    loadAnnonces();
+  };
+
   const handleRefuser = async () => {
     if (!selectedAnnonce || !motifRefus.trim()) {
       toast.error('Veuillez indiquer un motif de refus');
@@ -158,16 +188,22 @@ const AnnoncesPubliques = () => {
 
     setProcessing(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('annonces_publiques')
         .update({
           statut: 'refuse',
           motif_refus: motifRefus,
-          date_moderation: new Date().toISOString()
+          date_moderation: new Date().toISOString(),
+          modere_par: user?.id ?? null,
         })
         .eq('id', selectedAnnonce.id);
 
       if (error) throw error;
+
+      supabase.functions.invoke('annonce-moderation-notify', {
+        body: { annonce_id: selectedAnnonce.id, action: 'refused', motif_refus: motifRefus },
+      }).catch((e) => console.error('Notification annonceur échouée', e));
 
       toast.success('Annonce refusée');
       setShowRefusDialog(false);
@@ -199,14 +235,43 @@ const AnnoncesPubliques = () => {
     }
   };
 
+  const isExpired = (a: AnnoncePublique) =>
+    a.statut === 'expire' ||
+    (a.statut === 'publie' && !!a.date_expiration && new Date(a.date_expiration) < new Date());
+
+  const matchesTab = (a: AnnoncePublique) => {
+    switch (statutFilter) {
+      case 'en_attente':
+        return a.statut === 'en_attente';
+      case 'publie':
+        return a.statut === 'publie' && !isExpired(a);
+      case 'refuse':
+        return a.statut === 'refuse';
+      case 'expire':
+        return isExpired(a);
+      default:
+        return true;
+    }
+  };
+
+  const tabCounts = {
+    en_attente: annonces.filter(a => a.statut === 'en_attente').length,
+    publie: annonces.filter(a => a.statut === 'publie' && !isExpired(a)).length,
+    refuse: annonces.filter(a => a.statut === 'refuse').length,
+    expire: annonces.filter(isExpired).length,
+    all: annonces.length,
+  };
+
   const filteredAnnonces = annonces.filter(annonce => {
-    const matchesSearch = 
-      annonce.titre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      annonce.ville.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      annonce.annonceur?.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      annonce.annonceur?.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      !term ||
+      annonce.titre.toLowerCase().includes(term) ||
+      annonce.ville.toLowerCase().includes(term) ||
+      annonce.annonceur?.nom.toLowerCase().includes(term) ||
+      annonce.annonceur?.email.toLowerCase().includes(term);
+
+    return matchesSearch && matchesTab(annonce);
   });
 
   return (
@@ -249,12 +314,17 @@ const AnnoncesPubliques = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
+      <div className="space-y-4">
+        <Tabs value={statutFilter} onValueChange={setStatutFilter}>
+          <TabsList className="w-full flex-wrap h-auto justify-start gap-1">
+            <TabsTrigger value="en_attente">À modérer ({tabCounts.en_attente})</TabsTrigger>
+            <TabsTrigger value="publie">Publiées ({tabCounts.publie})</TabsTrigger>
+            <TabsTrigger value="refuse">Refusées ({tabCounts.refuse})</TabsTrigger>
+            <TabsTrigger value="expire">Expirées ({tabCounts.expire})</TabsTrigger>
+            <TabsTrigger value="all">Toutes ({tabCounts.all})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Rechercher par titre, ville, annonceur..."
@@ -263,20 +333,8 @@ const AnnoncesPubliques = () => {
             className="pl-10"
           />
         </div>
-        <Select value={statutFilter} onValueChange={setStatutFilter}>
-          <SelectTrigger className="w-full md:w-48">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="en_attente">En attente</SelectItem>
-            <SelectItem value="publie">Publiées</SelectItem>
-            <SelectItem value="refuse">Refusées</SelectItem>
-            <SelectItem value="brouillon">Brouillons</SelectItem>
-            <SelectItem value="expire">Expirées</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
+
 
       {/* Table */}
       {loading ? (
@@ -306,15 +364,20 @@ const AnnoncesPubliques = () => {
             </TableRow>
           </PremiumTableHeader>
           <TableBody>
-            {filteredAnnonces.map((annonce) => (
+            {filteredAnnonces.map((annonce) => {
+              const publicHref = `/annonces/${annonce.slug || annonce.id}`;
+              return (
               <PremiumTableRow 
                 key={annonce.id}
-                onClick={() => window.open(`/annonces/${annonce.id}`, '_blank')}
+                onClick={() => window.open(publicHref, '_blank')}
               >
                 <TableCell>
                   <div>
                     <p className="font-medium text-foreground line-clamp-1">{annonce.titre}</p>
                     <p className="text-sm text-muted-foreground">{annonce.ville}, {annonce.code_postal}</p>
+                    {annonce.statut === 'refuse' && annonce.motif_refus && (
+                      <p className="text-xs text-destructive line-clamp-1 mt-1">Motif : {annonce.motif_refus}</p>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -337,12 +400,24 @@ const AnnoncesPubliques = () => {
                   </span>
                 </TableCell>
                 <TableCell>
-                  {getStatutBadge(annonce.statut || 'brouillon')}
+                  <div className="flex items-center gap-2">
+                    {getStatutBadge(isExpired(annonce) ? 'expire' : (annonce.statut || 'brouillon'))}
+                    {annonce.est_mise_en_avant && (
+                      <Badge variant="outline" className="gap-1">
+                        <Star className="w-3 h-3 fill-current" /> En avant
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-muted-foreground">
-                    {format(new Date(annonce.date_soumission || annonce.created_at), 'dd MMM yyyy', { locale: fr })}
-                  </span>
+                  <div className="text-muted-foreground text-sm">
+                    <p>{format(new Date(annonce.date_soumission || annonce.created_at), 'dd MMM yyyy', { locale: fr })}</p>
+                    {annonce.date_expiration && (
+                      <p className="text-xs">
+                        Expire le {format(new Date(annonce.date_expiration), 'dd MMM yyyy', { locale: fr })}
+                      </p>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -351,44 +426,61 @@ const AnnoncesPubliques = () => {
                       variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(`/annonces/${annonce.id}`, '_blank');
+                        window.open(publicHref, '_blank');
                       }}
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    {annonce.statut === 'en_attente' && (
-                      <>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleApprouver(annonce);
-                          }}
-                          disabled={processing}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedAnnonce(annonce);
-                            setShowRefusDialog(true);
-                          }}
-                          disabled={processing}
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      </>
+                    {(annonce.statut === 'en_attente' || annonce.statut === 'refuse' || isExpired(annonce)) && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApprouver(annonce);
+                        }}
+                        disabled={processing}
+                        title={annonce.statut === 'en_attente' ? 'Approuver' : 'Republier'}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {annonce.statut !== 'refuse' && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedAnnonce(annonce);
+                          setShowRefusDialog(true);
+                        }}
+                        disabled={processing}
+                        title="Refuser"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {annonce.statut === 'publie' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className={annonce.est_mise_en_avant ? 'text-primary' : 'text-muted-foreground'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleMiseEnAvant(annonce);
+                        }}
+                        disabled={processing}
+                        title="Mettre en avant"
+                      >
+                        <Star className={`w-4 h-4 ${annonce.est_mise_en_avant ? 'fill-current' : ''}`} />
+                      </Button>
                     )}
                   </div>
                 </TableCell>
               </PremiumTableRow>
-            ))}
+            );})}
           </TableBody>
         </PremiumTable>
       )}

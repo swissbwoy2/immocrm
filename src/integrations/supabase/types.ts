@@ -967,6 +967,8 @@ export type Database = {
           date_debut_mise_avant: string | null
           date_expiration: string | null
           date_fin_mise_avant: string | null
+          date_mise_en_avant_debut: string | null
+          date_mise_en_avant_fin: string | null
           date_moderation: string | null
           date_publication: string | null
           date_soumission: string | null
@@ -1061,6 +1063,8 @@ export type Database = {
           date_debut_mise_avant?: string | null
           date_expiration?: string | null
           date_fin_mise_avant?: string | null
+          date_mise_en_avant_debut?: string | null
+          date_mise_en_avant_fin?: string | null
           date_moderation?: string | null
           date_publication?: string | null
           date_soumission?: string | null
@@ -1155,6 +1159,8 @@ export type Database = {
           date_debut_mise_avant?: string | null
           date_expiration?: string | null
           date_fin_mise_avant?: string | null
+          date_mise_en_avant_debut?: string | null
+          date_mise_en_avant_fin?: string | null
           date_moderation?: string | null
           date_publication?: string | null
           date_soumission?: string | null
@@ -13178,6 +13184,8 @@ export type Database = {
           date_debut_mise_avant: string | null
           date_expiration: string | null
           date_fin_mise_avant: string | null
+          date_mise_en_avant_debut: string | null
+          date_mise_en_avant_fin: string | null
           date_moderation: string | null
           date_publication: string | null
           date_soumission: string | null

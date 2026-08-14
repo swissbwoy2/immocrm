@@ -34,6 +34,7 @@ export interface AnnonceFormData {
   adresse_complementaire: string;
   code_postal: string;
   ville: string;
+  quartier: string;
   canton: string;
   latitude: number | null;
   longitude: number | null;
@@ -109,6 +110,7 @@ const initialFormData: AnnonceFormData = {
   adresse_complementaire: '',
   code_postal: '',
   ville: '',
+  quartier: '',
   canton: '',
   latitude: null,
   longitude: null,
@@ -235,6 +237,7 @@ export default function NouvelleAnnonce() {
         adresse_complementaire: existingAnnonce.adresse_complementaire || '',
         code_postal: existingAnnonce.code_postal || '',
         ville: existingAnnonce.ville || '',
+        quartier: existingAnnonce.quartier || '',
         canton: existingAnnonce.canton || '',
         latitude: existingAnnonce.latitude,
         longitude: existingAnnonce.longitude,
@@ -300,15 +303,28 @@ export default function NouvelleAnnonce() {
     }
   }, [existingAnnonce, annonceur, isEditMode]);
 
-  // Generate slug from title
-  const generateSlug = (titre: string) => {
-    return titre
+  // Génère un slug unique à partir du titre + ville
+  const slugify = (value: string) =>
+    value
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      + '-' + Date.now().toString(36);
+      .replace(/(^-|-$)/g, '');
+
+  const generateUniqueSlug = async (titre: string, ville: string) => {
+    const base = [slugify(titre), slugify(ville)].filter(Boolean).join('-').slice(0, 90) || 'annonce';
+    let candidate = base;
+    for (let i = 0; i < 6; i++) {
+      const { data } = await supabase
+        .from('annonces_publiques')
+        .select('id')
+        .eq('slug', candidate)
+        .maybeSingle();
+      if (!data) return candidate;
+      candidate = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+    }
+    return `${base}-${Date.now().toString(36)}`;
   };
 
   // Save mutation - MUST be before any conditional returns
@@ -335,6 +351,7 @@ export default function NouvelleAnnonce() {
         adresse_complementaire: formData.adresse_complementaire,
         code_postal: formData.code_postal,
         ville: formData.ville,
+        quartier: formData.quartier || null,
         canton: formData.canton,
         latitude: formData.latitude,
         longitude: formData.longitude,
@@ -426,7 +443,7 @@ export default function NouvelleAnnonce() {
         }
       } else {
         // Create new annonce
-        const slug = generateSlug(formData.titre);
+        const slug = await generateUniqueSlug(formData.titre, formData.ville);
         const reference = `REF-${Date.now().toString(36).toUpperCase()}`;
 
         const { data, error: insertError } = await supabase
@@ -459,6 +476,17 @@ export default function NouvelleAnnonce() {
             .insert(photosToInsert);
 
           if (photosError) throw photosError;
+        }
+      }
+
+      // Notifie les admins qu'une annonce est à modérer
+      if (status === 'en_attente' && annonce?.id) {
+        try {
+          await supabase.functions.invoke('annonce-moderation-notify', {
+            body: { annonce_id: annonce.id, action: 'submitted' },
+          });
+        } catch (e) {
+          console.error('Notification modération échouée', e);
         }
       }
 

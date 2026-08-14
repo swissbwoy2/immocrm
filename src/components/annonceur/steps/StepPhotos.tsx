@@ -112,6 +112,15 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
     updateFormData({ photos: newPhotos });
   };
 
+  // Réordonnancement par glisser-déposer
+  const movePhoto = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= formData.photos.length) return;
+    const newPhotos = [...formData.photos];
+    const [moved] = newPhotos.splice(from, 1);
+    newPhotos.splice(to, 0, moved);
+    updateFormData({ photos: newPhotos });
+  };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -250,20 +259,32 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
       {/* Photos Grid */}
       {formData.photos.length > 0 && (
         <div className="space-y-3">
-          <Label>Photos ajoutées ({formData.photos.length}/10)</Label>
+          <div className="flex items-center justify-between">
+            <Label>Photos ajoutées ({formData.photos.length}/10)</Label>
+            <span className="text-xs text-muted-foreground">Glissez pour réordonner</span>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             {formData.photos.map((photo, index) => (
               <div
-                key={index}
+                key={photo.url + index}
+                draggable
+                onDragStart={(e) => e.dataTransfer.setData('text/plain', String(index))}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const from = Number(e.dataTransfer.getData('text/plain'));
+                  if (!Number.isNaN(from)) movePhoto(from, index);
+                }}
                 className={cn(
-                  "relative group rounded-lg overflow-hidden border-2",
+                  "relative group rounded-lg overflow-hidden border-2 cursor-move",
                   photo.est_principale ? "border-primary" : "border-border"
                 )}
               >
                 <img
                   src={photo.url}
                   alt={`Photo ${index + 1}`}
-                  className="w-full h-32 object-cover"
+                  className="w-full h-32 object-cover pointer-events-none"
                 />
                 
                 {/* Principal badge */}

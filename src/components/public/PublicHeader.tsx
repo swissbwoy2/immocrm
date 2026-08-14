@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Search, Plus, User, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function PublicHeader() {
@@ -46,12 +47,7 @@ export function PublicHeader() {
                 Rechercher
               </Button>
             </Link>
-            <Link to="/inscription-annonceur">
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Déposer une annonce
-              </Button>
-            </Link>
+            <DeposerAnnonceButton />
             <Link to="/connexion-annonceur">
               <Button size="sm">
                 <User className="h-4 w-4 mr-2" />
@@ -89,12 +85,11 @@ export function PublicHeader() {
                       Rechercher
                     </Button>
                   </Link>
-                  <Link to="/inscription-annonceur" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Déposer une annonce
-                    </Button>
-                  </Link>
+                  <DeposerAnnonceButton
+                    className="w-full justify-start"
+                    size="default"
+                    onNavigate={() => setIsOpen(false)}
+                  />
                   <Link to="/connexion-annonceur" onClick={() => setIsOpen(false)}>
                     <Button className="w-full justify-start">
                       <LogIn className="h-4 w-4 mr-2" />
