@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { MapPin, Loader2 } from 'lucide-react';
 
@@ -44,7 +44,7 @@ export function PublicAnnoncesMap({
   const { isLoaded, isLoading, isFallback } = useGoogleMapsLoader();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement | google.maps.Marker>>(new Map());
+  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
   const [mapReady, setMapReady] = useState(false);
