@@ -93,12 +93,7 @@ export async function submitVisitVideoDecision(params: {
   const clientId = clientRow?.id;
   const agentId = clientRow?.agent_id || agentIdHint || null;
 
-  const { data: profileRow } = await supabase
-    .from('profiles')
-    .select('prenom, nom')
-    .eq('id', user.id)
-    .maybeSingle();
-  const displayName = `${profileRow?.prenom || ''} ${profileRow?.nom || ''}`.trim() || 'Le client';
+  const displayName = await getClientDisplayName(user.id);
 
   if (clientId) {
     const convId = await getOrCreateClientConversation(clientId);
@@ -117,54 +112,15 @@ export async function submitVisitVideoDecision(params: {
     }
   }
 
-  const notifTitle =
-    choice === 'souhaite_postuler'
-      ? `✅ ${displayName} souhaite postuler — ${address}`
-      : `❌ ${displayName} ne postule pas — ${address}`;
-  const notifMessage =
-    choice === 'souhaite_postuler'
-      ? `Après avoir visionné la vidéo de visite, le client souhaite déposer sa candidature.`
-      : `Après avoir visionné la vidéo de visite, le client ne souhaite pas postuler.`;
-  const notifType = choice === 'souhaite_postuler' ? 'client_souhaite_postuler' : 'visit_refused';
-  const notifMeta = {
-    visite_id: visiteId,
-    offre_id: offreId ?? null,
-    client_id: clientId ?? null,
-    adresse: address,
-  };
-
-  if (agentId) {
-    const { data: agentRow } = await supabase
-      .from('agents')
-      .select('user_id')
-      .eq('id', agentId)
-      .maybeSingle();
-    if (agentRow?.user_id) {
-      await supabase.rpc('create_notification', {
-        p_user_id: agentRow.user_id,
-        p_type: notifType,
-        p_title: notifTitle,
-        p_message: notifMessage,
-        p_link: `/agent/clients/${clientId ?? ''}`,
-        p_metadata: notifMeta,
-      });
-    }
-  }
-
-  const { data: admins } = await supabase
-    .from('user_roles')
-    .select('user_id')
-    .eq('role', 'admin');
-  for (const a of admins || []) {
-    await supabase.rpc('create_notification', {
-      p_user_id: a.user_id,
-      p_type: `${notifType}_admin`,
-      p_title: notifTitle,
-      p_message: notifMessage,
-      p_link: `/admin/clients/${clientId ?? ''}`,
-      p_metadata: notifMeta,
-    });
-  }
+  await notifyPostulationRequest({
+    clientId,
+    agentId,
+    offreId: offreId ?? null,
+    visiteId,
+    address,
+    displayName,
+    choice,
+  });
 }
 
 export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
