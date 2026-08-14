@@ -74,7 +74,27 @@ export default function RechercheAnnonces() {
     rayon: radiusKm.toString(),
   });
 
+  // SEO
+  useEffect(() => {
+    const label =
+      transactionType === 'location' ? 'Location' : transactionType === 'vente' ? 'Vente' : 'Immobilier';
+    const lieu = searchLocation ? ` à ${searchLocation}` : ' en Suisse romande';
+    document.title = `${label} — Annonces immobilières${lieu} | Logisorama`;
+    setMeta(
+      'description',
+      `Découvrez les annonces immobilières${lieu} : appartements, maisons et locaux à louer ou à vendre. Recherche par carte, filtres et alertes — Logisorama.`,
+    );
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = `${window.location.origin}/annonces`;
+  }, [transactionType, searchLocation]);
+
   // Geocode the search location when it changes
+
   useEffect(() => {
     if (!searchLocation || !mapsLoaded || !window.google?.maps) {
       setSearchCoords(null);
