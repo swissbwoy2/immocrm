@@ -157,130 +157,88 @@ export function PublicAnnoncesMap({
 
     const map = mapInstanceRef.current;
     const existingMarkerIds = new Set(markersRef.current.keys());
-    const currentAnnonceIds = new Set(annoncesWithCoords.map(a => a.id));
+    const currentAnnonceIds = new Set(annoncesWithCoords.map(e => e.annonce.id));
 
     // Remove markers for annonces no longer in the list
     existingMarkerIds.forEach(id => {
       if (!currentAnnonceIds.has(id)) {
         const marker = markersRef.current.get(id);
         if (marker) {
-          if ('setMap' in marker) {
-            (marker as google.maps.Marker).setMap(null);
-          } else {
-            (marker as google.maps.marker.AdvancedMarkerElement).map = null;
-          }
+          (marker as google.maps.Marker).setMap(null);
           markersRef.current.delete(id);
         }
       }
     });
 
     // Create or update markers
-    annoncesWithCoords.forEach(annonce => {
+    annoncesWithCoords.forEach(({ annonce, lat, lng }) => {
       const isHovered = hoveredAnnonceId === annonce.id;
-      const existingMarker = markersRef.current.get(annonce.id);
+      const position = { lat, lng };
+      const existingMarker = markersRef.current.get(annonce.id) as google.maps.Marker | undefined;
 
       if (existingMarker) {
-        // Update existing marker - handle both types
-        if ('content' in existingMarker) {
-          (existingMarker as google.maps.marker.AdvancedMarkerElement).content = createMarkerElement(annonce, isHovered);
-          (existingMarker as google.maps.marker.AdvancedMarkerElement).zIndex = isHovered ? 1000 : 1;
-        } else {
-          (existingMarker as google.maps.Marker).setZIndex(isHovered ? 1000 : 1);
-        }
-      } else {
-        // Create new marker - check if AdvancedMarkerElement is available
-        const position = { lat: annonce.latitude!, lng: annonce.longitude! };
-        
-        const showInfoWindow = () => {
-          const photo = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url 
-            || annonce.photos_annonces_publiques?.[0]?.url;
-
-          const infoContent = `
-            <div style="max-width: 250px; cursor: pointer;" id="info-${annonce.id}">
-              ${photo ? `<img src="${photo}" alt="${annonce.titre}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />` : ''}
-              <h3 style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">${annonce.titre}</h3>
-              <p style="font-weight: 700; color: hsl(var(--primary)); margin-bottom: 4px;">
-                CHF ${formatPrice(annonce.prix, annonce.type_transaction)}
-              </p>
-              <p style="font-size: 12px; color: #666;">
-                ${annonce.nombre_pieces ? `${annonce.nombre_pieces} pièces` : ''}
-                ${annonce.nombre_pieces && annonce.surface_habitable ? ' • ' : ''}
-                ${annonce.surface_habitable ? `${annonce.surface_habitable} m²` : ''}
-              </p>
-              <p style="font-size: 12px; color: #666;">${annonce.code_postal} ${annonce.ville}</p>
-            </div>
-          `;
-
-          if (infoWindowRef.current) {
-            infoWindowRef.current.setContent(infoContent);
-            infoWindowRef.current.open(map, markersRef.current.get(annonce.id));
-
-            google.maps.event.addListenerOnce(infoWindowRef.current, 'domready', () => {
-              const infoEl = document.getElementById(`info-${annonce.id}`);
-              if (infoEl) {
-                infoEl.addEventListener('click', () => {
-                  onAnnonceClick?.(annonce.id, annonce.slug);
-                });
-              }
-            });
-          }
-        };
-
-        if (google.maps.marker?.AdvancedMarkerElement) {
-          const marker = new google.maps.marker.AdvancedMarkerElement({
-            map,
-            position,
-            content: createMarkerElement(annonce, isHovered),
-            title: annonce.titre,
-          });
-
-          marker.addListener('click', showInfoWindow);
-
-          marker.content?.addEventListener?.('mouseenter', () => {
-            onMarkerHover?.(annonce.id);
-          });
-          marker.content?.addEventListener?.('mouseleave', () => {
-            onMarkerHover?.(null);
-          });
-
-          markersRef.current.set(annonce.id, marker);
-        } else {
-          // Fallback to classic Marker
-          const marker = new google.maps.Marker({
-            map,
-            position,
-            title: annonce.titre,
-            label: {
-              text: `CHF ${formatPrice(annonce.prix, annonce.type_transaction)}`,
-              color: '#ffffff',
-              fontWeight: 'bold',
-              fontSize: '11px',
-            },
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: isHovered ? '#3b82f6' : '#1f2937',
-              fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 2,
-            },
-          });
-
-          marker.addListener('click', showInfoWindow);
-          marker.addListener('mouseover', () => onMarkerHover?.(annonce.id));
-          marker.addListener('mouseout', () => onMarkerHover?.(null));
-
-          markersRef.current.set(annonce.id, marker);
-        }
+        existingMarker.setPosition(position);
+        existingMarker.setZIndex(isHovered ? 1000 : 1);
+        return;
       }
+
+      const showInfoWindow = () => {
+        const photo = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
+          || annonce.photos_annonces_publiques?.[0]?.url;
+
+        const infoContent = `
+          <div style="max-width: 250px; cursor: pointer;" id="info-${annonce.id}">
+            ${photo ? `<img src="${photo}" alt="${annonce.titre}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />` : ''}
+            <h3 style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">${annonce.titre}</h3>
+            <p style="font-weight: 700; margin-bottom: 4px;">
+              CHF ${formatPrice(annonce.prix, annonce.type_transaction)}
+            </p>
+            <p style="font-size: 12px; color: #666;">
+              ${annonce.nombre_pieces ? `${annonce.nombre_pieces} pièces` : ''}
+              ${annonce.nombre_pieces && annonce.surface_habitable ? ' • ' : ''}
+              ${annonce.surface_habitable ? `${annonce.surface_habitable} m²` : ''}
+            </p>
+            <p style="font-size: 12px; color: #666;">${annonce.code_postal} ${annonce.ville}</p>
+          </div>
+        `;
+
+        if (infoWindowRef.current) {
+          infoWindowRef.current.setContent(infoContent);
+          infoWindowRef.current.open(map, markersRef.current.get(annonce.id));
+
+          google.maps.event.addListenerOnce(infoWindowRef.current, 'domready', () => {
+            const infoEl = document.getElementById(`info-${annonce.id}`);
+            if (infoEl) {
+              infoEl.addEventListener('click', () => {
+                onAnnonceClick?.(annonce.id, annonce.slug);
+              });
+            }
+          });
+        }
+      };
+
+      const marker = new google.maps.Marker({
+        map,
+        position,
+        title: annonce.titre,
+        zIndex: isHovered ? 1000 : 1,
+      });
+
+      marker.addListener('click', showInfoWindow);
+      marker.addListener('mouseover', () => onMarkerHover?.(annonce.id));
+      marker.addListener('mouseout', () => onMarkerHover?.(null));
+
+      markersRef.current.set(annonce.id, marker);
     });
 
     // Fit bounds to markers
-    if (annoncesWithCoords.length > 0) {
+    if (annoncesWithCoords.length === 1) {
+      const { lat, lng } = annoncesWithCoords[0];
+      map.setCenter({ lat, lng });
+      map.setZoom(14);
+    } else if (annoncesWithCoords.length > 1) {
       const bounds = new google.maps.LatLngBounds();
-      annoncesWithCoords.forEach(a => {
-        bounds.extend({ lat: a.latitude!, lng: a.longitude! });
-      });
+      annoncesWithCoords.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
       map.fitBounds(bounds, 50);
 
       // Don't zoom in too much
@@ -292,7 +250,8 @@ export function PublicAnnoncesMap({
         google.maps.event.removeListener(listener);
       });
     }
-  }, [mapReady, annoncesWithCoords, hoveredAnnonceId, createMarkerElement, onAnnonceClick, onMarkerHover]);
+  }, [mapReady, annoncesWithCoords, hoveredAnnonceId, onAnnonceClick, onMarkerHover]);
+
 
   // Loading state
   if (isLoading) {
