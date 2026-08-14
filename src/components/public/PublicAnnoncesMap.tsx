@@ -227,16 +227,13 @@ export function PublicAnnoncesMap({
     } else if (annoncesWithCoords.length > 1) {
       const bounds = new google.maps.LatLngBounds();
       annoncesWithCoords.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
-      map.fitBounds(bounds, 50);
-
-      // Don't zoom in too much
-      const listener = google.maps.event.addListener(map, 'idle', () => {
-        const zoom = map.getZoom();
-        if (zoom && zoom > 15) {
-          map.setZoom(15);
-        }
-        google.maps.event.removeListener(listener);
+      // Clamp max zoom without breaking the fit
+      map.setOptions({ maxZoom: 15 });
+      map.fitBounds(bounds, 60);
+      const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
+        map.setOptions({ maxZoom: undefined });
       });
+      void listener;
     }
   }, [mapReady, annoncesWithCoords, hoveredAnnonceId, onAnnonceClick, onMarkerHover]);
 
