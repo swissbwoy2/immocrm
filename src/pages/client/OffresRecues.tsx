@@ -899,6 +899,15 @@ const OffresRecues = () => {
         }
       }
 
+      await notifyPostulationRequest({
+        clientId: clientData.id,
+        agentId: clientData.agent_id,
+        offreId: offre.id,
+        address: offre.adresse || '',
+        displayName: await getClientDisplayName(user!.id),
+        choice: 'souhaite_postuler',
+      });
+
       await loadOffres();
       refreshData();
 
