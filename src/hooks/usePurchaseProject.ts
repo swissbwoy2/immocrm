@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { annualToMonthly } from '@/lib/buyerProfile';
+
 import {
   DEFAULT_FINANCING_SETTINGS,
   FinancingSettings,
@@ -259,8 +261,17 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     } else {
       await supabase.from('purchase_financing_profiles').insert({ project_id: project.id, ...patch } as any);
     }
+    // Source de vérité unique acheteur : le revenu ANNUEL. On miroite systématiquement
+    // clients.revenus_mensuels = annuel / 12 pour qu'aucune vue n'affiche une valeur divergente.
+    if (patch.revenu_annuel_retenu !== undefined && project.client_id) {
+      await supabase
+        .from('clients')
+        .update({ revenus_mensuels: annualToMonthly(patch.revenu_annuel_retenu) } as any)
+        .eq('id', project.client_id);
+    }
     await reload();
   }, [project, financing, reload]);
+
 
   const upsertProperty = useCallback(async (row: any) => {
     if (!project) return;

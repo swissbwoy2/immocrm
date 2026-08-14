@@ -1,3 +1,4 @@
+import { getBuyerMonthlyIncome } from '@/lib/buyerProfile';
 import { useMemo } from 'react';
 import { ClientCandidate } from './useClientCandidates';
 import { hasStableStatus, SolvabilityProblem, ExcludedCandidate } from './useSolvabilityCheck';
@@ -65,7 +66,8 @@ export function usePurchaseSolvabilityCheck(
 
     const prixDemande = client.budget_max || 0;
     const apportDisponible = client.apport_personnel || 0;
-    const revenuMensuel = client.revenus_mensuels || 0;
+    // Acheteur : le revenu de référence est annuel, le mensuel en est toujours dérivé.
+    const revenuMensuel = getBuyerMonthlyIncome((client as any).financing, client);
     const revenuAnnuelBrut = revenuMensuel * 12;
 
     // Check client's stable status (B/C permit or Swiss)

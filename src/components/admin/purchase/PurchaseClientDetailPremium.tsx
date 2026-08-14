@@ -10,6 +10,8 @@ import { PurchaseDetailSections } from './PurchaseDetailSections';
 import { computeProgression, formatCHF } from '@/lib/purchaseFinancing';
 import type { UsePurchaseProjectResult } from '@/hooks/usePurchaseProject';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
+import { getBuyerAnnualIncome, getBuyerMonthlyIncome, parseZones } from '@/lib/buyerProfile';
+
 
 const PremiumStatCard = ({
   label, value, prefix = '', animated = false, variant = 'default', icon: Icon,
@@ -446,9 +448,22 @@ export function PurchaseClientDetailPremium({
               </div>
               <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50" />
               <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
-                <p className="text-xs text-muted-foreground mb-2">Zone(s) recherchée(s)</p>
-                <p className="font-medium text-sm text-primary">{client.region_recherche || 'Non renseigné'}</p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {parseZones(client.region_recherche).length > 1 ? 'Zones recherchées' : 'Zone(s) recherchée(s)'}
+                </p>
+                {parseZones(client.region_recherche).length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {parseZones(client.region_recherche).map((z) => (
+                      <Badge key={z} variant="secondary" className="bg-primary/15 text-primary border-primary/30">
+                        <MapPin className="h-3 w-3 mr-1" />{z}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-medium text-sm text-primary">Non renseigné</p>
+                )}
               </div>
+
               {client.souhaits_particuliers && (
                 <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 transition-all duration-300">
                   <p className="text-xs text-muted-foreground mb-2">Souhaits particuliers</p>
@@ -475,16 +490,18 @@ export function PurchaseClientDetailPremium({
                     {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
-                {(financing?.revenu_annuel_retenu || client.revenus_mensuels) ? (
+                {getBuyerAnnualIncome(financing, client) > 0 ? (
                   <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 backdrop-blur-sm">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {financing?.revenu_annuel_retenu ? 'Revenu annuel retenu' : 'Revenus mensuels nets'}
-                    </p>
+                    <p className="text-xs text-muted-foreground mb-1">Revenu annuel retenu</p>
                     <p className="font-bold text-green-600 dark:text-green-400">
-                      CHF {(financing?.revenu_annuel_retenu || client.revenus_mensuels).toLocaleString('fr-CH')}
+                      CHF {getBuyerAnnualIncome(financing, client).toLocaleString('fr-CH')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      soit CHF {getBuyerMonthlyIncome(financing, client).toLocaleString('fr-CH')} / mois
                     </p>
                   </div>
                 ) : null}
+
               </div>
             </CardContent>
           </PremiumCard>

@@ -57,7 +57,7 @@ export default function MandatAchatStepProject({ data, onChange }: Props) {
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-foreground flex items-center gap-1">
           <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-          Région / commune recherchée <span className="text-destructive ml-0.5">*</span>
+          Villes / zones recherchées <span className="text-destructive ml-0.5">*</span>
         </label>
         <GooglePlacesAutocomplete
           value={data.region_recherche}
@@ -65,9 +65,13 @@ export default function MandatAchatStepProject({ data, onChange }: Props) {
           placeholder="Ex: Lausanne, Morges, Nyon, Genève, Pully..."
           types={['locality', 'sublocality', 'administrative_area_level_1', 'administrative_area_level_2', 'postal_code']}
           restrictToSwitzerland={true}
+          multiSelect
         />
-        <p className="text-xs text-muted-foreground">Tapez librement une commune, ville, quartier, région ou district suisse</p>
+        <p className="text-xs text-muted-foreground">
+          Vous pouvez sélectionner <strong>plusieurs</strong> communes, villes, quartiers, régions ou districts suisses.
+        </p>
       </div>
+
 
       <LandingInput
         label="Surface minimum (m²)"
