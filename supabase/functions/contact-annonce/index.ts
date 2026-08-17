@@ -40,7 +40,7 @@ serve(async (req: Request): Promise<Response> => {
     const { data: annonce, error } = await supabase
       .from("annonces_publiques")
       .select(
-        "id, titre, reference, slug, ville, prix, type_transaction, statut, nb_contacts, email_contact, nom_contact, annonceur_id, annonceurs(nom, prenom, nom_entreprise, email)",
+        "id, titre, reference, slug, ville, prix, type_transaction, statut, nb_contacts, email_contact, nom_contact, annonceur_id, annonceurs(nom, prenom, nom_entreprise, email, user_id)",
       )
       .eq("id", annonce_id)
       .maybeSingle();
@@ -55,6 +55,51 @@ serve(async (req: Request): Promise<Response> => {
     const annonceur: any = annonce.annonceurs;
     const to = (annonce.email_contact || annonceur?.email || "").trim();
     const url = `https://logisorama.ch/annonces/${annonce.slug || annonce.id}`;
+
+    // If the sender is authenticated, open (or reuse) an in-app conversation
+    let conversationId: string | null = null;
+    const authHeader = req.headers.get("Authorization") || "";
+    if (authHeader.startsWith("Bearer ") && annonceur?.user_id) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData } = await supabase.auth.getUser(token);
+      const senderId = userData?.user?.id;
+
+      if (senderId && senderId !== annonceur.user_id) {
+        const { data: existing } = await supabase
+          .from("conversations_annonces")
+          .select("id")
+          .eq("annonce_id", annonce.id)
+          .eq("participant_1_id", senderId)
+          .eq("participant_2_id", annonceur.user_id)
+          .maybeSingle();
+
+        conversationId = existing?.id ?? null;
+
+        if (!conversationId) {
+          const { data: created, error: convErr } = await supabase
+            .from("conversations_annonces")
+            .insert({
+              annonce_id: annonce.id,
+              participant_1_id: senderId,
+              participant_2_id: annonceur.user_id,
+            })
+            .select("id")
+            .single();
+          if (convErr) console.error("conversation create error", convErr);
+          conversationId = created?.id ?? null;
+        }
+
+        if (conversationId) {
+          const { error: msgErr } = await supabase.from("messages_annonces").insert({
+            conversation_id: conversationId,
+            expediteur_id: senderId,
+            contenu: message,
+          });
+          if (msgErr) console.error("message insert error", msgErr);
+        }
+      }
+    }
+
 
     if (RESEND_API_KEY && to) {
       const html = `
