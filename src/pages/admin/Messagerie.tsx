@@ -637,6 +637,7 @@ const Messagerie = () => {
       }
       avatarUrl={null}
       status={currentConversation.subject}
+      conversationId={currentConversation.id}
       lastSeenAt={currentConversation.conversation_type !== 'admin-agent' ? currentConversation.clientLastSeenAt : undefined}
       isOnline={currentConversation.conversation_type !== 'admin-agent' ? currentConversation.clientIsOnline : undefined}
     />

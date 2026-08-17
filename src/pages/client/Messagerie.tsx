@@ -1780,6 +1780,7 @@ const Messagerie = () => {
     <ChatHeader
       name={getAgentName(currentConversation.agent_id)}
       avatarUrl={null}
+      conversationId={currentConversation.id}
       lastSeenAt={getAgentInfo(currentConversation.agent_id).lastSeenAt}
       isOnline={getAgentInfo(currentConversation.agent_id).isOnline}
     />

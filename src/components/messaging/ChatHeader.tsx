@@ -4,6 +4,7 @@ import { ArrowLeft, MoreVertical } from 'lucide-react';
 import { LeadAvatar } from '@/components/whatsapp/LeadAvatar';
 import { cn } from '@/lib/utils';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
+import { ConversationCallControls } from '@/components/calls/ConversationCallControls';
 
 interface ChatHeaderProps {
   name: string;
@@ -15,6 +16,8 @@ interface ChatHeaderProps {
   className?: string;
   lastSeenAt?: string | null;
   isOnline?: boolean | null;
+  /** Active les boutons d'appel audio / vidéo (room call:{conversationId}) */
+  conversationId?: string | null;
 }
 
 /**
@@ -29,6 +32,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   className,
   lastSeenAt,
   isOnline,
+  conversationId,
 }) => {
   return (
     <div
@@ -62,6 +66,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <p className="text-[11px] text-muted-foreground truncate">{status}</p>
         ) : null}
       </div>
+
+      {conversationId && <ConversationCallControls conversationId={conversationId} />}
 
       {onOptionsClick && (
         <Button
