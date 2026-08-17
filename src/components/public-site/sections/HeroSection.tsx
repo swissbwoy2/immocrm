@@ -1,6 +1,4 @@
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch, Building2, Hammer, KeyRound } from 'lucide-react';
+import { Crown, Key, Home, Building2, Hammer, KeyRound } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroChasseurAsset from '@/assets/hero-chasseur-split.png.asset.json';
 import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile-916.png.asset.json';
@@ -9,8 +7,6 @@ const heroBgMobile = heroChasseurMobileAsset.url;
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { motion, useReducedMotion } from 'framer-motion';
 import { GrainOverlay } from '@/components/public-site/animations/GrainOverlay';
-import { WordReveal } from '@/components/public-site/animations/WordReveal';
-import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { Meteors } from '@/components/public-site/magic/Meteors';
 
 // Services propriétaires — externalisés vers Immo-rama.ch
