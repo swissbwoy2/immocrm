@@ -187,7 +187,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         .select('id, type, title, message, link, metadata, created_at')
         .eq('user_id', user.id)
         .in('type', ['call_incoming', 'call_invite'])
-        .eq('read', false)
+        .or('read.is.false,read.is.null')
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(3);
