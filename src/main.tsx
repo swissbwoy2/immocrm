@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
 import { toast } from 'sonner';
 import { installAuthStorageGuard } from "./lib/authStorageGuard";
+import { installAudioUnlock } from "./lib/callRingtone";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
