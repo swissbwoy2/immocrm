@@ -9,14 +9,16 @@ import {
   canAccessConversation,
   callLink,
   HOST_ROLES,
+  resolveVisitAccess,
+  visitLiveLink,
 } from "../_shared/livekit-access.ts";
 
 /**
- * Invite a user into an existing call room.
+ * Invite a user into an existing call room, or into a visit live (`visiteId`).
  * ABSOLUTE RULE: only admin / agent / coursier can invite. Clients get 403.
  * Actions:
- *  - { action: "candidates", conversationId } -> people linked to the dossier
- *  - { action: "invite", conversationId, userId, mode } -> grant access + notify
+ *  - { action: "candidates", conversationId | visiteId } -> people linked
+ *  - { action: "invite", conversationId | visiteId, userId, mode } -> notify
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -31,10 +33,7 @@ serve(async (req) => {
     const body = await req.json();
     const action = body.action || "invite";
     const conversationId: string = body.conversationId;
-    if (!conversationId) {
-      console.error("livekit-invite: conversationId manquant", { userId: user.id, action });
-      return json({ error: "Conversation introuvable (identifiant manquant)" }, 400);
-    }
+    const visiteId: string | undefined = body.visiteId;
 
     const svc = serviceClient();
     const role = await resolveRole(svc, user.id);
@@ -44,11 +43,61 @@ serve(async (req) => {
       return json({ error: "Seuls un admin, un agent ou un coursier peuvent inviter" }, 403);
     }
 
+    // ---------- LIVE DE VISITE ---------------------------------------------
+    if (visiteId) {
+      const access = await resolveVisitAccess(svc, user.id, role, visiteId);
+      if (!access.allowed || !access.isHost) {
+        return json({ error: "Vous n'êtes pas hôte de ce live" }, 403);
+      }
+
+      if (action === "candidates") {
+        const candidates: { user_id: string; name: string; role: string }[] = [];
+        if (access.clientIds.length) {
+          const { data: clis } = await svc
+            .from("clients")
+            .select("user_id, prenom, nom")
+            .in("id", access.clientIds);
+          (clis || []).forEach((c: any) => {
+            if (!c.user_id || c.user_id === user.id) return;
+            if (candidates.some((x) => x.user_id === c.user_id)) return;
+            candidates.push({
+              user_id: c.user_id,
+              name: `${c.prenom || ""} ${c.nom || ""}`.trim() || "Client",
+              role: "client",
+            });
+          });
+        }
+        return json({ candidates });
+      }
+
+      const targetUserId: string = body.userId;
+      if (!targetUserId) return json({ error: "userId requis" }, 400);
+      const inviter = await getDisplayName(svc, user.id);
+
+      const { error: notifErr } = await svc.from("notifications").insert({
+        user_id: targetUserId,
+        type: "call_invite",
+        title: "Live de visite en cours",
+        message: `${inviter} vous invite à rejoindre le live de la visite`,
+        link: visitLiveLink(visiteId),
+        metadata: { visiteId, mode: "video", from: user.id, room: `visit:${visiteId}`, live: true },
+      });
+      if (notifErr) return json({ error: notifErr.message }, 500);
+      return json({ success: true });
+    }
+
+    // ---------- APPEL 1-À-1 -------------------------------------------------
+    if (!conversationId) {
+      console.error("livekit-invite: conversationId manquant", { userId: user.id, action });
+      return json({ error: "Conversation introuvable (identifiant manquant)" }, 400);
+    }
+
     const allowed = await canAccessConversation(svc, user.id, role, conversationId);
     if (!allowed) {
       console.error("livekit-invite: accès refusé", { userId: user.id, role, conversationId });
       return json({ error: "Accès refusé à cette conversation" }, 403);
     }
+
 
 
     const { data: conv } = await svc
