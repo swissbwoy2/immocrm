@@ -6,6 +6,7 @@ import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
 
 // Above the fold - eager
 import { HeroSection } from '@/components/public-site/sections/HeroSection';
+import { HeroMissionSection } from '@/components/public-site/sections/HeroMissionSection';
 import { DossierAnalyseSection } from '@/components/public-site/sections/DossierAnalyseSection';
 import { SocialProofSection } from '@/components/public-site/sections/SocialProofSection';
 import { TeamSection } from '@/components/public-site/sections/TeamSection';
