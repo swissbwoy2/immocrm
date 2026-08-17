@@ -12,10 +12,11 @@ import '@livekit/components-styles';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { CallMode, CallTokenResult, fetchCallToken, isCallHostRole } from '@/lib/livekitCall';
+import { CallMode, CallTokenResult, fetchCallToken, isCallHostRole, signalCall } from '@/lib/livekitCall';
 import { CallStage } from '@/components/calls/CallStage';
 import { AddParticipantDialog } from '@/components/calls/AddParticipantDialog';
-import { IncomingCallBanner, IncomingCall } from '@/components/calls/IncomingCallBanner';
+import { IncomingCallScreen, IncomingCall } from '@/components/calls/IncomingCallScreen';
+import { stopRingtone } from '@/lib/callRingtone';
 
 interface CallSession extends CallTokenResult {
   mode: CallMode;
@@ -150,6 +151,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             mode: (n?.metadata?.mode as CallMode) || 'video',
             title: n?.title || 'Appel entrant',
             message: n?.message || '',
+            callerName: (n?.message || '').replace(/ vous appelle$/i, '') || undefined,
+            callerId: n?.metadata?.from,
           });
         },
       )
@@ -160,6 +163,31 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.id, session?.conversationId]);
 
+  /** Refus / appel manqué : on prévient l'appelant (+ message rapide éventuel). */
+  const dismissIncoming = useCallback(
+    async (call: IncomingCall, action: 'declined' | 'missed', quickMessage?: string) => {
+      setIncoming(null);
+      stopRingtone();
+      try {
+        if (quickMessage && user?.id) {
+          await supabase.from('messages').insert({
+            conversation_id: call.conversationId,
+            sender_id: user.id,
+            sender_type: userRole || 'client',
+            content: quickMessage,
+          });
+        }
+      } catch (e) {
+        console.error('Message rapide non envoyé', e);
+      }
+      try {
+        await signalCall({ conversationId: call.conversationId, action, to: call.callerId });
+      } catch (e) {
+        console.error('Signal appel non envoyé', e);
+      }
+    },
+    [user?.id, userRole],
+  );
 
   const value = useMemo(
     () => ({ session, connecting, startCall, joinCall, leaveCall }),
@@ -171,13 +199,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       {incoming && !session && (
-        <IncomingCallBanner
+        <IncomingCallScreen
           call={incoming}
           accepting={!!connecting}
           onAccept={() => joinCall(incoming.conversationId, incoming.mode)}
-          onDecline={() => setIncoming(null)}
+          onDecline={(quickMessage) => void dismissIncoming(incoming, 'declined', quickMessage)}
+          onTimeout={() => void dismissIncoming(incoming, 'missed')}
         />
       )}
+
 
       {session && (
         <div className="fixed inset-0 z-[100] bg-[hsl(200_35%_12%)]">

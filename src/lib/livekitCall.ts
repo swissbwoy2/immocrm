@@ -105,3 +105,16 @@ export async function inviteToCall(params: {
 /** Hosts (admin / agent / coursier) can invite; clients never can. */
 export const isCallHostRole = (role?: string | null) =>
   role === 'admin' || role === 'agent' || role === 'coursier';
+
+/** Signale à l'appelant que l'appel a été refusé ou manqué. */
+export async function signalCall(params: {
+  conversationId: string;
+  action: 'declined' | 'missed';
+  to?: string;
+}): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('livekit-signal', {
+    body: params,
+  });
+  if (error) throw new Error(await readInvokeError('livekit-signal', error));
+  if ((data as any)?.error) throw new Error((data as any).error);
+}

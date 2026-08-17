@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   GridLayout,
   ParticipantTile,
@@ -11,7 +11,18 @@ import {
 } from '@livekit/components-react';
 import { ConnectionState as LKConnectionState, RoomEvent, Track } from 'livekit-client';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, Volume2 } from 'lucide-react';
+import {
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  PhoneOff,
+  UserPlus,
+  Volume2,
+  Volume1,
+  SwitchCamera,
+} from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 
@@ -108,6 +119,63 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
       setCamOn(!next);
     }
   };
+
+  // --- Haut-parleur / écouteur -------------------------------------------
+  const speakerSupported =
+    typeof HTMLMediaElement !== 'undefined' && 'setSinkId' in HTMLMediaElement.prototype;
+  const [outputs, setOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [speakerOn, setSpeakerOn] = useState(true);
+
+  const refreshDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setOutputs(devices.filter((d) => d.kind === 'audiooutput'));
+      setCameras(devices.filter((d) => d.kind === 'videoinput'));
+    } catch {
+      /* permissions non accordées : on masque les boutons */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshDevices();
+    navigator.mediaDevices?.addEventListener?.('devicechange', refreshDevices);
+    return () => navigator.mediaDevices?.removeEventListener?.('devicechange', refreshDevices);
+  }, [refreshDevices, micOn, camOn]);
+
+  const toggleSpeaker = async () => {
+    if (!room || !speakerSupported) return;
+    const next = !speakerOn;
+    const speaker = outputs.find((d) => /speaker|haut-parleur/i.test(d.label));
+    const earpiece = outputs.find((d) => /earpiece|écouteur|headset|headphone/i.test(d.label));
+    const target = next ? speaker || outputs[0] : earpiece || outputs[1] || outputs[0];
+    if (!target) return;
+    try {
+      await room.switchActiveDevice('audiooutput', target.deviceId);
+      setSpeakerOn(next);
+    } catch (e) {
+      console.error('Sortie audio non modifiable', e);
+    }
+  };
+
+  // --- Caméra avant / arrière ---------------------------------------------
+  const canSwitchCamera = cameras.length > 1;
+  const switchCamera = async () => {
+    if (!room || !canSwitchCamera) return;
+    const currentId = room.getActiveDevice('videoinput');
+    const idx = Math.max(0, cameras.findIndex((c) => c.deviceId === currentId));
+    const next = cameras[(idx + 1) % cameras.length];
+    try {
+      if (!camOn) {
+        await localParticipant?.setCameraEnabled(true);
+        setCamOn(true);
+      }
+      await room.switchActiveDevice('videoinput', next.deviceId);
+    } catch (e) {
+      console.error('Changement de caméra impossible', e);
+    }
+  };
+
 
   // On affiche la grille vidéo dès qu'une caméra est active quelque part.
   const hasVideo =
@@ -206,6 +274,45 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
         >
           {camOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
         </Button>
+
+        {speakerSupported && outputs.length > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={toggleSpeaker}
+                  aria-label={speakerOn ? 'Passer sur écouteur' : 'Passer sur haut-parleur'}
+                  className={cn(
+                    'h-12 w-12 rounded-full',
+                    speakerOn
+                      ? 'bg-white/15 hover:bg-white/25 text-white'
+                      : 'bg-white/10 hover:bg-white/20 text-white/70',
+                  )}
+                >
+                  {speakerOn ? <Volume2 className="h-5 w-5" /> : <Volume1 className="h-5 w-5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {speakerOn ? 'Haut-parleur activé' : 'Écouteur'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        {canSwitchCamera && (
+          <Button
+            type="button"
+            size="icon"
+            onClick={switchCamera}
+            aria-label="Changer de caméra"
+            className="h-12 w-12 rounded-full bg-white/15 hover:bg-white/25 text-white"
+          >
+            <SwitchCamera className="h-5 w-5" />
+          </Button>
+        )}
+
 
         {canInvite && (
           <Button

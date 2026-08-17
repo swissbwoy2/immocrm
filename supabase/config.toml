@@ -187,3 +187,5 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = true
   [functions.livekit-invite]
     verify_jwt = true
+  [functions.livekit-signal]
+    verify_jwt = true
