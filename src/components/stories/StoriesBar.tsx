@@ -12,6 +12,8 @@ import {
   usePreviewImage,
   villeFromAdresse,
 } from "@/components/public-site/showcase/useShowcase";
+import { StoryPhotoLink } from "@/components/public-site/showcase/StoryPhotoLink";
+
 
 interface Props {
   className?: string;
