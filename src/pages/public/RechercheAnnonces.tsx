@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PublicHeader } from '@/components/public/PublicHeader';
+import { AlerteAnnonceDialog } from '@/components/annonces/AlerteAnnonceDialog';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
@@ -725,6 +726,13 @@ export default function RechercheAnnonces() {
       </div>
 
       <PublicFooter />
+
+      <AlerteAnnonceDialog
+        open={alerteDialogOpen}
+        onOpenChange={setAlerteDialogOpen}
+        criteres={alerteCriteres}
+        defaultNom={alerteNom}
+      />
     </div>
   );
 }
