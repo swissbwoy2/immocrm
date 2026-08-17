@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Phone, PhoneOff, Video, MessageSquare, Send, X } from 'lucide-react';
+import { Phone, PhoneOff, Video, MessageSquare, Send, X, Volume2 } from 'lucide-react';
 import { CallMode } from '@/lib/livekitCall';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 import { startRingtone, stopRingtone, onRingtoneBlocked, retryRingtone } from '@/lib/callRingtone';
