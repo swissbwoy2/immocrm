@@ -1,44 +1,54 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { ShowcaseItem, usePreviewImage, villeFromAdresse, formatPrix } from './useShowcase';
+import { StoryPhotoLink } from './StoryPhotoLink';
 
 function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => void }) {
   const img = usePreviewImage(item);
   const ville = villeFromAdresse(item.adresse);
   const prix = formatPrix(item.prix);
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex shrink-0 flex-col items-center gap-2 w-[100px] group"
-    >
-      <span className="rounded-full p-[3px] bg-gradient-to-br from-primary to-accent transition-transform group-hover:scale-105">
-        <span className="block rounded-full p-[2px] bg-background">
-          <span className="block h-[76px] w-[76px] sm:h-[84px] sm:w-[84px] rounded-full overflow-hidden bg-muted">
-            {img ? (
-              <img
-                src={img}
-                alt={item.titre || 'Bien immobilier'}
-                loading="lazy"
-                draggable={false}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center">
-                <Home className="h-7 w-7 text-muted-foreground" />
-              </span>
-            )}
-          </span>
+  const photo = (
+    <span className="block rounded-full p-[3px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105">
+      <span className="block rounded-full p-[2px] bg-background">
+        <span className="block h-[76px] w-[76px] sm:h-[84px] sm:w-[84px] rounded-full overflow-hidden bg-muted">
+          {img ? (
+            <img
+              src={img}
+              alt={item.titre || 'Bien immobilier'}
+              loading="lazy"
+              draggable={false}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center">
+              <Home className="h-7 w-7 text-muted-foreground" />
+            </span>
+          )}
         </span>
       </span>
-      <span className="w-full text-center leading-tight">
+    </span>
+  );
+
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-2 w-[100px]">
+      {item.lien_annonce ? (
+        <StoryPhotoLink href={item.lien_annonce} iconSize="sm" className="rounded-full">
+          {photo}
+        </StoryPhotoLink>
+      ) : (
+        <button type="button" onClick={onClick} className="rounded-full">
+          {photo}
+        </button>
+      )}
+      <button type="button" onClick={onClick} className="w-full text-center leading-tight">
         <span className="block text-[11px] font-semibold text-foreground truncate">{ville || 'Suisse romande'}</span>
         {prix && <span className="block text-[10px] text-muted-foreground truncate">{prix}</span>}
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
+
 
 interface Props {
   title: string;

@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, Home, MapPin } from 'lucide-react';
 import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from '@/components/public-site/showcase/useShowcase';
+import { StoryPhotoLink } from '@/components/public-site/showcase/StoryPhotoLink';
+
 
 interface Props {
   item: ShowcaseItem | null;
@@ -36,15 +38,17 @@ function Body({ item }: { item: ShowcaseItem }) {
       {images.length > 0 ? (
         <div className="flex gap-2 overflow-x-auto no-scrollbar rounded-xl">
           {images.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt={`${item.titre || 'Bien'} — photo ${i + 1}`}
-              loading="lazy"
-              className="h-48 w-full shrink-0 rounded-xl object-cover sm:w-[420px]"
-            />
+            <StoryPhotoLink key={i} href={item.lien_annonce} className="w-full shrink-0 sm:w-[420px]">
+              <img
+                src={src}
+                alt={`${item.titre || 'Bien'} — photo ${i + 1}`}
+                loading="lazy"
+                className="h-48 w-full rounded-xl object-cover"
+              />
+            </StoryPhotoLink>
           ))}
         </div>
+
       ) : (
         <div className="flex h-40 items-center justify-center rounded-xl bg-muted">
           <Home className="h-8 w-8 text-muted-foreground" />

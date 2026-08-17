@@ -8,6 +8,7 @@ import {
   galleryUrls,
   usePreviewImage,
 } from '@/components/public-site/showcase/useShowcase';
+import { StoryPhotoLink } from '@/components/public-site/showcase/StoryPhotoLink';
 
 interface VisiteRow {
   id: string;
@@ -46,28 +47,36 @@ function VisiteBubble({ visite, onClick }: { visite: VisiteRow; onClick: () => v
   const img = usePreviewImage(item);
   const adresse = item.adresse || 'Visite programmée';
 
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex shrink-0 flex-col items-center gap-1.5 w-[84px] group"
-    >
-      <span className="rounded-full p-[2.5px] bg-gradient-to-br from-primary to-accent transition-transform group-hover:scale-105">
-        <span className="block rounded-full p-[2px] bg-background">
-          <span className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-full bg-muted">
-            {img ? (
-              <img src={img} alt={adresse} loading="lazy" className="h-full w-full object-cover" />
-            ) : (
-              <Home className="h-6 w-6 text-muted-foreground" />
-            )}
-          </span>
+  const photo = (
+    <span className="block rounded-full p-[2.5px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105">
+      <span className="block rounded-full p-[2px] bg-background">
+        <span className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-full bg-muted">
+          {img ? (
+            <img src={img} alt={adresse} loading="lazy" className="h-full w-full object-cover" />
+          ) : (
+            <Home className="h-6 w-6 text-muted-foreground" />
+          )}
         </span>
       </span>
-      <span className="w-full text-center leading-tight">
+    </span>
+  );
+
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-1.5 w-[84px]">
+      {item.lien_annonce ? (
+        <StoryPhotoLink href={item.lien_annonce} iconSize="sm" className="rounded-full">
+          {photo}
+        </StoryPhotoLink>
+      ) : (
+        <button type="button" onClick={onClick} className="rounded-full">
+          {photo}
+        </button>
+      )}
+      <button type="button" onClick={onClick} className="w-full text-center leading-tight">
         <span className="block truncate text-[11px] font-semibold text-foreground">{adresse}</span>
         <span className="block truncate text-[10px] text-muted-foreground">{fmtDate(visite.date_visite)}</span>
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -89,13 +98,14 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
       {images.length > 0 ? (
         <div className="flex gap-2 overflow-x-auto no-scrollbar rounded-xl">
           {images.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt={`Photo ${i + 1}`}
-              loading="lazy"
-              className="h-44 w-full shrink-0 rounded-xl object-cover sm:w-[400px]"
-            />
+            <StoryPhotoLink key={i} href={item.lien_annonce} className="w-full shrink-0 sm:w-[400px]">
+              <img
+                src={src}
+                alt={`Photo ${i + 1}`}
+                loading="lazy"
+                className="h-44 w-full rounded-xl object-cover"
+              />
+            </StoryPhotoLink>
           ))}
         </div>
       ) : (
