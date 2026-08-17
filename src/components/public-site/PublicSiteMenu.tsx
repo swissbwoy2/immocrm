@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, Star, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock } from 'lucide-react';
+import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 
 interface PublicSiteMenuProps {
@@ -28,10 +28,8 @@ const menuGroups = [
   {
     title: 'Confiance',
     items: [
-      { to: '#avis', label: 'Avis clients', icon: Star, anchor: true },
       { to: '#faq', label: 'FAQ', icon: MessageCircle, anchor: true },
       { to: '#partenaires', label: 'Partenaires', icon: Users, anchor: true },
-      { to: '#equipe', label: 'À propos', icon: Users, anchor: true },
     ],
   },
   {
