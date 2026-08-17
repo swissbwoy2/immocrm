@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Rocket, Sparkles } from 'lucide-react';
+import { Rocket } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 
 export function FloatingNav() {
@@ -41,17 +41,6 @@ export function FloatingNav() {
             </Link>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <Button
-                asChild
-                size="sm"
-                className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 text-white border-0 font-bold shadow-lg shadow-emerald-500/40 hover:shadow-emerald-500/60 transition-shadow px-2.5 sm:px-4 animate-pulse-soft"
-              >
-                <Link to="/demo">
-                  <Sparkles className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="whitespace-nowrap">Essayer la démo</span>
-                </Link>
-              </Button>
-
               <Button
                 asChild
                 size="sm"

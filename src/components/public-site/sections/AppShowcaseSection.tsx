@@ -330,17 +330,9 @@ export function AppShowcaseSection() {
                     Créer mon compte maintenant
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => navigate('/demo')}
-                    className="group h-14 px-6 text-base font-semibold border-primary/30 bg-background text-foreground hover:bg-primary/10 hover:border-primary/30 backdrop-blur transition-all"
-                  >
-                    🎬 Essayer la démo
-                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  ✓ Sans engagement &nbsp;·&nbsp; ✓ Activation immédiate &nbsp;·&nbsp; ✓ Démo en lecture seule, sans inscription
+                  ✓ Sans engagement &nbsp;·&nbsp; ✓ Activation immédiate
                 </p>
               </div>
             </div>
