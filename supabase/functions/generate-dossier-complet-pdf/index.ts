@@ -64,7 +64,7 @@ function formatCurrency(amount: number | null): string {
 
 function formatDate(date: string | null): string {
   if (!date) return 'N/A';
-  return new Date(date).toLocaleDateString('fr-CH');
+  return new Date(date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' });
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -530,7 +530,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Footer on each page
     const pages = pdfDoc.getPages();
     pages.forEach((p, index) => {
-      p.drawText(`CONFIDENTIEL - Dossier genere le ${new Date().toLocaleDateString('fr-CH')}`, {
+      p.drawText(`CONFIDENTIEL - Dossier genere le ${new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}`, {
         x: margin,
         y: 30,
         size: 8,

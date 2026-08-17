@@ -308,8 +308,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Date
     const estDate = immeuble.estimation_date
-      ? new Date(immeuble.estimation_date).toLocaleDateString('fr-CH')
-      : new Date().toLocaleDateString('fr-CH');
+      ? new Date(immeuble.estimation_date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })
+      : new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' });
     page.drawText(sanitizeText(`Date: ${estDate}`), { x: MARGIN, y, size: 11, font: helvetica, color: rgb(0.7, 0.8, 0.9) });
 
     // Agent info at bottom

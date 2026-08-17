@@ -336,7 +336,7 @@ serve(async (req) => {
           nextWindowStart.setDate(nextWindowStart.getDate() + nextCycleStartDay + REFUND_ELIGIBILITY_DAY + pauseOffset);
           const nextWindowEnd = new Date(sig);
           nextWindowEnd.setDate(nextWindowEnd.getDate() + nextCycleStartDay + MANDAT_DURATION_DAYS + pauseOffset);
-          const fmt = (d: Date) => d.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+          const fmt = (d: Date) => d.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
           reasonDetail = `Votre mandat s'est automatiquement renouvelé. La fenêtre de remboursement (jours ${REFUND_ELIGIBILITY_DAY} à ${MANDAT_DURATION_DAYS}) est close pour ce cycle. Vous pourrez en faire la demande lors du prochain cycle, entre le ${fmt(nextWindowStart)} et le ${fmt(nextWindowEnd)}.`;
         } else {
           reasonDetail = `Le remboursement est disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour du mandat (jour actuel : ${daysSinceSignature}).`;

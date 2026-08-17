@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <hr style="margin: 20px 0;" />
           <p style="color: #666; font-size: 12px;">
-            Lead reçu le ${new Date().toLocaleDateString('fr-CH', { 
+            Lead reçu le ${new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', 
               day: '2-digit', 
               month: '2-digit', 
               year: 'numeric',

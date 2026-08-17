@@ -28,7 +28,7 @@ function buildEmailHtml(opts: {
 }): string {
   const { prenom, nom, daysRemaining, daysSinceSignature, endDate, renewUrl, cancelUrl, refundUrl, pauseUrl } = opts;
   const refundEligible = daysSinceSignature >= REFUND_ELIGIBILITY_DAY;
-  const endDateStr = endDate.toLocaleDateString("fr-CH", {
+  const endDateStr = endDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
     day: "2-digit", month: "long", year: "numeric",
   });
   const isUrgent = daysRemaining <= 7;
@@ -288,13 +288,13 @@ serve(async (req) => {
             const { data: profile } = await supabase
               .from("profiles").select("prenom, nom, email").eq("id", client.user_id).maybeSingle();
             if (profile?.email) {
-              const newEndStr = newOfficialEnd.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+              const newEndStr = newOfficialEnd.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
               const refundWindowStart = new Date(newSignatureDate);
               refundWindowStart.setDate(refundWindowStart.getDate() + REFUND_ELIGIBILITY_DAY);
               const refundWindowEnd = new Date(newSignatureDate);
               refundWindowEnd.setDate(refundWindowEnd.getDate() + MANDAT_DURATION_DAYS);
-              const refundStartStr = refundWindowStart.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
-              const refundEndStr = refundWindowEnd.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+              const refundStartStr = refundWindowStart.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
+              const refundEndStr = refundWindowEnd.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
               const autoRenewHtml = `<!DOCTYPE html><html><body style="font-family:-apple-system,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
                 <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                   <div style="background:#1e40af;color:white;padding:30px 24px;text-align:center;">
@@ -407,7 +407,7 @@ serve(async (req) => {
             user_id: client.user_id,
             type: "mandate_expiring",
             title: `⏰ Votre mandat se termine dans ${daysRemaining} jour${daysRemaining > 1 ? "s" : ""}`,
-            message: `Sans action, il sera renouvelé automatiquement le ${endDate.toLocaleDateString("fr-CH")}.`,
+            message: `Sans action, il sera renouvelé automatiquement le ${endDate.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}.`,
             link: "/client/mon-contrat",
             metadata: { client_id: client.id, days_remaining: daysRemaining, token },
           });

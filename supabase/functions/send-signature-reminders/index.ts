@@ -161,14 +161,14 @@ serve(async (req) => {
       const { candidature, recipientEmail, recipientName, recipientRole, recipientUserId } = reminder;
       const signatureDate = new Date(candidature.date_signature_choisie);
       
-      const formattedDate = signatureDate.toLocaleDateString("fr-CH", {
+      const formattedDate = signatureDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       });
       
-      const formattedTime = signatureDate.toLocaleTimeString("fr-CH", {
+      const formattedTime = signatureDate.toLocaleTimeString("fr-CH", { timeZone: 'Europe/Zurich',
         hour: "2-digit",
         minute: "2-digit",
       });

@@ -81,7 +81,7 @@ serve(async (req) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #111;">
-        <h2 style="color:#1e40af;">Récap Auto-Offres — ${startOfDay.toLocaleDateString("fr-CH")}</h2>
+        <h2 style="color:#1e40af;">Récap Auto-Offres — ${startOfDay.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}</h2>
         <p><strong>${totalOffres}</strong> offres automatiques envoyées à <strong>${clientsServis}</strong> client(s).</p>
 
         <h3 style="margin-top:24px;color:#065f46;">Visites planifiées aujourd'hui (${visitesFixees.length})</h3>
