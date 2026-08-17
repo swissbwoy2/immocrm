@@ -189,3 +189,7 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = true
   [functions.livekit-signal]
     verify_jwt = true
+  [functions.annonce-alertes-run]
+    verify_jwt = false
+  [functions.annonce-alertes-unsubscribe]
+    verify_jwt = false
