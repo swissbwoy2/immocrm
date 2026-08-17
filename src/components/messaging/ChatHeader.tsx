@@ -4,6 +4,7 @@ import { ArrowLeft, MoreVertical } from 'lucide-react';
 import { LeadAvatar } from '@/components/whatsapp/LeadAvatar';
 import { cn } from '@/lib/utils';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
+import { ConversationCallControls } from '@/components/calls/ConversationCallControls';
 
 interface ChatHeaderProps {
   name: string;
@@ -31,6 +32,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   className,
   lastSeenAt,
   isOnline,
+  conversationId,
 }) => {
   return (
     <div
