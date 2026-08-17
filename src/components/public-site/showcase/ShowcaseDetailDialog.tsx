@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ExternalLink, Home, MapPin } from 'lucide-react';
 import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from './useShowcase';
+import { StoryPhotoLink } from './StoryPhotoLink';
+
 
 interface Props {
   item: ShowcaseItem | null;
