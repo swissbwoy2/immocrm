@@ -88,6 +88,16 @@ export function IncomingCallScreen({
             {call.mode === 'audio' ? 'Appel audio entrant…' : 'Appel vidéo entrant…'}
           </p>
         </div>
+
+        {audioBlocked && (
+          <button
+            type="button"
+            onClick={retryRingtone}
+            className="mt-2 flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 px-4 py-2 text-sm animate-pulse"
+          >
+            <Volume2 className="h-4 w-4" /> Touchez pour activer le son
+          </button>
+        )}
       </div>
 
       {replyOpen && (
