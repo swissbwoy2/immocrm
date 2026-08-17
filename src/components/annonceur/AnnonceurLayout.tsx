@@ -44,24 +44,22 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
     enabled: isAuthenticated
   });
 
-  // Fetch unread messages count
+  // Fetch unread messages count (conversations where the advertiser participates)
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ['annonceur-unread', annonceur?.id],
+    queryKey: ['annonceur-unread', user?.id],
     queryFn: async () => {
-      if (!annonceur) return 0;
+      if (!user) return 0;
       const { data } = await supabase
         .from('conversations_annonces')
-        .select(`
-          messages_annonces(id, lu)
-        `)
-        .eq('participant_1_id', annonceur.id);
-      
-      const count = data?.reduce((sum: number, c: any) => 
-        sum + (c.messages_annonces?.filter((m: any) => !m.lu).length || 0), 0
-      ) || 0;
-      return count;
+        .select('id, messages_annonces(id, lu, expediteur_id)')
+        .or(`participant_1_id.eq.${user.id},participant_2_id.eq.${user.id}`);
+
+      return (data || []).reduce((sum: number, c: any) =>
+        sum + (c.messages_annonces?.filter((m: any) => !m.lu && m.expediteur_id !== user.id).length || 0), 0
+      );
     },
-    enabled: !!annonceur
+    enabled: !!user?.id,
+    refetchInterval: 30000,
   });
 
   // Show auth loading state
