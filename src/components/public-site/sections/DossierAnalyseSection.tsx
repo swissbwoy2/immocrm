@@ -1,24 +1,12 @@
 import { lazy, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Key, Home, Sparkles } from 'lucide-react';
-import { useSearchType } from '@/contexts/SearchTypeContext';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 const StoriesShowcaseSection = lazy(() =>
   import('./StoriesShowcaseSection').then((m) => ({ default: m.StoriesShowcaseSection }))
 );
 
-
-
 export function DossierAnalyseSection() {
-  const { setSearchType } = useSearchType();
 
-  const openForm = (type: 'location' | 'achat') => {
-    setSearchType(type);
-    setTimeout(() => {
-      const el = document.getElementById('etape-1-qualification');
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
-  };
 
   return (
     <section id="analyse-dossier" className="relative overflow-hidden bg-background">
