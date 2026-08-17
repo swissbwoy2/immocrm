@@ -43,6 +43,7 @@ const PolitiqueConfidentialiteDE = lazy(() => import("./pages/legal/PolitiqueCon
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const BotLoginCode = lazy(() => import("./pages/BotLoginCode"));
+const Appel = lazy(() => import("./pages/Appel"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
@@ -318,6 +319,11 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/bot-login-code" element={<BotLoginCode />} />
+              {/* Route universelle d'appel (tous rôles) — évite toute 404 depuis une notification */}
+              <Route path="/appel" element={<Appel />} />
+              <Route path="/appel/:conversationId" element={<Appel />} />
+              <Route path="/call" element={<Appel />} />
+              <Route path="/call/:conversationId" element={<Appel />} />
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
 

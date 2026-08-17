@@ -90,7 +90,7 @@ serve(async (req) => {
             type: "call_incoming",
             title: mode === "audio" ? "Appel audio entrant" : "Appel vidéo entrant",
             message: `${name} vous appelle`,
-            link: callLink(t.role, conversationId),
+            link: callLink(t.role, conversationId, mode),
             metadata: { conversationId, mode, from: user.id, room },
           }));
         if (rows.length) await svc.from("notifications").insert(rows);

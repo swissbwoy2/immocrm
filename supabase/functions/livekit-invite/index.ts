@@ -148,7 +148,7 @@ serve(async (req) => {
       type: "call_invite",
       title: mode === "audio" ? "Invitation à un appel audio" : "Invitation à un appel vidéo",
       message: `${inviterName} vous invite à rejoindre l'appel`,
-      link: callLink(targetRole, conversationId),
+      link: callLink(targetRole, conversationId, mode),
       metadata: { conversationId, mode, from: user.id, room: `call:${conversationId}` },
     });
 

@@ -54,6 +54,18 @@ const NOTIFICATION_ROUTES: Record<string, Partial<Record<UserRole, string>>> = {
     client: '/client/visites-deleguees',
   },
 
+  // Call notifications (route universelle gérée plus bas pour les appels entrants)
+  call_declined: {
+    admin: '/admin/messagerie',
+    agent: '/agent/messagerie',
+    client: '/client/messagerie',
+  },
+  call_missed: {
+    admin: '/admin/messagerie',
+    agent: '/agent/messagerie',
+    client: '/client/messagerie',
+  },
+
   // Message notifications
   new_message: {
     admin: '/admin/messagerie',
@@ -353,6 +365,24 @@ export function getCorrectNotificationLink(
   metadata?: NotificationMetadata | null
 ): string {
   const stored = currentLink?.trim() || null;
+
+  // 0) Appels : route universelle /appel (existe pour tous les rôles).
+  //    Les anciens liens (/messagerie?call=..., /agent/messagerie?call=...)
+  //    sont réécrits ici pour ne jamais retomber sur une 404.
+  if (notificationType === 'call_incoming' || notificationType === 'call_invite') {
+    const q = stored?.includes('?') ? new URLSearchParams(stored.split('?')[1]) : null;
+    const conversationId =
+      (metadata as any)?.conversationId ||
+      metadata?.conversation_id ||
+      q?.get('call') ||
+      q?.get('conversationId') ||
+      '';
+    const mode = (metadata as any)?.mode || q?.get('mode') || '';
+    if (conversationId) {
+      return `/appel?call=${conversationId}&conversationId=${conversationId}${mode ? `&mode=${mode}` : ''}`;
+    }
+  }
+
 
   // 1) The stored link is authoritative: it is generated with the right
   //    deep-link params (?visiteId=, ?offreId=, ?conversationId=, ?offre=...).
