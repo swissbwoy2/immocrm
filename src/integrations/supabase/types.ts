@@ -13143,6 +13143,10 @@ export type Database = {
         Args: { _proprietaire_id: string }
         Returns: boolean
       }
+      is_annonce_conversation_participant: {
+        Args: { _conv: string }
+        Returns: boolean
+      }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
       is_coursier_for_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_coursier_for_agent_profile: {
