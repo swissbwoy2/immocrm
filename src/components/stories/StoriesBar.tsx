@@ -115,7 +115,29 @@ export function StoriesBar({ className }: Props) {
             </span>
           </button>
         ))}
+
+        {visites.length > 0 && (
+          <>
+            <div className="shrink-0 self-stretch w-px bg-border/70 mx-1" />
+            <div className="flex flex-col gap-1 shrink-0">
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wide px-1"
+                style={{ color: "hsl(158 55% 32%)" }}
+              >
+                Visites à venir
+              </span>
+              <div className="flex gap-3">
+                {visites.map((v) => (
+                  <VisitBubble key={v.id} item={v} onClick={() => setSelectedVisit(v)} />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
+
+      <ShowcaseVisitDialog item={selectedVisit} onOpenChange={(o) => !o && setSelectedVisit(null)} />
+
 
       {viewerOpen !== null && groups[viewerOpen] && (
         <StoryViewer
