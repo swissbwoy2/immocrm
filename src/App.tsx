@@ -283,6 +283,7 @@ const App = () => (
       >
         <TikTokPixelProvider>
           <AuthProvider>
+            <CallProvider>
             <AppContent />
             <Suspense fallback={<PageLoader />}>
               <Routes>
