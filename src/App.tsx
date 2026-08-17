@@ -50,6 +50,8 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 // Public portal pages
 const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
+const MesMessagesAnnonces = lazy(() => import("./pages/public/MesMessagesAnnonces"));
+const MesAlertesAnnonces = lazy(() => import("./pages/public/MesAlertesAnnonces"));
 const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
@@ -340,8 +342,11 @@ const App = () => (
               <Route path="/annonces" element={<RechercheAnnonces />} />
               <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
               <Route path="/annonces/:slug" element={<AnnonceDetail />} />
-              <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
-              <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
+               <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
+               <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
+               <Route path="/mes-messages-annonces" element={<MesMessagesAnnonces />} />
+               <Route path="/mes-messages-annonces/:conversationId" element={<MesMessagesAnnonces />} />
+               <Route path="/mes-alertes-annonces" element={<MesAlertesAnnonces />} />
               
               {/* Annonceur Routes - Protected */}
               <Route path="/espace-annonceur" element={<AnnonceurDashboard />} />

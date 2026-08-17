@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,8 @@ interface ContactAnnonceDialogProps {
 }
 
 export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnnonceDialogProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     nom: '',
     email: '',
@@ -51,13 +55,22 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
 
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      return true;
+      return (data as any)?.conversation_id as string | null;
     },
 
-    onSuccess: () => {
-      toast.success('Message envoyé avec succès !');
+    onSuccess: (conversationId) => {
       onOpenChange(false);
       setFormData(prev => ({ ...prev, nom: '', email: '', telephone: '' }));
+      if (conversationId) {
+        toast.success('Message envoyé — la discussion est ouverte', {
+          action: {
+            label: 'Voir la discussion',
+            onClick: () => navigate(`/mes-messages-annonces/${conversationId}`),
+          },
+        });
+      } else {
+        toast.success('Message envoyé avec succès !');
+      }
     },
     onError: (error) => {
       console.error('Error sending message:', error);
@@ -83,6 +96,23 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
             Envoyez un message concernant : {annonce?.titre}
           </DialogDescription>
         </DialogHeader>
+
+        {!user && (
+          <div className="mt-2 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+            <p className="text-muted-foreground">
+              Votre message sera transmis par e-mail. Pour discuter en direct avec l'annonceur
+              (messagerie instantanée, pièces jointes),{' '}
+              <button
+                type="button"
+                className="text-primary underline underline-offset-2"
+                onClick={() => navigate('/login')}
+              >
+                connectez-vous ou créez un compte
+              </button>
+              .
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-4">

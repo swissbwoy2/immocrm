@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PublicHeader } from '@/components/public/PublicHeader';
+import { AlerteAnnonceDialog } from '@/components/annonces/AlerteAnnonceDialog';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
@@ -289,45 +290,26 @@ export default function RechercheAnnonces() {
     return count;
   }, [transactionType, searchLocation, category, prixMin, prixMax, piecesMin, piecesMax, surfaceMin]);
 
-  const [isSavingSearch, setIsSavingSearch] = useState(false);
+  const [alerteDialogOpen, setAlerteDialogOpen] = useState(false);
 
-  const saveSearchAlert = async () => {
-    if (!user) {
-      toast.info('Connectez-vous pour créer une alerte e-mail');
-      return;
-    }
-    setIsSavingSearch(true);
-    try {
-      const nom = [
-        transactionType === 'location' ? 'Location' : transactionType === 'vente' ? 'Vente' : 'Tous biens',
-        searchLocation || 'Suisse',
-      ].join(' — ');
+  const alerteCriteres = useMemo(() => ({
+    type_transaction: transactionType || null,
+    categorie_id: category ? categories.find((c) => c.slug === category)?.id ?? null : null,
+    ville: searchLocation || null,
+    rayon_km: radiusKm,
+    latitude: searchCoords?.lat ?? null,
+    longitude: searchCoords?.lng ?? null,
+    prix_min: prixMin ? parseInt(prixMin) : null,
+    prix_max: prixMax ? parseInt(prixMax) : null,
+    pieces_min: piecesMin ? parseFloat(piecesMin) : null,
+    pieces_max: piecesMax ? parseFloat(piecesMax) : null,
+    surface_min: surfaceMin ? parseInt(surfaceMin) : null,
+  }), [transactionType, category, categories, searchLocation, radiusKm, searchCoords, prixMin, prixMax, piecesMin, piecesMax, surfaceMin]);
 
-      const { error } = await supabase.from('recherches_sauvegardees').insert({
-        user_id: user.id,
-        nom,
-        type_transaction: transactionType || null,
-        categorie_id: category ? categories.find((c) => c.slug === category)?.id ?? null : null,
-        ville: searchLocation || null,
-        rayon_km: radiusKm,
-        latitude: searchCoords?.lat ?? null,
-        longitude: searchCoords?.lng ?? null,
-        prix_min: prixMin ? parseInt(prixMin) : null,
-        prix_max: prixMax ? parseInt(prixMax) : null,
-        pieces_min: piecesMin ? parseFloat(piecesMin) : null,
-        pieces_max: piecesMax ? parseFloat(piecesMax) : null,
-        surface_min: surfaceMin ? parseInt(surfaceMin) : null,
-        alerte_active: true,
-        frequence_alerte: 'quotidien',
-      });
-      if (error) throw error;
-      toast.success('Alerte créée : vous serez averti des nouvelles annonces');
-    } catch {
-      toast.error("Impossible de créer l'alerte");
-    } finally {
-      setIsSavingSearch(false);
-    }
-  };
+  const alerteNom = [
+    transactionType === 'location' ? 'Location' : transactionType === 'vente' ? 'Vente' : 'Tous biens',
+    searchLocation || 'Suisse',
+  ].join(' — ');
 
 
 
@@ -629,8 +611,7 @@ export default function RechercheAnnonces() {
                   variant="outline"
                   size="sm"
                   className="hidden sm:inline-flex"
-                  onClick={saveSearchAlert}
-                  disabled={isSavingSearch}
+                  onClick={() => setAlerteDialogOpen(true)}
                 >
                   <BellPlus className="h-4 w-4 mr-2" />
                   Créer une alerte
@@ -745,6 +726,13 @@ export default function RechercheAnnonces() {
       </div>
 
       <PublicFooter />
+
+      <AlerteAnnonceDialog
+        open={alerteDialogOpen}
+        onOpenChange={setAlerteDialogOpen}
+        criteres={alerteCriteres}
+        defaultNom={alerteNom}
+      />
     </div>
   );
 }
