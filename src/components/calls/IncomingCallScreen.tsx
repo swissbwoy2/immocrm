@@ -46,11 +46,14 @@ export function IncomingCallScreen({
 }: Props) {
   const [replyOpen, setReplyOpen] = useState(false);
   const [text, setText] = useState('');
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   useEffect(() => {
     startRingtone();
     return () => stopRingtone();
   }, [call.conversationId]);
+
+  useEffect(() => onRingtoneBlocked(setAudioBlocked), []);
 
   useEffect(() => {
     if (accepting) stopRingtone();
