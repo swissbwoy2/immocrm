@@ -5,6 +5,7 @@ import { getCorrectNotificationLink, detectRoleFromPath } from "@/lib/notificati
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
+import { useAuth } from "@/contexts/AuthContext";
 
 // This hook handles push notifications for native iOS/Android
 
@@ -24,6 +25,7 @@ interface PushNotificationActionPerformed {
 
 export function usePushNotifications() {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
@@ -79,7 +81,12 @@ export function usePushNotifications() {
     console.log("[Push] Notification action performed:", action);
     const data = action.notification.data || {};
     const link = data.link || null;
-    const role = detectRoleFromPath(link || '');
+    // Le rôle RÉEL de l'utilisateur prime sur celui déduit du lien :
+    // un lien généré pour un autre espace ne doit jamais provoquer de 404.
+    const knownRoles = ['admin', 'agent', 'client', 'apporteur'] as const;
+    const role = (knownRoles as readonly string[]).includes(userRole || '')
+      ? (userRole as (typeof knownRoles)[number])
+      : detectRoleFromPath(link || '');
     let metadata: Record<string, string> | null = null;
     if (data.metadata) {
       try {
@@ -91,7 +98,7 @@ export function usePushNotifications() {
     const url = getCorrectNotificationLink(data.type || '', link, role, metadata);
     console.log("[Push] Navigating to:", url);
     navigate(url);
-  }, [navigate]);
+  }, [navigate, userRole]);
 
   const initializePushNotifications = useCallback(async () => {
     console.log("[Push] Initializing...");

@@ -29,7 +29,7 @@ interface CallContextValue {
   /** Démarre un appel (notifie les autres participants). */
   startCall: (conversationId: string, mode: CallMode) => Promise<void>;
   /** Rejoint un appel existant EN PLACE (aucune notification, aucun rechargement). */
-  joinCall: (conversationId: string, mode: CallMode) => Promise<void>;
+  joinCall: (conversationId: string, mode: CallMode) => Promise<boolean>;
   leaveCall: () => void;
 }
 
@@ -71,18 +71,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const connect = useCallback(
     async (conversationId: string, mode: CallMode, notify: boolean) => {
-      if (busyRef.current) return;
+      if (busyRef.current) return false;
       busyRef.current = true;
       setConnecting(mode);
       try {
         const res = await fetchCallToken({ conversationId, mode, notify });
         setSession({ ...res, mode, conversationId });
+        return true;
       } catch (e: any) {
         toast({
           title: 'Appel impossible',
           description: e?.message || "Impossible de rejoindre l'appel",
           variant: 'destructive',
         });
+        return false;
       } finally {
         setConnecting(null);
         busyRef.current = false;
@@ -92,14 +94,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   );
 
   const startCall = useCallback(
-    (conversationId: string, mode: CallMode) => connect(conversationId, mode, true),
+    async (conversationId: string, mode: CallMode) => {
+      await connect(conversationId, mode, true);
+    },
     [connect],
   );
 
   const joinCall = useCallback(
     async (conversationId: string, mode: CallMode) => {
       setIncoming(null);
-      await connect(conversationId, mode, false);
+      return connect(conversationId, mode, false);
     },
     [connect],
   );
@@ -113,6 +117,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // → on rejoint l'appel même si aucune conversation n'est encore ouverte.
   useEffect(() => {
     if (!user?.id) return;
+    // La route dédiée /appel gère elle-même la connexion (états + message
+    // « appel plus disponible ») : on ne double pas la tentative ici.
+    const path = window.location.pathname;
+    if (path.startsWith('/appel') || path.startsWith('/call')) return;
     const params = new URLSearchParams(window.location.search);
     const conversationId = params.get('call');
     if (!conversationId || deepLinkedRef.current === conversationId) return;

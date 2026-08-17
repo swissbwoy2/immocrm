@@ -7,7 +7,7 @@ import {
   resolveRole,
   getDisplayName,
   canAccessConversation,
-  callLink,
+  messagerieLink,
 } from "../_shared/livekit-access.ts";
 
 /**
@@ -73,7 +73,7 @@ serve(async (req) => {
             action === "declined"
               ? `${name} n'a pas pu répondre à votre appel`
               : `${name} n'a pas répondu`,
-          link: callLink(r, conversationId).split("?")[0],
+          link: `${messagerieLink(r)}?conversationId=${conversationId}`,
           metadata: { conversationId, from: user.id },
         };
       }),

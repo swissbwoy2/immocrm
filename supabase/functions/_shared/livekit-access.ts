@@ -170,14 +170,20 @@ export async function canAccessConversation(
 
 
 /** Deep link used in call notifications, per role. */
-export function callLink(role: CallRole, conversationId: string): string {
-  const base =
-    role === "admin"
-      ? "/admin/messagerie"
-      : role === "agent"
-        ? "/agent/messagerie"
-        : role === "proprietaire"
-          ? "/proprietaire/messagerie"
-          : "/client/messagerie";
-  return `${base}?conversationId=${conversationId}&call=${conversationId}`;
+export function callLink(role: CallRole, conversationId: string, mode?: string): string {
+  // Route universelle déclarée pour TOUS les rôles dans le routeur React :
+  // aucun lien d'appel ne peut donc tomber sur une 404 (y compris coursier).
+  const suffix = mode ? `&mode=${mode}` : "";
+  return `/appel?call=${conversationId}&conversationId=${conversationId}${suffix}`;
+}
+
+/** Lien vers la messagerie du rôle (appel refusé / manqué). */
+export function messagerieLink(role: CallRole): string {
+  return role === "admin"
+    ? "/admin/messagerie"
+    : role === "agent"
+      ? "/agent/messagerie"
+      : role === "proprietaire"
+        ? "/proprietaire/messagerie"
+        : "/client/messagerie";
 }
