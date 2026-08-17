@@ -1865,6 +1865,19 @@ const Messagerie = () => {
         chatView={chatView}
         selectedConversation={selectedConv}
         onSelectConversation={setSelectedConv}
+        chatHeader={
+          currentConversation ? (
+            <ChatHeader
+              name={getContactInfo(currentConversation).name}
+              avatarUrl={null}
+              conversationId={currentConversation.id}
+              status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
+              isArchived={currentConversation.is_archived}
+              lastSeenAt={getContactInfo(currentConversation).lastSeenAt}
+              isOnline={getContactInfo(currentConversation).isOnline}
+            />
+          ) : null
+        }
       />
     </div>
   );
