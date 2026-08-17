@@ -10,16 +10,17 @@ export function StoriesShowcaseSection() {
   if (loading || (offres.length === 0 && visites.length === 0)) return null;
 
   return (
-    <section className="py-12 md:py-16 bg-gradient-to-b from-primary/5 to-transparent">
-      <div className="container mx-auto max-w-5xl px-4">
+    <section className="rounded-2xl border border-primary/15 bg-primary/5 py-6 md:py-8">
+      <div className="px-4">
         <div className="mb-6 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground font-serif">
+          <h2 className="text-xl md:text-2xl font-bold text-foreground font-serif">
             Les biens que nous traitons <span className="text-primary">en direct</span>
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Visites planifiées et offres envoyées par nos chasseurs — mises à jour en continu.
           </p>
         </div>
+
 
         <div className="space-y-8">
           {visites.length > 0 && (

@@ -1,18 +1,12 @@
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Key, Home, Sparkles } from 'lucide-react';
-import { useSearchType } from '@/contexts/SearchTypeContext';
+import { lazy, Suspense } from 'react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
+const StoriesShowcaseSection = lazy(() =>
+  import('./StoriesShowcaseSection').then((m) => ({ default: m.StoriesShowcaseSection }))
+);
 
 export function DossierAnalyseSection() {
-  const { setSearchType } = useSearchType();
 
-  const openForm = (type: 'location' | 'achat') => {
-    setSearchType(type);
-    setTimeout(() => {
-      const el = document.getElementById('etape-1-qualification');
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
-  };
 
   return (
     <section id="analyse-dossier" className="relative overflow-hidden bg-background">
@@ -46,6 +40,11 @@ export function DossierAnalyseSection() {
                 </p>
               </div>
 
+              {/* Stories publiques — biens traités en direct */}
+              <Suspense fallback={null}>
+                <StoriesShowcaseSection />
+              </Suspense>
+
               {/* Trust cards */}
               <div className="relative grid sm:grid-cols-2 gap-4">
                 <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
@@ -60,39 +59,7 @@ export function DossierAnalyseSection() {
                 </div>
               </div>
 
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={() => openForm('location')}
-                  className="group h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-[0_10px_30px_-10px_hsl(var(--primary)/0.5)] hover:shadow-[0_10px_40px_-5px_hsl(var(--primary)/0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-                >
-                  <Key className="h-5 w-5" />
-                  <span className="text-base">Je cherche une location</span>
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => openForm('achat')}
-                  className="group h-auto py-4 px-6 bg-transparent border border-primary/40 hover:border-primary/70 hover:bg-primary/5 text-foreground font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <Home className="h-5 w-5 text-primary" />
-                  <span className="text-base">Je veux acheter un bien</span>
-                </Button>
-              </div>
 
-              {/* Bouton RDV gratuit */}
-              <a
-                href="/nouveau-mandat"
-                className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-gradient-to-r from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20 border border-primary/50 hover:border-primary text-primary font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.4)] w-full sm:w-auto"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm uppercase tracking-wide">Réserver mon RDV au bureau gratuitement</span>
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </a>
 
               {/* Bouton MAINTENANT */}
               <a

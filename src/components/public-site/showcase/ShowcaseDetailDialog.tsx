@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { setStoryDialogOpen } from './storyDialogState';
+
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -24,17 +26,26 @@ interface Props {
 export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
   const navigate = useNavigate();
   const [disclaimer, setDisclaimer] = useState(false);
+  const open = !!item || disclaimer;
+
+  useEffect(() => {
+    if (!open) return;
+    setStoryDialogOpen(true);
+    return () => setStoryDialogOpen(false);
+  }, [open]);
 
   return (
     <>
       <Dialog open={!!item} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[200] pb-24">
           {item && <DetailBody item={item} onDeposer={() => setDisclaimer(true)} />}
         </DialogContent>
       </Dialog>
 
+
       <AlertDialog open={disclaimer} onOpenChange={setDisclaimer}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[210]">
+
           <AlertDialogHeader>
             <AlertDialogTitle>Avant de continuer</AlertDialogTitle>
             <AlertDialogDescription>
