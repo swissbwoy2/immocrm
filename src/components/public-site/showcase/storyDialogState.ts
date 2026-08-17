@@ -5,11 +5,7 @@ let openCount = 0;
 
 export function setStoryDialogOpen(open: boolean) {
   openCount = Math.max(0, openCount + (open ? 1 : -1));
-  const isOpen = openCount > 0;
-  if (typeof document !== 'undefined') {
-    document.body.classList.toggle('imr-story-dialog-open', isOpen);
-  }
-  window.dispatchEvent(new CustomEvent(EVENT, { detail: isOpen }));
+  window.dispatchEvent(new CustomEvent(EVENT, { detail: openCount > 0 }));
 }
 
 export function useStoryDialogOpen() {

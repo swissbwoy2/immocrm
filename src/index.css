@@ -1691,18 +1691,3 @@ body.imr-immersive iframe[src*="whatsapp"] {
   pointer-events: none !important;
 }
 
-
-/* Masquage total des boutons flottants quand un dialog de story est ouvert */
-body.imr-story-dialog-open [data-floating-widget],
-body.imr-story-dialog-open .imr-floating-bubble,
-body.imr-story-dialog-open #whatsapp-widget,
-body.imr-story-dialog-open .whatsapp-float,
-body.imr-story-dialog-open [class*="elfsight-app-"],
-body.imr-story-dialog-open [class*="eapps-widget"],
-body.imr-story-dialog-open [class*="eapps-whatsapp"],
-body.imr-story-dialog-open iframe[src*="elfsight"],
-body.imr-story-dialog-open iframe[src*="whatsapp"] {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}

@@ -6,7 +6,6 @@ import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
 
 // Above the fold - eager
 import { HeroSection } from '@/components/public-site/sections/HeroSection';
-import { HeroMissionSection } from '@/components/public-site/sections/HeroMissionSection';
 import { DossierAnalyseSection } from '@/components/public-site/sections/DossierAnalyseSection';
 import { SocialProofSection } from '@/components/public-site/sections/SocialProofSection';
 import { TeamSection } from '@/components/public-site/sections/TeamSection';
@@ -54,19 +53,20 @@ export default function HomePage() {
   return (
     <PublicSiteLayout>
 
-      {/* 1) Bloc hero de choix de parcours (location / achat) */}
+
+
+      {/* Eager sections */}
+      <DossierAnalyseSection />
+
+      {/* Bloc hero de choix de parcours (location / achat) */}
       <HeroSection />
 
-      {/* 2) Calculateurs gratuits (location + achat) */}
+      {/* Calculateurs gratuits (location + achat) juste en dessous du choix de parcours */}
       <Suspense fallback={null}>
         <BudgetCalcSection />
       </Suspense>
 
-      {/* 3) Bloc marketing détaillé (valeur / confiance) */}
-      <HeroMissionSection />
 
-      {/* Sections suivantes */}
-      <DossierAnalyseSection />
 
       {/* Lazy sections */}
       <Suspense fallback={null}>
