@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
+import { ConversationCallControls } from "@/components/calls/ConversationCallControls";
 
 interface MobileMessengerProps {
   conversationsList: ReactNode;
@@ -89,6 +90,7 @@ export function MobileMessenger({
             </p>
           )}
         </div>
+        <ConversationCallControls conversationId={selectedConversation} variant="onColor" />
       </div>
 
       {/* Existing chat view (messages + offre cards + video + composer + dialogs) */}
