@@ -74,14 +74,11 @@ export default function HomePage() {
         <PricingSection />
       </Suspense>
 
-      <SocialProofSection />
-      <TeamSection />
       <ForWhoSection />
       <HowItWorksSection />
 
       {/* Lazy sections */}
       <Suspense fallback={null}>
-        <DifferentiatorSection />
         <ServicesFullSection />
         <GuaranteeSection />
         <CoverageSection />
