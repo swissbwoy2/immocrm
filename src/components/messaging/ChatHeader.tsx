@@ -15,6 +15,8 @@ interface ChatHeaderProps {
   className?: string;
   lastSeenAt?: string | null;
   isOnline?: boolean | null;
+  /** Active les boutons d'appel audio / vidéo (room call:{conversationId}) */
+  conversationId?: string | null;
 }
 
 /**
@@ -62,6 +64,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <p className="text-[11px] text-muted-foreground truncate">{status}</p>
         ) : null}
       </div>
+
+      {conversationId && <ConversationCallControls conversationId={conversationId} />}
 
       {onOptionsClick && (
         <Button
