@@ -51,13 +51,22 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
 
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      return true;
+      return (data as any)?.conversation_id as string | null;
     },
 
-    onSuccess: () => {
-      toast.success('Message envoyé avec succès !');
+    onSuccess: (conversationId) => {
       onOpenChange(false);
       setFormData(prev => ({ ...prev, nom: '', email: '', telephone: '' }));
+      if (conversationId) {
+        toast.success('Message envoyé — la discussion est ouverte', {
+          action: {
+            label: 'Voir la discussion',
+            onClick: () => navigate(`/mes-messages-annonces/${conversationId}`),
+          },
+        });
+      } else {
+        toast.success('Message envoyé avec succès !');
+      }
     },
     onError: (error) => {
       console.error('Error sending message:', error);
