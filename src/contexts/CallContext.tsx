@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { CallMode, CallTokenResult, fetchCallToken, isCallHostRole, signalCall } from '@/lib/livekitCall';
 import { CallStage } from '@/components/calls/CallStage';
+import { LiveStage } from '@/components/calls/LiveStage';
+import { fetchLiveToken } from '@/lib/livekitLive';
 import { AddParticipantDialog } from '@/components/calls/AddParticipantDialog';
 import { IncomingCallScreen, IncomingCall } from '@/components/calls/IncomingCallScreen';
 import { stopRingtone } from '@/lib/callRingtone';
@@ -21,6 +23,8 @@ import { stopRingtone } from '@/lib/callRingtone';
 interface CallSession extends CallTokenResult {
   mode: CallMode;
   conversationId: string;
+  /** Phase B : live de visite (room visit:{visiteId}). */
+  visiteId?: string;
 }
 
 interface CallContextValue {
@@ -30,6 +34,10 @@ interface CallContextValue {
   startCall: (conversationId: string, mode: CallMode) => Promise<void>;
   /** Rejoint un appel existant EN PLACE (aucune notification, aucun rechargement). */
   joinCall: (conversationId: string, mode: CallMode) => Promise<boolean>;
+  /** Démarre un live de visite en tant qu'hôte (notifie les clients concernés). */
+  startLive: (visiteId: string) => Promise<boolean>;
+  /** Rejoint un live de visite existant (hôte ou spectateur). */
+  joinLive: (visiteId: string) => Promise<boolean>;
   leaveCall: () => void;
 }
 
@@ -108,6 +116,40 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     [connect],
   );
 
+  const connectLive = useCallback(
+    async (visiteId: string, notify: boolean) => {
+      if (busyRef.current) return false;
+      busyRef.current = true;
+      setConnecting('video');
+      try {
+        const res = await fetchLiveToken({ visiteId, notify });
+        setSession({ ...res, mode: 'video', conversationId: '', visiteId });
+        return true;
+      } catch (e: any) {
+        toast({
+          title: 'Live indisponible',
+          description: e?.message || 'Impossible de rejoindre le live de visite',
+          variant: 'destructive',
+        });
+        return false;
+      } finally {
+        setConnecting(null);
+        busyRef.current = false;
+      }
+    },
+    [toast],
+  );
+
+  const startLive = useCallback((visiteId: string) => connectLive(visiteId, true), [connectLive]);
+
+  const joinLive = useCallback(
+    (visiteId: string) => {
+      setIncoming(null);
+      return connectLive(visiteId, false);
+    },
+    [connectLive],
+  );
+
   const leaveCall = useCallback(() => {
     setSession(null);
     setInviteOpen(false);
@@ -141,6 +183,27 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       if (n?.type !== 'call_incoming' && n?.type !== 'call_invite') return;
       if (n?.id && handledCallsRef.current.has(n.id)) return;
       if (n?.id) handledCallsRef.current.add(n.id);
+
+      // Live de visite (Phase B) : la salle est visit:{visiteId}.
+      const visiteId: string | undefined =
+        n?.metadata?.visiteId ||
+        (typeof n?.metadata?.room === 'string' && n.metadata.room.startsWith('visit:')
+          ? n.metadata.room.slice('visit:'.length)
+          : undefined);
+      if (visiteId) {
+        if (sessionRef.current?.visiteId === visiteId) return;
+        setIncoming({
+          conversationId: '',
+          visiteId,
+          mode: 'video',
+          title: n?.title || 'Live de visite',
+          message: n?.message || 'Rejoindre le live de visite',
+          callerName: n?.metadata?.hostName,
+          callerId: n?.metadata?.from,
+        });
+        if (n?.id) void supabase.from('notifications').update({ read: true }).eq('id', n.id);
+        return;
+      }
 
       // conversationId : métadonnées en priorité, sinon extrait du lien.
       let conversationId: string | undefined = n?.metadata?.conversationId;
@@ -220,6 +283,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     async (call: IncomingCall, action: 'declined' | 'missed', quickMessage?: string) => {
       setIncoming(null);
       stopRingtone();
+      if (call.visiteId) return; // live de visite : rien à signaler à l'appelant
       try {
         if (quickMessage && user?.id) {
           await supabase.from('messages').insert({
@@ -242,8 +306,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ session, connecting, startCall, joinCall, leaveCall }),
-    [session, connecting, startCall, joinCall, leaveCall],
+    () => ({ session, connecting, startCall, joinCall, startLive, joinLive, leaveCall }),
+    [session, connecting, startCall, joinCall, startLive, joinLive, leaveCall],
   );
 
   return (
@@ -254,7 +318,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         <IncomingCallScreen
           call={incoming}
           accepting={!!connecting}
-          onAccept={() => joinCall(incoming.conversationId, incoming.mode)}
+          onAccept={() =>
+            incoming.visiteId
+              ? joinLive(incoming.visiteId)
+              : joinCall(incoming.conversationId, incoming.mode)
+          }
           onDecline={(quickMessage) => void dismissIncoming(incoming, 'declined', quickMessage)}
           onTimeout={() => void dismissIncoming(incoming, 'missed')}
         />
@@ -267,8 +335,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             token={session.token}
             serverUrl={session.url}
             connect
-            audio={true}
-            video={session.mode === 'video'}
+            audio={session.visiteId ? !!session.isHost : true}
+            video={session.visiteId ? !!session.isHost : session.mode === 'video'}
             options={{ adaptiveStream: true, dynacast: true }}
             connectOptions={{ autoSubscribe: true }}
             data-lk-theme="default"
@@ -285,19 +353,29 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
               });
             }}
           >
-            <CallStage
-              mode={session.mode}
-              canInvite={canInvite}
-              onInvite={() => setInviteOpen(true)}
-              onLeave={leaveCall}
-            />
+            {session.visiteId ? (
+              <LiveStage
+                room={session.room}
+                isHost={!!session.isHost}
+                onInvite={() => setInviteOpen(true)}
+                onLeave={leaveCall}
+              />
+            ) : (
+              <CallStage
+                mode={session.mode}
+                canInvite={canInvite}
+                onInvite={() => setInviteOpen(true)}
+                onLeave={leaveCall}
+              />
+            )}
           </LiveKitRoom>
 
-          {canInvite && (
+          {(session.visiteId ? session.isHost : canInvite) && (
             <AddParticipantDialog
               open={inviteOpen}
               onOpenChange={setInviteOpen}
-              conversationId={session.conversationId}
+              conversationId={session.conversationId || undefined}
+              visiteId={session.visiteId}
               mode={session.mode}
             />
           )}
