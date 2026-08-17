@@ -124,7 +124,11 @@ async function collectConversationUserIds(
     .from("call_participants")
     .select("user_id")
     .eq("conversation_id", conversationId);
-  (invited || []).forEach((p: any) => out.push({ userId: p.user_id, role: "client" }));
+  for (const p of invited || []) {
+    if (!p.user_id) continue;
+    const r = await resolveRole(svc, p.user_id);
+    out.push({ userId: p.user_id, role: r });
+  }
 
   // dedupe
   const seen = new Set<string>();
