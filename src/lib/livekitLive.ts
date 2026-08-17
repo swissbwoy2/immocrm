@@ -27,7 +27,14 @@ export async function fetchLiveToken(params: {
   return data as LiveTokenResult;
 }
 
+async function requireSession() {
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) throw new Error('Session expirée : reconnecte-toi pour gérer le live.');
+}
+
 export async function fetchLiveCandidates(visiteId: string): Promise<CallCandidate[]> {
+  if (!visiteId) throw new Error('Visite introuvable (identifiant manquant)');
+  await requireSession();
   const { data, error } = await supabase.functions.invoke('livekit-invite', {
     body: { action: 'candidates', visiteId },
   });
@@ -37,6 +44,7 @@ export async function fetchLiveCandidates(visiteId: string): Promise<CallCandida
 }
 
 export async function inviteToLive(params: { visiteId: string; userId: string }): Promise<void> {
+  await requireSession();
   const { data, error } = await supabase.functions.invoke('livekit-invite', {
     body: { action: 'invite', visiteId: params.visiteId, userId: params.userId },
   });

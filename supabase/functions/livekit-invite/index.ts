@@ -11,6 +11,8 @@ import {
   HOST_ROLES,
   resolveVisitAccess,
   visitLiveLink,
+  loadVisitGroup,
+  parseRoom,
 } from "../_shared/livekit-access.ts";
 
 /**
@@ -32,8 +34,12 @@ serve(async (req) => {
 
     const body = await req.json();
     const action = body.action || "invite";
-    const conversationId: string = body.conversationId;
-    const visiteId: string | undefined = body.visiteId;
+    const parsedRoom = typeof body.room === "string" ? parseRoom(body.room) : null;
+    const conversationId: string =
+      body.conversationId || (parsedRoom?.kind === "call" ? parsedRoom.id : undefined);
+    const visiteId: string | undefined =
+      body.visiteId || (parsedRoom?.kind === "visit" ? parsedRoom.id : undefined);
+
 
     const svc = serviceClient();
     const role = await resolveRole(svc, user.id);
@@ -52,23 +58,49 @@ serve(async (req) => {
 
       if (action === "candidates") {
         const candidates: { user_id: string; name: string; role: string }[] = [];
+        const push = (user_id: string | null | undefined, name: string, r: string) => {
+          if (!user_id || user_id === user.id) return;
+          if (candidates.some((x) => x.user_id === user_id)) return;
+          candidates.push({ user_id, name, role: r });
+        };
+
+        // Clients concernés par la visite (nom via profiles : la table clients
+        // ne porte pas prenom/nom).
         if (access.clientIds.length) {
-          const { data: clis } = await svc
+          const { data: clis, error: cliErr } = await svc
             .from("clients")
-            .select("user_id, prenom, nom")
+            .select("id, user_id")
             .in("id", access.clientIds);
-          (clis || []).forEach((c: any) => {
-            if (!c.user_id || c.user_id === user.id) return;
-            if (candidates.some((x) => x.user_id === c.user_id)) return;
-            candidates.push({
-              user_id: c.user_id,
-              name: `${c.prenom || ""} ${c.nom || ""}`.trim() || "Client",
-              role: "client",
-            });
-          });
+          if (cliErr) console.error("livekit-invite: clients lookup", cliErr.message);
+          for (const c of clis || []) {
+            if (!c.user_id) continue;
+            push(c.user_id, await getDisplayName(svc, c.user_id), "client");
+          }
         }
+
+        // Agents et coursiers rattachés au créneau de visite.
+        const loaded = await loadVisitGroup(svc, visiteId);
+        const agentIds = [...new Set((loaded?.group || []).map((g: any) => g.agent_id).filter(Boolean))];
+        const coursierIds = [
+          ...new Set((loaded?.group || []).map((g: any) => g.coursier_id).filter(Boolean)),
+        ];
+        if (agentIds.length) {
+          const { data: ags } = await svc.from("agents").select("user_id").in("id", agentIds);
+          for (const a of ags || []) push(a.user_id, await getDisplayName(svc, a.user_id), "agent");
+        }
+        if (coursierIds.length) {
+          const { data: cous } = await svc.from("coursiers").select("user_id").in("id", coursierIds);
+          for (const c of cous || []) push(c.user_id, await getDisplayName(svc, c.user_id), "coursier");
+        }
+
+        // Admins (toujours autorisés à rejoindre un live).
+        const { data: admins } = await svc.from("user_roles").select("user_id").eq("role", "admin");
+        for (const a of admins || []) push(a.user_id, await getDisplayName(svc, a.user_id), "admin");
+
+        console.log("livekit-invite: candidats live", { visiteId, count: candidates.length });
         return json({ candidates });
       }
+
 
       const targetUserId: string = body.userId;
       if (!targetUserId) return json({ error: "userId requis" }, 400);
@@ -82,7 +114,11 @@ serve(async (req) => {
         link: visitLiveLink(visiteId),
         metadata: { visiteId, mode: "video", from: user.id, room: `visit:${visiteId}`, live: true },
       });
-      if (notifErr) return json({ error: notifErr.message }, 500);
+      if (notifErr) {
+        console.error("livekit-invite: notification live échouée", notifErr);
+        return json({ error: `Notification impossible : ${notifErr.message}` }, 500);
+      }
+      console.log("livekit-invite: invitation live envoyée", { visiteId, targetUserId });
       return json({ success: true });
     }
 

@@ -35,16 +35,21 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, visit
   const [candidates, setCandidates] = useState<CallCandidate[]>([]);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [invited, setInvited] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     setLoading(true);
+    setError(null);
     (visiteId ? fetchLiveCandidates(visiteId) : fetchInviteCandidates(conversationId!))
       .then((list) => !cancelled && setCandidates(list))
-      .catch((e) =>
-        toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
-      )
+      .catch((e) => {
+        console.error('[AddParticipantDialog] chargement des candidats', e);
+        if (cancelled) return;
+        setError(e?.message || 'Erreur inconnue');
+        toast({ title: 'Erreur', description: e?.message, variant: 'destructive' });
+      })
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
@@ -53,6 +58,7 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, visit
 
   const handleInvite = async (c: CallCandidate) => {
     setInvitingId(c.user_id);
+    setError(null);
     try {
       if (visiteId) {
         await inviteToLive({ visiteId, userId: c.user_id });
@@ -62,7 +68,9 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, visit
       setInvited((prev) => [...prev, c.user_id]);
       toast({ title: 'Invitation envoyée', description: `${c.name} a été invité à rejoindre ${visiteId ? 'le live' : "l'appel"}.` });
     } catch (e: any) {
-      toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
+      console.error('[AddParticipantDialog] invitation échouée', e);
+      setError(e?.message || 'Erreur inconnue');
+      toast({ title: "Échec de l'invitation", description: e?.message, variant: 'destructive' });
     } finally {
       setInvitingId(null);
     }
@@ -74,9 +82,17 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, visit
         <DialogHeader>
           <DialogTitle>Ajouter un participant</DialogTitle>
           <DialogDescription>
-            Les personnes liées au dossier peuvent être invitées à rejoindre l'appel.
+            {visiteId
+              ? 'Les personnes liées à cette visite peuvent être invitées à rejoindre le live.'
+              : "Les personnes liées au dossier peuvent être invitées à rejoindre l'appel."}
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {error}
+          </p>
+        )}
 
         {loading ? (
           <div className="py-10 flex justify-center">
@@ -84,7 +100,9 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, visit
           </div>
         ) : candidates.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucune personne à inviter pour ce dossier.
+            {visiteId
+              ? 'Aucune personne rattachée à cette visite à inviter.'
+              : 'Aucune personne à inviter pour ce dossier.'}
           </p>
         ) : (
           <div className="max-h-[50vh] overflow-y-auto space-y-1">
