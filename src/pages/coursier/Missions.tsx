@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 import { getInteretState } from '@/lib/offreInteret';
 import { Button } from '@/components/ui/button';
+import { StartVisitLiveButton } from '@/components/calls/StartVisitLiveButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -232,6 +233,12 @@ export default function CoursierMissions() {
             <CheckCircle className="mr-2 h-4 w-4" />
             Accepter la mission
           </Button>
+        )}
+
+        {type === 'active' && (
+          <div className="mb-2" onClick={(e) => e.stopPropagation()}>
+            <StartVisitLiveButton visiteId={mission.id} className="w-full" />
+          </div>
         )}
 
         {type === 'active' && (
@@ -684,6 +691,10 @@ export default function CoursierMissions() {
                     Terminer la visite
                   </Button>
                 )}
+                {selectedMission.coursier_id === coursierId &&
+                  selectedMission.statut_coursier === 'accepte' && (
+                    <StartVisitLiveButton visiteId={selectedMission.id} size="default" className="w-full" />
+                  )}
                 {selectedMission.coursier_id === coursierId &&
                   ['accepte', 'termine'].includes(selectedMission.statut_coursier) && (
                     <Button

@@ -21,7 +21,7 @@ export interface CallTokenResult {
  * « Edge Function returned a non-2xx status code ». On lit le vrai corps de
  * la réponse pour afficher le message réel (et on le logge en console).
  */
-async function readInvokeError(fnName: string, error: unknown): Promise<string> {
+export async function readInvokeError(fnName: string, error: unknown): Promise<string> {
   let detail = '';
   if (error instanceof FunctionsHttpError) {
     try {

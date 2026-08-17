@@ -187,3 +187,113 @@ export function messagerieLink(role: CallRole): string {
         ? "/proprietaire/messagerie"
         : "/client/messagerie";
 }
+
+// ---------------------------------------------------------------------------
+// PHASE B — Live de visite (room `visit:{visiteId}`)
+// ---------------------------------------------------------------------------
+
+export interface VisitAccess {
+  allowed: boolean;
+  /** Hôte = admin / agent / coursier rattaché à la visite : peut publier & piloter. */
+  isHost: boolean;
+  /** Toutes les lignes de visite du même créneau/adresse (visites groupées). */
+  visiteIds: string[];
+  clientIds: string[];
+}
+
+const DENY: VisitAccess = { allowed: false, isHost: false, visiteIds: [], clientIds: [] };
+
+/**
+ * Récupère la visite + le groupe de visites (même adresse & même horaire),
+ * car une visite physique est stockée en une ligne par client.
+ */
+export async function loadVisitGroup(svc: SupabaseClient, visiteId: string) {
+  const { data: v } = await svc
+    .from("visites")
+    .select("id, client_id, agent_id, coursier_id, adresse, date_visite")
+    .eq("id", visiteId)
+    .maybeSingle();
+  if (!v) return null;
+
+  let group: any[] = [v];
+  if (v.adresse && v.date_visite) {
+    const { data: g } = await svc
+      .from("visites")
+      .select("id, client_id, agent_id, coursier_id")
+      .eq("adresse", v.adresse)
+      .eq("date_visite", v.date_visite)
+      .limit(50);
+    if (g && g.length) group = g;
+  }
+  return { visite: v, group };
+}
+
+/** Qui peut rejoindre le live d'une visite, et à quel titre (hôte / spectateur) ? */
+export async function resolveVisitAccess(
+  svc: SupabaseClient,
+  userId: string,
+  role: CallRole,
+  visiteId: string,
+): Promise<VisitAccess> {
+  const loaded = await loadVisitGroup(svc, visiteId);
+  if (!loaded) {
+    console.error("resolveVisitAccess: visite introuvable", visiteId);
+    return DENY;
+  }
+  const { group } = loaded;
+  const visiteIds = group.map((g: any) => g.id);
+  const clientIds = [...new Set(group.map((g: any) => g.client_id).filter(Boolean))] as string[];
+
+  if (role === "admin") return { allowed: true, isHost: true, visiteIds, clientIds };
+
+  if (role === "agent") {
+    const { data: ag } = await svc.from("agents").select("id").eq("user_id", userId).maybeSingle();
+    if (ag) {
+      if (group.some((g: any) => g.agent_id === ag.id)) {
+        return { allowed: true, isHost: true, visiteIds, clientIds };
+      }
+      if (clientIds.length) {
+        const { data: cag } = await svc
+          .from("client_agents")
+          .select("id")
+          .eq("agent_id", ag.id)
+          .in("client_id", clientIds)
+          .limit(1);
+        if (cag && cag.length) return { allowed: true, isHost: true, visiteIds, clientIds };
+        const { data: cli } = await svc
+          .from("clients")
+          .select("id")
+          .eq("agent_id", ag.id)
+          .in("id", clientIds)
+          .limit(1);
+        if (cli && cli.length) return { allowed: true, isHost: true, visiteIds, clientIds };
+      }
+    }
+  }
+
+  if (role === "coursier") {
+    const { data: cou } = await svc.from("coursiers").select("id").eq("user_id", userId).maybeSingle();
+    if (cou && group.some((g: any) => g.coursier_id === cou.id)) {
+      return { allowed: true, isHost: true, visiteIds, clientIds };
+    }
+  }
+
+  // Client concerné par la visite : spectateur (jamais hôte).
+  if (clientIds.length) {
+    const { data: me } = await svc
+      .from("clients")
+      .select("id")
+      .eq("user_id", userId)
+      .in("id", clientIds)
+      .limit(1);
+    if (me && me.length) return { allowed: true, isHost: false, visiteIds, clientIds };
+  }
+
+  console.error("resolveVisitAccess: accès refusé", { userId, role, visiteId });
+  return { ...DENY, visiteIds, clientIds };
+}
+
+/** Lien universel vers le live d'une visite (route /appel, tous rôles). */
+export function visitLiveLink(visiteId: string): string {
+  return `/appel?visit=${visiteId}&mode=video`;
+}

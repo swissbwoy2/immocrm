@@ -11,7 +11,10 @@ import {
   canAccessConversation,
   callLink,
   HOST_ROLES,
+  resolveVisitAccess,
+  visitLiveLink,
 } from "../_shared/livekit-access.ts";
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -37,14 +40,86 @@ serve(async (req) => {
     }
 
     const parsed = parseRoom(room);
-    if (!parsed || parsed.kind !== "call") {
+    if (!parsed || (parsed.kind !== "call" && parsed.kind !== "visit")) {
       console.error("livekit-token: room invalide", room);
       return json({ error: `Salle d'appel invalide (${room})` }, 400);
     }
-    const conversationId = parsed.id;
 
     const svc = serviceClient();
     const role = await resolveRole(svc, user.id);
+    const name = await getDisplayName(svc, user.id);
+
+    // Identité unique par session : évite qu'un même compte ouvert sur 2 appareils
+    // se déconnecte mutuellement (LiveKit expulse les identités dupliquées).
+    const identity = `${user.id}#${crypto.randomUUID().slice(0, 8)}`;
+
+    // ---------- LIVE DE VISITE : visit:{visiteId} ---------------------------
+    if (parsed.kind === "visit") {
+      const visiteId = parsed.id;
+      const access = await resolveVisitAccess(svc, user.id, role, visiteId);
+      if (!access.allowed) {
+        return json({ error: "Accès refusé à ce live de visite." }, 403);
+      }
+      const isHost = access.isHost && HOST_ROLES.includes(role);
+
+      const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+        identity,
+        name,
+        ttl: 60 * 60 * 3,
+        metadata: JSON.stringify({ role, host: isHost, userId: user.id, visiteId }),
+      });
+      at.addGrant({
+        room,
+        roomJoin: true,
+        canPublish: isHost, // client = spectateur tant qu'il n'est pas monté
+        canSubscribe: true,
+        canPublishData: true,
+        roomAdmin: isHost,
+        roomCreate: isHost,
+      });
+      const liveToken = await at.toJwt();
+
+      if (notify && isHost) {
+        try {
+          const clientIds = access.clientIds;
+          const targets: string[] = [];
+          if (clientIds.length) {
+            const { data: clis } = await svc
+              .from("clients")
+              .select("user_id")
+              .in("id", clientIds);
+            (clis || []).forEach((c: any) => c.user_id && targets.push(c.user_id));
+          }
+          const rows = [...new Set(targets)]
+            .filter((t) => t !== user.id)
+            .map((userId) => ({
+              user_id: userId,
+              type: "call_incoming",
+              title: "Live de visite en cours",
+              message: `${name} diffuse la visite en direct — Rejoindre`,
+              link: visitLiveLink(visiteId),
+              metadata: { visiteId, mode: "video", from: user.id, room, live: true },
+            }));
+          if (rows.length) await svc.from("notifications").insert(rows);
+        } catch (e) {
+          console.error("notify live failed", e);
+        }
+      }
+
+      return json({
+        token: liveToken,
+        url: LIVEKIT_URL,
+        identity,
+        name,
+        role,
+        isHost,
+        room,
+        visiteId,
+      });
+    }
+
+    // ---------- APPEL 1-À-1 : call:{conversationId} -------------------------
+    const conversationId = parsed.id;
 
     const allowed = await canAccessConversation(svc, user.id, role, conversationId);
     if (!allowed) {
@@ -52,13 +127,7 @@ serve(async (req) => {
       return json({ error: "Accès refusé à cet appel (vous n'êtes pas rattaché à cette conversation)" }, 403);
     }
 
-
     const isHost = HOST_ROLES.includes(role);
-    const name = await getDisplayName(svc, user.id);
-
-    // Identité unique par session : évite qu'un même compte ouvert sur 2 appareils
-    // se déconnecte mutuellement (LiveKit expulse les identités dupliquées).
-    const identity = `${user.id}#${crypto.randomUUID().slice(0, 8)}`;
 
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity,
@@ -100,6 +169,7 @@ serve(async (req) => {
     }
 
     return json({ token, url: LIVEKIT_URL, identity, name, role, isHost, room });
+
   } catch (e) {
     console.error("livekit-token error", e);
     return json({ error: (e as Error).message }, 500);
