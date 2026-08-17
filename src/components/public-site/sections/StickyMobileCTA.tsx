@@ -15,13 +15,11 @@ export function StickyMobileCTA() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  if (!visible) return null;
+  if (!visible || dialogOpen) return null;
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-[55] bg-background/95 backdrop-blur-sm border-t border-border/50 px-4 py-3 transition-opacity duration-300 ${
-        dialogOpen ? 'opacity-20 pointer-events-none' : 'opacity-100'
-      }`}
+      className={`fixed bottom-0 left-0 right-0 z-[55] bg-background/95 backdrop-blur-sm border-t border-border/50 px-4 py-3`}
       style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
     >
       <Button
