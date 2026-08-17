@@ -115,6 +115,7 @@ const isChunkLoadError = (msg: string) =>
 
 const handleStaleChunk = (msg: string) => {
   if (!isChunkLoadError(msg)) return;
+  if ((window as any).__logisorama_in_call === true) return; // jamais pendant un appel
   try {
     const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0');
     if (Date.now() - last < 5 * 60_000) return; // 5 min throttle to avoid reload loops
