@@ -2189,6 +2189,30 @@ export type Database = {
           },
         ]
       }
+      call_participants: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       candidatures: {
         Row: {
           agent_valide_regie: boolean | null
