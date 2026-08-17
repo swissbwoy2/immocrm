@@ -32,6 +32,8 @@ interface ContactAnnonceDialogProps {
 }
 
 export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnnonceDialogProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     nom: '',
     email: '',
