@@ -10,6 +10,7 @@ import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StartVisitLiveButton } from '@/components/calls/StartVisitLiveButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors, priorityColors } from './types';
@@ -455,6 +456,11 @@ export function PremiumAgentDayEvents({
                             </div>
                           );
                         })()}
+
+                        {/* Live de visite (Phase B) */}
+                        <div className="pt-3 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
+                          <StartVisitLiveButton visiteId={firstVisite.id} className="w-full" />
+                        </div>
 
                         {/* Recommendations */}
                         {group.some(v => v.recommandation_agent) && (
