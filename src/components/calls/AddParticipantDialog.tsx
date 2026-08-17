@@ -82,7 +82,9 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, visit
         <DialogHeader>
           <DialogTitle>Ajouter un participant</DialogTitle>
           <DialogDescription>
-            Les personnes liées au dossier peuvent être invitées à rejoindre l'appel.
+            {visiteId
+              ? 'Les personnes liées à cette visite peuvent être invitées à rejoindre le live.'
+              : "Les personnes liées au dossier peuvent être invitées à rejoindre l'appel."}
           </DialogDescription>
         </DialogHeader>
 
