@@ -22,35 +22,50 @@ function VisitBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
   const img = usePreviewImage(item);
   const ville = villeFromAdresse(item.adresse);
 
+  const photo = (
+    <span
+      className="block rounded-full p-[2.5px]"
+      style={{
+        background: "linear-gradient(135deg, hsl(158 55% 38%), hsl(200 70% 45%))",
+        width: 60,
+        height: 60,
+      }}
+    >
+      <span className="block bg-background rounded-full p-[2px] w-full h-full">
+        <span className="w-full h-full rounded-full overflow-hidden bg-muted flex items-center justify-center">
+          {img ? (
+            <img src={img} alt={item.titre || "Bien"} loading="lazy" className="w-full h-full object-cover" />
+          ) : (
+            <Home className="h-5 w-5 text-muted-foreground" />
+          )}
+        </span>
+      </span>
+    </span>
+  );
+
   return (
-    <button type="button" onClick={onClick} className="flex flex-col items-center gap-1 shrink-0 w-16">
-      <div
-        className="rounded-full p-[2.5px]"
-        style={{
-          background: "linear-gradient(135deg, hsl(158 55% 38%), hsl(200 70% 45%))",
-          width: 60,
-          height: 60,
-        }}
-      >
-        <div className="bg-background rounded-full p-[2px] w-full h-full">
-          <div className="w-full h-full rounded-full overflow-hidden bg-muted flex items-center justify-center">
-            {img ? (
-              <img src={img} alt={item.titre || "Bien"} loading="lazy" className="w-full h-full object-cover" />
-            ) : (
-              <Home className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        </div>
-      </div>
-      <span
+    <div className="flex flex-col items-center gap-1 shrink-0 w-16">
+      {item.lien_annonce ? (
+        <StoryPhotoLink href={item.lien_annonce} iconSize="sm" className="rounded-full">
+          {photo}
+        </StoryPhotoLink>
+      ) : (
+        <button type="button" onClick={onClick} className="rounded-full">
+          {photo}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onClick}
         className="text-[11px] font-medium truncate w-full text-center"
         style={{ color: "hsl(200 35% 18%)" }}
       >
         {ville || "Visite"}
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
+
 
 /**
  * Horizontal stories bar (WhatsApp / Insta style).
