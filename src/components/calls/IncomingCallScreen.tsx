@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Phone, PhoneOff, Video, MessageSquare, Send, X } from 'lucide-react';
 import { CallMode } from '@/lib/livekitCall';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
-import { startRingtone, stopRingtone } from '@/lib/callRingtone';
+import { startRingtone, stopRingtone, onRingtoneBlocked, retryRingtone } from '@/lib/callRingtone';
 import { cn } from '@/lib/utils';
 
 export interface IncomingCall {
