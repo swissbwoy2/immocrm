@@ -1608,21 +1608,7 @@ const Messagerie = () => {
           <MessagesListSkeleton />
         ) : (
         <div className="space-y-2 max-w-4xl mx-auto min-w-0">
-          {/* Header qui défile avec les messages */}
-          {/* Header qui défile avec les messages */}
-          {currentConversation && !isMobile && (
-            <div className="mb-4 pb-3 border-b border-border/30">
-              <ChatHeader
-                name={getContactInfo(currentConversation).name}
-                avatarUrl={null}
-                conversationId={currentConversation.id}
-                status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
-                isArchived={currentConversation.is_archived}
-                lastSeenAt={getContactInfo(currentConversation).lastSeenAt}
-                isOnline={getContactInfo(currentConversation).isOnline}
-              />
-            </div>
-          )}
+          {/* En-tête déplacé en haut de la zone de chat (fixe) */}
           
           {/* Calculer le dernier message pour chaque offre */}
           {(() => {
