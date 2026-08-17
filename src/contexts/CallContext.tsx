@@ -53,6 +53,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [incoming, setIncoming] = useState<IncomingCall | null>(null);
   const busyRef = useRef(false);
+  const deepLinkedRef = useRef<string | null>(null);
 
   const canInvite = isCallHostRole(userRole);
 
@@ -101,6 +102,18 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     setInviteOpen(false);
   }, []);
 
+  // Deep-link global : ?call={conversationId} (notification push / e-mail)
+  // → on rejoint l'appel même si aucune conversation n'est encore ouverte.
+  useEffect(() => {
+    if (!user?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    const conversationId = params.get('call');
+    if (!conversationId || deepLinkedRef.current === conversationId) return;
+    deepLinkedRef.current = conversationId;
+    const mode = (params.get('mode') as CallMode) || 'video';
+    void joinCall(conversationId, mode);
+  }, [user?.id, joinCall]);
+
   // Appels entrants : notification in-app en temps réel (aucune navigation)
   useEffect(() => {
     if (!user?.id) return;
@@ -117,8 +130,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         (payload) => {
           const n: any = payload.new;
           if (n?.type !== 'call_incoming' && n?.type !== 'call_invite') return;
-          const conversationId = n?.metadata?.conversationId;
-          if (!conversationId) return;
+          // conversationId : métadonnées en priorité, sinon extrait du lien.
+          let conversationId: string | undefined = n?.metadata?.conversationId;
+          if (!conversationId && typeof n?.link === 'string') {
+            const q = n.link.split('?')[1];
+            if (q) {
+              const sp = new URLSearchParams(q);
+              conversationId = sp.get('call') || sp.get('conversationId') || undefined;
+            }
+          }
+          if (!conversationId) {
+            console.error('Appel entrant sans conversationId exploitable', n);
+            return;
+          }
           // Déjà en appel sur la même conversation → on ignore
           if (session?.conversationId === conversationId) return;
           setIncoming({
@@ -135,6 +159,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user?.id, session?.conversationId]);
+
 
   const value = useMemo(
     () => ({ session, connecting, startCall, joinCall, leaveCall }),

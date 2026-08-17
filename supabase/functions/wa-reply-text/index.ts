@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendWhatsAppText, normalizePhoneE164 } from "../_shared/whatsapp-send-text.ts";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,6 +10,9 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const _deny = await denyIfNotInternal(req, corsHeaders, 'wa-reply-text');
+  if (_deny) return _deny;
 
   try {
     const authHeader = req.headers.get("Authorization") || "";

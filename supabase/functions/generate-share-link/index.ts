@@ -54,6 +54,30 @@ serve(async (req) => {
       );
     }
 
+    // Le demandeur doit pouvoir accéder (RLS) à TOUS les documents partagés.
+    const { data: visibleDocs, error: docsError } = await supabaseUser
+      .from('documents')
+      .select('id')
+      .in('id', documentIds);
+
+    if (docsError) {
+      console.error('generate-share-link: lecture documents impossible', docsError.message);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Vérification des documents impossible' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const visibleIds = new Set((visibleDocs || []).map((d: { id: string }) => d.id));
+    const forbidden = documentIds.filter((id) => !visibleIds.has(id));
+    if (forbidden.length > 0) {
+      console.error('generate-share-link: documents non autorisés', { userId: user.id, forbidden });
+      return new Response(
+        JSON.stringify({ success: false, error: 'Accès refusé à certains documents sélectionnés' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Generate a secure random token
     const tokenArray = new Uint8Array(32);
     crypto.getRandomValues(tokenArray);
@@ -61,13 +85,12 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Calculate expiration date if provided
-    let expiresAt = null;
-    if (expiresInDays && expiresInDays > 0) {
-      const expDate = new Date();
-      expDate.setDate(expDate.getDate() + expiresInDays);
-      expiresAt = expDate.toISOString();
-    }
+    // Expiration : par défaut 7 jours, plafonnée à 30 jours.
+    const days = Math.min(Math.max(Number(expiresInDays) || 7, 1), 30);
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + days);
+    const expiresAt = expDate.toISOString();
+
 
     // Use service role to insert the link (bypasses RLS)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    {
+      const _deny = await denyIfNoProjectAccess(db, userId, projectId, corsHeaders, 'renovation-generate-final-report');
+      if (_deny) return _deny;
+    }
+
 
     const { data: project } = await db
       .from("renovation_projects")

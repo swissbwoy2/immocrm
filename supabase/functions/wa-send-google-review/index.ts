@@ -1,6 +1,7 @@
 // T12 — Cron J+7 after cles_remises: google_review_request (6 vars)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { loadOffreDetails, callSendWhatsApp, loadAgentName } from "../_shared/wa-helpers.ts";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,6 +10,9 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const _deny = await denyIfNotInternal(req, corsHeaders, 'wa-send-google-review');
+  if (_deny) return _deny;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,

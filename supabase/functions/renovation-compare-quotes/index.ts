@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,6 +61,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !user) {
+      console.error('renovation-compare-quotes: JWT invalide', authError?.message);
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { quoteIds, projectId } = await req.json();
 
     if (!Array.isArray(quoteIds) || quoteIds.length < 2 || !projectId) {
@@ -67,6 +79,12 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    {
+      const _deny = await denyIfNoProjectAccess(supabase, user.id, projectId, corsHeaders, 'renovation-compare-quotes');
+      if (_deny) return _deny;
+    }
+
 
     const { data: quotes } = await supabase
       .from('renovation_quotes')

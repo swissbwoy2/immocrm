@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    {
+      const _deny = await denyIfNoProjectAccess(db, userId, projectId, corsHeaders, 'renovation-close-project');
+      if (_deny) return _deny;
+    }
+
 
     const { data: closableCheck, error: rpcError } = await db.rpc(
       "renovation_check_project_closable",

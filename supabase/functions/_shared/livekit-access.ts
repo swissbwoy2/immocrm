@@ -79,12 +79,16 @@ export async function canAccessConversation(
 ): Promise<boolean> {
   if (role === "admin") return true;
 
-  const { data: conv } = await svc
+  const { data: conv, error: convErr } = await svc
     .from("conversations")
     .select("id, client_id, agent_id, admin_user_id")
     .eq("id", conversationId)
     .maybeSingle();
-  if (!conv) return false;
+  if (convErr) console.error("canAccessConversation: conversation lookup failed", convErr.message);
+  if (!conv) {
+    console.error("canAccessConversation: conversation introuvable", conversationId);
+    return false;
+  }
 
   if (conv.admin_user_id && conv.admin_user_id === userId) return true;
 
@@ -99,7 +103,8 @@ export async function canAccessConversation(
     if (cli) return true;
   }
 
-  // Agent side
+  // Agent side : agent de la conversation, co-agent (conversation_agents)
+  // ou agent rattaché au client (client_agents / clients.agent_id).
   const { data: ag } = await svc
     .from("agents")
     .select("id")
@@ -114,6 +119,40 @@ export async function canAccessConversation(
       .eq("agent_id", ag.id)
       .maybeSingle();
     if (ca) return true;
+    if (conv.client_id) {
+      const { data: cag } = await svc
+        .from("client_agents")
+        .select("id")
+        .eq("client_id", conv.client_id)
+        .eq("agent_id", ag.id)
+        .maybeSingle();
+      if (cag) return true;
+      const { data: cli2 } = await svc
+        .from("clients")
+        .select("id")
+        .eq("id", conv.client_id)
+        .eq("agent_id", ag.id)
+        .maybeSingle();
+      if (cli2) return true;
+    }
+  }
+
+  // Coursier : rattaché à une visite du client du dossier
+  if (role === "coursier" && conv.client_id) {
+    const { data: cou } = await svc
+      .from("coursiers")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (cou) {
+      const { data: vis } = await svc
+        .from("visites")
+        .select("id")
+        .eq("client_id", conv.client_id)
+        .eq("coursier_id", cou.id)
+        .limit(1);
+      if (vis && vis.length > 0) return true;
+    }
   }
 
   // Explicitly invited participant (coursier, extra agent, ...)
@@ -125,8 +164,10 @@ export async function canAccessConversation(
     .maybeSingle();
   if (cp) return true;
 
+  console.error("canAccessConversation: accès refusé", { userId, role, conversationId });
   return false;
 }
+
 
 /** Deep link used in call notifications, per role. */
 export function callLink(role: CallRole, conversationId: string): string {

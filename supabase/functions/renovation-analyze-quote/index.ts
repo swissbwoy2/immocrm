@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +54,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Quote not found' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    {
+      const _deny = await denyIfNoProjectAccess(supabase, user.id, quote.project_id, corsHeaders, 'renovation-analyze-quote');
+      if (_deny) return _deny;
     }
 
     if (!quote.file_id) {
