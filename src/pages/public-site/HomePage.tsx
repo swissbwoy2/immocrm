@@ -59,6 +59,11 @@ export default function HomePage() {
       {/* Eager sections */}
       <DossierAnalyseSection />
 
+      {/* Calculateurs gratuits (location + achat) remontés au-dessus du hero badge */}
+      <Suspense fallback={null}>
+        <BudgetCalcSection />
+      </Suspense>
+
       <HeroSection />
 
 
@@ -81,7 +86,6 @@ export default function HomePage() {
       <Suspense fallback={null}>
         <DifferentiatorSection />
         <ServicesFullSection />
-        <BudgetCalcSection />
         <DossierAnalyseForm />
         <GuaranteeSection />
         <CoverageSection />
