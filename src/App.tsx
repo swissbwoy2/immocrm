@@ -50,6 +50,8 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 // Public portal pages
 const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
+const MesMessagesAnnonces = lazy(() => import("./pages/public/MesMessagesAnnonces"));
+const MesAlertesAnnonces = lazy(() => import("./pages/public/MesAlertesAnnonces"));
 const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
