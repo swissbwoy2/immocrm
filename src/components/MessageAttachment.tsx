@@ -10,6 +10,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useSignedUrl } from "@/lib/storageUrl";
+
 
 interface MessageAttachmentProps {
   url: string;
@@ -18,16 +20,20 @@ interface MessageAttachmentProps {
   size: number;
 }
 
-export const MessageAttachment = ({ url, type: rawType, name: rawName, size: rawSize }: MessageAttachmentProps) => {
+export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, size: rawSize }: MessageAttachmentProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoLoaded, setVideoLoaded] = useState(false);
 
+  // Buckets privés → URL signée générée à l'affichage
+  const url = useSignedUrl(rawUrl);
+
   // Défensif : certains payloads legacy n'ont pas de type/nom/taille → ne jamais crasher la messagerie
   const type = typeof rawType === 'string' ? rawType : '';
   const name = typeof rawName === 'string' && rawName ? rawName : 'Fichier joint';
   const size = typeof rawSize === 'number' && !isNaN(rawSize) ? rawSize : 0;
+
 
   const handleDownload = () => {
     const a = document.createElement('a');

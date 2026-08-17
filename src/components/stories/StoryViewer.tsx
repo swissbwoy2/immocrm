@@ -10,6 +10,8 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
+import { useSignedUrl } from "@/lib/storageUrl";
+
 
 
 const QUICK_EMOJIS = ["❤️", "🔥", "😍", "👍", "😮", "👏"];
@@ -49,13 +51,14 @@ export function StoryViewer({ groups, startGroupIndex, onClose, onViewed }: Prop
   const story: StoryRow | undefined = group?.stories[si];
   const isAuthor = story && user?.id === story.author_user_id;
 
-  // URL du média : media_url si présent, sinon reconstruite depuis media_path (bucket public)
-  const mediaUrl = story
+  // URL du média : media_url si présent, sinon reconstruite depuis media_path.
+  // Bucket privé → URL signée générée à l'affichage.
+  const rawMediaUrl = story
     ? story.media_url ||
-      (story.media_path
-        ? supabase.storage.from("message-attachments").getPublicUrl(story.media_path).data.publicUrl
-        : null)
+      (story.media_path ? `message-attachments/${story.media_path}` : null)
     : null;
+  const mediaUrl = useSignedUrl(rawMediaUrl) || null;
+
 
 
 

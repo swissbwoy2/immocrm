@@ -16,6 +16,8 @@ import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDi
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { openStorageFile, downloadStorageFile } from '@/lib/storageUrl';
+
 
 const DOCUMENT_TYPES = [
   { value: 'bail', label: 'Bail' },
@@ -238,7 +240,7 @@ export default function Documents() {
                     <Card 
                       key={doc.id} 
                       className="group cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => window.open(doc.url, '_blank')}
+                      onClick={() => openStorageFile(doc.url)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
@@ -264,18 +266,16 @@ export default function Documents() {
                         <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button size="sm" variant="outline" className="flex-1" onClick={(e) => {
                             e.stopPropagation();
-                            window.open(doc.url, '_blank');
+                            openStorageFile(doc.url);
                           }}>
                             <Eye className="w-3 h-3 mr-1" />
                             Voir
                           </Button>
                           <Button size="sm" variant="outline" onClick={(e) => {
                             e.stopPropagation();
-                            const link = document.createElement('a');
-                            link.href = doc.url;
-                            link.download = doc.nom;
-                            link.click();
+                            downloadStorageFile(doc.url, doc.nom);
                           }}>
+
                             <Download className="w-3 h-3" />
                           </Button>
                         </div>
