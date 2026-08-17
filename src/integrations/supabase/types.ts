@@ -946,6 +946,84 @@ export type Database = {
           },
         ]
       }
+      alertes_annonces: {
+        Row: {
+          actif: boolean
+          created_at: string
+          criteres: Json
+          derniere_notif_at: string | null
+          email: string
+          frequence: string
+          id: string
+          nom: string | null
+          unsubscribe_token: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          criteres?: Json
+          derniere_notif_at?: string | null
+          email: string
+          frequence?: string
+          id?: string
+          nom?: string | null
+          unsubscribe_token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          criteres?: Json
+          derniere_notif_at?: string | null
+          email?: string
+          frequence?: string
+          id?: string
+          nom?: string | null
+          unsubscribe_token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      alertes_annonces_envois: {
+        Row: {
+          alerte_id: string
+          annonce_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          alerte_id: string
+          annonce_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          alerte_id?: string
+          annonce_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertes_annonces_envois_alerte_id_fkey"
+            columns: ["alerte_id"]
+            isOneToOne: false
+            referencedRelation: "alertes_annonces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertes_annonces_envois_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       annonces_publiques: {
         Row: {
           acces_pmr: boolean | null
