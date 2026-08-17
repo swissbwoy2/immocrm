@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  ConnectionState,
   GridLayout,
   ParticipantTile,
   RoomAudioRenderer,
@@ -180,7 +179,6 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
           <PhoneOff className="h-5 w-5" />
         </Button>
       </div>
-      <ConnectionState className="sr-only" />
     </div>
   );
 }
