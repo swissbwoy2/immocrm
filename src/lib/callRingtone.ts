@@ -30,7 +30,9 @@ const setBlocked = (v: boolean) => {
 export function onRingtoneBlocked(listener: Listener) {
   listeners.add(listener);
   listener(blocked);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 const getCtx = (): AudioContext | null => {
