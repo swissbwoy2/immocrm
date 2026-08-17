@@ -320,9 +320,34 @@ export default function RendezVousBureau() {
       }
 
       // ---- Cas 2 : Qualifié / À vérifier / À réorienter → flux normal ----
+      // Lead CRM créé AVANT le rendez-vous : le lien lead_id est posé dès l'insertion
+      // (plus aucune mise à jour anonyme n'est autorisée sur les rendez-vous).
+      const leadTypeRecherche: 'location' | 'vente' =
+        projet === 'location' ? 'location' : 'vente';
+      const leadId = crypto.randomUUID();
+      await supabase.from('leads').insert({
+        id: leadId,
+        email: email.trim(),
+        prenom: prenom.trim(),
+        nom: nom.trim(),
+        telephone: telephone.trim(),
+        source: 'rdv_bureau_crissier',
+        formulaire: 'rdv_bureau',
+        type_recherche: leadTypeRecherche,
+        is_qualified: true,
+        notes,
+        utm_source: utm.utm_source || 'direct',
+        utm_medium: utm.utm_medium || 'rdv_bureau',
+        utm_campaign: utm.utm_campaign || projet,
+        utm_content: utm.utm_content,
+        utm_term: utm.utm_term,
+        ...qualifFields,
+      } as any);
+
       const apptId = crypto.randomUUID();
       const { error: apptErr } = await supabase.from('lead_phone_appointments').insert({
         id: apptId,
+        lead_id: leadId,
         prospect_email: email.trim(),
         prospect_phone: telephone.trim(),
         prospect_name: fullName,
@@ -345,32 +370,6 @@ export default function RendezVousBureau() {
         return;
       }
 
-      // Lead CRM
-      const leadTypeRecherche: 'location' | 'vente' =
-        projet === 'location' ? 'location' : 'vente';
-      const leadId = crypto.randomUUID();
-      await supabase.from('leads').insert({
-        id: leadId,
-        email: email.trim(),
-        prenom: prenom.trim(),
-        nom: nom.trim(),
-        telephone: telephone.trim(),
-        source: 'rdv_bureau_crissier',
-        formulaire: 'rdv_bureau',
-        type_recherche: leadTypeRecherche,
-        is_qualified: true,
-        notes,
-        utm_source: utm.utm_source || 'direct',
-        utm_medium: utm.utm_medium || 'rdv_bureau',
-        utm_campaign: utm.utm_campaign || projet,
-        utm_content: utm.utm_content,
-        utm_term: utm.utm_term,
-        ...qualifFields,
-      } as any);
-      await supabase
-        .from('lead_phone_appointments')
-        .update({ lead_id: leadId })
-        .eq('id', apptId);
 
       const isBureau = appointmentType === 'bureau';
       const projetLabelForAdmin = projetLabel;
