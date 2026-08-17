@@ -1,7 +1,5 @@
 export { HeroSection } from './HeroSection';
-export { DifferentiatorSection } from './DifferentiatorSection';
 export { HowItWorksSection } from './HowItWorksSection';
-export { SocialProofSection } from './SocialProofSection';
 export { ServicesFullSection } from './ServicesFullSection';
 export { DossierAnalyseSection } from './DossierAnalyseSection';
 export { GuaranteeSection } from './GuaranteeSection';
@@ -11,7 +9,6 @@ export { CoverageSection } from './CoverageSection';
 export { StatsSection } from './StatsSection';
 export { PartnersSection } from './PartnersSection';
 export { TechSection } from './TechSection';
-export { TeamSection } from './TeamSection';
 export { ForWhoSection } from './ForWhoSection';
 export { FAQSection } from './FAQSection';
 export { CloserSection } from './CloserSection';
