@@ -64,12 +64,19 @@ export default function MandatFormStep6({ data, onChange }: Props) {
     }
     setUploading(typeKey);
     try {
-      const ext = file.name.split('.').pop();
-      const fileName = `mandat/${Date.now()}_${typeKey}.${ext}`;
-      const { error } = await supabase.storage.from('client-documents').upload(fileName, file);
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from('client-documents').getPublicUrl(fileName);
-      setDoc(typeKey, { name: file.name, url: urlData.publicUrl, type: typeKey, size: file.size });
+      // Dépôt via une fonction serveur : chaque demande a son propre dossier isolé.
+      const form = new FormData();
+      form.append('file', file);
+      form.append('target', 'demande_mandat');
+      const existingRequestId = sessionStorage.getItem('mandat_upload_request_id') || '';
+      if (existingRequestId) form.append('request_id', existingRequestId);
+
+      const { data: res, error } = await supabase.functions.invoke('public-document-upload', {
+        body: form,
+      });
+      if (error || !res?.success) throw error || new Error('upload failed');
+      if (res.request_id) sessionStorage.setItem('mandat_upload_request_id', res.request_id);
+      setDoc(typeKey, { name: file.name, url: res.url, type: typeKey, size: file.size });
       toast.success('Document ajouté');
     } catch (err) {
       console.error('Upload error', err);
@@ -78,6 +85,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
       setUploading(null);
     }
   };
+
 
   // Compteur intelligent : poursuites + 3 salaires + 2 faces identité
   const required = ['poursuites', 'salaire1', 'salaire2', 'salaire3', `${idKind}_recto`, `${idKind}_verso`];
