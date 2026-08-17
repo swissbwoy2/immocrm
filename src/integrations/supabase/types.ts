@@ -12905,6 +12905,8 @@ export type Database = {
         Args: { _agent_id: string; _client_id: string }
         Returns: boolean
       }
+      can_read_offer_attachment: { Args: { _name: string }; Returns: boolean }
+      can_read_visite_media: { Args: { _name: string }; Returns: boolean }
       check_demande_by_email: {
         Args: { check_email: string }
         Returns: boolean

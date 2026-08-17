@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   GridLayout,
   ParticipantTile,
@@ -6,11 +6,12 @@ import {
   useConnectionState,
   useLocalParticipant,
   useParticipants,
+  useRoomContext,
   useTracks,
 } from '@livekit/components-react';
-import { ConnectionState as LKConnectionState, Track } from 'livekit-client';
+import { ConnectionState as LKConnectionState, RoomEvent, Track } from 'livekit-client';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 
@@ -23,12 +24,15 @@ interface CallStageProps {
 
 /** Inner UI, rendered inside <LiveKitRoom>. */
 export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps) {
+  const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
   const connectionState = useConnectionState();
   const [micOn, setMicOn] = useState(true);
   // Appel téléphone = audio seul : caméra coupée au départ (activable ensuite).
   const [camOn, setCamOn] = useState(mode === 'video');
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  const initializedRef = useRef(false);
 
   // Toutes les pistes vidéo (locales ET distantes), placeholder inclus pour
   // les participants sans caméra active.
@@ -40,18 +44,50 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
     { onlySubscribed: false },
   );
 
+  // --- Autoplay audio : débloquer la lecture des pistes distantes -----------
   useEffect(() => {
-    if (!localParticipant) return;
+    if (!room) return;
+
+    const sync = () => setAudioBlocked(!room.canPlaybackAudio);
+    sync();
+
+    const tryStart = () => {
+      room
+        .startAudio()
+        .then(() => setAudioBlocked(false))
+        .catch(() => setAudioBlocked(!room.canPlaybackAudio));
+    };
+
+    // Tentative immédiate (le clic « Répondre » compte comme geste utilisateur)
+    tryStart();
+
+    room.on(RoomEvent.AudioPlaybackStatusChanged, sync);
+    room.on(RoomEvent.TrackSubscribed, tryStart);
+    document.addEventListener('pointerdown', tryStart, { once: false });
+
+    return () => {
+      room.off(RoomEvent.AudioPlaybackStatusChanged, sync);
+      room.off(RoomEvent.TrackSubscribed, tryStart);
+      document.removeEventListener('pointerdown', tryStart);
+    };
+  }, [room]);
+
+  // --- Publication initiale : micro TOUJOURS activé, une seule fois ---------
+  useEffect(() => {
+    if (!localParticipant || initializedRef.current) return;
+    initializedRef.current = true;
+
     localParticipant.setMicrophoneEnabled(true).catch(() => setMicOn(false));
     if (mode === 'video') {
       localParticipant.setCameraEnabled(true).catch(() => setCamOn(false));
     } else {
-      // Mode audio : on ne publie AUCUNE vidéo par défaut.
+      // Mode audio : on ne publie AUCUNE vidéo par défaut (le micro reste actif).
       localParticipant.setCameraEnabled(false).catch(() => undefined);
       setCamOn(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, localParticipant]);
+  }, [localParticipant]);
+
 
   const toggleMic = async () => {
     const next = !micOn;
@@ -82,7 +118,21 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
   return (
     <div className="flex flex-col h-full min-h-0 bg-[hsl(200_35%_12%)]">
       {/* Rend l'audio de TOUS les participants distants */}
-      <RoomAudioRenderer />
+      <RoomAudioRenderer volume={1} />
+
+      {audioBlocked && (
+        <div className="px-4 pt-3 flex justify-center">
+          <Button
+            type="button"
+            onClick={() => room?.startAudio().then(() => setAudioBlocked(false)).catch(() => undefined)}
+            className="rounded-full bg-[hsl(158_55%_45%)] hover:bg-[hsl(158_55%_40%)] text-white"
+          >
+            <Volume2 className="h-4 w-4 mr-2" />
+            Activer le son
+          </Button>
+        </div>
+      )}
+
 
       <div className="px-4 pt-3 text-center text-xs text-white/70">
         {connectionState !== LKConnectionState.Connected

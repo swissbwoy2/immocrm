@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RAPPORT_IMAGE_KEYS, RapportImageKey } from './types';
 import { Upload, X, Image, Loader2, Save } from 'lucide-react';
+import { SignedImage } from '@/components/SignedImage';
+
 
 interface RapportEstimationImagesProps {
   immeubleId: string;
@@ -114,11 +116,12 @@ export function RapportEstimationImages({ immeubleId, images, onUpdate }: Rappor
                   <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
                   {localImages[item.key] ? (
                     <div className="relative group rounded-lg overflow-hidden border aspect-video">
-                      <img
+                      <SignedImage
                         src={localImages[item.key]}
                         alt={item.label}
                         className="w-full h-full object-cover"
                       />
+
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <Button
                           size="sm"
