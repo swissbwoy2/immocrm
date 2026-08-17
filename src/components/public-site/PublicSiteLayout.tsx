@@ -11,6 +11,7 @@ const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner'
 
 function PublicSiteInner({ children }: { children: ReactNode }) {
   useWhatsAppTracking();
+  const storyDialogOpen = useStoryDialogOpen();
 
   return (
     <div
