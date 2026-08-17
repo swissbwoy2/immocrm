@@ -12960,6 +12960,38 @@ export type Database = {
           ville: string
         }[]
       }
+      get_public_showcase_offres: {
+        Args: never
+        Returns: {
+          adresse: string
+          date_envoi: string
+          etage: string
+          id: string
+          lien_annonce: string
+          medias_galerie: Json
+          pieces: number
+          prix: number
+          surface: number
+          titre: string
+          type_bien: string
+        }[]
+      }
+      get_public_showcase_visites: {
+        Args: never
+        Returns: {
+          adresse: string
+          date_visite: string
+          etage: string
+          id: string
+          lien_annonce: string
+          medias_galerie: Json
+          pieces: number
+          prix: number
+          surface: number
+          titre: string
+          type_bien: string
+        }[]
+      }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
         Returns: boolean
