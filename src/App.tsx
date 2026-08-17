@@ -340,8 +340,11 @@ const App = () => (
               <Route path="/annonces" element={<RechercheAnnonces />} />
               <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
               <Route path="/annonces/:slug" element={<AnnonceDetail />} />
-              <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
-              <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
+               <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
+               <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
+               <Route path="/mes-messages-annonces" element={<MesMessagesAnnonces />} />
+               <Route path="/mes-messages-annonces/:conversationId" element={<MesMessagesAnnonces />} />
+               <Route path="/mes-alertes-annonces" element={<MesAlertesAnnonces />} />
               
               {/* Annonceur Routes - Protected */}
               <Route path="/espace-annonceur" element={<AnnonceurDashboard />} />
