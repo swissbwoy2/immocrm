@@ -120,9 +120,10 @@ export async function setConversationFlag(
   value: boolean,
 ) {
   const column = `${flag}_par_${isParticipant1(conv, userId) ? 1 : 2}`;
+  const payload = { [column]: value } as Record<string, boolean>;
   const { error } = await supabase
     .from('conversations_annonces')
-    .update({ [column]: value })
+    .update(payload as never)
     .eq('id', conv.id);
   if (error) throw error;
 }
