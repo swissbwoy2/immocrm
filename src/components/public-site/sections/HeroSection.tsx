@@ -170,8 +170,3 @@ export function HeroSection() {
     </section>
   );
 }
-          </div>
-        </div>
-    </section>
-  );
-}
