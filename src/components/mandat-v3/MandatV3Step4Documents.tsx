@@ -39,37 +39,21 @@ export default function MandatV3Step4Documents({ data, mandateId, accessToken, o
     }
     setUploading(true);
     try {
-      const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-      const filePath = `${mandateId}/${Date.now()}_${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('mandates-private')
-        .upload(filePath, file);
+      // Le dépôt passe par une fonction serveur qui vérifie le jeton d'accès du mandat
+      // (plus aucune écriture anonyme directe dans le stockage privé).
+      const form = new FormData();
+      form.append('file', file);
+      form.append('target', 'mandate_v3');
+      form.append('mandate_id', mandateId);
+      form.append('access_token', accessToken);
+      form.append('document_category', category);
 
-      if (uploadError) {
-        toast.error(`Erreur upload: ${file.name}`);
-        console.error(uploadError);
-        return;
-      }
-
-      const response = await fetch(getEdgeFunctionUrl('mandate-update-draft'), {
+      const response = await fetch(getEdgeFunctionUrl('public-document-upload'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mandate_id: mandateId,
-          access_token: accessToken,
-          action: 'register_document',
-          data: {
-            file_name: file.name,
-            file_path: filePath,
-            file_type: file.type,
-            file_size: file.size,
-            document_category: category,
-          },
-        }),
+        body: form,
       });
       const result = await response.json();
       if (!result.success) {
-        await supabase.storage.from('mandates-private').remove([filePath]);
         toast.error(`Erreur enregistrement: ${file.name}`);
         return;
       }
@@ -77,12 +61,13 @@ export default function MandatV3Step4Documents({ data, mandateId, accessToken, o
       const newDoc: MandateDocumentData = {
         id: result.document_id || crypto.randomUUID(),
         file_name: file.name,
-        file_path: filePath,
+        file_path: result.file_path,
         file_type: file.type,
         document_category: category,
       };
       onChange({ documents: [...data.documents, newDoc] });
       toast.success(`Document ajouté : ${file.name}`);
+
     } catch (err) {
       console.error(err);
       toast.error('Erreur lors de l\'upload du document.');
