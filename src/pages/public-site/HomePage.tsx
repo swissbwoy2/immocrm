@@ -54,20 +54,19 @@ export default function HomePage() {
   return (
     <PublicSiteLayout>
 
-
-
-      {/* Eager sections */}
-      <DossierAnalyseSection />
-
-      {/* Bloc hero de choix de parcours (location / achat) */}
+      {/* 1) Bloc hero de choix de parcours (location / achat) */}
       <HeroSection />
 
-      {/* Calculateurs gratuits (location + achat) juste en dessous du choix de parcours */}
+      {/* 2) Calculateurs gratuits (location + achat) */}
       <Suspense fallback={null}>
         <BudgetCalcSection />
       </Suspense>
 
+      {/* 3) Bloc marketing détaillé (valeur / confiance) */}
+      <HeroMissionSection />
 
+      {/* Sections suivantes */}
+      <DossierAnalyseSection />
 
       {/* Lazy sections */}
       <Suspense fallback={null}>
