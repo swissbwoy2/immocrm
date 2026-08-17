@@ -41,8 +41,8 @@ export function ConversationCallControls({ conversationId, variant = 'default', 
 
   const btnClass =
     variant === 'onColor'
-      ? 'h-10 w-10 text-white hover:bg-white/15 hover:text-white'
-      : 'h-9 w-9 text-[hsl(158_55%_32%)] hover:bg-[hsl(158_55%_38%)]/10 hover:text-[hsl(158_55%_28%)]';
+      ? 'h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25 hover:text-white'
+      : 'h-9 w-9 rounded-full bg-[hsl(158_55%_38%)]/10 text-[hsl(158_55%_30%)] border border-[hsl(158_55%_38%)]/30 hover:bg-[hsl(158_55%_38%)]/20 hover:text-[hsl(158_55%_25%)]';
 
   return (
     <div className={cn('flex items-center gap-1 shrink-0', className)}>
