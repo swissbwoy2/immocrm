@@ -113,7 +113,11 @@ export function HeroSection() {
             >
               <div className="flex rounded-xl border border-primary/30 bg-background backdrop-blur-md p-1 gap-1">
                 <button
-                  onClick={() => setSearchType('location')}
+                  onClick={() => {
+                    setSearchType('location');
+                    const el = document.getElementById('calculateur');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isLocation || !searchType
                       ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20'
@@ -124,7 +128,11 @@ export function HeroSection() {
                   <span>Je cherche à louer</span>
                 </button>
                 <button
-                  onClick={() => setSearchType('achat')}
+                  onClick={() => {
+                    setSearchType('achat');
+                    const el = document.getElementById('calculateur');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                     isAchat
                       ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20'
