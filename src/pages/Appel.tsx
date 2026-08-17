@@ -20,7 +20,7 @@ export default function Appel() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, userRole, loading } = useAuth();
-  const { session, connecting, joinCall } = useCall();
+  const { session, connecting, joinCall, joinLive } = useCall();
   const [failed, setFailed] = useState<string | null>(null);
   const triedRef = useRef(false);
 
@@ -29,6 +29,7 @@ export default function Appel() {
     searchParams.get('call') ||
     searchParams.get('conversationId') ||
     '';
+  const visiteId = searchParams.get('visit') || searchParams.get('visiteId') || '';
   const mode = (searchParams.get('mode') as CallMode) || 'video';
 
   const messagerieHref = useMemo(() => {
@@ -53,7 +54,7 @@ export default function Appel() {
       });
       return;
     }
-    if (!conversationId) {
+    if (!conversationId && !visiteId) {
       setFailed("Cet appel n'est plus disponible.");
       return;
     }
@@ -61,13 +62,13 @@ export default function Appel() {
     triedRef.current = true;
     void (async () => {
       try {
-        const ok = await joinCall(conversationId, mode);
+        const ok = visiteId ? await joinLive(visiteId) : await joinCall(conversationId, mode);
         if (!ok) setFailed("Cet appel n'est plus disponible.");
       } catch (e: any) {
         setFailed(e?.message || "Cet appel n'est plus disponible.");
       }
     })();
-  }, [loading, user, conversationId, mode, joinCall, navigate]);
+  }, [loading, user, conversationId, visiteId, mode, joinCall, joinLive, navigate]);
 
   // Quand l'appel se termine (overlay fermé), on retourne à la messagerie.
   const wasInCall = useRef(false);
