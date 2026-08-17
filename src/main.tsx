@@ -39,15 +39,23 @@ if (isPreviewHost || isInIframe) {
     registrations.forEach((registration) => registration.unregister());
   });
 } else {
+  // Jamais de rechargement pendant un appel audio/vidéo en cours.
+  const isInCall = () => (window as any).__logisorama_in_call === true;
+
   // Un seul rechargement quand le nouveau SW prend le contrôle.
   let reloadedOnControllerChange = false;
   navigator.serviceWorker?.addEventListener('controllerchange', () => {
     if (reloadedOnControllerChange) return;
+    if (isInCall()) {
+      console.log('[PWA] Reload ignoré : appel en cours.');
+      return;
+    }
     reloadedOnControllerChange = true;
     window.location.reload();
   });
 
   const isUserBusy = () => {
+    if (isInCall()) return true;
     const el = document.activeElement as HTMLElement | null;
     if (!el) return false;
     return (
@@ -67,6 +75,7 @@ if (isPreviewHost || isInIframe) {
         setTimeout(() => void updateSW(true), 800);
         return;
       }
+      if (isInCall()) return;
       toast('Nouvelle version disponible', {
         duration: Infinity,
         action: { label: 'Actualiser', onClick: () => void updateSW(true) },
@@ -106,6 +115,7 @@ const isChunkLoadError = (msg: string) =>
 
 const handleStaleChunk = (msg: string) => {
   if (!isChunkLoadError(msg)) return;
+  if ((window as any).__logisorama_in_call === true) return; // jamais pendant un appel
   try {
     const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0');
     if (Date.now() - last < 5 * 60_000) return; // 5 min throttle to avoid reload loops
