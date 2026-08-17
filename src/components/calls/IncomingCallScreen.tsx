@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Phone, PhoneOff, Video, MessageSquare, Send, X } from 'lucide-react';
+import { Phone, PhoneOff, Video, MessageSquare, Send, X, Volume2 } from 'lucide-react';
 import { CallMode } from '@/lib/livekitCall';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
-import { startRingtone, stopRingtone } from '@/lib/callRingtone';
+import { startRingtone, stopRingtone, onRingtoneBlocked, retryRingtone } from '@/lib/callRingtone';
 import { cn } from '@/lib/utils';
 
 export interface IncomingCall {
@@ -46,11 +46,14 @@ export function IncomingCallScreen({
 }: Props) {
   const [replyOpen, setReplyOpen] = useState(false);
   const [text, setText] = useState('');
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   useEffect(() => {
     startRingtone();
     return () => stopRingtone();
   }, [call.conversationId]);
+
+  useEffect(() => onRingtoneBlocked(setAudioBlocked), []);
 
   useEffect(() => {
     if (accepting) stopRingtone();
@@ -85,6 +88,16 @@ export function IncomingCallScreen({
             {call.mode === 'audio' ? 'Appel audio entrant…' : 'Appel vidéo entrant…'}
           </p>
         </div>
+
+        {audioBlocked && (
+          <button
+            type="button"
+            onClick={retryRingtone}
+            className="mt-2 flex items-center gap-2 rounded-full bg-white/15 hover:bg-white/25 px-4 py-2 text-sm animate-pulse"
+          >
+            <Volume2 className="h-4 w-4" /> Touchez pour activer le son
+          </button>
+        )}
       </div>
 
       {replyOpen && (

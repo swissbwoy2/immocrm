@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
 import { toast } from 'sonner';
 import { installAuthStorageGuard } from "./lib/authStorageGuard";
+import { installAudioUnlock } from "./lib/callRingtone";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
@@ -9,6 +10,10 @@ import "./index.css";
 // Protège la session persistante contre les suppressions déclenchées par des
 // erreurs temporaires (500, 429, timeout) — doit être installé très tôt.
 installAuthStorageGuard();
+
+// Déverrouille l'audio au premier geste utilisateur : indispensable pour que la
+// sonnerie d'appel entrant puisse démarrer plus tard (autoplay policy).
+installAudioUnlock();
 
 // Domaine canonique : www.logisorama.ch et logisorama.ch sont deux origines
 // distinctes côté stockage navigateur. On normalise très tôt pour qu'une seule
