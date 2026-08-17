@@ -105,7 +105,7 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
               <button
                 type="button"
                 className="text-primary underline underline-offset-2"
-                onClick={() => navigate('/connexion')}
+                onClick={() => navigate('/login')}
               >
                 connectez-vous ou créez un compte
               </button>

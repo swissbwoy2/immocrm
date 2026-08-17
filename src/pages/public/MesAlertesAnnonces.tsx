@@ -29,7 +29,7 @@ export default function MesAlertesAnnonces() {
     enabled: !!user?.id,
   });
 
-  if (!loading && !user) return <Navigate to="/connexion" replace />;
+  if (!loading && !user) return <Navigate to="/login" replace />;
 
   const toggleActif = async (id: string, actif: boolean) => {
     const { error } = await supabase.from('alertes_annonces').update({ actif }).eq('id', id);

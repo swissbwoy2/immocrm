@@ -16,7 +16,7 @@ export default function MesMessagesAnnonces() {
     );
   }
 
-  if (!user) return <Navigate to="/connexion" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <div className="theme-luxury min-h-screen bg-background flex flex-col">
