@@ -46,6 +46,11 @@ export function DossierAnalyseSection() {
                 </p>
               </div>
 
+              {/* Stories publiques — biens traités en direct */}
+              <Suspense fallback={null}>
+                <StoriesShowcaseSection />
+              </Suspense>
+
               {/* Trust cards */}
               <div className="relative grid sm:grid-cols-2 gap-4">
                 <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
@@ -60,29 +65,6 @@ export function DossierAnalyseSection() {
                 </div>
               </div>
 
-              {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                <Button
-                  type="button"
-                  size="lg"
-                  onClick={() => openForm('location')}
-                  className="group h-auto py-4 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-[0_10px_30px_-10px_hsl(var(--primary)/0.5)] hover:shadow-[0_10px_40px_-5px_hsl(var(--primary)/0.6)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-                >
-                  <Key className="h-5 w-5" />
-                  <span className="text-base">Je cherche une location</span>
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => openForm('achat')}
-                  className="group h-auto py-4 px-6 bg-transparent border border-primary/40 hover:border-primary/70 hover:bg-primary/5 text-foreground font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <Home className="h-5 w-5 text-primary" />
-                  <span className="text-base">Je veux acheter un bien</span>
-                </Button>
-              </div>
 
               {/* Bouton RDV gratuit */}
               <a
