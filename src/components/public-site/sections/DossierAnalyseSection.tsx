@@ -72,15 +72,6 @@ export function DossierAnalyseSection() {
               </div>
 
 
-              {/* Bouton RDV gratuit */}
-              <a
-                href="/nouveau-mandat"
-                className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-gradient-to-r from-primary/20 to-primary/10 hover:from-primary/30 hover:to-primary/20 border border-primary/50 hover:border-primary text-primary font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.4)] w-full sm:w-auto"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm uppercase tracking-wide">Réserver mon RDV au bureau gratuitement</span>
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </a>
 
               {/* Bouton MAINTENANT */}
               <a

@@ -59,11 +59,8 @@ export default function HomePage() {
       {/* Eager sections */}
       <DossierAnalyseSection />
 
-      <Suspense fallback={null}>
-        <StoriesShowcaseSection />
-      </Suspense>
-
       <HeroSection />
+
 
 
       {/* Lazy sections */}
