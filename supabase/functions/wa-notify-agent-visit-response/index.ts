@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T15 — wa-notify-agent-visit-response (8 vars) — interne agent
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtDateFR, lienAnnonceOuFallback,
   loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";

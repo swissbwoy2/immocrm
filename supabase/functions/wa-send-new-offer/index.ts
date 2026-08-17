@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T2 — Send new_offer template (9 vars) on INSERT offres
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtDispo, lienAnnonceOuFallback,
   loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";

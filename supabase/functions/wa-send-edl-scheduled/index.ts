@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T10 — Send etat_des_lieux_scheduled (9 vars)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtDateCourtFR, lienAnnonceOuFallback,
   loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";

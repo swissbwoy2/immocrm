@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T7 — wa-send-candidature-refus (7 vars) on UPDATE candidatures.statut=refusee
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";
 

@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T9 — Send signature_scheduled (10 vars)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtDateCourtFR, fmtHeureFR,
   loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";

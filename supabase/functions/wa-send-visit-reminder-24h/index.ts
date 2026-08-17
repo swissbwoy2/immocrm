@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T4 — Cron visit_reminder_24h (9 vars) — daily 09:00 Europe/Zurich
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtHeureFR, lienAnnonceOuFallback,
   loadOffreDetails, loadAgentName, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";

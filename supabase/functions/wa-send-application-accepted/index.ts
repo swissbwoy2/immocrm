@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T8 — wa-send-application-accepted (8 vars) — fr enrichi
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtDateCourtFR, lienAnnonceOuFallback,
   loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";

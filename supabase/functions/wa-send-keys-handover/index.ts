@@ -1,7 +1,7 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 // T11 — Send keys_handover (7 vars)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
   fmtPieces, fmtPrixCHF, fmtDateCourtFR,
   loadOffreDetails, callSendWhatsApp,
 } from "../_shared/wa-helpers.ts";
