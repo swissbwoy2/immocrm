@@ -59,12 +59,13 @@ export default function HomePage() {
       {/* Eager sections */}
       <DossierAnalyseSection />
 
-      {/* Calculateurs gratuits (location + achat) remontés au-dessus du hero badge */}
+      {/* Bloc hero de choix de parcours (location / achat) */}
+      <HeroSection />
+
+      {/* Calculateurs gratuits (location + achat) juste en dessous du choix de parcours */}
       <Suspense fallback={null}>
         <BudgetCalcSection />
       </Suspense>
-
-      <HeroSection />
 
 
 
