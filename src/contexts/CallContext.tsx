@@ -178,9 +178,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     let stopped = false;
     const poll = async () => {
-      if (stopped || document.hidden) return;
+      if (stopped) return;
       const since = new Date(Date.now() - 60_000).toISOString();
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
         .select('id, type, title, message, link, metadata, created_at')
         .eq('user_id', user.id)
@@ -189,6 +189,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(3);
+      if (error) {
+        console.error('[call] sondage appels entrants échoué', error);
+        return;
+      }
       (data || []).forEach(handleNotification);
     };
     void poll();
