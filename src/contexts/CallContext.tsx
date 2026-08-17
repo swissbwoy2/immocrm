@@ -125,7 +125,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // + repli par sondage (certaines instances Realtime ne diffusent pas les
   // postgres_changes ; l'écran d'appel doit s'afficher dans tous les cas).
   useEffect(() => {
+    console.info('[call] veille appels entrants', { userId: user?.id || null });
     if (!user?.id) return;
+
 
     const handleNotification = (n: any) => {
       if (n?.type !== 'call_incoming' && n?.type !== 'call_invite') return;
