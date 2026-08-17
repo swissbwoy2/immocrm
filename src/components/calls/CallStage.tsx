@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
+  ConnectionState,
   GridLayout,
   ParticipantTile,
   RoomAudioRenderer,
+  useConnectionState,
   useLocalParticipant,
   useParticipants,
   useTracks,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { ConnectionState as LKConnectionState, Track } from 'livekit-client';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,9 +26,13 @@ interface CallStageProps {
 export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps) {
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
+  const connectionState = useConnectionState();
   const [micOn, setMicOn] = useState(true);
+  // Appel téléphone = audio seul : caméra coupée au départ (activable ensuite).
   const [camOn, setCamOn] = useState(mode === 'video');
 
+  // Toutes les pistes vidéo (locales ET distantes), placeholder inclus pour
+  // les participants sans caméra active.
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -36,10 +42,17 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
   );
 
   useEffect(() => {
-    localParticipant?.setCameraEnabled(mode === 'video').catch(() => setCamOn(false));
-    localParticipant?.setMicrophoneEnabled(true).catch(() => setMicOn(false));
+    if (!localParticipant) return;
+    localParticipant.setMicrophoneEnabled(true).catch(() => setMicOn(false));
+    if (mode === 'video') {
+      localParticipant.setCameraEnabled(true).catch(() => setCamOn(false));
+    } else {
+      // Mode audio : on ne publie AUCUNE vidéo par défaut.
+      localParticipant.setCameraEnabled(false).catch(() => undefined);
+      setCamOn(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, localParticipant]);
 
   const toggleMic = async () => {
     const next = !micOn;
@@ -61,21 +74,34 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
     }
   };
 
-  const videoVisible = mode === 'video';
+  // On affiche la grille vidéo dès qu'une caméra est active quelque part.
+  const hasVideo =
+    camOn || tracks.some((t) => !t.participant.isLocal && t.publication?.isSubscribed && !t.publication?.isMuted);
+
+  const remoteCount = participants.filter((p) => !p.isLocal).length;
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[hsl(200_35%_12%)]">
+      {/* Rend l'audio de TOUS les participants distants */}
       <RoomAudioRenderer />
 
+      <div className="px-4 pt-3 text-center text-xs text-white/70">
+        {connectionState !== LKConnectionState.Connected
+          ? 'Connexion…'
+          : remoteCount === 0
+            ? 'En attente que votre correspondant rejoigne…'
+            : `${remoteCount + 1} participants`}
+      </div>
+
       <div className="flex-1 min-h-0 overflow-hidden p-2">
-        {videoVisible ? (
+        {hasVideo ? (
           <GridLayout tracks={tracks} className="h-full">
             <ParticipantTile />
           </GridLayout>
         ) : (
           <div className="h-full flex flex-wrap items-center justify-center gap-6 p-4">
             {participants.map((p) => (
-              <div key={p.identity} className="flex flex-col items-center gap-2">
+              <div key={p.sid || p.identity} className="flex flex-col items-center gap-2">
                 <div
                   className={cn(
                     'rounded-full p-1 transition-all',
@@ -86,6 +112,7 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
                 </div>
                 <p className="text-xs text-white/90 max-w-[120px] truncate">
                   {p.name || 'Participant'}
+                  {p.isLocal ? ' (vous)' : ''}
                 </p>
               </div>
             ))}
@@ -153,6 +180,7 @@ export function CallStage({ mode, canInvite, onInvite, onLeave }: CallStageProps
           <PhoneOff className="h-5 w-5" />
         </Button>
       </div>
+      <ConnectionState className="sr-only" />
     </div>
   );
 }
