@@ -1615,6 +1615,7 @@ const Messagerie = () => {
               <ChatHeader
                 name={getContactInfo(currentConversation).name}
                 avatarUrl={null}
+                conversationId={currentConversation.id}
                 status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
                 isArchived={currentConversation.is_archived}
                 lastSeenAt={getContactInfo(currentConversation).lastSeenAt}
