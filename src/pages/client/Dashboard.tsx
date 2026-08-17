@@ -3,6 +3,7 @@ import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, Fi
 import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffresKPI';
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
 import { ProchainesVisitesCard } from '@/components/client/dashboard/ProchainesVisitesCard';
+import { MesVisitesAVenirBand } from '@/components/client/dashboard/MesVisitesAVenirBand';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -562,6 +563,12 @@ function ClientDashboardLocation() {
               onOffersClick={() => navigate('/client/offres-recues')}
             />
           </SectionErrorBoundary>
+
+          {/* Bande horizontale — mes visites à venir */}
+          <SectionErrorBoundary sectionName="MesVisitesAVenirBand">
+            <MesVisitesAVenirBand visites={visites} />
+          </SectionErrorBoundary>
+
 
           {/* Alerte compte non actif */}
           {profileActif === false && (
