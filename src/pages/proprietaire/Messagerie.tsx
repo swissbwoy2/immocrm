@@ -398,6 +398,7 @@ export default function Messagerie() {
               isOnline={agentInfo?.isOnline}
               lastSeenAt={agentInfo?.lastSeenAt}
               isArchived={selectedConversation.is_archived}
+              conversationId={selectedConversation.id}
               onBackClick={() => setSelectedConv(null)}
               className="relative z-10"
             />
