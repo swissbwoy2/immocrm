@@ -544,6 +544,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </CallProvider>
           </AuthProvider>
         </TikTokPixelProvider>
       </BrowserRouter>
