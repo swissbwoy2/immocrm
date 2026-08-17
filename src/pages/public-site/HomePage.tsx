@@ -86,7 +86,6 @@ export default function HomePage() {
       <Suspense fallback={null}>
         <DifferentiatorSection />
         <ServicesFullSection />
-        <BudgetCalcSection />
         <DossierAnalyseForm />
         <GuaranteeSection />
         <CoverageSection />
