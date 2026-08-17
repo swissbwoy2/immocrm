@@ -141,7 +141,7 @@ serve(async (req: Request): Promise<Response> => {
       .update({ nb_contacts: (annonce.nb_contacts || 0) + 1 })
       .eq("id", annonce.id);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, conversation_id: conversationId }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
