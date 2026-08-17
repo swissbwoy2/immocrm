@@ -11,7 +11,10 @@ import {
   canAccessConversation,
   callLink,
   HOST_ROLES,
+  resolveVisitAccess,
+  visitLiveLink,
 } from "../_shared/livekit-access.ts";
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
