@@ -1,6 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Key, Home, Sparkles } from 'lucide-react';
 import { useSearchType } from '@/contexts/SearchTypeContext';
+
+const StoriesShowcaseSection = lazy(() =>
+  import('./StoriesShowcaseSection').then((m) => ({ default: m.StoriesShowcaseSection }))
+);
+
 
 
 export function DossierAnalyseSection() {
