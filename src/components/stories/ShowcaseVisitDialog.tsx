@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, Home, MapPin } from 'lucide-react';
 import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from '@/components/public-site/showcase/useShowcase';
+import { StoryPhotoLink } from '@/components/public-site/showcase/StoryPhotoLink';
+
 
 interface Props {
   item: ShowcaseItem | null;
