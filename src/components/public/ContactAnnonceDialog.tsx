@@ -97,6 +97,23 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
           </DialogDescription>
         </DialogHeader>
 
+        {!user && (
+          <div className="mt-2 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+            <p className="text-muted-foreground">
+              Votre message sera transmis par e-mail. Pour discuter en direct avec l'annonceur
+              (messagerie instantanée, pièces jointes),{' '}
+              <button
+                type="button"
+                className="text-primary underline underline-offset-2"
+                onClick={() => navigate('/connexion')}
+              >
+                connectez-vous ou créez un compte
+              </button>
+              .
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
