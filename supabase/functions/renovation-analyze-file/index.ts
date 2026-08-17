@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,21 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'jobId is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    const { data: jobRow } = await supabase
+      .from('renovation_analysis_jobs')
+      .select('id, project_id')
+      .eq('id', jobId)
+      .maybeSingle();
+    if (!jobRow) {
+      return new Response(JSON.stringify({ error: 'Job introuvable' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    {
+      const _deny = await denyIfNoProjectAccess(supabase, user.id, jobRow.project_id, corsHeaders, 'renovation-analyze-file');
+      if (_deny) return _deny;
     }
 
     // If force=true, reset completed job to queued

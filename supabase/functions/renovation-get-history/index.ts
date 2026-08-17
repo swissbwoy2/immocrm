@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -101,6 +102,13 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    {
+      const _deny = await denyIfNoProjectAccess(adminClient, userId, projectId, corsHeaders, 'renovation-get-history');
+      if (_deny) return _deny;
+    }
+
+
 
     const limit = Math.min(Number(rawLimit) || 100, 500);
     const offset = Number(rawOffset) || 0;

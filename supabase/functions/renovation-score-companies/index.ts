@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +37,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { projectId, companyId } = await req.json();
+
+    {
+      const _deny = await denyIfNoProjectAccess(supabase, user.id, projectId, corsHeaders, 'renovation-score-companies');
+      if (_deny) return _deny;
+    }
+
 
     if (!projectId || !companyId) {
       return new Response(JSON.stringify({ error: 'projectId and companyId required' }), {

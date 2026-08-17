@@ -23,22 +23,33 @@ serve(async (req) => {
 
   try {
     const user = await getAuthUser(req);
-    if (!user) return json({ error: "Unauthorized" }, 401);
+    if (!user) {
+      console.error("livekit-invite: Authorization manquant ou JWT invalide");
+      return json({ error: "Session expirée : reconnecte-toi." }, 401);
+    }
 
     const body = await req.json();
     const action = body.action || "invite";
     const conversationId: string = body.conversationId;
-    if (!conversationId) return json({ error: "conversationId requis" }, 400);
+    if (!conversationId) {
+      console.error("livekit-invite: conversationId manquant", { userId: user.id, action });
+      return json({ error: "Conversation introuvable (identifiant manquant)" }, 400);
+    }
 
     const svc = serviceClient();
     const role = await resolveRole(svc, user.id);
 
     if (!HOST_ROLES.includes(role)) {
+      console.error("livekit-invite: rôle non autorisé", { userId: user.id, role });
       return json({ error: "Seuls un admin, un agent ou un coursier peuvent inviter" }, 403);
     }
 
     const allowed = await canAccessConversation(svc, user.id, role, conversationId);
-    if (!allowed) return json({ error: "Accès refusé à cette conversation" }, 403);
+    if (!allowed) {
+      console.error("livekit-invite: accès refusé", { userId: user.id, role, conversationId });
+      return json({ error: "Accès refusé à cette conversation" }, 403);
+    }
+
 
     const { data: conv } = await svc
       .from("conversations")

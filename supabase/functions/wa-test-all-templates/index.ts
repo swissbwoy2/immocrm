@@ -2,6 +2,7 @@
 // Returns a per-template report. Logs land in whatsapp_notification_logs as usual,
 // and the admin failure-trigger fires automatically on any failure.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,9 @@ const FIXTURES: Record<string, { variables: string[]; header_params?: string[]; 
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const _deny = await denyIfNotInternal(req, corsHeaders, 'wa-test-all-templates');
+  if (_deny) return _deny;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,

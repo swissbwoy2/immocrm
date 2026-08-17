@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,12 @@ serve(async (req) => {
     }
 
     const { projectId, storagePath, fileName, category, mimeType, fileSize, fileHash, tags } = await req.json();
+
+    {
+      const _deny = await denyIfNoProjectAccess(supabase, user.id, projectId, corsHeaders, 'renovation-register-upload');
+      if (_deny) return _deny;
+    }
+
 
     if (!projectId || !storagePath || !fileName) {
       return new Response(JSON.stringify({ error: 'projectId, storagePath, and fileName are required' }), {

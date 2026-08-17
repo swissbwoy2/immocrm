@@ -3,6 +3,7 @@
 // whose mandate ends in 30 days.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,6 +27,9 @@ function daysBetween(from: Date, to: Date): number {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const _deny = await denyIfNotInternal(req, corsHeaders, 'wa-send-mandate-expiring');
+  if (_deny) return _deny;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,

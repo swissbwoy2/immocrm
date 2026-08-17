@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +37,12 @@ serve(async (req) => {
 
     const body = await req.json();
     const { projectId, milestoneId, taskId, status, actualDate } = body;
+
+    {
+      const _deny = await denyIfNoProjectAccess(supabase, user.id, projectId, corsHeaders, 'renovation-update-progress');
+      if (_deny) return _deny;
+    }
+
 
     if (!projectId) {
       return new Response(JSON.stringify({ error: 'projectId is required' }), {

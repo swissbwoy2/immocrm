@@ -25,20 +25,33 @@ serve(async (req) => {
     }
 
     const user = await getAuthUser(req);
-    if (!user) return json({ error: "Unauthorized" }, 401);
+    if (!user) {
+      console.error("livekit-token: pas d'utilisateur (Authorization manquant ou JWT invalide)");
+      return json({ error: "Session expirée : reconnecte-toi pour rejoindre l'appel." }, 401);
+    }
 
     const { room, mode = "video", notify = false } = await req.json();
-    if (!room || typeof room !== "string") return json({ error: "room requis" }, 400);
+    if (!room || typeof room !== "string") {
+      console.error("livekit-token: room manquante", { userId: user.id });
+      return json({ error: "Appel introuvable : identifiant de conversation manquant." }, 400);
+    }
 
     const parsed = parseRoom(room);
-    if (!parsed || parsed.kind !== "call") return json({ error: "room invalide" }, 400);
+    if (!parsed || parsed.kind !== "call") {
+      console.error("livekit-token: room invalide", room);
+      return json({ error: `Salle d'appel invalide (${room})` }, 400);
+    }
     const conversationId = parsed.id;
 
     const svc = serviceClient();
     const role = await resolveRole(svc, user.id);
 
     const allowed = await canAccessConversation(svc, user.id, role, conversationId);
-    if (!allowed) return json({ error: "Accès refusé à cet appel" }, 403);
+    if (!allowed) {
+      console.error("livekit-token: accès refusé", { userId: user.id, role, conversationId });
+      return json({ error: "Accès refusé à cet appel (vous n'êtes pas rattaché à cette conversation)" }, 403);
+    }
+
 
     const isHost = HOST_ROLES.includes(role);
     const name = await getDisplayName(svc, user.id);
