@@ -32,8 +32,12 @@ serve(async (req) => {
 
     const body = await req.json();
     const action = body.action || "invite";
-    const conversationId: string = body.conversationId;
-    const visiteId: string | undefined = body.visiteId;
+    const parsedRoom = typeof body.room === "string" ? parseRoom(body.room) : null;
+    const conversationId: string =
+      body.conversationId || (parsedRoom?.kind === "call" ? parsedRoom.id : undefined);
+    const visiteId: string | undefined =
+      body.visiteId || (parsedRoom?.kind === "visit" ? parsedRoom.id : undefined);
+
 
     const svc = serviceClient();
     const role = await resolveRole(svc, user.id);
