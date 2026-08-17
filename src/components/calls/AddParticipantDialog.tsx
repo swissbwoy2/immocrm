@@ -11,11 +11,14 @@ import { Loader2, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 import { CallCandidate, CallMode, fetchInviteCandidates, inviteToCall } from '@/lib/livekitCall';
+import { fetchLiveCandidates, inviteToLive } from '@/lib/livekitLive';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  conversationId: string;
+  conversationId?: string;
+  /** Live de visite (Phase B) : invitations vers la room visit:{visiteId}. */
+  visiteId?: string;
   mode: CallMode;
 }
 
@@ -26,7 +29,7 @@ const roleLabel: Record<string, string> = {
   client: 'Client',
 };
 
-export function AddParticipantDialog({ open, onOpenChange, conversationId, mode }: Props) {
+export function AddParticipantDialog({ open, onOpenChange, conversationId, visiteId, mode }: Props) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<CallCandidate[]>([]);
@@ -37,7 +40,7 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, mode 
     if (!open) return;
     let cancelled = false;
     setLoading(true);
-    fetchInviteCandidates(conversationId)
+    (visiteId ? fetchLiveCandidates(visiteId) : fetchInviteCandidates(conversationId!))
       .then((list) => !cancelled && setCandidates(list))
       .catch((e) =>
         toast({ title: 'Erreur', description: e.message, variant: 'destructive' }),
@@ -46,14 +49,18 @@ export function AddParticipantDialog({ open, onOpenChange, conversationId, mode 
     return () => {
       cancelled = true;
     };
-  }, [open, conversationId, toast]);
+  }, [open, conversationId, visiteId, toast]);
 
   const handleInvite = async (c: CallCandidate) => {
     setInvitingId(c.user_id);
     try {
-      await inviteToCall({ conversationId, userId: c.user_id, mode });
+      if (visiteId) {
+        await inviteToLive({ visiteId, userId: c.user_id });
+      } else {
+        await inviteToCall({ conversationId: conversationId!, userId: c.user_id, mode });
+      }
       setInvited((prev) => [...prev, c.user_id]);
-      toast({ title: 'Invitation envoyée', description: `${c.name} a été invité à rejoindre l'appel.` });
+      toast({ title: 'Invitation envoyée', description: `${c.name} a été invité à rejoindre ${visiteId ? 'le live' : "l'appel"}.` });
     } catch (e: any) {
       toast({ title: 'Erreur', description: e.message, variant: 'destructive' });
     } finally {

@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 
 export interface IncomingCall {
   conversationId: string;
+  /** Live de visite (Phase B) : la salle est visit:{visiteId}. */
+  visiteId?: string;
   mode: CallMode;
   title: string;
   message: string;
