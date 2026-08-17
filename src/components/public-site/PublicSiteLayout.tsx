@@ -5,6 +5,7 @@ import { PublicSiteHeader } from './PublicSiteHeader';
 import { PublicSiteFooter } from './PublicSiteFooter';
 import { StickyMobileCTA } from './sections/StickyMobileCTA';
 import { ScrollProgressBar } from './animations/ScrollProgressBar';
+import { useStoryDialogOpen } from './showcase/storyDialogState';
 
 const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
 
