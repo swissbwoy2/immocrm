@@ -50,42 +50,63 @@ export function useShowcase() {
   return { offres, visites, loading };
 }
 
-// --- Link preview image (OpenGraph) with in-memory cache -------------------
-const previewCache = new Map<string, Promise<string | null>>();
+// --- Link preview image (OpenGraph) with batched public fetch --------------
+const previewCache = new Map<string, string | null>();
+const pending = new Set<string>();
+const listeners = new Set<() => void>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-function fetchPreviewImage(url: string): Promise<string | null> {
-  const cached = previewCache.get(url);
-  if (cached) return cached;
-  const p = supabase.functions
-    .invoke('get-link-preview', { body: { url } })
-    .then(({ data, error }) => (error ? null : ((data as { image_url?: string })?.image_url ?? null)))
-    .catch(() => null);
-  previewCache.set(url, p);
-  return p;
+function scheduleFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(async () => {
+    flushTimer = null;
+    const urls = Array.from(pending).slice(0, 20);
+    if (urls.length === 0) return;
+    urls.forEach((u) => pending.delete(u));
+    try {
+      const { data } = await supabase.functions.invoke('get-public-showcase-preview', {
+        body: { urls },
+      });
+      const previews = (data as { previews?: Record<string, { image_url?: string | null }> })?.previews || {};
+      urls.forEach((u) => previewCache.set(u, previews[u]?.image_url ?? null));
+    } catch {
+      urls.forEach((u) => previewCache.set(u, null));
+    }
+    listeners.forEach((l) => l());
+    if (pending.size > 0) scheduleFlush();
+  }, 120);
 }
 
 export function usePreviewImage(item: ShowcaseItem): string | null {
   const gallery = galleryUrls(item);
   const direct = gallery[0] ?? null;
-  const [img, setImg] = useState<string | null>(direct);
+  const link = item.lien_annonce;
+  const [img, setImg] = useState<string | null>(direct ?? (link ? previewCache.get(link) ?? null : null));
 
   useEffect(() => {
     if (direct) {
       setImg(direct);
       return;
     }
-    if (!item.lien_annonce) return;
-    let cancelled = false;
-    fetchPreviewImage(item.lien_annonce).then((u) => {
-      if (!cancelled) setImg(u);
-    });
-    return () => {
-      cancelled = true;
+    if (!link) return;
+    if (previewCache.has(link)) {
+      setImg(previewCache.get(link) ?? null);
+      return;
+    }
+    const notify = () => {
+      if (previewCache.has(link)) setImg(previewCache.get(link) ?? null);
     };
-  }, [direct, item.lien_annonce]);
+    listeners.add(notify);
+    pending.add(link);
+    scheduleFlush();
+    return () => {
+      listeners.delete(notify);
+    };
+  }, [direct, link]);
 
   return img;
 }
+
 
 export const villeFromAdresse = (adresse?: string | null): string => {
   if (!adresse) return '';
