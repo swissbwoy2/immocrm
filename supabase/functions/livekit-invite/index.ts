@@ -1,0 +1,149 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  corsHeaders,
+  json,
+  serviceClient,
+  getAuthUser,
+  resolveRole,
+  getDisplayName,
+  canAccessConversation,
+  callLink,
+  HOST_ROLES,
+} from "../_shared/livekit-access.ts";
+
+/**
+ * Invite a user into an existing call room.
+ * ABSOLUTE RULE: only admin / agent / coursier can invite. Clients get 403.
+ * Actions:
+ *  - { action: "candidates", conversationId } -> people linked to the dossier
+ *  - { action: "invite", conversationId, userId, mode } -> grant access + notify
+ */
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const user = await getAuthUser(req);
+    if (!user) return json({ error: "Unauthorized" }, 401);
+
+    const body = await req.json();
+    const action = body.action || "invite";
+    const conversationId: string = body.conversationId;
+    if (!conversationId) return json({ error: "conversationId requis" }, 400);
+
+    const svc = serviceClient();
+    const role = await resolveRole(svc, user.id);
+
+    if (!HOST_ROLES.includes(role)) {
+      return json({ error: "Seuls un admin, un agent ou un coursier peuvent inviter" }, 403);
+    }
+
+    const allowed = await canAccessConversation(svc, user.id, role, conversationId);
+    if (!allowed) return json({ error: "Accès refusé à cette conversation" }, 403);
+
+    const { data: conv } = await svc
+      .from("conversations")
+      .select("client_id, agent_id, admin_user_id")
+      .eq("id", conversationId)
+      .maybeSingle();
+    if (!conv) return json({ error: "Conversation introuvable" }, 404);
+
+    if (action === "candidates") {
+      const candidates: { user_id: string; name: string; role: string }[] = [];
+      const push = (user_id: string | null, name: string, r: string) => {
+        if (!user_id || user_id === user.id) return;
+        if (candidates.some((c) => c.user_id === user_id)) return;
+        candidates.push({ user_id, name, role: r });
+      };
+
+      // Client of the dossier
+      if (conv.client_id) {
+        const { data: cli } = await svc
+          .from("clients")
+          .select("user_id, prenom, nom")
+          .eq("id", conv.client_id)
+          .maybeSingle();
+        if (cli?.user_id) push(cli.user_id, `${cli.prenom || ""} ${cli.nom || ""}`.trim() || "Client", "client");
+      }
+
+      // Agents linked to the conversation / the client
+      const agentIds = new Set<string>();
+      if (conv.agent_id) agentIds.add(conv.agent_id);
+      const { data: cas } = await svc
+        .from("conversation_agents")
+        .select("agent_id")
+        .eq("conversation_id", conversationId);
+      (cas || []).forEach((c: any) => c.agent_id && agentIds.add(c.agent_id));
+      if (conv.client_id) {
+        const { data: cag } = await svc
+          .from("client_agents")
+          .select("agent_id")
+          .eq("client_id", conv.client_id);
+        (cag || []).forEach((c: any) => c.agent_id && agentIds.add(c.agent_id));
+      }
+      if (agentIds.size) {
+        const { data: ags } = await svc.from("agents").select("id, user_id").in("id", [...agentIds]);
+        for (const a of ags || []) {
+          if (!a.user_id) continue;
+          push(a.user_id, await getDisplayName(svc, a.user_id), "agent");
+        }
+      }
+
+      // Couriers assigned to this client's visits
+      if (conv.client_id) {
+        const { data: vis } = await svc
+          .from("visites")
+          .select("coursier_id")
+          .eq("client_id", conv.client_id)
+          .not("coursier_id", "is", null)
+          .limit(50);
+        const coursierIds = [...new Set((vis || []).map((v: any) => v.coursier_id))];
+        if (coursierIds.length) {
+          const { data: cous } = await svc
+            .from("coursiers")
+            .select("user_id, prenom, nom")
+            .in("id", coursierIds);
+          (cous || []).forEach((c: any) =>
+            push(c.user_id, `${c.prenom || ""} ${c.nom || ""}`.trim() || "Coursier", "coursier"),
+          );
+        }
+      }
+
+      // Admins
+      const { data: admins } = await svc.from("user_roles").select("user_id").eq("role", "admin");
+      for (const a of admins || []) {
+        push(a.user_id, await getDisplayName(svc, a.user_id), "admin");
+      }
+
+      return json({ candidates });
+    }
+
+    // action === "invite"
+    const targetUserId: string = body.userId;
+    const mode: string = body.mode || "video";
+    if (!targetUserId) return json({ error: "userId requis" }, 400);
+
+    await svc
+      .from("call_participants")
+      .upsert(
+        { conversation_id: conversationId, user_id: targetUserId, invited_by: user.id },
+        { onConflict: "conversation_id,user_id" },
+      );
+
+    const inviterName = await getDisplayName(svc, user.id);
+    const targetRole = await resolveRole(svc, targetUserId);
+
+    await svc.from("notifications").insert({
+      user_id: targetUserId,
+      type: "call_invite",
+      title: mode === "audio" ? "Invitation à un appel audio" : "Invitation à un appel vidéo",
+      message: `${inviterName} vous invite à rejoindre l'appel`,
+      link: callLink(targetRole, conversationId),
+      metadata: { conversationId, mode, from: user.id, room: `call:${conversationId}` },
+    });
+
+    return json({ success: true });
+  } catch (e) {
+    console.error("livekit-invite error", e);
+    return json({ error: (e as Error).message }, 500);
+  }
+});
