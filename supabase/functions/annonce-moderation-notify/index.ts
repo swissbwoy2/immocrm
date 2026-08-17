@@ -123,6 +123,23 @@ serve(async (req: Request): Promise<Response> => {
 
     // approved / refused -> notify the advertiser
     const approved = action === "approved";
+
+    // Fire matching e-mail alerts when the ad goes live
+    if (approved) {
+      try {
+        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/annonce-alertes-run`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") || "",
+          },
+          body: JSON.stringify({ annonce_id, frequence: "instantane" }),
+        });
+      } catch (e) {
+        console.error("annonce-alertes-run trigger error", e);
+      }
+    }
+
     const title = approved ? "Votre annonce est publiée 🎉" : "Votre annonce a été refusée";
     const message = approved
       ? `${titre} est désormais visible sur le portail.`
