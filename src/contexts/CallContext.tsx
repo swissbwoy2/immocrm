@@ -55,6 +55,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const [incoming, setIncoming] = useState<IncomingCall | null>(null);
   const busyRef = useRef(false);
   const deepLinkedRef = useRef<string | null>(null);
+  const handledCallsRef = useRef<Set<string>>(new Set());
+  const sessionRef = useRef<CallSession | null>(null);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   const canInvite = isCallHostRole(userRole);
 
@@ -116,8 +122,48 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id, joinCall]);
 
   // Appels entrants : notification in-app en temps réel (aucune navigation)
+  // + repli par sondage (certaines instances Realtime ne diffusent pas les
+  // postgres_changes ; l'écran d'appel doit s'afficher dans tous les cas).
   useEffect(() => {
     if (!user?.id) return;
+
+
+
+    const handleNotification = (n: any) => {
+      if (n?.type !== 'call_incoming' && n?.type !== 'call_invite') return;
+      if (n?.id && handledCallsRef.current.has(n.id)) return;
+      if (n?.id) handledCallsRef.current.add(n.id);
+
+      // conversationId : métadonnées en priorité, sinon extrait du lien.
+      let conversationId: string | undefined = n?.metadata?.conversationId;
+      if (!conversationId && typeof n?.link === 'string') {
+        const q = n.link.split('?')[1];
+        if (q) {
+          const sp = new URLSearchParams(q);
+          conversationId = sp.get('call') || sp.get('conversationId') || undefined;
+        }
+      }
+      if (!conversationId) {
+        console.error('Appel entrant sans conversationId exploitable', n);
+        return;
+      }
+      if (sessionRef.current?.conversationId === conversationId) return;
+
+      setIncoming({
+        conversationId,
+        mode: (n?.metadata?.mode as CallMode) || 'video',
+        title: n?.title || 'Appel entrant',
+        message: n?.message || '',
+        callerName: (n?.message || '').replace(/ vous appelle$/i, '') || undefined,
+        callerId: n?.metadata?.from,
+      });
+
+      // On marque la notification lue pour ne plus la resonner au prochain sondage.
+      if (n?.id) {
+        void supabase.from('notifications').update({ read: true }).eq('id', n.id);
+      }
+    };
+
     const channel = supabase
       .channel(`incoming-calls-${user.id}`)
       .on(
@@ -128,40 +174,38 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          const n: any = payload.new;
-          if (n?.type !== 'call_incoming' && n?.type !== 'call_invite') return;
-          // conversationId : métadonnées en priorité, sinon extrait du lien.
-          let conversationId: string | undefined = n?.metadata?.conversationId;
-          if (!conversationId && typeof n?.link === 'string') {
-            const q = n.link.split('?')[1];
-            if (q) {
-              const sp = new URLSearchParams(q);
-              conversationId = sp.get('call') || sp.get('conversationId') || undefined;
-            }
-          }
-          if (!conversationId) {
-            console.error('Appel entrant sans conversationId exploitable', n);
-            return;
-          }
-          // Déjà en appel sur la même conversation → on ignore
-          if (session?.conversationId === conversationId) return;
-          setIncoming({
-            conversationId,
-            mode: (n?.metadata?.mode as CallMode) || 'video',
-            title: n?.title || 'Appel entrant',
-            message: n?.message || '',
-            callerName: (n?.message || '').replace(/ vous appelle$/i, '') || undefined,
-            callerId: n?.metadata?.from,
-          });
-        },
+        (payload) => handleNotification(payload.new),
       )
       .subscribe();
 
+    let stopped = false;
+    const poll = async () => {
+      if (stopped) return;
+      const since = new Date(Date.now() - 60_000).toISOString();
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, type, title, message, link, metadata, created_at')
+        .eq('user_id', user.id)
+        .in('type', ['call_incoming', 'call_invite'])
+        .or('read.is.false,read.is.null')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      if (error) {
+        console.error('[call] sondage appels entrants échoué', error);
+        return;
+      }
+      (data || []).forEach(handleNotification);
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 4000);
+
     return () => {
+      stopped = true;
+      window.clearInterval(timer);
       supabase.removeChannel(channel);
     };
-  }, [user?.id, session?.conversationId]);
+  }, [user?.id]);
 
   /** Refus / appel manqué : on prévient l'appelant (+ message rapide éventuel). */
   const dismissIncoming = useCallback(
