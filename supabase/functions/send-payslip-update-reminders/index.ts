@@ -9,7 +9,7 @@ const APP_BASE_URL = 'https://immocrm.lovable.app';
 
 function formatDateFr(d: Date | string): string {
   const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('fr-CH', { day: '2-digit', month: 'long', year: 'numeric' });
+  return date.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 function getMonthName(monthIndex: number): string {

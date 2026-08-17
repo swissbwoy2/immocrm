@@ -239,7 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
     y -= 140;
 
     // Date
-    page.drawText(sanitizeText(`Analyse effectuee le ${new Date().toLocaleDateString('fr-CH')}`), {
+    page.drawText(sanitizeText(`Analyse effectuee le ${new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}`), {
       x: margin,
       y: y,
       size: 11,

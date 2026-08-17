@@ -42,7 +42,7 @@ function sanitizeText(text: string | null | undefined): string {
 function formatDate(dateString: string | null): string {
   if (!dateString) return '-';
   const date = new Date(dateString);
-  return date.toLocaleDateString('fr-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return date.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function formatCurrency(value: number | null): string {

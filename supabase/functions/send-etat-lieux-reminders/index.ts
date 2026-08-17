@@ -173,14 +173,14 @@ serve(async (req) => {
       const { candidature, recipientEmail, recipientName, recipientRole, recipientUserId } = reminder;
       const etatLieuxDate = new Date(candidature.date_etat_lieux);
       
-      const formattedDate = etatLieuxDate.toLocaleDateString("fr-CH", {
+      const formattedDate = etatLieuxDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       });
       
-      const heureText = candidature.heure_etat_lieux || etatLieuxDate.toLocaleTimeString("fr-CH", {
+      const heureText = candidature.heure_etat_lieux || etatLieuxDate.toLocaleTimeString("fr-CH", { timeZone: 'Europe/Zurich',
         hour: "2-digit",
         minute: "2-digit",
       });
