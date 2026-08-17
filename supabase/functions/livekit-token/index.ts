@@ -43,11 +43,15 @@ serve(async (req) => {
     const isHost = HOST_ROLES.includes(role);
     const name = await getDisplayName(svc, user.id);
 
+    // Identité unique par session : évite qu'un même compte ouvert sur 2 appareils
+    // se déconnecte mutuellement (LiveKit expulse les identités dupliquées).
+    const identity = `${user.id}#${crypto.randomUUID().slice(0, 8)}`;
+
     const at = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
-      identity: user.id,
+      identity,
       name,
       ttl: 60 * 60, // 1h
-      metadata: JSON.stringify({ role, host: isHost }),
+      metadata: JSON.stringify({ role, host: isHost, userId: user.id }),
     });
 
     at.addGrant({
@@ -82,7 +86,7 @@ serve(async (req) => {
       }
     }
 
-    return json({ token, url: LIVEKIT_URL, identity: user.id, name, role, isHost, room });
+    return json({ token, url: LIVEKIT_URL, identity, name, role, isHost, room });
   } catch (e) {
     console.error("livekit-token error", e);
     return json({ error: (e as Error).message }, 500);

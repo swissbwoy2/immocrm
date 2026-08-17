@@ -160,8 +160,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             token={session.token}
             serverUrl={session.url}
             connect
-            audio
+            audio={true}
             video={session.mode === 'video'}
+            options={{ adaptiveStream: true, dynacast: true }}
+            connectOptions={{ autoSubscribe: true }}
             data-lk-theme="default"
             style={{ height: '100%' }}
             onDisconnected={leaveCall}

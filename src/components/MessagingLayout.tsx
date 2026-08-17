@@ -125,6 +125,11 @@ export function MessagingLayout({
           </div>
         )}
 
+        {/* En-tête de conversation (nom + boutons d'appel audio/vidéo) — toutes tailles d'écran */}
+        {selectedConversation && chatHeader && (
+          <div className="shrink-0 relative z-20">{chatHeader}</div>
+        )}
+
         {chatView}
       </div>
     </div>
