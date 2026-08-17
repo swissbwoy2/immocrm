@@ -11,6 +11,8 @@ import {
   HOST_ROLES,
   resolveVisitAccess,
   visitLiveLink,
+  loadVisitGroup,
+  parseRoom,
 } from "../_shared/livekit-access.ts";
 
 /**
@@ -112,7 +114,11 @@ serve(async (req) => {
         link: visitLiveLink(visiteId),
         metadata: { visiteId, mode: "video", from: user.id, room: `visit:${visiteId}`, live: true },
       });
-      if (notifErr) return json({ error: notifErr.message }, 500);
+      if (notifErr) {
+        console.error("livekit-invite: notification live échouée", notifErr);
+        return json({ error: `Notification impossible : ${notifErr.message}` }, 500);
+      }
+      console.log("livekit-invite: invitation live envoyée", { visiteId, targetUserId });
       return json({ success: true });
     }
 
