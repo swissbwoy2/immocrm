@@ -610,8 +610,7 @@ export default function RechercheAnnonces() {
                   variant="outline"
                   size="sm"
                   className="hidden sm:inline-flex"
-                  onClick={saveSearchAlert}
-                  disabled={isSavingSearch}
+                  onClick={() => setAlerteDialogOpen(true)}
                 >
                   <BellPlus className="h-4 w-4 mr-2" />
                   Créer une alerte
