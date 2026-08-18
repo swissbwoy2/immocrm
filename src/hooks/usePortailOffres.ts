@@ -35,10 +35,21 @@ export function usePortailOffres() {
     queryKey: ['portail-offres'],
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<PortailOffre[]> => {
-      const { data, error } = await supabase.rpc('list_public_offres' as any);
-      if (error) throw error;
-      return (data || []) as PortailOffre[];
+      // La réponse REST est plafonnée à 1000 lignes : on pagine pour tout récupérer.
+      const all: PortailOffre[] = [];
+      const BATCH = 900;
+      for (let from = 0; from < 20000; from += BATCH) {
+        const { data, error } = await supabase
+          .rpc('list_public_offres' as any)
+          .range(from, from + BATCH - 1);
+        if (error) throw error;
+        const rows = (data || []) as PortailOffre[];
+        all.push(...rows);
+        if (rows.length < BATCH) break;
+      }
+      return all;
     },
+
   });
 }
 
