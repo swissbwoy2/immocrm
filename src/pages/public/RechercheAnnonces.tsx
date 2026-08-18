@@ -305,6 +305,17 @@ export default function RechercheAnnonces() {
   );
   const { data: previews = {} } = useOffresPreviews(previewUrls);
 
+  // Extraction serveur (cache en base) des galeries des offres visibles sans photo
+  const extractionIds = useMemo(
+    () =>
+      offresFiltrees
+        .filter((o) => galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce)
+        .slice(0, 8)
+        .map((o) => o.id),
+    [offresFiltrees],
+  );
+  useOffresImageExtraction(extractionIds);
+
   const offresCards = useMemo(
     () =>
       offresFiltrees.map((o) => {
@@ -317,6 +328,9 @@ export default function RechercheAnnonces() {
           type_transaction: 'location',
           prix: Number(o.prix ?? 0),
           ville: o.ville || o.adresse || '',
+          code_postal: o.code_postal || '',
+          latitude: o.latitude ?? null,
+          longitude: o.longitude ?? null,
           nombre_pieces: o.pieces ?? undefined,
           surface_habitable: o.surface ?? undefined,
           date_publication: o.date_envoi,
@@ -343,6 +357,30 @@ export default function RechercheAnnonces() {
     };
     return merged.sort(cmp);
   }, [annonces, offresCards, sortBy]);
+
+  // ---- Scroll infini (aucun plafond dur sur le nombre d'annonces) ----
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchParams, resultats.length]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setVisibleCount((c) => c + PAGE_SIZE);
+      },
+      { rootMargin: '400px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount, resultats.length]);
+
+  const resultatsVisibles = useMemo(() => resultats.slice(0, visibleCount), [resultats, visibleCount]);
+
 
   // ---- Localités voisines (Google Geocoding autour des villes sélectionnées) ----
   const addNeighbours = async () => {
