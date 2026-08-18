@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { PremiumPageShellV2, PremiumPageHeaderV2, PremiumEmptyStateV2 } from '@/components/dashboard/v2';
 import { useNotifications } from '@/hooks/useNotifications';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 interface Props {
   profile: { prenom?: string } | null;
@@ -22,6 +23,7 @@ export default function VenteClientDashboard({ profile }: Props) {
   return (
     <div className="flex-1 overflow-y-auto">
       <PremiumPageShellV2>
+        <DashboardAdBanner />
         <PremiumPageHeaderV2
           title={profile?.prenom ? `Bienvenue, ${profile.prenom}` : 'Tableau de bord'}
           subtitle="Votre dossier de vente est suivi par votre conseiller dédié"

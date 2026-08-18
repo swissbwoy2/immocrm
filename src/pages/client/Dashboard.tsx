@@ -56,6 +56,7 @@ import DashboardRelouer from './DashboardRelouer';
 import DashboardAchat from './DashboardAchat';
 import DashboardAchatEnAttente from './DashboardAchatEnAttente';
 import { isPurchaseBuyer } from '@/lib/journey';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 export default function ClientDashboardDispatcher() {
   const { user } = useAuth();
@@ -547,6 +548,7 @@ function ClientDashboardLocation() {
         <FloatingParticles count={8} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
         <PremiumPageShellV2 className="relative z-10">
           <MustChangePasswordBanner />
+          <DashboardAdBanner />
           {/* Premium Dashboard Header */}
           <SectionErrorBoundary sectionName="DashboardHeader">
             <PremiumDashboardHeader
