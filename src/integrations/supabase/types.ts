@@ -3727,6 +3727,7 @@ export type Database = {
       dashboard_banners: {
         Row: {
           actif: boolean
+          afficher_overlay: boolean
           created_at: string
           id: string
           image_url: string
@@ -3738,6 +3739,7 @@ export type Database = {
         }
         Insert: {
           actif?: boolean
+          afficher_overlay?: boolean
           created_at?: string
           id?: string
           image_url: string
@@ -3749,6 +3751,7 @@ export type Database = {
         }
         Update: {
           actif?: boolean
+          afficher_overlay?: boolean
           created_at?: string
           id?: string
           image_url?: string
