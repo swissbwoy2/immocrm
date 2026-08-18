@@ -15,6 +15,10 @@ interface Annonce {
   surface_habitable: number | null;
   nombre_pieces: number | null;
   photos_annonces_publiques?: { url: string; est_principale: boolean }[];
+  /** Annonce sourcée : lien externe d'origine */
+  lien_annonce?: string | null;
+  /** true si le clic peut ouvrir la fiche interne */
+  allowInternalDetail?: boolean;
 }
 
 interface PublicAnnoncesMapProps {
@@ -192,6 +196,7 @@ export function PublicAnnoncesMap({
               ${annonce.surface_habitable ? `${annonce.surface_habitable} m²` : ''}
             </p>
             <p style="font-size: 12px; color: #666;">${annonce.code_postal} ${annonce.ville}</p>
+            ${annonce.lien_annonce && !annonce.allowInternalDetail ? '<p style="font-size: 11px; color: #16a34a; margin-top: 6px; font-weight: 600;">Voir l\'annonce d\'origine ↗</p>' : ''}
           </div>
         `;
 
@@ -203,6 +208,10 @@ export function PublicAnnoncesMap({
             const infoEl = document.getElementById(`info-${annonce.id}`);
             if (infoEl) {
               infoEl.addEventListener('click', () => {
+                if (annonce.lien_annonce && !annonce.allowInternalDetail) {
+                  window.open(annonce.lien_annonce, '_blank', 'noopener,noreferrer');
+                  return;
+                }
                 onAnnonceClick?.(annonce.id, annonce.slug);
               });
             }
