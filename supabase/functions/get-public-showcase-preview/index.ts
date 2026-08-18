@@ -165,7 +165,9 @@ serve(async (req) => {
       }
     }
 
+    let firecrawlBudget = 2; // limite anti quota Firecrawl (25 req/min)
     await Promise.all(
+
       toFetch.slice(0, 6).map(async (t) => {
         const url = t.parsed.toString();
         const hostname = t.parsed.hostname;
