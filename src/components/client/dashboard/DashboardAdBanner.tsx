@@ -24,18 +24,19 @@ export function DashboardAdBanner({ banner: override, className }: Props) {
   const link = banner.lien_url?.trim() || '';
   const isExternal = /^https?:\/\//i.test(link);
   const clickable = !!link;
+  const showOverlay = !!banner.afficher_overlay && !!(banner.titre || banner.texte);
 
   const content = (
     <>
       <SignedImage
         src={banner.image_url}
         alt={banner.titre || 'Bannière'}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="block w-full h-auto"
       />
-      {(banner.titre || banner.texte) && (
+      {showOverlay && (
         <>
           <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/45 to-transparent" />
-          <div className="relative z-10 flex h-full flex-col justify-center gap-1 p-4 sm:p-6 md:p-8 max-w-[75%]">
+          <div className="absolute inset-0 z-10 flex flex-col justify-center gap-1 p-4 sm:p-6 md:p-8 max-w-[75%]">
             {banner.titre && (
               <h2 className="text-base sm:text-xl md:text-2xl font-bold text-foreground leading-tight line-clamp-2">
                 {banner.titre}
@@ -60,8 +61,6 @@ export function DashboardAdBanner({ banner: override, className }: Props) {
 
   const shell = cn(
     'relative block w-full overflow-hidden rounded-2xl border border-primary/20 bg-muted',
-    'aspect-[16/7] sm:aspect-[16/5]',
-    'shadow-[0_8px_30px_hsl(var(--primary)/0.10)]',
     clickable && 'cursor-pointer transition-transform duration-200 hover:scale-[1.005] hover:border-primary/40',
     className,
   );
@@ -84,3 +83,4 @@ export function DashboardAdBanner({ banner: override, className }: Props) {
     </button>
   );
 }
+

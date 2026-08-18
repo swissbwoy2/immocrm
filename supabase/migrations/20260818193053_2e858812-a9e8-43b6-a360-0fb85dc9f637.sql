@@ -1,0 +1,1 @@
+ALTER TABLE public.dashboard_banners ADD COLUMN IF NOT EXISTS afficher_overlay boolean NOT NULL DEFAULT false;

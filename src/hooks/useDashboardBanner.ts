@@ -8,6 +8,7 @@ export interface DashboardBanner {
   titre: string | null;
   texte: string | null;
   actif: boolean;
+  afficher_overlay?: boolean | null;
 }
 
 /** Récupère la bannière publicitaire active du dashboard client (la plus récente). */
@@ -21,11 +22,12 @@ export function useDashboardBanner() {
       try {
         const { data, error } = await supabase
           .from('dashboard_banners')
-          .select('id, image_url, lien_url, titre, texte, actif')
+          .select('id, image_url, lien_url, titre, texte, actif, afficher_overlay')
           .eq('actif', true)
           .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
+
         if (error) throw error;
         if (alive) setBanner((data as DashboardBanner) || null);
       } catch (e) {

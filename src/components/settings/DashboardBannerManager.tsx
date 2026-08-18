@@ -23,6 +23,7 @@ export function DashboardBannerManager() {
   const [titre, setTitre] = useState('');
   const [texte, setTexte] = useState('');
   const [actif, setActif] = useState(true);
+  const [afficherOverlay, setAfficherOverlay] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -40,6 +41,7 @@ export function DashboardBannerManager() {
         setTitre(data.titre || '');
         setTexte(data.texte || '');
         setActif(!!data.actif);
+        setAfficherOverlay(!!(data as any).afficher_overlay);
       }
       setLoading(false);
     })();
@@ -95,6 +97,7 @@ export function DashboardBannerManager() {
         titre: titre.trim() || null,
         texte: texte.trim() || null,
         actif,
+        afficher_overlay: afficherOverlay,
         updated_by: user?.id ?? null,
       };
       if (id) {
@@ -133,6 +136,7 @@ export function DashboardBannerManager() {
       setTitre('');
       setTexte('');
       setActif(true);
+      setAfficherOverlay(false);
       toast.success('Bannière supprimée');
     } catch (err: any) {
       toast.error(err?.message || 'Erreur lors de la suppression');
@@ -194,6 +198,16 @@ export function DashboardBannerManager() {
               />
             </div>
 
+            <div className="flex items-center justify-between rounded-xl border p-4">
+              <div>
+                <Label className="text-sm font-medium">Afficher un texte par-dessus l'image</Label>
+                <p className="text-xs text-muted-foreground">
+                  Désactivé : seule l'image est affichée (recommandé si le visuel contient déjà du texte).
+                </p>
+              </div>
+              <Switch checked={afficherOverlay} onCheckedChange={setAfficherOverlay} />
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Lien (optionnel)</Label>
@@ -230,6 +244,7 @@ export function DashboardBannerManager() {
                     titre: titre || null,
                     texte: texte || null,
                     actif,
+                    afficher_overlay: afficherOverlay,
                   }}
                 />
               ) : (
