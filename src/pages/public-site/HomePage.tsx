@@ -2,6 +2,8 @@ import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+
 
 
 // Above the fold - eager
