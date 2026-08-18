@@ -62,14 +62,16 @@ export default function RemplirDemandeLocation() {
   useEffect(() => {
     if (!isAcro || !bytes) { setPreviewBytes(null); return; }
     let cancelled = false;
-    const preview = aiByName && Object.keys(aiByName).length > 0
-      ? fillAcroFormByName({ templateBytes: bytes.slice(0), valuesByName: aiByName, champs, signatureDataUrl: signature })
-      : fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature });
+    const preview = champs.length > 0
+      ? fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, valuesById: resolvedChamps.byId, signatureDataUrl: signature })
+      : aiByName && Object.keys(aiByName).length > 0
+        ? fillAcroFormByName({ templateBytes: bytes.slice(0), valuesByName: aiByName, champs, signatureDataUrl: signature })
+        : fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature });
     preview
       .then((out) => { if (!cancelled) setPreviewBytes(out); })
       .catch(() => { if (!cancelled) setPreviewBytes(null); });
     return () => { cancelled = true; };
-  }, [isAcro, bytes, champs, values, signature, aiByName]);
+  }, [isAcro, bytes, champs, values, signature, aiByName, resolvedChamps]);
 
   useEffect(() => {
     const update = () => setWidth(Math.max(300, Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8)));
@@ -215,6 +217,12 @@ export default function RemplirDemandeLocation() {
     [champs, overrides],
   );
 
+  /* Valeurs résolues champ par champ selon la SECTION du schéma calibré */
+  const resolvedChamps = useMemo(
+    () => (sectioned ? resolveChampValues(effectiveChamps, sectioned) : { byId: {}, byName: {} }),
+    [effectiveChamps, sectioned],
+  );
+
   const saveSignature = async () => {
     if (!tempSignature || !user?.id) return;
     const path = `${user.id}/signature.png`;
@@ -254,31 +262,44 @@ export default function RemplirDemandeLocation() {
 
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
 
-      // Remplissage intelligent : le LLM déduit quelle donnée va dans quel champ
-      const ai = aiByName ?? (await runAi(true));
-
       let out: Uint8Array;
-      if (isAcro && ai && Object.keys(ai).length > 0) {
-        out = await fillAcroFormByName({
-          templateBytes: bytes.slice(0),
-          annexeBytes,
-          valuesByName: ai,
-          champs,
-          signatureDataUrl: signature,
-        });
-      } else {
-        const merged = ai && !isAcro
-          ? { ...resolved, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => String(v ?? '').trim() !== '')) }
-          : resolved;
+      if (champs.length > 0 && sectioned) {
+        // Schéma calibré : remplissage 100% déterministe, section par section
         const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
         out = await fill({
           templateBytes: bytes.slice(0),
           annexeBytes,
           champs: isAcro ? champs : effectiveChamps,
-          values: merged,
+          values: resolved,
+          valuesById: resolvedChamps.byId,
           signatureDataUrl: signature,
         });
+      } else {
+        // Modèle non calibré : repli sur la déduction IA
+        const ai = aiByName ?? (await runAi(true));
+        if (isAcro && ai && Object.keys(ai).length > 0) {
+          out = await fillAcroFormByName({
+            templateBytes: bytes.slice(0),
+            annexeBytes,
+            valuesByName: ai,
+            champs,
+            signatureDataUrl: signature,
+          });
+        } else {
+          const merged = ai && !isAcro
+            ? { ...resolved, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => String(v ?? '').trim() !== '')) }
+            : resolved;
+          const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
+          out = await fill({
+            templateBytes: bytes.slice(0),
+            annexeBytes,
+            champs: isAcro ? champs : effectiveChamps,
+            values: merged,
+            signatureDataUrl: signature,
+          });
+        }
       }
+
       setPreviewBytes(out);
       const blob = new Blob([out.slice().buffer as ArrayBuffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -396,7 +417,7 @@ export default function RemplirDemandeLocation() {
                 {(scale) =>
                   (isAcro ? [] : effectiveChamps).filter((c) => c.page === p).map((c) => {
                     const isSign = c.cle_champ === SIGNATURE_KEY;
-                    const text = isSign ? '' : values[c.cle_champ] ?? '';
+                    const text = isSign ? '' : resolvedChamps.byId[c.id] ?? values[c.cle_champ] ?? '';
                     return (
                       <DraggableBox
                         key={c.id}
