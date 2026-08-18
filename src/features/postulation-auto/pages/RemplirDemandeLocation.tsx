@@ -286,12 +286,17 @@ export default function RemplirDemandeLocation() {
         <div ref={containerRef} className="flex-1 overflow-auto bg-muted/40 p-3 space-y-6">
           {!formulaireId && <p className="py-16 text-center text-sm text-muted-foreground">Choisissez un modèle pour afficher l'aperçu.</p>}
           {formulaireId && !doc && <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
+          {doc && isAcro && (
+            <div className="text-center">
+              <Badge variant="secondary">Remplissage natif par nom de champ — aperçu réel, aucun placement manuel</Badge>
+            </div>
+          )}
           {doc && Array.from({ length: numPages }, (_, i) => i + 1).map((p) => (
             <div key={p} className="space-y-1">
               <p className="text-center text-xs text-muted-foreground">Page {p}</p>
               <PdfPage doc={doc} pageNumber={p} width={width}>
                 {(scale) =>
-                  effectiveChamps.filter((c) => c.page === p).map((c) => {
+                  (isAcro ? [] : effectiveChamps).filter((c) => c.page === p).map((c) => {
                     const isSign = c.cle_champ === SIGNATURE_KEY;
                     const text = isSign ? '' : values[c.cle_champ] ?? '';
                     return (
