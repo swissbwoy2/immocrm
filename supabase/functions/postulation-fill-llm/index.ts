@@ -227,16 +227,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     let dateVisite = "";
-    if (offreId) {
+    if (resolvedOffreId) {
       const { data: visite } = await admin
         .from("visites")
         .select("date_visite")
-        .eq("offre_id", offreId)
+        .eq("offre_id", resolvedOffreId)
         .order("date_visite", { ascending: false })
         .limit(1)
         .maybeSingle();
       dateVisite = fmtDate(visite?.date_visite as any);
     }
+
 
     const dossier = {
       candidat_principal: {
