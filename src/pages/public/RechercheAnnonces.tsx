@@ -220,7 +220,6 @@ export default function RechercheAnnonces() {
       if (neufOnly) query = query.ilike('etat_bien', '%neuf%');
 
       // Mots-clés : chaque mot doit être présent (titre / description / points forts)
-      splitList(motsCles.replace(/\s+/g, ' ')).forEach(() => {});
       motsCles
         .split(/[\s,]+/)
         .map((m) => escapeOr(m))
