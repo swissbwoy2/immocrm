@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 export default function ProprietaireDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -245,6 +246,7 @@ export default function ProprietaireDashboard() {
       </div>
       
       <div className="relative z-10 p-4 md:p-8">
+        <DashboardBanner />
         {/* Header */}
         <PremiumProprietaireDashboardHeader
           userName={profile?.prenom}
