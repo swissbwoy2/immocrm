@@ -9,6 +9,7 @@ import { PremiumPageShellV2, PremiumPageHeaderV2, PremiumEmptyStateV2 } from '@/
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 interface Props {
   profile: { prenom?: string; nom?: string; parcours_type?: string } | null;
@@ -48,6 +49,7 @@ export default function RenovationClientDashboard({ profile }: Props) {
   return (
     <div className="flex-1 overflow-y-auto">
       <PremiumPageShellV2>
+        <DashboardAdBanner />
         <PremiumPageHeaderV2
           title={profile?.prenom ? `Bienvenue, ${profile.prenom}` : 'Tableau de bord'}
           subtitle="Suivez vos projets de rénovation en temps réel"

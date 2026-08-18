@@ -36,6 +36,7 @@ import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { parseZones, formatZones } from '@/lib/buyerProfile';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 interface DashboardAchatProps {
   profile?: { prenom?: string; nom?: string } | null;
@@ -139,6 +140,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
         <FloatingParticles count={8} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
         <PremiumPageShellV2 className="relative z-10">
           <MustChangePasswordBanner />
+          <DashboardAdBanner />
 
           <PremiumDashboardHeader
             userName={profile?.prenom}

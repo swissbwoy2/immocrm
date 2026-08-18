@@ -13,6 +13,7 @@ import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog'
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { AdminDefaultGoalsManager } from '@/components/stats/AdminDefaultGoalsManager';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
+import { DashboardBannerManager } from '@/components/settings/DashboardBannerManager';
 
 export default function AdminParametres() {
   const { user } = useAuth();
@@ -384,6 +385,9 @@ export default function AdminParametres() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Bannière dashboard client */}
+          <DashboardBannerManager />
 
           {/* Google Agenda */}
           <GoogleCalendarConnect />

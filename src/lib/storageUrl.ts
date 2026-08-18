@@ -9,6 +9,7 @@ export const PRIVATE_BUCKETS = [
   'client-documents',
   'documents_immeuble',
   'message-attachments',
+  'marketing-assets',
 ] as const;
 
 const SIGNED_TTL_SECONDS = 3600; // 1 h

@@ -3724,6 +3724,42 @@ export type Database = {
           },
         ]
       }
+      dashboard_banners: {
+        Row: {
+          actif: boolean
+          created_at: string
+          id: string
+          image_url: string
+          lien_url: string | null
+          texte: string | null
+          titre: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          image_url: string
+          lien_url?: string | null
+          texte?: string | null
+          titre?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          image_url?: string
+          lien_url?: string | null
+          texte?: string | null
+          titre?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       default_agent_goals: {
         Row: {
           created_at: string | null

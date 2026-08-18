@@ -9,6 +9,7 @@ import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
 import { Loader2, Sparkles, Clock, Banknote, FileText, ShieldCheck, Mail, Phone } from 'lucide-react';
 import { formatCHF } from '@/lib/purchaseFinancing';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 interface Props {
   profile?: { prenom?: string; nom?: string } | null;
@@ -31,6 +32,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
   return (
     <PremiumPageShellV2>
       <div className="space-y-6 p-4 md:p-6">
+        <DashboardAdBanner />
         <PremiumDashboardHeader userName={fullName} parcoursType="achat" />
         <div className="flex justify-end">
           <Badge className="bg-amber-500/15 text-amber-700 border-amber-400/40">En attente d'activation</Badge>
