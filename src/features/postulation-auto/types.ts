@@ -29,6 +29,8 @@ export interface FormulaireChamp {
   /** Mode acroform : nom exact du champ dans le PDF */
   nom_champ_pdf?: string | null;
   type_champ?: 'text' | 'checkbox' | 'radio' | 'dropdown' | 'optionlist';
+  /** Section du formulaire : candidat principal, conjoint/co-candidat ou garant */
+  section?: 'principal' | 'conjoint' | 'garant' | null;
   /** Option à cocher/sélectionner (radio, dropdown) */
   option_valeur?: string | null;
 }
