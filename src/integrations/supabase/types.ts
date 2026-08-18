@@ -355,6 +355,30 @@ export type Database = {
           },
         ]
       }
+      agent_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          signature_path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          signature_path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          signature_path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agents: {
         Row: {
           created_at: string | null
@@ -5025,6 +5049,95 @@ export type Database = {
           quiz_score?: number | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      formulaire_champs: {
+        Row: {
+          alignement: string
+          cle_champ: string
+          created_at: string
+          formulaire_id: string
+          hauteur: number
+          id: string
+          largeur: number
+          page: number
+          pos_x: number
+          pos_y: number
+          taille_police: number
+          updated_at: string
+        }
+        Insert: {
+          alignement?: string
+          cle_champ: string
+          created_at?: string
+          formulaire_id: string
+          hauteur?: number
+          id?: string
+          largeur?: number
+          page?: number
+          pos_x?: number
+          pos_y?: number
+          taille_police?: number
+          updated_at?: string
+        }
+        Update: {
+          alignement?: string
+          cle_champ?: string
+          created_at?: string
+          formulaire_id?: string
+          hauteur?: number
+          id?: string
+          largeur?: number
+          page?: number
+          pos_x?: number
+          pos_y?: number
+          taille_police?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formulaire_champs_formulaire_id_fkey"
+            columns: ["formulaire_id"]
+            isOneToOne: false
+            referencedRelation: "formulaires_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formulaires_location: {
+        Row: {
+          actif: boolean
+          annexe_pdf_url: string | null
+          created_at: string
+          created_by: string | null
+          fichier_pdf_url: string | null
+          id: string
+          nb_pages: number
+          nom: string
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          annexe_pdf_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          fichier_pdf_url?: string | null
+          id?: string
+          nb_pages?: number
+          nom: string
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          annexe_pdf_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          fichier_pdf_url?: string | null
+          id?: string
+          nb_pages?: number
+          nom?: string
+          updated_at?: string
         }
         Relationships: []
       }
