@@ -52,6 +52,7 @@ export default function AcroformMapper({ formulaire }: { formulaire: FormulaireL
           alignement: 'left' as const,
           nom_champ_pdf: f.name,
           type_champ: f.type,
+          section: 'principal' as const,
         },
       ];
     });
@@ -84,6 +85,7 @@ export default function AcroformMapper({ formulaire }: { formulaire: FormulaireL
           nom_champ_pdf: f.name,
           type_champ: f.type,
           option_valeur: c!.option_valeur ?? null,
+          section: (c as any)!.section ?? 'principal',
           page: 1,
           pos_x: 0, pos_y: 0, largeur: 0, hauteur: 0, taille_police: 10, alignement: 'left',
         }));
@@ -162,6 +164,19 @@ export default function AcroformMapper({ formulaire }: { formulaire: FormulaireL
                     {STANDARD_FIELD_KEYS.map((k) => (
                       <SelectItem key={k.key} value={k.key}>{k.groupe} — {k.label}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={(champ as any)?.section ?? 'principal'}
+                  onValueChange={(v) =>
+                    setChamps((prev) => prev.map((c) => (c.nom_champ_pdf === f.name ? ({ ...c, section: v } as any) : c)))
+                  }
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="principal">Section : candidat principal</SelectItem>
+                    <SelectItem value="conjoint">Section : conjoint / co-candidat</SelectItem>
+                    <SelectItem value="garant">Section : garant</SelectItem>
                   </SelectContent>
                 </Select>
                 {(f.type === 'radio' || f.type === 'checkbox' || f.type === 'dropdown') && champ?.cle_champ && (

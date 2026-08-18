@@ -20,7 +20,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { ArrowLeft, Copy, FileText, Plus, Save, Trash2, Upload, Loader2 } from 'lucide-react';
+import { ArrowLeft, Copy, Eye, FileText, Plus, Save, Trash2, Upload, Loader2 } from 'lucide-react';
+import { calibrateFormulaire } from '../lib/calibrate';
 
 export default function ModelesDemandeLocation() {
   const { user } = useAuth();
@@ -179,6 +180,7 @@ export default function ModelesDemandeLocation() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => setEditing(f)}>Éditer le mapping</Button>
+                  <CalibrateButton formulaire={f} onDone={reload} />
                   <Button size="sm" variant="outline" onClick={() => toggleActif(f)}>{f.actif ? 'Désactiver' : 'Activer'}</Button>
                   <Button size="sm" variant="ghost" onClick={() => duplicate(f)} className="gap-1"><Copy className="h-3.5 w-3.5" />Dupliquer</Button>
                   <Button size="sm" variant="ghost" onClick={() => remove(f)} className="gap-1 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -256,6 +258,7 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
       hauteur: 16,
       taille_police: 10,
       alignement: 'left',
+      section: 'principal',
     };
     setChamps((prev) => [...prev, champ]);
     setSelectedId(tmpId);
@@ -287,6 +290,7 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
           .update({
             cle_champ: c.cle_champ, page: c.page, pos_x: c.pos_x, pos_y: c.pos_y,
             largeur: c.largeur, hauteur: c.hauteur, taille_police: c.taille_police, alignement: c.alignement,
+            section: c.section ?? 'principal',
           })
           .eq('id', c.id);
       }
@@ -324,6 +328,7 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <CalibrateButton formulaire={formulaire} onDone={reload} />
           <Button variant="outline" size="sm" onClick={switchMode}>
             {isAcro ? 'Passer en mode coordonnées' : 'Passer en champs natifs'}
           </Button>
@@ -387,6 +392,17 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Section</Label>
+                    <Select value={selected.section ?? 'principal'} onValueChange={(v) => patch(selected.id, { section: v as any })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="principal">Candidat principal</SelectItem>
+                        <SelectItem value="conjoint">Conjoint / co-candidat</SelectItem>
+                        <SelectItem value="garant">Garant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5"><Label className="text-xs">X</Label>
                       <Input type="number" value={Math.round(Number(selected.pos_x))} onChange={(e) => patch(selected.id, { pos_x: Number(e.target.value) })} /></div>
@@ -436,5 +452,32 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
       </div>
       )}
     </div>
+  );
+}
+
+
+/* ------------------------- Calibration VISION (IA) ------------------------ */
+
+function CalibrateButton({ formulaire, onDone }: { formulaire: FormulaireLocation; onDone: () => void }) {
+  const [running, setRunning] = useState(false);
+
+  const run = async () => {
+    setRunning(true);
+    try {
+      const res = await calibrateFormulaire({ formulaireId: formulaire.id, pdfPath: formulaire.fichier_pdf_url });
+      toast.success(`Schéma calibré : ${res.count} champ(s), dont ${res.conjoint} en section conjoint`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Calibration impossible');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <Button size="sm" variant="secondary" className="gap-1" onClick={run} disabled={running}>
+      {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+      Calibrer avec l'IA (vision)
+    </Button>
   );
 }

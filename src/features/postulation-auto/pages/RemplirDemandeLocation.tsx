@@ -9,6 +9,7 @@ import { usePdfDocument } from '../lib/pdfjs';
 import { fillAcroFormByName, fillAcroFormTemplate, fillPdfTemplate } from '../lib/fillPdf';
 import { llmFillPostulation } from '../lib/llmFill';
 import { buildPostulationValues } from '../lib/buildValues';
+import { buildSectionedValues, resolveChampValues, type SectionedValues } from '../lib/sectionValues';
 import PdfPage from '../components/PdfPage';
 import DraggableBox from '../components/DraggableBox';
 import SignaturePad from '@/components/mandat/SignaturePad';
@@ -48,6 +49,7 @@ export default function RemplirDemandeLocation() {
   const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
   const [aiByName, setAiByName] = useState<Record<string, string> | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [sectioned, setSectioned] = useState<SectionedValues | null>(null);
 
   const formulaire = useMemo(() => formulaires.find((f) => f.id === formulaireId) ?? null, [formulaires, formulaireId]);
   const isAcro = formulaire?.mode === 'acroform';
@@ -56,18 +58,34 @@ export default function RemplirDemandeLocation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(700);
 
+  const effectiveChamps: FormulaireChamp[] = useMemo(
+    () => champs.map((c) => {
+      const o = overrides[c.id];
+      return o ? { ...c, pos_x: o.x, pos_y: o.y, largeur: o.w, hauteur: o.h } : c;
+    }),
+    [champs, overrides],
+  );
+
+  /* Valeurs résolues champ par champ selon la SECTION du schéma calibré */
+  const resolvedChamps = useMemo(
+    () => (sectioned ? resolveChampValues(effectiveChamps, sectioned) : { byId: {}, byName: {} }),
+    [effectiveChamps, sectioned],
+  );
+
   /* Aperçu WYSIWYG du remplissage natif */
   useEffect(() => {
     if (!isAcro || !bytes) { setPreviewBytes(null); return; }
     let cancelled = false;
-    const preview = aiByName && Object.keys(aiByName).length > 0
-      ? fillAcroFormByName({ templateBytes: bytes.slice(0), valuesByName: aiByName, champs, signatureDataUrl: signature })
-      : fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature });
+    const preview = champs.length > 0
+      ? fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, valuesById: resolvedChamps.byId, signatureDataUrl: signature })
+      : aiByName && Object.keys(aiByName).length > 0
+        ? fillAcroFormByName({ templateBytes: bytes.slice(0), valuesByName: aiByName, champs, signatureDataUrl: signature })
+        : fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature });
     preview
       .then((out) => { if (!cancelled) setPreviewBytes(out); })
       .catch(() => { if (!cancelled) setPreviewBytes(null); });
     return () => { cancelled = true; };
-  }, [isAcro, bytes, champs, values, signature, aiByName]);
+  }, [isAcro, bytes, champs, values, signature, aiByName, resolvedChamps]);
 
   useEffect(() => {
     const update = () => setWidth(Math.max(300, Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8)));
@@ -156,11 +174,13 @@ export default function RemplirDemandeLocation() {
   /* Résolution automatique des valeurs dès qu'un client (et une offre) sont choisis */
   useEffect(() => {
     let cancelled = false;
-    if (!clientId || !user?.id) { setValues({}); return; }
+    if (!clientId || !user?.id) { setValues({}); setSectioned(null); return; }
     (async () => {
       try {
         const { values: v } = await buildPostulationValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
         if (!cancelled) setValues(v);
+        const sv = await buildSectionedValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
+        if (!cancelled) setSectioned(sv);
       } catch { /* noop */ }
     })();
     return () => { cancelled = true; };
@@ -203,14 +223,6 @@ export default function RemplirDemandeLocation() {
     }
   };
 
-  const effectiveChamps: FormulaireChamp[] = useMemo(
-    () => champs.map((c) => {
-      const o = overrides[c.id];
-      return o ? { ...c, pos_x: o.x, pos_y: o.y, largeur: o.w, hauteur: o.h } : c;
-    }),
-    [champs, overrides],
-  );
-
   const saveSignature = async () => {
     if (!tempSignature || !user?.id) return;
     const path = `${user.id}/signature.png`;
@@ -250,31 +262,50 @@ export default function RemplirDemandeLocation() {
 
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
 
-      // Remplissage intelligent : le LLM déduit quelle donnée va dans quel champ
-      const ai = aiByName ?? (await runAi(true));
+      const sv = sectioned ?? (user?.id
+        ? await buildSectionedValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu })
+        : null);
+      if (sv && sv !== sectioned) setSectioned(sv);
+      const byId = sv ? resolveChampValues(effectiveChamps, sv).byId : {};
 
       let out: Uint8Array;
-      if (isAcro && ai && Object.keys(ai).length > 0) {
-        out = await fillAcroFormByName({
-          templateBytes: bytes.slice(0),
-          annexeBytes,
-          valuesByName: ai,
-          champs,
-          signatureDataUrl: signature,
-        });
-      } else {
-        const merged = ai && !isAcro
-          ? { ...resolved, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => String(v ?? '').trim() !== '')) }
-          : resolved;
+      if (champs.length > 0 && sv) {
+        // Schéma calibré : remplissage 100% déterministe, section par section
         const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
         out = await fill({
           templateBytes: bytes.slice(0),
           annexeBytes,
           champs: isAcro ? champs : effectiveChamps,
-          values: merged,
+          values: resolved,
+          valuesById: byId,
           signatureDataUrl: signature,
         });
+      } else {
+        // Modèle non calibré : repli sur la déduction IA
+        const ai = aiByName ?? (await runAi(true));
+        if (isAcro && ai && Object.keys(ai).length > 0) {
+          out = await fillAcroFormByName({
+            templateBytes: bytes.slice(0),
+            annexeBytes,
+            valuesByName: ai,
+            champs,
+            signatureDataUrl: signature,
+          });
+        } else {
+          const merged = ai && !isAcro
+            ? { ...resolved, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => String(v ?? '').trim() !== '')) }
+            : resolved;
+          const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
+          out = await fill({
+            templateBytes: bytes.slice(0),
+            annexeBytes,
+            champs: isAcro ? champs : effectiveChamps,
+            values: merged,
+            signatureDataUrl: signature,
+          });
+        }
       }
+
       setPreviewBytes(out);
       const blob = new Blob([out.slice().buffer as ArrayBuffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -342,6 +373,12 @@ export default function RemplirDemandeLocation() {
           <Button onClick={() => runAi()} disabled={aiLoading || !formulaireId || !clientId} variant="secondary" className="w-full gap-2">
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Remplir avec l'IA
           </Button>
+          {sectioned && champs.length > 0 && (
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Schéma calibré : {champs.length} champ(s) — {champs.filter((c) => c.section === 'conjoint').length} en section conjoint.
+              {sectioned.hasConjoint ? ' Co-candidat détecté.' : ' Aucun co-candidat : section conjoint laissée vide.'}
+            </p>
+          )}
           {aiByName && (
             <p className="text-[11px] leading-4 text-emerald-600">
               IA : {Object.values(aiByName).filter((v) => String(v ?? '').trim() !== '').length} champ(s) déduit(s).
@@ -392,7 +429,7 @@ export default function RemplirDemandeLocation() {
                 {(scale) =>
                   (isAcro ? [] : effectiveChamps).filter((c) => c.page === p).map((c) => {
                     const isSign = c.cle_champ === SIGNATURE_KEY;
-                    const text = isSign ? '' : values[c.cle_champ] ?? '';
+                    const text = isSign ? '' : resolvedChamps.byId[c.id] ?? values[c.cle_champ] ?? '';
                     return (
                       <DraggableBox
                         key={c.id}
