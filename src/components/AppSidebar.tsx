@@ -536,10 +536,17 @@ export function AppSidebar() {
 
   };
 
-  const sections = useMemo(
-    () => getMenuForRole(userRole || '', profile?.parcours_type),
-    [userRole, profile?.parcours_type]
-  );
+  const sections = useMemo(() => {
+    const base = getMenuForRole(userRole || '', profile?.parcours_type);
+    if (!base.length) return base;
+    const portail: MenuItem = { name: "Portail d'annonces", icon: Globe, path: '/annonces', notifKey: null };
+    const [first, ...rest] = base;
+    if (first.items.some((i) => i.path === '/annonces')) return base;
+    // Insère juste après le "Tableau de bord" (premier élément) du premier bloc
+    const items = [...first.items];
+    items.splice(1, 0, portail);
+    return [{ ...first, items }, ...rest];
+  }, [userRole, profile?.parcours_type]);
 
   if (!user || !userRole) return null;
 
