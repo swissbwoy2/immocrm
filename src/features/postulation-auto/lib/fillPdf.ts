@@ -12,6 +12,18 @@ export function sanitizePdfText(input: string): string {
     .replace(/[\u2013\u2014]/g, '-');
 }
 
+/**
+ * Garde-fou : on n'écrit JAMAIS le nom d'une clé/champ technique dans le PDF
+ * (ex. "bien_loyer_ne", "co_prenom"). Si la valeur ressemble à un identifiant
+ * snake_case sans espace, on la considère comme vide.
+ */
+export function isKeyLikeValue(value: string): boolean {
+  const v = (value ?? '').trim();
+  if (!v || /\s/.test(v)) return false;
+  return /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(v);
+}
+
+
 export interface FillOptions {
   templateBytes: ArrayBuffer | Uint8Array;
   annexeBytes?: ArrayBuffer | Uint8Array | null;
@@ -82,7 +94,7 @@ export async function fillPdfTemplate({
     }
 
     const raw = values[champ.cle_champ];
-    if (!raw) continue;
+    if (!raw || isKeyLikeValue(String(raw))) continue;
     const text = sanitizePdfText(String(raw));
     const size = Number(champ.taille_police) || 10;
     const textWidth = font.widthOfTextAtSize(text, size);
@@ -150,7 +162,8 @@ export async function fillAcroFormTemplate({
   for (const champ of champs) {
     const name = champ.nom_champ_pdf;
     if (!name || !champ.cle_champ) continue;
-    const value = sanitizePdfText(String(values[champ.cle_champ] ?? ''));
+    const rawValue = String(values[champ.cle_champ] ?? '');
+    const value = isKeyLikeValue(rawValue) ? '' : sanitizePdfText(rawValue);
 
     try {
       if (champ.cle_champ === SIGNATURE_KEY) {
@@ -251,7 +264,8 @@ export async function fillAcroFormByName({
     const name = field.getName();
     const raw = valuesByName[name];
     if (raw === undefined) continue;
-    const value = sanitizePdfText(String(raw ?? '')).trim();
+    const valueRaw = sanitizePdfText(String(raw ?? '')).trim();
+    const value = isKeyLikeValue(valueRaw) ? '' : valueRaw;
     const ctor = field.constructor?.name ?? '';
     try {
       if (ctor.includes('CheckBox')) {

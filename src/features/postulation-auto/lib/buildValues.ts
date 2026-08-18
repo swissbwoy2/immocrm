@@ -33,6 +33,8 @@ export function formatPhoneCH(tel?: string | null): string {
 export interface BuildValuesResult {
   values: Record<string, string>;
   clientNom: string;
+  /** Offre réellement utilisée (résolue automatiquement si non fournie) */
+  offreId: string | null;
 }
 
 /**
@@ -71,15 +73,24 @@ export async function buildPostulationValues(params: {
 
   const co: any = (candidates ?? []).find((c: any) => c.type === 'conjoint' || c.type === 'colocataire') ?? (candidates ?? [])[0] ?? null;
 
+  // Offre : si aucune n'est fournie, on prend automatiquement la plus récente du client
+  const offreSelect = 'id, adresse, prix, pieces, etage, disponibilite, lien_annonce, contact_gerance, created_at';
   let offre: any = null;
   if (offreId) {
+    const { data } = await supabase.from('offres').select(offreSelect).eq('id', offreId).maybeSingle();
+    offre = data;
+  }
+  if (!offre) {
     const { data } = await supabase
       .from('offres')
-      .select('adresse, prix, pieces, etage, disponibilite, lien_annonce, contact_gerance')
-      .eq('id', offreId)
+      .select(offreSelect)
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
     offre = data;
   }
+  const resolvedOffreId: string | null = offre?.id ?? null;
 
   const { data: agent } = await supabase
     .from('profiles')
@@ -89,16 +100,17 @@ export async function buildPostulationValues(params: {
 
   // Date de la visite liée (si une visite existe pour ce client / cette offre)
   let dateVisite = '';
-  if (offreId) {
+  if (resolvedOffreId) {
     const { data: visite } = await supabase
       .from('visites')
       .select('date_visite')
-      .eq('offre_id', offreId)
+      .eq('offre_id', resolvedOffreId)
       .order('date_visite', { ascending: false })
       .limit(1)
       .maybeSingle();
     dateVisite = fmtDate(visite?.date_visite as any);
   }
+
 
   const revenusMensuels = Number(client?.revenus_mensuels ?? 0) || 0;
   const lieuSignature = lieu ?? 'Genève';
@@ -187,6 +199,7 @@ export async function buildPostulationValues(params: {
 
   return {
     values,
+    offreId: resolvedOffreId,
     clientNom: `${clientProfile?.prenom ?? ''} ${clientProfile?.nom ?? ''}`.trim(),
   };
 }

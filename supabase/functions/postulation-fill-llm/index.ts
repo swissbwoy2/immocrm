@@ -91,6 +91,8 @@ RÈGLES STRICTES (non négociables) :
 4. Si une donnée est manquante ou inconnue, laisse le champ VIDE (chaîne vide). N'invente JAMAIS de valeur, aucune approximation, aucun "N/A".
 5. Ne mets jamais de donnée du candidat principal dans un champ destiné au garant, au co-locataire ou au co-candidat, sauf s'il existe réellement un co-candidat dans le dossier.
 6. Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour.
+7. Si le dossier contient un "co_candidat" (garant, colocataire, co-débiteur, signataire solidaire), remplis IMPÉRATIVEMENT la section garant / co-locataire / 2e candidat du formulaire avec SES données (nom, prénom, date de naissance, état civil, nationalité, permis, profession, employeur, revenus). Ses champs e-mail et téléphone de contact restent ceux de l'AGENT.
+8. N'écris JAMAIS le nom technique d'un champ (ex. "bien_loyer_net", "co_prenom") comme valeur : si la donnée est absente, renvoie une chaîne vide.
 
 Pour les cases à cocher : réponds "Oui" (à cocher) ou "" (laisser vide).
 Pour les boutons radio / listes : réponds EXACTEMENT une des options proposées, ou "" si aucune ne correspond.
@@ -192,21 +194,33 @@ Deno.serve(async (req) => {
       .from("client_candidates")
       .select("*")
       .eq("client_id", clientId)
+      .order("created_at", { ascending: true })
       .limit(5);
+    const PRIORITE = ["colocataire", "co_debiteur", "signataire_solidaire", "garant"];
     const co: any =
-      (candidates ?? []).find((c: any) => c.type === "conjoint" || c.type === "colocataire") ??
+      PRIORITE.map((t) => (candidates ?? []).find((c: any) => c.type === t)).find(Boolean) ??
       (candidates ?? [])[0] ??
       null;
 
+    // ---- Offre : si aucune n'est fournie, on prend automatiquement la plus récente du client ----
+    const offreSelect = "id, adresse, prix, pieces, surface, etage, disponibilite, contact_gerance, lien_annonce, created_at";
     let offre: any = null;
     if (offreId) {
+      const { data } = await admin.from("offres").select(offreSelect).eq("id", offreId).maybeSingle();
+      offre = data;
+    }
+    if (!offre) {
       const { data } = await admin
         .from("offres")
-        .select("adresse, prix, pieces, surface, etage, disponibilite, contact_gerance, lien_annonce")
-        .eq("id", offreId)
+        .select(offreSelect)
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       offre = data;
     }
+    const resolvedOffreId: string | null = offre?.id ?? null;
+
 
     const { data: agent } = await admin
       .from("profiles")
@@ -215,16 +229,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     let dateVisite = "";
-    if (offreId) {
+    if (resolvedOffreId) {
       const { data: visite } = await admin
         .from("visites")
         .select("date_visite")
-        .eq("offre_id", offreId)
+        .eq("offre_id", resolvedOffreId)
         .order("date_visite", { ascending: false })
         .limit(1)
         .maybeSingle();
       dateVisite = fmtDate(visite?.date_visite as any);
     }
+
 
     const dossier = {
       candidat_principal: {
@@ -259,16 +274,33 @@ Deno.serve(async (req) => {
             prenom: co.prenom ?? "",
             nom: co.nom ?? "",
             date_naissance: fmtDate(co.date_naissance),
-            etat_civil: co.etat_civil ?? "",
+            etat_civil: co.etat_civil ?? co.situation_familiale ?? "",
             nationalite: co.nationalite ?? "",
             permis_sejour: co.type_permis ?? co.permis ?? "",
             adresse_actuelle: co.adresse ?? client.adresse ?? "",
+            npa_ville_actuelle: extractNpaVille(co.adresse ?? client.adresse),
             profession: co.profession ?? "",
             employeur: co.employeur ?? "",
+            lieu_travail: co.secteur_activite ?? "",
             revenus_mensuels: co.revenus_mensuels ?? "",
+            revenus_annuels: co.revenus_mensuels ? Number(co.revenus_mensuels) * 12 : "",
             lien: co.lien_avec_client ?? co.type ?? "",
+            role: co.type ?? "",
           }
         : null,
+      autres_candidats: (candidates ?? [])
+        .filter((c: any) => !co || c.id !== co.id)
+        .map((c: any) => ({
+          role: c.type ?? "",
+          prenom: c.prenom ?? "",
+          nom: c.nom ?? "",
+          date_naissance: fmtDate(c.date_naissance),
+          nationalite: c.nationalite ?? "",
+          permis_sejour: c.type_permis ?? "",
+          profession: c.profession ?? "",
+          employeur: c.employeur ?? "",
+          revenus_mensuels: c.revenus_mensuels ?? "",
+        })),
       bien_convoite: offre
         ? {
             adresse: offre.adresse ?? "",
@@ -279,9 +311,11 @@ Deno.serve(async (req) => {
             loyer_mensuel: offre.prix ?? "",
             disponibilite: offre.disponibilite ?? "",
             regie: offre.contact_gerance ?? "",
+            lien_annonce: offre.lien_annonce ?? "",
             date_visite: dateVisite,
           }
         : null,
+
       agent_responsable: {
         prenom: agent?.prenom ?? "",
         nom: agent?.nom ?? "",
@@ -340,6 +374,7 @@ Renvoie un objet JSON dont les clés sont exactement les identifiants de champs 
       values,
       fields: mode === "acroform" ? pdfFields : cles.map((c) => ({ name: c.cle_champ, type: "text" })),
       filled: nonEmpty,
+      offre_id: resolvedOffreId,
       dossier_resume: {
         client: `${dossier.candidat_principal.prenom} ${dossier.candidat_principal.nom}`.trim(),
         agent_email: dossier.agent_responsable.email,
