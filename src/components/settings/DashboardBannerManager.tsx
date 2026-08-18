@@ -208,9 +208,33 @@ export function DashboardBannerManager() {
               <Switch checked={afficherOverlay} onCheckedChange={setAfficherOverlay} />
             </div>
 
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+              Si tu remplis les liens iOS/Android, le clic ouvre le bon store selon l'appareil ;
+              sinon l'URL simple s'ouvre pour tous.
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Lien (optionnel)</Label>
+                <Label>Lien App Store (iOS)</Label>
+                <Input
+                  placeholder="https://apps.apple.com/…"
+                  value={lienIos}
+                  onChange={(e) => setLienIos(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lien Play Store (Android)</Label>
+                <Input
+                  placeholder="https://play.google.com/store/apps/…"
+                  value={lienAndroid}
+                  onChange={(e) => setLienAndroid(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>URL simple (optionnel)</Label>
                 <Input
                   placeholder="https://… ou /client/offres-recues"
                   value={lienUrl}
@@ -222,6 +246,7 @@ export function DashboardBannerManager() {
                 <Input value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={80} />
               </div>
             </div>
+
 
             <div className="space-y-2">
               <Label>Texte (optionnel)</Label>
