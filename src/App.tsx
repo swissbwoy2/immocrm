@@ -446,6 +446,8 @@ const App = () => (
               <Route path="/agent/deposer-candidature" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDeposerCandidature /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-demande" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirDemande /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/modeles-demande-location" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><ModelesDemandeLocation /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/postulation-auto" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><RemplirDemandeLocation /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/formation" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFormation /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/formation/:chapitreId" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFormationChapitre /></AppLayout></ProtectedRoute>} />
