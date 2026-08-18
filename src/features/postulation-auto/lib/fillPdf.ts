@@ -215,3 +215,86 @@ export async function fillAcroFormTemplate({
 
   return pdfDoc.save();
 }
+
+/* -------------------------------------------------------------------------- */
+/*            Remplissage AcroForm par NOM DE CHAMP (valeurs IA)               */
+/* -------------------------------------------------------------------------- */
+
+export interface FillByNameOptions {
+  templateBytes: ArrayBuffer | Uint8Array;
+  annexeBytes?: ArrayBuffer | Uint8Array | null;
+  /** { nomDuChampPdf: valeur } tel que renvoyé par le moteur IA */
+  valuesByName: Record<string, string>;
+  /** champs mappés — utilisés uniquement pour placer la signature */
+  champs?: FormulaireChamp[];
+  signatureDataUrl?: string | null;
+  flatten?: boolean;
+}
+
+/**
+ * Remplit un PDF interactif directement par nom de champ (sortie du moteur IA).
+ * Le type réel du champ est détecté dans le PDF, aucune configuration requise.
+ */
+export async function fillAcroFormByName({
+  templateBytes,
+  annexeBytes,
+  valuesByName,
+  champs = [],
+  signatureDataUrl,
+  flatten = true,
+}: FillByNameOptions): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(templateBytes, { ignoreEncryption: true });
+  const form = pdfDoc.getForm();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  for (const field of form.getFields()) {
+    const name = field.getName();
+    const raw = valuesByName[name];
+    if (raw === undefined) continue;
+    const value = sanitizePdfText(String(raw ?? '')).trim();
+    const ctor = field.constructor?.name ?? '';
+    try {
+      if (ctor.includes('CheckBox')) {
+        if (TRUTHY.includes(normalizeName(value))) (field as any).check();
+        else (field as any).uncheck();
+      } else if (ctor.includes('RadioGroup') || ctor.includes('Dropdown') || ctor.includes('OptionList')) {
+        const options: string[] = (field as any).getOptions?.() ?? [];
+        const opt = pickOption(options, value);
+        if (opt) (field as any).select(opt);
+      } else if (ctor.includes('TextField')) {
+        if (value) (field as any).setText(value);
+      }
+    } catch {
+      // champ non remplissable : on ignore
+    }
+  }
+
+  // Signature : placée sur les widgets mappés au champ "signature"
+  let signatureImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
+  if (signatureDataUrl?.startsWith('data:image')) {
+    try { signatureImage = await pdfDoc.embedPng(signatureDataUrl); } catch { signatureImage = null; }
+  }
+  if (signatureImage) {
+    for (const champ of champs.filter((c) => c.cle_champ === SIGNATURE_KEY && c.nom_champ_pdf)) {
+      try {
+        const field = form.getField(champ.nom_champ_pdf as string);
+        const widgets = (field as any).acroField?.getWidgets?.() ?? [];
+        for (const widget of widgets) {
+          const rect = widget.getRectangle();
+          const page = pdfDoc.getPages()[0];
+          const ratio = signatureImage.width / signatureImage.height;
+          let w = rect.width;
+          let h = w / ratio;
+          if (h > rect.height) { h = rect.height; w = h * ratio; }
+          page.drawImage(signatureImage, { x: rect.x, y: rect.y, width: w, height: h });
+        }
+      } catch { /* noop */ }
+    }
+  }
+
+  try { form.updateFieldAppearances(font); } catch { /* noop */ }
+  if (flatten) { try { form.flatten(); } catch { /* noop */ } }
+
+  await appendAnnexe(pdfDoc, annexeBytes);
+  return pdfDoc.save();
+}
