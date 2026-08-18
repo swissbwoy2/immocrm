@@ -52,15 +52,39 @@ export default function ModelesDemandeLocation() {
       let nbPages = 1;
       try {
         const { PDFDocument } = await import('pdf-lib');
-        nbPages = (await PDFDocument.load(bytes)).getPageCount();
+        nbPages = (await PDFDocument.load(bytes, { ignoreEncryption: true })).getPageCount();
       } catch { /* noop */ }
+
+      // Détection AcroForm + auto-mapping
+      const detected = await detectAcroFields(bytes);
+      const mode = shouldUseAcroform(detected) ? 'acroform' : 'overlay';
 
       await supabase
         .from('formulaires_location')
-        .update({ fichier_pdf_url: path, annexe_pdf_url: annexePath, nb_pages: nbPages })
+        .update({ fichier_pdf_url: path, annexe_pdf_url: annexePath, nb_pages: nbPages, mode })
         .eq('id', data.id);
 
-      toast.success('Modèle créé');
+      let auto = 0;
+      if (mode === 'acroform') {
+        const rows = detected
+          .map((f) => ({ f, m: autoMapFieldName(f.name) }))
+          .filter(({ m }) => !!m.cle_champ)
+          .map(({ f, m }) => ({
+            formulaire_id: data.id,
+            cle_champ: m.cle_champ as string,
+            nom_champ_pdf: f.name,
+            type_champ: f.type,
+            page: 1, pos_x: 0, pos_y: 0, largeur: 0, hauteur: 0, taille_police: 10, alignement: 'left',
+          }));
+        auto = rows.length;
+        if (rows.length) await supabase.from('formulaire_champs').insert(rows as any);
+      }
+
+      toast.success(
+        mode === 'acroform'
+          ? `PDF interactif détecté — ${auto}/${detected.length} champ(s) mappés automatiquement`
+          : 'Modèle créé (mode coordonnées)',
+      );
       setCreateOpen(false);
       setNom('');
       setFile(null);
