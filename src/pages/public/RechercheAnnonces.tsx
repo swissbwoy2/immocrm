@@ -716,22 +716,35 @@ export default function RechercheAnnonces() {
                 ))}
               </div>
             ) : resultats.length > 0 ? (
-              <div className={cn('grid gap-4', viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
-                {resultats.map((annonce, index) => (
-                  <div
-                    key={annonce.id}
-                    onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
-                    onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
-                    className={cn(
-                      'transition-all duration-200 animate-fade-in',
-                      viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl shadow-lg',
-                    )}
-                    style={{ animationDelay: `${index * 40}ms` }}
-                  >
-                    <PublicAnnonceCard annonce={annonce} featured={annonce.est_mise_en_avant} compact={false} />
+              <>
+                <div className={cn('grid gap-4', viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
+                  {resultatsVisibles.map((annonce, index) => (
+                    <div
+                      key={annonce.id}
+                      onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
+                      onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
+                      className={cn(
+                        'transition-all duration-200 animate-fade-in',
+                        viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl shadow-lg',
+                      )}
+                      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+                    >
+                      <PublicAnnonceCard annonce={annonce} featured={annonce.est_mise_en_avant} compact={false} />
+                    </div>
+                  ))}
+                </div>
+                {resultatsVisibles.length < resultats.length && (
+                  <div ref={sentinelRef} className="py-8 flex flex-col items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {resultatsVisibles.length} / {resultats.length} annonces
+                    </p>
+                    <Button variant="outline" className="cursor-pointer" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+                      Afficher plus
+                    </Button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+
             ) : (
               <div className="text-center py-16">
                 <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
