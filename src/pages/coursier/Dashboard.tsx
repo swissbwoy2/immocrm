@@ -14,6 +14,7 @@ import { AddressLink } from '@/components/AddressLink';
 import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
 import { CoursierClockCard } from '@/components/coursier/CoursierClockCard';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 export default function CoursierDashboard() {
   const { user } = useAuth();
@@ -145,6 +146,7 @@ export default function CoursierDashboard() {
   return (
     <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
       <div className="p-4 md:p-8 space-y-6 relative">
+        <DashboardBanner />
         <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
           <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />

@@ -23,6 +23,7 @@ import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 const setMeta = (name: string, content: string) => {
   let tag = document.querySelector(`meta[name="${name}"]`);
@@ -316,6 +317,7 @@ export default function RechercheAnnonces() {
   return (
     <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
+      <DashboardBanner wrapperClassName="container mx-auto px-4 pt-20" />
 
       {/* Search Bar - Sticky */}
       <div className="sticky top-16 z-40 bg-background border-b border-border shadow-sm">

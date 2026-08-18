@@ -14,6 +14,7 @@ import { AnnonceurLayout } from '@/components/annonceur/AnnonceurLayout';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 export default function AnnonceurDashboard() {
   const { user } = useAuth();
@@ -109,6 +110,7 @@ export default function AnnonceurDashboard() {
   return (
     <AnnonceurLayout>
       <div className="space-y-6">
+        <DashboardBanner />
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

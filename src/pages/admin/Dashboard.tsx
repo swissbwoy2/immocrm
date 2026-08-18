@@ -16,6 +16,7 @@ import { RecommendationStats } from '@/components/stats/RecommendationStats';
 import { PremiumKPICard } from '@/components/premium';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
 import { PremiumPageShellV2, PremiumPageHeaderV2 } from '@/components/dashboard/v2';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -277,6 +278,7 @@ export default function AdminDashboard() {
   return (
     <PullToRefresh onRefresh={loadData} className="flex-1 overflow-y-auto">
       <PremiumPageShellV2>
+        <DashboardBanner />
         <PremiumPageHeaderV2
           title="Tableau de bord"
           subtitle="Vue d'ensemble de l'activité de l'agence"

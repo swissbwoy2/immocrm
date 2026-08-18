@@ -8,6 +8,7 @@ import { Users, DollarSign, Clock, CheckCircle, Copy, Link, TrendingUp, Sparkles
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 interface ApporteurStats {
   total_referrals: number;
@@ -109,6 +110,7 @@ export default function ApporteurDashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="space-y-6 relative">
+      <DashboardBanner />
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
         <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />

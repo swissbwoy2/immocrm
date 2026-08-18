@@ -18,6 +18,7 @@ import { PremiumCandidaturesTraitementSection } from '@/components/premium/Premi
 import { PremiumProjectionFinanciereSection } from '@/components/premium/PremiumProjectionFinanciereSection';
 import { countUniqueOffres } from '@/utils/visitesCalculator';
 import { ClientReactionsWidget } from '@/components/premium/ClientReactionsWidget';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -304,6 +305,7 @@ export default function AgentDashboard() {
   return (
     <PullToRefresh onRefresh={loadAgentData} className="flex-1 overflow-y-auto">
       <PremiumPageShellV2>
+        <DashboardBanner />
           <PremiumPageHeaderV2
             title="Tableau de bord"
             subtitle="Gérez vos clients et vos offres"
