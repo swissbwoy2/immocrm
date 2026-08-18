@@ -29,6 +29,8 @@ export interface FillOptions {
   annexeBytes?: ArrayBuffer | Uint8Array | null;
   champs: FormulaireChamp[];
   values: Record<string, string>;
+  /** Valeurs résolues par identifiant de champ (prioritaires sur `values`) */
+  valuesById?: Record<string, string>;
   /** dataURL PNG */
   signatureDataUrl?: string | null;
 }
