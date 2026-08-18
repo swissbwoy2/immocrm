@@ -4,6 +4,8 @@ import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffre
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
 import { ProchainesVisitesCard } from '@/components/client/dashboard/ProchainesVisitesCard';
 import { MesVisitesAVenirBand } from '@/components/client/dashboard/MesVisitesAVenirBand';
+import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
+
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
