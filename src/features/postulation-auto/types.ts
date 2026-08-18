@@ -1,3 +1,5 @@
+export type FormulaireMode = 'overlay' | 'acroform';
+
 export interface FormulaireLocation {
   id: string;
   nom: string;
@@ -7,6 +9,8 @@ export interface FormulaireLocation {
   annexe_pdf_url: string | null;
   created_by: string | null;
   created_at: string;
+  /** 'acroform' = remplissage natif par nom de champ ; 'overlay' = coordonnées */
+  mode: FormulaireMode;
 }
 
 export interface FormulaireChamp {
@@ -22,6 +26,11 @@ export interface FormulaireChamp {
   hauteur: number;
   taille_police: number;
   alignement: 'left' | 'center' | 'right';
+  /** Mode acroform : nom exact du champ dans le PDF */
+  nom_champ_pdf?: string | null;
+  type_champ?: 'text' | 'checkbox' | 'radio' | 'dropdown' | 'optionlist';
+  /** Option à cocher/sélectionner (radio, dropdown) */
+  option_valeur?: string | null;
 }
 
 export type ChampDraft = Omit<FormulaireChamp, 'id' | 'formulaire_id'> & {
