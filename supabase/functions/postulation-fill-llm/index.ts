@@ -91,6 +91,8 @@ RÈGLES STRICTES (non négociables) :
 4. Si une donnée est manquante ou inconnue, laisse le champ VIDE (chaîne vide). N'invente JAMAIS de valeur, aucune approximation, aucun "N/A".
 5. Ne mets jamais de donnée du candidat principal dans un champ destiné au garant, au co-locataire ou au co-candidat, sauf s'il existe réellement un co-candidat dans le dossier.
 6. Réponds UNIQUEMENT avec un objet JSON valide, sans texte ni balises autour.
+7. Si le dossier contient un "co_candidat" (garant, colocataire, co-débiteur, signataire solidaire), remplis IMPÉRATIVEMENT la section garant / co-locataire / 2e candidat du formulaire avec SES données (nom, prénom, date de naissance, état civil, nationalité, permis, profession, employeur, revenus). Ses champs e-mail et téléphone de contact restent ceux de l'AGENT.
+8. N'écris JAMAIS le nom technique d'un champ (ex. "bien_loyer_net", "co_prenom") comme valeur : si la donnée est absente, renvoie une chaîne vide.
 
 Pour les cases à cocher : réponds "Oui" (à cocher) ou "" (laisser vide).
 Pour les boutons radio / listes : réponds EXACTEMENT une des options proposées, ou "" si aucune ne correspond.
@@ -372,6 +374,7 @@ Renvoie un objet JSON dont les clés sont exactement les identifiants de champs 
       values,
       fields: mode === "acroform" ? pdfFields : cles.map((c) => ({ name: c.cle_champ, type: "text" })),
       filled: nonEmpty,
+      offre_id: resolvedOffreId,
       dossier_resume: {
         client: `${dossier.candidat_principal.prenom} ${dossier.candidat_principal.nom}`.trim(),
         agent_email: dossier.agent_responsable.email,
