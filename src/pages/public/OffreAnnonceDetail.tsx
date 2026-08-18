@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { galerieUrls } from '@/hooks/usePortailOffres';
+import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 import {
   ArrowLeft, ExternalLink, MapPin, Ruler, Layers, Home, CalendarDays, Flame,
   Compass, Zap, Building2, Phone, ImageOff,
@@ -50,6 +51,7 @@ export default function OffreAnnonceDetail() {
   const { id = '' } = useParams();
   const [activePhoto, setActivePhoto] = useState(0);
   const [brokenPhotos, setBrokenPhotos] = useState<string[]>([]);
+  const { canViewInternalListing, isLoading: accessLoading } = useSourcedListingAccess();
 
   const { data: offre, isLoading } = useQuery({
     queryKey: ['portail-offre', id],
@@ -82,6 +84,15 @@ export default function OffreAnnonceDetail() {
     return previewImage && !brokenPhotos.includes(previewImage) ? [previewImage] : [];
   }, [offre?.medias_galerie, previewImage, brokenPhotos]);
 
+  // Annonce sourcée : la fiche interne est réservée aux clients connectés.
+  // Le visiteur public est renvoyé vers l'annonce d'origine.
+  const redirectToSource = !accessLoading && !canViewInternalListing && !!offre?.lien_annonce;
+  useEffect(() => {
+    if (redirectToSource && offre?.lien_annonce) {
+      window.location.replace(offre.lien_annonce);
+    }
+  }, [redirectToSource, offre?.lien_annonce]);
+
   useEffect(() => {
     if (!offre) return;
     const t = `${offre.titre || 'Annonce'} — ${offre.ville || ''} | Logisorama`.slice(0, 60);
@@ -98,7 +109,7 @@ export default function OffreAnnonceDetail() {
     );
   }, [offre]);
 
-  if (isLoading) {
+  if (isLoading || accessLoading) {
     return (
       <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
@@ -106,6 +117,36 @@ export default function OffreAnnonceDetail() {
           <div className="h-72 bg-muted animate-pulse rounded-xl" />
           <div className="h-6 w-1/2 bg-muted animate-pulse rounded" />
         </div>
+      </div>
+    );
+  }
+
+  if (offre && !canViewInternalListing) {
+    return (
+      <div className="theme-luxury min-h-screen bg-background">
+        <PublicHeader />
+        <div className="container mx-auto px-4 pt-28 pb-16 max-w-xl text-center space-y-4">
+          <h1 className="text-2xl font-semibold">Annonce publiée sur un portail partenaire</h1>
+          <p className="text-muted-foreground">
+            Le détail complet de ce bien est consultable sur l'annonce d'origine, ou dans votre espace
+            personnel Logisorama si vous êtes client.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            {offre.lien_annonce && (
+              <Button asChild>
+                <a href={offre.lien_annonce} target="_blank" rel="noopener noreferrer nofollow">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Voir l'annonce d'origine
+                </a>
+              </Button>
+            )}
+            <Button asChild variant="outline"><Link to="/login">Je suis client — me connecter</Link></Button>
+          </div>
+          <Button asChild variant="ghost" className="mt-2">
+            <Link to="/annonces/recherche"><ArrowLeft className="h-4 w-4 mr-2" />Retour aux annonces</Link>
+          </Button>
+        </div>
+        <PublicFooter />
       </div>
     );
   }
