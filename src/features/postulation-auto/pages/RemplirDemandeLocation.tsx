@@ -70,7 +70,7 @@ export default function RemplirDemandeLocation() {
   }, [isAcro, bytes, champs, values, signature, aiByName]);
 
   useEffect(() => {
-    const update = () => setWidth(Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8));
+    const update = () => setWidth(Math.max(300, Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8)));
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
