@@ -9,7 +9,7 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.extract-offre-images]
     verify_jwt = false
-
+  [functions.process-email-queue]
     verify_jwt = true
   [functions.automation-auth-exchange]
     verify_jwt = false
