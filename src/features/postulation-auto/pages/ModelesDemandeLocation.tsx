@@ -221,6 +221,7 @@ export default function ModelesDemandeLocation() {
 
 function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation; onBack: () => void }) {
   const { champs, setChamps, reload } = useFormulaireChamps(formulaire.id);
+  const [mode, setMode] = useState<'overlay' | 'acroform'>(formulaire.mode ?? 'overlay');
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
   const { doc, numPages } = usePdfDocument(bytes);
   const [selectedId, setSelectedId] = useState<string | null>(null);
