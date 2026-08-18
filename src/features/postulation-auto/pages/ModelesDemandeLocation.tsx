@@ -171,6 +171,9 @@ export default function ModelesDemandeLocation() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <Badge variant="outline" className="text-[11px]">
+                  {f.mode === 'acroform' ? 'Champs natifs (PDF interactif)' : 'Coordonnées (PDF plat)'}
+                </Badge>
                 <p className="text-xs text-muted-foreground">
                   {f.nb_pages} page(s){f.annexe_pdf_url ? ' • annexe jointe' : ''}
                 </p>
