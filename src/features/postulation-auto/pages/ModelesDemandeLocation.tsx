@@ -433,6 +433,7 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
           </ScrollArea>
         </div>
       </div>
+      )}
     </div>
   );
 }
