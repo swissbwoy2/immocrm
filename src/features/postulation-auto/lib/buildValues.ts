@@ -49,7 +49,7 @@ export async function buildPostulationValues(params: {
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, user_id, date_naissance, nationalite, type_permis, etat_civil, situation_familiale, profession, employeur, revenus_mensuels, adresse, nombre_occupants, animaux')
+    .select('id, user_id, date_naissance, nationalite, type_permis, etat_civil, situation_familiale, profession, employeur, revenus_mensuels, adresse, nombre_occupants, animaux, secteur_activite, gerance_actuelle, motif_changement, date_engagement')
     .eq('id', clientId)
     .maybeSingle();
 
