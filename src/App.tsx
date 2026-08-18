@@ -53,6 +53,8 @@ const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"))
 const MesMessagesAnnonces = lazy(() => import("./pages/public/MesMessagesAnnonces"));
 const MesAlertesAnnonces = lazy(() => import("./pages/public/MesAlertesAnnonces"));
 const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
+const OffreAnnonceDetail = lazy(() => import("./pages/public/OffreAnnonceDetail"));
+
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
@@ -343,7 +345,9 @@ const App = () => (
               {/* Portail annonces public */}
               <Route path="/annonces" element={<RechercheAnnonces />} />
               <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
-              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
+             <Route path="/annonces/offre/:id" element={<OffreAnnonceDetail />} />
+             <Route path="/annonces/:slug" element={<AnnonceDetail />} />
+
                <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
                <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
                <Route path="/mes-messages-annonces" element={<MesMessagesAnnonces />} />

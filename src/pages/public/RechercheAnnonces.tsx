@@ -24,6 +24,9 @@ import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { usePortailOffres, useOffresPreviews, galerieUrls } from '@/hooks/usePortailOffres';
+import { findNeighbourLocalites, geocodeLocalite } from '@/lib/swissLocalities';
+
 
 const setMeta = (name: string, content: string) => {
   let tag = document.querySelector(`meta[name="${name}"]`);
@@ -257,29 +260,105 @@ export default function RechercheAnnonces() {
     enabled: categories.length > 0 || categorieSlugs.length === 0,
   });
 
-  // ---- Localités voisines ----
+  // ---- Offres existantes exposées comme annonces publiques (aucune donnée client) ----
+  const { data: offresBrutes = [], isLoading: offresLoading } = usePortailOffres();
+
+  const offresFiltrees = useMemo(() => {
+    if (transactionType === 'vente' || neufOnly) return [];
+    const norm = (s: any) => String(s ?? '').toLowerCase();
+    const motsList = motsCles.split(/[\s,]+/).map((m) => m.toLowerCase()).filter(Boolean);
+
+    return offresBrutes.filter((o) => {
+      const hay = `${norm(o.titre)} ${norm(o.adresse)} ${norm(o.type_bien)} ${norm(o.ville)}`;
+      if (lieux.length) {
+        const ok = lieux.some((l) => {
+          const v = l.toLowerCase();
+          return /^\d{4}$/.test(v) ? norm(o.code_postal) === v || norm(o.adresse).includes(v) : hay.includes(v);
+        });
+        if (!ok) return false;
+      }
+      if (categorieSlugs.length) {
+        const ok = categorieSlugs.some((s) => {
+          const root = s.replace(/s$/, '').split('-')[0];
+          return norm(o.type_bien).includes(root) || norm(o.titre).includes(root);
+        });
+        if (!ok) return false;
+      }
+      if (prixMin && (o.prix == null || o.prix < parseInt(prixMin))) return false;
+      if (prixMax && (o.prix == null || o.prix > parseInt(prixMax))) return false;
+      if (piecesMin && (o.pieces == null || o.pieces < parseFloat(piecesMin))) return false;
+      if (piecesMax && (o.pieces == null || o.pieces > parseFloat(piecesMax))) return false;
+      if (surfaceMin && (o.surface == null || o.surface < parseInt(surfaceMin))) return false;
+      if (surfaceMax && (o.surface == null || o.surface > parseInt(surfaceMax))) return false;
+      if (motsList.length && !motsList.every((m) => hay.includes(m))) return false;
+      return true;
+    });
+  }, [offresBrutes, transactionType, neufOnly, lieux, categorieSlugs, prixMin, prixMax, piecesMin, piecesMax, surfaceMin, surfaceMax, motsCles]);
+
+  const previewUrls = useMemo(
+    () =>
+      offresFiltrees
+        .filter((o) => galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce)
+        .slice(0, 60)
+        .map((o) => o.lien_annonce as string),
+    [offresFiltrees],
+  );
+  const { data: previews = {} } = useOffresPreviews(previewUrls);
+
+  const offresCards = useMemo(
+    () =>
+      offresFiltrees.map((o) => {
+        const gal = galerieUrls(o.medias_galerie);
+        const photo = gal[0] || (o.lien_annonce ? previews[o.lien_annonce] : undefined);
+        return {
+          id: o.id,
+          slug: `offre/${o.id}`,
+          titre: o.titre || `${o.type_bien || 'Bien'} à ${o.ville || ''}`.trim(),
+          type_transaction: 'location',
+          prix: Number(o.prix ?? 0),
+          ville: o.ville || o.adresse || '',
+          nombre_pieces: o.pieces ?? undefined,
+          surface_habitable: o.surface ?? undefined,
+          date_publication: o.date_envoi,
+          est_mise_en_avant: false,
+          photos_annonces_publiques: photo ? [{ url: photo, est_principale: true }] : [],
+        } as any;
+      }),
+    [offresFiltrees, previews],
+  );
+
+  const resultats = useMemo(() => {
+    const merged = [...annonces, ...offresCards];
+    const num = (v: any) => (v == null ? null : Number(v));
+    const cmp = (a: any, b: any) => {
+      switch (sortBy) {
+        case 'prix_asc': return (num(a.prix) ?? 0) - (num(b.prix) ?? 0);
+        case 'prix_desc': return (num(b.prix) ?? 0) - (num(a.prix) ?? 0);
+        case 'pieces_asc': return (num(a.nombre_pieces) ?? 0) - (num(b.nombre_pieces) ?? 0);
+        case 'pieces_desc': return (num(b.nombre_pieces) ?? 0) - (num(a.nombre_pieces) ?? 0);
+        case 'surface': return (num(b.surface_habitable) ?? 0) - (num(a.surface_habitable) ?? 0);
+        default:
+          return new Date(b.date_publication || 0).getTime() - new Date(a.date_publication || 0).getTime();
+      }
+    };
+    return merged.sort(cmp);
+  }, [annonces, offresCards, sortBy]);
+
+  // ---- Localités voisines (Google Geocoding autour des villes sélectionnées) ----
   const addNeighbours = async () => {
-    if (!searchCoords) {
-      toast.error("Impossible de localiser la première ville sélectionnée");
+    if (!lieux.length) {
+      toast.error('Sélectionnez d’abord une localité');
       return;
     }
     setNeighboursLoading(true);
     try {
-      const d = 0.18; // ~20 km
-      const { data, error } = await supabase
-        .from('annonces_publiques')
-        .select('ville')
-        .eq('statut', 'publie')
-        .gte('latitude', searchCoords.lat - d)
-        .lte('latitude', searchCoords.lat + d)
-        .gte('longitude', searchCoords.lng - d * 1.5)
-        .lte('longitude', searchCoords.lng + d * 1.5)
-        .limit(1000);
-      if (error) throw error;
-      const existing = new Set(lieux.map((l) => l.toLowerCase()));
-      const extra = Array.from(new Set((data || []).map((r: any) => r.ville).filter(Boolean)))
-        .filter((v) => !existing.has(String(v).toLowerCase()))
-        .slice(0, 12) as string[];
+      let center = searchCoords;
+      if (!center) center = await geocodeLocalite(lieux[0]);
+      if (!center) {
+        toast.error(`Impossible de localiser « ${lieux[0]} » (service Geocoding indisponible ou clé restreinte)`);
+        return;
+      }
+      const extra = await findNeighbourLocalites(center, lieux, 12);
       if (!extra.length) {
         toast.info('Aucune localité voisine supplémentaire trouvée');
         return;
@@ -287,11 +366,18 @@ export default function RechercheAnnonces() {
       setLocalites([...localites, ...extra.map(parseLocalite)]);
       toast.success(`${extra.length} localité(s) voisine(s) ajoutée(s)`);
     } catch (e: any) {
-      toast.error(e?.message || 'Erreur lors de la recherche des localités voisines');
+      const msg = String(e?.message || e);
+      console.error('[Localités voisines] échec:', msg);
+      toast.error(
+        msg.includes('geocoder_unavailable')
+          ? 'Google Maps n’est pas chargé (clé ou service Geocoding indisponible)'
+          : `Erreur Google (${msg}) — vérifiez que les API Places et Geocoding sont activées`,
+      );
     } finally {
       setNeighboursLoading(false);
     }
   };
+
 
   // ---- Application des filtres avancés ----
   const applyDraft = () => {
@@ -577,7 +663,7 @@ export default function RechercheAnnonces() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="text-lg font-semibold truncate">
-                  {isLoading ? 'Recherche…' : `${annonces.length} bien${annonces.length !== 1 ? 's' : ''}`}
+                  {isLoading || offresLoading ? 'Recherche…' : `${resultats.length} bien${resultats.length !== 1 ? 's' : ''}`}
                 </h1>
                 <p className="text-sm text-muted-foreground truncate">
                   {transactionType === 'location' ? 'À louer' : transactionType === 'vente' ? 'À vendre' : 'Tous les biens'}
@@ -623,15 +709,15 @@ export default function RechercheAnnonces() {
           </div>
 
           <div className="flex-1 lg:overflow-y-auto px-4 lg:px-6 py-4">
-            {isLoading ? (
+            {isLoading || offresLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="bg-muted animate-pulse rounded-xl h-56" />
                 ))}
               </div>
-            ) : annonces.length > 0 ? (
+            ) : resultats.length > 0 ? (
               <div className={cn('grid gap-4', viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
-                {annonces.map((annonce, index) => (
+                {resultats.map((annonce, index) => (
                   <div
                     key={annonce.id}
                     onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
@@ -665,7 +751,7 @@ export default function RechercheAnnonces() {
           <>
             <div className="hidden lg:block lg:w-[45%] xl:w-[50%] h-full border-l bg-muted/30">
               <PublicAnnoncesMap
-                annonces={annonces}
+                annonces={resultats}
                 onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
                 hoveredAnnonceId={hoveredAnnonceId}
                 onMarkerHover={setHoveredAnnonceId}
@@ -674,7 +760,7 @@ export default function RechercheAnnonces() {
             </div>
             <div className="lg:hidden h-[50vh] border-t">
               <PublicAnnoncesMap
-                annonces={annonces}
+                annonces={resultats}
                 onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
                 hoveredAnnonceId={hoveredAnnonceId}
                 onMarkerHover={setHoveredAnnonceId}

@@ -1,0 +1,1 @@
+GRANT SELECT (id, nom, nom_entreprise, type_annonceur, logo_url, note_moyenne) ON public.annonceurs TO anon;

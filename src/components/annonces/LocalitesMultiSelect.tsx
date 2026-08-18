@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, X, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
+import { searchLocalitesGoogle } from '@/lib/swissLocalities';
 
 export interface LocaliteOption {
   /** Valeur utilisée pour filtrer (nom de ville, canton ou NPA) */
@@ -40,7 +42,10 @@ export function LocalitesMultiSelect({
 }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [googleSuggestions, setGoogleSuggestions] = useState<LocaliteOption[]>([]);
+  const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
 
   const { data: localites = [] } = useQuery({
     queryKey: ['localites-annonces'],
@@ -62,24 +67,60 @@ export function LocalitesMultiSelect({
     },
   });
 
+  // Autocomplétion Google Places (toute la Suisse), debouncée
+  useEffect(() => {
+    const q = query.trim();
+    if (!mapsLoaded || q.length < 2) {
+      setGoogleSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const t = window.setTimeout(async () => {
+      try {
+        const res = await searchLocalitesGoogle(q);
+        if (!cancelled) setGoogleSuggestions(res.map(({ value, label, kind }) => ({ value, label, kind })));
+      } catch (e: any) {
+        console.error('[Localités] Google Places autocomplete a échoué:', e?.message || e);
+        if (!cancelled) setGoogleSuggestions([]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      window.clearTimeout(t);
+    };
+  }, [query, mapsLoaded]);
+
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const taken = new Set(selected.map((s) => s.value.toLowerCase()));
-    return localites
-      .filter((l) => l.value.toLowerCase().includes(q) && !taken.has(l.value.toLowerCase()))
-      .slice(0, 8);
-  }, [query, localites, selected]);
+    const local = localites.filter((l) => l.value.toLowerCase().includes(q) && !taken.has(l.value.toLowerCase()));
+    const merged: LocaliteOption[] = [];
+    const seen = new Set<string>();
+    [...googleSuggestions, ...local].forEach((o) => {
+      const k = o.value.toLowerCase();
+      if (taken.has(k) || seen.has(k)) return;
+      seen.add(k);
+      merged.push(o);
+    });
+    return merged.slice(0, 10);
+  }, [query, localites, selected, googleSuggestions]);
 
   const add = (opt: LocaliteOption) => {
     if (selected.some((s) => s.value.toLowerCase() === opt.value.toLowerCase())) return;
     onChange([...selected, opt]);
     setQuery('');
+    setGoogleSuggestions([]);
     setOpen(false);
     inputRef.current?.focus();
   };
 
   const remove = (value: string) => onChange(selected.filter((s) => s.value !== value));
+
 
   return (
     <div className={cn('w-full', className)}>
@@ -107,6 +148,11 @@ export function LocalitesMultiSelect({
           className="pl-9"
           aria-label="Localités"
         />
+        {searching && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
+
+
 
         {open && suggestions.length > 0 && (
           <ul className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg overflow-hidden">

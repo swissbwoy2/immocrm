@@ -38,6 +38,16 @@ const normalize = (raw: string): URL | null => {
   }
 };
 
+const decodeEntities = (s: string): string =>
+  s
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&#(\d+);/g, (_m, d) => String.fromCharCode(parseInt(d, 10)));
+
 const getMeta = (html: string, attr: 'property' | 'name', key: string): string | null => {
   const patterns = [
     new RegExp(`<meta[^>]*${attr}=["']${key}["'][^>]*content=["']([^"']+)["']`, 'i'),
@@ -45,10 +55,48 @@ const getMeta = (html: string, attr: 'property' | 'name', key: string): string |
   ];
   for (const p of patterns) {
     const m = html.match(p);
-    if (m) return m[1];
+    if (m) return decodeEntities(m[1]);
   }
   return null;
 };
+
+/** Certains portails (homegate, immoscout…) bloquent le fetch direct : on passe par Firecrawl. */
+const fetchHtmlViaFirecrawl = async (url: string): Promise<string | null> => {
+  const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!apiKey) return null;
+  const endpoints = ['https://api.firecrawl.dev/v2/scrape', 'https://api.firecrawl.dev/v1/scrape'];
+  for (const endpoint of endpoints) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45_000);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          formats: ['rawHtml'],
+          onlyMainContent: false,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const body = await res.text();
+      if (!res.ok) {
+        console.error('firecrawl preview failed', endpoint, url, res.status, body.slice(0, 300));
+        continue;
+      }
+      const data = JSON.parse(body);
+      const html = data?.data?.rawHtml || data?.rawHtml || data?.data?.html || null;
+      if (html) return html;
+    } catch (e) {
+      clearTimeout(timer);
+      console.error('firecrawl preview error', endpoint, url, String(e));
+    }
+  }
+  return null;
+};
+
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -117,22 +165,39 @@ serve(async (req) => {
     }
 
     await Promise.all(
-      toFetch.slice(0, 10).map(async (t) => {
+      toFetch.slice(0, 6).map(async (t) => {
         const url = t.parsed.toString();
         const hostname = t.parsed.hostname;
         try {
-          const res = await fetch(url, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-              'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-            },
-          });
-          if (!res.ok) {
+          let html: string | null = null;
+          try {
+            const res = await fetch(url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+              },
+            });
+            if (res.ok) html = await res.text();
+          } catch (_e) {
+            html = null;
+          }
+
+          const hasImage = (h: string | null) =>
+            !!h && !!(getMeta(h, 'property', 'og:image') || getMeta(h, 'name', 'twitter:image'));
+
+          // Portails protégés (403) ou page sans og:image → fallback Firecrawl
+          if (!hasImage(html)) {
+            const viaFirecrawl = await fetchHtmlViaFirecrawl(url);
+            if (hasImage(viaFirecrawl)) html = viaFirecrawl;
+            else html = html ?? viaFirecrawl;
+          }
+
+          if (!html) {
             previews[t.raw] = { image_url: null, title: hostname };
             return;
           }
-          const html = await res.text();
+
           let imageUrl = getMeta(html, 'property', 'og:image') || getMeta(html, 'name', 'twitter:image');
           if (imageUrl && !imageUrl.startsWith('http')) {
             imageUrl = imageUrl.startsWith('/')
@@ -140,6 +205,7 @@ serve(async (req) => {
               : `${t.parsed.protocol}//${t.parsed.host}/${imageUrl}`;
           }
           const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+
           const preview = {
             url,
             title: getMeta(html, 'property', 'og:title') || (titleMatch ? titleMatch[1].trim() : null),
