@@ -94,6 +94,11 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             src={mainPhoto}
             alt={`${annonce.titre} — ${annonce.ville}`}
             loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src.endsWith('/placeholder.svg')) return;
+              img.src = '/placeholder.svg';
+            }}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
 

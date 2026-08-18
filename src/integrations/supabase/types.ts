@@ -7524,11 +7524,15 @@ export type Database = {
           envoi_auto: boolean
           equipements: string[] | null
           etage: string | null
+          geocoded_at: string | null
           id: string
+          images_extracted_at: string | null
           interesse_notified_at: string | null
+          latitude: number | null
           lien_annonce: string | null
           locataire_nom: string | null
           locataire_tel: string | null
+          longitude: number | null
           medias_galerie: Json | null
           missing_info: string | null
           needs_agent_action: boolean
@@ -7564,11 +7568,15 @@ export type Database = {
           envoi_auto?: boolean
           equipements?: string[] | null
           etage?: string | null
+          geocoded_at?: string | null
           id?: string
+          images_extracted_at?: string | null
           interesse_notified_at?: string | null
+          latitude?: number | null
           lien_annonce?: string | null
           locataire_nom?: string | null
           locataire_tel?: string | null
+          longitude?: number | null
           medias_galerie?: Json | null
           missing_info?: string | null
           needs_agent_action?: boolean
@@ -7604,11 +7612,15 @@ export type Database = {
           envoi_auto?: boolean
           equipements?: string[] | null
           etage?: string | null
+          geocoded_at?: string | null
           id?: string
+          images_extracted_at?: string | null
           interesse_notified_at?: string | null
+          latitude?: number | null
           lien_annonce?: string | null
           locataire_nom?: string | null
           locataire_tel?: string | null
+          longitude?: number | null
           medias_galerie?: Json | null
           missing_info?: string | null
           needs_agent_action?: boolean
@@ -13256,7 +13268,9 @@ export type Database = {
           equipements: string[]
           etage: string
           id: string
+          latitude: number
           lien_annonce: string
+          longitude: number
           medias_galerie: Json
           orientation: string
           pieces: number
@@ -13381,7 +13395,9 @@ export type Database = {
           disponibilite: string
           etage: string
           id: string
+          latitude: number
           lien_annonce: string
+          longitude: number
           medias_galerie: Json
           pieces: number
           prix: number

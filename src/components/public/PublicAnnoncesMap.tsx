@@ -167,8 +167,13 @@ export function PublicAnnoncesMap({
       if (existingMarker) {
         existingMarker.setPosition(position);
         existingMarker.setZIndex(isHovered ? 1000 : 1);
+        const icon = existingMarker.getIcon() as google.maps.Symbol | undefined;
+        if (icon && typeof icon === 'object' && 'path' in icon) {
+          existingMarker.setIcon({ ...icon, fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)' });
+        }
         return;
       }
+
 
       const showInfoWindow = () => {
         const photo = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
@@ -205,12 +210,27 @@ export function PublicAnnoncesMap({
         }
       };
 
+      const label = annonce.prix
+        ? new Intl.NumberFormat('fr-CH', { notation: 'compact', maximumFractionDigits: 0 }).format(annonce.prix)
+        : '•';
+
       const marker = new google.maps.Marker({
         map,
         position,
         title: annonce.titre,
         zIndex: isHovered ? 1000 : 1,
+        label: { text: label, color: '#ffffff', fontSize: '11px', fontWeight: '600' },
+        icon: {
+          path: 'M -22,-12 H 22 a 6,6 0 0 1 6,6 v 0 a 6,6 0 0 1 -6,6 H -22 a 6,6 0 0 1 -6,-6 v 0 a 6,6 0 0 1 6,-6 z',
+          fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+          scale: 1,
+          labelOrigin: new google.maps.Point(0, -6),
+        },
       });
+
 
       marker.addListener('click', showInfoWindow);
       marker.addListener('mouseover', () => onMarkerHover?.(annonce.id));

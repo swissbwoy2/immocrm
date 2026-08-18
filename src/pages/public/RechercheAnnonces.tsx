@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +24,7 @@ import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
-import { usePortailOffres, useOffresPreviews, galerieUrls } from '@/hooks/usePortailOffres';
+import { usePortailOffres, useOffresPreviews, useOffresImageExtraction, galerieUrls } from '@/hooks/usePortailOffres';
 import { findNeighbourLocalites, geocodeLocalite } from '@/lib/swissLocalities';
 
 
@@ -37,6 +37,8 @@ const setMeta = (name: string, content: string) => {
   }
   tag.setAttribute('content', content);
 };
+
+const PAGE_SIZE = 48;
 
 const escapeOr = (v: string) => v.replace(/[,()]/g, ' ').trim();
 const splitList = (v: string) => v.split(',').map((s) => s.trim()).filter(Boolean);
@@ -58,7 +60,10 @@ export default function RechercheAnnonces() {
   const navigate = useNavigate();
   const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
 
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+  // Sur mobile on démarre toujours sur la liste (la carte est en plein écran via le toggle)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>(
+    typeof window !== 'undefined' && window.innerWidth < 1024 ? 'list' : 'map',
+  );
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [hoveredAnnonceId, setHoveredAnnonceId] = useState<string | null>(null);
   const [searchCoords, setSearchCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -253,9 +258,16 @@ export default function RechercheAnnonces() {
           query = query.order('est_mise_en_avant', { ascending: false }).order('date_publication', { ascending: false });
       }
 
-      const { data, error } = await query.limit(200);
-      if (error) throw error;
-      return data || [];
+      // Pagination serveur : aucun plafond dur (le rendu est limité par le scroll infini)
+      const all: any[] = [];
+      const BATCH = 900;
+      for (let from = 0; from < 15000; from += BATCH) {
+        const { data, error } = await query.range(from, from + BATCH - 1);
+        if (error) throw error;
+        if (data?.length) all.push(...data);
+        if (!data || data.length < BATCH) break;
+      }
+      return all;
     },
     enabled: categories.length > 0 || categorieSlugs.length === 0,
   });
@@ -305,6 +317,22 @@ export default function RechercheAnnonces() {
   );
   const { data: previews = {} } = useOffresPreviews(previewUrls);
 
+  // Extraction serveur (cache en base) des galeries des offres visibles sans photo
+  const extractionIds = useMemo(
+    () =>
+      offresFiltrees
+        .filter(
+          (o) =>
+            (galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce) ||
+            o.latitude == null ||
+            o.longitude == null,
+        )
+        .slice(0, 8)
+        .map((o) => o.id),
+    [offresFiltrees],
+  );
+  useOffresImageExtraction(extractionIds);
+
   const offresCards = useMemo(
     () =>
       offresFiltrees.map((o) => {
@@ -317,6 +345,9 @@ export default function RechercheAnnonces() {
           type_transaction: 'location',
           prix: Number(o.prix ?? 0),
           ville: o.ville || o.adresse || '',
+          code_postal: o.code_postal || '',
+          latitude: o.latitude ?? null,
+          longitude: o.longitude ?? null,
           nombre_pieces: o.pieces ?? undefined,
           surface_habitable: o.surface ?? undefined,
           date_publication: o.date_envoi,
@@ -343,6 +374,30 @@ export default function RechercheAnnonces() {
     };
     return merged.sort(cmp);
   }, [annonces, offresCards, sortBy]);
+
+  // ---- Scroll infini (aucun plafond dur sur le nombre d'annonces) ----
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchParams, resultats.length]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setVisibleCount((c) => c + PAGE_SIZE);
+      },
+      { rootMargin: '400px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount, resultats.length]);
+
+  const resultatsVisibles = useMemo(() => resultats.slice(0, visibleCount), [resultats, visibleCount]);
+
 
   // ---- Localités voisines (Google Geocoding autour des villes sélectionnées) ----
   const addNeighbours = async () => {
@@ -716,22 +771,35 @@ export default function RechercheAnnonces() {
                 ))}
               </div>
             ) : resultats.length > 0 ? (
-              <div className={cn('grid gap-4', viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
-                {resultats.map((annonce, index) => (
-                  <div
-                    key={annonce.id}
-                    onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
-                    onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
-                    className={cn(
-                      'transition-all duration-200 animate-fade-in',
-                      viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl shadow-lg',
-                    )}
-                    style={{ animationDelay: `${index * 40}ms` }}
-                  >
-                    <PublicAnnonceCard annonce={annonce} featured={annonce.est_mise_en_avant} compact={false} />
+              <>
+                <div className={cn('grid gap-4', viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
+                  {resultatsVisibles.map((annonce, index) => (
+                    <div
+                      key={annonce.id}
+                      onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
+                      onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
+                      className={cn(
+                        'transition-all duration-200 animate-fade-in',
+                        viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl shadow-lg',
+                      )}
+                      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+                    >
+                      <PublicAnnonceCard annonce={annonce} featured={annonce.est_mise_en_avant} compact={false} />
+                    </div>
+                  ))}
+                </div>
+                {resultatsVisibles.length < resultats.length && (
+                  <div ref={sentinelRef} className="py-8 flex flex-col items-center gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {resultatsVisibles.length} / {resultats.length} annonces
+                    </p>
+                    <Button variant="outline" className="cursor-pointer" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+                      Afficher plus
+                    </Button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+
             ) : (
               <div className="text-center py-16">
                 <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
@@ -749,6 +817,7 @@ export default function RechercheAnnonces() {
 
         {viewMode === 'map' && (
           <>
+            {/* Desktop : carte à droite */}
             <div className="hidden lg:block lg:w-[45%] xl:w-[50%] h-full border-l bg-muted/30">
               <PublicAnnoncesMap
                 annonces={resultats}
@@ -758,7 +827,8 @@ export default function RechercheAnnonces() {
                 searchCenter={searchCoords}
               />
             </div>
-            <div className="lg:hidden h-[50vh] border-t">
+            {/* Mobile / tablette : carte plein écran */}
+            <div className="lg:hidden fixed inset-0 z-50 bg-background">
               <PublicAnnoncesMap
                 annonces={resultats}
                 onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
@@ -766,9 +836,23 @@ export default function RechercheAnnonces() {
                 onMarkerHover={setHoveredAnnonceId}
                 searchCenter={searchCoords}
               />
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 pointer-events-none">
+                <Button
+                  size="sm"
+                  className="pointer-events-auto shadow-lg cursor-pointer"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4 mr-2" />
+                  Retour à la liste
+                </Button>
+                <Badge variant="secondary" className="pointer-events-auto shadow-lg">
+                  {resultats.length} bien{resultats.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
           </>
         )}
+
       </div>
 
       <PublicFooter />

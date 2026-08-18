@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PortailOffre {
@@ -16,6 +17,8 @@ export interface PortailOffre {
   medias_galerie: any;
   date_envoi: string | null;
   disponibilite?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export const galerieUrls = (medias: any): string[] => {
@@ -32,11 +35,55 @@ export function usePortailOffres() {
     queryKey: ['portail-offres'],
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<PortailOffre[]> => {
-      const { data, error } = await supabase.rpc('list_public_offres' as any);
-      if (error) throw error;
-      return (data || []) as PortailOffre[];
+      // La réponse REST est plafonnée à 1000 lignes : on pagine pour tout récupérer.
+      const all: PortailOffre[] = [];
+      const BATCH = 900;
+      for (let from = 0; from < 20000; from += BATCH) {
+        const { data, error } = await supabase
+          .rpc('list_public_offres' as any)
+          .range(from, from + BATCH - 1);
+        if (error) throw error;
+        const rows = (data || []) as PortailOffre[];
+        all.push(...rows);
+        if (rows.length < BATCH) break;
+      }
+      return all;
     },
+
   });
+}
+
+/**
+ * Extraction serveur des galeries d'images (et géocodage) pour les offres visibles
+ * qui n'ont pas encore de photos. Résultat mis en cache en base : une seule extraction par offre.
+ */
+export function useOffresImageExtraction(ids: string[]) {
+  const queryClient = useQueryClient();
+  const done = useRef<Set<string>>(new Set());
+  const running = useRef(false);
+
+  useEffect(() => {
+    const pending = ids.filter((id) => !done.current.has(id)).slice(0, 8);
+    if (!pending.length || running.current) return;
+
+    running.current = true;
+    pending.forEach((id) => done.current.add(id));
+
+    supabase.functions
+      .invoke('extract-offre-images', { body: { ids: pending } })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('[Portail] Extraction images indisponible:', error.message);
+          return;
+        }
+        if ((data as any)?.updated) {
+          queryClient.invalidateQueries({ queryKey: ['portail-offres'] });
+        }
+      })
+      .finally(() => {
+        running.current = false;
+      });
+  }, [ids, queryClient]);
 }
 
 /** Aperçus (og:image) des liens sources, pour les offres sans galerie. */

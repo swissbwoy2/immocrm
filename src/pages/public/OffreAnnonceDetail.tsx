@@ -49,6 +49,7 @@ const formatPrix = (p?: number | null) =>
 export default function OffreAnnonceDetail() {
   const { id = '' } = useParams();
   const [activePhoto, setActivePhoto] = useState(0);
+  const [brokenPhotos, setBrokenPhotos] = useState<string[]>([]);
 
   const { data: offre, isLoading } = useQuery({
     queryKey: ['portail-offre', id],
@@ -76,10 +77,10 @@ export default function OffreAnnonceDetail() {
   });
 
   const photos = useMemo(() => {
-    const g = galerieUrls(offre?.medias_galerie);
+    const g = galerieUrls(offre?.medias_galerie).filter((u) => !brokenPhotos.includes(u));
     if (g.length) return g;
-    return previewImage ? [previewImage] : [];
-  }, [offre?.medias_galerie, previewImage]);
+    return previewImage && !brokenPhotos.includes(previewImage) ? [previewImage] : [];
+  }, [offre?.medias_galerie, previewImage, brokenPhotos]);
 
   useEffect(() => {
     if (!offre) return;
@@ -149,12 +150,17 @@ export default function OffreAnnonceDetail() {
         <section className="mb-6">
           {photos.length > 0 ? (
             <div className="space-y-3">
-              <div className="relative rounded-xl overflow-hidden bg-muted aspect-[16/10]">
+              <div className="relative w-full mx-auto rounded-xl overflow-hidden bg-muted aspect-[16/10] max-h-[460px]">
                 <img
                   src={photos[Math.min(activePhoto, photos.length - 1)]}
                   alt={`${offre.titre || 'Annonce'} — ${offre.ville || ''}`}
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                   loading="eager"
+                  onError={() => {
+                    const url = photos[Math.min(activePhoto, photos.length - 1)];
+                    setBrokenPhotos((p) => (p.includes(url) ? p : [...p, url]));
+                    setActivePhoto(0);
+                  }}
                 />
               </div>
               {photos.length > 1 && (
@@ -169,7 +175,13 @@ export default function OffreAnnonceDetail() {
                         i === activePhoto ? 'border-primary' : 'border-transparent',
                       )}
                     >
-                      <img src={p} alt="" className="h-full w-full object-cover" loading="lazy" />
+                      <img
+                        src={p}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        onError={() => setBrokenPhotos((prev) => (prev.includes(p) ? prev : [...prev, p]))}
+                      />
                     </button>
                   ))}
                 </div>
