@@ -60,7 +60,10 @@ export default function RechercheAnnonces() {
   const navigate = useNavigate();
   const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
 
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
+  // Sur mobile on démarre toujours sur la liste (la carte est en plein écran via le toggle)
+  const [viewMode, setViewMode] = useState<'list' | 'map'>(
+    typeof window !== 'undefined' && window.innerWidth < 1024 ? 'list' : 'map',
+  );
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [hoveredAnnonceId, setHoveredAnnonceId] = useState<string | null>(null);
   const [searchCoords, setSearchCoords] = useState<{ lat: number; lng: number } | null>(null);
