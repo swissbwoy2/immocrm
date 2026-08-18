@@ -64,21 +64,22 @@ const getMeta = (html: string, attr: 'property' | 'name', key: string): string |
 const fetchHtmlViaFirecrawl = async (url: string): Promise<string | null> => {
   const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
   if (!apiKey) return null;
-  const endpoints = ['https://api.firecrawl.dev/v2/scrape', 'https://api.firecrawl.dev/v1/scrape'];
-  for (const endpoint of endpoints) {
+  // v2 en mode furtif (contourne Datadome sur homegate/immoscout), puis repli v1 simple
+  const attempts: { endpoint: string; payload: Record<string, unknown> }[] = [
+    { endpoint: 'https://api.firecrawl.dev/v2/scrape', payload: { url, formats: ['rawHtml'], onlyMainContent: false, proxy: 'stealth', location: { country: 'CH', languages: ['fr'] } } },
+    { endpoint: 'https://api.firecrawl.dev/v1/scrape', payload: { url, formats: ['rawHtml'], onlyMainContent: false } },
+  ];
+  for (const { endpoint, payload } of attempts) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          formats: ['rawHtml'],
-          onlyMainContent: false,
-        }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
+
       clearTimeout(timer);
       const body = await res.text();
       if (!res.ok) {
