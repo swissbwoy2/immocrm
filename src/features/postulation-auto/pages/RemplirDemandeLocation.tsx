@@ -262,8 +262,14 @@ export default function RemplirDemandeLocation() {
 
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
 
+      const sv = sectioned ?? (user?.id
+        ? await buildSectionedValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu })
+        : null);
+      if (sv && sv !== sectioned) setSectioned(sv);
+      const byId = sv ? resolveChampValues(effectiveChamps, sv).byId : {};
+
       let out: Uint8Array;
-      if (champs.length > 0 && sectioned) {
+      if (champs.length > 0 && sv) {
         // Schéma calibré : remplissage 100% déterministe, section par section
         const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
         out = await fill({
@@ -271,7 +277,7 @@ export default function RemplirDemandeLocation() {
           annexeBytes,
           champs: isAcro ? champs : effectiveChamps,
           values: resolved,
-          valuesById: resolvedChamps.byId,
+          valuesById: byId,
           signatureDataUrl: signature,
         });
       } else {
@@ -367,6 +373,12 @@ export default function RemplirDemandeLocation() {
           <Button onClick={() => runAi()} disabled={aiLoading || !formulaireId || !clientId} variant="secondary" className="w-full gap-2">
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Remplir avec l'IA
           </Button>
+          {sectioned && champs.length > 0 && (
+            <p className="text-[11px] leading-4 text-muted-foreground">
+              Schéma calibré : {champs.length} champ(s) — {champs.filter((c) => c.section === 'conjoint').length} en section conjoint.
+              {sectioned.hasConjoint ? ' Co-candidat détecté.' : ' Aucun co-candidat : section conjoint laissée vide.'}
+            </p>
+          )}
           {aiByName && (
             <p className="text-[11px] leading-4 text-emerald-600">
               IA : {Object.values(aiByName).filter((v) => String(v ?? '').trim() !== '').length} champ(s) déduit(s).
