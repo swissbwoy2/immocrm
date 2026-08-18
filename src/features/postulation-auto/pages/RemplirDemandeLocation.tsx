@@ -60,11 +60,14 @@ export default function RemplirDemandeLocation() {
   useEffect(() => {
     if (!isAcro || !bytes) { setPreviewBytes(null); return; }
     let cancelled = false;
-    fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature })
+    const preview = aiByName && Object.keys(aiByName).length > 0
+      ? fillAcroFormByName({ templateBytes: bytes.slice(0), valuesByName: aiByName, champs, signatureDataUrl: signature })
+      : fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature });
+    preview
       .then((out) => { if (!cancelled) setPreviewBytes(out); })
       .catch(() => { if (!cancelled) setPreviewBytes(null); });
     return () => { cancelled = true; };
-  }, [isAcro, bytes, champs, values, signature]);
+  }, [isAcro, bytes, champs, values, signature, aiByName]);
 
   useEffect(() => {
     const update = () => setWidth(Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8));
