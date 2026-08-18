@@ -101,6 +101,8 @@ const AdminFacturesAbaNinja = lazy(() => import("./pages/admin/FacturesAbaNinja"
 const AdminStatistiquesAgents = lazy(() => import("./pages/admin/StatistiquesAgents"));
 const AdminRemplirPDF = lazy(() => import("./pages/admin/RemplirPDF"));
 const AdminRemplirDemandeIA = lazy(() => import("./pages/admin/RemplirDemandeIA"));
+const ModelesDemandeLocation = lazy(() => import("./features/postulation-auto/pages/ModelesDemandeLocation"));
+const RemplirDemandeLocation = lazy(() => import("./features/postulation-auto/pages/RemplirDemandeLocation"));
 const AdminLeads = lazy(() => import("./pages/admin/Leads"));
 const AdminAutoOffres = lazy(() => import("./pages/admin/AutoOffres"));
 const AdminOffresAuto = lazy(() => import("./pages/admin/OffresAuto"));
