@@ -192,21 +192,33 @@ Deno.serve(async (req) => {
       .from("client_candidates")
       .select("*")
       .eq("client_id", clientId)
+      .order("created_at", { ascending: true })
       .limit(5);
+    const PRIORITE = ["colocataire", "co_debiteur", "signataire_solidaire", "garant"];
     const co: any =
-      (candidates ?? []).find((c: any) => c.type === "conjoint" || c.type === "colocataire") ??
+      PRIORITE.map((t) => (candidates ?? []).find((c: any) => c.type === t)).find(Boolean) ??
       (candidates ?? [])[0] ??
       null;
 
+    // ---- Offre : si aucune n'est fournie, on prend automatiquement la plus récente du client ----
+    const offreSelect = "id, adresse, prix, pieces, surface, etage, disponibilite, contact_gerance, lien_annonce, created_at";
     let offre: any = null;
     if (offreId) {
+      const { data } = await admin.from("offres").select(offreSelect).eq("id", offreId).maybeSingle();
+      offre = data;
+    }
+    if (!offre) {
       const { data } = await admin
         .from("offres")
-        .select("adresse, prix, pieces, surface, etage, disponibilite, contact_gerance, lien_annonce")
-        .eq("id", offreId)
+        .select(offreSelect)
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       offre = data;
     }
+    const resolvedOffreId: string | null = offre?.id ?? null;
+
 
     const { data: agent } = await admin
       .from("profiles")
