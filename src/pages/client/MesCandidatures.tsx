@@ -374,6 +374,51 @@ const MesCandidatures = () => {
     setShowThankYouDialog(true);
   };
 
+  // ---- Recherche / filtres / tri (UX uniquement, la logique de statuts reste inchangée) ----
+  const enrichedOffres = useMemo(() => offres.map((offre) => {
+    const candidature = candidatures.find(c => c.offre_id === offre.id);
+    const statut = candidature?.statut || offre.statut;
+    return { ...offre, __statut: statut, groupe: getGroupe(statut) };
+  }), [offres, candidatures]);
+
+  const statutCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    enrichedOffres.forEach(o => map.set(o.__statut, (map.get(o.__statut) || 0) + 1));
+    return Array.from(map.entries()).map(([statut, count]) => ({ statut, count }));
+  }, [enrichedOffres]);
+
+  const visibleOffres = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = enrichedOffres.filter(o => {
+      if (statutFilter.startsWith('groupe:')) {
+        if (o.groupe !== statutFilter.slice(7)) return false;
+      } else if (statutFilter !== 'all' && o.__statut !== statutFilter) {
+        return false;
+      }
+      if (!q) return true;
+      const hay = [o.adresse, o.ville, o.npa, o.quartier, o.type_bien]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+    list = [...list].sort((a, b) => {
+      if (sortBy === 'statut') {
+        const sa = WORKFLOW_STATUTS[a.__statut as keyof typeof WORKFLOW_STATUTS]?.step ?? 0;
+        const sb = WORKFLOW_STATUTS[b.__statut as keyof typeof WORKFLOW_STATUTS]?.step ?? 0;
+        return sb - sa;
+      }
+      const da = new Date(a.date_envoi || 0).getTime();
+      const db = new Date(b.date_envoi || 0).getTime();
+      return sortBy === 'ancien' ? da - db : db - da;
+    });
+    return list;
+  }, [enrichedOffres, search, statutFilter, sortBy]);
+
+  const groupedOffres = useMemo(() => (
+    GROUPES
+      .map(g => ({ ...g, items: visibleOffres.filter(o => o.groupe === g.key) }))
+      .filter(g => g.items.length > 0)
+  ), [visibleOffres]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-4">
