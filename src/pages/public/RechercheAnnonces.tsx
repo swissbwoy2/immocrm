@@ -318,7 +318,12 @@ export default function RechercheAnnonces() {
   const extractionIds = useMemo(
     () =>
       offresFiltrees
-        .filter((o) => galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce)
+        .filter(
+          (o) =>
+            (galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce) ||
+            o.latitude == null ||
+            o.longitude == null,
+        )
         .slice(0, 8)
         .map((o) => o.id),
     [offresFiltrees],
