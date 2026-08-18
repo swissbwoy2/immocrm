@@ -299,6 +299,15 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
     }
   };
 
+  const isAcro = mode === 'acroform';
+
+  const switchMode = async () => {
+    const next = isAcro ? 'overlay' : 'acroform';
+    await supabase.from('formulaires_location').update({ mode: next }).eq('id', formulaire.id);
+    setMode(next);
+    toast.success(next === 'acroform' ? 'Mode champs natifs activé' : 'Mode coordonnées activé');
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
@@ -306,13 +315,32 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
           <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="min-w-0">
             <h2 className="truncate font-semibold">{formulaire.nom}</h2>
-            <p className="text-xs text-muted-foreground">Touchez le PDF pour ajouter un champ • {champs.length} champ(s)</p>
+            <p className="text-xs text-muted-foreground">
+              {isAcro
+                ? `Remplissage par nom de champ • ${champs.length} correspondance(s)`
+                : `Touchez le PDF pour ajouter un champ • ${champs.length} champ(s)`}
+            </p>
           </div>
         </div>
-        <Button onClick={save} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Enregistrer
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={switchMode}>
+            {isAcro ? 'Passer en mode coordonnées' : 'Passer en champs natifs'}
+          </Button>
+          {!isAcro && (
+            <Button onClick={save} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Enregistrer
+            </Button>
+          )}
+        </div>
       </div>
+
+      {isAcro && (
+        <div className="flex-1 overflow-auto">
+          <AcroformMapper formulaire={{ ...formulaire, mode: 'acroform' }} />
+        </div>
+      )}
+      {!isAcro && (
+
 
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         <div ref={containerRef} className="flex-1 overflow-auto bg-muted/40 p-3 space-y-6">
