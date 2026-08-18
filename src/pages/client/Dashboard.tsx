@@ -4,6 +4,8 @@ import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffre
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
 import { ProchainesVisitesCard } from '@/components/client/dashboard/ProchainesVisitesCard';
 import { MesVisitesAVenirBand } from '@/components/client/dashboard/MesVisitesAVenirBand';
+import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
+
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -566,10 +568,16 @@ function ClientDashboardLocation() {
             />
           </SectionErrorBoundary>
 
+          {/* Bande horizontale — mes offres reçues */}
+          <SectionErrorBoundary sectionName="MesOffresRecuesBand">
+            <MesOffresRecuesBand offres={offres} />
+          </SectionErrorBoundary>
+
           {/* Bande horizontale — mes visites à venir */}
           <SectionErrorBoundary sectionName="MesVisitesAVenirBand">
             <MesVisitesAVenirBand visites={visites} />
           </SectionErrorBoundary>
+
 
 
           {/* Alerte compte non actif */}

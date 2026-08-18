@@ -20,6 +20,9 @@ export function DashboardBannerManager() {
   const [id, setId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [lienUrl, setLienUrl] = useState('');
+  const [lienIos, setLienIos] = useState('');
+  const [lienAndroid, setLienAndroid] = useState('');
+
   const [titre, setTitre] = useState('');
   const [texte, setTexte] = useState('');
   const [actif, setActif] = useState(true);
@@ -38,6 +41,9 @@ export function DashboardBannerManager() {
         setId(data.id);
         setImageUrl(data.image_url || '');
         setLienUrl(data.lien_url || '');
+        setLienIos((data as any).lien_ios || '');
+        setLienAndroid((data as any).lien_android || '');
+
         setTitre(data.titre || '');
         setTexte(data.texte || '');
         setActif(!!data.actif);
@@ -94,12 +100,15 @@ export function DashboardBannerManager() {
       const payload = {
         image_url: imageUrl,
         lien_url: link || null,
+        lien_ios: lienIos.trim() || null,
+        lien_android: lienAndroid.trim() || null,
         titre: titre.trim() || null,
         texte: texte.trim() || null,
         actif,
         afficher_overlay: afficherOverlay,
         updated_by: user?.id ?? null,
       };
+
       if (id) {
         const { error } = await supabase.from('dashboard_banners').update(payload).eq('id', id);
         if (error) throw error;
@@ -133,6 +142,9 @@ export function DashboardBannerManager() {
       setId(null);
       setImageUrl('');
       setLienUrl('');
+      setLienIos('');
+      setLienAndroid('');
+
       setTitre('');
       setTexte('');
       setActif(true);
@@ -208,9 +220,33 @@ export function DashboardBannerManager() {
               <Switch checked={afficherOverlay} onCheckedChange={setAfficherOverlay} />
             </div>
 
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+              Si tu remplis les liens iOS/Android, le clic ouvre le bon store selon l'appareil ;
+              sinon l'URL simple s'ouvre pour tous.
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Lien (optionnel)</Label>
+                <Label>Lien App Store (iOS)</Label>
+                <Input
+                  placeholder="https://apps.apple.com/…"
+                  value={lienIos}
+                  onChange={(e) => setLienIos(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Lien Play Store (Android)</Label>
+                <Input
+                  placeholder="https://play.google.com/store/apps/…"
+                  value={lienAndroid}
+                  onChange={(e) => setLienAndroid(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>URL simple (optionnel)</Label>
                 <Input
                   placeholder="https://… ou /client/offres-recues"
                   value={lienUrl}
@@ -222,6 +258,7 @@ export function DashboardBannerManager() {
                 <Input value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={80} />
               </div>
             </div>
+
 
             <div className="space-y-2">
               <Label>Texte (optionnel)</Label>
@@ -241,6 +278,9 @@ export function DashboardBannerManager() {
                     id: 'preview',
                     image_url: imageUrl,
                     lien_url: lienUrl || null,
+                    lien_ios: lienIos || null,
+                    lien_android: lienAndroid || null,
+
                     titre: titre || null,
                     texte: texte || null,
                     actif,

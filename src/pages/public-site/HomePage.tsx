@@ -2,6 +2,8 @@ import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+
 
 
 // Above the fold - eager
@@ -52,8 +54,14 @@ export default function HomePage() {
 
 
 
+      {/* Bannière publicitaire configurable par l'admin (masquée si aucune bannière active) */}
+      <div className="container mx-auto px-4 pt-4">
+        <DashboardAdBanner />
+      </div>
+
       {/* Eager sections */}
       <DossierAnalyseSection />
+
 
       {/* Bloc hero de choix de parcours (location / achat) */}
       <HeroSection />

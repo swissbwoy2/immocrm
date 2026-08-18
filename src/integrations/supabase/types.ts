@@ -3731,6 +3731,8 @@ export type Database = {
           created_at: string
           id: string
           image_url: string
+          lien_android: string | null
+          lien_ios: string | null
           lien_url: string | null
           texte: string | null
           titre: string | null
@@ -3743,6 +3745,8 @@ export type Database = {
           created_at?: string
           id?: string
           image_url: string
+          lien_android?: string | null
+          lien_ios?: string | null
           lien_url?: string | null
           texte?: string | null
           titre?: string | null
@@ -3755,6 +3759,8 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string
+          lien_android?: string | null
+          lien_ios?: string | null
           lien_url?: string | null
           texte?: string | null
           titre?: string | null
