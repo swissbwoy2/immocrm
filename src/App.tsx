@@ -101,6 +101,8 @@ const AdminFacturesAbaNinja = lazy(() => import("./pages/admin/FacturesAbaNinja"
 const AdminStatistiquesAgents = lazy(() => import("./pages/admin/StatistiquesAgents"));
 const AdminRemplirPDF = lazy(() => import("./pages/admin/RemplirPDF"));
 const AdminRemplirDemandeIA = lazy(() => import("./pages/admin/RemplirDemandeIA"));
+const ModelesDemandeLocation = lazy(() => import("./features/postulation-auto/pages/ModelesDemandeLocation"));
+const RemplirDemandeLocation = lazy(() => import("./features/postulation-auto/pages/RemplirDemandeLocation"));
 const AdminLeads = lazy(() => import("./pages/admin/Leads"));
 const AdminAutoOffres = lazy(() => import("./pages/admin/AutoOffres"));
 const AdminOffresAuto = lazy(() => import("./pages/admin/OffresAuto"));
@@ -400,6 +402,8 @@ const App = () => (
               <Route path="/admin/statistiques-agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminStatistiquesAgents /></AppLayout></ProtectedRoute>} />
 <Route path="/admin/remplir-pdf" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/remplir-demande-ia" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirDemandeIA /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/modeles-demande-location" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><ModelesDemandeLocation /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/postulation-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RemplirDemandeLocation /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/auto-offres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAutoOffres /></AppLayout></ProtectedRoute>} />
@@ -442,6 +446,8 @@ const App = () => (
               <Route path="/agent/deposer-candidature" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDeposerCandidature /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-demande" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirDemande /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/modeles-demande-location" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><ModelesDemandeLocation /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/postulation-auto" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><RemplirDemandeLocation /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/formation" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFormation /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/formation/:chapitreId" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentFormationChapitre /></AppLayout></ProtectedRoute>} />
