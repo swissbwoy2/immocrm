@@ -167,8 +167,13 @@ export function PublicAnnoncesMap({
       if (existingMarker) {
         existingMarker.setPosition(position);
         existingMarker.setZIndex(isHovered ? 1000 : 1);
+        const icon = existingMarker.getIcon() as google.maps.Symbol | undefined;
+        if (icon && typeof icon === 'object' && 'path' in icon) {
+          existingMarker.setIcon({ ...icon, fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)' });
+        }
         return;
       }
+
 
       const showInfoWindow = () => {
         const photo = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
