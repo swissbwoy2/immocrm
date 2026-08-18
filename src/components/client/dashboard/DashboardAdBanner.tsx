@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ExternalLink, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SignedImage } from '@/components/SignedImage';
-import { useDashboardBanner, type DashboardBanner } from '@/hooks/useDashboardBanner';
+import { useDashboardBanner, resolveBannerLink, type DashboardBanner } from '@/hooks/useDashboardBanner';
 
 interface Props {
   /** Permet un aperçu (admin) sans requête réseau. */
@@ -21,10 +21,11 @@ export function DashboardAdBanner({ banner: override, className }: Props) {
 
   if (!banner?.image_url) return null;
 
-  const link = banner.lien_url?.trim() || '';
+  const link = resolveBannerLink(banner);
   const isExternal = /^https?:\/\//i.test(link);
   const clickable = !!link;
   const showOverlay = !!banner.afficher_overlay && !!(banner.titre || banner.texte);
+
 
   const content = (
     <>
