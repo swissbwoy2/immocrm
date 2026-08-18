@@ -173,10 +173,11 @@ export default function RemplirDemandeLocation() {
     setGenerating(true);
     try {
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
-      const out = await fillPdfTemplate({
+      const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
+      const out = await fill({
         templateBytes: bytes,
         annexeBytes,
-        champs: effectiveChamps,
+        champs: isAcro ? champs : effectiveChamps,
         values,
         signatureDataUrl: signature,
       });
