@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Maximize2, Building2, Heart, Star } from 'lucide-react';
+import { MapPin, Bed, Maximize2, Building2, Heart, Star, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +22,10 @@ interface AnnonceData {
   surface_habitable?: number;
   nb_vues?: number;
   est_mise_en_avant?: boolean;
+  /** Annonce « sourcée » (issue d'un portail externe) : lien de l'annonce d'origine */
+  lien_annonce?: string | null;
+  /** true si le clic doit ouvrir la fiche interne (client connecté) */
+  allowInternalDetail?: boolean;
   disponible_immediatement?: boolean;
   annonceurs?: {
     nom: string;
@@ -74,8 +78,25 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
 
   const advertiserName = annonce.annonceurs?.nom_entreprise || annonce.annonceurs?.nom || 'Annonceur';
 
+  // Annonce sourcée + visiteur public : on n'héberge pas la fiche, on renvoie à la source
+  const externalOnly = !!annonce.lien_annonce && !annonce.allowInternalDetail;
+
+  const Wrapper = ({ children }: { children: React.ReactNode }) =>
+    externalOnly ? (
+      <a
+        href={annonce.lien_annonce as string}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className="block"
+      >
+        {children}
+      </a>
+    ) : (
+      <Link to={`/annonces/${annonce.slug || annonce.id}`}>{children}</Link>
+    );
+
   return (
-    <Link to={`/annonces/${annonce.slug || annonce.id}`}>
+    <Wrapper>
       <Card 
         className={cn(
           "group overflow-hidden transition-all duration-200 hover:shadow-lg border-border/50 bg-card",
@@ -124,6 +145,12 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
               <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] shadow-sm px-1.5 py-0.5">
                 <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
                 Vedette
+              </Badge>
+            )}
+            {externalOnly && (
+              <Badge variant="secondary" className="bg-background/95 text-foreground/80 text-[10px] shadow-sm px-1.5 py-0.5">
+                <ExternalLink className="h-2.5 w-2.5 mr-0.5" />
+                Annonce externe
               </Badge>
             )}
             {annonce.disponible_immediatement && (
@@ -231,6 +258,6 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
           )}
         </CardContent>
       </Card>
-    </Link>
+    </Wrapper>
   );
 }
