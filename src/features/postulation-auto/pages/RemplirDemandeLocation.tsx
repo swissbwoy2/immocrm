@@ -6,7 +6,7 @@ import { keyLabel, SIGNATURE_KEY } from '../keys';
 import type { FormulaireChamp } from '../types';
 import { FORM_BUCKET, SIGN_BUCKET, dataUrlToBlob, fetchBytes } from '../lib/storage';
 import { usePdfDocument } from '../lib/pdfjs';
-import { fillPdfTemplate } from '../lib/fillPdf';
+import { fillAcroFormTemplate, fillPdfTemplate } from '../lib/fillPdf';
 import { buildPostulationValues } from '../lib/buildValues';
 import PdfPage from '../components/PdfPage';
 import DraggableBox from '../components/DraggableBox';
