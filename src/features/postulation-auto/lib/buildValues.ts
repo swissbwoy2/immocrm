@@ -87,9 +87,23 @@ export async function buildPostulationValues(params: {
     .eq('id', agentUserId)
     .maybeSingle();
 
+  // Date de la visite liée (si une visite existe pour ce client / cette offre)
+  let dateVisite = '';
+  if (offreId) {
+    const { data: visite } = await supabase
+      .from('visites')
+      .select('date_visite')
+      .eq('offre_id', offreId)
+      .order('date_visite', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    dateVisite = fmtDate(visite?.date_visite as any);
+  }
+
   const revenusMensuels = Number(client?.revenus_mensuels ?? 0) || 0;
   const lieuSignature = lieu ?? 'Genève';
   const dateJour = fmtDate(new Date().toISOString());
+  const agentTel = formatPhoneCH(agent?.telephone);
 
   const values: Record<string, string> = {
     prenom: clientProfile?.prenom ?? '',
