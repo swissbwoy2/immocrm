@@ -128,37 +128,62 @@ export async function buildPostulationValues(params: {
 
     // RÈGLE STRICTE : coordonnées de l'agent/admin connecté
     email_contact: agent?.email ?? '',
-    tel_contact: agent?.telephone ?? '',
+    tel_contact: agentTel,
     co_email_contact: agent?.email ?? '',
-    co_tel_contact: agent?.telephone ?? '',
+    co_tel_contact: agentTel,
 
     bien_adresse: offre?.adresse ?? '',
     bien_npa_ville: extractNpaVille(offre?.adresse),
     bien_ville: extractNpaVille(offre?.adresse).replace(/^\d{4}\s*/, ''),
-    bien_etage: offre?.etage ?? '',
-    bien_pieces: offre?.pieces ? String(offre.pieces) : '',
+    bien_etage: offre?.etage != null ? String(offre.etage) : '',
+    bien_pieces: offre?.pieces != null ? String(offre.pieces) : '',
     bien_loyer: fmtMoney(offre?.prix),
     bien_charges: '',
     bien_loyer_brut: fmtMoney(offre?.prix),
-    date_visite: '',
+    date_visite: dateVisite,
 
     co_prenom: co?.prenom ?? '',
     co_nom: co?.nom ?? '',
     co_date_naissance: fmtDate(co?.date_naissance),
-    co_etat_civil: co?.etat_civil ?? '',
+    co_etat_civil: co?.etat_civil ?? co?.situation_familiale ?? '',
     co_nationalite: co?.nationalite ?? '',
     co_permis: co?.type_permis ?? co?.permis ?? '',
     co_adresse_actuelle: co?.adresse ?? client?.adresse ?? '',
     co_npa_ville_actuelle: extractNpaVille(co?.adresse ?? client?.adresse),
     co_profession: co?.profession ?? '',
     co_employeur: co?.employeur ?? '',
-    co_lieu_travail: '',
+    co_lieu_travail: co?.secteur_activite ?? '',
     co_revenus: fmtMoney(co?.revenus_mensuels),
 
     lieu: lieuSignature,
     date_du_jour: dateJour,
     lieu_et_date: `${lieuSignature}, ${dateJour}`,
   };
+
+  // ---- Alias de clés utilisées par certains modèles (lookup pur, déterministe) ----
+  const aliases: Record<string, string> = {
+    revenus: values.revenus_mensuels,
+    revenu: values.revenus_mensuels,
+    salaire: values.revenus_mensuels,
+    bien_loyer_net: values.bien_loyer,
+    loyer: values.bien_loyer,
+    loyer_net: values.bien_loyer,
+    charges: values.bien_charges,
+    date_entree: values.date_entree_souhaitee,
+    ville_bien: values.bien_ville,
+    npa_ville_bien: values.bien_npa_ville,
+    adresse_bien: values.bien_adresse,
+    pieces: values.bien_pieces,
+    etage: values.bien_etage,
+    co_revenus_mensuels: values.co_revenus,
+    nombre_personnes: values.nb_personnes,
+    email: values.email_contact,
+    telephone: values.tel_contact,
+    tel: values.tel_contact,
+  };
+  for (const [k, v] of Object.entries(aliases)) {
+    if (!values[k]) values[k] = v ?? '';
+  }
 
   return {
     values,
