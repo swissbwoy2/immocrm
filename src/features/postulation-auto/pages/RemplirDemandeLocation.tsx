@@ -104,7 +104,10 @@ export default function RemplirDemandeLocation() {
         .eq('client_id', clientId)
         .order('created_at', { ascending: false })
         .limit(100);
-      setOffres((data ?? []).map((o: any) => ({ id: o.id, label: `${o.adresse ?? 'Sans adresse'}${o.prix ? ` — CHF ${o.prix}` : ''}` })));
+      const list = (data ?? []).map((o: any) => ({ id: o.id, label: `${o.adresse ?? 'Sans adresse'}${o.prix ? ` — CHF ${o.prix}` : ''}` }));
+      setOffres(list);
+      // Sélection automatique de l'offre active / la plus récente : aucune action manuelle requise
+      setOffreId((prev) => (prev && list.some((o) => o.id === prev) ? prev : list[0]?.id ?? ''));
     })();
   }, [clientId]);
 
@@ -234,7 +237,6 @@ export default function RemplirDemandeLocation() {
   const generate = async () => {
     if (!bytes || !formulaire) { toast.error('Sélectionnez un modèle'); return; }
     if (!clientId) { toast.error('Sélectionnez un client'); return; }
-    if (!offreId) { toast.error("Sélectionnez une offre / un bien"); return; }
     if (!isAcro && champs.length === 0) { toast.error("Ce modèle n'a aucun champ mappé"); return; }
     setGenerating(true);
     try {
@@ -293,14 +295,14 @@ export default function RemplirDemandeLocation() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col lg:h-[calc(100vh-4rem)] pb-24 lg:pb-0">
       <div className="border-b px-4 py-3 md:px-8">
         <h1 className="text-xl md:text-2xl font-bold">Postulation automatique</h1>
         <p className="text-sm text-muted-foreground">Remplissage intelligent du formulaire : l'IA lit le formulaire et le dossier client, puis déduit chaque champ.</p>
       </div>
 
-      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
-        <div className="w-full lg:w-80 shrink-0 overflow-auto border-b lg:border-b-0 lg:border-r p-4 space-y-4">
+      <div className="flex flex-1 flex-col lg:flex-row lg:overflow-hidden">
+        <div className="w-full lg:w-80 lg:shrink-0 lg:overflow-auto border-b lg:border-b-0 lg:border-r p-4 space-y-4">
           <div className="space-y-1.5">
             <Label className="text-xs">Modèle</Label>
             <Select value={formulaireId} onValueChange={setFormulaireId}>
@@ -375,7 +377,7 @@ export default function RemplirDemandeLocation() {
           </p>
         </div>
 
-        <div ref={containerRef} className="flex-1 overflow-auto bg-muted/40 p-3 space-y-6">
+        <div ref={containerRef} className="w-full min-w-0 flex-1 overflow-x-auto lg:overflow-auto bg-muted/40 p-2 sm:p-3 space-y-6">
           {!formulaireId && <p className="py-16 text-center text-sm text-muted-foreground">Choisissez un modèle pour afficher l'aperçu.</p>}
           {formulaireId && !doc && <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
           {doc && isAcro && (
@@ -426,6 +428,13 @@ export default function RemplirDemandeLocation() {
             <div className="text-center"><Badge variant="secondary">Ce modèle n'a aucun champ mappé</Badge></div>
           )}
         </div>
+      </div>
+
+      {/* Barre d'action mobile : le bouton de génération reste toujours accessible */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
+        <Button onClick={generate} disabled={generating || !bytes} className="w-full gap-2 h-12">
+          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Générer le PDF rempli
+        </Button>
       </div>
 
       <Dialog open={signOpen} onOpenChange={setSignOpen}>
