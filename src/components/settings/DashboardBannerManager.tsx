@@ -100,12 +100,15 @@ export function DashboardBannerManager() {
       const payload = {
         image_url: imageUrl,
         lien_url: link || null,
+        lien_ios: lienIos.trim() || null,
+        lien_android: lienAndroid.trim() || null,
         titre: titre.trim() || null,
         texte: texte.trim() || null,
         actif,
         afficher_overlay: afficherOverlay,
         updated_by: user?.id ?? null,
       };
+
       if (id) {
         const { error } = await supabase.from('dashboard_banners').update(payload).eq('id', id);
         if (error) throw error;
@@ -139,6 +142,9 @@ export function DashboardBannerManager() {
       setId(null);
       setImageUrl('');
       setLienUrl('');
+      setLienIos('');
+      setLienAndroid('');
+
       setTitre('');
       setTexte('');
       setActif(true);
