@@ -124,7 +124,7 @@ export async function buildPostulationValues(params: {
     nb_personnes: client?.nombre_occupants ? String(client.nombre_occupants) : '',
     animaux: client?.animaux === true ? 'Oui' : client?.animaux === false ? 'Non' : '',
     fumeur: 'Non',
-    date_entree_souhaitee: offre?.disponibilite ?? '',
+    date_entree_souhaitee: offre?.disponibilite ?? fmtDate(client?.date_engagement) ?? '',
 
     // RÈGLE STRICTE : coordonnées de l'agent/admin connecté
     email_contact: agent?.email ?? '',
