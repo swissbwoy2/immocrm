@@ -13240,6 +13240,35 @@ export type Database = {
           ville: string
         }[]
       }
+      get_public_offre: {
+        Args: { p_id: string }
+        Returns: {
+          adresse: string
+          annee_construction: number
+          classe_energetique: string
+          code_postal: string
+          contact_annonceur: string
+          contact_gerance: string
+          contact_visite: string
+          date_envoi: string
+          description: string
+          disponibilite: string
+          equipements: string[]
+          etage: string
+          id: string
+          lien_annonce: string
+          medias_galerie: Json
+          orientation: string
+          pieces: number
+          prix: number
+          prochaine_visite: string
+          surface: number
+          titre: string
+          type_bien: string
+          type_chauffage: string
+          ville: string
+        }[]
+      }
       get_public_showcase_offres: {
         Args: never
         Returns: {
@@ -13342,6 +13371,25 @@ export type Database = {
       is_proprietaire_owner: {
         Args: { _proprietaire_id: string }
         Returns: boolean
+      }
+      list_public_offres: {
+        Args: never
+        Returns: {
+          adresse: string
+          code_postal: string
+          date_envoi: string
+          disponibilite: string
+          etage: string
+          id: string
+          lien_annonce: string
+          medias_galerie: Json
+          pieces: number
+          prix: number
+          surface: number
+          titre: string
+          type_bien: string
+          ville: string
+        }[]
       }
       log_ai_activity: {
         Args: {

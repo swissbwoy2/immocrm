@@ -38,6 +38,16 @@ const normalize = (raw: string): URL | null => {
   }
 };
 
+const decodeEntities = (s: string): string =>
+  s
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&#(\d+);/g, (_m, d) => String.fromCharCode(parseInt(d, 10)));
+
 const getMeta = (html: string, attr: 'property' | 'name', key: string): string | null => {
   const patterns = [
     new RegExp(`<meta[^>]*${attr}=["']${key}["'][^>]*content=["']([^"']+)["']`, 'i'),
@@ -45,10 +55,49 @@ const getMeta = (html: string, attr: 'property' | 'name', key: string): string |
   ];
   for (const p of patterns) {
     const m = html.match(p);
-    if (m) return m[1];
+    if (m) return decodeEntities(m[1]);
   }
   return null;
 };
+
+/** Certains portails (homegate, immoscout…) bloquent le fetch direct : on passe par Firecrawl. */
+const fetchHtmlViaFirecrawl = async (url: string): Promise<string | null> => {
+  const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!apiKey) return null;
+  // v2 en mode furtif (contourne Datadome sur homegate/immoscout), puis repli v1 simple
+  const attempts: { endpoint: string; payload: Record<string, unknown> }[] = [
+    { endpoint: 'https://api.firecrawl.dev/v2/scrape', payload: { url, formats: ['rawHtml'], onlyMainContent: false, proxy: 'stealth', location: { country: 'CH', languages: ['fr'] } } },
+    { endpoint: 'https://api.firecrawl.dev/v1/scrape', payload: { url, formats: ['rawHtml'], onlyMainContent: false } },
+  ];
+  for (const { endpoint, payload } of attempts) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45_000);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+      const body = await res.text();
+      if (!res.ok) {
+        console.error('firecrawl preview failed', endpoint, url, res.status, body.slice(0, 300));
+        continue;
+      }
+      const data = JSON.parse(body);
+      const html = data?.data?.rawHtml || data?.rawHtml || data?.data?.html || null;
+      if (html) return html;
+    } catch (e) {
+      clearTimeout(timer);
+      console.error('firecrawl preview error', endpoint, url, String(e));
+    }
+  }
+  return null;
+};
+
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -116,44 +165,64 @@ serve(async (req) => {
       }
     }
 
+    let firecrawlBudget = 2; // limite anti quota Firecrawl (25 req/min)
     await Promise.all(
-      toFetch.slice(0, 10).map(async (t) => {
+
+      toFetch.slice(0, 6).map(async (t) => {
         const url = t.parsed.toString();
         const hostname = t.parsed.hostname;
         try {
-          const res = await fetch(url, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-              'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-            },
-          });
-          if (!res.ok) {
-            previews[t.raw] = { image_url: null, title: hostname };
-            return;
+          let html: string | null = null;
+          try {
+            const res = await fetch(url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+              },
+            });
+            if (res.ok) html = await res.text();
+          } catch (_e) {
+            html = null;
           }
-          const html = await res.text();
-          let imageUrl = getMeta(html, 'property', 'og:image') || getMeta(html, 'name', 'twitter:image');
+
+          const hasImage = (h: string | null) =>
+            !!h && !!(getMeta(h, 'property', 'og:image') || getMeta(h, 'name', 'twitter:image'));
+
+          // Portails protégés (403) ou page sans og:image → fallback Firecrawl (limité)
+          if (!hasImage(html) && firecrawlBudget > 0) {
+            firecrawlBudget -= 1;
+            const viaFirecrawl = await fetchHtmlViaFirecrawl(url);
+            if (hasImage(viaFirecrawl)) html = viaFirecrawl;
+            else html = html ?? viaFirecrawl;
+          }
+
+          let imageUrl = html
+            ? getMeta(html, 'property', 'og:image') || getMeta(html, 'name', 'twitter:image')
+            : null;
           if (imageUrl && !imageUrl.startsWith('http')) {
             imageUrl = imageUrl.startsWith('/')
               ? `${t.parsed.protocol}//${t.parsed.host}${imageUrl}`
               : `${t.parsed.protocol}//${t.parsed.host}/${imageUrl}`;
           }
-          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          const titleMatch = html ? html.match(/<title[^>]*>([^<]+)<\/title>/i) : null;
+
           const preview = {
             url,
-            title: getMeta(html, 'property', 'og:title') || (titleMatch ? titleMatch[1].trim() : null),
-            description: getMeta(html, 'property', 'og:description') || getMeta(html, 'name', 'description'),
+            title: (html && getMeta(html, 'property', 'og:title')) || (titleMatch ? titleMatch[1].trim() : hostname),
+            description: html ? getMeta(html, 'property', 'og:description') || getMeta(html, 'name', 'description') : null,
             image_url: imageUrl,
-            site_name: getMeta(html, 'property', 'og:site_name') || hostname,
+            site_name: (html && getMeta(html, 'property', 'og:site_name')) || hostname,
             favicon_url: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
             fetched_at: new Date().toISOString(),
           };
           previews[t.raw] = { image_url: preview.image_url, title: preview.title };
+          // On mémorise aussi les échecs (image nulle) pour ne pas re-scraper à chaque affichage
           await admin.from('link_previews').upsert(preview, { onConflict: 'url' });
         } catch (_e) {
           previews[t.raw] = { image_url: null, title: hostname };
         }
+
       }),
     );
 
