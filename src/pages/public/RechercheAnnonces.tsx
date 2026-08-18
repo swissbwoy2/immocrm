@@ -749,6 +749,7 @@ export default function RechercheAnnonces() {
 
         {viewMode === 'map' && (
           <>
+            {/* Desktop : carte à droite */}
             <div className="hidden lg:block lg:w-[45%] xl:w-[50%] h-full border-l bg-muted/30">
               <PublicAnnoncesMap
                 annonces={resultats}
@@ -758,7 +759,8 @@ export default function RechercheAnnonces() {
                 searchCenter={searchCoords}
               />
             </div>
-            <div className="lg:hidden h-[50vh] border-t">
+            {/* Mobile / tablette : carte plein écran */}
+            <div className="lg:hidden fixed inset-0 z-50 bg-background">
               <PublicAnnoncesMap
                 annonces={resultats}
                 onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
@@ -766,9 +768,23 @@ export default function RechercheAnnonces() {
                 onMarkerHover={setHoveredAnnonceId}
                 searchCenter={searchCoords}
               />
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 pointer-events-none">
+                <Button
+                  size="sm"
+                  className="pointer-events-auto shadow-lg cursor-pointer"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4 mr-2" />
+                  Retour à la liste
+                </Button>
+                <Badge variant="secondary" className="pointer-events-auto shadow-lg">
+                  {resultats.length} bien{resultats.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
           </>
         )}
+
       </div>
 
       <PublicFooter />
