@@ -9,6 +9,7 @@ import { usePdfDocument } from '../lib/pdfjs';
 import { fillAcroFormByName, fillAcroFormTemplate, fillPdfTemplate } from '../lib/fillPdf';
 import { llmFillPostulation } from '../lib/llmFill';
 import { buildPostulationValues } from '../lib/buildValues';
+import { buildSectionedValues, resolveChampValues, type SectionedValues } from '../lib/sectionValues';
 import PdfPage from '../components/PdfPage';
 import DraggableBox from '../components/DraggableBox';
 import SignaturePad from '@/components/mandat/SignaturePad';
@@ -48,6 +49,7 @@ export default function RemplirDemandeLocation() {
   const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
   const [aiByName, setAiByName] = useState<Record<string, string> | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [sectioned, setSectioned] = useState<SectionedValues | null>(null);
 
   const formulaire = useMemo(() => formulaires.find((f) => f.id === formulaireId) ?? null, [formulaires, formulaireId]);
   const isAcro = formulaire?.mode === 'acroform';
@@ -156,11 +158,13 @@ export default function RemplirDemandeLocation() {
   /* Résolution automatique des valeurs dès qu'un client (et une offre) sont choisis */
   useEffect(() => {
     let cancelled = false;
-    if (!clientId || !user?.id) { setValues({}); return; }
+    if (!clientId || !user?.id) { setValues({}); setSectioned(null); return; }
     (async () => {
       try {
         const { values: v } = await buildPostulationValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
         if (!cancelled) setValues(v);
+        const sv = await buildSectionedValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
+        if (!cancelled) setSectioned(sv);
       } catch { /* noop */ }
     })();
     return () => { cancelled = true; };
