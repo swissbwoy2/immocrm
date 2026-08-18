@@ -760,7 +760,18 @@ const MesCandidatures = () => {
                 </PremiumCandidatureCard>
               </div>
               );
+                  })}
+                  </div>
+                </section>
+              );
             })}
+            {visibleOffres.length === 0 && (
+              <PremiumEmptyState
+                icon={FileStack}
+                title="Aucun résultat"
+                description="Aucune candidature ne correspond à votre recherche ou à vos filtres."
+              />
+            )}
           </div>
         ) : (
           <PremiumEmptyState
