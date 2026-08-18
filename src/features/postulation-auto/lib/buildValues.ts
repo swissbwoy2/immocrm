@@ -18,6 +18,18 @@ export function extractNpaVille(adresse?: string | null): string {
   return parts.length > 1 ? parts[parts.length - 1] : '';
 }
 
+/** Numéro suisse au format national avec le 0 initial (021 634 28 39). */
+export function formatPhoneCH(tel?: string | null): string {
+  if (!tel) return '';
+  const t = String(tel).trim();
+  const m = t.match(/^(?:\+41|0041)\s*(.*)$/);
+  if (m) {
+    const rest = m[1].trim();
+    return rest.startsWith('0') ? rest : `0${rest}`;
+  }
+  return t;
+}
+
 export interface BuildValuesResult {
   values: Record<string, string>;
   clientNom: string;
@@ -37,7 +49,7 @@ export async function buildPostulationValues(params: {
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, user_id, date_naissance, nationalite, type_permis, etat_civil, situation_familiale, profession, employeur, revenus_mensuels, adresse, nombre_occupants, animaux')
+    .select('id, user_id, date_naissance, nationalite, type_permis, etat_civil, situation_familiale, profession, employeur, revenus_mensuels, adresse, nombre_occupants, animaux, secteur_activite, gerance_actuelle, motif_changement, date_engagement')
     .eq('id', clientId)
     .maybeSingle();
 
@@ -75,9 +87,23 @@ export async function buildPostulationValues(params: {
     .eq('id', agentUserId)
     .maybeSingle();
 
+  // Date de la visite liée (si une visite existe pour ce client / cette offre)
+  let dateVisite = '';
+  if (offreId) {
+    const { data: visite } = await supabase
+      .from('visites')
+      .select('date_visite')
+      .eq('offre_id', offreId)
+      .order('date_visite', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    dateVisite = fmtDate(visite?.date_visite as any);
+  }
+
   const revenusMensuels = Number(client?.revenus_mensuels ?? 0) || 0;
   const lieuSignature = lieu ?? 'Genève';
   const dateJour = fmtDate(new Date().toISOString());
+  const agentTel = formatPhoneCH(agent?.telephone);
 
   const values: Record<string, string> = {
     prenom: clientProfile?.prenom ?? '',
@@ -90,49 +116,74 @@ export async function buildPostulationValues(params: {
     npa_ville_actuelle: extractNpaVille(client?.adresse),
     profession: client?.profession ?? '',
     employeur: client?.employeur ?? '',
-    lieu_travail: '',
+    lieu_travail: client?.secteur_activite ?? '',
     revenus_mensuels: fmtMoney(client?.revenus_mensuels),
     revenus_annuels: revenusMensuels ? fmtMoney(revenusMensuels * 12) : '',
-    regie_actuelle: offre?.contact_gerance ?? '',
-    motif: '',
+    regie_actuelle: client?.gerance_actuelle ?? offre?.contact_gerance ?? '',
+    motif: client?.motif_changement ?? '',
     nb_personnes: client?.nombre_occupants ? String(client.nombre_occupants) : '',
     animaux: client?.animaux === true ? 'Oui' : client?.animaux === false ? 'Non' : '',
     fumeur: 'Non',
-    date_entree_souhaitee: offre?.disponibilite ?? '',
+    date_entree_souhaitee: offre?.disponibilite ?? fmtDate(client?.date_engagement) ?? '',
 
     // RÈGLE STRICTE : coordonnées de l'agent/admin connecté
     email_contact: agent?.email ?? '',
-    tel_contact: agent?.telephone ?? '',
+    tel_contact: agentTel,
     co_email_contact: agent?.email ?? '',
-    co_tel_contact: agent?.telephone ?? '',
+    co_tel_contact: agentTel,
 
     bien_adresse: offre?.adresse ?? '',
     bien_npa_ville: extractNpaVille(offre?.adresse),
     bien_ville: extractNpaVille(offre?.adresse).replace(/^\d{4}\s*/, ''),
-    bien_etage: offre?.etage ?? '',
-    bien_pieces: offre?.pieces ? String(offre.pieces) : '',
+    bien_etage: offre?.etage != null ? String(offre.etage) : '',
+    bien_pieces: offre?.pieces != null ? String(offre.pieces) : '',
     bien_loyer: fmtMoney(offre?.prix),
     bien_charges: '',
     bien_loyer_brut: fmtMoney(offre?.prix),
-    date_visite: '',
+    date_visite: dateVisite,
 
     co_prenom: co?.prenom ?? '',
     co_nom: co?.nom ?? '',
     co_date_naissance: fmtDate(co?.date_naissance),
-    co_etat_civil: co?.etat_civil ?? '',
+    co_etat_civil: co?.etat_civil ?? co?.situation_familiale ?? '',
     co_nationalite: co?.nationalite ?? '',
     co_permis: co?.type_permis ?? co?.permis ?? '',
     co_adresse_actuelle: co?.adresse ?? client?.adresse ?? '',
     co_npa_ville_actuelle: extractNpaVille(co?.adresse ?? client?.adresse),
     co_profession: co?.profession ?? '',
     co_employeur: co?.employeur ?? '',
-    co_lieu_travail: '',
+    co_lieu_travail: co?.secteur_activite ?? '',
     co_revenus: fmtMoney(co?.revenus_mensuels),
 
     lieu: lieuSignature,
     date_du_jour: dateJour,
     lieu_et_date: `${lieuSignature}, ${dateJour}`,
   };
+
+  // ---- Alias de clés utilisées par certains modèles (lookup pur, déterministe) ----
+  const aliases: Record<string, string> = {
+    revenus: values.revenus_mensuels,
+    revenu: values.revenus_mensuels,
+    salaire: values.revenus_mensuels,
+    bien_loyer_net: values.bien_loyer,
+    loyer: values.bien_loyer,
+    loyer_net: values.bien_loyer,
+    charges: values.bien_charges,
+    date_entree: values.date_entree_souhaitee,
+    ville_bien: values.bien_ville,
+    npa_ville_bien: values.bien_npa_ville,
+    adresse_bien: values.bien_adresse,
+    pieces: values.bien_pieces,
+    etage: values.bien_etage,
+    co_revenus_mensuels: values.co_revenus,
+    nombre_personnes: values.nb_personnes,
+    email: values.email_contact,
+    telephone: values.tel_contact,
+    tel: values.tel_contact,
+  };
+  for (const [k, v] of Object.entries(aliases)) {
+    if (!values[k]) values[k] = v ?? '';
+  }
 
   return {
     values,
