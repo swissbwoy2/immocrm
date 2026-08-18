@@ -5066,6 +5066,7 @@ export type Database = {
           page: number
           pos_x: number
           pos_y: number
+          section: string
           taille_police: number
           type_champ: string
           updated_at: string
@@ -5083,6 +5084,7 @@ export type Database = {
           page?: number
           pos_x?: number
           pos_y?: number
+          section?: string
           taille_police?: number
           type_champ?: string
           updated_at?: string
@@ -5100,6 +5102,7 @@ export type Database = {
           page?: number
           pos_x?: number
           pos_y?: number
+          section?: string
           taille_police?: number
           type_champ?: string
           updated_at?: string
@@ -5118,6 +5121,7 @@ export type Database = {
         Row: {
           actif: boolean
           annexe_pdf_url: string | null
+          calibrated_at: string | null
           created_at: string
           created_by: string | null
           fichier_pdf_url: string | null
@@ -5130,6 +5134,7 @@ export type Database = {
         Insert: {
           actif?: boolean
           annexe_pdf_url?: string | null
+          calibrated_at?: string | null
           created_at?: string
           created_by?: string | null
           fichier_pdf_url?: string | null
@@ -5142,6 +5147,7 @@ export type Database = {
         Update: {
           actif?: boolean
           annexe_pdf_url?: string | null
+          calibrated_at?: string | null
           created_at?: string
           created_by?: string | null
           fichier_pdf_url?: string | null
