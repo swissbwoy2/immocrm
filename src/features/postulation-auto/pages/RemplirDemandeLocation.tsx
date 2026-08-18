@@ -44,12 +44,24 @@ export default function RemplirDemandeLocation() {
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
   const [generating, setGenerating] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
 
   const formulaire = useMemo(() => formulaires.find((f) => f.id === formulaireId) ?? null, [formulaires, formulaireId]);
+  const isAcro = formulaire?.mode === 'acroform';
   const { champs, reload: reloadChamps } = useFormulaireChamps(formulaireId || null);
-  const { doc, numPages } = usePdfDocument(bytes);
+  const { doc, numPages } = usePdfDocument(isAcro ? previewBytes ?? bytes : bytes);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(700);
+
+  /* Aperçu WYSIWYG du remplissage natif */
+  useEffect(() => {
+    if (!isAcro || !bytes) { setPreviewBytes(null); return; }
+    let cancelled = false;
+    fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature })
+      .then((out) => { if (!cancelled) setPreviewBytes(out); })
+      .catch(() => { if (!cancelled) setPreviewBytes(null); });
+    return () => { cancelled = true; };
+  }, [isAcro, bytes, champs, values, signature]);
 
   useEffect(() => {
     const update = () => setWidth(Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8));
