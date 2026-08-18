@@ -33,6 +33,8 @@ export function formatPhoneCH(tel?: string | null): string {
 export interface BuildValuesResult {
   values: Record<string, string>;
   clientNom: string;
+  /** Offre réellement utilisée (résolue automatiquement si non fournie) */
+  offreId: string | null;
 }
 
 /**
@@ -197,6 +199,7 @@ export async function buildPostulationValues(params: {
 
   return {
     values,
+    offreId: resolvedOffreId,
     clientNom: `${clientProfile?.prenom ?? ''} ${clientProfile?.nom ?? ''}`.trim(),
   };
 }
