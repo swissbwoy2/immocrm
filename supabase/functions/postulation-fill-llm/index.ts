@@ -272,16 +272,33 @@ Deno.serve(async (req) => {
             prenom: co.prenom ?? "",
             nom: co.nom ?? "",
             date_naissance: fmtDate(co.date_naissance),
-            etat_civil: co.etat_civil ?? "",
+            etat_civil: co.etat_civil ?? co.situation_familiale ?? "",
             nationalite: co.nationalite ?? "",
             permis_sejour: co.type_permis ?? co.permis ?? "",
             adresse_actuelle: co.adresse ?? client.adresse ?? "",
+            npa_ville_actuelle: extractNpaVille(co.adresse ?? client.adresse),
             profession: co.profession ?? "",
             employeur: co.employeur ?? "",
+            lieu_travail: co.secteur_activite ?? "",
             revenus_mensuels: co.revenus_mensuels ?? "",
+            revenus_annuels: co.revenus_mensuels ? Number(co.revenus_mensuels) * 12 : "",
             lien: co.lien_avec_client ?? co.type ?? "",
+            role: co.type ?? "",
           }
         : null,
+      autres_candidats: (candidates ?? [])
+        .filter((c: any) => !co || c.id !== co.id)
+        .map((c: any) => ({
+          role: c.type ?? "",
+          prenom: c.prenom ?? "",
+          nom: c.nom ?? "",
+          date_naissance: fmtDate(c.date_naissance),
+          nationalite: c.nationalite ?? "",
+          permis_sejour: c.type_permis ?? "",
+          profession: c.profession ?? "",
+          employeur: c.employeur ?? "",
+          revenus_mensuels: c.revenus_mensuels ?? "",
+        })),
       bien_convoite: offre
         ? {
             adresse: offre.adresse ?? "",
@@ -292,9 +309,11 @@ Deno.serve(async (req) => {
             loyer_mensuel: offre.prix ?? "",
             disponibilite: offre.disponibilite ?? "",
             regie: offre.contact_gerance ?? "",
+            lien_annonce: offre.lien_annonce ?? "",
             date_visite: dateVisite,
           }
         : null,
+
       agent_responsable: {
         prenom: agent?.prenom ?? "",
         nom: agent?.nom ?? "",
