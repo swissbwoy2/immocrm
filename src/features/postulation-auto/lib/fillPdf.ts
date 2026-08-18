@@ -55,6 +55,7 @@ export async function fillPdfTemplate({
   annexeBytes,
   champs,
   values,
+  valuesById,
   signatureDataUrl,
 }: FillOptions): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(templateBytes);
@@ -95,7 +96,7 @@ export async function fillPdfTemplate({
       continue;
     }
 
-    const raw = values[champ.cle_champ];
+    const raw = valuesById?.[champ.id] ?? values[champ.cle_champ];
     if (!raw || isKeyLikeValue(String(raw))) continue;
     const text = sanitizePdfText(String(raw));
     const size = Number(champ.taille_police) || 10;
@@ -145,6 +146,7 @@ export async function fillAcroFormTemplate({
   annexeBytes,
   champs,
   values,
+  valuesById,
   signatureDataUrl,
   flatten = true,
 }: FillOptions & { flatten?: boolean }): Promise<Uint8Array> {
@@ -164,7 +166,7 @@ export async function fillAcroFormTemplate({
   for (const champ of champs) {
     const name = champ.nom_champ_pdf;
     if (!name || !champ.cle_champ) continue;
-    const rawValue = String(values[champ.cle_champ] ?? '');
+    const rawValue = String(valuesById?.[champ.id] ?? values[champ.cle_champ] ?? '');
     const value = isKeyLikeValue(rawValue) ? '' : sanitizePdfText(rawValue);
 
     try {
