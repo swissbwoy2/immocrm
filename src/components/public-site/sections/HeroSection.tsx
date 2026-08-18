@@ -346,19 +346,9 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.8 }}
               className="mt-6"
             >
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground hover:bg-primary/10">
-                  <Link to="/login">Déjà client ? Se connecter</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="border-2 border-green-500/40 hover:border-green-500 bg-transparent hover:bg-green-500/10 text-green-400 hover:text-green-300"
-                >
-                  <Link to="/inscription-annonceur">Déposer une annonce</Link>
-                </Button>
-              </div>
+              <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-muted-foreground hover:bg-primary/10">
+                <Link to="/login">Déjà client ? Se connecter</Link>
+              </Button>
             </motion.div>
             <motion.div
               initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
