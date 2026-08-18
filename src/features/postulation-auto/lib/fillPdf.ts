@@ -12,6 +12,18 @@ export function sanitizePdfText(input: string): string {
     .replace(/[\u2013\u2014]/g, '-');
 }
 
+/**
+ * Garde-fou : on n'écrit JAMAIS le nom d'une clé/champ technique dans le PDF
+ * (ex. "bien_loyer_ne", "co_prenom"). Si la valeur ressemble à un identifiant
+ * snake_case sans espace, on la considère comme vide.
+ */
+export function isKeyLikeValue(value: string): boolean {
+  const v = (value ?? '').trim();
+  if (!v || /\s/.test(v)) return false;
+  return /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(v);
+}
+
+
 export interface FillOptions {
   templateBytes: ArrayBuffer | Uint8Array;
   annexeBytes?: ArrayBuffer | Uint8Array | null;
