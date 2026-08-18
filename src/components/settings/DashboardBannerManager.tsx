@@ -278,6 +278,9 @@ export function DashboardBannerManager() {
                     id: 'preview',
                     image_url: imageUrl,
                     lien_url: lienUrl || null,
+                    lien_ios: lienIos || null,
+                    lien_android: lienAndroid || null,
+
                     titre: titre || null,
                     texte: texte || null,
                     actif,
