@@ -20,6 +20,9 @@ export function DashboardBannerManager() {
   const [id, setId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [lienUrl, setLienUrl] = useState('');
+  const [lienIos, setLienIos] = useState('');
+  const [lienAndroid, setLienAndroid] = useState('');
+
   const [titre, setTitre] = useState('');
   const [texte, setTexte] = useState('');
   const [actif, setActif] = useState(true);
@@ -38,6 +41,9 @@ export function DashboardBannerManager() {
         setId(data.id);
         setImageUrl(data.image_url || '');
         setLienUrl(data.lien_url || '');
+        setLienIos((data as any).lien_ios || '');
+        setLienAndroid((data as any).lien_android || '');
+
         setTitre(data.titre || '');
         setTexte(data.texte || '');
         setActif(!!data.actif);
