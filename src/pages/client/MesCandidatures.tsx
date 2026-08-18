@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -60,6 +62,26 @@ const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destr
   return (config?.color as any) || 'secondary';
 };
 
+// Regroupement d'affichage (UX seulement — n'altère aucun statut)
+const GROUPES = [
+  { key: 'en_cours', label: 'En cours', dot: 'bg-primary' },
+  { key: 'deposees', label: 'Déposées / en traitement', dot: 'bg-sky-500' },
+  { key: 'cloturees', label: 'Clôturées', dot: 'bg-muted-foreground' },
+] as const;
+
+const STATUTS_DEPOSEES = [
+  'candidature_deposee', 'en_attente', 'acceptee', 'bail_conclu', 'attente_bail',
+  'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe',
+];
+const STATUTS_CLOTUREES = ['refusee', 'cles_remises'];
+
+const getGroupe = (statut: string) => {
+  if (STATUTS_CLOTUREES.includes(statut)) return 'cloturees';
+  if (STATUTS_DEPOSEES.includes(statut)) return 'deposees';
+  return 'en_cours';
+};
+
+
 interface DateProposee {
   date: string;
   lieu: string;
@@ -82,6 +104,9 @@ const MesCandidatures = () => {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [showThankYouDialog, setShowThankYouDialog] = useState(false);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [search, setSearch] = useState('');
+  const [statutFilter, setStatutFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'ancien' | 'statut'>('recent');
 
   // Handle URL parameter for auto-expanding candidature
   useEffect(() => {
@@ -374,6 +399,51 @@ const MesCandidatures = () => {
     setShowThankYouDialog(true);
   };
 
+  // ---- Recherche / filtres / tri (UX uniquement, la logique de statuts reste inchangée) ----
+  const enrichedOffres = useMemo(() => offres.map((offre) => {
+    const candidature = candidatures.find(c => c.offre_id === offre.id);
+    const statut = candidature?.statut || offre.statut;
+    return { ...offre, __statut: statut, groupe: getGroupe(statut) };
+  }), [offres, candidatures]);
+
+  const statutCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    enrichedOffres.forEach(o => map.set(o.__statut, (map.get(o.__statut) || 0) + 1));
+    return Array.from(map.entries()).map(([statut, count]) => ({ statut, count }));
+  }, [enrichedOffres]);
+
+  const visibleOffres = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = enrichedOffres.filter(o => {
+      if (statutFilter.startsWith('groupe:')) {
+        if (o.groupe !== statutFilter.slice(7)) return false;
+      } else if (statutFilter !== 'all' && o.__statut !== statutFilter) {
+        return false;
+      }
+      if (!q) return true;
+      const hay = [o.adresse, o.ville, o.npa, o.quartier, o.type_bien]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+    list = [...list].sort((a, b) => {
+      if (sortBy === 'statut') {
+        const sa = WORKFLOW_STATUTS[a.__statut as keyof typeof WORKFLOW_STATUTS]?.step ?? 0;
+        const sb = WORKFLOW_STATUTS[b.__statut as keyof typeof WORKFLOW_STATUTS]?.step ?? 0;
+        return sb - sa;
+      }
+      const da = new Date(a.date_envoi || 0).getTime();
+      const db = new Date(b.date_envoi || 0).getTime();
+      return sortBy === 'ancien' ? da - db : db - da;
+    });
+    return list;
+  }, [enrichedOffres, search, statutFilter, sortBy]);
+
+  const groupedOffres = useMemo(() => (
+    GROUPES
+      .map(g => ({ ...g, items: visibleOffres.filter(o => o.groupe === g.key) }))
+      .filter(g => g.items.length > 0)
+  ), [visibleOffres]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -409,8 +479,82 @@ const MesCandidatures = () => {
         <PremiumCandidatureKPIs data={kpiData} />
 
         {offres.length > 0 ? (
-          <div className="grid gap-6">
-            {offres.map((offre, index) => {
+          <div className="space-y-8">
+            {/* Recherche / filtres / tri */}
+            <div className="rounded-2xl border border-primary/15 bg-card/70 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher par adresse, ville, quartier…"
+                    className="pl-9 h-11 bg-background/60"
+                    aria-label="Rechercher une candidature"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 md:w-auto">
+                  <Select value={statutFilter} onValueChange={setStatutFilter}>
+                    <SelectTrigger className="h-11 sm:w-[230px]" aria-label="Filtrer par statut">
+                      <SelectValue placeholder="Statut" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      <SelectItem value="all">Tous les statuts ({offres.length})</SelectItem>
+                      {statutCounts.map(({ statut, count }) => (
+                        <SelectItem key={statut} value={statut}>
+                          {getStatutLabel(statut)} ({count})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                    <SelectTrigger className="h-11 sm:w-[190px]" aria-label="Trier">
+                      <SelectValue placeholder="Trier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recent">Plus récentes d'abord</SelectItem>
+                      <SelectItem value="ancien">Plus anciennes d'abord</SelectItem>
+                      <SelectItem value="statut">Par statut (avancement)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatutFilter('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${statutFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
+                >
+                  Tout ({offres.length})
+                </button>
+                {GROUPES.map((g) => {
+                  const count = enrichedOffres.filter(o => o.groupe === g.key).length;
+                  if (!count) return null;
+                  return (
+                    <button
+                      key={g.key}
+                      type="button"
+                      onClick={() => setStatutFilter(statutFilter === `groupe:${g.key}` ? 'all' : `groupe:${g.key}`)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${statutFilter === `groupe:${g.key}` ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
+                    >
+                      {g.label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {groupedOffres.map((groupe) => {
+              return (
+                <section key={groupe.key} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className={`h-2.5 w-2.5 rounded-full ${groupe.dot}`} />
+                    <h2 className="text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
+                    <Badge variant="secondary" className="rounded-full">{groupe.items.length}</Badge>
+                    <div className="flex-1 h-px bg-border/50" />
+                  </div>
+                  <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+                  {groupe.items.map((offre, index) => {
               const candidature = candidatures.find(c => c.offre_id === offre.id);
               const statut = candidature?.statut || offre.statut;
               const datesProposees = candidature?.dates_signature_proposees as DateProposee[] | null;
@@ -760,7 +904,18 @@ const MesCandidatures = () => {
                 </PremiumCandidatureCard>
               </div>
               );
+                  })}
+                  </div>
+                </section>
+              );
             })}
+            {visibleOffres.length === 0 && (
+              <PremiumEmptyState
+                icon={FileStack}
+                title="Aucun résultat"
+                description="Aucune candidature ne correspond à votre recherche ou à vos filtres."
+              />
+            )}
           </div>
         ) : (
           <PremiumEmptyState
