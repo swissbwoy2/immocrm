@@ -62,6 +62,26 @@ const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destr
   return (config?.color as any) || 'secondary';
 };
 
+// Regroupement d'affichage (UX seulement — n'altère aucun statut)
+const GROUPES = [
+  { key: 'en_cours', label: 'En cours', dot: 'bg-primary' },
+  { key: 'deposees', label: 'Déposées / en traitement', dot: 'bg-sky-500' },
+  { key: 'cloturees', label: 'Clôturées', dot: 'bg-muted-foreground' },
+] as const;
+
+const STATUTS_DEPOSEES = [
+  'candidature_deposee', 'en_attente', 'acceptee', 'bail_conclu', 'attente_bail',
+  'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe',
+];
+const STATUTS_CLOTUREES = ['refusee', 'cles_remises'];
+
+const getGroupe = (statut: string) => {
+  if (STATUTS_CLOTUREES.includes(statut)) return 'cloturees';
+  if (STATUTS_DEPOSEES.includes(statut)) return 'deposees';
+  return 'en_cours';
+};
+
+
 interface DateProposee {
   date: string;
   lieu: string;
