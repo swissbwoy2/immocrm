@@ -566,10 +566,16 @@ function ClientDashboardLocation() {
             />
           </SectionErrorBoundary>
 
+          {/* Bande horizontale — mes offres reçues */}
+          <SectionErrorBoundary sectionName="MesOffresRecuesBand">
+            <MesOffresRecuesBand offres={offres} />
+          </SectionErrorBoundary>
+
           {/* Bande horizontale — mes visites à venir */}
           <SectionErrorBoundary sectionName="MesVisitesAVenirBand">
             <MesVisitesAVenirBand visites={visites} />
           </SectionErrorBoundary>
+
 
 
           {/* Alerte compte non actif */}
