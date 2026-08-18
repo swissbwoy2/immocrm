@@ -63,7 +63,7 @@ export async function buildPostulationValues(params: {
   if (offreId) {
     const { data } = await supabase
       .from('offres')
-      .select('adresse, prix, pieces, etage, disponibilite, lien_annonce')
+      .select('adresse, prix, pieces, etage, disponibilite, lien_annonce, contact_gerance')
       .eq('id', offreId)
       .maybeSingle();
     offre = data;
@@ -93,7 +93,7 @@ export async function buildPostulationValues(params: {
     lieu_travail: '',
     revenus_mensuels: fmtMoney(client?.revenus_mensuels),
     revenus_annuels: revenusMensuels ? fmtMoney(revenusMensuels * 12) : '',
-    regie_actuelle: '',
+    regie_actuelle: offre?.contact_gerance ?? '',
     motif: '',
     nb_personnes: client?.nombre_occupants ? String(client.nombre_occupants) : '',
     animaux: client?.animaux === true ? 'Oui' : client?.animaux === false ? 'Non' : '',
