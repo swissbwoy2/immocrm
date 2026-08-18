@@ -24,7 +24,7 @@ import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
-import { usePortailOffres, useOffresPreviews, galerieUrls } from '@/hooks/usePortailOffres';
+import { usePortailOffres, useOffresPreviews, useOffresImageExtraction, galerieUrls } from '@/hooks/usePortailOffres';
 import { findNeighbourLocalites, geocodeLocalite } from '@/lib/swissLocalities';
 
 
@@ -37,6 +37,8 @@ const setMeta = (name: string, content: string) => {
   }
   tag.setAttribute('content', content);
 };
+
+const PAGE_SIZE = 48;
 
 const escapeOr = (v: string) => v.replace(/[,()]/g, ' ').trim();
 const splitList = (v: string) => v.split(',').map((s) => s.trim()).filter(Boolean);
@@ -253,9 +255,16 @@ export default function RechercheAnnonces() {
           query = query.order('est_mise_en_avant', { ascending: false }).order('date_publication', { ascending: false });
       }
 
-      const { data, error } = await query.limit(200);
-      if (error) throw error;
-      return data || [];
+      // Pagination serveur : aucun plafond dur (le rendu est limité par le scroll infini)
+      const all: any[] = [];
+      const BATCH = 900;
+      for (let from = 0; from < 15000; from += BATCH) {
+        const { data, error } = await query.range(from, from + BATCH - 1);
+        if (error) throw error;
+        if (data?.length) all.push(...data);
+        if (!data || data.length < BATCH) break;
+      }
+      return all;
     },
     enabled: categories.length > 0 || categorieSlugs.length === 0,
   });
