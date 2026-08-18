@@ -21,6 +21,7 @@ import { AlerteAnnonceDialog } from '@/components/annonces/AlerteAnnonceDialog';
 import { LocalitesMultiSelect, parseLocalite, type LocaliteOption } from '@/components/annonces/LocalitesMultiSelect';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
+import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
@@ -333,6 +334,8 @@ export default function RechercheAnnonces() {
   );
   useOffresImageExtraction(extractionIds);
 
+  const { canViewInternalListing } = useSourcedListingAccess();
+
   const offresCards = useMemo(
     () =>
       offresFiltrees.map((o) => {
@@ -352,10 +355,12 @@ export default function RechercheAnnonces() {
           surface_habitable: o.surface ?? undefined,
           date_publication: o.date_envoi,
           est_mise_en_avant: false,
+          lien_annonce: o.lien_annonce || null,
+          allowInternalDetail: canViewInternalListing,
           photos_annonces_publiques: photo ? [{ url: photo, est_principale: true }] : [],
         } as any;
       }),
-    [offresFiltrees, previews],
+    [offresFiltrees, previews, canViewInternalListing],
   );
 
   const resultats = useMemo(() => {
