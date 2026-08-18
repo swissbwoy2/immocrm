@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Sparkles, Megaphone } from 'lucide-react';
 
 const StoriesShowcaseSection = lazy(() =>
   import('./StoriesShowcaseSection').then((m) => ({ default: m.StoriesShowcaseSection }))
@@ -61,15 +62,24 @@ export function DossierAnalyseSection() {
 
 
 
-              {/* Bouton MAINTENANT */}
-              <a
-                href="/nouveau-mandat"
-                className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)] w-full sm:w-auto"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="text-sm uppercase tracking-wide">Active ta recherche MAINTENANT et décroche ton bail</span>
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </a>
+              {/* Boutons CTA */}
+              <div className="flex flex-col sm:flex-row gap-3 w-full">
+                <a
+                  href="/nouveau-mandat"
+                  className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)] w-full sm:w-auto"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-sm uppercase tracking-wide">Active ta recherche MAINTENANT et décroche ton bail</span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </a>
+                <Link
+                  to="/inscription-annonceur"
+                  className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 rounded-xl border-2 border-primary/40 hover:border-primary bg-transparent hover:bg-primary/10 text-primary font-semibold transition-all w-full sm:w-auto"
+                >
+                  <Megaphone className="h-4 w-4" />
+                  <span className="text-sm uppercase tracking-wide">Déposer une annonce</span>
+                </Link>
+              </div>
             </div>
 
 
