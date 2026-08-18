@@ -52,8 +52,14 @@ export default function HomePage() {
 
 
 
+      {/* Bannière publicitaire configurable par l'admin (masquée si aucune bannière active) */}
+      <div className="container mx-auto px-4 pt-4">
+        <DashboardAdBanner />
+      </div>
+
       {/* Eager sections */}
       <DossierAnalyseSection />
+
 
       {/* Bloc hero de choix de parcours (location / achat) */}
       <HeroSection />
