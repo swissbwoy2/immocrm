@@ -82,6 +82,9 @@ const MesCandidatures = () => {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [showThankYouDialog, setShowThankYouDialog] = useState(false);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [search, setSearch] = useState('');
+  const [statutFilter, setStatutFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'ancien' | 'statut'>('recent');
 
   // Handle URL parameter for auto-expanding candidature
   useEffect(() => {
