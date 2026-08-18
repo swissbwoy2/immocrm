@@ -400,6 +400,8 @@ const App = () => (
               <Route path="/admin/statistiques-agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminStatistiquesAgents /></AppLayout></ProtectedRoute>} />
 <Route path="/admin/remplir-pdf" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/remplir-demande-ia" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirDemandeIA /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/modeles-demande-location" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><ModelesDemandeLocation /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/postulation-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RemplirDemandeLocation /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/auto-offres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAutoOffres /></AppLayout></ProtectedRoute>} />
