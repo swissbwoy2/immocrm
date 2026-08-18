@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { FormulaireChamp } from '../types';
 import { SIGNATURE_KEY } from '../keys';
+import { normalizeName } from './acroform';
 
 /** pdf-lib (WinAnsi) ne supporte pas certains espaces unicode */
 export function sanitizePdfText(input: string): string {
@@ -18,6 +19,17 @@ export interface FillOptions {
   values: Record<string, string>;
   /** dataURL PNG */
   signatureDataUrl?: string | null;
+}
+
+async function appendAnnexe(pdfDoc: PDFDocument, annexeBytes?: ArrayBuffer | Uint8Array | null) {
+  if (!annexeBytes) return;
+  try {
+    const annexe = await PDFDocument.load(annexeBytes, { ignoreEncryption: true });
+    const copied = await pdfDoc.copyPages(annexe, annexe.getPageIndices());
+    copied.forEach((p) => pdfDoc.addPage(p));
+  } catch {
+    // annexe illisible : on ignore silencieusement
+  }
 }
 
 /**
@@ -86,15 +98,120 @@ export async function fillPdfTemplate({
     page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
   }
 
-  if (annexeBytes) {
+  await appendAnnexe(pdfDoc, annexeBytes);
+
+  return pdfDoc.save();
+}
+
+/* -------------------------------------------------------------------------- */
+/*                       Remplissage natif AcroForm                            */
+/* -------------------------------------------------------------------------- */
+
+const TRUTHY = ['oui', 'yes', 'x', 'true', '1', 'coche'];
+
+function pickOption(options: string[], value: string, optionValeur?: string | null): string | null {
+  if (optionValeur && options.includes(optionValeur)) return optionValeur;
+  const v = normalizeName(value);
+  if (!v) return null;
+  const exact = options.find((o) => normalizeName(o) === v);
+  if (exact) return exact;
+  const partial = options.find((o) => {
+    const n = normalizeName(o);
+    return n && (n.includes(v) || v.includes(n));
+  });
+  return partial ?? null;
+}
+
+/**
+ * Remplissage natif : chaque valeur est écrite dans le champ AcroForm portant
+ * le nom mappé. 100% déterministe, sans placement manuel.
+ */
+export async function fillAcroFormTemplate({
+  templateBytes,
+  annexeBytes,
+  champs,
+  values,
+  signatureDataUrl,
+  flatten = true,
+}: FillOptions & { flatten?: boolean }): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.load(templateBytes, { ignoreEncryption: true });
+  const form = pdfDoc.getForm();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  let signatureImage: Awaited<ReturnType<typeof pdfDoc.embedPng>> | null = null;
+  if (signatureDataUrl?.startsWith('data:image')) {
     try {
-      const annexe = await PDFDocument.load(annexeBytes);
-      const copied = await pdfDoc.copyPages(annexe, annexe.getPageIndices());
-      copied.forEach((p) => pdfDoc.addPage(p));
+      signatureImage = await pdfDoc.embedPng(signatureDataUrl);
     } catch {
-      // annexe illisible : on ignore silencieusement
+      signatureImage = null;
     }
   }
+
+  for (const champ of champs) {
+    const name = champ.nom_champ_pdf;
+    if (!name || !champ.cle_champ) continue;
+    const value = sanitizePdfText(String(values[champ.cle_champ] ?? ''));
+
+    try {
+      if (champ.cle_champ === SIGNATURE_KEY) {
+        if (!signatureImage) continue;
+        const field = form.getField(name);
+        const widgets = (field as any).acroField?.getWidgets?.() ?? [];
+        for (const widget of widgets) {
+          const rect = widget.getRectangle();
+          const page = pdfDoc.getPages().find((p) => {
+            const ref = (widget.P?.() ?? null);
+            return ref ? p.ref === ref : false;
+          }) ?? pdfDoc.getPages()[0];
+          const ratio = signatureImage.width / signatureImage.height;
+          let w = rect.width;
+          let h = w / ratio;
+          if (h > rect.height) { h = rect.height; w = h * ratio; }
+          page.drawImage(signatureImage, { x: rect.x, y: rect.y, width: w, height: h });
+        }
+        continue;
+      }
+
+      const type = champ.type_champ ?? 'text';
+      if (type === 'checkbox') {
+        const cb = form.getCheckBox(name);
+        const shouldCheck = champ.option_valeur
+          ? normalizeName(champ.option_valeur) === normalizeName(value)
+          : TRUTHY.includes(normalizeName(value));
+        if (shouldCheck) cb.check();
+        else cb.uncheck();
+      } else if (type === 'radio') {
+        const rg = form.getRadioGroup(name);
+        const opt = pickOption(rg.getOptions(), value, champ.option_valeur);
+        if (opt) rg.select(opt);
+      } else if (type === 'dropdown') {
+        const dd = form.getDropdown(name);
+        const opt = pickOption(dd.getOptions(), value, champ.option_valeur);
+        if (opt) dd.select(opt);
+        else if (value) dd.setOptions([...dd.getOptions(), value]), dd.select(value);
+      } else if (type === 'optionlist') {
+        const ol = form.getOptionList(name);
+        const opt = pickOption(ol.getOptions(), value, champ.option_valeur);
+        if (opt) ol.select(opt);
+      } else {
+        if (!value) continue;
+        const tf = form.getTextField(name);
+        tf.setText(value);
+      }
+    } catch {
+      // champ absent ou de type inattendu : on ignore
+    }
+  }
+
+  try {
+    form.updateFieldAppearances(font);
+  } catch { /* noop */ }
+
+  if (flatten) {
+    try { form.flatten(); } catch { /* noop */ }
+  }
+
+  await appendAnnexe(pdfDoc, annexeBytes);
 
   return pdfDoc.save();
 }

@@ -6,8 +6,10 @@ import { STANDARD_FIELD_KEYS, keyLabel } from '../keys';
 import type { FormulaireChamp, FormulaireLocation } from '../types';
 import { FORM_BUCKET, fetchBytes, uploadPdf } from '../lib/storage';
 import { usePdfDocument } from '../lib/pdfjs';
+import { autoMapFieldName, detectAcroFields, shouldUseAcroform } from '../lib/acroform';
 import PdfPage from '../components/PdfPage';
 import DraggableBox from '../components/DraggableBox';
+import AcroformMapper from '../components/AcroformMapper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,15 +54,39 @@ export default function ModelesDemandeLocation() {
       let nbPages = 1;
       try {
         const { PDFDocument } = await import('pdf-lib');
-        nbPages = (await PDFDocument.load(bytes)).getPageCount();
+        nbPages = (await PDFDocument.load(bytes, { ignoreEncryption: true })).getPageCount();
       } catch { /* noop */ }
+
+      // Détection AcroForm + auto-mapping
+      const detected = await detectAcroFields(bytes);
+      const mode = shouldUseAcroform(detected) ? 'acroform' : 'overlay';
 
       await supabase
         .from('formulaires_location')
-        .update({ fichier_pdf_url: path, annexe_pdf_url: annexePath, nb_pages: nbPages })
+        .update({ fichier_pdf_url: path, annexe_pdf_url: annexePath, nb_pages: nbPages, mode })
         .eq('id', data.id);
 
-      toast.success('Modèle créé');
+      let auto = 0;
+      if (mode === 'acroform') {
+        const rows = detected
+          .map((f) => ({ f, m: autoMapFieldName(f.name) }))
+          .filter(({ m }) => !!m.cle_champ)
+          .map(({ f, m }) => ({
+            formulaire_id: data.id,
+            cle_champ: m.cle_champ as string,
+            nom_champ_pdf: f.name,
+            type_champ: f.type,
+            page: 1, pos_x: 0, pos_y: 0, largeur: 0, hauteur: 0, taille_police: 10, alignement: 'left',
+          }));
+        auto = rows.length;
+        if (rows.length) await supabase.from('formulaire_champs').insert(rows as any);
+      }
+
+      toast.success(
+        mode === 'acroform'
+          ? `PDF interactif détecté — ${auto}/${detected.length} champ(s) mappés automatiquement`
+          : 'Modèle créé (mode coordonnées)',
+      );
       setCreateOpen(false);
       setNom('');
       setFile(null);
@@ -145,6 +171,9 @@ export default function ModelesDemandeLocation() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <Badge variant="outline" className="text-[11px]">
+                  {f.mode === 'acroform' ? 'Champs natifs (PDF interactif)' : 'Coordonnées (PDF plat)'}
+                </Badge>
                 <p className="text-xs text-muted-foreground">
                   {f.nb_pages} page(s){f.annexe_pdf_url ? ' • annexe jointe' : ''}
                 </p>
@@ -192,6 +221,7 @@ export default function ModelesDemandeLocation() {
 
 function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation; onBack: () => void }) {
   const { champs, setChamps, reload } = useFormulaireChamps(formulaire.id);
+  const [mode, setMode] = useState<'overlay' | 'acroform'>(formulaire.mode ?? 'overlay');
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
   const { doc, numPages } = usePdfDocument(bytes);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -270,6 +300,15 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
     }
   };
 
+  const isAcro = mode === 'acroform';
+
+  const switchMode = async () => {
+    const next = isAcro ? 'overlay' : 'acroform';
+    await supabase.from('formulaires_location').update({ mode: next }).eq('id', formulaire.id);
+    setMode(next);
+    toast.success(next === 'acroform' ? 'Mode champs natifs activé' : 'Mode coordonnées activé');
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
@@ -277,13 +316,32 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
           <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-4 w-4" /></Button>
           <div className="min-w-0">
             <h2 className="truncate font-semibold">{formulaire.nom}</h2>
-            <p className="text-xs text-muted-foreground">Touchez le PDF pour ajouter un champ • {champs.length} champ(s)</p>
+            <p className="text-xs text-muted-foreground">
+              {isAcro
+                ? `Remplissage par nom de champ • ${champs.length} correspondance(s)`
+                : `Touchez le PDF pour ajouter un champ • ${champs.length} champ(s)`}
+            </p>
           </div>
         </div>
-        <Button onClick={save} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Enregistrer
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={switchMode}>
+            {isAcro ? 'Passer en mode coordonnées' : 'Passer en champs natifs'}
+          </Button>
+          {!isAcro && (
+            <Button onClick={save} disabled={saving} className="gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Enregistrer
+            </Button>
+          )}
+        </div>
       </div>
+
+      {isAcro && (
+        <div className="flex-1 overflow-auto">
+          <AcroformMapper formulaire={{ ...formulaire, mode: 'acroform' }} />
+        </div>
+      )}
+      {!isAcro && (
+
 
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
         <div ref={containerRef} className="flex-1 overflow-auto bg-muted/40 p-3 space-y-6">
@@ -376,6 +434,7 @@ function MappingEditor({ formulaire, onBack }: { formulaire: FormulaireLocation;
           </ScrollArea>
         </div>
       </div>
+      )}
     </div>
   );
 }

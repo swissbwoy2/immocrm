@@ -53,11 +53,11 @@ export async function buildPostulationValues(params: {
 
   const { data: candidates } = await supabase
     .from('client_candidates')
-    .select('type, prenom, nom, date_naissance, profession, revenus_mensuels')
+    .select('*')
     .eq('client_id', clientId)
     .limit(5);
 
-  const co = (candidates ?? []).find((c) => c.type === 'conjoint' || c.type === 'colocataire') ?? (candidates ?? [])[0] ?? null;
+  const co: any = (candidates ?? []).find((c: any) => c.type === 'conjoint' || c.type === 'colocataire') ?? (candidates ?? [])[0] ?? null;
 
   let offre: any = null;
   if (offreId) {
@@ -75,6 +75,10 @@ export async function buildPostulationValues(params: {
     .eq('id', agentUserId)
     .maybeSingle();
 
+  const revenusMensuels = Number(client?.revenus_mensuels ?? 0) || 0;
+  const lieuSignature = lieu ?? 'Genève';
+  const dateJour = fmtDate(new Date().toISOString());
+
   const values: Record<string, string> = {
     prenom: clientProfile?.prenom ?? '',
     nom: clientProfile?.nom ?? '',
@@ -86,7 +90,11 @@ export async function buildPostulationValues(params: {
     npa_ville_actuelle: extractNpaVille(client?.adresse),
     profession: client?.profession ?? '',
     employeur: client?.employeur ?? '',
+    lieu_travail: '',
     revenus_mensuels: fmtMoney(client?.revenus_mensuels),
+    revenus_annuels: revenusMensuels ? fmtMoney(revenusMensuels * 12) : '',
+    regie_actuelle: '',
+    motif: '',
     nb_personnes: client?.nombre_occupants ? String(client.nombre_occupants) : '',
     animaux: client?.animaux === true ? 'Oui' : client?.animaux === false ? 'Non' : '',
     fumeur: 'Non',
@@ -95,21 +103,35 @@ export async function buildPostulationValues(params: {
     // RÈGLE STRICTE : coordonnées de l'agent/admin connecté
     email_contact: agent?.email ?? '',
     tel_contact: agent?.telephone ?? '',
+    co_email_contact: agent?.email ?? '',
+    co_tel_contact: agent?.telephone ?? '',
 
     bien_adresse: offre?.adresse ?? '',
     bien_npa_ville: extractNpaVille(offre?.adresse),
+    bien_ville: extractNpaVille(offre?.adresse).replace(/^\d{4}\s*/, ''),
     bien_etage: offre?.etage ?? '',
     bien_pieces: offre?.pieces ? String(offre.pieces) : '',
     bien_loyer: fmtMoney(offre?.prix),
+    bien_charges: '',
+    bien_loyer_brut: fmtMoney(offre?.prix),
+    date_visite: '',
 
     co_prenom: co?.prenom ?? '',
     co_nom: co?.nom ?? '',
     co_date_naissance: fmtDate(co?.date_naissance),
+    co_etat_civil: co?.etat_civil ?? '',
+    co_nationalite: co?.nationalite ?? '',
+    co_permis: co?.type_permis ?? co?.permis ?? '',
+    co_adresse_actuelle: co?.adresse ?? client?.adresse ?? '',
+    co_npa_ville_actuelle: extractNpaVille(co?.adresse ?? client?.adresse),
     co_profession: co?.profession ?? '',
+    co_employeur: co?.employeur ?? '',
+    co_lieu_travail: '',
     co_revenus: fmtMoney(co?.revenus_mensuels),
 
-    lieu: lieu ?? 'Genève',
-    date_du_jour: fmtDate(new Date().toISOString()),
+    lieu: lieuSignature,
+    date_du_jour: dateJour,
+    lieu_et_date: `${lieuSignature}, ${dateJour}`,
   };
 
   return {

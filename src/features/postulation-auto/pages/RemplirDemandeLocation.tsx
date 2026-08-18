@@ -6,7 +6,7 @@ import { keyLabel, SIGNATURE_KEY } from '../keys';
 import type { FormulaireChamp } from '../types';
 import { FORM_BUCKET, SIGN_BUCKET, dataUrlToBlob, fetchBytes } from '../lib/storage';
 import { usePdfDocument } from '../lib/pdfjs';
-import { fillPdfTemplate } from '../lib/fillPdf';
+import { fillAcroFormTemplate, fillPdfTemplate } from '../lib/fillPdf';
 import { buildPostulationValues } from '../lib/buildValues';
 import PdfPage from '../components/PdfPage';
 import DraggableBox from '../components/DraggableBox';
@@ -44,12 +44,24 @@ export default function RemplirDemandeLocation() {
   const [bytes, setBytes] = useState<Uint8Array | null>(null);
   const [generating, setGenerating] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
 
   const formulaire = useMemo(() => formulaires.find((f) => f.id === formulaireId) ?? null, [formulaires, formulaireId]);
+  const isAcro = formulaire?.mode === 'acroform';
   const { champs, reload: reloadChamps } = useFormulaireChamps(formulaireId || null);
-  const { doc, numPages } = usePdfDocument(bytes);
+  const { doc, numPages } = usePdfDocument(isAcro ? previewBytes ?? bytes : bytes);
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(700);
+
+  /* Aperçu WYSIWYG du remplissage natif */
+  useEffect(() => {
+    if (!isAcro || !bytes) { setPreviewBytes(null); return; }
+    let cancelled = false;
+    fillAcroFormTemplate({ templateBytes: bytes.slice(0), champs, values, signatureDataUrl: signature })
+      .then((out) => { if (!cancelled) setPreviewBytes(out); })
+      .catch(() => { if (!cancelled) setPreviewBytes(null); });
+    return () => { cancelled = true; };
+  }, [isAcro, bytes, champs, values, signature]);
 
   useEffect(() => {
     const update = () => setWidth(Math.min(900, (containerRef.current?.clientWidth ?? 700) - 8));
@@ -173,10 +185,11 @@ export default function RemplirDemandeLocation() {
     setGenerating(true);
     try {
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
-      const out = await fillPdfTemplate({
+      const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
+      const out = await fill({
         templateBytes: bytes,
         annexeBytes,
-        champs: effectiveChamps,
+        champs: isAcro ? champs : effectiveChamps,
         values,
         signatureDataUrl: signature,
       });
@@ -273,12 +286,17 @@ export default function RemplirDemandeLocation() {
         <div ref={containerRef} className="flex-1 overflow-auto bg-muted/40 p-3 space-y-6">
           {!formulaireId && <p className="py-16 text-center text-sm text-muted-foreground">Choisissez un modèle pour afficher l'aperçu.</p>}
           {formulaireId && !doc && <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
+          {doc && isAcro && (
+            <div className="text-center">
+              <Badge variant="secondary">Remplissage natif par nom de champ — aperçu réel, aucun placement manuel</Badge>
+            </div>
+          )}
           {doc && Array.from({ length: numPages }, (_, i) => i + 1).map((p) => (
             <div key={p} className="space-y-1">
               <p className="text-center text-xs text-muted-foreground">Page {p}</p>
               <PdfPage doc={doc} pageNumber={p} width={width}>
                 {(scale) =>
-                  effectiveChamps.filter((c) => c.page === p).map((c) => {
+                  (isAcro ? [] : effectiveChamps).filter((c) => c.page === p).map((c) => {
                     const isSign = c.cle_champ === SIGNATURE_KEY;
                     const text = isSign ? '' : values[c.cle_champ] ?? '';
                     return (
