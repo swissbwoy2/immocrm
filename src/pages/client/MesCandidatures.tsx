@@ -409,8 +409,82 @@ const MesCandidatures = () => {
         <PremiumCandidatureKPIs data={kpiData} />
 
         {offres.length > 0 ? (
-          <div className="grid gap-6">
-            {offres.map((offre, index) => {
+          <div className="space-y-8">
+            {/* Recherche / filtres / tri */}
+            <div className="rounded-2xl border border-primary/15 bg-card/70 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Rechercher par adresse, ville, quartier…"
+                    className="pl-9 h-11 bg-background/60"
+                    aria-label="Rechercher une candidature"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 md:w-auto">
+                  <Select value={statutFilter} onValueChange={setStatutFilter}>
+                    <SelectTrigger className="h-11 sm:w-[230px]" aria-label="Filtrer par statut">
+                      <SelectValue placeholder="Statut" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      <SelectItem value="all">Tous les statuts ({offres.length})</SelectItem>
+                      {statutCounts.map(({ statut, count }) => (
+                        <SelectItem key={statut} value={statut}>
+                          {getStatutLabel(statut)} ({count})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                    <SelectTrigger className="h-11 sm:w-[190px]" aria-label="Trier">
+                      <SelectValue placeholder="Trier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recent">Plus récentes d'abord</SelectItem>
+                      <SelectItem value="ancien">Plus anciennes d'abord</SelectItem>
+                      <SelectItem value="statut">Par statut (avancement)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatutFilter('all')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${statutFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
+                >
+                  Tout ({offres.length})
+                </button>
+                {GROUPES.map((g) => {
+                  const count = enrichedOffres.filter(o => o.groupe === g.key).length;
+                  if (!count) return null;
+                  return (
+                    <button
+                      key={g.key}
+                      type="button"
+                      onClick={() => setStatutFilter(statutFilter === `groupe:${g.key}` ? 'all' : `groupe:${g.key}`)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${statutFilter === `groupe:${g.key}` ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
+                    >
+                      {g.label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {groupedOffres.map((groupe) => {
+              return (
+                <section key={groupe.key} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className={`h-2.5 w-2.5 rounded-full ${groupe.dot}`} />
+                    <h2 className="text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
+                    <Badge variant="secondary" className="rounded-full">{groupe.items.length}</Badge>
+                    <div className="flex-1 h-px bg-border/50" />
+                  </div>
+                  <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+                  {groupe.items.map((offre, index) => {
               const candidature = candidatures.find(c => c.offre_id === offre.id);
               const statut = candidature?.statut || offre.statut;
               const datesProposees = candidature?.dates_signature_proposees as DateProposee[] | null;
