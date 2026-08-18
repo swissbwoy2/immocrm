@@ -5061,10 +5061,13 @@ export type Database = {
           hauteur: number
           id: string
           largeur: number
+          nom_champ_pdf: string | null
+          option_valeur: string | null
           page: number
           pos_x: number
           pos_y: number
           taille_police: number
+          type_champ: string
           updated_at: string
         }
         Insert: {
@@ -5075,10 +5078,13 @@ export type Database = {
           hauteur?: number
           id?: string
           largeur?: number
+          nom_champ_pdf?: string | null
+          option_valeur?: string | null
           page?: number
           pos_x?: number
           pos_y?: number
           taille_police?: number
+          type_champ?: string
           updated_at?: string
         }
         Update: {
@@ -5089,10 +5095,13 @@ export type Database = {
           hauteur?: number
           id?: string
           largeur?: number
+          nom_champ_pdf?: string | null
+          option_valeur?: string | null
           page?: number
           pos_x?: number
           pos_y?: number
           taille_police?: number
+          type_champ?: string
           updated_at?: string
         }
         Relationships: [
@@ -5113,6 +5122,7 @@ export type Database = {
           created_by: string | null
           fichier_pdf_url: string | null
           id: string
+          mode: string
           nb_pages: number
           nom: string
           updated_at: string
@@ -5124,6 +5134,7 @@ export type Database = {
           created_by?: string | null
           fichier_pdf_url?: string | null
           id?: string
+          mode?: string
           nb_pages?: number
           nom: string
           updated_at?: string
@@ -5135,6 +5146,7 @@ export type Database = {
           created_by?: string | null
           fichier_pdf_url?: string | null
           id?: string
+          mode?: string
           nb_pages?: number
           nom?: string
           updated_at?: string
