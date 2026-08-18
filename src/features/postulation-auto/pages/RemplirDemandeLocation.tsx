@@ -6,7 +6,8 @@ import { keyLabel, SIGNATURE_KEY } from '../keys';
 import type { FormulaireChamp } from '../types';
 import { FORM_BUCKET, SIGN_BUCKET, dataUrlToBlob, fetchBytes } from '../lib/storage';
 import { usePdfDocument } from '../lib/pdfjs';
-import { fillAcroFormTemplate, fillPdfTemplate } from '../lib/fillPdf';
+import { fillAcroFormByName, fillAcroFormTemplate, fillPdfTemplate } from '../lib/fillPdf';
+import { llmFillPostulation } from '../lib/llmFill';
 import { buildPostulationValues } from '../lib/buildValues';
 import PdfPage from '../components/PdfPage';
 import DraggableBox from '../components/DraggableBox';
@@ -19,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Download, FileSignature, Loader2, MapPin, Wand2 } from 'lucide-react';
+import { Download, FileSignature, Loader2, MapPin, Sparkles, Wand2 } from 'lucide-react';
 
 interface ClientOption { id: string; label: string }
 interface OffreOption { id: string; label: string }
@@ -45,6 +46,8 @@ export default function RemplirDemandeLocation() {
   const [generating, setGenerating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
+  const [aiByName, setAiByName] = useState<Record<string, string> | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const formulaire = useMemo(() => formulaires.find((f) => f.id === formulaireId) ?? null, [formulaires, formulaireId]);
   const isAcro = formulaire?.mode === 'acroform';
@@ -157,6 +160,29 @@ export default function RemplirDemandeLocation() {
     return () => { cancelled = true; };
   }, [clientId, offreId, user?.id, lieu]);
 
+  /** Remplissage intelligent (LLM côté serveur) */
+  const runAi = useCallback(async (silent = false): Promise<Record<string, string> | null> => {
+    if (!formulaireId || !clientId) {
+      if (!silent) toast.error('Sélectionnez un modèle et un client');
+      return null;
+    }
+    setAiLoading(true);
+    try {
+      const res = await llmFillPostulation({ formulaireId, clientId, offreId: offreId || null, lieu });
+      setAiByName(res.values);
+      if (res.mode === 'overlay') setValues((prev) => ({ ...prev, ...Object.fromEntries(Object.entries(res.values).filter(([, v]) => String(v ?? '').trim() !== '')) }));
+      if (!silent) toast.success(`IA : ${res.filled} champ(s) rempli(s)`);
+      return res.values;
+    } catch (e: any) {
+      if (!silent) toast.error(e?.message ?? 'Le remplissage IA a échoué');
+      return null;
+    } finally {
+      setAiLoading(false);
+    }
+  }, [formulaireId, clientId, offreId, lieu]);
+
+  useEffect(() => { setAiByName(null); }, [formulaireId, clientId, offreId]);
+
   const loadValues = async () => {
     if (!clientId || !user?.id) { toast.error('Sélectionnez un client'); return; }
     setBusy(true);
@@ -206,7 +232,7 @@ export default function RemplirDemandeLocation() {
     if (!bytes || !formulaire) { toast.error('Sélectionnez un modèle'); return; }
     if (!clientId) { toast.error('Sélectionnez un client'); return; }
     if (!offreId) { toast.error("Sélectionnez une offre / un bien"); return; }
-    if (champs.length === 0) { toast.error("Ce modèle n'a aucun champ mappé"); return; }
+    if (!isAcro && champs.length === 0) { toast.error("Ce modèle n'a aucun champ mappé"); return; }
     setGenerating(true);
     try {
       // Résolution FRAÎCHE des valeurs au moment de la génération (client + offre + agent)
@@ -218,14 +244,32 @@ export default function RemplirDemandeLocation() {
       }
 
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
-      const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
-      const out = await fill({
-        templateBytes: bytes.slice(0),
-        annexeBytes,
-        champs: isAcro ? champs : effectiveChamps,
-        values: resolved,
-        signatureDataUrl: signature,
-      });
+
+      // Remplissage intelligent : le LLM déduit quelle donnée va dans quel champ
+      const ai = aiByName ?? (await runAi(true));
+
+      let out: Uint8Array;
+      if (isAcro && ai && Object.keys(ai).length > 0) {
+        out = await fillAcroFormByName({
+          templateBytes: bytes.slice(0),
+          annexeBytes,
+          valuesByName: ai,
+          champs,
+          signatureDataUrl: signature,
+        });
+      } else {
+        const merged = ai && !isAcro
+          ? { ...resolved, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => String(v ?? '').trim() !== '')) }
+          : resolved;
+        const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
+        out = await fill({
+          templateBytes: bytes.slice(0),
+          annexeBytes,
+          champs: isAcro ? champs : effectiveChamps,
+          values: merged,
+          signatureDataUrl: signature,
+        });
+      }
       setPreviewBytes(out);
       const blob = new Blob([out.slice().buffer as ArrayBuffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -249,7 +293,7 @@ export default function RemplirDemandeLocation() {
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       <div className="border-b px-4 py-3 md:px-8">
         <h1 className="text-xl md:text-2xl font-bold">Postulation automatique</h1>
-        <p className="text-sm text-muted-foreground">Remplissage exact du formulaire depuis le mapping du modèle — sans IA.</p>
+        <p className="text-sm text-muted-foreground">Remplissage intelligent du formulaire : l'IA lit le formulaire et le dossier client, puis déduit chaque champ.</p>
       </div>
 
       <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
@@ -289,6 +333,15 @@ export default function RemplirDemandeLocation() {
           <Button onClick={loadValues} disabled={busy} className="w-full gap-2">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Charger les données
           </Button>
+
+          <Button onClick={() => runAi()} disabled={aiLoading || !formulaireId || !clientId} variant="secondary" className="w-full gap-2">
+            {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Remplir avec l'IA
+          </Button>
+          {aiByName && (
+            <p className="text-[11px] leading-4 text-emerald-600">
+              IA : {Object.values(aiByName).filter((v) => String(v ?? '').trim() !== '').length} champ(s) déduit(s).
+            </p>
+          )}
 
           <Card className="border-primary/20">
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileSignature className="h-4 w-4 text-primary" />Signature</CardTitle></CardHeader>
