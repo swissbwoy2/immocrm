@@ -58,6 +58,20 @@ export default function RemplirDemandeLocation() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(700);
 
+  const effectiveChamps: FormulaireChamp[] = useMemo(
+    () => champs.map((c) => {
+      const o = overrides[c.id];
+      return o ? { ...c, pos_x: o.x, pos_y: o.y, largeur: o.w, hauteur: o.h } : c;
+    }),
+    [champs, overrides],
+  );
+
+  /* Valeurs résolues champ par champ selon la SECTION du schéma calibré */
+  const resolvedChamps = useMemo(
+    () => (sectioned ? resolveChampValues(effectiveChamps, sectioned) : { byId: {}, byName: {} }),
+    [effectiveChamps, sectioned],
+  );
+
   /* Aperçu WYSIWYG du remplissage natif */
   useEffect(() => {
     if (!isAcro || !bytes) { setPreviewBytes(null); return; }
@@ -208,20 +222,6 @@ export default function RemplirDemandeLocation() {
       setBusy(false);
     }
   };
-
-  const effectiveChamps: FormulaireChamp[] = useMemo(
-    () => champs.map((c) => {
-      const o = overrides[c.id];
-      return o ? { ...c, pos_x: o.x, pos_y: o.y, largeur: o.w, hauteur: o.h } : c;
-    }),
-    [champs, overrides],
-  );
-
-  /* Valeurs résolues champ par champ selon la SECTION du schéma calibré */
-  const resolvedChamps = useMemo(
-    () => (sectioned ? resolveChampValues(effectiveChamps, sectioned) : { byId: {}, byName: {} }),
-    [effectiveChamps, sectioned],
-  );
 
   const saveSignature = async () => {
     if (!tempSignature || !user?.id) return;
