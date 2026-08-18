@@ -137,13 +137,35 @@ export default function RemplirDemandeLocation() {
     try { localStorage.setItem(storageKey(formulaireId, clientId, offreId), JSON.stringify(next)); } catch { /* noop */ }
   }, [formulaireId, clientId, offreId]);
 
+  const resolveValues = useCallback(async () => {
+    if (!clientId || !user?.id) return null;
+    const { values: v } = await buildPostulationValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
+    setValues(v);
+    return v;
+  }, [clientId, offreId, user?.id, lieu]);
+
+  /* Résolution automatique des valeurs dès qu'un client (et une offre) sont choisis */
+  useEffect(() => {
+    let cancelled = false;
+    if (!clientId || !user?.id) { setValues({}); return; }
+    (async () => {
+      try {
+        const { values: v } = await buildPostulationValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
+        if (!cancelled) setValues(v);
+      } catch { /* noop */ }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, offreId, user?.id, lieu]);
+
   const loadValues = async () => {
     if (!clientId || !user?.id) { toast.error('Sélectionnez un client'); return; }
     setBusy(true);
     try {
-      const { values: v } = await buildPostulationValues({ clientId, offreId: offreId || null, agentUserId: user.id, lieu });
-      setValues(v);
-      toast.success('Données chargées (contact = vos coordonnées)');
+      const v = await resolveValues();
+      const filled = Object.values(v ?? {}).filter(Boolean).length;
+      toast.success(`Données chargées : ${filled} valeur(s) — contact = vos coordonnées`);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Impossible de charger les données du client');
     } finally {
       setBusy(false);
     }
@@ -182,26 +204,40 @@ export default function RemplirDemandeLocation() {
 
   const generate = async () => {
     if (!bytes || !formulaire) { toast.error('Sélectionnez un modèle'); return; }
+    if (!clientId) { toast.error('Sélectionnez un client'); return; }
+    if (!offreId) { toast.error("Sélectionnez une offre / un bien"); return; }
+    if (champs.length === 0) { toast.error("Ce modèle n'a aucun champ mappé"); return; }
     setGenerating(true);
     try {
+      // Résolution FRAÎCHE des valeurs au moment de la génération (client + offre + agent)
+      const resolved = (await resolveValues()) ?? values;
+      const filled = Object.values(resolved).filter((v) => String(v ?? '').trim() !== '').length;
+      if (filled === 0) {
+        toast.error("Aucune donnée n'a pu être résolue pour ce client / cette offre");
+        return;
+      }
+
       const annexeBytes = formulaire.annexe_pdf_url ? await fetchBytes(FORM_BUCKET, formulaire.annexe_pdf_url) : null;
       const fill = isAcro ? fillAcroFormTemplate : fillPdfTemplate;
       const out = await fill({
-        templateBytes: bytes,
+        templateBytes: bytes.slice(0),
         annexeBytes,
         champs: isAcro ? champs : effectiveChamps,
-        values,
+        values: resolved,
         signatureDataUrl: signature,
       });
+      setPreviewBytes(out);
       const blob = new Blob([out.slice().buffer as ArrayBuffer], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
+      a.rel = 'noopener';
       a.download = `demande-location-${Date.now()}.pdf`;
+      document.body.appendChild(a);
       a.click();
-      window.open(url, '_blank');
+      a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60000);
-      toast.success('PDF généré');
+      toast.success(`PDF généré et rempli (${filled} valeurs)`);
     } catch (e: any) {
       toast.error(e?.message ?? 'Erreur de génération');
     } finally {
