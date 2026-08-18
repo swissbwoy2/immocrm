@@ -187,40 +187,40 @@ serve(async (req) => {
           const hasImage = (h: string | null) =>
             !!h && !!(getMeta(h, 'property', 'og:image') || getMeta(h, 'name', 'twitter:image'));
 
-          // Portails protégés (403) ou page sans og:image → fallback Firecrawl
-          if (!hasImage(html)) {
+          // Portails protégés (403) ou page sans og:image → fallback Firecrawl (limité)
+          if (!hasImage(html) && firecrawlBudget > 0) {
+            firecrawlBudget -= 1;
             const viaFirecrawl = await fetchHtmlViaFirecrawl(url);
             if (hasImage(viaFirecrawl)) html = viaFirecrawl;
             else html = html ?? viaFirecrawl;
           }
 
-          if (!html) {
-            previews[t.raw] = { image_url: null, title: hostname };
-            return;
-          }
-
-          let imageUrl = getMeta(html, 'property', 'og:image') || getMeta(html, 'name', 'twitter:image');
+          let imageUrl = html
+            ? getMeta(html, 'property', 'og:image') || getMeta(html, 'name', 'twitter:image')
+            : null;
           if (imageUrl && !imageUrl.startsWith('http')) {
             imageUrl = imageUrl.startsWith('/')
               ? `${t.parsed.protocol}//${t.parsed.host}${imageUrl}`
               : `${t.parsed.protocol}//${t.parsed.host}/${imageUrl}`;
           }
-          const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          const titleMatch = html ? html.match(/<title[^>]*>([^<]+)<\/title>/i) : null;
 
           const preview = {
             url,
-            title: getMeta(html, 'property', 'og:title') || (titleMatch ? titleMatch[1].trim() : null),
-            description: getMeta(html, 'property', 'og:description') || getMeta(html, 'name', 'description'),
+            title: (html && getMeta(html, 'property', 'og:title')) || (titleMatch ? titleMatch[1].trim() : hostname),
+            description: html ? getMeta(html, 'property', 'og:description') || getMeta(html, 'name', 'description') : null,
             image_url: imageUrl,
-            site_name: getMeta(html, 'property', 'og:site_name') || hostname,
+            site_name: (html && getMeta(html, 'property', 'og:site_name')) || hostname,
             favicon_url: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
             fetched_at: new Date().toISOString(),
           };
           previews[t.raw] = { image_url: preview.image_url, title: preview.title };
+          // On mémorise aussi les échecs (image nulle) pour ne pas re-scraper à chaque affichage
           await admin.from('link_previews').upsert(preview, { onConflict: 'url' });
         } catch (_e) {
           previews[t.raw] = { image_url: null, title: hostname };
         }
+
       }),
     );
 
