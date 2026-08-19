@@ -36,6 +36,7 @@ const AccompagnementAchat = lazy(() => import("./pages/AccompagnementAchat"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 const MentionsLegales = lazy(() => import("./pages/legal/MentionsLegales"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/legal/PolitiqueConfidentialite"));
+const ConditionsGenerales = lazy(() => import("./pages/legal/ConditionsGenerales"));
 const MentionsLegalesEN = lazy(() => import("./pages/legal/MentionsLegales.en"));
 const PolitiqueConfidentialiteEN = lazy(() => import("./pages/legal/PolitiqueConfidentialite.en"));
 const MentionsLegalesDE = lazy(() => import("./pages/legal/MentionsLegales.de"));
@@ -341,6 +342,7 @@ const App = () => (
               {/* Legal Routes */}
               <Route path="/mentions-legales" element={<MentionsLegales />} />
               <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
+              <Route path="/conditions-generales" element={<ConditionsGenerales />} />
               <Route path="/en/legal-notice" element={<MentionsLegalesEN />} />
               <Route path="/en/privacy-policy" element={<PolitiqueConfidentialiteEN />} />
               <Route path="/de/impressum" element={<MentionsLegalesDE />} />
