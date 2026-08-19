@@ -19,6 +19,7 @@ import {
   Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';

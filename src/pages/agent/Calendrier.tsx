@@ -27,6 +27,7 @@ import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { useNotifications } from '@/hooks/useNotifications';
