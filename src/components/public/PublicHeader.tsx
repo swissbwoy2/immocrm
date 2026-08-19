@@ -55,7 +55,19 @@ export function PublicHeader() {
               </Button>
             </Link>
             <DeposerAnnonceButton />
+            {isAuthenticated && (
+              <Link to="/mes-messages-annonces">
+                <Button variant="ghost" size="sm" className="relative">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Messagerie
+                  {unreadAnnonces > 0 && (
+                    <Badge className="ml-2 h-5 min-w-5 px-1.5">{unreadAnnonces}</Badge>
+                  )}
+                </Button>
+              </Link>
+            )}
             {isAuthenticated ? (
+
               <Link to={spacePath}>
                 <Button size="sm">
                   <LayoutDashboard className="h-4 w-4 mr-2" />
