@@ -47,7 +47,7 @@ export function DossierAnalyseSection() {
               </Suspense>
 
               {/* Accès au portail d'annonces */}
-              <div className="flex justify-center w-full">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
                 <Link
                   to="/annonces"
                   className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)]"
@@ -55,6 +55,13 @@ export function DossierAnalyseSection() {
                   <Megaphone className="h-5 w-5" />
                   Accéder au portail
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+                <Link
+                  to="/inscription-annonceur"
+                  className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 rounded-xl border-2 border-primary/40 hover:border-primary bg-transparent hover:bg-primary/10 text-primary font-semibold text-base transition-all"
+                >
+                  <Megaphone className="h-5 w-5" />
+                  Déposer une annonce
                 </Link>
               </div>
 
