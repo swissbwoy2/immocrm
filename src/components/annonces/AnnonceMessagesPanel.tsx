@@ -26,6 +26,10 @@ import {
   Ban,
   Loader2,
   FileDown,
+  User,
+  Mail,
+  Phone,
+
 } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -239,10 +243,11 @@ export function AnnonceMessagesPanel({
                           {c.annonces_publiques?.titre || 'Annonce'}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {isGuestConversation(c)
-                            ? `${c.guest_nom || 'Visiteur'} · ${c.guest_email || ''}`
+                          {c.guest_nom || c.guest_email
+                            ? `${c.guest_nom || 'Visiteur'}${c.guest_email ? ` · ${c.guest_email}` : ''}`
                             : c.annonces_publiques?.ville || ''}
                         </p>
+
                         <p className="text-xs text-muted-foreground truncate mt-1">
                           {last?.contenu || 'Nouvelle conversation'}
                         </p>
@@ -284,9 +289,7 @@ export function AnnonceMessagesPanel({
                   {conv.annonces_publiques?.titre || 'Annonce'}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {isGuestConversation(conv)
-                    ? `${conv.guest_nom || 'Visiteur'} · ${conv.guest_email || ''}${conv.guest_telephone ? ` · ${conv.guest_telephone}` : ''}`
-                    : conv.annonces_publiques?.ville}
+                  {conv.guest_nom || conv.annonces_publiques?.ville || ''}
                 </p>
               </div>
               {conv.annonces_publiques?.slug && (
@@ -317,6 +320,36 @@ export function AnnonceMessagesPanel({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
+            {/* Coordonnées du demandeur (côté annonceur) */}
+            {conv.participant_2_id === userId && (conv.guest_nom || conv.guest_email || conv.guest_telephone) && (
+              <div className="px-3 py-2 border-b border-border bg-muted/40">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                  Coordonnées du demandeur
+                </p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  {conv.guest_nom && (
+                    <span className="flex items-center gap-1 font-medium">
+                      <User className="h-3.5 w-3.5 text-primary" />
+                      {conv.guest_nom}
+                    </span>
+                  )}
+                  {conv.guest_email && (
+                    <a href={`mailto:${conv.guest_email}`} className="flex items-center gap-1 text-primary hover:underline break-all">
+                      <Mail className="h-3.5 w-3.5" />
+                      {conv.guest_email}
+                    </a>
+                  )}
+                  {conv.guest_telephone && (
+                    <a href={`tel:${conv.guest_telephone}`} className="flex items-center gap-1 text-primary hover:underline">
+                      <Phone className="h-3.5 w-3.5" />
+                      {conv.guest_telephone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
 
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">

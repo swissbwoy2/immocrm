@@ -191,7 +191,7 @@ export default function RechercheAnnonces() {
         .from('annonces_publiques')
         .select(`
           *,
-          annonceurs(nom, nom_entreprise, type_annonceur, logo_url, note_moyenne),
+          annonceurs(id, nom, nom_entreprise, type_annonceur, logo_url, note_moyenne),
           categories_annonces(nom, slug, icone),
           photos_annonces_publiques(url, est_principale)
         `)

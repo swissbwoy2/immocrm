@@ -31,6 +31,41 @@ export default function Profil() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (file: File) => {
+    if (!user?.id) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Veuillez choisir une image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image trop lourde (max 5 Mo).');
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const path = `${user.id}/annonceur-logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('profile-avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('profile-avatars').getPublicUrl(path);
+      const { error: updErr } = await supabase
+        .from('annonceurs')
+        .update({ logo_url: pub.publicUrl })
+        .eq('user_id', user.id);
+      if (updErr) throw updErr;
+      await queryClient.invalidateQueries({ queryKey: ['annonceur-profil'] });
+      toast.success('Photo de profil mise à jour');
+    } catch (err: any) {
+      toast.error(err?.message || "Échec de l'envoi de l'image");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
 
   // Fetch annonceur profile
   const { data: annonceur, isLoading } = useQuery({
@@ -187,12 +222,35 @@ export default function Profil() {
           <Card className="md:col-span-1">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
-                <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={annonceur.logo_url || ''} />
-                  <AvatarFallback className="text-2xl">
-                    {annonceur.nom?.[0]}{annonceur.prenom?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative mb-4">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={annonceur.logo_url || ''} />
+                    <AvatarFallback className="text-2xl">
+                      {annonceur.nom?.[0]}{annonceur.prenom?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label
+                    htmlFor="annonceur-logo-input"
+                    className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md cursor-pointer hover:bg-primary/90 transition-colors"
+                    title="Changer la photo / le logo"
+                  >
+                    <Upload className="h-4 w-4" />
+                  </label>
+                  <input
+                    id="annonceur-logo-input"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploadingLogo}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (file) handleLogoUpload(file);
+                    }}
+                  />
+                </div>
+                {uploadingLogo && <p className="text-xs text-muted-foreground mb-2">Envoi en cours…</p>}
+
                 
                 <h2 className="text-xl font-semibold">
                   {annonceur.prenom} {annonceur.nom}

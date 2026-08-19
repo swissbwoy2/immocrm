@@ -5,8 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, Building2, Plus, MessageCircle, User,
-  Settings, LogOut, Menu, X, ChevronRight, Bell, Loader2, AlertCircle
+  Settings, LogOut, Menu, X, ChevronRight, Bell, Loader2, AlertCircle,
+  ArrowLeft, Globe
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -167,7 +169,29 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
         </nav>
 
         {/* User */}
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
+          <Button
+            variant="outline"
+            className="w-full justify-start bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
+            asChild
+          >
+            <Link to="/annonces">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au portail
+            </Link>
+          </Button>
+          {annonceur?.id && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+              asChild
+            >
+              <Link to={`/annonceur/${annonceur.id}`}>
+                <Globe className="h-4 w-4 mr-2" />
+                Ma page publique
+              </Link>
+            </Button>
+          )}
           <div className="flex items-center gap-3 mb-3">
             {annonceur?.logo_url ? (
               <img src={annonceur.logo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -194,16 +218,26 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
             Déconnexion
           </Button>
         </div>
+
       </aside>
 
       {/* Mobile Header */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-background border-b z-40 lg:hidden">
         <div className="flex items-center justify-between h-full px-4">
-          <Link to="/espace-annonceur" className="flex items-center gap-2">
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-8" />
-          </Link>
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/espace-annonceur" className="flex items-center gap-2">
+              <img src={logoImmoRama} alt="Immo-Rama" className="h-8" />
+            </Link>
+            <Button variant="outline" size="sm" asChild className="h-8 px-2">
+              <Link to="/annonces">
+                <ArrowLeft className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline text-xs">Portail</span>
+              </Link>
+            </Button>
+          </div>
 
           <div className="flex items-center gap-2">
+
             <Link to="/espace-annonceur/messages">
               <Button variant="ghost" size="icon" className="relative">
                 <MessageCircle className="h-5 w-5" />
@@ -269,7 +303,21 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
                   })}
                 </nav>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t space-y-2">
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/annonces" onClick={() => setIsMobileMenuOpen(false)}>
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Retour au portail
+                    </Link>
+                  </Button>
+                  {annonceur?.id && (
+                    <Button variant="ghost" className="w-full justify-start" asChild>
+                      <Link to={`/annonceur/${annonceur.id}`} onClick={() => setIsMobileMenuOpen(false)}>
+                        <Globe className="h-4 w-4 mr-2" />
+                        Ma page publique
+                      </Link>
+                    </Button>
+                  )}
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start"
@@ -278,13 +326,8 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
                     <LogOut className="h-4 w-4 mr-2" />
                     Déconnexion
                   </Button>
-                  <Link 
-                    to="/annonces" 
-                    className="block text-sm text-muted-foreground hover:text-foreground mt-3 text-center"
-                  >
-                    ← Retour au portail
-                  </Link>
                 </div>
+
               </SheetContent>
             </Sheet>
           </div>

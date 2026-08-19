@@ -760,26 +760,35 @@ export default function AnnonceDetail() {
                 {/* Advertiser Card */}
                 <Card className="p-6">
                   <div className="flex items-start gap-4 mb-4">
-                    {annonce.annonceurs?.logo_url ? (
-                      <img 
-                        src={annonce.annonceurs.logo_url} 
-                        alt={annonce.annonceurs.nom_entreprise || annonce.annonceurs.nom}
-                        className="w-16 h-16 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <User className="h-8 w-8 text-primary" />
-                      </div>
-                    )}
+                    {annonce.annonceurs?.logo_url && annonce.annonceurs?.id ? (
+                      <Link
+                        to={`/annonceur/${annonce.annonceurs.id}`}
+                        aria-label="Voir toutes les annonces de cet annonceur"
+                        className="shrink-0"
+                      >
+                        <img
+                          src={annonce.annonceurs.logo_url}
+                          alt={annonce.annonceurs.nom_entreprise || annonce.annonceurs.nom}
+                          className="w-16 h-16 rounded-full object-cover border border-border hover:opacity-90 transition-opacity"
+                        />
+                      </Link>
+                    ) : null}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">
-                          {annonce.annonceurs?.nom_entreprise || `${annonce.annonceurs?.prenom || ''} ${annonce.annonceurs?.nom || ''}`}
+                          {annonce.annonceurs?.id ? (
+                            <Link to={`/annonceur/${annonce.annonceurs.id}`} className="hover:text-primary hover:underline">
+                              {annonce.annonceurs?.nom_entreprise || `${annonce.annonceurs?.prenom || ''} ${annonce.annonceurs?.nom || ''}`}
+                            </Link>
+                          ) : (
+                            annonce.annonceurs?.nom_entreprise || `${annonce.annonceurs?.prenom || ''} ${annonce.annonceurs?.nom || ''}`
+                          )}
                         </h3>
                         {annonce.annonceurs?.est_verifie && (
                           <Shield className="h-4 w-4 text-success" />
                         )}
                       </div>
+
                       <p className="text-sm text-muted-foreground capitalize">
                         {annonce.annonceurs?.type_annonceur === 'particulier' ? 'Particulier' : 
                          annonce.annonceurs?.type_annonceur === 'agence' ? 'Agence immobilière' : 

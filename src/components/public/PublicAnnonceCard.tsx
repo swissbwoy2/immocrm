@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Bed, Maximize2, Building2, Heart, Star, ExternalLink, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,9 @@ interface AnnonceData {
   allowInternalDetail?: boolean;
   disponible_immediatement?: boolean;
   annonceurs?: {
+    id?: string;
     nom: string;
+
     nom_entreprise?: string;
     type_annonceur: string;
     logo_url?: string;
@@ -54,7 +56,9 @@ interface PublicAnnonceCardProps {
 }
 
 export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceCardProps) {
+  const navigate = useNavigate();
   const { isFavorite: isFav, toggleFavorite } = usePublicFavoris();
+
   const [, setIsHovered] = useState(false);
   const isFavorite = isFav(annonce.id);
 
@@ -181,14 +185,32 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             <Heart className={cn("h-3.5 w-3.5", isFavorite && "fill-current")} />
           </Button>
 
+          {/* Bulle annonceur (uniquement si logo/photo) */}
+          {!compact && annonce.annonceurs?.logo_url && annonce.annonceurs?.id && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(`/annonceur/${annonce.annonceurs!.id}`);
+              }}
+              title={advertiserName}
+              aria-label={`Voir toutes les annonces de ${advertiserName}`}
+              className="absolute bottom-2 right-2 h-9 w-9 rounded-full overflow-hidden border-2 border-background shadow-md bg-background hover:scale-105 transition-transform"
+            >
+              <img src={annonce.annonceurs.logo_url} alt={advertiserName} className="h-full w-full object-cover" />
+            </button>
+          )}
+
           {/* Photo count indicator */}
           {!compact && annonce.photos_annonces_publiques && annonce.photos_annonces_publiques.length > 1 && (
-            <div className="absolute bottom-2 right-2">
+            <div className={cn("absolute bottom-2", annonce.annonceurs?.logo_url ? "right-14" : "right-2")}>
               <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-[10px] font-medium shadow-sm px-1.5 py-0.5">
                 {annonce.photos_annonces_publiques.length}
               </Badge>
             </div>
           )}
+
         </div>
 
         {/* Content */}
@@ -250,16 +272,12 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
           {/* Compact mode footer */}
           {compact && (
             <div className="flex items-center gap-1.5 mt-auto">
-              {annonce.annonceurs?.logo_url ? (
+              {annonce.annonceurs?.logo_url && (
                 <img 
                   src={annonce.annonceurs.logo_url} 
                   alt={advertiserName}
                   className="h-5 w-5 rounded-full object-cover border border-border"
                 />
-              ) : (
-                <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Building2 className="h-3 w-3 text-primary" />
-                </div>
               )}
               <span className="text-[10px] text-muted-foreground line-clamp-1">{advertiserName}</span>
             </div>

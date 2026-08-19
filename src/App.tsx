@@ -50,6 +50,8 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 
 // Public portal pages
 const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
+const AnnonceurPublic = lazy(() => import("./pages/public/AnnonceurPublic"));
+
 const MesMessagesAnnonces = lazy(() => import("./pages/public/MesMessagesAnnonces"));
 const MesAlertesAnnonces = lazy(() => import("./pages/public/MesAlertesAnnonces"));
 const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
@@ -348,7 +350,9 @@ const App = () => (
               {/* Portail annonces public */}
               <Route path="/annonces" element={<RechercheAnnonces />} />
               <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
+             <Route path="/annonceur/:id" element={<AnnonceurPublic />} />
              <Route path="/annonces/offre/:id" element={<OffreAnnonceDetail />} />
+
              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
 
                <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
