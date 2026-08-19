@@ -17,6 +17,7 @@ export interface ShowcaseItem {
   /** Annonce native (publiée sur notre portail) : contenu et images nous appartiennent */
   is_native?: boolean;
   type_transaction?: string | null;
+  est_mise_en_avant?: boolean | null;
 }
 
 

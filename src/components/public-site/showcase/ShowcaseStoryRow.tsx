@@ -14,7 +14,7 @@ function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
   return (
     <div className="flex shrink-0 flex-col items-center gap-2 w-[100px]">
       <button type="button" onClick={onClick} className="rounded-full">
-        <span className="block rounded-full p-[3px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105">
+        <span className={`block rounded-full p-[3px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105 ${item.est_mise_en_avant ? 'ring-2 ring-accent ring-offset-2 ring-offset-background' : ''}`}>
           <span className="block rounded-full p-[2px] bg-background">
             <span className="block h-[76px] w-[76px] sm:h-[84px] sm:w-[84px] rounded-full overflow-hidden bg-muted">
               {img ? (
@@ -37,6 +37,11 @@ function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
         </span>
       </button>
       <button type="button" onClick={onClick} className="w-full text-center leading-tight">
+        {item.est_mise_en_avant && (
+          <span className="mb-0.5 inline-block rounded-full bg-gradient-to-r from-primary to-accent px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wide text-primary-foreground">
+            Excellente offre
+          </span>
+        )}
         <span className="block text-[11px] font-semibold text-foreground truncate">{ville || 'Suisse romande'}</span>
         {prix && <span className="block text-[10px] text-muted-foreground truncate">{prix}</span>}
       </button>

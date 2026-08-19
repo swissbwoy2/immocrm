@@ -58,6 +58,7 @@ interface AnnoncePublique {
   motif_refus?: string | null;
   slug?: string | null;
   est_mise_en_avant?: boolean | null;
+  mise_en_avant_rang?: number | null;
   nb_vues: number;
   nb_favoris: number;
   annonceur_id: string;
@@ -167,6 +168,8 @@ const AnnoncesPubliques = () => {
       .from('annonces_publiques')
       .update({
         est_mise_en_avant: next,
+        mise_en_avant_depuis: next ? now.toISOString() : null,
+        mise_en_avant_rang: next ? (annonce.mise_en_avant_rang ?? 1) : null,
         date_mise_en_avant_debut: next ? now.toISOString() : null,
         date_mise_en_avant_fin: next ? fin.toISOString() : null,
       })
@@ -176,7 +179,7 @@ const AnnoncesPubliques = () => {
       toast.error('Erreur lors de la mise en avant');
       return;
     }
-    toast.success(next ? 'Annonce mise en avant (30 jours)' : 'Mise en avant retirée');
+    toast.success(next ? 'Annonce mise en avant — badge « Excellente offre » activé' : 'Mise en avant retirée');
     loadAnnonces();
   };
 
@@ -404,7 +407,7 @@ const AnnoncesPubliques = () => {
                     {getStatutBadge(isExpired(annonce) ? 'expire' : (annonce.statut || 'brouillon'))}
                     {annonce.est_mise_en_avant && (
                       <Badge variant="outline" className="gap-1">
-                        <Star className="w-3 h-3 fill-current" /> En avant
+                        <Star className="w-3 h-3 fill-current" /> Excellente offre
                       </Badge>
                     )}
                   </div>
@@ -472,7 +475,7 @@ const AnnoncesPubliques = () => {
                           handleToggleMiseEnAvant(annonce);
                         }}
                         disabled={processing}
-                        title="Mettre en avant"
+                        title={annonce.est_mise_en_avant ? 'Retirer la mise en avant' : 'Mettre en avant (Excellente offre)'}
                       >
                         <Star className={`w-4 h-4 ${annonce.est_mise_en_avant ? 'fill-current' : ''}`} />
                       </Button>
