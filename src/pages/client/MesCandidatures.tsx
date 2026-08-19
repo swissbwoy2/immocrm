@@ -467,11 +467,18 @@ const MesCandidatures = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto relative">
+    <div className="flex-1 overflow-x-hidden overflow-y-auto relative">
       {/* Floating particles background */}
       <FloatingParticles count={15} />
       
-      <div className="p-4 md:p-8 relative z-10">
+      <div
+        className="w-full max-w-full px-3 pt-4 sm:px-6 sm:pt-6 md:px-8 md:pt-8 relative z-10"
+        style={{
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+
+
         <PremiumPageHeader
           title="Mes Candidatures"
           subtitle="Suivez l'état de vos offres et candidatures en temps réel"
@@ -485,21 +492,21 @@ const MesCandidatures = () => {
         {offres.length > 0 ? (
           <div className="space-y-8">
             {/* Recherche / filtres / tri */}
-            <div className="rounded-2xl border border-primary/15 bg-card/70 backdrop-blur-sm p-3 sm:p-4 space-y-3">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="relative flex-1 min-w-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="rounded-2xl border border-primary/15 bg-card/70 backdrop-blur-sm p-3 sm:p-4 space-y-3 overflow-hidden">
+              <div className="flex flex-col lg:flex-row gap-3">
+                <div className="relative w-full min-w-0 lg:flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Rechercher par adresse, ville, quartier…"
-                    className="pl-9 h-11 bg-background/60"
+                    placeholder="Rechercher par adresse, ville…"
+                    className="w-full pl-9 h-11 bg-background/60"
                     aria-label="Rechercher une candidature"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 md:w-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:flex lg:w-auto lg:shrink-0">
                   <Select value={statutFilter} onValueChange={setStatutFilter}>
-                    <SelectTrigger className="h-11 sm:w-[230px]" aria-label="Filtrer par statut">
+                    <SelectTrigger className="h-11 w-full min-w-0 lg:w-[230px]" aria-label="Filtrer par statut">
                       <SelectValue placeholder="Statut" />
                     </SelectTrigger>
                     <SelectContent className="max-h-72">
@@ -512,7 +519,7 @@ const MesCandidatures = () => {
                     </SelectContent>
                   </Select>
                   <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                    <SelectTrigger className="h-11 sm:w-[190px]" aria-label="Trier">
+                    <SelectTrigger className="h-11 w-full min-w-0 lg:w-[190px]" aria-label="Trier">
                       <SelectValue placeholder="Trier" />
                     </SelectTrigger>
                     <SelectContent>
@@ -523,13 +530,13 @@ const MesCandidatures = () => {
                   </Select>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="-mx-1 flex flex-wrap items-center gap-2 px-1">
                 <button
                   type="button"
                   onClick={() => setStatutFilter('all')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${statutFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
+                  className={`inline-flex max-w-full items-center justify-center rounded-full border px-3 py-2 text-xs font-medium transition-colors min-h-[38px] ${statutFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
                 >
-                  Tout ({offres.length})
+                  <span className="truncate">Tout ({offres.length})</span>
                 </button>
                 {GROUPES.map((g) => {
                   const count = enrichedOffres.filter(o => o.groupe === g.key).length;
@@ -539,25 +546,27 @@ const MesCandidatures = () => {
                       key={g.key}
                       type="button"
                       onClick={() => setStatutFilter(statutFilter === `groupe:${g.key}` ? 'all' : `groupe:${g.key}`)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors min-h-[32px] ${statutFilter === `groupe:${g.key}` ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
+                      className={`inline-flex max-w-full items-center justify-center rounded-full border px-3 py-2 text-xs font-medium transition-colors min-h-[38px] ${statutFilter === `groupe:${g.key}` ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
                     >
-                      {g.label} ({count})
+                      <span className="truncate">{g.label} ({count})</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
+
             {groupedOffres.map((groupe) => {
               return (
                 <section key={groupe.key} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className={`h-2.5 w-2.5 rounded-full ${groupe.dot}`} />
-                    <h2 className="text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
-                    <Badge variant="secondary" className="rounded-full">{groupe.items.length}</Badge>
-                    <div className="flex-1 h-px bg-border/50" />
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${groupe.dot}`} />
+                    <h2 className="min-w-0 truncate text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
+                    <Badge variant="secondary" className="shrink-0 rounded-full">{groupe.items.length}</Badge>
+                    <div className="hidden sm:block flex-1 h-px bg-border/50" />
                   </div>
-                  <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
+
                   {groupe.items.map((offre, index) => {
               const candidature = candidatures.find(c => c.offre_id === offre.id);
               const statut = candidature?.statut || offre.statut;

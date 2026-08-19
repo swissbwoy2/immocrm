@@ -111,51 +111,55 @@ export function PremiumCandidatureCard({
         )}
 
         <CollapsibleTrigger asChild>
-          <div className="cursor-pointer hover:bg-muted/20 transition-colors p-5 md:p-6 relative z-10">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="cursor-pointer hover:bg-muted/20 transition-colors p-4 sm:p-5 md:p-6 relative z-10">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
               {/* Left section - Address and status */}
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <AddressLink 
-                    address={offre.adresse}
-                    className="text-lg md:text-xl font-bold truncate"
-                    iconClassName="h-5 w-5 text-primary"
-                  />
-                  <Badge 
-                    variant={statutVariant}
-                    className={`${styles.badge} ${isSpecialStatus ? 'animate-pulse' : ''}`}
-                  >
-                    {statutLabel}
-                  </Badge>
+                <div className="flex items-start gap-2 mb-3">
+                  <div className="min-w-0 flex-1">
+                    <AddressLink
+                      address={offre.adresse}
+                      className="text-base sm:text-lg md:text-xl font-bold break-words"
+                      iconClassName="h-5 w-5 shrink-0 text-primary"
+                    />
+                  </div>
+                  <div className="shrink-0 -mt-0.5">
+                    <Badge
+                      variant={statutVariant}
+                      className={`whitespace-nowrap max-w-[45vw] sm:max-w-none truncate ${styles.badge} ${isSpecialStatus ? 'animate-pulse' : ''}`}
+                    >
+                      {statutLabel}
+                    </Badge>
+                  </div>
                 </div>
 
                 {/* Info grid */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg px-2.5 py-1">
-                    <Home className="h-4 w-4 text-primary/70" />
-                    <span>{offre.pieces || '-'} pcs</span>
+                    <Home className="h-4 w-4 shrink-0 text-primary/70" />
+                    <span className="whitespace-nowrap">{offre.pieces || '-'} pcs</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg px-2.5 py-1">
-                    <Square className="h-4 w-4 text-primary/70" />
-                    <span>{offre.surface || '-'} m²</span>
+                    <Square className="h-4 w-4 shrink-0 text-primary/70" />
+                    <span className="whitespace-nowrap">{offre.surface || '-'} m²</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg px-2.5 py-1">
-                    <Calendar className="h-4 w-4 text-primary/70" />
-                    <span>{new Date(offre.date_envoi).toLocaleDateString('fr-CH')}</span>
+                    <Calendar className="h-4 w-4 shrink-0 text-primary/70" />
+                    <span className="whitespace-nowrap">{new Date(offre.date_envoi).toLocaleDateString('fr-CH')}</span>
                   </div>
                 </div>
               </div>
 
               {/* Right section - Price and toggle */}
-              <div className="flex items-center justify-between lg:justify-end gap-4">
-                <div className="text-right">
-                  <p className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <div className="flex items-center justify-between lg:justify-end gap-3 lg:gap-4 border-t lg:border-t-0 border-border/30 pt-3 lg:pt-0">
+                <div className="min-w-0 text-left lg:text-right">
+                  <p className="truncate text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                     CHF {offre.prix?.toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground">par mois</p>
                 </div>
                 <div className={`
-                  p-2 rounded-full bg-muted/30 text-muted-foreground
+                  shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-muted/30 text-muted-foreground
                   transition-all duration-300
                   ${isExpanded ? 'rotate-180 bg-primary/10 text-primary' : ''}
                 `}>
@@ -170,8 +174,9 @@ export function PremiumCandidatureCard({
           </div>
         </CollapsibleTrigger>
 
+
         <CollapsibleContent>
-          <div className="px-5 md:px-6 pb-5 md:pb-6 relative z-10 border-t border-border/30">
+          <div className="px-4 sm:px-5 md:px-6 pb-5 md:pb-6 relative z-10 border-t border-border/30">
             {children}
           </div>
         </CollapsibleContent>
