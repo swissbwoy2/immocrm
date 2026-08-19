@@ -103,12 +103,13 @@ export function PublicHeader() {
                     size="default"
                     onNavigate={() => setIsOpen(false)}
                   />
-                  <Link to="/connexion-annonceur" onClick={() => setIsOpen(false)}>
+                  <Link to={isAuthenticated ? spacePath : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
                     <Button className="w-full justify-start">
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Connexion
+                      {isAuthenticated ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+                      {isAuthenticated ? 'Mon espace' : 'Connexion'}
                     </Button>
                   </Link>
+
                 </div>
 
                 <div className="border-t pt-6">
