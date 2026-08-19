@@ -1,3 +1,4 @@
+import RespoTest from '@/pages/__RespoTest';
 import { Suspense, lazy, useEffect } from 'react';
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -301,6 +302,7 @@ const App = () => (
               
               <Route path="/login" element={<Login />} />
               <Route path="/demo" element={<DemoPage />} />
+              <Route path="/__respo-test" element={<RespoTest />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
               <Route path="/mandat-v3" element={<MandatV3 />} />
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
