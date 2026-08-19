@@ -51,13 +51,23 @@ export function PublicHeader() {
               </Button>
             </Link>
             <DeposerAnnonceButton />
-            <Link to="/connexion-annonceur">
-              <Button size="sm">
-                <User className="h-4 w-4 mr-2" />
-                Connexion
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to={spacePath}>
+                <Button size="sm">
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Mon espace
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/connexion-annonceur">
+                <Button size="sm">
+                  <User className="h-4 w-4 mr-2" />
+                  Connexion
+                </Button>
+              </Link>
+            )}
           </div>
+
 
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
