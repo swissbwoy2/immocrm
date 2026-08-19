@@ -559,12 +559,15 @@ export default function InscriptionAnnonceur() {
                 </AnimatePresence>
               </form>
 
-              <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-                Déjà un compte ?{' '}
-                <Link to="/connexion-annonceur" className="text-primary font-medium hover:underline">
-                  Se connecter
-                </Link>
-              </div>
+              {!isAuthenticated && (
+                <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
+                  Déjà un compte ?{' '}
+                  <Link to="/connexion-annonceur" className="text-primary font-medium hover:underline">
+                    Se connecter
+                  </Link>
+                </div>
+              )}
+
             </Card>
           </div>
         </div>
