@@ -4,7 +4,9 @@ const SYNC_SECRET = Deno.env.get("IMMORAMA_SYNC_SECRET") || "";
 const SOURCE = "immo-rama.ch";
 const ANNONCEUR_ID = "11110000-0000-4000-8000-000000000001";
 
-const DEFAULT_CONTACT = {
+// Valeurs initiales uniquement : le profil annonceur immo-rama.ch (rattaché à l'admin)
+// reste la source de vérité et peut être modifié à tout moment.
+const FALLBACK_CONTACT = {
   nom_contact: "Immo-Rama",
   email_contact: "info@immo-rama.ch",
   telephone_contact: "+41 22 519 09 04",
