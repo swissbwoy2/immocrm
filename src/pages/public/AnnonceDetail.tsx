@@ -7,7 +7,7 @@ import {
   ArrowLeft, Heart, Share2, Flag, MapPin, Bed, Bath, Maximize, 
   Calendar, Building2, Check, Phone, Mail, MessageCircle, 
   Star, ChevronLeft, ChevronRight, X, User, Shield, Clock,
-  Home, Car, Thermometer, Wifi, Trees, Waves
+  Home, Car, Thermometer, Wifi, Trees, Waves, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
