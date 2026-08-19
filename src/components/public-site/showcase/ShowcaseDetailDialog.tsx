@@ -43,8 +43,9 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
 
 function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => void }) {
   const { canViewInternalListing } = useSourcedListingAccess();
-  const gallery = canViewInternalListing ? galleryUrls(item) : [];
-  const cover = usePreviewImage(item, canViewInternalListing);
+  const allowImages = canViewInternalListing || !!item.is_native;
+  const gallery = allowImages ? galleryUrls(item) : [];
+  const cover = usePreviewImage(item, allowImages);
   const images = gallery.length > 0 ? gallery : cover ? [cover] : [];
 
   return (
@@ -67,7 +68,7 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
           ))}
         </div>
 
-      ) : canViewInternalListing ? (
+      ) : allowImages ? (
         <div className="flex h-40 items-center justify-center rounded-xl bg-muted">
           <Home className="h-8 w-8 text-muted-foreground" />
         </div>

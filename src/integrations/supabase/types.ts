@@ -13316,6 +13316,23 @@ export type Database = {
           ville: string
         }[]
       }
+      get_public_showcase_annonces: {
+        Args: never
+        Returns: {
+          adresse: string
+          date_envoi: string
+          etage: string
+          id: string
+          lien_annonce: string
+          medias_galerie: Json
+          pieces: number
+          prix: number
+          surface: number
+          titre: string
+          type_bien: string
+          type_transaction: string
+        }[]
+      }
       get_public_showcase_offres: {
         Args: never
         Returns: {
