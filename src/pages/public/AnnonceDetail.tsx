@@ -173,15 +173,27 @@ export default function AnnonceDetail() {
 
   const handleShare = async () => {
     const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({
-        title: annonce?.titre,
-        text: annonce?.description_courte,
-        url
-      });
-    } else {
-      navigator.clipboard.writeText(url);
+    const title = annonce?.titre ?? 'Annonce';
+    const text = annonce?.description_courte ?? '';
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform()) {
+        const { Share } = await import('@capacitor/share');
+        await Share.share({ title, text, url, dialogTitle: 'Partager l\'annonce' });
+        return;
+      }
+    } catch (e) {}
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ title, text, url });
+        return;
+      }
+    } catch (e) {}
+    try {
+      await navigator.clipboard.writeText(url);
       toast.success('Lien copié dans le presse-papier');
+    } catch {
+      toast.error('Impossible de partager le lien');
     }
   };
 

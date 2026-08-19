@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ExternalLink, Home, MapPin } from 'lucide-react';
 import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from './useShowcase';
+import { Link } from 'react-router-dom';
 import { StoryPhotoLink } from './StoryPhotoLink';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
 import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
@@ -119,10 +120,17 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
         </Button>
         {item.lien_annonce && (
           <Button asChild variant="outline" className="flex-1">
-            <a href={item.lien_annonce} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Voir l'annonce
-            </a>
+            {item.lien_annonce.startsWith('/') ? (
+              <Link to={item.lien_annonce}>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Voir l'annonce
+              </Link>
+            ) : (
+              <a href={item.lien_annonce} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Voir l'annonce
+              </a>
+            )}
           </Button>
         )}
       </div>
