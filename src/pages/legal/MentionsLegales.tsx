@@ -53,7 +53,7 @@ export default function MentionsLegales() {
               <li>Siège : <strong>Chemin de l'Esparcette 5, 1023 Crissier, Suisse</strong></li>
               <li>IDE : <strong>CHE-442.303.796</strong></li>
               <li>Email : <a href="mailto:info@immo-rama.ch" className="text-primary hover:underline">info@immo-rama.ch</a></li>
-              <li>Téléphone : <a href="tel:+41216259505" className="text-primary hover:underline">021 625 95 05</a></li>
+              <li>Téléphone : <a href="tel:+41216342839" className="text-primary hover:underline">021 634 28 39</a></li>
             </ul>
           </div>
 

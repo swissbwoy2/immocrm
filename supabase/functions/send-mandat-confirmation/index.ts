@@ -136,7 +136,7 @@ serve(async (req) => {
     <div class="footer">
       <p>Immo-rama.ch<br>
       Chemin de l'Esparcette 5, 1023 Crissier<br>
-      Tél: 021 625 95 05 | Email: info@immo-rama.ch</p>
+      Tél: 021 634 28 39 | Email: info@immo-rama.ch</p>
       <p>© ${new Date().getFullYear()} Immo-rama.ch - Tous droits réservés</p>
     </div>
   </div>
