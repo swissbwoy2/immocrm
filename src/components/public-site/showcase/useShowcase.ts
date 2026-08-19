@@ -14,7 +14,11 @@ export interface ShowcaseItem {
   medias_galerie: unknown;
   date_envoi?: string | null;
   date_visite?: string | null;
+  /** Annonce native (publiée sur notre portail) : contenu et images nous appartiennent */
+  is_native?: boolean;
+  type_transaction?: string | null;
 }
+
 
 const asArray = (v: unknown): string[] => {
   if (!Array.isArray(v)) return [];
@@ -28,18 +32,25 @@ export const galleryUrls = (item: ShowcaseItem) => asArray(item.medias_galerie);
 export function useShowcase() {
   const [offres, setOffres] = useState<ShowcaseItem[]>([]);
   const [visites, setVisites] = useState<ShowcaseItem[]>([]);
+  const [annonces, setAnnonces] = useState<ShowcaseItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [o, v] = await Promise.all([
+      const [o, v, a] = await Promise.all([
         supabase.rpc('get_public_showcase_offres'),
         supabase.rpc('get_public_showcase_visites'),
+        supabase.rpc('get_public_showcase_annonces' as never),
       ]);
       if (cancelled) return;
       setOffres(((o.data as ShowcaseItem[]) || []).filter((i) => i.titre || i.adresse));
       setVisites(((v.data as ShowcaseItem[]) || []).filter((i) => i.titre || i.adresse));
+      setAnnonces(
+        (((a.data as ShowcaseItem[]) || []) as ShowcaseItem[])
+          .filter((i) => i.titre || i.adresse)
+          .map((i) => ({ ...i, is_native: true })),
+      );
       setLoading(false);
     })();
     return () => {
@@ -47,8 +58,9 @@ export function useShowcase() {
     };
   }, []);
 
-  return { offres, visites, loading };
+  return { offres, visites, annonces, loading };
 }
+
 
 // --- Link preview image (OpenGraph) with batched public fetch --------------
 const previewCache = new Map<string, string | null>();

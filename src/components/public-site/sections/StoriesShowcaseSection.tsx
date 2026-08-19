@@ -4,10 +4,13 @@ import { ShowcaseStoryRow } from '../showcase/ShowcaseStoryRow';
 import { ShowcaseDetailDialog } from '../showcase/ShowcaseDetailDialog';
 
 export function StoriesShowcaseSection() {
-  const { offres, visites, loading } = useShowcase();
+  const { offres, visites, annonces, loading } = useShowcase();
   const [selected, setSelected] = useState<ShowcaseItem | null>(null);
 
-  if (loading || (offres.length === 0 && visites.length === 0)) return null;
+  const aLouer = annonces.filter((a) => a.type_transaction !== 'vente');
+  const aVendre = annonces.filter((a) => a.type_transaction === 'vente');
+
+  if (loading || (offres.length === 0 && visites.length === 0 && annonces.length === 0)) return null;
 
   return (
     <section className="rounded-2xl border border-primary/15 bg-primary/5 py-6 md:py-8">
@@ -23,6 +26,12 @@ export function StoriesShowcaseSection() {
 
 
         <div className="space-y-8">
+          {aLouer.length > 0 && (
+            <ShowcaseStoryRow title="Annonces à louer" items={aLouer} onSelect={setSelected} />
+          )}
+          {aVendre.length > 0 && (
+            <ShowcaseStoryRow title="Annonces à vendre" items={aVendre} onSelect={setSelected} />
+          )}
           {visites.length > 0 && (
             <ShowcaseStoryRow title="Visites à venir" items={visites} onSelect={setSelected} />
           )}
@@ -31,6 +40,8 @@ export function StoriesShowcaseSection() {
           )}
         </div>
       </div>
+
+
 
       <ShowcaseDetailDialog item={selected} onOpenChange={(o) => !o && setSelected(null)} />
     </section>

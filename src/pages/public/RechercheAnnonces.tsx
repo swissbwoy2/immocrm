@@ -198,7 +198,10 @@ export default function RechercheAnnonces() {
         .eq('statut', 'publie')
         .or(`date_expiration.is.null,date_expiration.gt.${nowIso}`);
 
-      if (transactionType) query = query.eq('type_transaction', transactionType);
+      // « Tous » = aucun filtre (louer + acheter). Sinon on tolère les variantes de valeurs.
+      if (transactionType === 'vente') query = query.in('type_transaction', ['vente', 'achat', 'vendre']);
+      else if (transactionType === 'location') query = query.in('type_transaction', ['location', 'louer']);
+      else if (transactionType) query = query.eq('type_transaction', transactionType);
 
       // Multi-localités : OR sur ville / canton / NPA
       if (lieux.length) {

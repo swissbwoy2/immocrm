@@ -6,7 +6,8 @@ import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 
 function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => void }) {
   const { canViewInternalListing } = useSourcedListingAccess();
-  const img = usePreviewImage(item, canViewInternalListing);
+  const allowImages = canViewInternalListing || !!item.is_native;
+  const img = usePreviewImage(item, allowImages);
   const ville = villeFromAdresse(item.adresse);
   const prix = formatPrix(item.prix);
 
@@ -24,7 +25,7 @@ function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
                   draggable={false}
                   className="h-full w-full object-cover"
                 />
-              ) : canViewInternalListing ? (
+              ) : allowImages ? (
                 <span className="flex h-full w-full items-center justify-center">
                   <Home className="h-7 w-7 text-muted-foreground" />
                 </span>
