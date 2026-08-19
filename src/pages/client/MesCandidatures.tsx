@@ -421,8 +421,12 @@ const MesCandidatures = () => {
         return false;
       }
       if (!q) return true;
-      const hay = [o.adresse, o.ville, o.npa, o.quartier, o.type_bien]
-        .filter(Boolean).join(' ').toLowerCase();
+      const hay = [
+        o.adresse, o.ville, o.npa, o.quartier, o.type_bien,
+        (o as any).titre, (o as any).regie, (o as any).gerance,
+        (o as any).contact_gerance, (o as any).contact_annonceur,
+      ].filter(Boolean).join(' ').toLowerCase();
+
       return hay.includes(q);
     });
     list = [...list].sort((a, b) => {
