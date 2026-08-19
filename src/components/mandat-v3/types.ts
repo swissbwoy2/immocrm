@@ -38,18 +38,24 @@ export interface MandatV3FormData {
   // Documents
   documents: MandateDocumentData[];
 
-  // Legal checkboxes
+  // Legal consents (12)
+  legal_objet: boolean;
+  legal_obligation_moyens: boolean;
   legal_exclusivite: boolean;
   legal_duree: boolean;
   legal_commission: boolean;
   legal_acompte: boolean;
-  legal_resiliation: boolean;
-  legal_obligations_client: boolean;
-  legal_obligations_agence: boolean;
-  legal_protection_donnees: boolean;
+  legal_transmission_dossier: boolean;
+  legal_garants_cocandidats: boolean;
   legal_litiges: boolean;
-  legal_droit_applicable: boolean;
+  legal_protection_donnees: boolean;
+  legal_cgu: boolean;
   legal_acceptation_generale: boolean;
+  // Legacy (conservés pour compatibilité base de données)
+  legal_resiliation?: boolean;
+  legal_obligations_client?: boolean;
+  legal_obligations_agence?: boolean;
+  legal_droit_applicable?: boolean;
 
   // Signature
   signature_data: string;
