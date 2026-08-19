@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { usePublicFavoris } from '@/hooks/usePublicFavoris';
+import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
+
 
 
 interface AnnonceData {
