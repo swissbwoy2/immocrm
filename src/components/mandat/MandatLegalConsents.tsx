@@ -55,20 +55,20 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
   return (
     <div className="space-y-4">
       {/* Contrat de mandat (source active en base) */}
-      <div className="rounded-xl border border-[hsl(38_45%_48%/0.15)] overflow-hidden bg-[hsl(30_12%_10%/0.5)]">
-        <div className="px-4 py-2.5 border-b border-[hsl(38_45%_48%/0.15)] flex items-center gap-2">
-          <FileText size={14} className="text-[hsl(38_55%_65%)]" />
-          <h3 className="text-sm font-semibold text-[hsl(40_20%_75%)]">
+      <div className="rounded-xl border border-border overflow-hidden bg-muted/40">
+        <div className="px-4 py-2.5 border-b border-border flex items-center gap-2">
+          <FileText size={14} className="text-primary" />
+          <h3 className="text-sm font-semibold text-foreground">
             Contrat de mandat de recherche immobilière
           </h3>
         </div>
         <ScrollArea className="h-[260px] sm:h-[340px]">
           {loading ? (
             <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-5 w-5 animate-spin text-[hsl(40_20%_45%)]" />
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="p-4 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-[hsl(40_20%_62%)]">
+            <div className="p-4 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
               {contractText}
             </div>
           )}
@@ -77,7 +77,7 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
 
       {/* 12 consentements */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-[hsl(40_20%_75%)]">
+        <h3 className="text-sm font-semibold text-foreground">
           Consentements ({checkedCount}/{LEGAL_CHECKBOXES.length})
         </h3>
 
@@ -88,26 +88,26 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
               key={cb.key}
               className={`rounded-xl border p-3 sm:p-4 transition-colors ${
                 checked
-                  ? 'border-emerald-500/30 bg-emerald-950/10'
-                  : 'border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)]'
+                  ? 'border-emerald-500/30 bg-emerald-500/10'
+                  : 'border-border bg-muted/40'
               }`}
             >
               <div className="flex items-baseline gap-2">
-                <span className="text-xs font-semibold text-[hsl(40_20%_45%)]">{index + 1}.</span>
-                <h4 className="text-sm font-semibold text-[hsl(40_20%_78%)]">{cb.title}</h4>
+                <span className="text-xs font-semibold text-muted-foreground">{index + 1}.</span>
+                <h4 className="text-sm font-semibold text-foreground">{cb.title}</h4>
               </div>
-              <p className="text-xs sm:text-sm text-[hsl(40_20%_58%)] mt-1.5 leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
                 {cb.question}
               </p>
               {cb.note && (
-                <p className="text-[11px] text-[hsl(40_20%_45%)] mt-1 italic">{cb.note}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 italic">{cb.note}</p>
               )}
               {cb.linkHref && (
                 <a
                   href={cb.linkHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block text-xs text-[hsl(38_55%_65%)] underline mt-1.5"
+                  className="inline-block text-xs text-primary underline mt-1.5"
                 >
                   {cb.linkLabel}
                 </a>
@@ -121,7 +121,7 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
                 />
                 <Label
                   htmlFor={`mandat-${cb.key}`}
-                  className="text-xs sm:text-sm font-medium leading-relaxed cursor-pointer text-[hsl(40_20%_72%)]"
+                  className="text-xs sm:text-sm font-medium leading-relaxed cursor-pointer text-foreground"
                 >
                   {cb.cta}
                 </Label>
@@ -132,15 +132,15 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
       </div>
 
       {allChecked && (
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-3 flex items-center gap-2">
-          <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-          <p className="text-xs text-emerald-300">
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 flex items-center gap-2">
+          <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+          <p className="text-xs text-emerald-700">
             Toutes les dispositions ont été acceptées. Vous pouvez signer votre mandat.
           </p>
         </div>
       )}
 
-      <p className="text-[11px] text-[hsl(40_20%_40%)]">
+      <p className="text-[11px] text-muted-foreground">
         Questions ? info@immo-rama.ch — +41 21 634 28 39
       </p>
     </div>

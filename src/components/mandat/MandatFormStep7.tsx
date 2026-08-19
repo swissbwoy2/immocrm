@@ -21,26 +21,26 @@ export default function MandatFormStep7({ data, onChange }: Props) {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">Récapitulatif et signature</h2>
-        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">Vérifiez vos informations et signez le mandat.</p>
+        <h2 className="text-2xl font-bold text-foreground">Récapitulatif et signature</h2>
+        <p className="text-sm text-muted-foreground mt-1">Vérifiez vos informations et signez le mandat.</p>
       </div>
 
       {/* Récapitulatif */}
-      <div className="rounded-xl border border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)] p-4">
+      <div className="rounded-xl border border-border bg-muted/40 p-4">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-full bg-[hsl(38_45%_48%/0.15)] flex items-center justify-center">
-            <FileCheck size={14} className="text-[hsl(38_55%_65%)]" />
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <FileCheck size={14} className="text-primary" />
           </div>
-          <h3 className="text-sm font-semibold text-[hsl(40_20%_75%)]">Récapitulatif de votre dossier</h3>
+          <h3 className="text-sm font-semibold text-foreground">Récapitulatif de votre dossier</h3>
         </div>
         <MandatRecapitulatif data={data} onChange={onChange} />
       </div>
 
       {/* Code promo */}
-      <div className="rounded-xl border border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)] p-4">
+      <div className="rounded-xl border border-border bg-muted/40 p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Gift size={15} className="text-[hsl(38_55%_65%)]" />
-          <span className="text-sm font-medium text-[hsl(40_20%_70%)]">Code promo (optionnel)</span>
+          <Gift size={15} className="text-primary" />
+          <span className="text-sm font-medium text-foreground">Code promo (optionnel)</span>
         </div>
         <LandingInput
           label=""
@@ -53,12 +53,12 @@ export default function MandatFormStep7({ data, onChange }: Props) {
       {/* Dispositions du mandat + 12 consentements */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-[hsl(38_45%_48%/0.15)] flex items-center justify-center">
-            <FileText size={14} className="text-[hsl(38_55%_65%)]" />
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <FileText size={14} className="text-primary" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-[hsl(40_20%_75%)]">Dispositions du mandat</p>
-            <p className="text-[10px] text-[hsl(40_20%_40%)]">*À lire attentivement et approuver avant de signer</p>
+            <p className="text-sm font-semibold text-foreground">Dispositions du mandat</p>
+            <p className="text-[10px] text-muted-foreground">*À lire attentivement et approuver avant de signer</p>
           </div>
         </div>
         <MandatLegalConsents data={data} onChange={onChange} />
@@ -67,31 +67,31 @@ export default function MandatFormStep7({ data, onChange }: Props) {
       {/* Signature */}
       <div className={`rounded-xl border p-4 transition-all duration-500 ${
         hasSignature
-          ? 'border-emerald-500/25 bg-emerald-950/10 shadow-[0_0_20px_hsl(142_60%_40%/0.08)]'
-          : 'border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.5)]'
+          ? 'border-emerald-500/25 bg-emerald-500/10 shadow-[0_0_20px_hsl(142_60%_40%/0.08)]'
+          : 'border-border bg-muted/40'
       }`}>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <PenLine size={15} className={hasSignature ? 'text-emerald-400' : 'text-[hsl(38_55%_65%)]'} />
-              <span className="text-sm font-semibold text-[hsl(40_20%_75%)]">
-                Signature électronique <span className="text-red-400">*</span>
+              <PenLine size={15} className={hasSignature ? 'text-emerald-600' : 'text-primary'} />
+              <span className="text-sm font-semibold text-foreground">
+                Signature électronique <span className="text-destructive">*</span>
               </span>
             </div>
             {hasSignature && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1">
+              <span className="text-xs text-emerald-600 flex items-center gap-1">
                 <CheckCircle2 size={13} /> Signé
               </span>
             )}
           </div>
           {hasCGVAccepted ? (
             <>
-              <p className="text-xs text-[hsl(40_20%_45%)]">Utilisez votre souris, votre doigt ou un stylet pour signer dans le cadre ci-dessous.</p>
+              <p className="text-xs text-muted-foreground">Utilisez votre souris, votre doigt ou un stylet pour signer dans le cadre ci-dessous.</p>
               <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
             </>
           ) : (
-            <div className="rounded-lg border border-dashed border-[hsl(38_45%_48%/0.25)] bg-[hsl(30_12%_8%/0.6)] p-5 text-center">
-              <p className="text-xs text-[hsl(40_20%_50%)]">
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 p-5 text-center">
+              <p className="text-xs text-muted-foreground">
                 La signature électronique se débloquera dès que les 12 dispositions auront été acceptées.
               </p>
             </div>
@@ -103,7 +103,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
       {/* Alert état incomplet */}
       {!isComplete && (
         <div className="rounded-xl border border-red-500/30 bg-red-950/15 p-3 flex items-start gap-2">
-          <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle size={15} className="text-destructive flex-shrink-0 mt-0.5" />
           <p className="text-xs text-red-300">
             {!hasSignature && !hasCGVAccepted && 'Veuillez signer le mandat et accepter les dispositions pour continuer.'}
             {!hasSignature && hasCGVAccepted && 'Veuillez signer le mandat pour continuer.'}
@@ -114,9 +114,9 @@ export default function MandatFormStep7({ data, onChange }: Props) {
 
       {/* Success */}
       {isComplete && (
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-3 flex items-start gap-2">
-          <Sparkles size={15} className="text-emerald-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-emerald-300">Après validation, une copie de votre mandat signé vous sera envoyée par email au format PDF.</p>
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 flex items-start gap-2">
+          <Sparkles size={15} className="text-emerald-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-emerald-700">Après validation, une copie de votre mandat signé vous sera envoyée par email au format PDF.</p>
         </div>
       )}
     </div>

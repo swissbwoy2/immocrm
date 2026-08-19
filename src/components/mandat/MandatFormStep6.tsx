@@ -98,18 +98,18 @@ export default function MandatFormStep6({ data, onChange }: Props) {
     <div className="space-y-6">
       {/* En-tête */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-white">Documents à fournir</h2>
-        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground">Documents à fournir</h2>
+        <p className="text-sm text-muted-foreground mt-1">
           Téléchargez ou scannez les documents nécessaires pour constituer votre dossier.
         </p>
-        <p className="text-xs text-[hsl(38_55%_65%)] mt-2">
+        <p className="text-xs text-primary mt-2">
           Ces documents sont facultatifs à cette étape ; vous pourrez les ajouter maintenant ou plus tard.
           Un dossier complet accélère toutefois vos candidatures.
         </p>
       </div>
 
       {/* Progression compacte */}
-      <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-[hsl(38_45%_48%/0.18)] bg-[hsl(30_12%_10%/0.5)]">
+      <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-border bg-muted/40">
         <div className="flex items-center gap-3">
           <div className="relative w-12 h-12">
             <svg className="w-full h-full -rotate-90">
@@ -132,17 +132,17 @@ export default function MandatFormStep6({ data, onChange }: Props) {
                 </linearGradient>
               </defs>
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-[hsl(38_55%_65%)]">
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-primary">
               {pct}%
             </span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-[hsl(40_20%_82%)]">
+            <p className="text-sm font-semibold text-foreground">
               {uploadedCount} / {total} documents
             </p>
-            <p className="text-xs text-[hsl(40_20%_50%)]">
+            <p className="text-xs text-muted-foreground">
               {allDone ? (
-                <span className="text-emerald-400 inline-flex items-center gap-1">
+                <span className="text-emerald-600 inline-flex items-center gap-1">
                   <Sparkles size={12} /> Dossier complet
                 </span>
               ) : (
@@ -151,23 +151,23 @@ export default function MandatFormStep6({ data, onChange }: Props) {
             </p>
           </div>
         </div>
-        <ShieldCheck className="h-5 w-5 text-[hsl(38_55%_65%)] hidden sm:block" />
+        <ShieldCheck className="h-5 w-5 text-primary hidden sm:block" />
       </div>
 
       {/* === Documents administratifs === */}
       <section className="space-y-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-[hsl(40_20%_75%)] border-b border-[hsl(38_45%_48%/0.15)] pb-2">
-          <FileText className="h-4 w-4 text-[hsl(38_55%_65%)]" />
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground border-b border-border pb-2">
+          <FileText className="h-4 w-4 text-primary" />
           Documents administratifs
         </h3>
 
         {/* Extrait des poursuites */}
         <div>
           <div className="flex items-baseline justify-between mb-2">
-            <p className="text-sm font-medium text-[hsl(40_20%_82%)]">
+            <p className="text-sm font-medium text-foreground">
               Extrait des poursuites
             </p>
-            <span className="text-[11px] text-[hsl(40_20%_45%)]">Datant de moins de 3 mois</span>
+            <span className="text-[11px] text-muted-foreground">Datant de moins de 3 mois</span>
           </div>
           <LandingDocumentDropzone
             documentType="extrait_poursuites"
@@ -182,15 +182,15 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         {/* 3 fiches de salaire */}
         <div>
           <div className="flex items-baseline justify-between mb-2">
-            <p className="text-sm font-medium text-[hsl(40_20%_82%)]">
+            <p className="text-sm font-medium text-foreground">
               3 dernières fiches de salaire
             </p>
-            <span className="text-[11px] text-[hsl(40_20%_45%)]">Une par mois</span>
+            <span className="text-[11px] text-muted-foreground">Une par mois</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {SALAIRE_KEYS.map((s) => (
               <div key={s.key}>
-                <p className="text-[11px] text-[hsl(40_20%_55%)] mb-1.5">{s.label}</p>
+                <p className="text-[11px] text-muted-foreground mb-1.5">{s.label}</p>
                 <LandingDocumentDropzone
                   documentType="fiche_salaire"
                   baseFileName={s.key}
@@ -208,11 +208,11 @@ export default function MandatFormStep6({ data, onChange }: Props) {
 
       {/* === Identité === */}
       <section className="space-y-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-[hsl(40_20%_75%)] border-b border-[hsl(38_45%_48%/0.15)] pb-2">
-          <CreditCard className="h-4 w-4 text-[hsl(38_55%_65%)]" />
-          {idTitle} <span className="text-[hsl(40_20%_55%)] font-normal">(Carte d'identité Suisse ou Permis de séjour)</span>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground border-b border-border pb-2">
+          <CreditCard className="h-4 w-4 text-primary" />
+          {idTitle} <span className="text-muted-foreground font-normal">(Carte d'identité Suisse ou Permis de séjour)</span>
         </h3>
-        <p className="text-xs text-[hsl(40_20%_55%)] -mt-2">
+        <p className="text-xs text-muted-foreground -mt-2">
           Recto et verso recommandés (facultatifs).
         </p>
 
@@ -221,7 +221,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
             const key = `${idKind}_${face}`;
             return (
               <div key={key}>
-                <p className="text-sm font-medium text-[hsl(40_20%_82%)] mb-2">
+                <p className="text-sm font-medium text-foreground mb-2">
                   {idTitle} ({face})
                 </p>
                 <LandingDocumentDropzone
@@ -238,7 +238,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         </div>
       </section>
 
-      <p className="text-[11px] text-[hsl(40_20%_35%)] text-center flex items-center justify-center gap-1.5">
+      <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1.5">
         <FileText size={11} /> Formats acceptés : PDF, JPG, PNG · 10 MB max par fichier
       </p>
     </div>
