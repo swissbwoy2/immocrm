@@ -5,11 +5,11 @@
  */
 export const CANDIDACY_LEGAL = {
   /** Raison sociale exacte inscrite au registre / IDE */
-  raisonSociale: '[RAISON SOCIALE EXACTE]',
+  raisonSociale: 'Ramazani Christ, entreprise individuelle',
   /** Adresse postale complète du responsable du traitement */
-  adressePostale: '[adresse postale complète]',
+  adressePostale: 'Chemin de l\'Esparcette 5, 1023 Crissier',
   /** E-mail dédié à la protection des données */
-  emailProtectionDonnees: '[e-mail protection des données]',
+  emailProtectionDonnees: 'admin@immo-rama.ch',
   /** Taux de TVA suisse applicable */
   tauxTVA: '8,1 %',
   /** Commission de courtage en cas de succès */
