@@ -875,9 +875,12 @@ export default function AgentVisites() {
               💡 {visite.notes}
             </p>
           )}
-          
 
-          
+          {/* Live de visite (hôte : agent) */}
+          <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+            <VisitLiveButton visiteId={visite.id} dateVisite={visite.date_visite} className="w-full" />
+          </div>
+
           {/* Date/time footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border/50">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
