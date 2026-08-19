@@ -4,7 +4,7 @@ import { LandingCheckbox } from '@/components/forms-premium/LandingCheckbox';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconSignature } from '@/components/forms-premium/icons/LuxuryIcons';
 import SignaturePad from './SignaturePad';
-import CGVContent from './CGVContent';
+import MandatLegalConsents from './MandatLegalConsents';
 import MandatRecapitulatif from './MandatRecapitulatif';
 import { FileCheck, AlertCircle, PenLine, FileText, Gift, CheckCircle2, Sparkles } from 'lucide-react';
 

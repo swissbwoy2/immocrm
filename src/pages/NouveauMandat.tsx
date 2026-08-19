@@ -13,6 +13,7 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
+import { LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
 import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
@@ -92,6 +93,7 @@ export default function NouveauMandat() {
 
   const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
   const currentStepDef = steps[currentStep] ?? steps[0];
+  const allLegalAccepted = LEGAL_CHECKBOXES.every((cb) => (formData as any)[cb.key] === true);
 
   const validateStep = (step: number): boolean => {
     const def = steps[step];
@@ -132,7 +134,7 @@ export default function NouveauMandat() {
         // Documents entièrement facultatifs : jamais bloquants (location comme achat)
         return true;
       case 'signature':
-        return !!(formData.signature_data && formData.cgv_acceptees);
+        return !!(formData.signature_data && allLegalAccepted);
       default:
         return true;
     }
@@ -287,6 +289,7 @@ export default function NouveauMandat() {
         signature_data: formData.signature_data,
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
+        legal_consents: formData.legal_consents_at as any,
         code_promo: formData.code_promo,
         payment_method: formData.payment_method ?? 'qr_invoice',
         montant_acompte: montantAcompte,
@@ -592,7 +595,7 @@ export default function NouveauMandat() {
                 variant="submit"
                 onClick={handleSubmit}
                 loading={submitting}
-                disabled={submitting || !formData.cgv_acceptees || !formData.signature_data}
+                disabled={submitting || !allLegalAccepted || !formData.signature_data}
               >
                 Envoyer la demande
               </LandingButton>
