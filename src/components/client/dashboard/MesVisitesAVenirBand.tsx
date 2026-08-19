@@ -149,6 +149,10 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
         </p>
       )}
 
+      <VisitLiveButton visiteId={visite.id} size="default" className="w-full" />
+
+
+
       {item.lien_annonce && (
         <Button asChild variant="outline" className="w-full">
           <a href={item.lien_annonce} target="_blank" rel="noopener noreferrer">
