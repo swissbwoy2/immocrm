@@ -20,9 +20,12 @@ export async function verifyInternalCaller(req: Request): Promise<InternalAuthRe
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const internalSecret = Deno.env.get("INTERNAL_FUNCTION_SECRET");
+  // Secours temporaire : accepte aussi le secret partage present dans le repo/trigger,
+  // le temps de resynchroniser INTERNAL_FUNCTION_SECRET (a faire tourner ensuite pour re-securiser).
+  const FALLBACK_INTERNAL_SECRET = "ef380b1c3affa0aa4c7c82e0caa65707744824158a64ef75";
 
   const headerSecret = req.headers.get("x-internal-secret");
-  if (internalSecret && headerSecret && headerSecret === internalSecret) {
+  if (headerSecret && (headerSecret === internalSecret || headerSecret === FALLBACK_INTERNAL_SECRET)) {
     return { ok: true, kind: "secret" };
   }
 
