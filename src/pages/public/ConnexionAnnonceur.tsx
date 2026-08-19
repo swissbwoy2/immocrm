@@ -8,10 +8,13 @@ import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/aut
 import { Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
+import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 
 export default function ConnexionAnnonceur() {
   const navigate = useNavigate();
+  const { user, spacePath, isLoading: authLoading } = useConnectedIdentity();
   const [email, setEmail] = useState('');
+
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
