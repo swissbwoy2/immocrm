@@ -1,3 +1,4 @@
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar, Clock, Home, Maximize, Building, FileText } from 'lucide-react';
