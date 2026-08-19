@@ -68,19 +68,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify all 11 legal checkboxes are checked
+    // Verify all 12 legal consents are checked
     const { data: mandateData } = await supabase
       .from("mandates")
-      .select("legal_exclusivite, legal_duree, legal_commission, legal_acompte, legal_resiliation, legal_obligations_client, legal_obligations_agence, legal_protection_donnees, legal_litiges, legal_droit_applicable, legal_acceptation_generale")
+      .select("legal_objet, legal_obligation_moyens, legal_exclusivite, legal_duree, legal_commission, legal_acompte, legal_transmission_dossier, legal_garants_cocandidats, legal_litiges, legal_protection_donnees, legal_cgu, legal_acceptation_generale")
       .eq("id", mandate_id)
       .single();
 
     const legalFields = [
-      "legal_exclusivite", "legal_duree", "legal_commission", "legal_acompte",
-      "legal_resiliation", "legal_obligations_client", "legal_obligations_agence",
-      "legal_protection_donnees", "legal_litiges", "legal_droit_applicable",
-      "legal_acceptation_generale"
+      "legal_objet", "legal_obligation_moyens", "legal_exclusivite", "legal_duree",
+      "legal_commission", "legal_acompte", "legal_transmission_dossier",
+      "legal_garants_cocandidats", "legal_litiges", "legal_protection_donnees",
+      "legal_cgu", "legal_acceptation_generale"
     ];
+
 
     const allChecked = legalFields.every((f) => (mandateData as any)?.[f] === true);
     if (!allChecked) {

@@ -63,6 +63,11 @@ const DOCUMENT_FIELDS: Record<string, "string" | "number" | "boolean"> = {
 };
 
 const LEGAL_FIELDS: Record<string, "string" | "number" | "boolean"> = {
+  legal_objet: "boolean",
+  legal_obligation_moyens: "boolean",
+  legal_transmission_dossier: "boolean",
+  legal_garants_cocandidats: "boolean",
+  legal_cgu: "boolean",
   legal_exclusivite: "boolean",
   legal_duree: "boolean",
   legal_commission: "boolean",
