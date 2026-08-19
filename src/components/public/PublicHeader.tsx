@@ -119,7 +119,19 @@ export function PublicHeader() {
                     size="default"
                     onNavigate={() => setIsOpen(false)}
                   />
+                  {isAuthenticated && (
+                    <Link to="/mes-messages-annonces" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full justify-start">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Messagerie
+                        {unreadAnnonces > 0 && (
+                          <Badge className="ml-auto h-5 min-w-5 px-1.5">{unreadAnnonces}</Badge>
+                        )}
+                      </Button>
+                    </Link>
+                  )}
                   <Link to={isAuthenticated ? spacePath : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
+
                     <Button className="w-full justify-start">
                       {isAuthenticated ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                       {isAuthenticated ? 'Mon espace' : 'Connexion'}
