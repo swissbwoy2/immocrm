@@ -82,10 +82,14 @@ export default function MandatV3Step4Documents({ data, mandateId, accessToken, o
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-lg sm:text-xl font-bold text-foreground">Documents</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-foreground">Documents <span className="text-sm font-normal text-muted-foreground">(facultatif)</span></h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Scannez ou téléversez vos documents. Les pièces officielles (identité, permis, fiches de salaire,
-          extrait des poursuites…) requièrent <strong>recto et verso</strong>.
+          Scannez ou téléversez vos documents. Pour les pièces officielles (identité, permis), le
+          recto et le verso sont recommandés.
+        </p>
+        <p className="text-xs text-primary mt-2">
+          Ces documents sont facultatifs à cette étape ; vous pourrez les ajouter maintenant ou plus tard.
+          Un dossier complet accélère toutefois vos candidatures.
         </p>
       </div>
 
