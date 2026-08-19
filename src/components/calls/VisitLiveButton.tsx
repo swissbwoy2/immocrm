@@ -54,19 +54,22 @@ export function VisitLiveButton({
       if (!cancelled) setLiveEnCours(!!data?.length);
     };
     void check();
-    const channel = supabase
-      .channel(`lives-${visiteId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lives', filter: `visite_id=eq.${visiteId}` },
-        () => void check(),
-      )
-      .subscribe();
+
+    // Nom de channel unique par instance : plusieurs boutons peuvent être montés
+    // simultanément pour la même visite (calendrier + dialog + liste).
+    const channel = supabase.channel(`lives-${visiteId}-${instanceId}`);
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'lives', filter: `visite_id=eq.${visiteId}` },
+      () => void check(),
+    );
+    channel.subscribe();
+
     return () => {
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [visiteId]);
+  }, [visiteId, instanceId]);
 
   if (!visiteId) return null;
 
