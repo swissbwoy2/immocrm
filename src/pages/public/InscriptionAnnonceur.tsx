@@ -225,9 +225,15 @@ export default function InscriptionAnnonceur() {
         toast.error('Veuillez renseigner le nom de votre entreprise');
         return;
       }
+      // Déjà connecté : pas de mot de passe ni de nouveau compte
+      if (isAuthenticated) {
+        activateMutation.mutate();
+        return;
+      }
       setStep(3);
       return;
     }
+
 
     if (step === 3) {
       if (!formData.password || formData.password.length < 8) {
