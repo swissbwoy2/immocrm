@@ -467,11 +467,19 @@ const MesCandidatures = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto relative">
+    <div className="flex-1 overflow-x-hidden overflow-y-auto relative">
       {/* Floating particles background */}
       <FloatingParticles count={15} />
       
-      <div className="p-4 md:p-8 relative z-10">
+      <div
+        className="w-full max-w-full px-3 py-4 sm:p-6 md:p-8 relative z-10"
+        style={{
+          paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+          paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+
         <PremiumPageHeader
           title="Mes Candidatures"
           subtitle="Suivez l'état de vos offres et candidatures en temps réel"
