@@ -169,9 +169,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         est_mise_en_avant: p.featured === true,
         statut: "publie",
         date_publication: p.published_at ?? p.date_publication ?? new Date().toISOString(),
-        nom_contact: p.contact_name ?? DEFAULT_CONTACT.nom_contact,
-        email_contact: p.contact_email ?? DEFAULT_CONTACT.email_contact,
-        telephone_contact: p.contact_phone ?? DEFAULT_CONTACT.telephone_contact,
+        nom_contact: contact.nom_contact,
+        email_contact: contact.email_contact,
+        telephone_contact: contact.telephone_contact,
         updated_at: new Date().toISOString(),
       };
 
