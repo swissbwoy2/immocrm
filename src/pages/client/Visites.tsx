@@ -1,3 +1,4 @@
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
