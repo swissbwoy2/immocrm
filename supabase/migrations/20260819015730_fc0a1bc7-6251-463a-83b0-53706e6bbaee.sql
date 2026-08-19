@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.protect_annonce_promotion_fields() FROM PUBLIC, anon, authenticated;
