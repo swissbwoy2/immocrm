@@ -32,7 +32,13 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 import { toast } from 'sonner';
-import { ParticipantAction, setParticipantPermission } from '@/lib/livekitLive';
+import {
+  ParticipantAction,
+  setParticipantPermission,
+  setLiveSpeaker,
+  endLive,
+} from '@/lib/livekitLive';
+
 
 interface LiveStageProps {
   /** Nom complet de la room LiveKit (visit:{visiteId}). */
