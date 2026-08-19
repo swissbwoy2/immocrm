@@ -1,0 +1,1 @@
+ALTER TABLE public.demandes_mandat ADD COLUMN IF NOT EXISTS legal_consents jsonb NOT NULL DEFAULT '{}'::jsonb;

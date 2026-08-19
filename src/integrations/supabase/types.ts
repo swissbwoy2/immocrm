@@ -3876,6 +3876,7 @@ export type Database = {
           gerance_actuelle: string
           id: string
           instrument_musique: boolean | null
+          legal_consents: Json
           loyer_actuel: number
           montant_acompte: number | null
           montant_charges_extra: number | null
@@ -3940,6 +3941,7 @@ export type Database = {
           gerance_actuelle: string
           id?: string
           instrument_musique?: boolean | null
+          legal_consents?: Json
           loyer_actuel?: number
           montant_acompte?: number | null
           montant_charges_extra?: number | null
@@ -4004,6 +4006,7 @@ export type Database = {
           gerance_actuelle?: string
           id?: string
           instrument_musique?: boolean | null
+          legal_consents?: Json
           loyer_actuel?: number
           montant_acompte?: number | null
           montant_charges_extra?: number | null
