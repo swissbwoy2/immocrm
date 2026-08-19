@@ -13327,6 +13327,7 @@ export type Database = {
         Returns: {
           adresse: string
           date_envoi: string
+          est_mise_en_avant: boolean
           etage: string
           id: string
           lien_annonce: string
