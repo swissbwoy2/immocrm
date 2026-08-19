@@ -56,23 +56,35 @@ serve(async (req: Request): Promise<Response> => {
     const to = (annonce.email_contact || annonceur?.email || "").trim();
     const url = `https://logisorama.ch/annonces/${annonce.slug || annonce.id}`;
 
-    // If the sender is authenticated, open (or reuse) an in-app conversation
+    // Ouvre (ou réutilise) une conversation in-app côté annonceur
     let conversationId: string | null = null;
-    const authHeader = req.headers.get("Authorization") || "";
-    if (authHeader.startsWith("Bearer ") && annonceur?.user_id) {
-      const token = authHeader.replace("Bearer ", "");
-      const { data: userData } = await supabase.auth.getUser(token);
-      const senderId = userData?.user?.id;
+    const ownerId: string | null = annonceur?.user_id ?? null;
 
-      if (senderId && senderId !== annonceur.user_id) {
-        const { data: existing } = await supabase
+    if (ownerId) {
+      let senderId: string | null = null;
+      const authHeader = req.headers.get("Authorization") || "";
+      if (authHeader.startsWith("Bearer ")) {
+        const token = authHeader.replace("Bearer ", "");
+        const { data: userData, error: authErr } = await supabase.auth.getUser(token);
+        if (authErr) console.warn("contact-annonce: token invalide", authErr.message);
+        senderId = userData?.user?.id ?? null;
+      }
+
+      if (senderId === ownerId) {
+        console.log("contact-annonce: l'annonceur se contacte lui-même, pas de conversation");
+      } else {
+        // Recherche d'une conversation existante (utilisateur connecté OU invité par e-mail)
+        let query = supabase
           .from("conversations_annonces")
           .select("id")
           .eq("annonce_id", annonce.id)
-          .eq("participant_1_id", senderId)
-          .eq("participant_2_id", annonceur.user_id)
-          .maybeSingle();
+          .eq("participant_2_id", ownerId);
+        query = senderId
+          ? query.eq("participant_1_id", senderId)
+          : query.is("participant_1_id", null).eq("guest_email", String(email).toLowerCase().trim());
 
+        const { data: existing, error: findErr } = await query.maybeSingle();
+        if (findErr) console.error("contact-annonce: recherche conversation", findErr);
         conversationId = existing?.id ?? null;
 
         if (!conversationId) {
@@ -81,24 +93,33 @@ serve(async (req: Request): Promise<Response> => {
             .insert({
               annonce_id: annonce.id,
               participant_1_id: senderId,
-              participant_2_id: annonceur.user_id,
+              participant_2_id: ownerId,
+              guest_nom: senderId ? null : nom,
+              guest_email: senderId ? null : String(email).toLowerCase().trim(),
+              guest_telephone: senderId ? null : (telephone || null),
             })
             .select("id")
             .single();
-          if (convErr) console.error("conversation create error", convErr);
+          if (convErr) console.error("contact-annonce: création conversation", convErr);
           conversationId = created?.id ?? null;
         }
 
         if (conversationId) {
+          const contenu = senderId
+            ? message
+            : `${message}\n\n— ${nom} · ${email}${telephone ? ` · ${telephone}` : ""}`;
           const { error: msgErr } = await supabase.from("messages_annonces").insert({
             conversation_id: conversationId,
             expediteur_id: senderId,
-            contenu: message,
+            contenu,
           });
-          if (msgErr) console.error("message insert error", msgErr);
+          if (msgErr) console.error("contact-annonce: insertion message", msgErr);
         }
       }
+    } else {
+      console.warn("contact-annonce: annonceur sans compte utilisateur, e-mail uniquement");
     }
+
 
 
     if (RESEND_API_KEY && to) {
