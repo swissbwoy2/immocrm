@@ -38,18 +38,24 @@ export interface MandatV3FormData {
   // Documents
   documents: MandateDocumentData[];
 
-  // Legal checkboxes
+  // Legal consents (12)
+  legal_objet: boolean;
+  legal_obligation_moyens: boolean;
   legal_exclusivite: boolean;
   legal_duree: boolean;
   legal_commission: boolean;
   legal_acompte: boolean;
-  legal_resiliation: boolean;
-  legal_obligations_client: boolean;
-  legal_obligations_agence: boolean;
-  legal_protection_donnees: boolean;
+  legal_transmission_dossier: boolean;
+  legal_garants_cocandidats: boolean;
   legal_litiges: boolean;
-  legal_droit_applicable: boolean;
+  legal_protection_donnees: boolean;
+  legal_cgu: boolean;
   legal_acceptation_generale: boolean;
+  // Legacy (conservés pour compatibilité base de données)
+  legal_resiliation?: boolean;
+  legal_obligations_client?: boolean;
+  legal_obligations_agence?: boolean;
+  legal_droit_applicable?: boolean;
 
   // Signature
   signature_data: string;
@@ -79,19 +85,95 @@ export interface MandateDocumentData {
   document_category: string;
 }
 
-export const LEGAL_CHECKBOXES = [
-  { key: 'legal_exclusivite', label: 'J\'accepte le caractère exclusif du mandat (Art. 2)' },
-  { key: 'legal_duree', label: 'J\'accepte la durée de 3 mois avec reconduction tacite (Art. 3)' },
-  { key: 'legal_commission', label: 'J\'accepte la commission d\'un mois de loyer brut (Art. 4)' },
-  { key: 'legal_acompte', label: 'J\'accepte le versement d\'un acompte de CHF 300.– (Art. 5)' },
-  { key: 'legal_resiliation', label: 'J\'ai pris connaissance des conditions de résiliation (Art. 6)' },
-  { key: 'legal_obligations_client', label: 'J\'accepte mes obligations en tant que client (Art. 7)' },
-  { key: 'legal_obligations_agence', label: 'J\'ai pris connaissance des obligations de l\'agence (Art. 8)' },
-  { key: 'legal_protection_donnees', label: 'J\'accepte le traitement de mes données personnelles (Art. 9)' },
-  { key: 'legal_litiges', label: 'J\'accepte la clause de non-contournement et de règlement des litiges (Art. 11-12)' },
-  { key: 'legal_droit_applicable', label: 'J\'accepte que le droit suisse s\'applique (Art. 13)' },
-  { key: 'legal_acceptation_generale', label: 'Je déclare avoir lu, compris et accepté l\'intégralité du contrat (Art. 16)' },
-] as const;
+export interface LegalConsent {
+  key: string;
+  title: string;
+  question: string;
+  cta: string;
+  note?: string;
+  linkHref?: string;
+  linkLabel?: string;
+}
+
+export const LEGAL_CHECKBOXES: LegalConsent[] = [
+  {
+    key: 'legal_objet',
+    title: 'Objet du mandat',
+    question: 'Confirmez-vous vouloir confier à Immo-rama.ch votre recherche immobilière selon les critères communiqués ?',
+    cta: 'Oui, je confirme',
+  },
+  {
+    key: 'legal_obligation_moyens',
+    title: 'Obligation de moyens',
+    question: "Avez-vous compris qu'Immo-rama.ch met en œuvre ses moyens pour vous accompagner mais ne peut garantir l'obtention d'un logement ou la conclusion d'une transaction ?",
+    cta: "Oui, j'ai compris",
+  },
+  {
+    key: 'legal_exclusivite',
+    title: 'Exclusivité',
+    question: 'Acceptez-vous de confier cette recherche à Immo-rama.ch à titre exclusif pendant la durée du mandat, sous réserve de votre droit légal de résilier le mandat en tout temps ?',
+    cta: "Oui, j'accepte l'exclusivité",
+  },
+  {
+    key: 'legal_duree',
+    title: 'Durée et renouvellement',
+    question: "Acceptez-vous une durée initiale de 3 mois, renouvelable par périodes de 3 mois, tout en conservant votre droit de résilier le mandat en tout temps conformément à l'art. 404 CO ?",
+    cta: "Oui, j'accepte",
+  },
+  {
+    key: 'legal_commission',
+    title: 'Commission',
+    question: "Si vous obtenez un logement grâce à l'intervention d'Immo-rama.ch, acceptez-vous qu'une commission correspondant à un mois de loyer brut, charges comprises, soit due, plus TVA au taux légal si applicable ?",
+    cta: "Oui, j'accepte la commission",
+    note: 'TVA actuelle : 8,1 % si Immo-rama.ch est assujettie.',
+  },
+  {
+    key: 'legal_acompte',
+    title: 'Acompte',
+    question: "Acceptez-vous de verser un acompte de CHF 300.–, déductible de la commission en cas de succès, conformément à l'article 7 du contrat ?",
+    cta: "Oui, j'accepte",
+  },
+  {
+    key: 'legal_transmission_dossier',
+    title: 'Transmission du dossier',
+    question: 'Autorisez-vous Immo-rama.ch à transmettre aux régies, propriétaires, vendeurs ou partenaires concernés les informations et documents nécessaires aux candidatures que vous demandez ?',
+    cta: "Oui, j'autorise",
+  },
+  {
+    key: 'legal_garants_cocandidats',
+    title: 'Garants et co-candidats',
+    question: "Lorsque vous nous transmettez les données d'un garant, d'un co-candidat ou d'une autre personne, confirmez-vous l'avoir informé de cette transmission ?",
+    cta: 'Oui, je confirme',
+  },
+  {
+    key: 'legal_litiges',
+    title: 'Non-contournement',
+    question: 'Acceptez-vous que la commission puisse rester due si vous concluez directement un contrat portant sur un bien présenté par Immo-rama.ch et que son intervention a contribué à la conclusion de ce contrat ?',
+    cta: "Oui, j'accepte",
+  },
+  {
+    key: 'legal_protection_donnees',
+    title: 'Données personnelles',
+    question: "J'ai pris connaissance de la Politique de confidentialité et des traitements nécessaires à l'exécution de mon mandat.",
+    cta: "Oui, j'en ai pris connaissance",
+    linkHref: '/politique-confidentialite',
+    linkLabel: 'Lire la Politique de confidentialité',
+  },
+  {
+    key: 'legal_cgu',
+    title: 'CGU',
+    question: "Acceptez-vous les Conditions Générales d'Utilisation de Logisorama.ch applicables à votre utilisation de la plateforme et de l'application ?",
+    cta: "Oui, j'accepte les CGU",
+    linkHref: '/conditions-generales',
+    linkLabel: 'Lire les Conditions Générales d\'Utilisation',
+  },
+  {
+    key: 'legal_acceptation_generale',
+    title: 'Acceptation finale',
+    question: 'Confirmez-vous avoir lu et compris le contrat et vouloir conclure le mandat avec Immo-rama.ch ?',
+    cta: 'SIGNER ET ACTIVER MON MANDAT',
+  },
+];
 
 export const initialMandatV3Data: MandatV3FormData = {
   email: '',
@@ -121,16 +203,17 @@ export const initialMandatV3Data: MandatV3FormData = {
   criteres_souhaites: '',
   related_parties: [],
   documents: [],
+  legal_objet: false,
+  legal_obligation_moyens: false,
   legal_exclusivite: false,
   legal_duree: false,
   legal_commission: false,
   legal_acompte: false,
-  legal_resiliation: false,
-  legal_obligations_client: false,
-  legal_obligations_agence: false,
-  legal_protection_donnees: false,
+  legal_transmission_dossier: false,
+  legal_garants_cocandidats: false,
   legal_litiges: false,
-  legal_droit_applicable: false,
+  legal_protection_donnees: false,
+  legal_cgu: false,
   legal_acceptation_generale: false,
   signature_data: '',
 };

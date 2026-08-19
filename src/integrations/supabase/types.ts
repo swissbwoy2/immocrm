@@ -6940,15 +6940,20 @@ export type Database = {
           id: string
           legal_acceptation_generale: boolean | null
           legal_acompte: boolean | null
+          legal_cgu: boolean
           legal_commission: boolean | null
           legal_droit_applicable: boolean | null
           legal_duree: boolean | null
           legal_exclusivite: boolean | null
+          legal_garants_cocandidats: boolean
           legal_litiges: boolean | null
+          legal_objet: boolean
+          legal_obligation_moyens: boolean
           legal_obligations_agence: boolean | null
           legal_obligations_client: boolean | null
           legal_protection_donnees: boolean | null
           legal_resiliation: boolean | null
+          legal_transmission_dossier: boolean
           nationalite: string | null
           nom: string
           nombre_enfants: number | null
@@ -6996,15 +7001,20 @@ export type Database = {
           id?: string
           legal_acceptation_generale?: boolean | null
           legal_acompte?: boolean | null
+          legal_cgu?: boolean
           legal_commission?: boolean | null
           legal_droit_applicable?: boolean | null
           legal_duree?: boolean | null
           legal_exclusivite?: boolean | null
+          legal_garants_cocandidats?: boolean
           legal_litiges?: boolean | null
+          legal_objet?: boolean
+          legal_obligation_moyens?: boolean
           legal_obligations_agence?: boolean | null
           legal_obligations_client?: boolean | null
           legal_protection_donnees?: boolean | null
           legal_resiliation?: boolean | null
+          legal_transmission_dossier?: boolean
           nationalite?: string | null
           nom: string
           nombre_enfants?: number | null
@@ -7052,15 +7062,20 @@ export type Database = {
           id?: string
           legal_acceptation_generale?: boolean | null
           legal_acompte?: boolean | null
+          legal_cgu?: boolean
           legal_commission?: boolean | null
           legal_droit_applicable?: boolean | null
           legal_duree?: boolean | null
           legal_exclusivite?: boolean | null
+          legal_garants_cocandidats?: boolean
           legal_litiges?: boolean | null
+          legal_objet?: boolean
+          legal_obligation_moyens?: boolean
           legal_obligations_agence?: boolean | null
           legal_obligations_client?: boolean | null
           legal_protection_donnees?: boolean | null
           legal_resiliation?: boolean | null
+          legal_transmission_dossier?: boolean
           nationalite?: string | null
           nom?: string
           nombre_enfants?: number | null

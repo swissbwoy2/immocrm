@@ -79,33 +79,58 @@ export default function MandatV3Step6Legal({ data, mandateId, onChange }: Props)
         </ScrollArea>
       </div>
 
-      {/* Legal checkboxes */}
+      {/* Legal consents */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold text-sm sm:text-base text-foreground">
-            Clauses ({checkedCount}/{LEGAL_CHECKBOXES.length})
+            Consentements ({checkedCount}/{LEGAL_CHECKBOXES.length})
           </h3>
           {!allChecked && (
             <Button type="button" variant="outline" size="sm" onClick={handleAcceptAll} className="text-xs min-h-[36px]">
-              J'ai lu et j'accepte toutes les clauses
+              Tout accepter
             </Button>
           )}
         </div>
 
-        {LEGAL_CHECKBOXES.map((cb) => (
-          <div key={cb.key} className="flex items-start gap-3 p-2.5 sm:p-3 rounded-lg hover:bg-muted/30 transition-colors">
-            <Checkbox
-              id={cb.key}
-              checked={data[cb.key as keyof MandatV3FormData] as boolean}
-              onCheckedChange={(checked) => handleCheckboxChange(cb.key, checked as boolean)}
-              className="mt-0.5 min-w-[20px] min-h-[20px]"
-            />
-            <Label htmlFor={cb.key} className="text-xs sm:text-sm leading-relaxed cursor-pointer">
-              {cb.label}
-            </Label>
-          </div>
-        ))}
+        {LEGAL_CHECKBOXES.map((cb, index) => {
+          const checked = data[cb.key as keyof MandatV3FormData] === true;
+          return (
+            <div
+              key={cb.key}
+              className={`rounded-xl border p-3 sm:p-4 transition-colors ${checked ? 'border-green-500/50 bg-green-50/60 dark:bg-green-950/20' : 'bg-card'}`}
+            >
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-semibold text-muted-foreground">{index + 1}.</span>
+                <h4 className="font-semibold text-sm text-foreground">{cb.title}</h4>
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">{cb.question}</p>
+              {cb.note && <p className="text-[11px] text-muted-foreground/80 mt-1 italic">{cb.note}</p>}
+              {cb.linkHref && (
+                <a
+                  href={cb.linkHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-xs text-primary underline mt-1.5"
+                >
+                  {cb.linkLabel}
+                </a>
+              )}
+              <div className="mt-3 flex items-start gap-3">
+                <Checkbox
+                  id={cb.key}
+                  checked={checked}
+                  onCheckedChange={(v) => handleCheckboxChange(cb.key, v as boolean)}
+                  className="mt-0.5 min-w-[20px] min-h-[20px]"
+                />
+                <Label htmlFor={cb.key} className="text-xs sm:text-sm font-medium leading-relaxed cursor-pointer">
+                  {cb.cta}
+                </Label>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
 
       {allChecked && (
         <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 sm:p-4 text-xs sm:text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
