@@ -356,6 +356,17 @@ export function PremiumAgentOffreDetailsDialog({
                       </Badge>
                     </div>
 
+                    {/* Live de visite */}
+                    <div className="mb-3">
+                      <VisitLiveButton
+                        visiteId={visite.id}
+                        dateVisite={visite.date_visite}
+                        className="w-full"
+                      />
+                    </div>
+
+
+
                     {/* Feedback si visite effectuée */}
                     {visite.statut === 'effectuee' && visite.feedback_agent && (
                       <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
