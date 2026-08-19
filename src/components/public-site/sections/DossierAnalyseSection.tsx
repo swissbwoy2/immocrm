@@ -46,7 +46,20 @@ export function DossierAnalyseSection() {
                 <StoriesShowcaseSection />
               </Suspense>
 
+              {/* Accès au portail d'annonces */}
+              <div className="flex justify-center w-full">
+                <Link
+                  to="/annonces"
+                  className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)]"
+                >
+                  <Megaphone className="h-5 w-5" />
+                  Accéder au portail
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
+
               {/* Trust cards */}
+
               <div className="relative grid sm:grid-cols-2 gap-4">
                 <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>

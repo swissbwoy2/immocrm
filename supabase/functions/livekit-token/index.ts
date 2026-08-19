@@ -101,11 +101,16 @@ serve(async (req) => {
         } else {
           const { data: ex } = await svc
             .from("lives")
-            .select("id")
+            .select("id, statut")
             .eq("room_name", room)
             .maybeSingle();
-          liveId = ex?.id ?? null;
+          // Un spectateur ne peut jamais démarrer un live : il rejoint uniquement une session en cours.
+          if (!ex || ex.statut !== "en_cours") {
+            return json({ error: "Aucun live en cours pour cette visite." }, 409);
+          }
+          liveId = ex.id ?? null;
         }
+
       } catch (e) {
         console.error("live session upsert failed", e);
       }
