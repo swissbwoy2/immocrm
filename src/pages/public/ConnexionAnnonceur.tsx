@@ -89,6 +89,14 @@ export default function ConnexionAnnonceur() {
   const isLoading = loginMutation.isPending;
   const canSubmit = !!email && !!password && !isLoading;
 
+  // Session déjà active : inutile de redemander une connexion.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    navigate(spacePath, { replace: true });
+  }, [authLoading, user, spacePath, navigate]);
+
+
+
   return (
     <PremiumAuthLayout
       title="Espace Annonceur"
