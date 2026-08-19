@@ -472,13 +472,12 @@ const MesCandidatures = () => {
       <FloatingParticles count={15} />
       
       <div
-        className="w-full max-w-full px-3 py-4 sm:p-6 md:p-8 relative z-10"
+        className="w-full max-w-full px-3 pt-4 sm:px-6 sm:pt-6 md:px-8 md:pt-8 relative z-10"
         style={{
-          paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
-          paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
           paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
+
 
         <PremiumPageHeader
           title="Mes Candidatures"
