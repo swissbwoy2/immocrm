@@ -295,9 +295,17 @@ export default function InscriptionAnnonceur() {
                       className="space-y-6"
                     >
                       <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold mb-2">Créer un compte annonceur</h1>
+                        <h1 className="text-2xl font-bold mb-2">
+                          {isAuthenticated ? 'Déposer une annonce' : 'Créer un compte annonceur'}
+                        </h1>
                         <p className="text-muted-foreground">Quel type d'annonceur êtes-vous ?</p>
+                        {isAuthenticated && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Vous êtes déjà connecté : vos informations personnelles sont reprises automatiquement.
+                          </p>
+                        )}
                       </div>
+
 
                       <div className="space-y-3">
                         {typeOptions.map((option) => {
