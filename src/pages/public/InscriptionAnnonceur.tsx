@@ -39,7 +39,9 @@ interface FormData {
 
 export default function InscriptionAnnonceur() {
   const navigate = useNavigate();
+  const { isAuthenticated, identity, isLoading: identityLoading } = useConnectedIdentity();
   const [step, setStep] = useState(1);
+
   const [formData, setFormData] = useState<FormData>({
     type_annonceur: 'particulier',
     civilite: '',
