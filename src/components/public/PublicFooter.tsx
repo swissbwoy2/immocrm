@@ -115,11 +115,14 @@ export function PublicFooter() {
         <div className="border-t border-sidebar-border mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-sidebar-foreground/60">
           <p>© {currentYear} Immo-Rama. Tous droits réservés.</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link to="/mentions-legales" className="hover:text-sidebar-foreground transition-colors">
+          <Link to="/mentions-legales" className="hover:text-sidebar-foreground transition-colors">
               Mentions légales
             </Link>
             <Link to="/politique-confidentialite" className="hover:text-sidebar-foreground transition-colors">
               Politique de confidentialité
+            </Link>
+            <Link to="/conditions-generales" className="hover:text-sidebar-foreground transition-colors">
+              Conditions Générales d'Utilisation
             </Link>
             <button
               type="button"
