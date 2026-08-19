@@ -50,7 +50,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
         />
       </div>
 
-      {/* CGV */}
+      {/* Dispositions du mandat + 12 consentements */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-[hsl(38_45%_48%/0.15)] flex items-center justify-center">
@@ -61,7 +61,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
             <p className="text-[10px] text-[hsl(40_20%_40%)]">*À lire attentivement et approuver avant de signer</p>
           </div>
         </div>
-        <CGVContent typeRecherche={data.type_recherche} />
+        <MandatLegalConsents data={data} onChange={onChange} />
       </div>
 
       {/* Signature */}
@@ -84,18 +84,21 @@ export default function MandatFormStep7({ data, onChange }: Props) {
               </span>
             )}
           </div>
-          <p className="text-xs text-[hsl(40_20%_45%)]">Utilisez votre souris, votre doigt ou un stylet pour signer dans le cadre ci-dessous.</p>
-          <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
+          {hasCGVAccepted ? (
+            <>
+              <p className="text-xs text-[hsl(40_20%_45%)]">Utilisez votre souris, votre doigt ou un stylet pour signer dans le cadre ci-dessous.</p>
+              <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed border-[hsl(38_45%_48%/0.25)] bg-[hsl(30_12%_8%/0.6)] p-5 text-center">
+              <p className="text-xs text-[hsl(40_20%_50%)]">
+                La signature électronique se débloquera dès que les 12 dispositions auront été acceptées.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* CGV checkbox */}
-      <LandingCheckbox
-        checked={data.cgv_acceptees}
-        onCheckedChange={(checked) => onChange({ cgv_acceptees: checked })}
-        required
-        label="En cochant cette case, je confirme avoir répondu aux questions en bonne conscience et que j'ai pris connaissance qu'en cas de réponses non conforme à la vérité, les offreurs de logement ont le droit de résilier le contrat de (sous-)location avec effet immédiat - et sous réserve d'autres revendications. En outre, je confirme accepter sans condition les dispositions de contrat pour chercheurs de logement."
-      />
 
       {/* Alert état incomplet */}
       {!isComplete && (
