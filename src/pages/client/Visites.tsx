@@ -481,6 +481,8 @@ export default function Visites() {
 
         {isExpanded && (
           <CardContent className="relative space-y-5 pt-0">
+            <VisitLiveButton visiteId={visite.id} size="default" className="w-full" />
+
             <VisitVideoDecisionCard visite={visite} onUpdated={loadVisites} />
 
             <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
