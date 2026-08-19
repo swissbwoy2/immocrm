@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Radio, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCall } from '@/contexts/CallContext';
@@ -36,6 +36,7 @@ export function VisitLiveButton({
   const { startLive, joinLive, connecting, session } = useCall();
   const [busy, setBusy] = useState(false);
   const [liveEnCours, setLiveEnCours] = useState(false);
+  const instanceId = useId();
 
   const isHost = !!userRole && HOST_ROLES.includes(userRole);
   const active = session?.visiteId === visiteId;
@@ -54,19 +55,22 @@ export function VisitLiveButton({
       if (!cancelled) setLiveEnCours(!!data?.length);
     };
     void check();
-    const channel = supabase
-      .channel(`lives-${visiteId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lives', filter: `visite_id=eq.${visiteId}` },
-        () => void check(),
-      )
-      .subscribe();
+
+    // Nom de channel unique par instance : plusieurs boutons peuvent être montés
+    // simultanément pour la même visite (calendrier + dialog + liste).
+    const channel = supabase.channel(`lives-${visiteId}-${instanceId}`);
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'lives', filter: `visite_id=eq.${visiteId}` },
+      () => void check(),
+    );
+    channel.subscribe();
+
     return () => {
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [visiteId]);
+  }, [visiteId, instanceId]);
 
   if (!visiteId) return null;
 
