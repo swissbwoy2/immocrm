@@ -330,6 +330,9 @@ const App = () => (
               <Route path="/appel/:conversationId" element={<Appel />} />
               <Route path="/call" element={<Appel />} />
               <Route path="/call/:conversationId" element={<Appel />} />
+              {/* Live de visite (Phase B) — /live/:visiteId */}
+              <Route path="/live/:visiteId" element={<Appel />} />
+
               <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
 
