@@ -187,12 +187,35 @@ export default function Profil() {
           <Card className="md:col-span-1">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
-                <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={annonceur.logo_url || ''} />
-                  <AvatarFallback className="text-2xl">
-                    {annonceur.nom?.[0]}{annonceur.prenom?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative mb-4">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={annonceur.logo_url || ''} />
+                    <AvatarFallback className="text-2xl">
+                      {annonceur.nom?.[0]}{annonceur.prenom?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label
+                    htmlFor="annonceur-logo-input"
+                    className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md cursor-pointer hover:bg-primary/90 transition-colors"
+                    title="Changer la photo / le logo"
+                  >
+                    <Upload className="h-4 w-4" />
+                  </label>
+                  <input
+                    id="annonceur-logo-input"
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploadingLogo}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (file) handleLogoUpload(file);
+                    }}
+                  />
+                </div>
+                {uploadingLogo && <p className="text-xs text-muted-foreground mb-2">Envoi en cours…</p>}
+
                 
                 <h2 className="text-xl font-semibold">
                   {annonceur.prenom} {annonceur.nom}
