@@ -1,18 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { setStoryDialogOpen } from './storyDialogState';
 
-import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ExternalLink, Home, MapPin } from 'lucide-react';
@@ -20,6 +9,7 @@ import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from './useSho
 import { StoryPhotoLink } from './StoryPhotoLink';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
 import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
+import { useImmoRamaCandidacyDialog } from '@/hooks/useImmoRamaCandidacyDialog';
 
 
 interface Props {
@@ -28,8 +18,7 @@ interface Props {
 }
 
 export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
-  const navigate = useNavigate();
-  const [disclaimer, setDisclaimer] = useState(false);
+  const { openDialog, dialog, isOpen: disclaimer } = useImmoRamaCandidacyDialog();
   const open = !!item || disclaimer;
 
   useEffect(() => {
@@ -42,30 +31,15 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
     <>
       <Dialog open={!!item} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[200] pb-24">
-          {item && <DetailBody item={item} onDeposer={() => setDisclaimer(true)} />}
+          {item && <DetailBody item={item} onDeposer={openDialog} />}
         </DialogContent>
       </Dialog>
 
-
-      <AlertDialog open={disclaimer} onOpenChange={setDisclaimer}>
-        <AlertDialogContent className="z-[210]">
-
-          <AlertDialogHeader>
-            <AlertDialogTitle>Avant de continuer</AlertDialogTitle>
-            <AlertDialogDescription>
-              Pour obtenir plus d'informations sur ce bien, souscrivez au mandat de recherche Logisorama.ch. En cas
-              d'attribution d'un logement, une commission équivalente à un mois de loyer sera due à Logisorama.ch.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => navigate('/nouveau-mandat')}>OK, je continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {dialog}
     </>
   );
 }
+
 
 function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => void }) {
   const { canViewInternalListing } = useSourcedListingAccess();
