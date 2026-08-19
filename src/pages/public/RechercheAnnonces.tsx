@@ -242,6 +242,12 @@ export default function RechercheAnnonces() {
           );
         });
 
+      // Les annonces mises en avant par l'admin restent épinglées en tête, quel que soit le tri
+      query = query
+        .order('est_mise_en_avant', { ascending: false, nullsFirst: false })
+        .order('mise_en_avant_rang', { ascending: true, nullsFirst: false })
+        .order('mise_en_avant_depuis', { ascending: false, nullsFirst: false });
+
       switch (sortBy) {
         case 'prix_asc':
           query = query.order('prix', { ascending: true });
@@ -259,8 +265,9 @@ export default function RechercheAnnonces() {
           query = query.order('surface_habitable', { ascending: false, nullsFirst: false });
           break;
         default:
-          query = query.order('est_mise_en_avant', { ascending: false }).order('date_publication', { ascending: false });
+          query = query.order('date_publication', { ascending: false });
       }
+
 
       // Pagination serveur : aucun plafond dur (le rendu est limité par le scroll infini)
       const all: any[] = [];
