@@ -30,6 +30,7 @@ import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButt
 import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 import { getInteretState } from '@/lib/offreInteret';
