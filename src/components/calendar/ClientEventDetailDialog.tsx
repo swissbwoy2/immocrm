@@ -199,6 +199,9 @@ export function ClientEventDetailDialog({
               </div>
             )}
 
+            {/* Live de visite en cours (spectateur) */}
+            <VisitLiveButton visiteId={visite.id} size="default" className="w-full" />
+
             <AddToCalendarButton
               event={{
                 uid: `${visite.id}@immocrm`,
