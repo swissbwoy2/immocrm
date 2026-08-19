@@ -104,6 +104,7 @@ export default function Profil() {
     nom: '',
     prenom: '',
     nom_entreprise: '',
+    email: '',
     telephone: '',
     telephone_secondaire: '',
     adresse: '',
