@@ -58,19 +58,19 @@ export default function InscriptionAnnonceur() {
     { 
       value: 'particulier', 
       label: 'Particulier', 
-      description: 'Je vends ou loue mon bien personnel',
+      description: 'Propriétaire ou locataire sortant — vendez, louez ou trouvez un repreneur pour votre logement.',
       icon: User 
     },
     { 
       value: 'agence', 
       label: 'Agence immobilière', 
-      description: 'Je suis un professionnel de l\'immobilier',
+      description: 'Professionnel de l\'immobilier : régie, courtier ou agence.',
       icon: Building2 
     },
     { 
       value: 'promoteur', 
       label: 'Promoteur / Constructeur', 
-      description: 'Je commercialise des programmes neufs',
+      description: 'Commercialisation de programmes et de biens neufs.',
       icon: HardHat 
     },
   ];
