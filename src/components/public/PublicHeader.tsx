@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
 import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
+import { useAnnonceUnreadCount } from '@/hooks/useAnnonceUnreadCount';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function PublicHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { isAuthenticated, spacePath } = useConnectedIdentity();
+  const unreadAnnonces = useAnnonceUnreadCount();
+
 
   const navLinks = [
     { href: '/annonces', label: 'Accueil' },
@@ -51,7 +55,19 @@ export function PublicHeader() {
               </Button>
             </Link>
             <DeposerAnnonceButton />
+            {isAuthenticated && (
+              <Link to="/mes-messages-annonces">
+                <Button variant="ghost" size="sm" className="relative">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Messagerie
+                  {unreadAnnonces > 0 && (
+                    <Badge className="ml-2 h-5 min-w-5 px-1.5">{unreadAnnonces}</Badge>
+                  )}
+                </Button>
+              </Link>
+            )}
             {isAuthenticated ? (
+
               <Link to={spacePath}>
                 <Button size="sm">
                   <LayoutDashboard className="h-4 w-4 mr-2" />
@@ -103,7 +119,19 @@ export function PublicHeader() {
                     size="default"
                     onNavigate={() => setIsOpen(false)}
                   />
+                  {isAuthenticated && (
+                    <Link to="/mes-messages-annonces" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full justify-start">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Messagerie
+                        {unreadAnnonces > 0 && (
+                          <Badge className="ml-auto h-5 min-w-5 px-1.5">{unreadAnnonces}</Badge>
+                        )}
+                      </Button>
+                    </Link>
+                  )}
                   <Link to={isAuthenticated ? spacePath : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
+
                     <Button className="w-full justify-start">
                       {isAuthenticated ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                       {isAuthenticated ? 'Mon espace' : 'Connexion'}

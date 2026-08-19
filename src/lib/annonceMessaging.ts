@@ -3,8 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 export interface AnnonceConversation {
   id: string;
   annonce_id: string;
-  participant_1_id: string;
+  participant_1_id: string | null;
   participant_2_id: string;
+  guest_nom?: string | null;
+  guest_email?: string | null;
+  guest_telephone?: string | null;
   dernier_message_at: string | null;
   archive_par_1: boolean | null;
   archive_par_2: boolean | null;
@@ -18,7 +21,7 @@ export interface AnnonceConversation {
 export interface AnnonceMessage {
   id: string;
   conversation_id: string;
-  expediteur_id: string;
+  expediteur_id: string | null;
   contenu: string | null;
   piece_jointe_url: string | null;
   piece_jointe_nom: string | null;
@@ -26,6 +29,11 @@ export interface AnnonceMessage {
   created_at: string;
   supprime?: boolean | null;
 }
+
+export function isGuestConversation(conv: AnnonceConversation) {
+  return !conv.participant_1_id;
+}
+
 
 export const ANNONCE_ATTACHMENTS_BUCKET = 'annonce-attachments';
 
