@@ -102,6 +102,10 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         <p className="text-sm text-[hsl(40_20%_55%)] mt-1">
           Téléchargez ou scannez les documents nécessaires pour constituer votre dossier.
         </p>
+        <p className="text-xs text-[hsl(38_55%_65%)] mt-2">
+          Ces documents sont facultatifs à cette étape ; vous pourrez les ajouter maintenant ou plus tard.
+          Un dossier complet accélère toutefois vos candidatures.
+        </p>
       </div>
 
       {/* Progression compacte */}
@@ -142,7 +146,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
                   <Sparkles size={12} /> Dossier complet
                 </span>
               ) : (
-                'Complétez votre dossier pour activer les recherches'
+                'Facultatif — un dossier complet accélère vos candidatures'
               )}
             </p>
           </div>
@@ -161,7 +165,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         <div>
           <div className="flex items-baseline justify-between mb-2">
             <p className="text-sm font-medium text-[hsl(40_20%_82%)]">
-              Extrait des poursuites <span className="text-red-400">*</span>
+              Extrait des poursuites
             </p>
             <span className="text-[11px] text-[hsl(40_20%_45%)]">Datant de moins de 3 mois</span>
           </div>
@@ -179,7 +183,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         <div>
           <div className="flex items-baseline justify-between mb-2">
             <p className="text-sm font-medium text-[hsl(40_20%_82%)]">
-              3 dernières fiches de salaire <span className="text-red-400">*</span>
+              3 dernières fiches de salaire
             </p>
             <span className="text-[11px] text-[hsl(40_20%_45%)]">Une par mois</span>
           </div>
@@ -209,7 +213,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
           {idTitle} <span className="text-[hsl(40_20%_55%)] font-normal">(Carte d'identité Suisse ou Permis de séjour)</span>
         </h3>
         <p className="text-xs text-[hsl(40_20%_55%)] -mt-2">
-          Recto et verso obligatoires.
+          Recto et verso recommandés (facultatifs).
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -218,7 +222,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
             return (
               <div key={key}>
                 <p className="text-sm font-medium text-[hsl(40_20%_82%)] mb-2">
-                  {idTitle} ({face}) <span className="text-red-400">*</span>
+                  {idTitle} ({face})
                 </p>
                 <LandingDocumentDropzone
                   documentType={idKind}
