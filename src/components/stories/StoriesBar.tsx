@@ -12,6 +12,8 @@ import {
   usePreviewImage,
   villeFromAdresse,
 } from "@/components/public-site/showcase/useShowcase";
+import { ExternalListingPlaceholder } from "@/components/public/ExternalListingPlaceholder";
+import { useSourcedListingAccess } from "@/hooks/useSourcedListingAccess";
 
 
 interface Props {
@@ -20,7 +22,8 @@ interface Props {
 
 /** Round anonymized bubble for an upcoming public visit (no client data). */
 function VisitBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => void }) {
-  const img = usePreviewImage(item);
+  const { canViewInternalListing } = useSourcedListingAccess();
+  const img = usePreviewImage(item, canViewInternalListing);
   const ville = villeFromAdresse(item.adresse);
 
   return (
@@ -38,8 +41,10 @@ function VisitBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
             <span className="w-full h-full rounded-full overflow-hidden bg-muted flex items-center justify-center">
               {img ? (
                 <img src={img} alt={item.titre || "Bien"} loading="lazy" className="w-full h-full object-cover" />
-              ) : (
+              ) : canViewInternalListing ? (
                 <Home className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ExternalListingPlaceholder className="rounded-full" />
               )}
             </span>
           </span>

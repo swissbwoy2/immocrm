@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { ShowcaseItem, usePreviewImage, villeFromAdresse, formatPrix } from './useShowcase';
+import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
+import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 
 function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => void }) {
-  const img = usePreviewImage(item);
+  const { canViewInternalListing } = useSourcedListingAccess();
+  const img = usePreviewImage(item, canViewInternalListing);
   const ville = villeFromAdresse(item.adresse);
   const prix = formatPrix(item.prix);
 
@@ -21,10 +24,12 @@ function StoryBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
                   draggable={false}
                   className="h-full w-full object-cover"
                 />
-              ) : (
+              ) : canViewInternalListing ? (
                 <span className="flex h-full w-full items-center justify-center">
                   <Home className="h-7 w-7 text-muted-foreground" />
                 </span>
+              ) : (
+                <ExternalListingPlaceholder className="rounded-full" />
               )}
             </span>
           </span>
