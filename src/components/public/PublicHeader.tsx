@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard, MessageSquare } from 'lucide-react';
+import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard, MessageSquare, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -67,13 +67,20 @@ export function PublicHeader() {
               </Link>
             )}
             {isAuthenticated ? (
-
-              <Link to={spacePath}>
-                <Button size="sm">
-                  <LayoutDashboard className="h-4 w-4 mr-2" />
-                  Mon espace
-                </Button>
-              </Link>
+              <>
+                <Link to={spacePath}>
+                  <Button variant="ghost" size="sm">
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Tableau de bord
+                  </Button>
+                </Link>
+                <Link to="/espace-annonceur">
+                  <Button size="sm">
+                    <Megaphone className="h-4 w-4 mr-2" />
+                    Mon espace
+                  </Button>
+                </Link>
+              </>
             ) : (
               <Link to="/connexion-annonceur">
                 <Button size="sm">
@@ -82,6 +89,7 @@ export function PublicHeader() {
                 </Button>
               </Link>
             )}
+
           </div>
 
 
@@ -130,13 +138,21 @@ export function PublicHeader() {
                       </Button>
                     </Link>
                   )}
-                  <Link to={isAuthenticated ? spacePath : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
-
+                  <Link to={isAuthenticated ? '/espace-annonceur' : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
                     <Button className="w-full justify-start">
-                      {isAuthenticated ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+                      {isAuthenticated ? <Megaphone className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                       {isAuthenticated ? 'Mon espace' : 'Connexion'}
                     </Button>
                   </Link>
+                  {isAuthenticated && (
+                    <Link to={spacePath} onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full justify-start">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Tableau de bord
+                      </Button>
+                    </Link>
+                  )}
+
 
                 </div>
 
