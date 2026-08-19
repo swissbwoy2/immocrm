@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard, MessageSquare } from 'lucide-react';
+import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard, MessageSquare, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
