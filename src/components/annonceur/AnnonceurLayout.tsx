@@ -103,9 +103,13 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
           </p>
           <div className="flex flex-col gap-2">
             <Button onClick={() => navigate('/inscription-annonceur')}>
-              Créer un compte annonceur
+              Créer un profil annonceur
             </Button>
-            <Button variant="outline" onClick={() => signOut()}>
+            <Button variant="outline" onClick={() => navigate('/annonces')}>
+              Retour au portail
+            </Button>
+            <Button variant="ghost" onClick={() => signOut()}>
+
               Se déconnecter
             </Button>
           </div>
