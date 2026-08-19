@@ -39,6 +39,7 @@ import {
   isArchived,
   isBlockedByMe,
   isBlockedByOther,
+  isGuestConversation,
   lastMessage,
   markAnnonceMessagesRead,
   sendAnnonceMessage,
@@ -238,7 +239,9 @@ export function AnnonceMessagesPanel({
                           {c.annonces_publiques?.titre || 'Annonce'}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {c.annonces_publiques?.ville || ''}
+                          {isGuestConversation(c)
+                            ? `${c.guest_nom || 'Visiteur'} · ${c.guest_email || ''}`
+                            : c.annonces_publiques?.ville || ''}
                         </p>
                         <p className="text-xs text-muted-foreground truncate mt-1">
                           {last?.contenu || 'Nouvelle conversation'}
@@ -280,7 +283,11 @@ export function AnnonceMessagesPanel({
                 <p className="font-semibold text-sm truncate">
                   {conv.annonces_publiques?.titre || 'Annonce'}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">{conv.annonces_publiques?.ville}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {isGuestConversation(conv)
+                    ? `${conv.guest_nom || 'Visiteur'} · ${conv.guest_email || ''}${conv.guest_telephone ? ` · ${conv.guest_telephone}` : ''}`
+                    : conv.annonces_publiques?.ville}
+                </p>
               </div>
               {conv.annonces_publiques?.slug && (
                 <Button variant="ghost" size="icon" asChild>
@@ -314,7 +321,7 @@ export function AnnonceMessagesPanel({
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
                 {(messages || []).map((m) => {
-                  const mine = m.expediteur_id === userId;
+                  const mine = !!m.expediteur_id && m.expediteur_id === userId;
                   return (
                     <div key={m.id} className={cn('flex', mine ? 'justify-end' : 'justify-start')}>
                       <div
@@ -347,7 +354,20 @@ export function AnnonceMessagesPanel({
             </ScrollArea>
 
             <div className="p-3 border-t border-border">
-              {blockedByMe || blockedByOther ? (
+              {isGuestConversation(conv) ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <p className="text-center text-xs text-muted-foreground">
+                    Demande envoyée par un visiteur non inscrit — répondez-lui par e-mail.
+                  </p>
+                  {conv.guest_email && (
+                    <Button asChild size="sm" variant="outline">
+                      <a href={`mailto:${conv.guest_email}?subject=${encodeURIComponent(conv.annonces_publiques?.titre || 'Votre demande')}`}>
+                        <Send className="h-4 w-4 mr-2" /> Répondre par e-mail
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              ) : blockedByMe || blockedByOther ? (
                 <p className="text-center text-sm text-muted-foreground py-2">
                   {blockedByMe
                     ? 'Vous avez bloqué cette conversation.'
