@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,11 +24,14 @@ import { CandidacyDetailedTerms } from '@/components/legal/CandidacyDetailedTerm
 export function useImmoRamaCandidacyDialog(options?: { onConfirm?: () => void }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [accepted, setAccepted] = useState(false);
+  const [acceptedCommission, setAcceptedCommission] = useState(false);
+  const [acceptedTransmission, setAcceptedTransmission] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const bothAccepted = acceptedCommission && acceptedTransmission;
 
   const openDialog = useCallback(() => {
-    setAccepted(false);
+    setAcceptedCommission(false);
+    setAcceptedTransmission(false);
     setShowDetails(false);
     setOpen(true);
   }, []);
@@ -36,7 +39,8 @@ export function useImmoRamaCandidacyDialog(options?: { onConfirm?: () => void })
   const handleOpenChange = useCallback((next: boolean) => {
     setOpen(next);
     if (!next) {
-      setAccepted(false);
+      setAcceptedCommission(false);
+      setAcceptedTransmission(false);
       setShowDetails(false);
     }
   }, []);
@@ -51,69 +55,46 @@ export function useImmoRamaCandidacyDialog(options?: { onConfirm?: () => void })
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-left text-sm text-muted-foreground">
               <p>
-                En poursuivant, vous mandatez Immo-rama.ch (Logisorama.ch) pour déposer votre dossier de
-                candidature au logement sélectionné et effectuer les démarches nécessaires auprès de la gérance ou
-                du bailleur.
+                Vous souhaitez qu'Immo-rama.ch dépose votre candidature pour ce logement à votre place.
+                En cliquant sur «&nbsp;Déposer ma candidature&nbsp;», vous demandez à Immo-rama.ch de
+                transmettre aux destinataires concernés les informations et documents nécessaires à
+                l'examen de votre dossier.
               </p>
 
               <p className="font-semibold text-foreground">Commission uniquement en cas de succès</p>
               <p>
-                Si notre intervention aboutit à l'attribution du logement et à la conclusion du bail, une
-                commission de courtage équivalente à un mois de loyer brut est due, conformément aux art. 412 et
-                413 CO.
+                Si vous obtenez ce logement grâce à l'intervention d'Immo-rama.ch, une commission
+                correspondant à un mois de loyer brut, charges comprises, sera due conformément aux règles
+                du courtage des art. 412 ss CO. TVA au taux légal, actuellement {CANDIDACY_LEGAL.tauxTVA},
+                en sus si applicable.
               </p>
               <p>
-                Par « loyer brut », on entend le loyer net mensuel + les charges mensuelles prévues au bail, hors
-                dépôt de garantie et autres prestations distinctes.
-              </p>
-              <p>
-                Si Immo-rama.ch est assujettie à la TVA, la TVA au taux légal de {CANDIDACY_LEGAL.tauxTVA} s'ajoute
-                à cette commission. Le montant total correspond alors à 1,081 × le loyer brut mensuel.
-              </p>
-              <p>
-                Le dépôt d'une candidature ne garantit pas l'attribution du logement. La décision appartient
-                exclusivement à la gérance ou au bailleur.
+                <strong className="text-foreground">Aucun double paiement&nbsp;:</strong> si cette candidature
+                est déjà couverte par un mandat Immo-rama.ch prévoyant la même commission au succès, une
+                seule commission sera facturée pour l'attribution du même logement.
               </p>
 
-              <p className="font-semibold text-foreground">Protection de vos données</p>
+              <p className="font-semibold text-foreground">Vos données</p>
               <p>
-                Pour traiter votre candidature, vous autorisez expressément Immo-rama.ch à utiliser et à
-                transmettre à la gérance, au bailleur ou à leurs représentants les données et documents strictement
-                nécessaires, notamment :
-              </p>
-              <ul className="list-disc space-y-1 pl-5">
-                <li>pièce d'identité et/ou permis de séjour ;</li>
-                <li>fiches de salaire et informations professionnelles ;</li>
-                <li>extrait de l'Office des poursuites ;</li>
-                <li>coordonnées et autres justificatifs nécessaires au dossier.</li>
-              </ul>
-              <p>
-                Ces documents contiennent des informations personnelles et financières confidentielles et peuvent,
-                selon leur contenu, comprendre des données sensibles.
-              </p>
-              <p>
-                Ils sont utilisés uniquement pour préparer, transmettre et suivre votre candidature, fournir le
-                service demandé et gérer l'éventuelle commission de succès.
-              </p>
-              <p>
-                Les pièces du dossier sont conservées pendant la durée nécessaire au service, puis supprimées ou
-                anonymisées au plus tard {CANDIDACY_LEGAL.conservationJours} jours après sa fin, sauf obligation
-                légale ou nécessité de conserver certaines informations en cas de créance ou de litige.
-              </p>
-              <p>
-                Vous pouvez demander l'accès à vos données, leur rectification et, lorsque les conditions légales
-                sont réunies, leur suppression ou la cessation de leur traitement, auprès de{' '}
-                {CANDIDACY_LEGAL.emailProtectionDonnees}.
-              </p>
-              <p>
-                Vous êtes libre de ne pas utiliser ce service. Le retrait de votre autorisation reste possible pour
-                l'avenir ; dans ce cas, Immo-rama.ch ne pourra plus transmettre de nouvelles candidatures
-                nécessitant ces données.
-              </p>
-              <p>
-                Cette autorisation permet uniquement de déposer et suivre votre candidature. Elle n'autorise pas
-                Immo-rama.ch à signer un bail, une garantie ou un autre engagement contractuel en votre nom sans
-                procuration distincte.
+                Vous autorisez Immo-rama.ch à transmettre, uniquement dans la mesure nécessaire à cette
+                candidature, votre dossier et les informations pertinentes à la régie, au propriétaire ou au
+                bailleur concerné. Si votre dossier contient des données relatives à un co-candidat, garant
+                ou autre tiers, vous confirmez l'avoir informé de cette transmission. Consultez notre{' '}
+                <Link
+                  to="/politique-confidentialite"
+                  target="_blank"
+                  className="text-primary underline underline-offset-2"
+                >
+                  Politique de confidentialité
+                </Link>{' '}
+                pour davantage d'informations ou contactez-nous à{' '}
+                <a
+                  href={`mailto:${CANDIDACY_LEGAL.emailProtectionDonnees}`}
+                  className="text-primary underline underline-offset-2"
+                >
+                  {CANDIDACY_LEGAL.emailProtectionDonnees}
+                </a>
+                .
               </p>
 
               <button
@@ -135,20 +116,32 @@ export function useImmoRamaCandidacyDialog(options?: { onConfirm?: () => void })
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm cursor-pointer">
-          <Checkbox
-            checked={accepted}
-            onCheckedChange={(v) => setAccepted(v === true)}
-            aria-label="J'ai lu et j'accepte les conditions"
-            className="mt-0.5"
-          />
-          <span>J'ai lu et j'accepte les conditions</span>
-        </label>
+        <div className="space-y-2">
+          <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm cursor-pointer">
+            <Checkbox
+              checked={acceptedCommission}
+              onCheckedChange={(v) => setAcceptedCommission(v === true)}
+              className="mt-0.5 min-w-[20px] min-h-[20px]"
+            />
+            <span>
+              J'ai compris et j'accepte la commission applicable uniquement en cas d'attribution du logement
+              grâce à l'intervention d'Immo-rama.ch.
+            </span>
+          </label>
+          <label className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm cursor-pointer">
+            <Checkbox
+              checked={acceptedTransmission}
+              onCheckedChange={(v) => setAcceptedTransmission(v === true)}
+              className="mt-0.5 min-w-[20px] min-h-[20px]"
+            />
+            <span>Je demande à Immo-rama.ch de transmettre mon dossier pour cette candidature.</span>
+          </label>
+        </div>
 
         <AlertDialogFooter>
           <AlertDialogCancel>Annuler</AlertDialogCancel>
-          <AlertDialogAction disabled={!accepted} onClick={confirm}>
-            OK, je continue
+          <AlertDialogAction disabled={!bothAccepted} onClick={confirm}>
+            DÉPOSER MA CANDIDATURE
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
