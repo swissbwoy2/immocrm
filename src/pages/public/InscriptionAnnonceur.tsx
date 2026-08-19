@@ -265,7 +265,7 @@ export default function InscriptionAnnonceur() {
           <div className="max-w-xl mx-auto">
             {/* Progress */}
             <div className="flex items-center justify-center gap-2 mb-8">
-              {[1, 2, 3].map((s) => (
+              {(isAuthenticated ? [1, 2] : [1, 2, 3]).map((s, i, arr) => (
                 <div key={s} className="flex items-center">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
                     s < step ? 'bg-success text-success-foreground' :
@@ -274,12 +274,13 @@ export default function InscriptionAnnonceur() {
                   }`}>
                     {s < step ? <Check className="h-5 w-5" /> : s}
                   </div>
-                  {s < 3 && (
+                  {i < arr.length - 1 && (
                     <div className={`w-16 h-1 mx-2 rounded ${s < step ? 'bg-success' : 'bg-muted'}`} />
                   )}
                 </div>
               ))}
             </div>
+
 
             <Card className="p-6 md:p-8">
               <form onSubmit={handleSubmit}>
