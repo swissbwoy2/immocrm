@@ -9,7 +9,7 @@ export const CANDIDACY_LEGAL = {
   /** Adresse postale complète du responsable du traitement */
   adressePostale: 'Chemin de l\'Esparcette 5, 1023 Crissier',
   /** E-mail dédié à la protection des données */
-  emailProtectionDonnees: 'admin@immo-rama.ch',
+  emailProtectionDonnees: 'info@immo-rama.ch',
   /** Taux de TVA suisse applicable */
   tauxTVA: '8,1 %',
   /** Commission de courtage en cas de succès */
