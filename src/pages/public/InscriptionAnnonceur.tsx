@@ -455,11 +455,21 @@ export default function InscriptionAnnonceur() {
                           <ArrowLeft className="h-4 w-4 mr-2" />
                           Retour
                         </Button>
-                        <Button type="submit" className="flex-1">
-                          Continuer
-                          <ArrowRight className="h-4 w-4 ml-2" />
+                        <Button type="submit" className="flex-1" disabled={activateMutation.isPending || identityLoading}>
+                          {activateMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Activation...
+                            </>
+                          ) : (
+                            <>
+                              {isAuthenticated ? 'Continuer vers le dépôt' : 'Continuer'}
+                              <ArrowRight className="h-4 w-4 ml-2" />
+                            </>
+                          )}
                         </Button>
                       </div>
+
                     </motion.div>
                   )}
 
