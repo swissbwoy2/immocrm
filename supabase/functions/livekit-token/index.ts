@@ -147,6 +147,8 @@ serve(async (req) => {
         isHost,
         room,
         visiteId,
+        liveId,
+
       });
     }
 
