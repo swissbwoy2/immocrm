@@ -31,6 +31,41 @@ export default function Profil() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (file: File) => {
+    if (!user?.id) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Veuillez choisir une image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image trop lourde (max 5 Mo).');
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const path = `${user.id}/annonceur-logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('profile-avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('profile-avatars').getPublicUrl(path);
+      const { error: updErr } = await supabase
+        .from('annonceurs')
+        .update({ logo_url: pub.publicUrl })
+        .eq('user_id', user.id);
+      if (updErr) throw updErr;
+      await queryClient.invalidateQueries({ queryKey: ['annonceur-profil'] });
+      toast.success('Photo de profil mise à jour');
+    } catch (err: any) {
+      toast.error(err?.message || "Échec de l'envoi de l'image");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
 
   // Fetch annonceur profile
   const { data: annonceur, isLoading } = useQuery({
