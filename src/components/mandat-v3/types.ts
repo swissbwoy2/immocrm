@@ -134,7 +134,7 @@ export const LEGAL_CHECKBOXES: LegalConsent[] = [
     cta: "Oui, j'accepte",
   },
   {
-    key: 'legal_transmission_dossier',
+    key: 'legal_remboursement', title: 'Remboursement', question: "Acceptez-vous que l'acompte ne soit remboursable qu'après 90 jours de recherche active (remboursement sous 30 jours si aucun logement n'a été obtenu grâce à Immo-rama.ch), et qu'il ne soit pas remboursable si vous mettez fin au mandat avant 90 jours, sous réserve de votre droit légal de résilier en tout temps ?", cta: "Oui, j'accepte" }, { key: 'legal_transmission_dossier',
     title: 'Transmission du dossier',
     question: 'Autorisez-vous Immo-rama.ch à transmettre aux régies, propriétaires, vendeurs ou partenaires concernés les informations et documents nécessaires aux candidatures que vous demandez ?',
     cta: "Oui, j'autorise",
