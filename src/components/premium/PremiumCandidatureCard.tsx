@@ -176,7 +176,7 @@ export function PremiumCandidatureCard({
 
 
         <CollapsibleContent>
-          <div className="px-5 md:px-6 pb-5 md:pb-6 relative z-10 border-t border-border/30">
+          <div className="px-4 sm:px-5 md:px-6 pb-5 md:pb-6 relative z-10 border-t border-border/30">
             {children}
           </div>
         </CollapsibleContent>
