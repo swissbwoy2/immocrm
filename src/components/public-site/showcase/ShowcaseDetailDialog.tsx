@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ExternalLink, Home, MapPin } from 'lucide-react';
 import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from './useShowcase';
 import { StoryPhotoLink } from './StoryPhotoLink';
+import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
+import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 
 
 interface Props {
@@ -66,8 +68,9 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
 }
 
 function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => void }) {
-  const gallery = galleryUrls(item);
-  const cover = usePreviewImage(item);
+  const { canViewInternalListing } = useSourcedListingAccess();
+  const gallery = canViewInternalListing ? galleryUrls(item) : [];
+  const cover = usePreviewImage(item, canViewInternalListing);
   const images = gallery.length > 0 ? gallery : cover ? [cover] : [];
 
   return (
@@ -90,10 +93,16 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
           ))}
         </div>
 
-      ) : (
+      ) : canViewInternalListing ? (
         <div className="flex h-40 items-center justify-center rounded-xl bg-muted">
           <Home className="h-8 w-8 text-muted-foreground" />
         </div>
+      ) : (
+        <StoryPhotoLink href={item.lien_annonce} className="block">
+          <div className="h-40 overflow-hidden rounded-xl border border-border">
+            <ExternalListingPlaceholder />
+          </div>
+        </StoryPhotoLink>
       )}
 
       <div className="flex flex-wrap gap-2">

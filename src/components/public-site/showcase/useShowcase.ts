@@ -77,13 +77,21 @@ function scheduleFlush() {
   }, 120);
 }
 
-export function usePreviewImage(item: ShowcaseItem): string | null {
+/**
+ * Aperçu image de l'annonce source.
+ * `enabled = false` (visiteur public) → aucune image tierce n'est affichée ni récupérée.
+ */
+export function usePreviewImage(item: ShowcaseItem, enabled = true): string | null {
   const gallery = galleryUrls(item);
-  const direct = gallery[0] ?? null;
-  const link = item.lien_annonce;
+  const direct = enabled ? gallery[0] ?? null : null;
+  const link = enabled ? item.lien_annonce : null;
   const [img, setImg] = useState<string | null>(direct ?? (link ? previewCache.get(link) ?? null : null));
 
   useEffect(() => {
+    if (!enabled) {
+      setImg(null);
+      return;
+    }
     if (direct) {
       setImg(direct);
       return;
@@ -102,7 +110,7 @@ export function usePreviewImage(item: ShowcaseItem): string | null {
     return () => {
       listeners.delete(notify);
     };
-  }, [direct, link]);
+  }, [direct, link, enabled]);
 
   return img;
 }
