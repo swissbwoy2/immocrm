@@ -87,6 +87,13 @@ serve(async (req: Request): Promise<Response> => {
         if (findErr) console.error("contact-annonce: recherche conversation", findErr);
         conversationId = existing?.id ?? null;
 
+        // Coordonnées du demandeur : toujours conservées (connecté ou non)
+        const contactInfo = {
+          guest_nom: nom || null,
+          guest_email: email ? String(email).toLowerCase().trim() : null,
+          guest_telephone: telephone || null,
+        };
+
         if (!conversationId) {
           const { data: created, error: convErr } = await supabase
             .from("conversations_annonces")
@@ -94,15 +101,20 @@ serve(async (req: Request): Promise<Response> => {
               annonce_id: annonce.id,
               participant_1_id: senderId,
               participant_2_id: ownerId,
-              guest_nom: senderId ? null : nom,
-              guest_email: senderId ? null : String(email).toLowerCase().trim(),
-              guest_telephone: senderId ? null : (telephone || null),
+              ...contactInfo,
             })
             .select("id")
             .single();
           if (convErr) console.error("contact-annonce: création conversation", convErr);
           conversationId = created?.id ?? null;
+        } else {
+          const { error: updErr } = await supabase
+            .from("conversations_annonces")
+            .update(contactInfo)
+            .eq("id", conversationId);
+          if (updErr) console.error("contact-annonce: maj coordonnées", updErr);
         }
+
 
         if (conversationId) {
           const contenu = senderId
