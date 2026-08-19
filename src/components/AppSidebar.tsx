@@ -544,13 +544,20 @@ export function AppSidebar() {
     const base = getMenuForRole(userRole || '', profile?.parcours_type);
     if (!base.length) return base;
     const portail: MenuItem = { name: "Portail d'annonces", icon: Globe, path: '/annonces', notifKey: null };
+    const espaceAnnonceur: MenuItem = { name: 'Espace annonceur', icon: Megaphone, path: '/espace-annonceur', notifKey: null };
     const [first, ...rest] = base;
-    if (first.items.some((i) => i.path === '/annonces')) return base;
-    // Insère juste après le "Tableau de bord" (premier élément) du premier bloc
     const items = [...first.items];
-    items.splice(1, 0, portail);
+    if (!items.some((i) => i.path === '/annonces')) {
+      // Insère juste après le "Tableau de bord" (premier élément) du premier bloc
+      items.splice(1, 0, portail);
+    }
+    if (!items.some((i) => i.path === '/espace-annonceur')) {
+      const idx = items.findIndex((i) => i.path === '/annonces');
+      items.splice(idx >= 0 ? idx + 1 : items.length, 0, espaceAnnonceur);
+    }
     return [{ ...first, items }, ...rest];
   }, [userRole, profile?.parcours_type]);
+
 
   if (!user || !userRole) return null;
 
