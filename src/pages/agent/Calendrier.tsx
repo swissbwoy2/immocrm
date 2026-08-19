@@ -1354,6 +1354,17 @@ export default function AgentCalendrier() {
             </DialogTitle>
           </DialogHeader>
 
+          {selectedVisite?.id && (
+            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
+              <VisitLiveButton
+                visiteId={selectedVisite.id}
+                dateVisite={selectedVisite.date_visite}
+                size="default"
+                className="w-full"
+              />
+            </div>
+          )}
+
           {selectedVisite && (
             <div className="space-y-6">
               {/* En-tête avec adresse et date/heure */}
