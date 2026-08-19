@@ -128,17 +128,9 @@ export default function NouveauMandat() {
           (formData.apport_personnel + formData.achat_fonds_propres_3a + formData.achat_fonds_propres_lpp + formData.achat_montant_epl) > 0);
       case 'situation_perso':
         return true;
-      case 'docs': {
-        if (isPurchase) {
-          // Documents recommandés mais pas bloquants pour l'achat (validation bancaire post-activation)
-          return true;
-        }
-        const types = new Set(formData.documents_uploades.map((d) => d.type));
-        const isPermis = ['B', 'C', 'F', 'N'].includes(formData.type_permis);
-        const idKind = isPermis ? 'permis_sejour' : 'piece_identite';
-        const required = ['poursuites', 'salaire1', 'salaire2', 'salaire3', `${idKind}_recto`, `${idKind}_verso`];
-        return required.every((k) => types.has(k));
-      }
+      case 'docs':
+        // Documents entièrement facultatifs : jamais bloquants (location comme achat)
+        return true;
       case 'signature':
         return !!(formData.signature_data && formData.cgv_acceptees);
       default:
