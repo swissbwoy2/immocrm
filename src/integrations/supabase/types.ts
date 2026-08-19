@@ -6285,6 +6285,39 @@ export type Database = {
         }
         Relationships: []
       }
+      lives: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          hote_id: string
+          id: string
+          offre_id: string | null
+          room_name: string
+          statut: string
+          visite_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          hote_id: string
+          id?: string
+          offre_id?: string | null
+          room_name: string
+          statut?: string
+          visite_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          hote_id?: string
+          id?: string
+          offre_id?: string | null
+          room_name?: string
+          statut?: string
+          visite_id?: string | null
+        }
+        Relationships: []
+      }
       locataires_immeuble: {
         Row: {
           charges: number | null
