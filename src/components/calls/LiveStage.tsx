@@ -220,11 +220,68 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
     }
   };
 
+  // --- Mains levées (data channel) -----------------------------------------
+  const visiteId = roomName.startsWith('visit:') ? roomName.slice('visit:'.length) : '';
+  const [raisedHands, setRaisedHands] = useState<string[]>([]);
+  const [handRaised, setHandRaised] = useState(false);
+  const [endingLive, setEndingLive] = useState(false);
+
+  useEffect(() => {
+    if (!room) return;
+    const onData = (payload: Uint8Array, participant?: any) => {
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload));
+        if (msg?.type !== 'raise_hand') return;
+        const identity = participant?.identity;
+        if (!identity) return;
+        setRaisedHands((prev) =>
+          msg.raised
+            ? prev.includes(identity)
+              ? prev
+              : [...prev, identity]
+            : prev.filter((i) => i !== identity),
+        );
+        if (isHost && msg.raised) {
+          toast.info(`${participant?.name || 'Un participant'} demande la parole`);
+        }
+      } catch {
+        /* message non pertinent */
+      }
+    };
+    room.on(RoomEvent.DataReceived, onData);
+    return () => {
+      room.off(RoomEvent.DataReceived, onData);
+    };
+  }, [room, isHost]);
+
+  const toggleHand = async () => {
+    const next = !handRaised;
+    setHandRaised(next);
+    try {
+      await localParticipant?.publishData(
+        new TextEncoder().encode(JSON.stringify({ type: 'raise_hand', raised: next })),
+        { reliable: true },
+      );
+      toast.success(next ? 'Demande de parole envoyée' : 'Demande de parole retirée');
+    } catch (e: any) {
+      setHandRaised(!next);
+      toast.error('Impossible d’envoyer la demande', { description: e?.message });
+    }
+  };
+
   // --- Actions hôte --------------------------------------------------------
   const runHostAction = async (identity: string, action: ParticipantAction, name: string) => {
     setBusyIdentity(identity);
     try {
-      await setParticipantPermission({ room: roomName, identity, action });
+      if ((action === 'promote' || action === 'demote') && visiteId) {
+        // Live : promotion contrôlée côté serveur (max 2 intervenants).
+        await setLiveSpeaker({ visiteId, identity, action });
+      } else {
+        await setParticipantPermission({ room: roomName, identity, action });
+      }
+      if (action === 'promote' || action === 'remove') {
+        setRaisedHands((prev) => prev.filter((i) => i !== identity));
+      }
       const labels: Record<ParticipantAction, string> = {
         promote: `${name} est monté en direct`,
         demote: `${name} est repassé spectateur`,
@@ -238,6 +295,24 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
       setBusyIdentity(null);
     }
   };
+
+  const handleLeave = async () => {
+    if (!isHost || !visiteId) {
+      onLeave();
+      return;
+    }
+    setEndingLive(true);
+    try {
+      await endLive(visiteId);
+      toast.success('Live terminé');
+    } catch (e: any) {
+      toast.error('Fermeture du live incomplète', { description: e?.message });
+    } finally {
+      setEndingLive(false);
+      onLeave();
+    }
+  };
+
 
   const people = useMemo(
     () =>
