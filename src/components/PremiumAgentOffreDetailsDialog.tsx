@@ -1,3 +1,4 @@
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { useState, useEffect } from 'react';
 import {
   Dialog,
