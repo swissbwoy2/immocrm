@@ -347,6 +347,16 @@ export default function Profil() {
                     </div>
                   )}
 
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail de contact</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="telephone">Téléphone</Label>
