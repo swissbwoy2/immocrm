@@ -70,7 +70,7 @@ export default function MandatFormStep3({ data, onChange }: Props) {
 
           {/* Budget locatif indicatif (règle suisse du tiers) */}
           {data.revenus_mensuels >= 1000 && (
-            <div className="md:col-span-2 rounded-2xl border border-border bg-gradient-to-br from-primary to-primary p-5 space-y-4 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
+            <div className="md:col-span-2 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-primary/5 p-5 space-y-4 transition-all duration-500 animate-in fade-in slide-in-from-top-2">
               <div className="flex items-center gap-2 text-primary">
                 <TrendingUp size={16} strokeWidth={2} />
                 <span className="text-sm font-semibold uppercase tracking-wide">Budget locatif indicatif</span>
