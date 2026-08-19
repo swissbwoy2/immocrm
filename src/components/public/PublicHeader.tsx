@@ -138,13 +138,21 @@ export function PublicHeader() {
                       </Button>
                     </Link>
                   )}
-                  <Link to={isAuthenticated ? spacePath : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
-
+                  <Link to={isAuthenticated ? '/espace-annonceur' : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
                     <Button className="w-full justify-start">
-                      {isAuthenticated ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+                      {isAuthenticated ? <Megaphone className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                       {isAuthenticated ? 'Mon espace' : 'Connexion'}
                     </Button>
                   </Link>
+                  {isAuthenticated && (
+                    <Link to={spacePath} onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" className="w-full justify-start">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Tableau de bord
+                      </Button>
+                    </Link>
+                  )}
+
 
                 </div>
 
