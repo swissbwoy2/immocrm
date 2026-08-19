@@ -76,6 +76,21 @@ export interface MandatFormData {
   signature_data: string;
   cgv_acceptees: boolean;
 
+  // Consentements juridiques (12 dispositions du contrat de mandat)
+  legal_objet: boolean;
+  legal_obligation_moyens: boolean;
+  legal_exclusivite: boolean;
+  legal_duree: boolean;
+  legal_commission: boolean;
+  legal_acompte: boolean;
+  legal_transmission_dossier: boolean;
+  legal_garants_cocandidats: boolean;
+  legal_litiges: boolean;
+  legal_protection_donnees: boolean;
+  legal_cgu: boolean;
+  legal_acceptation_generale: boolean;
+  legal_consents_at: Record<string, string>;
+
   // Code promo
   code_promo: string;
 
@@ -281,6 +296,19 @@ export const initialFormData: MandatFormData = {
   documents_uploades: [],
   signature_data: '',
   cgv_acceptees: false,
+  legal_objet: false,
+  legal_obligation_moyens: false,
+  legal_exclusivite: false,
+  legal_duree: false,
+  legal_commission: false,
+  legal_acompte: false,
+  legal_transmission_dossier: false,
+  legal_garants_cocandidats: false,
+  legal_litiges: false,
+  legal_protection_donnees: false,
+  legal_cgu: false,
+  legal_acceptation_generale: false,
+  legal_consents_at: {},
   code_promo: '',
   payment_method: 'qr_invoice',
 
