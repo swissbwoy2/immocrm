@@ -1,3 +1,4 @@
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { useMemo, useState } from 'react';
 import { CalendarClock, ExternalLink, Home, MapPin, Phone, StickyNote } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -147,6 +148,10 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
           <span className="whitespace-pre-wrap">{visite.notes}</span>
         </p>
       )}
+
+      <VisitLiveButton visiteId={visite.id} size="default" className="w-full" />
+
+
 
       {item.lien_annonce && (
         <Button asChild variant="outline" className="w-full">

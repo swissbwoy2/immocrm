@@ -19,6 +19,7 @@ import {
   Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
@@ -874,9 +875,12 @@ export default function AgentVisites() {
               💡 {visite.notes}
             </p>
           )}
-          
 
-          
+          {/* Live de visite (hôte : agent) */}
+          <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+            <VisitLiveButton visiteId={visite.id} dateVisite={visite.date_visite} className="w-full" />
+          </div>
+
           {/* Date/time footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border/50">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { StartVisitLiveButton } from '@/components/calls/StartVisitLiveButton';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
@@ -374,7 +374,7 @@ export function PremiumDayEvents({
 
                       {/* Live de visite (Phase B) — hôte : admin / agent / coursier */}
                       <div className="pt-3 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
-                        <StartVisitLiveButton visiteId={firstVisite.id} className="w-full" />
+                        <VisitLiveButton visiteId={firstVisite.id} className="w-full" />
                       </div>
 
                       {firstVisite.agent_id && (

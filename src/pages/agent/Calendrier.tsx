@@ -27,6 +27,7 @@ import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -1353,6 +1354,17 @@ export default function AgentCalendrier() {
               {selectedVisite?.statut === 'effectuee' && <Badge variant="secondary">Effectuée</Badge>}
             </DialogTitle>
           </DialogHeader>
+
+          {selectedVisite?.id && (
+            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
+              <VisitLiveButton
+                visiteId={selectedVisite.id}
+                dateVisite={selectedVisite.date_visite}
+                size="default"
+                className="w-full"
+              />
+            </div>
+          )}
 
           {selectedVisite && (
             <div className="space-y-6">

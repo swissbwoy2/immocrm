@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 import { getInteretState } from '@/lib/offreInteret';
 import { Button } from '@/components/ui/button';
-import { StartVisitLiveButton } from '@/components/calls/StartVisitLiveButton';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -237,7 +237,7 @@ export default function CoursierMissions() {
 
         {type === 'active' && (
           <div className="mb-2" onClick={(e) => e.stopPropagation()}>
-            <StartVisitLiveButton visiteId={mission.id} className="w-full" />
+            <VisitLiveButton visiteId={mission.id} className="w-full" />
           </div>
         )}
 
@@ -693,7 +693,7 @@ export default function CoursierMissions() {
                 )}
                 {selectedMission.coursier_id === coursierId &&
                   selectedMission.statut_coursier === 'accepte' && (
-                    <StartVisitLiveButton visiteId={selectedMission.id} size="default" className="w-full" />
+                    <VisitLiveButton visiteId={selectedMission.id} size="default" className="w-full" />
                   )}
                 {selectedMission.coursier_id === coursierId &&
                   ['accepte', 'termine'].includes(selectedMission.statut_coursier) && (

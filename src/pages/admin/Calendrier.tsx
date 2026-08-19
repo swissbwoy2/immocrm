@@ -30,6 +30,7 @@ import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButt
 import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 import { getInteretState } from '@/lib/offreInteret';
@@ -715,6 +716,18 @@ export default function AdminCalendrier() {
           <DialogHeader>
             <DialogTitle>Détails de la visite</DialogTitle>
           </DialogHeader>
+
+          {selectedVisiteGroup?.[0]?.id && (
+            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
+              <VisitLiveButton
+                visiteId={selectedVisiteGroup[0].id}
+                dateVisite={selectedVisiteGroup[0].date_visite}
+                size="default"
+                className="w-full"
+              />
+            </div>
+          )}
+          
           
           {selectedVisiteGroup && selectedVisiteGroup.length > 0 && (
             <div className="space-y-6">

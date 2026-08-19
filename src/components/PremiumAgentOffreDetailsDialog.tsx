@@ -1,3 +1,4 @@
+import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -355,6 +356,17 @@ export function PremiumAgentOffreDetailsDialog({
                         {visite.statut === 'effectuee' ? 'Effectuée' : visite.statut === 'confirmee' ? 'Confirmée' : 'Planifiée'}
                       </Badge>
                     </div>
+
+                    {/* Live de visite */}
+                    <div className="mb-3">
+                      <VisitLiveButton
+                        visiteId={visite.id}
+                        dateVisite={visite.date_visite}
+                        className="w-full"
+                      />
+                    </div>
+
+
 
                     {/* Feedback si visite effectuée */}
                     {visite.statut === 'effectuee' && visite.feedback_agent && (
