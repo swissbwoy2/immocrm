@@ -422,14 +422,26 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
                         {p.isLocal ? ' (vous)' : ''}
                       </p>
                       <p className="text-[11px] text-white/60">
-                        {p.isHost ? 'Hôte' : p.live ? 'En direct' : 'Spectateur'}
+                        {p.isHost
+                          ? 'Hôte'
+                          : p.live
+                            ? 'En direct'
+                            : raisedHands.includes(p.identity)
+                              ? 'Demande la parole'
+                              : 'Spectateur'}
                       </p>
                     </div>
+                    {!p.live && raisedHands.includes(p.identity) && (
+                      <Badge className="bg-amber-500 text-white border-0 text-[10px] gap-1">
+                        <Hand className="h-3 w-3" /> Main levée
+                      </Badge>
+                    )}
                     {p.live && !p.isHost && (
                       <Badge className="bg-[hsl(158_55%_45%)] text-white border-0 text-[10px]">
                         Direct
                       </Badge>
                     )}
+
                   </div>
 
                   {isHost && !p.isLocal && !p.isHost && (
