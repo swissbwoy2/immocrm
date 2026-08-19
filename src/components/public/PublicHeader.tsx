@@ -67,13 +67,20 @@ export function PublicHeader() {
               </Link>
             )}
             {isAuthenticated ? (
-
-              <Link to={spacePath}>
-                <Button size="sm">
-                  <LayoutDashboard className="h-4 w-4 mr-2" />
-                  Mon espace
-                </Button>
-              </Link>
+              <>
+                <Link to={spacePath}>
+                  <Button variant="ghost" size="sm">
+                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                    Tableau de bord
+                  </Button>
+                </Link>
+                <Link to="/espace-annonceur">
+                  <Button size="sm">
+                    <Megaphone className="h-4 w-4 mr-2" />
+                    Mon espace
+                  </Button>
+                </Link>
+              </>
             ) : (
               <Link to="/connexion-annonceur">
                 <Button size="sm">
@@ -82,6 +89,7 @@ export function PublicHeader() {
                 </Button>
               </Link>
             )}
+
           </div>
 
 
