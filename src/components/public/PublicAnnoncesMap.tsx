@@ -180,12 +180,16 @@ export function PublicAnnoncesMap({
 
 
       const showInfoWindow = () => {
-        const photo = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
-          || annonce.photos_annonces_publiques?.[0]?.url;
+        const isExternal = !!annonce.lien_annonce && !annonce.allowInternalDetail;
+        const photo = isExternal
+          ? undefined
+          : annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
+            || annonce.photos_annonces_publiques?.[0]?.url;
 
         const infoContent = `
           <div style="max-width: 250px; cursor: pointer;" id="info-${annonce.id}">
-            ${photo ? `<img src="${photo}" alt="${annonce.titre}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />` : ''}
+            ${isExternal ? externalListingPlaceholderHtml(120) : (photo ? `<img src="${photo}" alt="${annonce.titre}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />` : '')}
+
             <h3 style="font-weight: 600; margin-bottom: 4px; font-size: 14px;">${annonce.titre}</h3>
             <p style="font-weight: 700; margin-bottom: 4px;">
               CHF ${formatPrice(annonce.prix, annonce.type_transaction)}
