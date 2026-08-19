@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { MapPin, Loader2 } from 'lucide-react';
+import { externalListingPlaceholderHtml } from '@/components/public/ExternalListingPlaceholder';
+
 
 interface Annonce {
   id: string;
