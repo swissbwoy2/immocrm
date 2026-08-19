@@ -63,8 +63,8 @@ export default function MandatFormStep1({ data, onChange }: Props) {
   return (
     <div className="space-y-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">Informations personnelles</h2>
-        <p className="text-sm text-[hsl(40_20%_55%)] mt-1">Vos coordonnées et situation personnelle.</p>
+        <h2 className="text-2xl font-bold text-foreground">Informations personnelles</h2>
+        <p className="text-sm text-muted-foreground mt-1">Vos coordonnées et situation personnelle.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -75,10 +75,10 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
         {/* Adresse avec autocomplete */}
         <div className="md:col-span-2 space-y-1.5">
-          <label className="flex items-center gap-2 text-sm font-medium text-[hsl(40_20%_60%)]">
-            <span className="text-[hsl(38_45%_48%)]"><IconMapPin size={16} /></span>
+          <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <span className="text-primary"><IconMapPin size={16} /></span>
             Adresse actuelle
-            <span className="text-[hsl(40_20%_38%)] text-[10px]">(optionnel)</span>
+            <span className="text-muted-foreground text-[10px]">(optionnel)</span>
           </label>
           <GoogleAddressAutocomplete
             value={data.adresse}
@@ -91,9 +91,9 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
         {/* Date de naissance — 3 selects */}
         <div className="md:col-span-2 space-y-1.5">
-          <label className="flex items-center gap-2 text-sm font-medium text-[hsl(40_20%_60%)]">
-            <span className="text-[hsl(38_45%_48%)]"><IconCalendar size={16} /></span>
-            Date de naissance <span className="text-red-400">*</span>
+          <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <span className="text-primary"><IconCalendar size={16} /></span>
+            Date de naissance <span className="text-destructive">*</span>
           </label>
           <div className="grid grid-cols-3 gap-2">
             <LandingSelect label="" value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)} placeholder="Jour" options={DAYS.map(d => ({ value: d, label: String(parseInt(d, 10)) }))} />
