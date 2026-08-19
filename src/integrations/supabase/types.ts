@@ -3589,8 +3589,11 @@ export type Database = {
           bloque_par_2: boolean | null
           created_at: string | null
           dernier_message_at: string | null
+          guest_email: string | null
+          guest_nom: string | null
+          guest_telephone: string | null
           id: string
-          participant_1_id: string
+          participant_1_id: string | null
           participant_2_id: string
         }
         Insert: {
@@ -3601,8 +3604,11 @@ export type Database = {
           bloque_par_2?: boolean | null
           created_at?: string | null
           dernier_message_at?: string | null
+          guest_email?: string | null
+          guest_nom?: string | null
+          guest_telephone?: string | null
           id?: string
-          participant_1_id: string
+          participant_1_id?: string | null
           participant_2_id: string
         }
         Update: {
@@ -3613,8 +3619,11 @@ export type Database = {
           bloque_par_2?: boolean | null
           created_at?: string | null
           dernier_message_at?: string | null
+          guest_email?: string | null
+          guest_nom?: string | null
+          guest_telephone?: string | null
           id?: string
-          participant_1_id?: string
+          participant_1_id?: string | null
           participant_2_id?: string
         }
         Relationships: [
@@ -7190,7 +7199,7 @@ export type Database = {
           conversation_id: string
           created_at: string | null
           date_lecture: string | null
-          expediteur_id: string
+          expediteur_id: string | null
           id: string
           lu: boolean | null
           piece_jointe_nom: string | null
@@ -7202,7 +7211,7 @@ export type Database = {
           conversation_id: string
           created_at?: string | null
           date_lecture?: string | null
-          expediteur_id: string
+          expediteur_id?: string | null
           id?: string
           lu?: boolean | null
           piece_jointe_nom?: string | null
@@ -7214,7 +7223,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string | null
           date_lecture?: string | null
-          expediteur_id?: string
+          expediteur_id?: string | null
           id?: string
           lu?: boolean | null
           piece_jointe_nom?: string | null
