@@ -559,13 +559,14 @@ const MesCandidatures = () => {
             {groupedOffres.map((groupe) => {
               return (
                 <section key={groupe.key} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className={`h-2.5 w-2.5 rounded-full ${groupe.dot}`} />
-                    <h2 className="text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
-                    <Badge variant="secondary" className="rounded-full">{groupe.items.length}</Badge>
-                    <div className="flex-1 h-px bg-border/50" />
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${groupe.dot}`} />
+                    <h2 className="min-w-0 truncate text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
+                    <Badge variant="secondary" className="shrink-0 rounded-full">{groupe.items.length}</Badge>
+                    <div className="hidden sm:block flex-1 h-px bg-border/50" />
                   </div>
-                  <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
+
                   {groupe.items.map((offre, index) => {
               const candidature = candidatures.find(c => c.offre_id === offre.id);
               const statut = candidature?.statut || offre.statut;
