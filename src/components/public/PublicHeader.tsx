@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Search, Plus, User, LogIn } from 'lucide-react';
+import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
+import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function PublicHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated, spacePath } = useConnectedIdentity();
 
   const navLinks = [
     { href: '/annonces', label: 'Accueil' },
     { href: '/annonces/recherche?type=location', label: 'Louer' },
     { href: '/annonces/recherche?type=vente', label: 'Acheter' },
   ];
+
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
@@ -48,13 +51,23 @@ export function PublicHeader() {
               </Button>
             </Link>
             <DeposerAnnonceButton />
-            <Link to="/connexion-annonceur">
-              <Button size="sm">
-                <User className="h-4 w-4 mr-2" />
-                Connexion
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to={spacePath}>
+                <Button size="sm">
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Mon espace
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/connexion-annonceur">
+                <Button size="sm">
+                  <User className="h-4 w-4 mr-2" />
+                  Connexion
+                </Button>
+              </Link>
+            )}
           </div>
+
 
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -90,12 +103,13 @@ export function PublicHeader() {
                     size="default"
                     onNavigate={() => setIsOpen(false)}
                   />
-                  <Link to="/connexion-annonceur" onClick={() => setIsOpen(false)}>
+                  <Link to={isAuthenticated ? spacePath : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
                     <Button className="w-full justify-start">
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Connexion
+                      {isAuthenticated ? <LayoutDashboard className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+                      {isAuthenticated ? 'Mon espace' : 'Connexion'}
                     </Button>
                   </Link>
+
                 </div>
 
                 <div className="border-t pt-6">

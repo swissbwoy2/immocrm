@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,10 +8,13 @@ import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/aut
 import { Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
+import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 
 export default function ConnexionAnnonceur() {
   const navigate = useNavigate();
+  const { user, spacePath, isLoading: authLoading } = useConnectedIdentity();
   const [email, setEmail] = useState('');
+
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -88,6 +91,14 @@ export default function ConnexionAnnonceur() {
 
   const isLoading = loginMutation.isPending;
   const canSubmit = !!email && !!password && !isLoading;
+
+  // Session déjà active : inutile de redemander une connexion.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    navigate(spacePath, { replace: true });
+  }, [authLoading, user, spacePath, navigate]);
+
+
 
   return (
     <PremiumAuthLayout

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +15,9 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
+import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+
 
 type AnnonceurType = 'particulier' | 'agence' | 'promoteur';
 
@@ -37,7 +39,9 @@ interface FormData {
 
 export default function InscriptionAnnonceur() {
   const navigate = useNavigate();
+  const { isAuthenticated, identity, isLoading: identityLoading } = useConnectedIdentity();
   const [step, setStep] = useState(1);
+
   const [formData, setFormData] = useState<FormData>({
     type_annonceur: 'particulier',
     civilite: '',
@@ -53,6 +57,67 @@ export default function InscriptionAnnonceur() {
     confirmPassword: '',
     acceptCGU: false,
   });
+
+  // Utilisateur déjà connecté : on pré-remplit son identité (aucune ressaisie, aucun nouveau compte)
+  useEffect(() => {
+    if (!identity) return;
+    setFormData(prev => ({
+      ...prev,
+      prenom: prev.prenom || identity.prenom,
+      nom: prev.nom || identity.nom,
+      email: prev.email || identity.email,
+      telephone: prev.telephone || identity.telephone,
+      adresse: prev.adresse || identity.adresse,
+    }));
+  }, [identity]);
+
+  // Activation de l'espace annonceur pour un utilisateur DÉJÀ connecté (sans création de compte)
+  const activateMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Session expirée, veuillez vous reconnecter');
+
+      const { data: existing } = await supabase
+        .from('annonceurs')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing?.id) return existing.id;
+
+      const { data, error } = await supabase
+        .from('annonceurs')
+        .insert({
+          user_id: user.id,
+          type_annonceur: formData.type_annonceur,
+          civilite: formData.civilite || null,
+          nom: formData.nom,
+          prenom: formData.prenom || null,
+          nom_entreprise: formData.type_annonceur !== 'particulier' ? formData.nom_entreprise : null,
+          email: formData.email,
+          telephone: formData.telephone || null,
+          adresse: formData.adresse || null,
+          code_postal: formData.code_postal || null,
+          ville: formData.ville || null,
+          statut: 'actif',
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: () => {
+      toast.success('Espace annonceur activé');
+      navigate('/espace-annonceur/nouvelle-annonce');
+    },
+    onError: (error: any) => {
+      console.error('Activation annonceur error:', error);
+      toast.error(error.message || "Erreur lors de l'activation de l'espace annonceur");
+    },
+  });
+
+
 
   const typeOptions: { value: AnnonceurType; label: string; description: string; icon: any }[] = [
     { 
@@ -160,9 +225,15 @@ export default function InscriptionAnnonceur() {
         toast.error('Veuillez renseigner le nom de votre entreprise');
         return;
       }
+      // Déjà connecté : pas de mot de passe ni de nouveau compte
+      if (isAuthenticated) {
+        activateMutation.mutate();
+        return;
+      }
       setStep(3);
       return;
     }
+
 
     if (step === 3) {
       if (!formData.password || formData.password.length < 8) {
@@ -194,7 +265,7 @@ export default function InscriptionAnnonceur() {
           <div className="max-w-xl mx-auto">
             {/* Progress */}
             <div className="flex items-center justify-center gap-2 mb-8">
-              {[1, 2, 3].map((s) => (
+              {(isAuthenticated ? [1, 2] : [1, 2, 3]).map((s, i, arr) => (
                 <div key={s} className="flex items-center">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
                     s < step ? 'bg-success text-success-foreground' :
@@ -203,12 +274,13 @@ export default function InscriptionAnnonceur() {
                   }`}>
                     {s < step ? <Check className="h-5 w-5" /> : s}
                   </div>
-                  {s < 3 && (
+                  {i < arr.length - 1 && (
                     <div className={`w-16 h-1 mx-2 rounded ${s < step ? 'bg-success' : 'bg-muted'}`} />
                   )}
                 </div>
               ))}
             </div>
+
 
             <Card className="p-6 md:p-8">
               <form onSubmit={handleSubmit}>
@@ -223,9 +295,17 @@ export default function InscriptionAnnonceur() {
                       className="space-y-6"
                     >
                       <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold mb-2">Créer un compte annonceur</h1>
+                        <h1 className="text-2xl font-bold mb-2">
+                          {isAuthenticated ? 'Déposer une annonce' : 'Créer un compte annonceur'}
+                        </h1>
                         <p className="text-muted-foreground">Quel type d'annonceur êtes-vous ?</p>
+                        {isAuthenticated && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Vous êtes déjà connecté : vos informations personnelles sont reprises automatiquement.
+                          </p>
+                        )}
                       </div>
+
 
                       <div className="space-y-3">
                         {typeOptions.map((option) => {
@@ -375,11 +455,21 @@ export default function InscriptionAnnonceur() {
                           <ArrowLeft className="h-4 w-4 mr-2" />
                           Retour
                         </Button>
-                        <Button type="submit" className="flex-1">
-                          Continuer
-                          <ArrowRight className="h-4 w-4 ml-2" />
+                        <Button type="submit" className="flex-1" disabled={activateMutation.isPending || identityLoading}>
+                          {activateMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Activation...
+                            </>
+                          ) : (
+                            <>
+                              {isAuthenticated ? 'Continuer vers le dépôt' : 'Continuer'}
+                              <ArrowRight className="h-4 w-4 ml-2" />
+                            </>
+                          )}
                         </Button>
                       </div>
+
                     </motion.div>
                   )}
 
@@ -469,12 +559,15 @@ export default function InscriptionAnnonceur() {
                 </AnimatePresence>
               </form>
 
-              <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-                Déjà un compte ?{' '}
-                <Link to="/connexion-annonceur" className="text-primary font-medium hover:underline">
-                  Se connecter
-                </Link>
-              </div>
+              {!isAuthenticated && (
+                <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
+                  Déjà un compte ?{' '}
+                  <Link to="/connexion-annonceur" className="text-primary font-medium hover:underline">
+                    Se connecter
+                  </Link>
+                </div>
+              )}
+
             </Card>
           </div>
         </div>
