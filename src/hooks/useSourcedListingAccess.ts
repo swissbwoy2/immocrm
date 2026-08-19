@@ -32,9 +32,14 @@ export function useSourcedListingAccess() {
 
   const isLoading = loading || (userRole === 'client' && clientLoading);
 
+  // Tout utilisateur authentifié (client actif, staff, annonceur…) accède à la fiche interne.
+  const canViewInternalListing =
+    isStaff || isActiveClient === true || (!!user && userRole !== 'client');
+
   return {
     isLoading,
     /** true = la fiche interne complète peut être affichée */
-    canViewInternalListing: isStaff || isActiveClient === true,
+    canViewInternalListing,
   };
 }
+
