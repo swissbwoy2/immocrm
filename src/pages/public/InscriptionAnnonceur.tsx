@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +15,9 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
+import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+
 
 type AnnonceurType = 'particulier' | 'agence' | 'promoteur';
 
