@@ -382,7 +382,7 @@ export default function RechercheAnnonces() {
   const resultats = useMemo(() => {
     const merged = [...annonces, ...offresCards];
     const num = (v: any) => (v == null ? null : Number(v));
-    const cmp = (a: any, b: any) => {
+    const sortCmp = (a: any, b: any) => {
       switch (sortBy) {
         case 'prix_asc': return (num(a.prix) ?? 0) - (num(b.prix) ?? 0);
         case 'prix_desc': return (num(b.prix) ?? 0) - (num(a.prix) ?? 0);
@@ -393,8 +393,24 @@ export default function RechercheAnnonces() {
           return new Date(b.date_publication || 0).getTime() - new Date(a.date_publication || 0).getTime();
       }
     };
+    // Épinglage : les annonces mises en avant passent avant tout, quel que soit le tri
+    const cmp = (a: any, b: any) => {
+      const fa = a.est_mise_en_avant ? 1 : 0;
+      const fb = b.est_mise_en_avant ? 1 : 0;
+      if (fa !== fb) return fb - fa;
+      if (fa === 1) {
+        const ra = a.mise_en_avant_rang ?? Number.MAX_SAFE_INTEGER;
+        const rb = b.mise_en_avant_rang ?? Number.MAX_SAFE_INTEGER;
+        if (ra !== rb) return ra - rb;
+        const da = new Date(a.mise_en_avant_depuis || 0).getTime();
+        const db = new Date(b.mise_en_avant_depuis || 0).getTime();
+        if (da !== db) return db - da;
+      }
+      return sortCmp(a, b);
+    };
     return merged.sort(cmp);
   }, [annonces, offresCards, sortBy]);
+
 
   // ---- Scroll infini (aucun plafond dur sur le nombre d'annonces) ----
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
