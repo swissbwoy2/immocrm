@@ -79,6 +79,38 @@ serve(async (req) => {
       });
       const liveToken = await at.toJwt();
 
+      // Session de live : créée / réactivée par l'hôte.
+      let liveId: string | null = null;
+      try {
+        if (isHost) {
+          const { data: up } = await svc
+            .from("lives")
+            .upsert(
+              {
+                room_name: room,
+                hote_id: user.id,
+                visite_id: visiteId,
+                statut: "en_cours",
+                ended_at: null,
+              },
+              { onConflict: "room_name" },
+            )
+            .select("id")
+            .maybeSingle();
+          liveId = up?.id ?? null;
+        } else {
+          const { data: ex } = await svc
+            .from("lives")
+            .select("id")
+            .eq("room_name", room)
+            .maybeSingle();
+          liveId = ex?.id ?? null;
+        }
+      } catch (e) {
+        console.error("live session upsert failed", e);
+      }
+
+
       if (notify && isHost) {
         try {
           const clientIds = access.clientIds;
@@ -115,6 +147,8 @@ serve(async (req) => {
         isHost,
         room,
         visiteId,
+        liveId,
+
       });
     }
 

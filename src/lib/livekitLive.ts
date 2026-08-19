@@ -66,3 +66,27 @@ export async function setParticipantPermission(params: {
   if (error) throw new Error(await readInvokeError('livekit-participant-permissions', error));
   if ((data as any)?.error) throw new Error((data as any).error);
 }
+
+/** Host-only : promotion / rétrogradation d'un spectateur (max 2 intervenants). */
+export async function setLiveSpeaker(params: {
+  visiteId: string;
+  identity: string;
+  action: 'promote' | 'demote';
+}): Promise<void> {
+  await requireSession();
+  const { data, error } = await supabase.functions.invoke('livekit-live-promote', {
+    body: params,
+  });
+  if (error) throw new Error(await readInvokeError('livekit-live-promote', error));
+  if ((data as any)?.error) throw new Error((data as any).error);
+}
+
+/** Host-only : termine le live (ferme la room, statut = termine). */
+export async function endLive(visiteId: string): Promise<void> {
+  await requireSession();
+  const { data, error } = await supabase.functions.invoke('livekit-live-end', {
+    body: { visiteId },
+  });
+  if (error) throw new Error(await readInvokeError('livekit-live-end', error));
+  if ((data as any)?.error) throw new Error((data as any).error);
+}

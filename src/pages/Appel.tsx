@@ -29,7 +29,9 @@ export default function Appel() {
     searchParams.get('call') ||
     searchParams.get('conversationId') ||
     '';
-  const visiteId = searchParams.get('visit') || searchParams.get('visiteId') || '';
+  const visiteId =
+    params.visiteId || searchParams.get('visit') || searchParams.get('visiteId') || '';
+
   const mode = (searchParams.get('mode') as CallMode) || 'video';
 
   const messagerieHref = useMemo(() => {

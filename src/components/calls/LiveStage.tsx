@@ -25,6 +25,7 @@ import {
   ArrowDownCircle,
   UserX,
   Radio,
+  Hand,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,13 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 import { toast } from 'sonner';
-import { ParticipantAction, setParticipantPermission } from '@/lib/livekitLive';
+import {
+  ParticipantAction,
+  setParticipantPermission,
+  setLiveSpeaker,
+  endLive,
+} from '@/lib/livekitLive';
+
 
 interface LiveStageProps {
   /** Nom complet de la room LiveKit (visit:{visiteId}). */
@@ -214,11 +221,68 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
     }
   };
 
+  // --- Mains levées (data channel) -----------------------------------------
+  const visiteId = roomName.startsWith('visit:') ? roomName.slice('visit:'.length) : '';
+  const [raisedHands, setRaisedHands] = useState<string[]>([]);
+  const [handRaised, setHandRaised] = useState(false);
+  const [endingLive, setEndingLive] = useState(false);
+
+  useEffect(() => {
+    if (!room) return;
+    const onData = (payload: Uint8Array, participant?: any) => {
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload));
+        if (msg?.type !== 'raise_hand') return;
+        const identity = participant?.identity;
+        if (!identity) return;
+        setRaisedHands((prev) =>
+          msg.raised
+            ? prev.includes(identity)
+              ? prev
+              : [...prev, identity]
+            : prev.filter((i) => i !== identity),
+        );
+        if (isHost && msg.raised) {
+          toast.info(`${participant?.name || 'Un participant'} demande la parole`);
+        }
+      } catch {
+        /* message non pertinent */
+      }
+    };
+    room.on(RoomEvent.DataReceived, onData);
+    return () => {
+      room.off(RoomEvent.DataReceived, onData);
+    };
+  }, [room, isHost]);
+
+  const toggleHand = async () => {
+    const next = !handRaised;
+    setHandRaised(next);
+    try {
+      await localParticipant?.publishData(
+        new TextEncoder().encode(JSON.stringify({ type: 'raise_hand', raised: next })),
+        { reliable: true },
+      );
+      toast.success(next ? 'Demande de parole envoyée' : 'Demande de parole retirée');
+    } catch (e: any) {
+      setHandRaised(!next);
+      toast.error('Impossible d’envoyer la demande', { description: e?.message });
+    }
+  };
+
   // --- Actions hôte --------------------------------------------------------
   const runHostAction = async (identity: string, action: ParticipantAction, name: string) => {
     setBusyIdentity(identity);
     try {
-      await setParticipantPermission({ room: roomName, identity, action });
+      if ((action === 'promote' || action === 'demote') && visiteId) {
+        // Live : promotion contrôlée côté serveur (max 2 intervenants).
+        await setLiveSpeaker({ visiteId, identity, action });
+      } else {
+        await setParticipantPermission({ room: roomName, identity, action });
+      }
+      if (action === 'promote' || action === 'remove') {
+        setRaisedHands((prev) => prev.filter((i) => i !== identity));
+      }
       const labels: Record<ParticipantAction, string> = {
         promote: `${name} est monté en direct`,
         demote: `${name} est repassé spectateur`,
@@ -232,6 +296,24 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
       setBusyIdentity(null);
     }
   };
+
+  const handleLeave = async () => {
+    if (!isHost || !visiteId) {
+      onLeave();
+      return;
+    }
+    setEndingLive(true);
+    try {
+      await endLive(visiteId);
+      toast.success('Live terminé');
+    } catch (e: any) {
+      toast.error('Fermeture du live incomplète', { description: e?.message });
+    } finally {
+      setEndingLive(false);
+      onLeave();
+    }
+  };
+
 
   const people = useMemo(
     () =>
@@ -341,14 +423,26 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
                         {p.isLocal ? ' (vous)' : ''}
                       </p>
                       <p className="text-[11px] text-white/60">
-                        {p.isHost ? 'Hôte' : p.live ? 'En direct' : 'Spectateur'}
+                        {p.isHost
+                          ? 'Hôte'
+                          : p.live
+                            ? 'En direct'
+                            : raisedHands.includes(p.identity)
+                              ? 'Demande la parole'
+                              : 'Spectateur'}
                       </p>
                     </div>
+                    {!p.live && raisedHands.includes(p.identity) && (
+                      <Badge className="bg-amber-500 text-white border-0 text-[10px] gap-1">
+                        <Hand className="h-3 w-3" /> Main levée
+                      </Badge>
+                    )}
                     {p.live && !p.isHost && (
                       <Badge className="bg-[hsl(158_55%_45%)] text-white border-0 text-[10px]">
                         Direct
                       </Badge>
                     )}
+
                   </div>
 
                   {isHost && !p.isLocal && !p.isHost && (
@@ -478,6 +572,25 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
           </Button>
         )}
 
+        {!isHost && !canPublish && (
+          <Button
+            type="button"
+            onClick={toggleHand}
+            aria-label="Demander la parole"
+            className={cn(
+              'h-12 rounded-full px-4 gap-2',
+              handRaised
+                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                : 'bg-white/15 hover:bg-white/25 text-white',
+            )}
+          >
+            <Hand className="h-5 w-5" />
+            <span className="text-sm hidden sm:inline">
+              {handRaised ? 'Main levée' : 'Demander la parole'}
+            </span>
+          </Button>
+        )}
+
         {isHost && (
           <Button
             type="button"
@@ -493,7 +606,8 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
         <Button
           type="button"
           size="icon"
-          onClick={onLeave}
+          onClick={handleLeave}
+          disabled={endingLive}
           aria-label={isHost ? 'Terminer le live' : 'Quitter le live'}
           className="h-12 w-12 rounded-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
         >
