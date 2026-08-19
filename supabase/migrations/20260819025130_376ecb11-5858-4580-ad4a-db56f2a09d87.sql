@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.sync_annonceur_contact_to_annonces() FROM PUBLIC, anon, authenticated;

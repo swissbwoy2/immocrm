@@ -4,7 +4,9 @@ const SYNC_SECRET = Deno.env.get("IMMORAMA_SYNC_SECRET") || "";
 const SOURCE = "immo-rama.ch";
 const ANNONCEUR_ID = "11110000-0000-4000-8000-000000000001";
 
-const DEFAULT_CONTACT = {
+// Valeurs initiales uniquement : le profil annonceur immo-rama.ch (rattaché à l'admin)
+// reste la source de vérité et peut être modifié à tout moment.
+const FALLBACK_CONTACT = {
   nom_contact: "Immo-Rama",
   email_contact: "info@immo-rama.ch",
   telephone_contact: "+41 22 519 09 04",
@@ -96,6 +98,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? [payload.property]
         : [payload];
 
+  // Source de vérité des coordonnées : le profil annonceur immo-rama.ch (compte admin)
+  const { data: annonceurProfil } = await supabase
+    .from("annonceurs")
+    .select("nom, prenom, nom_entreprise, email, telephone")
+    .eq("id", ANNONCEUR_ID)
+    .maybeSingle();
+
+  const contact = {
+    nom_contact:
+      annonceurProfil?.nom_entreprise ||
+      [annonceurProfil?.prenom, annonceurProfil?.nom].filter(Boolean).join(" ") ||
+      FALLBACK_CONTACT.nom_contact,
+    email_contact: annonceurProfil?.email || FALLBACK_CONTACT.email_contact,
+    telephone_contact: annonceurProfil?.telephone || FALLBACK_CONTACT.telephone_contact,
+  };
+
   const results: any[] = [];
 
   for (const p of list) {
@@ -151,9 +169,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         est_mise_en_avant: p.featured === true,
         statut: "publie",
         date_publication: p.published_at ?? p.date_publication ?? new Date().toISOString(),
-        nom_contact: p.contact_name ?? DEFAULT_CONTACT.nom_contact,
-        email_contact: p.contact_email ?? DEFAULT_CONTACT.email_contact,
-        telephone_contact: p.contact_phone ?? DEFAULT_CONTACT.telephone_contact,
+        nom_contact: contact.nom_contact,
+        email_contact: contact.email_contact,
+        telephone_contact: contact.telephone_contact,
         updated_at: new Date().toISOString(),
       };
 
