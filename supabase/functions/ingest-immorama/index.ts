@@ -98,6 +98,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? [payload.property]
         : [payload];
 
+  // Source de vérité des coordonnées : le profil annonceur immo-rama.ch (compte admin)
+  const { data: annonceurProfil } = await supabase
+    .from("annonceurs")
+    .select("nom, prenom, nom_entreprise, email, telephone")
+    .eq("id", ANNONCEUR_ID)
+    .maybeSingle();
+
+  const contact = {
+    nom_contact:
+      annonceurProfil?.nom_entreprise ||
+      [annonceurProfil?.prenom, annonceurProfil?.nom].filter(Boolean).join(" ") ||
+      FALLBACK_CONTACT.nom_contact,
+    email_contact: annonceurProfil?.email || FALLBACK_CONTACT.email_contact,
+    telephone_contact: annonceurProfil?.telephone || FALLBACK_CONTACT.telephone_contact,
+  };
+
   const results: any[] = [];
 
   for (const p of list) {
