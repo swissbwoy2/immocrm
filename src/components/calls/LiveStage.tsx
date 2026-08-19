@@ -25,6 +25,7 @@ import {
   ArrowDownCircle,
   UserX,
   Radio,
+  Hand,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -571,6 +572,25 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
           </Button>
         )}
 
+        {!isHost && !canPublish && (
+          <Button
+            type="button"
+            onClick={toggleHand}
+            aria-label="Demander la parole"
+            className={cn(
+              'h-12 rounded-full px-4 gap-2',
+              handRaised
+                ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                : 'bg-white/15 hover:bg-white/25 text-white',
+            )}
+          >
+            <Hand className="h-5 w-5" />
+            <span className="text-sm hidden sm:inline">
+              {handRaised ? 'Main levée' : 'Demander la parole'}
+            </span>
+          </Button>
+        )}
+
         {isHost && (
           <Button
             type="button"
@@ -586,7 +606,8 @@ export function LiveStage({ room: roomName, isHost, onInvite, onLeave }: LiveSta
         <Button
           type="button"
           size="icon"
-          onClick={onLeave}
+          onClick={handleLeave}
+          disabled={endingLive}
           aria-label={isHost ? 'Terminer le live' : 'Quitter le live'}
           className="h-12 w-12 rounded-full bg-destructive hover:bg-destructive/90 text-destructive-foreground"
         >
