@@ -308,39 +308,44 @@ export default function RechercheAnnonces() {
     });
   }, [offresBrutes, transactionType, neufOnly, lieux, categorieSlugs, prixMin, prixMax, piecesMin, piecesMax, surfaceMin, surfaceMax, motsCles]);
 
+  const { canViewInternalListing } = useSourcedListingAccess();
+
+  // En public : aucune récupération d'image tierce (og:image / galerie)
   const previewUrls = useMemo(
     () =>
-      offresFiltrees
-        .filter((o) => galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce)
-        .slice(0, 60)
-        .map((o) => o.lien_annonce as string),
-    [offresFiltrees],
+      canViewInternalListing
+        ? offresFiltrees
+            .filter((o) => galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce)
+            .slice(0, 60)
+            .map((o) => o.lien_annonce as string)
+        : [],
+    [offresFiltrees, canViewInternalListing],
   );
   const { data: previews = {} } = useOffresPreviews(previewUrls);
 
-  // Extraction serveur (cache en base) des galeries des offres visibles sans photo
+  // Extraction serveur : galeries (privé uniquement) + géocodage (toujours utile pour la carte)
   const extractionIds = useMemo(
     () =>
       offresFiltrees
         .filter(
           (o) =>
-            (galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce) ||
+            (canViewInternalListing && galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce) ||
             o.latitude == null ||
             o.longitude == null,
         )
         .slice(0, 8)
         .map((o) => o.id),
-    [offresFiltrees],
+    [offresFiltrees, canViewInternalListing],
   );
   useOffresImageExtraction(extractionIds);
-
-  const { canViewInternalListing } = useSourcedListingAccess();
 
   const offresCards = useMemo(
     () =>
       offresFiltrees.map((o) => {
         const gal = galerieUrls(o.medias_galerie);
-        const photo = gal[0] || (o.lien_annonce ? previews[o.lien_annonce] : undefined);
+        const photo = canViewInternalListing
+          ? gal[0] || (o.lien_annonce ? previews[o.lien_annonce] : undefined)
+          : undefined;
         return {
           id: o.id,
           slug: `offre/${o.id}`,
@@ -362,6 +367,7 @@ export default function RechercheAnnonces() {
       }),
     [offresFiltrees, previews, canViewInternalListing],
   );
+
 
   const resultats = useMemo(() => {
     const merged = [...annonces, ...offresCards];
