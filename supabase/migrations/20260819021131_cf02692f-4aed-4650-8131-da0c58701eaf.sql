@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.notify_on_new_annonce_message() FROM PUBLIC, anon, authenticated;
