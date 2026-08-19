@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Bed, Maximize2, Building2, Heart, Star, ExternalLink } from 'lucide-react';
+import { MapPin, Bed, Maximize2, Building2, Heart, Star, ExternalLink, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -148,12 +148,13 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
             >
               {annonce.type_transaction === 'vente' ? 'À vendre' : 'À louer'}
             </Badge>
-            {featured && annonce.est_mise_en_avant && (
-              <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] shadow-sm px-1.5 py-0.5">
-                <Star className="h-2.5 w-2.5 mr-0.5 fill-current" />
-                Vedette
+            {annonce.est_mise_en_avant && (
+              <Badge className="border-0 bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-bold shadow-md px-2 py-0.5 ring-1 ring-primary/30">
+                <Sparkles className="h-2.5 w-2.5 mr-0.5 fill-current" />
+                Excellente offre
               </Badge>
             )}
+
             {externalOnly && (
               <Badge variant="secondary" className="bg-background/95 text-foreground/80 text-[10px] shadow-sm px-1.5 py-0.5">
                 <ExternalLink className="h-2.5 w-2.5 mr-0.5" />

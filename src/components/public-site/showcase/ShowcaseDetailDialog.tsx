@@ -81,6 +81,11 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
       )}
 
       <div className="flex flex-wrap gap-2">
+        {item.est_mise_en_avant && (
+          <Badge className="border-0 bg-gradient-to-r from-primary to-accent text-primary-foreground font-bold shadow-md">
+            Excellente offre
+          </Badge>
+        )}
         {item.type_bien && <Badge variant="secondary">{item.type_bien}</Badge>}
         {item.pieces != null && <Badge variant="secondary">{item.pieces} pièces</Badge>}
         {item.surface != null && <Badge variant="secondary">{item.surface} m²</Badge>}

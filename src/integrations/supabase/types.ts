@@ -1097,6 +1097,8 @@ export type Database = {
           longitude: number | null
           meta_description: string | null
           meta_title: string | null
+          mise_en_avant_depuis: string | null
+          mise_en_avant_rang: number | null
           modere_par: string | null
           motif_refus: string | null
           mots_cles: string[] | null
@@ -1193,6 +1195,8 @@ export type Database = {
           longitude?: number | null
           meta_description?: string | null
           meta_title?: string | null
+          mise_en_avant_depuis?: string | null
+          mise_en_avant_rang?: number | null
           modere_par?: string | null
           motif_refus?: string | null
           mots_cles?: string[] | null
@@ -1289,6 +1293,8 @@ export type Database = {
           longitude?: number | null
           meta_description?: string | null
           meta_title?: string | null
+          mise_en_avant_depuis?: string | null
+          mise_en_avant_rang?: number | null
           modere_par?: string | null
           motif_refus?: string | null
           mots_cles?: string[] | null
@@ -13321,6 +13327,7 @@ export type Database = {
         Returns: {
           adresse: string
           date_envoi: string
+          est_mise_en_avant: boolean
           etage: string
           id: string
           lien_annonce: string
@@ -13642,6 +13649,8 @@ export type Database = {
           longitude: number | null
           meta_description: string | null
           meta_title: string | null
+          mise_en_avant_depuis: string | null
+          mise_en_avant_rang: number | null
           modere_par: string | null
           motif_refus: string | null
           mots_cles: string[] | null

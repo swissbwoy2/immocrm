@@ -35,6 +35,8 @@ export default function PublicAnnonces() {
         `)
         .eq('statut', 'publie')
         .eq('est_mise_en_avant', true)
+        .order('mise_en_avant_rang', { ascending: true, nullsFirst: false })
+        .order('mise_en_avant_depuis', { ascending: false, nullsFirst: false })
         .order('date_publication', { ascending: false })
         .limit(6);
       
@@ -56,6 +58,9 @@ export default function PublicAnnonces() {
           photos_annonces_publiques(url, est_principale)
         `)
         .eq('statut', 'publie')
+        .order('est_mise_en_avant', { ascending: false, nullsFirst: false })
+        .order('mise_en_avant_rang', { ascending: true, nullsFirst: false })
+        .order('mise_en_avant_depuis', { ascending: false, nullsFirst: false })
         .order('date_publication', { ascending: false })
         .limit(9);
       

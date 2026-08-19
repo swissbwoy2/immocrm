@@ -7,7 +7,7 @@ import {
   ArrowLeft, Heart, Share2, Flag, MapPin, Bed, Bath, Maximize, 
   Calendar, Building2, Check, Phone, Mail, MessageCircle, 
   Star, ChevronLeft, ChevronRight, X, User, Shield, Clock,
-  Home, Car, Thermometer, Wifi, Trees, Waves
+  Home, Car, Thermometer, Wifi, Trees, Waves, Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -391,9 +391,16 @@ export default function AnnonceDetail() {
               {/* Header */}
               <div>
                 <div className="flex flex-wrap gap-2 mb-3">
+                  {annonce.est_mise_en_avant && (
+                    <Badge className="border-0 bg-gradient-to-r from-primary to-accent text-primary-foreground font-bold shadow-md ring-1 ring-primary/30">
+                      <Sparkles className="h-3.5 w-3.5 mr-1 fill-current" />
+                      Excellente offre
+                    </Badge>
+                  )}
                   <Badge variant={annonce.type_transaction === 'location' ? 'default' : 'secondary'}>
                     {annonce.type_transaction === 'location' ? 'À louer' : 'À vendre'}
                   </Badge>
+
                   {annonce.disponible_immediatement && (
                     <Badge variant="outline" className="text-success border-success">
                       <Check className="h-3 w-3 mr-1" />
