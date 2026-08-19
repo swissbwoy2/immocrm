@@ -58,6 +58,67 @@ export default function InscriptionAnnonceur() {
     acceptCGU: false,
   });
 
+  // Utilisateur déjà connecté : on pré-remplit son identité (aucune ressaisie, aucun nouveau compte)
+  useEffect(() => {
+    if (!identity) return;
+    setFormData(prev => ({
+      ...prev,
+      prenom: prev.prenom || identity.prenom,
+      nom: prev.nom || identity.nom,
+      email: prev.email || identity.email,
+      telephone: prev.telephone || identity.telephone,
+      adresse: prev.adresse || identity.adresse,
+    }));
+  }, [identity]);
+
+  // Activation de l'espace annonceur pour un utilisateur DÉJÀ connecté (sans création de compte)
+  const activateMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Session expirée, veuillez vous reconnecter');
+
+      const { data: existing } = await supabase
+        .from('annonceurs')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing?.id) return existing.id;
+
+      const { data, error } = await supabase
+        .from('annonceurs')
+        .insert({
+          user_id: user.id,
+          type_annonceur: formData.type_annonceur,
+          civilite: formData.civilite || null,
+          nom: formData.nom,
+          prenom: formData.prenom || null,
+          nom_entreprise: formData.type_annonceur !== 'particulier' ? formData.nom_entreprise : null,
+          email: formData.email,
+          telephone: formData.telephone || null,
+          adresse: formData.adresse || null,
+          code_postal: formData.code_postal || null,
+          ville: formData.ville || null,
+          statut: 'actif',
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: () => {
+      toast.success('Espace annonceur activé');
+      navigate('/espace-annonceur/nouvelle-annonce');
+    },
+    onError: (error: any) => {
+      console.error('Activation annonceur error:', error);
+      toast.error(error.message || "Erreur lors de l'activation de l'espace annonceur");
+    },
+  });
+
+
+
   const typeOptions: { value: AnnonceurType; label: string; description: string; icon: any }[] = [
     { 
       value: 'particulier', 
