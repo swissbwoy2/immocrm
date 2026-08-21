@@ -21,10 +21,7 @@ export function DashboardBanner({ wrapperClassName, className }: Props) {
 
   return (
     <div className={cn('mb-3 md:mb-4', wrapperClassName)}>
-      <DashboardAdBanner
-        banner={banner}
-        className={cn('max-h-[132px] md:max-h-[168px]', className)}
-      />
+      <DashboardAdBanner banner={banner} compact className={className} />
     </div>
   );
 }
