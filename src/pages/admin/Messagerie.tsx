@@ -573,7 +573,7 @@ const Messagerie = () => {
   const conversationsList = (
     <>
       <StoriesBar />
-      <div className="p-4 border-b border-border/50 space-y-3">
+      <div className="p-3 border-b border-border/50 space-y-3">
         <div className="flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <SidebarTrigger className="shrink-0" />
@@ -594,7 +594,7 @@ const Messagerie = () => {
         </div>
       </div>
       <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
         ) : filteredConversations.length === 0 ? (
