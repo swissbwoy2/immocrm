@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ChevronRight } from 'lucide-react';
+
 
 interface BreadcrumbItem {
   label: string;
