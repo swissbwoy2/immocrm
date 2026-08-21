@@ -315,7 +315,7 @@ export default function AgentDashboard() {
                 <Button
                   variant="outline"
                   onClick={() => navigate('/agent/messagerie')}
-                  className="glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+                  className="glass-morphism border-primary/20 transition-colors duration-200"
                 >
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
@@ -326,7 +326,7 @@ export default function AgentDashboard() {
           />
 
           {/* KPIs avec effets modernes */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 items-stretch">
             <PremiumKPICard 
               title="Clients actifs" 
               value={clientsActifs} 
