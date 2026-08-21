@@ -81,15 +81,16 @@ export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = (
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 mt-0.5">
+        <div className="flex items-center justify-between gap-2 mt-0.5 min-w-0 max-w-full">
           <p
             className={cn(
-              'truncate text-xs',
+              'truncate min-w-0 flex-1 text-xs',
               unread ? 'text-foreground/80' : 'text-muted-foreground',
             )}
           >
             {lastMessage || 'Aucun message'}
           </p>
+
           <div className="flex items-center gap-1 shrink-0">
             {isArchived && (
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
