@@ -172,7 +172,11 @@ export default function AnnonceDetail() {
   }, [annonce]);
 
   const handleShare = async () => {
-    const url = window.location.href;
+    const ogBase = import.meta.env.VITE_SUPABASE_URL;
+    const slugOrId = annonce?.slug || annonce?.id;
+    const url = ogBase && slugOrId
+      ? `${ogBase}/functions/v1/annonce-og?slug=${encodeURIComponent(slugOrId)}`
+      : window.location.href;
     const title = annonce?.titre ?? 'Annonce';
     const text = annonce?.description_courte ?? '';
     try {

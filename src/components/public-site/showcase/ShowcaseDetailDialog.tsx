@@ -115,9 +115,11 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
       {item.prix != null && <p className="text-xl font-bold text-primary">{formatPrix(item.prix)}</p>}
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Button className="flex-1" onClick={onDeposer}>
-          Déposer mon dossier
-        </Button>
+        {item.type_transaction !== 'vente' && (
+          <Button className="flex-1" onClick={onDeposer}>
+            Déposer mon dossier
+          </Button>
+        )}
         {item.lien_annonce && (
           <Button asChild variant="outline" className="flex-1">
             {item.lien_annonce.startsWith('/') ? (

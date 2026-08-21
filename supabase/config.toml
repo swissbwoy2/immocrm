@@ -206,3 +206,5 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.annonce-alertes-unsubscribe]
     verify_jwt = false
+  [functions.annonce-og]
+    verify_jwt = false
