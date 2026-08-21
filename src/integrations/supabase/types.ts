@@ -11904,6 +11904,83 @@ export type Database = {
           },
         ]
       }
+      support_ticket_messages: {
+        Row: {
+          author_id: string
+          author_role: string
+          body: string
+          created_at: string
+          id: string
+          ticket_id: string
+        }
+        Insert: {
+          author_id: string
+          author_role: string
+          body: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+        }
+        Update: {
+          author_id?: string
+          author_role?: string
+          body?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_agent_id: string | null
+          categorie: string
+          closed_at: string | null
+          created_at: string
+          id: string
+          last_message_at: string
+          priorite: string
+          statut: string
+          sujet: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_agent_id?: string | null
+          categorie?: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          priorite?: string
+          statut?: string
+          sujet: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_agent_id?: string | null
+          categorie?: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          priorite?: string
+          statut?: string
+          sujet?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -13229,6 +13306,10 @@ export type Database = {
         Returns: boolean
       }
       assert_not_demo: { Args: never; Returns: boolean }
+      build_offre_msg: {
+        Args: { o_id: string; visite_txt: string }
+        Returns: string
+      }
       calculate_match_score: {
         Args: { p_criteria: Json; p_property_result_id: string }
         Returns: undefined
@@ -13541,6 +13622,23 @@ export type Database = {
         Returns: undefined
       }
       purge_old_data: { Args: never; Returns: Json }
+      push_offre: {
+        Args: {
+          p_adresse: string
+          p_annee: number
+          p_clients: string[]
+          p_descr: string
+          p_dispo: string
+          p_etage: string
+          p_lien: string
+          p_pieces: number
+          p_prix: number
+          p_surface: number
+          p_visite_ts?: string
+          p_visite_txt?: string
+        }
+        Returns: string
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
