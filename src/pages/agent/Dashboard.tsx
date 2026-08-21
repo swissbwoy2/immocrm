@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Bike, Heart } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Bike, Heart, Handshake, AlertTriangle } from 'lucide-react';
 import { PremiumPageShellV2, PremiumPageHeaderV2 } from '@/components/dashboard/v2';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
@@ -315,7 +315,7 @@ export default function AgentDashboard() {
                 <Button
                   variant="outline"
                   onClick={() => navigate('/agent/messagerie')}
-                  className="glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+                  className="glass-morphism border-primary/20 transition-colors duration-200"
                 >
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
@@ -326,7 +326,7 @@ export default function AgentDashboard() {
           />
 
           {/* KPIs avec effets modernes */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 items-stretch">
             <PremiumKPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -486,8 +486,8 @@ export default function AgentDashboard() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    🤝 Visites déléguées par vos clients
+                    <Handshake className="w-5 h-5" />
+                    Visites déléguées par vos clients
                   </CardTitle>
                   <Badge variant="default" className="animate-pulse">
                     {visitesDelegues.length}
@@ -593,7 +593,7 @@ export default function AgentDashboard() {
             {/* Deadlines critiques */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold">⚠️ Deadlines critiques</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-warning" />Deadlines critiques</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
@@ -667,7 +667,7 @@ export default function AgentDashboard() {
           {transactionsCeMois.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold">✅ Affaires conclues ce mois</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2"><CheckCircle className="w-5 h-5 text-success" />Affaires conclues ce mois</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {transactionsCeMois.map(transaction => {
@@ -711,7 +711,7 @@ export default function AgentDashboard() {
           {/* Dernières offres */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">📤 Dernières offres envoyées</CardTitle>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2"><Send className="w-5 h-5 text-primary" />Dernières offres envoyées</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {offres.length > 0 ? (
@@ -773,7 +773,7 @@ export default function AgentDashboard() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">📄 Documents clients</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2"><FileText className="w-5 h-5 text-primary" />Documents clients</CardTitle>
                 <Button variant="outline" size="sm" onClick={() => navigate('/agent/documents')}>
                   Voir tout
                 </Button>

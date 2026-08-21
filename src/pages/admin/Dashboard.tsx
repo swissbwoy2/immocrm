@@ -288,7 +288,7 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 onClick={() => navigate('/admin/messagerie')}
-                className="glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+                className="glass-morphism border-primary/20 transition-colors duration-200"
               >
                 <Bell className="w-4 h-4 mr-2" />
                 Messages
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
         />
 
         {/* KPIs avec composants Premium */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 items-stretch">
           <PremiumKPICard 
             title="Clients actifs" 
             value={clientsActifs} 
@@ -378,7 +378,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Section Statistiques détaillées avec glassmorphism */}
-        <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <div className="animate-fade-in motion-reduce:animate-none" style={{ animationDelay: '400ms' }}>
           <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
             <CardContent className="relative p-0">
@@ -393,7 +393,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Statistiques de recommandation */}
-        <div className="mb-8 animate-fade-in" style={{ animationDelay: '450ms' }}>
+        <div className="animate-fade-in motion-reduce:animate-none" style={{ animationDelay: '450ms' }}>
           <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
             <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-50" />
             <CardContent className="relative p-0">
@@ -403,7 +403,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Projection financière agence */}
-        <div className="mb-8 animate-fade-in" style={{ animationDelay: '475ms' }}>
+        <div className="animate-fade-in motion-reduce:animate-none" style={{ animationDelay: '475ms' }}>
           <AgencyProjectionSection 
             projections={agencyProjections}
             totalCommissionAgence={totalCommissionAgence}
@@ -411,7 +411,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Répartition des agents avec effets modernes */}
-        <Card className="mb-8 animate-fade-in group relative overflow-hidden hover:shadow-xl transition-all duration-500" style={{ animationDelay: '500ms' }}>
+        <Card className="animate-fade-in motion-reduce:animate-none group relative overflow-hidden hover:shadow-xl transition-all duration-500" style={{ animationDelay: '500ms' }}>
             {/* Effet shine au hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />

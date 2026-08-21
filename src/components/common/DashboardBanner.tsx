@@ -20,8 +20,12 @@ export function DashboardBanner({ wrapperClassName, className }: Props) {
   if (!banner?.image_url) return null;
 
   return (
-    <div className={cn('mb-4 md:mb-6', wrapperClassName)}>
-      <DashboardAdBanner banner={banner} className={className} />
+    <div className={cn('mb-3 md:mb-4', wrapperClassName)}>
+      <DashboardAdBanner
+        banner={banner}
+        className={cn('max-h-[132px] md:max-h-[168px]', className)}
+      />
     </div>
   );
 }
+

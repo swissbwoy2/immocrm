@@ -730,7 +730,7 @@ function ClientDashboardLocation() {
           </SectionErrorBoundary>
 
           {/* === Tuiles d'action XL — 2 colonnes principales === */}
-          <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 items-stretch">
             <QuickTileXL
               icon={FolderOpen}
               title="Mon dossier"
@@ -749,7 +749,7 @@ function ClientDashboardLocation() {
           </div>
 
           {/* === Tuiles secondaires pleine largeur === */}
-          <div className="grid grid-cols-1 gap-3 mb-8">
+          <div className="grid grid-cols-1 gap-3">
             <QuickTileXL
               icon={FileText}
               variant="wide"
@@ -820,7 +820,7 @@ function ClientDashboardLocation() {
 
           {/* Solvabilité et Checklist */}
           {profileActif !== false && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="animate-fade-in group" style={{ animationDelay: '220ms' }}>
                 <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -885,8 +885,8 @@ function ClientDashboardLocation() {
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                          🚀 Vos candidatures en cours
+                        <h3 className="text-xl font-bold text-foreground">
+                          Vos candidatures en cours
                         </h3>
                         <p className="text-sm text-muted-foreground">
                           Suivez la progression de vos dossiers
@@ -931,7 +931,7 @@ function ClientDashboardLocation() {
           )}
 
           {/* Mon mandat & Mon agent - Grid Premium */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Mon mandat - PremiumMandatProgress */}
             <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
               {profileActif === false ? (
