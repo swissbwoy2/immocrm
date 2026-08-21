@@ -38,7 +38,7 @@ project_id = "ydljsdscdnqrqnjvqela"
   [functions.create-coursier]
     verify_jwt = false
   [functions.create-final-invoice]
-    verify_jwt = false
+    verify_jwt = true
   [functions.create-proprietaire]
     verify_jwt = false
   [functions.create-public-user]
@@ -56,7 +56,7 @@ project_id = "ydljsdscdnqrqnjvqela"
   [functions.generate-dossier-complet-pdf]
     verify_jwt = true
   [functions.generate-estimation-report-pdf]
-    verify_jwt = false
+    verify_jwt = true
   [functions.generate-full-mandat-pdf]
     verify_jwt = false
   [functions.generate-share-link]
@@ -92,7 +92,7 @@ project_id = "ydljsdscdnqrqnjvqela"
   [functions.meta-leads-backfill]
     verify_jwt = true
   [functions.migrate-documents-to-storage]
-    verify_jwt = false
+    verify_jwt = true
   [functions.notify-new-lead]
     verify_jwt = false
   [functions.notify-unassigned-clients]
@@ -146,7 +146,7 @@ project_id = "ydljsdscdnqrqnjvqela"
   [functions.send-followup-campaign]
     verify_jwt = false
   [functions.send-invoice-reminders]
-    verify_jwt = false
+    verify_jwt = true
   [functions.send-mandat-pdf]
     verify_jwt = false
   [functions.send-notification-email]
@@ -178,7 +178,7 @@ project_id = "ydljsdscdnqrqnjvqela"
   [functions.sync-all-imap-emails]
     verify_jwt = false
   [functions.sync-google-calendar]
-    verify_jwt = false
+    verify_jwt = true
   [functions.track-email-click]
     verify_jwt = false
   [functions.track-email-open]
@@ -188,7 +188,7 @@ project_id = "ydljsdscdnqrqnjvqela"
   [functions.contact-annonce]
     verify_jwt = false
   [functions.annonce-moderation-notify]
-    verify_jwt = false
+    verify_jwt = true
   [functions.livekit-token]
     verify_jwt = true
   [functions.livekit-invite]

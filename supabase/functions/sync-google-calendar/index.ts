@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireAuth } from "../_shared/require-admin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +41,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth.response!;
+
   try {
     const clientId = Deno.env.get('GOOGLE_CALENDAR_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CALENDAR_CLIENT_SECRET');
@@ -61,10 +64,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    if (userId !== auth.userId) {
+      return new Response(JSON.stringify({ error: 'Accès refusé' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = auth.admin!;
 
     // Get user's token
     const { data: tokenRow, error: tokenError } = await supabase

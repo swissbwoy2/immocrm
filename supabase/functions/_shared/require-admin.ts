@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 export interface AuthResult {
   ok: boolean;
   userId?: string;
+  roles?: string[];
   admin?: SupabaseClient;
   response?: Response;
 }
@@ -25,7 +26,10 @@ function jsonError(status: number, message: string) {
  * If `requireAdmin` is true, also checks the caller has the `admin` role in `user_roles`.
  * Returns an admin (service-role) Supabase client on success.
  */
-export async function requireAuth(req: Request, opts: { requireAdmin?: boolean } = {}): Promise<AuthResult> {
+export async function requireAuth(
+  req: Request,
+  opts: { requireAdmin?: boolean; allowedRoles?: string[] } = {},
+): Promise<AuthResult> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -46,16 +50,23 @@ export async function requireAuth(req: Request, opts: { requireAdmin?: boolean }
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  if (opts.requireAdmin) {
-    const { data: roles } = await admin
+  let roleNames: string[] = [];
+  if (opts.requireAdmin || opts.allowedRoles?.length) {
+    const { data: roles, error: rolesError } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", userData.user.id);
-    const isAdmin = (roles ?? []).some((r: { role: string }) => r.role === "admin");
-    if (!isAdmin) {
+    if (rolesError) {
+      console.error("requireAuth: lecture des rôles impossible", { userId: userData.user.id });
+      return { ok: false, response: jsonError(500, "Vérification des droits impossible") };
+    }
+    roleNames = (roles ?? []).map((row: { role: string }) => row.role);
+
+    const allowedRoles = opts.requireAdmin ? ["admin"] : (opts.allowedRoles ?? []);
+    if (!roleNames.some((role) => allowedRoles.includes(role))) {
       return { ok: false, response: jsonError(403, "Accès refusé") };
     }
   }
 
-  return { ok: true, userId: userData.user.id, admin };
+  return { ok: true, userId: userData.user.id, roles: roleNames, admin };
 }

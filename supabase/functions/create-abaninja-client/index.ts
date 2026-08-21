@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { enforceRateLimit } from '../_shared/rate-limit.ts';
+import { createInvoiceWorkflowToken } from '../_shared/invoice-workflow-token.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +23,6 @@ function parseSwissAddress(adresse: string): { street: string; zip_code: string;
   // Try to find a 4-digit Swiss postal code
   const zipMatch = adresse.match(/\b(\d{4})\b/);
   if (!zipMatch) {
-    console.log('Could not find zip code in address:', adresse);
     return null;
   }
   
@@ -34,13 +35,12 @@ function parseSwissAddress(adresse: string): { street: string; zip_code: string;
   street = street.replace(/,\s*$/, '').trim();
   
   // City is everything after the zip code
-  let city = adresse.substring(zipIndex + 4).trim();
+  const city = adresse.substring(zipIndex + 4).trim();
   
   // Determine canton/state based on postal code ranges (simplified)
   const state = getSwissState(zipCode);
   
   if (!street || !city) {
-    console.log('Could not parse street or city from address:', adresse);
     return null;
   }
   
@@ -100,9 +100,29 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const limited = await enforceRateLimit(supabase, req, corsHeaders, 'abaninja-public-client', {
+      maxRequests: 5,
+      windowSeconds: 3600,
+    });
+    if (limited) return limited;
+
     const { prenom, nom, email, telephone, adresse } = await req.json() as CreateClientRequest;
 
-    console.log('Creating AbaNinja client:', { prenom, nom, email });
+    const cleanPrenom = String(prenom || '').trim();
+    const cleanNom = String(nom || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanTelephone = String(telephone || '').trim();
+    const cleanAdresse = String(adresse || '').trim();
+    if (!cleanPrenom || !cleanNom || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) ||
+        cleanPrenom.length > 100 || cleanNom.length > 100 || cleanEmail.length > 254 ||
+        cleanTelephone.length > 40 || cleanAdresse.length > 500) {
+      return new Response(JSON.stringify({ success: false, error: 'Données client invalides' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Creating AbaNinja client request');
 
     // Get next client number using the database function
     const { data: clientNumber, error: numberError } = await supabase.rpc('get_next_abaninja_client_number');
@@ -115,27 +135,26 @@ serve(async (req) => {
     console.log('Generated client number:', clientNumber);
 
     // Parse the address if provided
-    const parsedAddress = adresse ? parseSwissAddress(adresse) : null;
-    console.log('Parsed address:', parsedAddress);
+    const parsedAddress = cleanAdresse ? parseSwissAddress(cleanAdresse) : null;
 
     // Create person in AbaNinja with the correct API v2 format
     // Documentation: https://abaninja.ch/apidocs/#tag/Addresses/paths/~1accounts~1{accountUuid}~1addresses~1v2~1addresses/post
     const personPayload: Record<string, unknown> = {
       type: "person",
       customer_number: clientNumber, // e.g., "IR0149"
-      first_name: prenom,
-      last_name: nom,
+      first_name: cleanPrenom,
+      last_name: cleanNom,
       currency_code: "CHF",
       language: "fr",
       contacts: [
         {
           type: "email",
-          value: email,
+          value: cleanEmail,
           primary: true
         },
-        ...(telephone && String(telephone).trim() ? [{
+        ...(cleanTelephone ? [{
           type: "phone",
-          value: String(telephone).trim(),
+          value: cleanTelephone,
           primary: false
         }] : [])
       ]
@@ -156,7 +175,7 @@ serve(async (req) => {
       // Fallback : utiliser l'adresse brute avec valeurs par défaut
       personPayload.addresses = [
         {
-          address: adresse || "Adresse à compléter",
+          address: cleanAdresse || "Adresse à compléter",
           city: "Lausanne",
           zip_code: "1000",
           state: "VD",
@@ -165,8 +184,6 @@ serve(async (req) => {
       ];
       console.log('Using fallback address for client without valid postal code');
     }
-
-    console.log('AbaNinja person payload:', JSON.stringify(personPayload));
 
     // Use the correct v2 endpoint for creating addresses
     const response = await fetch(
@@ -184,10 +201,9 @@ serve(async (req) => {
 
     const responseText = await response.text();
     console.log('AbaNinja response status:', response.status);
-    console.log('AbaNinja response:', responseText);
-
     if (!response.ok) {
-      throw new Error(`AbaNinja API error: ${response.status} - ${responseText}`);
+      console.error('AbaNinja client creation rejected', { status: response.status });
+      throw new Error('AbaNinja client creation failed');
     }
 
     const data = JSON.parse(responseText);
@@ -197,7 +213,14 @@ serve(async (req) => {
     const clientUuid = data.data?.uuid || data.uuid;
     const addressUuid = data.data?.addresses?.[0]?.uuid || null;
 
-    console.log('Created client UUID:', clientUuid, 'Address UUID:', addressUuid);
+    if (!clientUuid || !addressUuid) {
+      throw new Error('AbaNinja returned an incomplete client');
+    }
+    const workflowToken = await createInvoiceWorkflowToken({
+      clientUuid,
+      addressUuid,
+      email: cleanEmail,
+    });
 
     return new Response(
       JSON.stringify({
@@ -205,7 +228,7 @@ serve(async (req) => {
         client_uuid: clientUuid,
         address_uuid: addressUuid,
         client_number: clientNumber,
-        data
+        workflow_token: workflowToken,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -215,11 +238,10 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Error creating AbaNinja client:', error);
-    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage
+        error: 'Création du client impossible'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

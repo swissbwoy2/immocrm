@@ -1,10 +1,11 @@
 // Send WhatsApp notification via Meta Cloud API
 // Lot 1: never blocks calling action; logs every attempt.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
 };
 
 const GRAPH_VERSION = "v21.0";
@@ -58,6 +59,9 @@ function normalizePhone(raw: string): string | null {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const denied = await denyIfNotInternal(req, corsHeaders, "send-whatsapp-notification");
+  if (denied) return denied;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
