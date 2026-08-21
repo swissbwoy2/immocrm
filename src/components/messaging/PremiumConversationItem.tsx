@@ -39,9 +39,10 @@ export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = (
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
-        'w-full text-left px-3 py-2.5 flex items-center gap-3 transition-colors duration-150 min-h-[68px] border-b border-border/40',
+        'w-full max-w-full min-w-0 box-border overflow-hidden text-left px-3 py-2.5 flex items-center gap-3 transition-colors duration-150 min-h-[68px] border-b border-border/40',
         'hover:bg-[hsl(var(--whatsapp-green))/0.08] active:bg-[hsl(var(--whatsapp-green))/0.12]',
         isSelected && 'bg-[hsl(var(--whatsapp-green))/0.10]',
         isArchived && 'opacity-60',
@@ -55,16 +56,17 @@ export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = (
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
+      <div className="flex-1 min-w-0 max-w-full overflow-hidden">
+        <div className="flex items-center justify-between gap-2 min-w-0 max-w-full">
           <span
             className={cn(
-              'truncate text-sm',
+              'truncate min-w-0 flex-1 text-sm',
               unread ? 'font-semibold text-foreground' : 'font-medium text-foreground/90',
             )}
           >
             {name}
           </span>
+
           {lastMessageTime && (
             <span
               className={cn(
@@ -79,15 +81,16 @@ export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = (
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 mt-0.5">
+        <div className="flex items-center justify-between gap-2 mt-0.5 min-w-0 max-w-full">
           <p
             className={cn(
-              'truncate text-xs',
+              'truncate min-w-0 flex-1 text-xs',
               unread ? 'text-foreground/80' : 'text-muted-foreground',
             )}
           >
             {lastMessage || 'Aucun message'}
           </p>
+
           <div className="flex items-center gap-1 shrink-0">
             {isArchived && (
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

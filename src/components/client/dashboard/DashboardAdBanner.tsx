@@ -8,13 +8,15 @@ interface Props {
   /** Permet un aperçu (admin) sans requête réseau. */
   banner?: DashboardBanner | null;
   className?: string;
+  /** Mode compact : hauteur fixe + image en object-cover (rétrocompatible, off par défaut). */
+  compact?: boolean;
 }
 
 /**
  * Bannière publicitaire (annonce / promo / mise à jour) affichée en haut du dashboard client.
  * Ne rend rien si aucune bannière active n'est définie.
  */
-export function DashboardAdBanner({ banner: override, className }: Props) {
+export function DashboardAdBanner({ banner: override, className, compact = false }: Props) {
   const navigate = useNavigate();
   const { banner: fetched } = useDashboardBanner();
   const banner = override !== undefined ? override : fetched;
@@ -32,12 +34,12 @@ export function DashboardAdBanner({ banner: override, className }: Props) {
       <SignedImage
         src={banner.image_url}
         alt={banner.titre || 'Bannière'}
-        className="block w-full h-auto"
+        className={cn('block w-full', compact ? 'h-full object-cover' : 'h-auto')}
       />
       {showOverlay && (
         <>
           <div className="absolute inset-0 bg-gradient-to-r from-background/85 via-background/45 to-transparent" />
-          <div className="absolute inset-0 z-10 flex flex-col justify-center gap-1 p-4 sm:p-6 md:p-8 max-w-[75%]">
+          <div className="absolute inset-0 z-10 flex flex-col justify-center gap-1 max-w-[75%] p-3 sm:p-5 md:p-6">
             {banner.titre && (
               <h2 className="text-base sm:text-xl md:text-2xl font-bold text-foreground leading-tight line-clamp-2">
                 {banner.titre}
@@ -62,6 +64,7 @@ export function DashboardAdBanner({ banner: override, className }: Props) {
 
   const shell = cn(
     'relative block w-full overflow-hidden rounded-2xl border border-primary/20 bg-muted',
+    compact && 'h-[132px] md:h-[168px]',
     clickable && 'cursor-pointer transition-transform duration-200 hover:scale-[1.005] hover:border-primary/40',
     className,
   );

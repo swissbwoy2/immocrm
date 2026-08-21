@@ -1,5 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { ChevronLeft, Menu } from 'lucide-react';
+import { ChevronLeft, Menu, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -72,7 +72,7 @@ export function MessagingLayout({
       {/* Panneau des conversations - Style WhatsApp - Zone de scroll indépendante */}
       <div
         className={cn(
-          "bg-card border-r border-border/50 flex flex-col overflow-y-auto overflow-x-hidden",
+          "bg-card border-r border-border/50 flex flex-col min-h-0 overflow-hidden",
           // Desktop: toujours visible avec hauteur fixe
           "lg:relative lg:w-[360px] lg:translate-x-0 lg:h-full lg:shrink-0",
           // Tablet: largeur intermédiaire
@@ -130,7 +130,28 @@ export function MessagingLayout({
           <div className="shrink-0 relative z-20">{chatHeader}</div>
         )}
 
-        {chatView}
+        {selectedConversation ? (
+          chatView
+        ) : (
+          <>
+            <div className="lg:hidden flex-1 min-h-0">{chatView}</div>
+            <div
+              className="hidden lg:flex flex-1 min-h-0 flex-col items-center justify-center gap-3 p-8 text-center"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                <MessageSquare className="h-7 w-7 text-muted-foreground" aria-hidden />
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">Aucune conversation sélectionnée</p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Choisissez une conversation dans la liste de gauche pour afficher les messages.
+                </p>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

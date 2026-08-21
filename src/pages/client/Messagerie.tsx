@@ -1694,7 +1694,7 @@ const Messagerie = () => {
       <FloatingParticles count={10} className="opacity-30" />
       
       {/* Premium Header */}
-      <div className="relative z-10 p-4 border-b border-border/30 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-sm">
+      <div className="relative z-10 p-3 border-b border-border/30 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-4">
           <SidebarTrigger className="shrink-0" />
           <div className="flex-1 min-w-0">
@@ -1733,7 +1733,7 @@ const Messagerie = () => {
       </div>
       
       {/* Conversations list */}
-      <ScrollArea className="flex-1 relative z-10">
+      <ScrollArea className="flex-1 relative z-10 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
         ) : filteredConversations.length === 0 ? (
