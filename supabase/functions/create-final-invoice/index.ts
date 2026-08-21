@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireAuth } from "../_shared/require-admin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +25,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req, { allowedRoles: ['admin', 'agent'] });
+  if (!auth.ok) return auth.response!;
+
   try {
     const apiKey = Deno.env.get('ABANINJA_API_KEY');
     const accountUuid = Deno.env.get('ABANINJA_ACCOUNT_UUID');
@@ -44,13 +49,37 @@ serve(async (req) => {
       adresse_bien 
     } = await req.json() as CreateFinalInvoiceRequest;
 
-    console.log('Creating final invoice for:', { 
-      client_uuid, 
-      candidature_id, 
-      loyer_mensuel, 
-      acompte_paye,
-      adresse_bien 
-    });
+    if (!client_uuid || !address_uuid || !candidature_id || !prenom || !nom ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim()) ||
+        !Number.isFinite(loyer_mensuel) || !Number.isFinite(acompte_paye) ||
+        loyer_mensuel <= 0 || loyer_mensuel > 100000 ||
+        acompte_paye < 0 || acompte_paye > 100000 ||
+        String(adresse_bien || '').length > 500) {
+      return new Response(JSON.stringify({ success: false, error: 'Données de facture invalides' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+    const scopedClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: visibleCandidature } = await scopedClient
+      .from('candidatures')
+      .select('id')
+      .eq('id', candidature_id)
+      .maybeSingle();
+    if (!visibleCandidature) {
+      return new Response(JSON.stringify({ success: false, error: 'Accès refusé' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Creating final AbaNinja invoice request');
 
     // Calculate final amount
     const montant_final = loyer_mensuel - acompte_paye;
@@ -90,8 +119,6 @@ serve(async (req) => {
     }
 
     const iban = bankAccount.qrBill?.qrIban || bankAccount.iban;
-    console.log('Using bank account:', bankAccount.name);
-
     if (!iban) {
       throw new Error('No IBAN found in bank account. Please configure an IBAN in AbaNinja.');
     }
@@ -149,8 +176,6 @@ serve(async (req) => {
       documents: [invoiceData]
     };
 
-    console.log('AbaNinja final invoice payload:', JSON.stringify(payload, null, 2));
-
     const response = await fetch(
       `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices`,
       {
@@ -166,10 +191,9 @@ serve(async (req) => {
 
     const responseText = await response.text();
     console.log('AbaNinja invoice response status:', response.status);
-    console.log('AbaNinja invoice response:', responseText);
-
     if (!response.ok) {
-      throw new Error(`AbaNinja API error: ${response.status} - ${responseText}`);
+      console.error('AbaNinja final invoice creation rejected', { status: response.status });
+      throw new Error('Final invoice creation failed');
     }
 
     const data = JSON.parse(responseText);
@@ -179,7 +203,6 @@ serve(async (req) => {
 
     // Send invoice by email automatically
     let emailSent = false;
-    console.log('Sending final invoice by email to:', email);
     console.log('Invoice UUID:', invoice.uuid);
     
     try {
@@ -205,7 +228,7 @@ serve(async (req) => {
       console.log('Send invoice response status:', sendResponse.status);
 
       if (sendResponse.ok) {
-        console.log('Final invoice sent successfully by email to:', email);
+        console.log('Final invoice sent successfully');
         emailSent = true;
       } else {
         console.warn('Failed to send invoice by email:', sendResponse.status, sendResponseText);
@@ -254,11 +277,10 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Error creating final invoice:', error);
-    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage
+        error: 'Création de la facture finale impossible'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

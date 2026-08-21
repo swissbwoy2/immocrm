@@ -730,7 +730,7 @@ function ClientDashboardLocation() {
           </SectionErrorBoundary>
 
           {/* === Tuiles d'action XL — 2 colonnes principales === */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 items-stretch">
+          <div className="grid grid-cols-2 gap-3 md:gap-4 items-stretch">
             <QuickTileXL
               icon={FolderOpen}
               title="Mon dossier"

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -83,30 +84,15 @@ async function sendEmail(to: string, subject: string, html: string) {
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const internalSecret = Deno.env.get("INTERNAL_FUNCTION_SECRET");
-  const provided = req.headers.get("x-internal-secret");
-  const authHeader = req.headers.get("Authorization") || "";
-
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Authorization: internal secret OR admin JWT
-  let authorized = !!internalSecret && provided === internalSecret;
-  if (!authorized && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData } = await supabase.auth.getUser(token);
-    if (userData?.user) {
-      const { data: role } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userData.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      authorized = !!role;
-    }
-  }
+  // Authorization: service role, internal secret, or an authenticated admin.
+  const caller = await verifyInternalCaller(req);
+  const authorized = caller.ok &&
+    (caller.kind === "service" || caller.kind === "secret" || caller.roles?.includes("admin"));
   if (!authorized) {
     return new Response(JSON.stringify({ error: "Non autorisé" }), {
       status: 401,

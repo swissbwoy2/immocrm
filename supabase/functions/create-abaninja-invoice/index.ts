@@ -1,4 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { enforceRateLimit } from "../_shared/rate-limit.ts";
+import { verifyInvoiceWorkflowToken } from "../_shared/invoice-workflow-token.ts";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +16,8 @@ interface CreateInvoiceRequest {
   prenom: string;
   nom: string;
   email: string;
-  demande_id: string;
+  demande_id?: string | null;
+  workflow_token?: string;
 }
 
 serve(async (req) => {
@@ -30,9 +35,42 @@ serve(async (req) => {
       throw new Error('AbaNinja credentials not configured');
     }
 
-    const { client_uuid, address_uuid, type_recherche, prenom, nom, email, demande_id } = await req.json() as CreateInvoiceRequest;
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const limited = await enforceRateLimit(admin, req, corsHeaders, 'abaninja-public-invoice', {
+      maxRequests: 5,
+      windowSeconds: 3600,
+    });
+    if (limited) return limited;
 
-    console.log('Creating AbaNinja invoice for:', { client_uuid, address_uuid, type_recherche, email });
+    const { client_uuid, address_uuid, type_recherche, prenom, nom, email, demande_id, workflow_token } = await req.json() as CreateInvoiceRequest;
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    if (!client_uuid || !address_uuid || !prenom || !nom ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) ||
+        !['Acheter', 'Louer'].includes(type_recherche) ||
+        String(prenom).length > 100 || String(nom).length > 100 || cleanEmail.length > 254) {
+      return new Response(JSON.stringify({ success: false, error: 'Données de facture invalides' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const caller = await verifyInternalCaller(req);
+    const validWorkflow = await verifyInvoiceWorkflowToken(workflow_token, {
+      clientUuid: client_uuid,
+      addressUuid: address_uuid,
+      email: cleanEmail,
+    });
+    if (!caller.ok && !validWorkflow) {
+      return new Response(JSON.stringify({ success: false, error: 'Non autorisé' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Creating AbaNinja invoice request');
 
     // Fetch bank accounts from AbaNinja - CORRECTED endpoint with /finances/v2/
     console.log('Fetching bank accounts from AbaNinja...');
@@ -48,10 +86,9 @@ serve(async (req) => {
 
     const bankAccountsText = await bankAccountsResponse.text();
     console.log('Bank accounts response status:', bankAccountsResponse.status);
-    console.log('Bank accounts response:', bankAccountsText);
-
     if (!bankAccountsResponse.ok) {
-      throw new Error(`Failed to fetch bank accounts: ${bankAccountsResponse.status} - ${bankAccountsText}`);
+      console.error('AbaNinja bank account lookup failed', { status: bankAccountsResponse.status });
+      throw new Error('Bank account lookup failed');
     }
 
     const bankAccounts = JSON.parse(bankAccountsText);
@@ -67,9 +104,6 @@ serve(async (req) => {
 
     // Extract IBAN or QR-IBAN from the bank account
     const iban = bankAccount.qrBill?.qrIban || bankAccount.iban;
-    console.log('Using IBAN:', iban ? `${iban.substring(0, 8)}...` : 'none');
-    console.log('Using bank account:', bankAccount.name);
-
     if (!iban) {
       throw new Error('No IBAN found in bank account. Please configure an IBAN in AbaNinja.');
     }
@@ -136,8 +170,6 @@ serve(async (req) => {
       documents: [invoiceData]
     };
 
-    console.log('AbaNinja invoice payload:', JSON.stringify(payload, null, 2));
-
     const response = await fetch(
       `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices`,
       {
@@ -153,10 +185,9 @@ serve(async (req) => {
 
     const responseText = await response.text();
     console.log('AbaNinja invoice response status:', response.status);
-    console.log('AbaNinja invoice response:', responseText);
-
     if (!response.ok) {
-      throw new Error(`AbaNinja API error: ${response.status} - ${responseText}`);
+      console.error('AbaNinja invoice creation rejected', { status: response.status });
+      throw new Error('Invoice creation failed');
     }
 
     const data = JSON.parse(responseText);
@@ -166,7 +197,6 @@ serve(async (req) => {
 
     // Send invoice by email automatically
     let emailSent = false;
-    console.log('Sending invoice by email to:', email);
     console.log('Invoice UUID:', invoice.uuid);
     
     try {
@@ -183,21 +213,20 @@ serve(async (req) => {
           body: JSON.stringify({
             channel: 'email',
             recipient: {
-              email: email
+              email: cleanEmail
             }
           })
         }
       );
 
-      const sendResponseText = await sendResponse.text();
+      await sendResponse.text();
       console.log('Send invoice response status:', sendResponse.status);
-      console.log('Send invoice response:', sendResponseText);
 
       if (sendResponse.ok) {
-        console.log('Invoice sent successfully by email to:', email);
+        console.log('Invoice sent successfully');
         emailSent = true;
       } else {
-        console.warn('Failed to send invoice by email:', sendResponse.status, sendResponseText);
+        console.warn('Failed to send invoice by email', { status: sendResponse.status });
         
         // Fallback: Try alternative endpoint format
         console.log('Trying alternative send endpoint...');
@@ -212,14 +241,13 @@ serve(async (req) => {
             },
             body: JSON.stringify({
               channel: 'email',
-              recipientEmail: email
+              recipientEmail: cleanEmail
             })
           }
         );
         
-        const altResponseText = await altSendResponse.text();
+        await altSendResponse.text();
         console.log('Alternative send response status:', altSendResponse.status);
-        console.log('Alternative send response:', altResponseText);
         
         if (altSendResponse.ok) {
           console.log('Invoice sent via alternative endpoint');
@@ -237,7 +265,6 @@ serve(async (req) => {
         invoice_number: invoice.number || invoice.reference,
         amount: montant,
         email_sent: emailSent,
-        data: invoice
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -247,11 +274,10 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Error creating AbaNinja invoice:', error);
-    const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage
+        error: 'Création de la facture impossible'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

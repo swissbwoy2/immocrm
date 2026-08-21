@@ -187,6 +187,7 @@ export default function NouveauMandat() {
       // ÉTAPE 1: Créer le client AbaNinja AVANT l'insert
       let abaninjaClientUuid: string | null = null;
       let abaninjaAddressUuid: string | null = null;
+      let abaninjaWorkflowToken: string | null = null;
       try {
         const { data: clientResponse, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
           body: {
@@ -203,6 +204,7 @@ export default function NouveauMandat() {
         } else if (clientResponse?.client_uuid) {
           abaninjaClientUuid = clientResponse.client_uuid;
           abaninjaAddressUuid = clientResponse.address_uuid;
+          abaninjaWorkflowToken = clientResponse.workflow_token || null;
           console.log('AbaNinja client created:', abaninjaClientUuid, 'Address:', abaninjaAddressUuid);
         }
       } catch (abaNinjaClientError) {
@@ -213,7 +215,7 @@ export default function NouveauMandat() {
       let abaninjaInvoiceId: string | null = null;
       let abaninjaInvoiceRef: string | null = null;
       
-      if (abaninjaClientUuid && abaninjaAddressUuid) {
+      if (abaninjaClientUuid && abaninjaAddressUuid && abaninjaWorkflowToken) {
         try {
           const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
             body: {
@@ -223,7 +225,8 @@ export default function NouveauMandat() {
               prenom: formData.prenom,
               nom: formData.nom,
               email: formData.email,
-              demande_id: null
+              demande_id: null,
+              workflow_token: abaninjaWorkflowToken,
             }
           });
 

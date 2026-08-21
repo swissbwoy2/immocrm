@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { requireAuth } from "../_shared/require-admin.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -190,6 +191,9 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth.response!;
+
   try {
     const { immeuble_id } = await req.json();
 
@@ -202,9 +206,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Generating estimation report PDF for immeuble:', immeuble_id);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+    const scopedClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: visibleImmeuble } = await scopedClient
+      .from('immeubles')
+      .select('id')
+      .eq('id', immeuble_id)
+      .maybeSingle();
+    if (!visibleImmeuble) {
+      return new Response(JSON.stringify({ error: 'Accès refusé' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabase = auth.admin!;
 
     // Fetch immeuble with all fields
     const { data: immeuble, error: immeubleError } = await supabase

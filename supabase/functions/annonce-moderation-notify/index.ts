@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireAuth } from "../_shared/require-admin.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const RAW_FROM = (Deno.env.get("RESEND_FROM_EMAIL") || "").trim();
@@ -46,6 +46,9 @@ serve(async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth.response!;
+
   try {
     const { annonce_id, action, motif_refus } = (await req.json()) as {
       annonce_id: string;
@@ -53,17 +56,14 @@ serve(async (req: Request): Promise<Response> => {
       motif_refus?: string;
     };
 
-    if (!annonce_id || !action) {
+    if (!annonce_id || !["submitted", "approved", "refused"].includes(action)) {
       return new Response(JSON.stringify({ error: "Paramètres manquants" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const supabase = auth.admin!;
 
     const { data: annonce, error } = await supabase
       .from("annonces_publiques")
@@ -80,6 +80,20 @@ serve(async (req: Request): Promise<Response> => {
 
     const annonceur: any = annonce.annonceur;
     const titre = annonce.titre || "Annonce";
+
+    const { data: roleRows } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", auth.userId!);
+    const isAdmin = (roleRows || []).some((row: any) => row.role === "admin");
+    const isOwner = annonceur?.user_id === auth.userId;
+
+    if ((action === "submitted" && !isOwner && !isAdmin) || (action !== "submitted" && !isAdmin)) {
+      return new Response(JSON.stringify({ error: "Accès refusé" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (action === "submitted") {
       const { data: admins } = await supabase
@@ -131,7 +145,7 @@ serve(async (req: Request): Promise<Response> => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-internal-secret": Deno.env.get("INTERNAL_FUNCTION_SECRET") || "",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
           },
           body: JSON.stringify({ annonce_id, frequence: "instantane" }),
         });
