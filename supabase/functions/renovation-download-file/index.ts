@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,6 +58,15 @@ serve(async (req) => {
       });
     }
 
+    const accessDenied = await denyIfNoProjectAccess(
+      supabase,
+      user.id,
+      file.project_id,
+      corsHeaders,
+      'renovation-download-file',
+    );
+    if (accessDenied) return accessDenied;
+
     // Check user access to project
     const { data: roleData } = await supabase
       .from('user_roles')
@@ -64,7 +74,7 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    const isAdminOrAgent = roleData && ['admin', 'agent'].includes(roleData.role);
+    const isAdmin = roleData?.role === 'admin';
 
     // Check if project member
     const { data: isMember } = await supabase
@@ -119,15 +129,8 @@ serve(async (req) => {
 
     const isCreator = projectData?.created_by === user.id;
 
-    // Deny if no access at all
-    if (!isAdminOrAgent && !isMember && !isProprietaire && !isCompanyUser && !isCreator) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     // Company users: check category restriction
-    if (isCompanyUser && !isAdminOrAgent && !isMember && !isProprietaire && !isCreator) {
+    if (isCompanyUser && !isAdmin && !isMember && !isProprietaire && !isCreator) {
       if (RESTRICTED_CATEGORIES.includes(file.category)) {
         return new Response(JSON.stringify({ error: 'Access denied for this file category' }), {
           status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

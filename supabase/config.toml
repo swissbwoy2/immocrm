@@ -91,6 +91,8 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.meta-leads-backfill]
     verify_jwt = true
+  [functions.meta-leads-webhook]
+    verify_jwt = false
   [functions.migrate-documents-to-storage]
     verify_jwt = true
   [functions.notify-new-lead]

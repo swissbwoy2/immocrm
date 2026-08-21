@@ -66,11 +66,22 @@ export async function checkRenovationProjectAccess(
   if (project.immeuble_id) {
     const { data: imm } = await svc
       .from("immeubles")
-      .select("id")
+      .select("id, agent_responsable_id, proprietaire_id")
       .eq("id", project.immeuble_id)
-      .eq("agent_responsable_id", userId)
       .maybeSingle();
-    if (imm) return { allowed: true, isAdmin: false, roles };
+    if (imm?.agent_responsable_id === userId) {
+      return { allowed: true, isAdmin: false, roles };
+    }
+
+    if (imm?.proprietaire_id) {
+      const { data: owner } = await svc
+        .from("proprietaires")
+        .select("id")
+        .eq("id", imm.proprietaire_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (owner) return { allowed: true, isAdmin: false, roles };
+    }
   }
 
   return { allowed: false, isAdmin: false, roles, reason: "non rattaché au projet" };

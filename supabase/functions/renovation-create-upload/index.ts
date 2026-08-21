@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,71 +42,14 @@ serve(async (req) => {
       });
     }
 
-    // Verify user can upload to this project
-    const { data: canUpload } = await supabase.rpc('renovation_user_can_upload_to_project', { _project_id: projectId });
-    // Since it's SECURITY DEFINER with auth.uid(), we need to check via member/role tables directly
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const isAdminOrAgent = roleData && ['admin', 'agent'].includes(roleData.role);
-
-    const { data: isMember } = await supabase
-      .from('renovation_project_members')
-      .select('id')
-      .eq('project_id', projectId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const { data: isCompanyUser } = await supabase
-      .from('renovation_project_companies')
-      .select('id, company_id')
-      .eq('project_id', projectId)
-      .maybeSingle();
-
-    let companyLink = false;
-    if (isCompanyUser) {
-      const { data: cuLink } = await supabase
-        .from('renovation_company_users')
-        .select('id')
-        .eq('company_id', isCompanyUser.company_id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-      companyLink = !!cuLink;
-    }
-
-    // Check proprietaire via immeuble
-    const { data: projectData } = await supabase
-      .from('renovation_projects')
-      .select('immeuble_id')
-      .eq('id', projectId)
-      .single();
-
-    let isProprietaire = false;
-    if (projectData) {
-      const { data: imm } = await supabase
-        .from('immeubles')
-        .select('proprietaire_id')
-        .eq('id', projectData.immeuble_id)
-        .single();
-      if (imm?.proprietaire_id) {
-        const { data: prop } = await supabase
-          .from('proprietaires')
-          .select('id')
-          .eq('id', imm.proprietaire_id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        isProprietaire = !!prop;
-      }
-    }
-
-    if (!isAdminOrAgent && !isMember && !companyLink && !isProprietaire) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const accessDenied = await denyIfNoProjectAccess(
+      supabase,
+      user.id,
+      projectId,
+      corsHeaders,
+      'renovation-create-upload',
+    );
+    if (accessDenied) return accessDenied;
 
     // Generate controlled path
     const timestamp = Date.now();
