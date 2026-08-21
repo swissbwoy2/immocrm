@@ -82,32 +82,41 @@ export default function SupportStaff() {
     return () => clearInterval(t);
   }, [open, loadMsgs]);
 
-  const call = async (payload: any) => {
-    setBusy(true);
-    const { data, error } = await supabase.functions.invoke('support-ticket', { body: payload });
-    setBusy(false);
-    if (error || (data as any)?.error) { toast.error('Action impossible'); return false; }
-    return true;
-  };
-
   const doReply = async () => {
-    if (!open || !reply.trim()) return;
-    if (await call({ action: 'reply', ticket_id: open.id, message: reply.trim() })) { setReply(''); loadMsgs(open.id); loadTickets(); }
+    if (!open || !reply.trim() || !user) return;
+    setBusy(true);
+    const role = isAdmin ? 'admin' : 'agent';
+    const { error } = await supabase.from('support_ticket_messages')
+      .insert({ ticket_id: open.id, author_id: user.id, author_role: role, body: reply.trim() });
+    if (!error && (open.statut === 'nouveau' || open.statut === 'assigne')) {
+      await supabase.from('support_tickets').update({ statut: 'en_cours' }).eq('id', open.id);
+      setOpen({ ...open, statut: 'en_cours' });
+    }
+    setBusy(false);
+    if (error) { toast.error('Envoi impossible'); return; }
+    setReply(''); loadMsgs(open.id); loadTickets();
   };
   const doAssign = async (agentId: string) => {
     if (!open) return;
-    if (await call({ action: 'assign', ticket_id: open.id, agent_id: agentId === 'none' ? null : agentId })) {
-      const upd = { ...open, assigned_agent_id: agentId === 'none' ? null : agentId, statut: agentId === 'none' ? 'nouveau' : 'assigne' };
-      setOpen(upd); loadTickets();
-      toast.success('Assignation mise à jour');
-    }
+    setBusy(true);
+    const aid = agentId === 'none' ? null : agentId;
+    const { error } = await supabase.from('support_tickets')
+      .update({ assigned_agent_id: aid, statut: aid ? 'assigne' : 'nouveau' }).eq('id', open.id);
+    setBusy(false);
+    if (error) { toast.error('Action impossible'); return; }
+    setOpen({ ...open, assigned_agent_id: aid, statut: aid ? 'assigne' : 'nouveau' }); loadTickets();
+    toast.success('Assignation mise à jour');
   };
   const doStatus = async (statut: string) => {
     if (!open) return;
-    if (await call({ action: 'set_status', ticket_id: open.id, statut })) {
-      setOpen({ ...open, statut }); loadTickets();
-      toast.success('Statut mis à jour');
-    }
+    setBusy(true);
+    const closed = statut === 'cloture' || statut === 'resolu';
+    const { error } = await supabase.from('support_tickets')
+      .update({ statut, closed_at: closed ? new Date().toISOString() : null }).eq('id', open.id);
+    setBusy(false);
+    if (error) { toast.error('Action impossible'); return; }
+    setOpen({ ...open, statut }); loadTickets();
+    toast.success('Statut mis à jour');
   };
 
   const shown = tickets.filter((t) => filter === 'tous' || t.statut === filter);

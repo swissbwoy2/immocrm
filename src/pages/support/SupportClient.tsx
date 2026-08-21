@@ -64,25 +64,28 @@ export default function SupportClient() {
 
   const submitCreate = async () => {
     if (!sujet.trim() || !message.trim()) { toast.error('Sujet et message requis'); return; }
+    if (!user) return;
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke('support-ticket', {
-      body: { action: 'create', sujet: sujet.trim(), categorie, message: message.trim() },
-    });
+    const { data: t, error } = await supabase.from('support_tickets')
+      .insert({ user_id: user.id, sujet: sujet.trim(), categorie, statut: 'nouveau' }).select('id').single();
+    if (!error && t) {
+      await supabase.from('support_ticket_messages')
+        .insert({ ticket_id: (t as any).id, author_id: user.id, author_role: 'client', body: message.trim() });
+    }
     setBusy(false);
-    if (error || (data as any)?.error) { toast.error('Envoi impossible'); return; }
+    if (error) { toast.error('Envoi impossible'); return; }
     toast.success('Ticket envoyé au support');
     setSujet(''); setMessage(''); setCategorie('question'); setCreating(false);
     loadTickets();
   };
 
   const submitReply = async () => {
-    if (!open || !reply.trim()) return;
+    if (!open || !reply.trim() || !user) return;
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke('support-ticket', {
-      body: { action: 'reply', ticket_id: open.id, message: reply.trim() },
-    });
+    const { error } = await supabase.from('support_ticket_messages')
+      .insert({ ticket_id: open.id, author_id: user.id, author_role: 'client', body: reply.trim() });
     setBusy(false);
-    if (error || (data as any)?.error) { toast.error('Envoi impossible'); return; }
+    if (error) { toast.error('Envoi impossible'); return; }
     setReply('');
     loadMsgs(open.id);
   };
