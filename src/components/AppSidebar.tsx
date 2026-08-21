@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2 } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy} from 'lucide-react';
 import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -58,6 +58,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
             { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
             { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
+            { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
           ],
         },
         {
@@ -155,6 +156,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
             { name: 'Calendrier', icon: Calendar, path: '/agent/calendrier', notifKey: 'visit_combined' },
             { name: 'Notifications', icon: Bell, path: '/agent/notifications', notifKey: 'total' },
+            { name: 'Support', icon: LifeBuoy, path: '/agent/support', notifKey: null },
           ],
         },
         {
@@ -231,6 +233,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
               { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
               { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
+              { name: 'Aide & support', icon: LifeBuoy, path: '/support', notifKey: null },
             ],
           },
           {

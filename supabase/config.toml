@@ -208,3 +208,5 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.annonce-og]
     verify_jwt = false
+  [functions.support-ticket]
+    verify_jwt = true

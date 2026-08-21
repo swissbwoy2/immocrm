@@ -91,6 +91,8 @@ const AdminMessagerie = lazy(() => import("./pages/admin/Messagerie"));
 const AdminMigrateDocuments = lazy(() => import("./pages/admin/MigrateDocuments"));
 const AdminSuiviExtraits = lazy(() => import("./pages/admin/SuiviExtraitsPoursuites"));
 const AdminNotifications = lazy(() => import("./pages/admin/Notifications"));
+const SupportClient = lazy(() => import("./pages/support/SupportClient"));
+const SupportStaff = lazy(() => import("./pages/support/SupportStaff"));
 const AdminParametres = lazy(() => import("./pages/admin/Parametres"));
 const AdminWhatsAppNotifications = lazy(() => import("./pages/admin/WhatsAppNotifications"));
 const AdminEnvoyerEmail = lazy(() => import("./pages/admin/EnvoyerEmail"));
@@ -489,6 +491,9 @@ const App = () => (
               <Route path="/client/messagerie" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMessagerie /></AppLayout></ProtectedRoute>} />
               <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
               <Route path="/client/notifications" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientNotifications /></AppLayout></ProtectedRoute>} />
+              <Route path="/support" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><SupportClient /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/support" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><SupportStaff /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/support" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><SupportStaff /></AppLayout></ProtectedRoute>} />
               <Route path="/client/parametres" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/client/annonces" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientAnnonces /></AppLayout></ProtectedRoute>} />
               <Route path="/client/carte" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCarte /></AppLayout></ProtectedRoute>} />
