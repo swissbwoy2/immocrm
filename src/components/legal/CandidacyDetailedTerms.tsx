@@ -13,7 +13,7 @@ const S = ({ title, children }: { title: string; children: React.ReactNode }) =>
  * ou sur une page dédiée.
  */
 export function CandidacyDetailedTerms() {
-  const { raisonSociale, adressePostale, emailProtectionDonnees, tauxTVA, commission, conservationJours } =
+  const { raisonSociale, adressePostale, emailProtectionDonnees, commission, conservationJours } =
     CANDIDACY_LEGAL;
 
   return (
@@ -56,9 +56,8 @@ export function CandidacyDetailedTerms() {
           commission de succès.
         </p>
         <p>
-          Si Immo-rama.ch est assujettie à la TVA au moment où la commission devient exigible, la TVA suisse au
-          taux légal applicable est ajoutée. Au taux actuellement applicable de {tauxTVA}, la commission totale
-          correspond à 108,1 % d'un mois de loyer brut.
+          Si Immo-rama.ch est assujettie à la TVA au moment où la commission devient exigible, la TVA au taux
+          légal, si elle est due, est ajoutée à la commission.
         </p>
       </S>
 

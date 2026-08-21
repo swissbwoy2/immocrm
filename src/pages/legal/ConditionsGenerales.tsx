@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { useEffect } from 'react';
 
-const LAST_UPDATE = '19 août 2026';
+const LAST_UPDATE = '21 août 2026';
 
 export default function ConditionsGenerales() {
   useEffect(() => {
@@ -35,156 +35,159 @@ export default function ConditionsGenerales() {
           <div>
             <h1 className="text-4xl font-bold">Conditions Générales d'Utilisation</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Logisorama.ch — Dernière mise à jour : {LAST_UPDATE}
+              Logisorama.ch — Version contractuelle consolidée — Dernière mise à jour : {LAST_UPDATE}
             </p>
           </div>
         </div>
 
         <section className="space-y-10 text-base leading-relaxed">
           <div>
-            <h2 className="text-2xl font-semibold mb-3">1. Exploitant</h2>
+            <h2 className="text-2xl font-semibold mb-3">1. Exploitant et cocontractant</h2>
             <p>
-              La plateforme <strong>Logisorama.ch</strong>, ses applications mobiles et les services associés sont exploités par :
+              La plateforme <strong>Logisorama.ch</strong>, ses applications mobiles, interfaces web et services associés sont exploités par :
             </p>
             <ul className="mt-3 space-y-1">
               <li><strong>Immo-rama.ch — entreprise individuelle Christ Ramazani</strong></li>
               <li>Chemin de l'Esparcette 5, 1023 Crissier (VD), Suisse</li>
               <li>IDE : <strong>CHE-442.303.796</strong></li>
-              <li>Email : <a href="mailto:info@immo-rama.ch" className="text-primary hover:underline">info@immo-rama.ch</a></li>
+              <li>Courriel : <a href="mailto:info@immo-rama.ch" className="text-primary hover:underline">info@immo-rama.ch</a></li>
               <li>Téléphone : <a href="tel:+41216342839" className="text-primary hover:underline">+41 21 634 28 39</a></li>
             </ul>
-          </div>
-
-          <div>
-            <h2 className="text-2xl font-semibold mb-3">2. Champ d'application</h2>
-            <p>
-              Les présentes Conditions Générales d'Utilisation régissent l'accès et l'utilisation du site Logisorama.ch, de ses applications mobiles, de ses interfaces web et des fonctionnalités associées. Les services contractuels spécifiques, notamment les mandats de recherche immobilière, peuvent faire l'objet de contrats complémentaires. En cas de contradiction, les dispositions spécialement convenues dans le contrat concerné priment pour le service correspondant.
+            <p className="mt-3">
+              Sauf indication expresse contraire au moment de la commande, Immo-rama.ch est le cocontractant de l'Utilisateur.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">3. Comptes et rôles</h2>
+            <h2 className="text-2xl font-semibold mb-3">2. Champ d'application, incorporation et hiérarchie</h2>
             <p>
-              La plateforme peut proposer différents types de comptes et rôles, notamment client, agent, administrateur, coursier, apporteur, propriétaire, annonceur ou autre intervenant autorisé. Chaque utilisateur est responsable de l'exactitude des informations communiquées et de la confidentialité de ses moyens d'authentification. L'utilisateur ne doit pas permettre à un tiers non autorisé d'utiliser son compte.
+              Les présentes Conditions générales d'utilisation régissent tout accès et toute utilisation de Logisorama. Leur acceptation intervient au moyen d'un mécanisme permettant à l'Utilisateur d'en prendre connaissance, de les conserver et de manifester son accord. Les mandats, offres, tarifs, politiques ou conditions particulières applicables à une prestation déterminée complètent les présentes CGU et priment en cas de contradiction pour cette seule prestation. Le droit impératif demeure réservé.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">4. Services</h2>
+            <h2 className="text-2xl font-semibold mb-3">3. Capacité, comptes et rôles</h2>
             <p>
-              Logisorama.ch peut notamment proposer : recherche immobilière, matching automatisé, gestion d'un dossier, annonces immobilières, messagerie, visites physiques ou à distance, appels audio ou vidéo, live de visite, notifications, dépôt de candidatures, suivi des recherches et prestations administratives.
+              L'Utilisateur déclare disposer de l'exercice des droits civils ou agir avec l'autorisation valable de son représentant légal. Les rôles proposés peuvent notamment comprendre client, agent, administrateur, coursier, apporteur, propriétaire ou annonceur. L'Utilisateur garantit l'exactitude, l'actualité et la licéité des informations fournies, assure la confidentialité de ses identifiants et informe immédiatement Immo-rama.ch de tout accès non autorisé. Les actes accomplis au moyen de son compte lui sont imputables dans les limites du droit applicable.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">5. Informations immobilières</h2>
+            <h2 className="text-2xl font-semibold mb-3">4. Description et évolution des services</h2>
             <p>
-              Les annonces et informations publiées sont fournies à titre informatif. Sauf engagement exprès contraire, Logisorama.ch ne garantit pas que les informations provenant d'un annonceur, d'une régie, d'un propriétaire ou d'une source externe soient exhaustives, immédiatement actualisées ou exemptes d'erreurs. L'utilisateur doit vérifier les éléments déterminants avant toute conclusion de contrat.
+              Logisorama peut fournir des outils de recherche et de matching, gestion de dossiers, publication ou indexation d'annonces, messagerie, visites physiques ou à distance, appels audio ou vidéo, notifications, dépôt de candidatures, suivi et prestations administratives. La description disponible lors de la commande détermine la prestation due. Les adaptations techniques ne doivent pas supprimer une caractéristique essentielle d'une prestation payante en cours sans base contractuelle ni information appropriée.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">6. Annonces externes</h2>
+            <h2 className="text-2xl font-semibold mb-3">5. Informations immobilières et devoir de vérification</h2>
             <p>
-              Logisorama.ch peut référencer des offres provenant de sources immobilières tierces. Lorsqu'une annonce est identifiée comme « ANNONCE EXTERNE », Logisorama.ch agit comme service d'orientation ou d'indexation et peut présenter des informations factuelles permettant d'identifier l'offre ainsi qu'un lien vers la source. Les contenus protégés provenant de tiers, notamment photographies, descriptions originales, plans ou vidéos, ne doivent être reproduits ou réhébergés que lorsque Logisorama.ch dispose des droits ou autorisations nécessaires. Le simple fait qu'une annonce soit visible uniquement par des utilisateurs connectés ne supprime pas automatiquement les droits d'auteur du titulaire.
+              Les informations relatives aux biens proviennent notamment d'annonceurs, propriétaires, régies, agences ou sources tierces. Sous réserve d'une garantie expressément assumée, Immo-rama.ch ne garantit ni leur exhaustivité ni leur actualité permanente. Elle corrige toutefois dans un délai approprié toute erreur substantielle portée à sa connaissance et vérifiable. L'Utilisateur doit vérifier les éléments déterminants, notamment prix, surfaces, disponibilité, charges, état, droits réels et conditions contractuelles, avant de s'engager.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">7. Dépôt d'annonces</h2>
+            <h2 className="text-2xl font-semibold mb-3">6. Annonces externes et droits de tiers</h2>
             <p>
-              Tout annonceur garantit : qu'il est autorisé à publier l'annonce ; que les informations communiquées sont sincères ; qu'il dispose des droits nécessaires sur les textes, photographies, vidéos et autres contenus publiés ; que l'annonce ne viole pas les droits de tiers ; qu'elle n'est ni frauduleuse, ni trompeuse, ni discriminatoire ou illicite. L'annonceur accorde à Immo-rama.ch, pour la durée de publication de son annonce, les droits nécessaires à l'hébergement, l'affichage et la diffusion des contenus qu'il fournit dans le cadre des services Logisorama.ch.
+              Une annonce identifiée comme externe constitue un référencement ou un service d'orientation vers la source. Les photographies, plans, descriptions originales, bases de données et autres contenus protégés ne sont reproduits, adaptés ou réhébergés que sur la base d'une licence, d'une autorisation ou d'une exception légale applicable. Le référencement doit permettre d'identifier la source et respecter ses conditions licites. Tout titulaire de droits peut adresser une demande motivée de retrait à info@immo-rama.ch.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">8. Modération</h2>
+            <h2 className="text-2xl font-semibold mb-3">7. Dépôt d'annonces et licence de publication</h2>
             <p>
-              Immo-rama.ch peut contrôler, corriger la présentation, suspendre ou retirer une annonce lorsqu'elle paraît manifestement erronée, frauduleuse, illicite, expirée ou contraire aux présentes CGU. Cette possibilité ne crée pas une obligation générale de contrôler préalablement chaque information publiée par les utilisateurs.
+              L'Annonceur garantit disposer du pouvoir de proposer le bien et de tous les droits nécessaires sur les contenus transmis. Il garantit que l'annonce est exacte, non trompeuse, non discriminatoire et conforme au droit. Il concède à Immo-rama.ch, pour la durée nécessaire à la publication et à la promotion du bien sur les canaux convenus, une licence non exclusive, territoriale dans la mesure du service, permettant d'héberger, reproduire techniquement, redimensionner, afficher et communiquer les contenus. L'Annonceur répond des prétentions de tiers résultant d'une violation qui lui est imputable.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">9. Messagerie</h2>
+            <h2 className="text-2xl font-semibold mb-3">8. Modération et retrait</h2>
             <p>
-              La messagerie doit être utilisée dans le cadre des finalités immobilières proposées par la plateforme. Sont notamment interdits le spam, le harcèlement, l'usurpation d'identité, les menaces, la fraude, la diffusion de logiciels malveillants et l'utilisation de la messagerie pour contourner les règles contractuelles ou légales.
+              Immo-rama.ch peut refuser, suspendre, corriger la présentation ou retirer tout contenu manifestement erroné, expiré, frauduleux, illicite ou contraire aux présentes CGU. Cette faculté ne crée aucune obligation générale de surveillance préalable. Lorsque les circonstances le permettent, l'Utilisateur est informé du motif et peut fournir des observations ; les mesures urgentes de sécurité, de prévention de fraude ou imposées par une autorité demeurent réservées.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">10. Appels audio, vidéo et live de visite</h2>
+            <h2 className="text-2xl font-semibold mb-3">9. Messagerie et communications</h2>
             <p>
-              Logisorama.ch peut permettre des communications audio et vidéo en temps réel ainsi que des visites immobilières diffusées à distance. Les participants doivent respecter la vie privée, le droit à l'image, la confidentialité des lieux visités et les instructions de l'agent ou du propriétaire. Une diffusion en direct n'est pas automatiquement un enregistrement. Lorsqu'une fonctionnalité d'enregistrement est activée, les participants doivent être clairement informés avant le début de l'enregistrement et l'enregistrement ne doit commencer qu'après obtention des consentements nécessaires.
+              La messagerie est réservée aux finalités du service. Sont interdits le spam, le harcèlement, les menaces, l'usurpation d'identité, la fraude, les contenus illicites, les logiciels malveillants, la collecte non autorisée de données et le contournement des protections contractuelles ou techniques. Immo-rama.ch peut conserver les éléments nécessaires à la sécurité, au traitement d'un signalement ou à l'établissement de droits, conformément à la politique de confidentialité.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">11. Notifications</h2>
+            <h2 className="text-2xl font-semibold mb-3">10. Appels audio, vidéo et visites en direct</h2>
             <p>
-              L'utilisateur peut recevoir des notifications dans l'application, par e-mail ou, lorsqu'il les autorise sur son appareil, par notification push. Les notifications non essentielles peuvent être désactivées selon les paramètres disponibles. Les communications marketing sont gérées séparément des notifications strictement nécessaires au service.
+              Les participants respectent la confidentialité, le droit à l'image, le domicile et les instructions du propriétaire ou de l'agent. Les communications en direct ne sont pas enregistrées par défaut. Toute activation d'une fonction d'enregistrement doit être précédée d'une information claire sur la finalité, les destinataires et la durée de conservation, ainsi que de l'obtention des consentements requis. Un participant peut refuser l'enregistrement sans perdre l'accès aux fonctions essentielles lorsque l'enregistrement n'est pas indispensable.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">12. Intelligence artificielle</h2>
+            <h2 className="text-2xl font-semibold mb-3">11. Notifications et communications commerciales</h2>
             <p>
-              Logisorama.ch peut utiliser des mécanismes automatisés ou assistés par intelligence artificielle pour pré-classer des annonces, effectuer un matching, générer des suggestions ou assister ses collaborateurs. Le pré-tri effectué par ces outils ne remplace pas la décision finale, qui demeure humaine.
+              Les notifications strictement nécessaires à la sécurité, à l'exécution d'un contrat ou au suivi d'une demande peuvent être adressées par les canaux fournis. Les notifications facultatives et les communications commerciales peuvent être paramétrées ou désactivées. Tout consentement marketing est distinct, libre et révocable, sans effet rétroactif sur les traitements licites antérieurs.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">12. Systèmes automatisés et intelligence artificielle</h2>
+            <p>
+              Logisorama peut utiliser des outils automatisés pour classer, rapprocher ou suggérer des annonces et assister ses collaborateurs. Sauf information contraire conforme à l'art. 21 LPD, ces outils n'adoptent pas seuls une décision produisant des effets juridiques ou affectant significativement l'Utilisateur. Les résultats constituent des aides susceptibles d'erreurs et font l'objet d'une appréciation humaine lorsque la décision le requiert.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">13. Propriété intellectuelle</h2>
             <p>
-              La plateforme, sa structure, son interface, ses marques, ses logiciels, ses créations graphiques et ses contenus propres sont protégés conformément au droit applicable. L'utilisateur ne peut pas extraire, copier, reproduire ou exploiter commercialement ces éléments sans autorisation lorsqu'une telle utilisation dépasse les droits que lui confère la loi.
+              Sous réserve des droits de tiers, les logiciels, bases de données, interfaces, marques, signes distinctifs, textes et créations propres à Logisorama ou Immo-rama.ch sont protégés. Aucun droit n'est transféré à l'Utilisateur au-delà de la licence personnelle, révocable, non exclusive et non transférable nécessaire à l'utilisation normale du service pendant la relation contractuelle.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">14. Utilisations interdites</h2>
             <p>
-              Sont notamment interdits : la création de faux comptes ; la transmission de faux documents ; l'accès non autorisé aux comptes ou données de tiers ; l'extraction massive automatisée de contenus ; la tentative de contourner les mesures de sécurité ; l'utilisation frauduleuse des documents de candidature ; l'utilisation de la plateforme contrairement au droit applicable.
+              Il est notamment interdit de créer de faux comptes, fournir de faux documents, accéder sans droit à un système ou à des données, contourner une mesure de sécurité, extraire massivement les contenus, automatiser des requêtes non autorisées, porter atteinte aux droits de tiers, détourner un dossier de candidature, tester les vulnérabilités sans autorisation ou utiliser la plateforme à des fins illicites.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">15. Services et sites tiers</h2>
+            <h2 className="text-2xl font-semibold mb-3">15. Services de tiers</h2>
             <p>
-              La plateforme peut contenir des liens ou intégrations provenant de fournisseurs ou sites tiers. Ces services restent soumis à leurs propres conditions lorsqu'ils sont juridiquement indépendants d'Immo-rama.ch.
+              Les services techniquement ou juridiquement fournis par un tiers peuvent être soumis aux conditions de ce tiers. Immo-rama.ch sélectionne et encadre ses sous-traitants conformément au droit applicable, mais ne devient pas partie à un contrat conclu directement entre l'Utilisateur et un fournisseur indépendant. Les responsabilités impératives et les obligations propres d'Immo-rama.ch demeurent réservées.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">16. Disponibilité</h2>
+            <h2 className="text-2xl font-semibold mb-3">16. Disponibilité, maintenance et sécurité</h2>
             <p>
-              Immo-rama.ch met en œuvre des moyens raisonnables pour assurer la disponibilité du service mais ne garantit pas une disponibilité permanente ou sans interruption. Des maintenances, incidents techniques ou événements dépendant de fournisseurs tiers peuvent affecter temporairement certaines fonctionnalités.
+              Immo-rama.ch met en œuvre les moyens techniques et organisationnels raisonnablement exigibles pour assurer la disponibilité et la sécurité du service, sans garantir une exploitation ininterrompue. Les maintenances, incidents, cyberattaques ou défaillances de tiers peuvent entraîner des interruptions. Les opérations planifiées importantes sont annoncées lorsque cela est raisonnablement possible.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">17. Responsabilité</h2>
             <p>
-              Immo-rama.ch répond conformément au droit suisse des dommages qui lui sont juridiquement imputables. Elle ne garantit pas l'attribution d'un logement, l'exactitude absolue des informations de tiers ou la disponibilité permanente des biens référencés. Les limitations prévues par les présentes CGU ne s'appliquent pas lorsque le droit impératif interdit une limitation de responsabilité.
+              Immo-rama.ch répond des dommages directs dont les conditions légales d'imputation sont établies. Elle ne garantit ni l'attribution d'un logement, ni la conclusion d'une acquisition, ni la disponibilité permanente d'un bien. Toute exclusion s'interprète restrictivement et ne s'applique pas au dol ou à la faute grave au sens de l'art. 100 CO, à l'atteinte à la vie ou à l'intégrité corporelle, ni aux responsabilités qui ne peuvent être exclues. La responsabilité pour les auxiliaires demeure régie par le droit applicable.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">18. Suspension et clôture d'un compte</h2>
+            <h2 className="text-2xl font-semibold mb-3">18. Suspension et clôture</h2>
             <p>
-              Un compte peut être suspendu ou clôturé notamment en cas de violation grave ou répétée des présentes CGU, utilisation frauduleuse, atteinte à la sécurité ou obligation légale. La clôture d'un compte n'efface pas automatiquement les données dont la conservation demeure nécessaire pour respecter une obligation légale, gérer une procédure ou établir des droits contractuels.
+              Immo-rama.ch peut suspendre ou clôturer un compte pour motif légitime, notamment violation grave ou répétée, fraude, atteinte à la sécurité, risque pour un tiers ou obligation légale. La mesure doit être proportionnée. Sauf urgence ou interdiction légale, l'Utilisateur est informé et peut remédier à la violation. La clôture n'éteint ni les créances acquises ni les obligations de conservation ou de preuve.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">19. Modification des CGU</h2>
             <p>
-              Les CGU peuvent être adaptées pour tenir compte de changements légaux, techniques ou fonctionnels. Les modifications importantes sont communiquées de manière appropriée avant leur entrée en vigueur lorsqu'elles concernent un contrat en cours.
+              Les modifications répondant à une évolution légale, technique ou fonctionnelle sont communiquées de manière appropriée. Une modification substantielle défavorable ne s'applique pas rétroactivement à une prestation déterminée déjà intégralement convenue, sauf nécessité légale ou accord valable. Lorsque la modification affecte durablement un contrat en cours, l'Utilisateur dispose, dans la mesure requise par le droit et la nature du service, d'un droit de résiliation avant son entrée en vigueur.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">20. Droit applicable et for</h2>
             <p>
-              Le droit suisse est applicable. Les tribunaux compétents sont déterminés conformément au droit suisse, les fors impératifs ou protecteurs applicables aux consommateurs demeurant réservés.
+              Le droit matériel suisse est applicable, à l'exclusion de ses règles de conflit lorsqu'elles conduiraient à un autre droit, sous réserve des normes impératives applicables. Les fors impératifs et protecteurs sont réservés. Lorsque l'Utilisateur agit à des fins privées, l'art. 32 CPC demeure applicable ; aucune clause ne vaut renonciation anticipée à un for protecteur.
             </p>
           </div>
         </section>

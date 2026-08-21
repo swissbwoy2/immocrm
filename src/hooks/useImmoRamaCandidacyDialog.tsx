@@ -65,8 +65,7 @@ export function useImmoRamaCandidacyDialog(options?: { onConfirm?: () => void })
               <p>
                 Si vous obtenez ce logement grâce à l'intervention d'Immo-rama.ch, une commission
                 correspondant à un mois de loyer brut, charges comprises, sera due conformément aux règles
-                du courtage des art. 412 ss CO. TVA au taux légal, actuellement {CANDIDACY_LEGAL.tauxTVA},
-                en sus si applicable.
+                du courtage des art. 412 ss CO. TVA au taux légal, si elle est due, en sus.
               </p>
               <p>
                 <strong className="text-foreground">Aucun double paiement&nbsp;:</strong> si cette candidature

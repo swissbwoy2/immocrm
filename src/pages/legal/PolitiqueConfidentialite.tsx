@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useEffect } from 'react';
 
-const LAST_UPDATE = '19 août 2026';
+const LAST_UPDATE = '21 août 2026';
 
 const PRESTATAIRES: { nom: string; fonction: string; donnees: string }[] = [
   { nom: 'Supabase', fonction: 'Base de données, authentification, stockage', donnees: 'Compte, dossier, documents, données applicatives' },
@@ -56,8 +56,7 @@ export default function PolitiqueConfidentialite() {
           <div>
             <h1 className="text-4xl font-bold">Politique de confidentialité</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Fondée sur la LPD suisse révisée et son ordonnance, et sur le RGPD lorsque celui-ci
-              est applicable à un traitement déterminé — Dernière mise à jour : {LAST_UPDATE}
+              Fondée sur la LPD et l'OPDo ; RGPD uniquement lorsqu'il est effectivement applicable — Dernière mise à jour : {LAST_UPDATE}
             </p>
           </div>
         </div>
@@ -65,105 +64,64 @@ export default function PolitiqueConfidentialite() {
         <section className="space-y-8 text-base leading-relaxed">
           <div>
             <h2 className="text-2xl font-semibold mb-3">1. Responsable du traitement</h2>
-            <ul className="space-y-1">
-              <li><strong>Immo-rama.ch — entreprise individuelle Christ Ramazani</strong></li>
-              <li>Chemin de l'Esparcette 5, 1023 Crissier (VD), Suisse</li>
-              <li>IDE : <strong>CHE-442.303.796</strong></li>
-              <li>
-                E-mail protection des données :{' '}
-                <a href="mailto:info@immo-rama.ch" className="text-primary hover:underline">info@immo-rama.ch</a>
-              </li>
-              <li>
-                Téléphone :{' '}
-                <a href="tel:+41216342839" className="text-primary hover:underline">+41 21 634 28 39</a>
-              </li>
+            <p>
+              Immo-rama.ch — entreprise individuelle Christ Ramazani, Chemin de l'Esparcette 5, 1023 Crissier (VD), Suisse, IDE CHE-442.303.796, agit comme responsable du traitement.
+            </p>
+            <ul className="mt-3 space-y-1">
+              <li>Contact : <a href="mailto:info@immo-rama.ch" className="text-primary hover:underline">info@immo-rama.ch</a></li>
+              <li>Téléphone : <a href="tel:+41216342839" className="text-primary hover:underline">+41 21 634 28 39</a></li>
             </ul>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">2. Champ d'application</h2>
+            <h2 className="text-2xl font-semibold mb-3">2. Champ d'application et droit applicable</h2>
             <p>
-              La présente politique s'applique à Logisorama.ch, à ses applications mobiles, aux
-              espaces clients, annonceurs et professionnels ainsi qu'aux services associés
-              exploités par Immo-rama.ch. Elle est fondée sur la Loi fédérale sur la protection des
-              données (LPD) et son ordonnance. Lorsque le RGPD est applicable à un traitement
-              déterminé, les droits et obligations supplémentaires du RGPD sont également
-              respectés.
+              La présente politique s'applique au site Logisorama.ch, aux applications, espaces clients, annonceurs et professionnels ainsi qu'aux prestations connexes exploitées par Immo-rama.ch. Elle est fondée sur la LPD et son ordonnance. Le RGPD n'est appliqué que lorsqu'un traitement relève effectivement de son champ territorial ou matériel.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">3. Données traitées</h2>
+            <h2 className="text-2xl font-semibold mb-3">3. Catégories de données traitées</h2>
             <p>
-              Selon les services utilisés, nous pouvons traiter notamment : identité et
-              coordonnées ; informations de compte ; critères immobiliers ; situation
-              professionnelle et financière ; informations concernant le ménage ; données de
-              garants et co-candidats ; pièces d'identité ou permis ; fiches de salaire ; contrats
-              de travail ; extraits du registre des poursuites ; documents de candidature ;
-              messages et communications ; informations relatives aux visites ; contenus audio ou
-              vidéo lorsqu'une fonction correspondante est utilisée ; données de facturation et de
-              paiement ; journaux techniques, adresse IP et données de sécurité ; identifiants de
-              notifications ; données liées aux préférences marketing et aux cookies.
+              Selon la prestation, peuvent être traitées : identité, coordonnées et authentification ; critères immobiliers ; situation personnelle, professionnelle et financière ; composition du ménage ; informations relatives aux garants et co-candidats ; pièces d'identité, permis, fiches de salaire, contrats de travail et extraits des poursuites ; documents de candidature ; messages ; visites et communications ; facturation et paiements ; journaux techniques, adresse IP, sécurité ; identifiants de notifications ; choix relatifs aux cookies et au marketing. Les données de tiers ne doivent être transmises qu'après information de ceux-ci et lorsqu'une base suffisante existe.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">4. Finalités</h2>
             <p>
-              Exploiter Logisorama.ch ; créer et gérer les comptes ; exécuter les mandats ;
-              constituer les dossiers ; proposer des biens ; effectuer des matchings ; organiser
-              les visites ; déposer les candidatures demandées ; communiquer avec les régies,
-              propriétaires et autres intervenants ; fournir la messagerie, les appels et les
-              notifications ; gérer la facturation ; prévenir la fraude ; assurer la sécurité ;
-              respecter les obligations légales ; établir ou défendre des droits ; améliorer la
-              plateforme et, lorsque cela est autorisé, effectuer des opérations marketing.
+              Les traitements ont pour finalités l'exploitation et la sécurité de la plateforme, la création et la gestion des comptes, l'exécution des mandats, la constitution et la transmission des dossiers demandés, le matching, l'organisation des visites, les communications, la facturation, la prévention de la fraude, le respect d'obligations légales, l'établissement et la défense de droits, l'amélioration du service et, lorsque les conditions sont remplies, les activités de mesure et de marketing.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">5. Consentement et autres motifs de traitement</h2>
+            <h2 className="text-2xl font-semibold mb-3">5. Justification, consentements et transparence</h2>
             <p>
-              Sous la LPD, l'exécution des traitements nécessaires au service n'est pas
-              artificiellement présentée comme dépendant d'un consentement unique et révocable.
-              Lorsque le traitement est nécessaire à l'exécution du service demandé ou repose sur
-              un intérêt privé prépondérant compatible avec la LPD, nous le signalons de manière
-              transparente. Un consentement distinct est demandé lorsqu'il est juridiquement
-              nécessaire ou approprié, notamment pour certains traitements facultatifs,
-              enregistrements ou activités marketing.
-            </p>
-            <p className="mt-3">
-              <strong>Enregistrement audio ou vidéo :</strong> les appels et les live de visite ne
-              font l'objet <strong>d'aucun enregistrement par défaut</strong> — la fonction
-              d'enregistrement est désactivée. Si un enregistrement devait être activé à l'avenir,
-              les participants en seraient clairement informés avant tout enregistrement.
+              Sous la LPD, tout traitement respecte les principes de licéité, bonne foi, proportionnalité, finalité, reconnaissabilité et sécurité. Les traitements nécessaires à la prestation ne sont pas artificiellement soumis à un consentement global. Un consentement spécifique, libre et révocable est sollicité lorsqu'il est requis ou approprié, notamment pour certains usages facultatifs, enregistrements et opérations marketing. Le retrait n'affecte pas la licéité des traitements antérieurs.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">6. Intelligence artificielle et matching</h2>
+            <h2 className="text-2xl font-semibold mb-3">6. Matching, profilage et décisions automatisées</h2>
             <p>
-              Des systèmes automatisés peuvent comparer des critères de recherche à des annonces et
-              proposer des opportunités. Lorsque l'outil ne fait qu'assister un collaborateur et
-              qu'une décision pertinente reste effectivement prise par un humain, il n'est pas
-              présenté comme une décision individuelle entièrement automatisée. Si ce
-              fonctionnement change, la présente politique sera adaptée conformément notamment à
-              l'art. 21 LPD.
+              Les systèmes peuvent rapprocher les critères d'un Utilisateur avec des annonces et établir des suggestions. À la date de la présente politique, aucune décision produisant des effets juridiques ou affectant significativement une personne n'est adoptée exclusivement par un système automatisé. Si une telle décision devait être introduite, les personnes seraient informées conformément à l'art. 21 LPD et pourraient demander qu'elle soit revue par une personne physique.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">7. Destinataires</h2>
             <p>
-              Régies immobilières, propriétaires, bailleurs, vendeurs, agents et autres
-              destinataires d'une candidature demandée par l'utilisateur ; prestataires techniques ;
-              prestataires de facturation ; fournisseurs de communications et de notifications ;
-              autorités lorsque la loi l'exige.
+              Les données peuvent être communiquées, selon le service demandé et dans la mesure nécessaire, aux régies, propriétaires, bailleurs, vendeurs, agents, professionnels impliqués dans une transaction, prestataires techniques, fournisseurs de paiement ou de facturation, services de communication et autorités compétentes. Aucune vente de dossiers de candidature n'est effectuée.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">8. Prestataires techniques</h2>
-            <div className="mt-3 overflow-x-auto rounded-lg border">
+            <h2 className="text-2xl font-semibold mb-3">8. Sous-traitants et transferts internationaux</h2>
+            <p>
+              Les sous-traitants sont sélectionnés et encadrés contractuellement conformément à l'art. 9 LPD. Pour tout traitement à l'étranger, Immo-rama.ch vérifie le pays, le niveau de protection, le rôle du destinataire et, lorsque nécessaire, met en œuvre une garantie appropriée, notamment une certification reconnue, des clauses contractuelles types adaptées au droit suisse ou une exception légale documentée. Les informations disponibles sont communiquées sur demande.
+            </p>
+            <h3 className="text-lg font-semibold mt-4 mb-2">Registre synthétique des prestataires techniques</h3>
+            <div className="mt-1 overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
@@ -184,100 +142,56 @@ export default function PolitiqueConfidentialite() {
               </table>
             </div>
             <p className="mt-4">
-              La synchronisation entre Immo-rama.ch et Logisorama.ch s'effectue au sein de la même
-              entreprise (Immo-rama.ch, Christ Ramazani), qui reste le même responsable de
-              traitement utilisant plusieurs systèmes ; il ne s'agit pas d'un transfert à un
-              sous-traitant tiers.
-            </p>
-            <p className="mt-3">
-              Pour chaque prestataire, le pays de traitement et le mécanisme de transfert
-              (notamment le Swiss-U.S. Data Privacy Framework lorsque le prestataire américain est
-              certifié, ou des clauses contractuelles types) sont documentés dans notre registre
-              interne et vérifiés au cas par cas.
+              La synchronisation entre Immo-rama.ch et Logisorama.ch s'effectue au sein de la même entreprise (Immo-rama.ch, Christ Ramazani), qui reste le même responsable de traitement utilisant plusieurs systèmes ; il ne s'agit pas d'un transfert à un sous-traitant tiers.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">9. Sécurité</h2>
             <p>
-              Nous mettons en œuvre des mesures organisationnelles et techniques adaptées au risque
-              (art. 8 LPD). L'accès aux données est limité aux personnes qui en ont besoin, compte
-              tenu de la nature sensible des dossiers locatifs.
+              Des mesures techniques et organisationnelles adaptées au risque sont appliquées conformément à l'art. 8 LPD et à l'OPDo : contrôle des accès, authentification, journalisation, sauvegardes, gestion des droits, chiffrement lorsque approprié, cloisonnement, gestion des vulnérabilités, procédures d'incident et obligations de confidentialité. Aucun dispositif ne garantit toutefois une sécurité absolue.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">10. Durée de conservation</h2>
+            <h2 className="text-2xl font-semibold mb-3">10. Durées de conservation</h2>
             <p>
-              Les données ne sont conservées que le temps nécessaire aux finalités poursuivies,
-              sous réserve d'obligations légales, d'un litige, de la défense de droits ou d'un
-              besoin de preuve. Les documents comptables et contractuels soumis à conservation
-              peuvent devoir être conservés dix ans (art. 958f CO).
-            </p>
-            <p className="mt-3">
-              Cette durée de dix ans ne s'applique <strong>pas</strong> automatiquement à
-              l'ensemble d'un dossier locataire (pièces d'identité, fiches de salaire, extraits de
-              poursuites) : pour ces documents opérationnels, une durée spécifique et plus courte
-              est définie selon le besoin réel.
+              Les données sont conservées pendant la durée nécessaire à la finalité, au contrat, à la preuve ou à une obligation légale. Sauf nécessité documentée contraire, les pièces opérationnelles sensibles d'un dossier de candidature sont supprimées ou anonymisées au plus tard 90 jours après la fin du service. Les données contractuelles et comptables soumises à l'art. 958f CO peuvent être conservées dix ans. Les litiges, blocages probatoires et obligations d'autorité peuvent justifier une conservation limitée plus longue.
             </p>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">11. Droits des personnes</h2>
             <p>
-              Vous disposez d'un droit d'accès (art. 25 ss LPD), de rectification, de suppression
-              lorsqu'aucun motif légitime ne justifie la conservation, d'opposition, de
-              portabilité (art. 28 LPD) dans les situations prévues par la loi, ainsi que du droit
-              de retirer un consentement sans effet rétroactif.
-            </p>
-            <p className="mt-3">
-              Demandes à :{' '}
-              <a href="mailto:info@immo-rama.ch" className="text-primary hover:underline font-semibold">
-                info@immo-rama.ch
-              </a>
+              Toute personne concernée peut exercer les droits prévus par la LPD, notamment l'accès aux données selon les art. 25 ss LPD, la rectification, la remise ou transmission selon l'art. 28 LPD lorsque ses conditions sont remplies, ainsi que demander la suppression ou s'opposer à un traitement lorsqu'aucun motif prépondérant ne justifie sa poursuite. Les demandes sont adressées à info@immo-rama.ch ; une vérification proportionnée de l'identité peut être requise.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">12. Analyse d'impact (AIPD)</h2>
+            <h2 className="text-2xl font-semibold mb-3">12. Analyse d'impact</h2>
             <p>
-              Lorsqu'un traitement est susceptible d'entraîner un risque élevé pour la personnalité
-              ou les droits fondamentaux, une analyse d'impact relative à la protection des données
-              est effectuée conformément à l'art. 22 LPD.
+              Lorsqu'un traitement envisagé est susceptible d'entraîner un risque élevé pour la personnalité ou les droits fondamentaux, Immo-rama.ch réalise préalablement une analyse d'impact conformément à l'art. 22 LPD et consulte le PFPDT lorsque les conditions légales l'exigent.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">13. Violations de données</h2>
+            <h2 className="text-2xl font-semibold mb-3">13. Violations de la sécurité des données</h2>
             <p>
-              Lorsqu'une violation de la sécurité des données présente un risque élevé pour la
-              personnalité ou les droits fondamentaux, elle est annoncée au Préposé fédéral à la
-              protection des données et à la transparence (PFPDT) dans les meilleurs délais
-              (art. 24 LPD).
+              Toute violation est documentée et traitée selon une procédure d'incident. Lorsqu'elle est susceptible d'entraîner un risque élevé pour la personnalité ou les droits fondamentaux, elle est annoncée au PFPDT dans les meilleurs délais conformément à l'art. 24 LPD ; les personnes concernées sont informées lorsque cela est nécessaire à leur protection ou exigé par le PFPDT.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">14. Cookies et marketing</h2>
+            <h2 className="text-2xl font-semibold mb-3">14. Cookies, mesure d'audience et marketing</h2>
             <p>
-              Nous utilisons les technologies nécessaires au fonctionnement du service et, selon
-              les choix de l'utilisateur, des outils de mesure, d'analyse et de publicité (Meta
-              Pixel, Google Ads, TikTok Pixel).
-            </p>
-            <p className="mt-3">
-              Une plateforme de gestion du consentement (CMP) propose « Tout accepter », « Tout
-              refuser » et « Personnaliser ». Les traceurs non essentiels sont refusés par défaut et
-              aucun pixel publicitaire n'est déclenché avant le choix de l'utilisateur lorsqu'un
-              consentement préalable est requis.
+              Les technologies strictement nécessaires peuvent être utilisées pour fournir et sécuriser le service. Les outils d'analyse ou de publicité, notamment Meta Pixel, Google Ads ou TikTok Pixel, ne sont activés que conformément aux choix enregistrés et au droit applicable. Une interface de gestion permet d'accepter, refuser ou personnaliser les catégories non essentielles et de modifier ultérieurement les préférences.
             </p>
           </div>
 
           <div>
-            <h2 className="text-2xl font-semibold mb-3">15. Modifications</h2>
+            <h2 className="text-2xl font-semibold mb-3">15. Modifications et contact</h2>
             <p>
-              La présente politique peut être modifiée selon l'évolution des services, des
-              prestataires et des exigences légales. La date de dernière mise à jour est affichée en
-              haut de page.
+              La politique peut être adaptée lorsque les traitements, prestataires ou exigences légales évoluent. La version en vigueur et sa date sont publiées. Toute question ou demande relative à la protection des données peut être adressée à info@immo-rama.ch.
             </p>
           </div>
         </section>
