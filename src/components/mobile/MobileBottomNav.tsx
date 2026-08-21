@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu, LifeBuoy } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ export function getBottomNavItems(role: string | null): BottomNavItem[] {
         { name: 'Postulations', icon: Mailbox, path: '/admin/postulations' },
         { name: 'Messages', icon: MessageSquare, path: '/admin/messagerie' },
         { name: 'Agenda', icon: Calendar, path: '/admin/calendrier' },
+        { name: 'Support', icon: LifeBuoy, path: '/admin/support' },
       ];
     case 'agent':
       return [
@@ -24,6 +25,7 @@ export function getBottomNavItems(role: string | null): BottomNavItem[] {
         { name: 'Postulations', icon: Mailbox, path: '/agent/postulations' },
         { name: 'Messages', icon: MessageSquare, path: '/agent/messagerie' },
         { name: 'Agenda', icon: Calendar, path: '/agent/calendrier' },
+        { name: 'Support', icon: LifeBuoy, path: '/agent/support' },
       ];
     case 'client':
       return [
@@ -31,6 +33,7 @@ export function getBottomNavItems(role: string | null): BottomNavItem[] {
         { name: 'Offres', icon: Home, path: '/client/offres-recues' },
         { name: 'Messages', icon: MessageSquare, path: '/client/messagerie' },
         { name: 'Agenda', icon: Calendar, path: '/client/calendrier' },
+        { name: 'Support', icon: LifeBuoy, path: '/support' },
       ];
     default:
       return [];
@@ -54,7 +57,7 @@ export function MobileBottomNav({ role }: { role: string | null }) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       aria-label="Navigation principale"
     >
-      <div className="grid grid-cols-5">
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${items.length + 1}, minmax(0, 1fr))` }}>
         {items.map((item) => {
           const active = isActive(item.path);
           return (
