@@ -15,8 +15,8 @@ const faqsLocation = [
 ];
 
 const faqsAchat = [
-  { q: "Que se passe-t-il si vous ne trouvez rien en 6 mois ?", a: "Votre acompte de 2'499 CHF vous est intégralement remboursé. Notre engagement est total : si nous ne trouvons pas de bien correspondant à vos critères dans les 6 mois, vous ne perdez rien." },
-  { q: "Combien coûte le service ?", a: "Service au prix forfaitaire de 4'999 CHF TTC : acompte d'activation de 2'499 CHF à la signature (déduit), puis solde de 2'500 CHF uniquement en cas de succès (acte d'acquisition). Aucun frais caché." },
+  { q: "Que se passe-t-il si vous ne trouvez rien en 6 mois ?", a: "Si nous mettons fin au mandat, ou au terme des 6 mois sans acquisition (dénonciation ordinaire notifiée dans les 15 derniers jours), votre montant d'activation de 2'500 CHF vous est remboursé sous 30 jours. En cas de résiliation anticipée de votre part, il reste acquis en rémunération des démarches déjà engagées." },
+  { q: "Combien coûte le service ?", a: "La commission est de 1 % du prix de vente (min. CHF 500, + TVA si due). Un montant d'activation de 2'500 CHF est versé à la signature et imputé sur la commission ; le solde (1 % − 2'500 CHF) n'est dû qu'en cas de succès, à la conclusion de l'acte. Aucun frais caché." },
   { q: "Comment fonctionne la recherche d'un bien ?", a: "Votre agent accède aux biens off-market via son réseau professionnel, contacte directement vendeurs, notaires et régies, et vous présente une sélection sur-mesure. Vous ne visitez que les biens qui correspondent vraiment à votre projet." },
   { q: "M'aidez-vous pour le financement hypothécaire ?", a: "Oui. Nous vous mettons en relation avec notre comparateur indépendant pour obtenir les meilleurs taux auprès de nos partenaires bancaires : UBS, Raiffeisen, BCV, BCGE, Crédit Agricole et d'autres établissements." },
   { q: "Couvrez-vous toute la Suisse romande ?", a: "Nous intervenons dans les cantons de Genève, Vaud, Fribourg, Neuchâtel, Valais et Jura. Notre réseau de contacts est particulièrement dense sur l'Arc lémanique." },

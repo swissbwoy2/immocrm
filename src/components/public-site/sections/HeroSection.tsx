@@ -326,7 +326,7 @@ export function HeroSection() {
                   </Button>
                   <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mt-2">
                     <span className="flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />Acompte 2'499 CHF
+                      <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />Activation 2'500 CHF
                     </span>
                     <span className="flex items-center gap-1">
                       <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />Mandat de 6 mois

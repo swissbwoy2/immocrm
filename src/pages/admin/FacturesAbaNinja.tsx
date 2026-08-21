@@ -94,7 +94,7 @@ export default function FacturesAbaNinja() {
   };
 
   const getMontant = (demande: DemandeMandat) => {
-    return demande.type_recherche === 'Acheter' ? 2499 : (demande.montant_acompte || 300);
+    return demande.type_recherche === 'Acheter' ? 2500 : (demande.montant_acompte || 300);
   };
 
   const monthlyStats = useMemo(() => {

@@ -217,8 +217,8 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
         statut: 'en_attente_activation',
         statut_mandat: 'a_signer',
         statut_acompte: 'a_payer',
-        montant_mandat: 4999,
-        montant_acompte: 2499,
+        montant_mandat: 0,
+        montant_acompte: 2500,
         duree_progression_jours: 180,
         date_debut_progression: null,
       })

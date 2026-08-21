@@ -60,7 +60,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                 <Badge className="bg-amber-100 text-amber-700 border-0">En attente</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Validez le dossier, le mandat et l'acompte CHF 2'499.– puis activez le parcours. Le suivi achat (mandat 6 mois) démarrera automatiquement.
+                Validez le dossier, le mandat et l'activation CHF 2’500.– (imputée sur la commission de 1 % du prix) puis activez le parcours. Le suivi achat (mandat 6 mois) démarrera automatiquement.
               </p>
             </div>
             <Button

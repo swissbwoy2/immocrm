@@ -112,8 +112,8 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   let yPosition = pageHeight - margin;
   
   const isPurchase = data.type_recherche === 'Acheter';
-  const acompte = isPurchase ? 2499 : 300;
-  const mandatTotal = isPurchase ? 4999 : 300;
+  const acompte = isPurchase ? 2500 : 300;
+  const mandatTotal = isPurchase ? 0 : 300; // commission achat = 1 % du prix (variable)
   const solde = isPurchase ? 2500 : 0;
   
   // Helper function to add text with sanitization
@@ -383,13 +383,13 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   yPosition -= 20;
   
   if (isPurchase) {
-    addText(`Prix total du service: CHF ${mandatTotal}.- TTC`, margin, yPosition, 11, helveticaBold);
+    addText(`Commission de courtage: 1 % du prix de vente (min. CHF 500), + TVA si due`, margin, yPosition, 11, helveticaBold);
     yPosition -= lineHeight;
-    addText(`Acompte d'activation: CHF ${acompte}.- TTC (du a la signature)`, margin, yPosition, 10);
+    addText(`Montant d'activation: CHF ${acompte}.- (impute sur la commission)`, margin, yPosition, 10);
     yPosition -= lineHeight;
-    addText(`Solde du en cas de succes: CHF ${solde}.- TTC (a l'acquisition du bien)`, margin, yPosition, 10);
+    addText(`Solde a la conclusion de l'acte: 1 % du prix - CHF ${acompte}.-`, margin, yPosition, 10);
     yPosition -= lineHeight;
-    addText(`L'acompte de CHF ${acompte}.- est deduit du prix total de CHF ${mandatTotal}.-.`, margin, yPosition, 10);
+    addText(`Activation remboursee sous 30 j si Immo-Rama met fin, ou au terme sans acquisition; acquise si resiliation anticipee du mandant.`, margin, yPosition, 10);
     yPosition -= 20;
   } else {
     addText(`Montant de l'acompte: CHF ${acompte}.-`, margin, yPosition, 11, helveticaBold);
@@ -483,22 +483,22 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= lineHeight;
     addWrappedText(
-      "Le mandant s'engage a payer au mandataire un prix total forfaitaire de CHF 4'999.- TTC pour le service de recherche et d'accompagnement a l'achat immobilier.",
+      "Le mandant s'engage a payer une commission de 1 % du prix de vente authentiquement convenu, plus la TVA au taux legal uniquement si elle est due, avec un minimum de CHF 500.-.",
       margin, maxTextWidth, 9
     );
     yPosition -= 5;
     addWrappedText(
-      "Un acompte d'activation de CHF 2'499.- TTC est du a la signature du present mandat. Cet acompte est integralement deduit du prix total de CHF 4'999.- TTC.",
+      "Un montant d'activation de CHF 2'500.- est du a la signature et est impute sur toute commission valablement acquise.",
       margin, maxTextWidth, 9
     );
     yPosition -= 5;
     addWrappedText(
-      "Le solde de CHF 2'500.- TTC est du uniquement en cas de succes, soit a la conclusion de l'acte d'acquisition d'un bien immobilier presente ou accompagne par le mandataire.",
+      "La commission n'est due que si un contrat de vente en la forme authentique est conclu et resulte causalement de l'indication ou de la negociation du mandataire.",
       margin, maxTextWidth, 9
     );
     yPosition -= 5;
     addWrappedText(
-      "En cas d'echec total des recherches au terme du mandat, l'acompte est rembourse selon les conditions prevues a l'article 'Remboursement'.",
+      "Si le mandataire met fin au mandat avant l'echeance, ou au terme sans acquisition (denonciation ordinaire), l'activation de CHF 2'500.- est remboursee sous 30 jours; en cas de resiliation anticipee du mandant, elle reste acquise.",
       margin, maxTextWidth, 9
     );
     yPosition -= 5;
@@ -508,7 +508,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     );
     yPosition -= 5;
     addWrappedText(
-      "Si le mandant se porte acquereur, par ses propres moyens ou par tout autre moyen, d'un bien presente par le mandataire, la commission est integralement due au mandataire.",
+      "Pour un bien du meme vendeur, la commission n'est due que si le mandataire a fourni une contribution causale documentee a l'acquisition.",
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
@@ -559,7 +559,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     checkNewPage();
     addText('2.1', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     addWrappedText(
-      "La commission est de 1 mois de loyer brut (loyer avec les charges) a la signature du contrat de bail. Une caution a hauteur de CHF 300.- doit etre versee pour l'activation de votre dossier. Elle sera comptabilisee en cas de reussite et deductible. Le mandat de recherche est valable 3 mois, passe ce delai, le mandat est renouvelable ou prend fin. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires. En cas de non-renouvellement, la caution vous est restituee sous un delai de 30 jours.",
+      "La commission est de 1 mois de loyer brut (charges comprises), plus la TVA au taux legal si elle est due, min. CHF 500, et n'est due qu'a la conclusion d'un bail valable resultant de l'activite d'Immo-Rama. Un montant d'activation de CHF 300.- est verse a l'ouverture du dossier et impute sur la commission. Le mandat est conclu pour 90 jours, reconduit tacitement par periodes de 90 jours; la denonciation ordinaire se notifie entre le 75e et le 90e jour (par ecrit ou dans l'application Logisorama.ch). Si Immo-Rama met fin au mandat, ou au terme sans conclusion de bail, les CHF 300.- sont rembourses sous 30 jours; en cas de resiliation anticipee du mandant, ils restent acquis. Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
@@ -818,7 +818,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email with PDF attachment
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@immo-rama.ch";
     const isPurchase = data.type_recherche === 'Acheter';
-    const acompte = isPurchase ? 2499 : 300;
+    const acompte = isPurchase ? 2500 : 300;
     
     // Format budget without Unicode issues
     const budgetFormatted = data.budget_max.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");

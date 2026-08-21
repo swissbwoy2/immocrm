@@ -181,8 +181,8 @@ export default function NouveauMandat() {
       }
 
       const isPurchase = formData.journey === 'purchase' || formData.type_recherche === 'Acheter';
-      // ⚠️ Acompte exact : CHF 2'499 pour achat, CHF 300 pour location.
-      const montantAcompte = isPurchase ? 2499 : 300;
+      // ⚠️ Activation exacte : CHF 2'500 pour achat (imputee sur commission 1 %), CHF 300 pour location.
+      const montantAcompte = isPurchase ? 2500 : 300;
 
       // ÉTAPE 1: Créer le client AbaNinja AVANT l'insert
       let abaninjaClientUuid: string | null = null;

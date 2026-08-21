@@ -497,7 +497,7 @@ const handler = async (req: Request): Promise<Response> => {
       addText('2. DUREE', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "Le present contrat est conclu pour une duree de 6 mois a compter de sa date de signature. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires.",
+        "Le present contrat est conclu pour une periode initiale de 6 mois a compter de son activation, reconduite tacitement par periodes de 6 mois. La denonciation ordinaire se notifie au plus tot 15 jours avant l'echeance et jusqu'a l'echeance (par ecrit ou dans l'application Logisorama.ch). Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
         margin, maxTextWidth, 9
       );
       yPosition -= 10;
@@ -507,12 +507,12 @@ const handler = async (req: Request): Promise<Response> => {
       addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "Le mandant s'engage a payer au mandataire un prix total forfaitaire de CHF 4'999.- TTC pour le service de recherche et d'accompagnement a l'achat immobilier.",
+        "Le mandant s'engage a payer une commission de 1 % du prix de vente authentiquement convenu, plus la TVA au taux legal uniquement si elle est due, avec un minimum de CHF 500.-.",
         margin, maxTextWidth, 9
       );
       yPosition -= 5;
       addWrappedText(
-        "Un acompte d'activation de CHF 2'499.- TTC est du a la signature et est integralement deduit du prix total de CHF 4'999.-. Le solde de CHF 2'500.- TTC est du uniquement en cas de succes, a la conclusion de l'acte d'acquisition.",
+        "Un montant d'activation de CHF 2'500.- est du a la signature et est impute sur toute commission valablement acquise. La commission n'est exigible que si un contrat de vente en la forme authentique est conclu et resulte causalement de l'activite du mandataire. Si le mandataire met fin au mandat, ou au terme sans acquisition, l'activation est remboursee sous 30 jours; en cas de resiliation anticipee du mandant, elle reste acquise.",
         margin, maxTextWidth, 9
       );
       yPosition -= 5;
@@ -581,7 +581,7 @@ const handler = async (req: Request): Promise<Response> => {
       addText('2.1', margin + 5, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "La commission est de 1 mois de loyer brut (loyer avec les charges) a la signature du contrat de bail. Une caution a hauteur de CHF 300.- doit etre versee pour l'activation de votre dossier. Elle sera comptabilisee en cas de reussite et deductible. Le mandat de recherche est valable 3 mois, passe ce delai, le mandat est renouvelable ou prend fin. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires. En cas de non-renouvellement, la caution vous est restituee sous un delai de 30 jours.",
+        "La commission est de 1 mois de loyer brut (charges comprises), plus la TVA au taux legal si elle est due, min. CHF 500, et n'est due qu'a la conclusion d'un bail valable resultant de l'activite d'Immo-Rama. Un montant d'activation de CHF 300.- est verse a l'ouverture du dossier et impute sur la commission. Le mandat est conclu pour 90 jours, reconduit tacitement par periodes de 90 jours; la denonciation ordinaire se notifie entre le 75e et le 90e jour (par ecrit ou dans l'application Logisorama.ch). Si Immo-Rama met fin au mandat, ou au terme sans conclusion de bail, les CHF 300.- sont rembourses sous 30 jours; en cas de resiliation anticipee du mandant, ils restent acquis. Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
         margin + 25, maxTextWidth - 30, 9
       );
       yPosition -= 10;
@@ -731,7 +731,7 @@ const handler = async (req: Request): Promise<Response> => {
     addText("Une facture QR vous est envoyee par email, payable depuis votre app bancaire.", margin + 10, yPosition, 9);
     yPosition -= lineHeight + 5;
     
-    const acompte = isPurchase ? "2'499 CHF (sur 4'999 CHF TTC, solde 2'500 CHF en cas de succes)" : "300 CHF";
+    const acompte = isPurchase ? "CHF 2'500 (active sur la commission de 1 % du prix, min. CHF 500)" : "300 CHF";
     addText(`Montant de l'acompte : ${acompte}`, margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= 30;
     

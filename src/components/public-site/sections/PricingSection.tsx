@@ -48,10 +48,10 @@ const columnsLocation = [
 const columnsAchat = [
   {
     title: 'Activation',
-    value: "2'499 CHF (sur 4'999)",
+    value: "2'500 CHF",
     valueDescription: "Acompte d'engagement",
-    description: "Acompte d'engagement, déduit de la commission finale d'achat.",
-    features: ['Sans engagement', 'Remboursable', 'Mandat exclusif'],
+    description: "Montant d'activation imputé sur la commission (1 % du prix, min. CHF 500).",
+    features: ['Sans engagement', 'Imputé sur la commission', 'Mandat exclusif'],
     imageSrc: activationKey,
     imageAlt: 'Clé dorée — symbole de l\'activation',
     highlight: false,

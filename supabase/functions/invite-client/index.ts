@@ -761,8 +761,8 @@ serve(async (req) => {
               statut: 'en_attente_activation',
               statut_mandat: purchaseMandateStatus,
               statut_acompte: 'a_payer',
-              montant_acompte: 2499,
-              montant_mandat: 4999,
+              montant_acompte: 2500,
+              montant_mandat: 0,
               duree_progression_jours: 180,
               date_debut_progression: null,
               // date_debut_progression: NULL — démarre seulement à l'activation admin
@@ -786,8 +786,8 @@ serve(async (req) => {
               assigned_agent_id: existingProject.assigned_agent_id || assignedAgentId,
               statut_acompte: 'a_payer',
               statut_mandat: purchaseMandateStatus,
-              montant_acompte: 2499,
-              montant_mandat: 4999,
+              montant_acompte: 2500,
+              montant_mandat: 0,
               duree_progression_jours: 180,
             })
             .eq('id', projectId);
@@ -830,7 +830,7 @@ serve(async (req) => {
 
             // 17 étapes (a_faire)
             const ACHAT_STEPS_DEF = [
-              { key: 'acompte_paye',          label: "Acompte payé (CHF 2'499)",                  ordre: 1 },
+              { key: 'acompte_paye',          label: "Activation payée (CHF 2'500)",                ordre: 1 },
               { key: 'mandat_signe',          label: "Mandat d'accompagnement signé",             ordre: 2 },
               { key: 'kickoff',               label: 'Rendez-vous de cadrage avec votre conseiller', ordre: 3 },
               { key: 'documents_financement', label: 'Documents financiers transmis',             ordre: 4 },

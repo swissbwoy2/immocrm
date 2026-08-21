@@ -78,9 +78,9 @@ serve(async (req) => {
     const referenceId = demande_id ? demande_id.slice(0, 8).toUpperCase() : Date.now().toString(36).toUpperCase();
 
     // Calculate amount based on search type
-    const montant = type_recherche === 'Acheter' ? 2499 : 300;
+    const montant = type_recherche === 'Acheter' ? 2500 : 300;
     const description = type_recherche === 'Acheter' 
-      ? "Acompte d'activation - Mandat de recherche Achat immobilier (CHF 2'499.- déduits du prix total de CHF 4'999.-)"
+      ? "Montant d'activation - Mandat de recherche Achat immobilier (CHF 2'500.- imputés sur la commission de 1 % du prix de vente, min. CHF 500)"
       : 'Acompte mandat de recherche - Location';
 
     // Calculate dates

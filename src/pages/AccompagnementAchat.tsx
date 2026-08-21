@@ -40,7 +40,7 @@ export default function AccompagnementAchat() {
           </Button>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Badge variant="outline" className="border-sky-200">CHF 4'999 — acompte CHF 2'499</Badge>
+          <Badge variant="outline" className="border-sky-200">Commission 1 % du prix — activation CHF 2'500</Badge>
           <Badge variant="outline" className="border-sky-200">Validation bancaire 24-48 h</Badge>
           <Badge variant="outline" className="border-sky-200">Mandat 6 mois</Badge>
         </div>
@@ -60,7 +60,7 @@ export default function AccompagnementAchat() {
           <ValueProp icon={Key} title="Remise des clés"
             text="Présence à la remise des clés, état des lieux et premières démarches de propriétaire." />
           <ValueProp icon={ShieldCheck} title="Transparence totale"
-            text="Tarif fixe CHF 4'999. Acompte CHF 2'499 à l'activation, solde à la remise des clés. Aucune commission cachée." />
+            text="Commission de 1 % du prix (min. CHF 500, + TVA si due). Activation CHF 2'500 imputée sur la commission, solde à la remise des clés. Aucune commission cachée." />
         </div>
       </section>
 

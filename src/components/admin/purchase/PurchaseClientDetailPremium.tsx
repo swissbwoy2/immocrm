@@ -92,8 +92,8 @@ export function PurchaseClientDetailPremium({
 
   const doneSteps = steps.filter((s) => s.statut === 'fait').length;
 
-  const montantMandat = project?.montant_mandat ?? 4999;
-  const montantAcompte = project?.montant_acompte ?? 2499;
+  const montantMandat = project?.montant_mandat ?? 0;
+  const montantAcompte = project?.montant_acompte ?? 2500;
   const soldeSucces = montantMandat - montantAcompte;
 
   return (
@@ -357,9 +357,9 @@ export function PurchaseClientDetailPremium({
 
         {/* ─── Mandat financier summary ─── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <PremiumStatCard label="Mandat total achat" value={`CHF ${montantMandat.toLocaleString('fr-CH')}`} variant="primary" icon={Banknote} />
+          <PremiumStatCard label="Commission achat" value="1 % du prix" variant="primary" icon={Banknote} />
           <PremiumStatCard label="Acompte" value={`CHF ${montantAcompte.toLocaleString('fr-CH')}`} variant="warning" icon={Wallet} />
-          <PremiumStatCard label="Solde au succès" value={`CHF ${soldeSucces.toLocaleString('fr-CH')}`} variant="success" icon={Target} />
+          <PremiumStatCard label="Solde au succès" value="1 % − activation" variant="success" icon={Target} />
           <PremiumStatCard label="Durée mandat" value="6 mois" icon={Clock} />
         </div>
 

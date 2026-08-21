@@ -56,7 +56,7 @@ const faqItemsAchat = [
   {
     question: "Combien ça coûte exactement ?",
     answer:
-      "C'est transparent : prix forfaitaire de 4'999 CHF TTC. Un acompte d'activation de 2'499 CHF est versé à la signature (intégralement déduit du prix total). Le solde de 2'500 CHF n'est dû qu'en cas de succès (acte d'acquisition). Aucun frais caché.",
+      "C'est transparent : la commission est de 1 % du prix de vente (min. CHF 500, + TVA si due). Un montant d'activation de 2'500 CHF est versé à la signature et imputé sur la commission. Le solde (1 % − 2'500 CHF) n'est dû qu'en cas de succès (acte d'acquisition). Aucun frais caché.",
   },
   {
     question: "Dois-je signer un contrat ?",
@@ -66,7 +66,7 @@ const faqItemsAchat = [
   {
     question: "Comment fonctionne la garantie remboursement ?",
     answer:
-      "Si après 6 mois de recherche active aucun bien correspondant à tes critères n'a été trouvé, ton acompte de 2'499 CHF t'est intégralement remboursé. Aucun risque financier : tu ne paies le solde de 2'500 CHF que si tu achètes effectivement un bien grâce à notre accompagnement.",
+      "Si nous mettons fin au mandat, ou au terme des 6 mois sans acquisition (dénonciation ordinaire dans les 15 derniers jours), ton activation de 2'500 CHF t'est remboursée sous 30 jours. En cas de résiliation anticipée de ta part, elle reste acquise. Tu ne paies le solde (1 % − 2'500 CHF) que si tu achètes grâce à notre accompagnement.",
   },
   {
     question: "Que se passe-t-il si je trouve moi-même ?",
@@ -86,7 +86,7 @@ const faqItemsAchat = [
   {
     question: "Comment ça marche concrètement ?",
     answer:
-      "Tu remplis le formulaire et signes un mandat de recherche. Tu verses l'acompte d'activation de 2'499 CHF (sur un forfait total de 4'999 CHF TTC) et ton chasseur immobilier dédié se met immédiatement au travail : recherche active, accès aux biens off-market, pré-sélection, organisation des visites, négociation du prix et accompagnement jusqu'au notaire.",
+      "Tu remplis le formulaire et signes un mandat de recherche. Tu verses le montant d'activation de 2'500 CHF (imputé sur la commission de 1 % du prix, min. CHF 500) et ton chasseur immobilier dédié se met immédiatement au travail : recherche active, accès aux biens off-market, pré-sélection, organisation des visites, négociation du prix et accompagnement jusqu'au notaire.",
   },
   {
     question: "Comment travaillez-vous pour moi ?",

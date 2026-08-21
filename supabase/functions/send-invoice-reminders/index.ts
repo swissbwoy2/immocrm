@@ -52,7 +52,7 @@ serve(async (req) => {
     const results: { email: string; success: boolean; error?: string }[] = [];
 
     for (const invoice of (pendingInvoices as PendingInvoice[]) || []) {
-      const montant = invoice.type_recherche === 'Acheter' ? 2499 : (invoice.montant_acompte || 300);
+      const montant = invoice.type_recherche === 'Acheter' ? 2500 : (invoice.montant_acompte || 300);
       const daysPending = Math.floor((Date.now() - new Date(invoice.created_at).getTime()) / (1000 * 60 * 60 * 24));
 
       // Send reminder email to client

@@ -17,7 +17,7 @@ interface Props {
 
 export default function MandatRecapitulatif({ data, onChange }: Props) {
   const isPurchase = data.type_recherche === 'Acheter';
-  const acompte = isPurchase ? 2499 : 300;
+  const acompte = isPurchase ? 2500 : 300;
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';

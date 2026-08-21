@@ -135,7 +135,7 @@ export function GuaranteeSection() {
                       <>
                         Mandat de <strong className="text-foreground">6 mois</strong> : on cherche activement ton bien idéal.
                         <br />
-                        <strong className="text-foreground">Pas de bien trouvé ? Acompte de 2'499 CHF intégralement remboursé.</strong>
+                        <strong className="text-foreground">Au terme des 6 mois sans acquisition, l'activation de 2'500 CHF est remboursée sous 30 jours.</strong>
                       </>
                     ) : (
                       <>

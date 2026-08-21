@@ -74,7 +74,7 @@ const shortComparisonDataAchat = [{
   icon: Landmark
 }, {
   aspect: "Commission transparente",
-  logisorama: "Prix forfaitaire 4'999 CHF TTC. Acompte d'activation 2'499 CHF (déduit). Solde 2'500 CHF uniquement en cas de succès.",
+  logisorama: "Commission de 1 % du prix de vente (min. CHF 500, + TVA si due). Activation 2'500 CHF imputée sur la commission ; solde à la conclusion de l'acte.",
   solo: "Tu paies 3-5% de commission à l'agence, sans garantie.",
   icon: PiggyBank
 }];
@@ -124,7 +124,7 @@ export function DifferentiationSection() {
     cta: isAchat ? "Trouver mon bien !" : "Je me lance !",
     ctaLink: isAchat ? "#quickform" : "/nouveau-mandat",
     guarantee: isAchat 
-      ? "Forfait 4'999 CHF • Acompte 2'499 CHF (déduit) • Solde 2'500 CHF si succès"
+      ? "Commission 1 % du prix • Activation 2'500 CHF imputée • Solde à l'acte"
       : "90 jours pour trouver • Remboursement intégral si échec",
   };
   

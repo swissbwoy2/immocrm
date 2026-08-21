@@ -58,7 +58,7 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
   }, [isOpen, userId]);
 
   // Montant dynamique selon le type de recherche
-  const montantAcompte = typeRecherche === 'Acheter' ? "2'499.-" : "300.-";
+  const montantAcompte = typeRecherche === 'Acheter' ? "2’500.-" : "300.-";
 
   const handleContactAdmin = async () => {
     setSending(true);

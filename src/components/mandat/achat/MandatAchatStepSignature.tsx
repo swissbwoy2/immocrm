@@ -73,17 +73,17 @@ const PERIMETRE_MISSION = [
 ];
 
 const AUTORISATIONS = [
-  "Le client autorise Immo-Rama.ch à transmettre ses données personnelles et financières aux partenaires bancaires, courtiers en financement, notaires, agences immobilières, propriétaires, vendeurs et partenaires nécessaires à la réalisation de son projet d'achat.",
-  "Le client consent au traitement de ses données financières dans le cadre de l'analyse de capacité d'achat et de la recherche de financement.",
-  "Le client autorise Immo-Rama.ch à le représenter dans les démarches de recherche, prise de contact, coordination et négociation liées au projet d'achat.",
+  "Le Mandant autorise Immo-Rama à transmettre les seules données nécessaires à une démarche déterminée (financement, offre, acte) aux partenaires concernés : banques et courtiers en financement, notaires, agences, propriétaires et vendeurs.",
+  "Tout contrôle de solvabilité ou contact avec l'employeur n'a lieu qu'après information préalable et accord spécifique du Mandant, dans le respect de la LPD (finalité, proportionnalité, sécurité et transparence).",
+  "Le Mandant autorise Immo-Rama à le représenter dans les démarches de recherche, prise de contact, coordination et négociation liées à son projet d'achat. La prospection commerciale repose sur un consentement séparé, facultatif et révocable.",
 ];
 
 const LIMITES = [
-  "Immo-Rama.ch agit comme accompagnateur et conseiller.",
-  "Immo-Rama.ch ne garantit pas l'obtention d'un financement hypothécaire.",
-  "Immo-Rama.ch ne garantit pas l'acceptation d'une offre d'achat par un vendeur.",
-  "Immo-Rama.ch ne garantit pas la disponibilité d'un bien immobilier.",
-  "La décision finale d'achat et de signature de l'acte authentique reste entièrement sous la responsabilité du client.",
+  "Immo-Rama agit avec diligence et fidélité, sans obligation de résultat.",
+  "Immo-Rama ne garantit ni la disponibilité d'un bien, ni l'obtention d'un financement hypothécaire, ni l'acceptation d'une offre par un vendeur.",
+  "Les décisions juridiques, techniques, fiscales et financières appartiennent au Mandant, assisté au besoin de professionnels qualifiés.",
+  "Aucune exclusion ne couvre le dol, la faute grave, la violation d'une obligation essentielle imputable à Immo-Rama, ni les responsabilités légalement impératives.",
+  "La décision finale d'achat et de signature de l'acte authentique reste sous la responsabilité du Mandant.",
 ];
 
 function formatDate(dateStr: string): string {
@@ -124,7 +124,7 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
       >
         <div className="flex items-center gap-2 mb-1.5">
           <FileCheck size={18} style={{ color: C.gold }} />
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.gold }}>Mandat d'accompagnement à l'achat immobilier</span>
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: C.gold }}>Mandat de recherche immobilière — Achat (Vaud)</span>
         </div>
         <h2 className="text-2xl font-bold" style={{ color: C.forest }}>Vérification, lecture et signature</h2>
         <p className="text-sm mt-1.5" style={{ color: C.inkSoft }}>
@@ -172,20 +172,20 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
       <Section title="3. Conditions financières Immo-Rama.ch" icon={<span className="text-[11px] font-bold">CHF</span>}>
         <div className="space-y-1">
           <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
-            <span className="text-sm" style={{ color: C.inkSoft }}>Prix total du mandat d'accompagnement</span>
-            <strong className="text-base" style={{ color: C.forest }}>CHF 4&apos;999.–</strong>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Commission de courtage (au succès, min. CHF 500, + TVA si due)</span>
+            <strong className="text-base" style={{ color: C.forest }}>1 % du prix de vente</strong>
           </div>
           <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
-            <span className="text-sm" style={{ color: C.inkSoft }}>Acompte à l'activation du dossier</span>
-            <strong className="text-base" style={{ color: C.gold }}>CHF 2&apos;499.–</strong>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Montant d'activation (imputé sur la commission)</span>
+            <strong className="text-base" style={{ color: C.gold }}>CHF 2&apos;500.–</strong>
           </div>
           <div className="flex justify-between items-center py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
-            <span className="text-sm" style={{ color: C.inkSoft }}>Solde de succès (à la remise des clés)</span>
-            <strong className="text-base" style={{ color: C.ink }}>CHF 2&apos;500.–</strong>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Solde à la conclusion de l'acte (commission − activation)</span>
+            <strong className="text-base" style={{ color: C.ink }}>1 % du prix − activation CHF 2&apos;500.–</strong>
           </div>
           <div className="flex justify-between items-center py-2">
-            <span className="text-sm" style={{ color: C.inkSoft }}>Durée contractuelle du mandat</span>
-            <strong className="text-base" style={{ color: C.ink }}>6 mois</strong>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Durée du mandat</span>
+            <strong className="text-base" style={{ color: C.ink }}>6 mois, reconduction tacite 6 mois</strong>
           </div>
         </div>
       </Section>
@@ -275,7 +275,7 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
         </div>
 
         <p className="text-sm mb-2 leading-relaxed" style={{ color: C.inkSoft }}>
-          En signant, je confirme avoir lu et accepté le présent mandat d'accompagnement à l'achat immobilier, ses conditions financières, son périmètre de mission, ses autorisations et ses limites de responsabilité.
+          En signant, je confirme avoir lu et accepté le présent mandat de recherche immobilière (achat), ses honoraires (commission de 1 % du prix de vente, min. CHF 500, + TVA si due), son périmètre de mission, ses autorisations et ses limites de responsabilité.
         </p>
         <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
         <p className="text-[11px] mt-2" style={{ color: C.inkSoft }}>
@@ -289,7 +289,7 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
           checked={data.cgv_acceptees}
           onCheckedChange={(checked) => onChange({ cgv_acceptees: checked })}
           required
-          label="Je déclare avoir lu et accepté l'intégralité du présent mandat d'accompagnement à l'achat immobilier, ainsi que les conditions financières, le périmètre de mission, les autorisations de transmission de données et les limites de responsabilité d'Immo-Rama.ch. Je comprends que ce mandat est conclu pour une durée de 6 mois à compter de son activation."
+          label="Je déclare avoir lu et accepté l'intégralité du présent mandat de recherche immobilière (achat) : la commission de 1 % du prix de vente (min. CHF 500, + TVA si due), le montant d'activation de CHF 2’500 imputé sur la commission, le périmètre de mission, les autorisations de transmission de données et les limites de responsabilité. Je comprends que le mandat est conclu pour une période initiale de 6 mois reconductible tacitement par périodes de 6 mois, et que chaque partie peut y mettre fin en tout temps conformément à l'art. 404 CO, aux conséquences financières prévues."
         />
       </div>
 

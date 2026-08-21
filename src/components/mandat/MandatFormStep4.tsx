@@ -80,7 +80,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
         label="Que recherchez-vous ?"
         options={[
           { value: 'Louer', label: 'Louer', description: 'Acompte: 300 CHF', icon: <Home size={20} strokeWidth={1.5} /> },
-          { value: 'Acheter', label: 'Acheter', description: "Acompte: 2'499 CHF (sur 4'999 CHF)", icon: <Building2 size={20} strokeWidth={1.5} /> },
+          { value: 'Acheter', label: 'Acheter', description: "Activation: 2’500 CHF · commission 1 % du prix", icon: <Building2 size={20} strokeWidth={1.5} /> },
         ]}
         value={data.type_recherche}
         onChange={(v) => onChange({ type_recherche: v, budget_max: 0, apport_personnel: 0 })}
