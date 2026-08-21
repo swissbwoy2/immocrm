@@ -25,14 +25,17 @@ export function PremiumPageHeaderV2({
   badge,
   className = '',
 }: PremiumPageHeaderV2Props) {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: -12 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${className}`}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-3 border-b border-border/40 ${className}`}
     >
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 min-w-0">
+
         {breadcrumbs && breadcrumbs.length > 0 && (
           <nav className="flex items-center gap-1 text-xs text-muted-foreground">
             {breadcrumbs.map((crumb, i) => (
