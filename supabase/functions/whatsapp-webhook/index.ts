@@ -912,17 +912,20 @@ Deno.serve(async (req) => {
 
   // ---------- HMAC X-Hub-Signature-256 verification ----------
   const appSecret = Deno.env.get("WHATSAPP_APP_SECRET");
-  if (appSecret) {
-    const sigHeader = req.headers.get("x-hub-signature-256");
-    const ok = await verifyMetaSignature(rawBody, sigHeader, appSecret);
-    if (!ok) {
-      return new Response(JSON.stringify({ error: "invalid_signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-  } else {
-    console.warn("whatsapp-webhook: HMAC verification disabled (WHATSAPP_APP_SECRET not set)");
+  if (!appSecret) {
+    console.error("whatsapp-webhook: WHATSAPP_APP_SECRET is not configured");
+    return new Response(JSON.stringify({ error: "webhook_unavailable" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const sigHeader = req.headers.get("x-hub-signature-256");
+  const ok = await verifyMetaSignature(rawBody, sigHeader, appSecret);
+  if (!ok) {
+    return new Response(JSON.stringify({ error: "invalid_signature" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   let body: any;

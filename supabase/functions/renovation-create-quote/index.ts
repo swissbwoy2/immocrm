@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +56,15 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const accessDenied = await denyIfNoProjectAccess(
+      supabase,
+      user.id,
+      projectId,
+      corsHeaders,
+      'renovation-create-quote',
+    );
+    if (accessDenied) return accessDenied;
 
     // Verify project exists and user can manage it
     const { data: project } = await supabase

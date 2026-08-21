@@ -56,7 +56,12 @@ async function verifySignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   const expected = `sha256=${hashHex}`;
-  return expected === signature;
+  if (expected.length !== signature.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i += 1) {
+    mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return mismatch === 0;
 }
 
 Deno.serve(async (req) => {
@@ -92,15 +97,16 @@ Deno.serve(async (req) => {
 
     // Validate signature
     const signature = req.headers.get("x-hub-signature-256");
-    if (signature && META_APP_SECRET) {
-      const valid = await verifySignature(bodyText, signature, META_APP_SECRET);
-      if (!valid) {
-        console.error("Invalid webhook signature");
-        return new Response("Invalid signature", {
-          status: 403,
-          headers: corsHeaders,
-        });
-      }
+    if (!META_APP_SECRET) {
+      console.error("meta-leads-webhook: META_APP_SECRET is not configured");
+      return new Response("Webhook unavailable", { status: 503, headers: corsHeaders });
+    }
+    if (!signature || !(await verifySignature(bodyText, signature, META_APP_SECRET))) {
+      console.error("Invalid or missing webhook signature");
+      return new Response("Invalid signature", {
+        status: 403,
+        headers: corsHeaders,
+      });
     }
 
     let payload: any;

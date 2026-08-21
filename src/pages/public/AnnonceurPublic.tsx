@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, MapPin, Phone, Mail, Globe, Star, Shield, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Building2, MapPin, Star, Shield, RotateCcw, ArrowLeft } from 'lucide-react';
 
 type Transaction = 'tous' | 'location' | 'vente';
 
@@ -37,8 +37,7 @@ export default function AnnonceurPublic() {
     enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('annonceurs')
-        .select('id, nom, prenom, nom_entreprise, type_annonceur, logo_url, site_web, telephone, email, ville, canton, est_verifie, note_moyenne, nb_avis')
+        .rpc('get_public_annonceurs')
         .eq('id', id!)
         .maybeSingle();
       if (error) throw error;
@@ -182,32 +181,6 @@ export default function AnnonceurPublic() {
                       <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                       {Number(annonceur.note_moyenne).toFixed(1)} ({annonceur.nb_avis || 0})
                     </span>
-                  )}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {annonceur.telephone && (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={`tel:${annonceur.telephone}`}>
-                        <Phone className="h-4 w-4 mr-1.5" />
-                        {annonceur.telephone}
-                      </a>
-                    </Button>
-                  )}
-                  {annonceur.email && (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={`mailto:${annonceur.email}`}>
-                        <Mail className="h-4 w-4 mr-1.5" />
-                        Écrire
-                      </a>
-                    </Button>
-                  )}
-                  {annonceur.site_web && (
-                    <Button size="sm" variant="ghost" asChild>
-                      <a href={annonceur.site_web} target="_blank" rel="noopener noreferrer">
-                        <Globe className="h-4 w-4 mr-1.5" />
-                        Site web
-                      </a>
-                    </Button>
                   )}
                 </div>
               </div>

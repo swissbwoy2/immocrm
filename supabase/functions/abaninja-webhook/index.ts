@@ -49,22 +49,22 @@ serve(async (req) => {
     const signature = req.headers.get('x-abaninja-signature') || '';
     const webhookSecret = Deno.env.get('ABANINJA_WEBHOOK_SECRET') || '';
     
-    if (webhookSecret && signature) {
-      const isValid = await verifySignature(rawBody, signature, webhookSecret);
-      
-      if (!isValid) {
-        console.error('Invalid webhook signature');
-        return new Response(
-          JSON.stringify({ success: false, error: 'Invalid signature' }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-      console.log('Webhook signature verified successfully');
-    } else {
-      console.log('No signature verification (signature or secret missing)');
+    if (!webhookSecret) {
+      console.error('abaninja-webhook: ABANINJA_WEBHOOK_SECRET is not configured');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Webhook unavailable' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    if (!signature || !(await verifySignature(rawBody, signature, webhookSecret))) {
+      console.error('Invalid or missing webhook signature');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid signature' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const payload = JSON.parse(rawBody);
