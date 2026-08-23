@@ -4436,6 +4436,30 @@ export type Database = {
           },
         ]
       }
+      edge_rate_limits: {
+        Row: {
+          identity_hash: string
+          request_count: number
+          scope: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          identity_hash: string
+          request_count?: number
+          scope: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          identity_hash?: string
+          request_count?: number
+          scope?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       email_configurations: {
         Row: {
           created_at: string | null
@@ -13328,6 +13352,15 @@ export type Database = {
         Args: { _offre_id: string }
         Returns: string
       }
+      consume_edge_rate_limit: {
+        Args: {
+          p_identity_hash: string
+          p_max_requests: number
+          p_scope: string
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       create_approval_request: {
         Args: {
           p_ai_agent_id?: string
@@ -13511,6 +13544,25 @@ export type Database = {
           prix: number
           surface: number
           visitline: string
+        }
+        Returns: string
+      }
+      ir_new_ids: { Args: { p_ids: string }; Returns: string }
+      ir_new_streets: { Args: { p: string }; Returns: string }
+      ir_push: {
+        Args: {
+          p_adresse: string
+          p_annee: number
+          p_clients: string[]
+          p_desc: string
+          p_dispo: string
+          p_etage: string
+          p_lien: string
+          p_pieces: number
+          p_prix: number
+          p_surface: number
+          p_visite_txt?: string
+          p_visites?: string[]
         }
         Returns: string
       }
