@@ -64,7 +64,7 @@ export function PublicSiteFooter() {
             <ul className="space-y-3">
               {[
                 { href: 'https://immo-rama.ch/vendre-mon-bien', label: 'Vendre mon bien' },
-                { href: 'https://logisorama.ch/relouer-mon-appartement', label: 'Mise en location propriétaire' },
+                { href: '/relouer-mon-appartement', label: 'Reprise de bail / trouver un repreneur' },
                 { href: 'https://immo-rama.ch/project-management', label: 'Project Management' },
                 { href: 'https://www.immo-rama.ch', label: 'www.immo-rama.ch' },
               ].map((link) => (

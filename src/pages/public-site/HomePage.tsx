@@ -18,6 +18,7 @@ const GuaranteeSection = lazy(() => import('@/components/public-site/sections/Gu
 const PricingSection = lazy(() => import('@/components/public-site/sections/PricingSection').then(m => ({ default: m.PricingSection })));
 const BudgetCalcSection = lazy(() => import('@/components/public-site/sections/BudgetCalcSection').then(m => ({ default: m.BudgetCalcSection })));
 const CoverageSection = lazy(() => import('@/components/public-site/sections/CoverageSection').then(m => ({ default: m.CoverageSection })));
+const SeoLocalSection = lazy(() => import('@/components/landing/SeoLocalSection').then(m => ({ default: m.SeoLocalSection })));
 const StatsSection = lazy(() => import('@/components/public-site/sections/StatsSection').then(m => ({ default: m.StatsSection })));
 const PartnersSection = lazy(() => import('@/components/public-site/sections/PartnersSection').then(m => ({ default: m.PartnersSection })));
 const TechSection = lazy(() => import('@/components/public-site/sections/TechSection').then(m => ({ default: m.TechSection })));
@@ -90,6 +91,7 @@ export default function HomePage() {
         <ServicesFullSection />
         <GuaranteeSection />
         <CoverageSection />
+        <SeoLocalSection />
         <StatsSection />
         <PartnersSection />
         <TechSection />

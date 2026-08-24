@@ -1,21 +1,10 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Home, Banknote, Eye, Handshake, Scale, Key, CheckCircle2, Clock, ShieldCheck, Sparkles } from 'lucide-react';
+import { Home, Banknote, Eye, Handshake, Scale, Key, ShieldCheck, Sparkles, type LucideIcon } from 'lucide-react';
 
 export default function AccompagnementAchat() {
-  useEffect(() => {
-    document.title = 'Accompagnement à l\'achat immobilier | Immo-Rama';
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) {
-      meta.setAttribute('content',
-        'Accompagnement complet à l\'achat immobilier en Suisse : validation bancaire 24-48 h, courtier qui visite pour vous, négociation et signature notariée. Mandat 6 mois jusqu\'à la remise des clés.',
-      );
-    }
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50">
       {/* HERO */}
@@ -24,7 +13,7 @@ export default function AccompagnementAchat() {
           <Home className="h-3 w-3 mr-1" /> Accompagnement acheteur — Immo-Rama
         </Badge>
         <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-sky-900 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
-          Devenez propriétaire en toute sérénité
+          Votre chasseur immobilier en Suisse romande
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
           Validation bancaire en 24 à 48 heures, biens sélectionnés et visités par notre courtier,
@@ -108,7 +97,7 @@ export default function AccompagnementAchat() {
   );
 }
 
-function ValueProp({ icon: Icon, title, text }: any) {
+function ValueProp({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
     <Card className="p-5 border-sky-100 hover:border-sky-200 transition">
       <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center mb-3">

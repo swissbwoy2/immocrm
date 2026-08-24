@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Bell, Sparkles, Check, ArrowRight, MapPin, Clock, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,14 +15,6 @@ const FAQSection = lazy(() =>
 );
 
 export default function ChasseurAppartement() {
-  useEffect(() => {
-    document.title = "Chasseur d'appartement n°1 en Suisse romande | Immo-rama";
-    const meta = document.querySelector('meta[name="description"]');
-    const desc =
-      "Le service de chasseur d'appartement n°1 en Suisse romande. Trouve ton appartement en 1 clic, active ta recherche aujourd'hui.";
-    if (meta) meta.setAttribute('content', desc);
-  }, []);
-
   return (
     <PublicSiteLayout>
       <main className="pt-28 md:pt-32">
@@ -40,8 +32,8 @@ export default function ChasseurAppartement() {
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground leading-[1.05] mb-5">
-                  Chasseur d'appartement
-                  <span className="block text-primary mt-2">numéro 1 en Suisse romande</span>
+                  Chasseur d'appartement à Lausanne
+                  <span className="block text-primary mt-2">et en Suisse romande</span>
                 </h1>
 
                 <div className="h-1 w-24 bg-gradient-to-r from-primary to-accent rounded-full mb-6" />
