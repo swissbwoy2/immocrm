@@ -90,8 +90,9 @@ export function SeoLocalSection() {
                 correspond vraiment à votre projet.
               </p>
               <p>
-                Si vous souhaitez vendre ou relouer un bien dont vous êtes propriétaire, ces
-                services sont gérés directement par notre agence Immo-rama.ch :{' '}
+                Si vous souhaitez vendre un bien, ce service est géré directement par notre agence
+                Immo-rama.ch. Si vous êtes locataire sortant, Logisorama peut aussi vous aider à
+                trouver un repreneur solvable :{' '}
                 <a
                   href="https://immo-rama.ch/vendre-mon-bien"
                   target="_blank"
@@ -100,15 +101,10 @@ export function SeoLocalSection() {
                 >
                   vendre mon bien
                 </a>{' '}
-                ou{' '}
-                <a
-                  href="https://logisorama.ch/relouer-mon-appartement"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary font-semibold hover:underline"
-                >
-                  relouer mon appartement
-                </a>
+                {' '}ou{' '}
+                <Link to="/relouer-mon-appartement" className="text-primary font-semibold hover:underline">
+                  organiser une reprise de bail
+                </Link>
                 .
               </p>
             </section>

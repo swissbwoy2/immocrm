@@ -13,6 +13,7 @@ import { ScrollToTop } from "./components/ScrollToTop";
 import { TikTokPixelProvider } from "./components/TikTokPixelProvider";
 import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 import { IOSAppInterstitial } from "./components/IOSAppInterstitial";
+import { RouteSeo } from "./components/RouteSeo";
 
 // Eager load critical pages
 import Login from "./pages/Login";
@@ -279,7 +280,7 @@ const AppContent = () => {
     }
   }, [location.pathname]);
 
-  return null;
+  return <RouteSeo />;
 };
 
 const App = () => (

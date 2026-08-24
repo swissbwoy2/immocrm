@@ -184,7 +184,7 @@ export function HeroSection() {
                 </p>
 
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight max-w-3xl mx-auto font-serif">
-                  <WordReveal text="Ton futur appartement," delay={0.1} />
+                  <WordReveal text="Ta recherche d'appartement en Suisse romande," delay={0.1} />
                   {' '}
                   <span className="luxury-gradient-text">Notre Mission&nbsp;!</span>
                 </h1>

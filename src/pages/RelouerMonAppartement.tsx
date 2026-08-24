@@ -34,17 +34,6 @@ const STEPS = [
 export default function RelouerMonAppartement() {
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = 'Relouer mon appartement — Locataire sortant | Logisorama';
-    const meta = document.querySelector('meta[name="description"]');
-    const content =
-      "Vous quittez votre appartement ? Logisorama trouve un repreneur solvable, organise les visites et transmet un dossier complet à la régie pour vous libérer du bail rapidement.";
-    if (meta) meta.setAttribute('content', content);
-    else {
-      const m = document.createElement('meta');
-      m.name = 'description';
-      m.content = content;
-      document.head.appendChild(m);
-    }
   }, []);
 
   return (
@@ -65,15 +54,16 @@ export default function RelouerMonAppartement() {
             </span>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground leading-tight mb-5">
-              Vous quittez votre appartement ?<br />
+              Reprise de bail : trouvez un repreneur solvable<br />
               <span className="bg-gradient-to-r from-primary to-[hsl(var(--imr-green-light))] bg-clip-text text-transparent">
                 Évitez de payer deux loyers.
               </span>
             </h1>
 
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
-              Logisorama vous aide à trouver rapidement un repreneur solvable, à organiser les
-              visites et à transmettre un dossier complet à votre régie ou propriétaire.
+              Vous quittez votre appartement en Suisse romande ? Logisorama vous aide à trouver
+              rapidement un locataire de remplacement, organise les visites et transmet un dossier
+              complet à votre régie ou propriétaire.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
