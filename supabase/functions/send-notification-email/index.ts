@@ -18,6 +18,10 @@ interface NotificationEmailRequest {
   title?: string;
   message?: string;
   link?: string;
+  // Broadcast open/click tracking (writes a row into lead_email_logs)
+  track?: boolean;
+  cta_url?: string;
+  campaign_key?: string;
 }
 
 const getNotificationIcon = (type: string): string => {
@@ -345,7 +349,40 @@ serve(async (req) => {
     }
 
     const userName = profile.prenom ? `${profile.prenom}` : undefined;
-    const emailHtml = generateEmailHtml(title, message, notification_type, link, userName);
+    let emailHtml = generateEmailHtml(title, message, notification_type, link, userName);
+
+    // --- Broadcast open/click tracking (writes into lead_email_logs) ---
+    let trackingLogId: string | null = null;
+    if (requestData.track) {
+      try {
+        const { data: logRow, error: logErr } = await supabase
+          .from("lead_email_logs")
+          .insert({
+            lead_id: null,
+            campaign_key: requestData.campaign_key ?? "broadcast",
+            recipient_email: profile.email,
+            subject: title,
+            status: "sending",
+            sent_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single();
+        if (logErr) {
+          console.warn("lead_email_logs insert failed:", logErr.message);
+        } else {
+          trackingLogId = logRow.id;
+          const base = `${supabaseUrl}/functions/v1`;
+          const pixel = `<img src="${base}/track-email-open?id=${trackingLogId}" width="1" height="1" style="display:none" alt=""/>`;
+          emailHtml = emailHtml.replace("</body>", `${pixel}</body>`);
+          if (requestData.cta_url) {
+            const tracked = `${base}/track-email-click?id=${trackingLogId}&url=${encodeURIComponent(requestData.cta_url)}`;
+            emailHtml = emailHtml.split(requestData.cta_url).join(tracked);
+          }
+        }
+      } catch (e) {
+        console.warn("tracking setup exception:", e);
+      }
+    }
 
     // Send push notification in parallel
     const pushPromise = sendPushNotification(supabaseUrl, supabaseServiceKey, user_id, title, message, link);
@@ -389,6 +426,14 @@ serve(async (req) => {
 
         console.log(`Email notification sent successfully to ${profile.email}`, emailData);
         emailSent = true;
+
+        // Persist provider id + mark sent on the tracking row (broadcasts)
+        if (trackingLogId) {
+          await supabase
+            .from("lead_email_logs")
+            .update({ status: "sent", provider_message_id: emailData?.id ?? null })
+            .eq("id", trackingLogId);
+        }
         
         // Mark notification as email_sent if we have notification_id
         if (notificationId) {

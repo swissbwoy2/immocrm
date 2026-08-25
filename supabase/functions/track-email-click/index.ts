@@ -32,6 +32,11 @@ const ALLOWED_HOSTS = [
   'www.comparis.ch',
   'newhome.ch',
   'www.newhome.ch',
+  // App stores (update / install campaigns)
+  'apps.apple.com',
+  'itunes.apple.com',
+  'testflight.apple.com',
+  'play.google.com',
 ];
 
 function isAllowed(rawUrl: string): boolean {
