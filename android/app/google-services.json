@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "833651767922",
+    "project_id": "logisorama-notifications-push",
+    "storage_bucket": "logisorama-notifications-push.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:833651767922:android:8fa3b7bbfdf8afcdf4a0eb",
+        "android_client_info": {
+          "package_name": "ch.logisorama.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKjtaB3jzbw9sB2MXKyarL0nCA6cbUukY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
