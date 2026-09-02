@@ -11,4 +11,5 @@ export type TemplateEntry = {
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'client-credentials': clientCredentials,
+  'service-notice': serviceNotice,
 }
