@@ -1,6 +1,6 @@
 // Communication officielle aux clients actifs :
 // 1) crée un ticket Support (trace in-app) pour chaque client actif ;
-// 2) envoie l'email correspondant via send-transactional-email ;
+// 2) envoie l'email correspondant via l'API e-mail gérée ;
 // 3) idempotent grâce à broadcast_campaign_log (campaign_key + user_id).
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
