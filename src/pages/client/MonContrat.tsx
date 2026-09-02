@@ -167,7 +167,6 @@ export default function MonContrat() {
   // Mandate management state
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'cancel' | 'cancel_with_refund' | null>(null);
 
   const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
     if (!client) return;
@@ -187,17 +186,18 @@ export default function MonContrat() {
     }
   };
 
-  const openCancelDialog = (withRefund: boolean) => {
-    setPendingAction(withRefund ? 'cancel_with_refund' : 'cancel');
+  const openCancelDialog = () => {
     setReasonDialogOpen(true);
   };
 
   const handleCancelSubmit = async (reason: CancellationReason) => {
-    if (!client || !pendingAction) return;
-    setActionLoading(pendingAction);
+    if (!client) return;
+    // Par défaut : simple cancel. Remboursement uniquement dans la fenêtre J80→J90.
+    const action = refundEligibleNow ? 'cancel_with_refund' : 'cancel';
+    setActionLoading(action);
     try {
       const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
-        body: { action: pendingAction, client_id: client.id, cancellation_reason: reason },
+        body: { action, client_id: client.id, cancellation_reason: reason },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error ?? 'Erreur');
@@ -232,7 +232,7 @@ export default function MonContrat() {
     if (searchParams.get('action') !== 'refund') return;
     autoOpenedRefund.current = true;
     if (refundEligibleNow && !showRefundRequested) {
-      openCancelDialog(true);
+      openCancelDialog();
     } else {
       toast({
         title: refundEligibleNow ? 'Demande déjà enregistrée' : 'Pas encore éligible',
@@ -519,34 +519,14 @@ export default function MonContrat() {
                     </Button>
                   )}
 
-                  {/* Annuler simple — masqué après J82 */}
-                  {!refundEligibleNow && (
-                    <Button
-                      variant="outline"
-                      onClick={() => openCancelDialog(false)}
-                      disabled={actionLoading !== null}
-                      className="w-full"
-                    >
-                      <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat
-                    </Button>
-                  )}
-
-                  {/* Annuler + Remboursement — visible toujours, désactivé hors fenêtre J80→J90 */}
+                  {/* Annuler — toujours disponible. Action = cancel par défaut, cancel_with_refund uniquement dans la fenêtre J80→J90 */}
                   <Button
-                    variant={refundEligibleNow ? 'default' : 'outline'}
-                    onClick={() => openCancelDialog(true)}
-                    disabled={!refundEligibleNow || actionLoading !== null}
+                    variant="outline"
+                    onClick={() => openCancelDialog()}
+                    disabled={actionLoading !== null}
                     className="w-full"
-                    title={
-                      !refundEligibleNow
-                        ? refundWindowClosed
-                          ? `Fenêtre close (jours ${REFUND_ELIGIBILITY_DAY}–${MANDAT_DURATION_DAYS}). Mandat renouvelé automatiquement.`
-                          : `Disponible entre le ${REFUND_ELIGIBILITY_DAY}ème et le ${MANDAT_DURATION_DAYS}ème jour`
-                        : undefined
-                    }
                   >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    Annuler + Remboursement
+                    <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat
                   </Button>
 
                   {/* Pause */}
@@ -569,14 +549,14 @@ export default function MonContrat() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
-                {pendingAction === 'cancel_with_refund' ? 'Annuler + Demander mon remboursement' : 'Annuler mon mandat'}
+                {refundEligibleNow ? 'Annuler + Demander mon remboursement' : 'Annuler mon mandat'}
               </DialogTitle>
               <DialogDescription>
                 Aidez-nous à comprendre votre choix. Cette information est confidentielle.
               </DialogDescription>
             </DialogHeader>
             <CancellationReasonForm
-              withRefund={pendingAction === 'cancel_with_refund'}
+              withRefund={refundEligibleNow}
               daysSinceSignature={daysSinceSignature ?? 0}
               loading={actionLoading !== null}
               onSubmit={handleCancelSubmit}

@@ -206,8 +206,13 @@ serve(async (req) => {
       }
       tokenRow = data;
       clientId = data.client_id;
-    } else if (clientIdDirect && (typedAction === "pause" || typedAction === "resume")) {
-      // Pause/Resume : autoriser via client_id en passant par auth header (vérification user owner)
+    } else if (clientIdDirect && (
+      typedAction === "pause" ||
+      typedAction === "resume" ||
+      typedAction === "cancel" ||
+      typedAction === "cancel_with_refund"
+    )) {
+      // Pause/Resume/Cancel/Cancel+Refund : autoriser via client_id en passant par auth header (vérification user owner)
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return jsonResponse({ ok: false, error: "Authentification requise" }, 401);
