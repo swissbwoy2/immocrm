@@ -207,6 +207,7 @@ serve(async (req) => {
       tokenRow = data;
       clientId = data.client_id;
     } else if (clientIdDirect && (
+      typedAction === "renew" ||
       typedAction === "pause" ||
       typedAction === "resume" ||
       typedAction === "cancel" ||
@@ -274,7 +275,7 @@ serve(async (req) => {
     // Récupérer le client
     const { data: client, error: clientErr } = await supabase
       .from("clients")
-      .select("id, user_id, agent_id, statut, mandat_date_signature, mandate_paused_at, mandate_pause_days, mandate_official_end_date, refund_status")
+      .select("id, user_id, agent_id, statut, type_recherche, mandat_date_signature, mandate_paused_at, mandate_pause_days, mandate_official_end_date, refund_status, cancellation_requested_at, abaninja_client_uuid")
       .eq("id", clientId)
       .maybeSingle();
 
@@ -302,16 +303,65 @@ serve(async (req) => {
       const officialEndDate = new Date(today);
       officialEndDate.setDate(officialEndDate.getDate() + MANDAT_DURATION_DAYS);
 
+      // Le client avait annulé → réactivation complète du mandat
+      const wasCancelled = !!client.cancellation_requested_at &&
+        !["actif", "en_attente"].includes(client.statut ?? "");
+
+      const renewUpdate: Record<string, unknown> = {
+        mandat_date_signature: newSignatureDate,
+        statut: "actif",
+        mandate_pause_days: 0,
+        mandate_paused_at: null,
+        mandate_official_end_date: officialEndDate.toISOString().split("T")[0],
+      };
+
+      if (wasCancelled) {
+        renewUpdate.cancellation_requested_at = null;
+        renewUpdate.cancellation_reason = null;
+        renewUpdate.refund_requested_at = null;
+        renewUpdate.refund_status = "not_applicable";
+        renewUpdate.refund_eligible = false;
+        renewUpdate.date_changement_statut = newSignatureDate;
+      }
+
       await supabase
         .from("clients")
-        .update({
-          mandat_date_signature: newSignatureDate,
-          statut: "actif",
-          mandate_pause_days: 0,
-          mandate_paused_at: null,
-          mandate_official_end_date: officialEndDate.toISOString().split("T")[0],
-        })
+        .update(renewUpdate)
         .eq("id", client.id);
+
+      // Acompte d'activation redû après une annulation : émission d'une nouvelle facture
+      if (wasCancelled) {
+        try {
+          const { data: prof } = await supabase
+            .from("profiles").select("prenom, nom, email, telephone")
+            .eq("id", client.user_id).maybeSingle();
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/create-abaninja-invoice`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              type_recherche: client.type_recherche ?? "Louer",
+              prenom: prof?.prenom ?? "",
+              nom: prof?.nom ?? "",
+              email: prof?.email ?? "",
+              demande_id: client.id,
+              client_uuid: client.abaninja_client_uuid,
+            }),
+          });
+        } catch (e) {
+          console.error("Acompte invoice on renewal failed (non-blocking)", e);
+        }
+
+        await notify(
+          supabase,
+          client,
+          "mandate_renewed",
+          "💳 Acompte d'activation à régler",
+          "Votre mandat est renouvelé. L'acompte de 300.- est de nouveau dû pour l'activation de vos recherches.",
+        );
+      }
 
       dbAction = "renewed";
       await notify(supabase, client, "mandate_renewed", "✅ Mandat renouvelé", `Votre mandat a bien été renouvelé pour ${MANDAT_DURATION_DAYS} jours.`);

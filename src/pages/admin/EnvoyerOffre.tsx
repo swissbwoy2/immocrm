@@ -16,6 +16,7 @@ import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
 import { buildOffreMessage, formatDateVisite } from "@/lib/offreMessage";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { isMandatCancelled, isMandatCancelledError, MANDAT_CANCELLED_OFFER_MESSAGE } from '@/lib/mandatCancellation';
 
 interface FormData {
   clientId: string;
@@ -176,6 +177,7 @@ const AdminEnvoyerOffre = () => {
   });
 
   const selectedClient = clients.find(c => c.id === formData.clientId);
+  const selectedClientCancelled = isMandatCancelled(selectedClient);
 
   const handleDateVisiteChange = (index: number, value: string) => {
     const newDates = [...formData.datesVisite];
@@ -188,6 +190,11 @@ const AdminEnvoyerOffre = () => {
     
     if (!formData.clientId || !formData.localisation || !formData.prix || !formData.surface || !formData.nombrePieces) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires", variant: "destructive" });
+      return;
+    }
+
+    if (selectedClientCancelled) {
+      toast({ title: "Mandat annulé", description: MANDAT_CANCELLED_OFFER_MESSAGE, variant: "destructive" });
       return;
     }
 
@@ -382,7 +389,11 @@ const AdminEnvoyerOffre = () => {
       navigate('/admin/offres-envoyees');
     } catch (error) {
       console.error('Error sending offer:', error);
-      toast({ title: "Erreur", description: "Impossible d'envoyer l'offre", variant: "destructive" });
+      toast({
+        title: isMandatCancelledError(error) ? "Mandat annulé" : "Erreur",
+        description: isMandatCancelledError(error) ? MANDAT_CANCELLED_OFFER_MESSAGE : "Impossible d'envoyer l'offre",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -633,7 +644,13 @@ const AdminEnvoyerOffre = () => {
                 <RotateCcw className="h-4 w-4" />
                 Réinitialiser
               </Button>
-              <Button onClick={handleSubmit} className="flex-1" size="lg" disabled={isSubmitting || !formData.clientId}>
+              <Button
+                onClick={handleSubmit}
+                className="flex-1"
+                size="lg"
+                disabled={isSubmitting || !formData.clientId || selectedClientCancelled}
+                title={selectedClientCancelled ? MANDAT_CANCELLED_OFFER_MESSAGE : undefined}
+              >
                 {isSubmitting ? 'Envoi en cours...' : 'Envoyer'}
               </Button>
             </div>

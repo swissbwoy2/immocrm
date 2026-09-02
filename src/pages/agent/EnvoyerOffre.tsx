@@ -19,6 +19,7 @@ import { ClientMultiSelect } from "@/components/ClientMultiSelect";
 import { buildOffreMessage, formatDateVisite } from "@/lib/offreMessage";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { isMandatCancelled, isMandatCancelledError, MANDAT_CANCELLED_OFFER_MESSAGE } from '@/lib/mandatCancellation';
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -170,6 +171,11 @@ const EnvoyerOffre = () => {
       // Boucle sur chaque client sélectionné
       for (const clientId of selectedClientIds) {
         const client = clients.find(c => c.id === clientId);
+
+        if (isMandatCancelled(client)) {
+          toast({ title: "Mandat annulé", description: MANDAT_CANCELLED_OFFER_MESSAGE, variant: "destructive" });
+          continue; // Ce client doit d'abord renouveler son mandat
+        }
         
         // Check for duplicate offers (100% similar: same address, price, floor, surface)
         const { data: existingOffers } = await supabase
@@ -392,6 +398,11 @@ const EnvoyerOffre = () => {
       
       // Déterminer le message d'erreur approprié
       let errorMessage = "Impossible d'envoyer l'offre";
+
+      if (isMandatCancelledError(error)) {
+        toast({ title: "Mandat annulé", description: MANDAT_CANCELLED_OFFER_MESSAGE, variant: "destructive" });
+        return;
+      }
       
       if (error?.code === '42501' || error?.message?.includes('row-level security')) {
         errorMessage = "Erreur de permissions: vous n'êtes pas autorisé à envoyer cette offre. Vérifiez que le client vous est bien assigné.";
