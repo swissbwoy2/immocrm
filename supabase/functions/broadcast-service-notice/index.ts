@@ -1,11 +1,13 @@
 // Communication officielle aux clients actifs :
 // 1) crée un ticket Support (trace in-app) pour chaque client actif ;
-// 2) envoie l'email correspondant via send-transactional-email ;
+// 2) envoie l'email correspondant via l'API e-mail gérée ;
 // 3) idempotent grâce à broadcast_campaign_log (campaign_key + user_id).
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
+import { sendTemplateEmail } from "../_shared/transactional-email-templates/send-email.ts";
+import { logEmailSend } from "../_shared/email-send-log.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -157,20 +159,44 @@ Deno.serve(async (req) => {
       });
 
       if (gate.allowed && gate.email) {
-        const { error: sendError } = await supabase.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "service-notice",
-            recipientEmail: gate.email,
+        const recipient = gate.email;
+        try {
+          const result = await sendTemplateEmail("service-notice", recipient, {
             idempotencyKey: `${CAMPAIGN_KEY}-${userId}`,
             templateData: { prenom: profile?.nom || profile?.prenom || undefined },
-          },
-        });
-        if (sendError) throw new Error(`email: ${sendError.message}`);
-        emailStatus = "sent";
-        emails += 1;
+          });
+
+          if (result.sent) {
+            emailStatus = "sent";
+            emails += 1;
+            await logEmailSend(supabase as any, {
+              templateName: "service-notice",
+              recipientEmail: recipient,
+              status: "sent",
+            });
+          } else {
+            emailStatus = "suppressed";
+            skippedEmails += 1;
+            await logEmailSend(supabase as any, {
+              templateName: "service-notice",
+              recipientEmail: recipient,
+              status: "suppressed",
+            });
+          }
+        } catch (sendError) {
+          const message = sendError instanceof Error ? sendError.message : String(sendError);
+          await logEmailSend(supabase as any, {
+            templateName: "service-notice",
+            recipientEmail: recipient,
+            status: "failed",
+            errorMessage: message,
+          });
+          throw new Error(`email: ${message}`);
+        }
       } else {
         skippedEmails += 1;
       }
+
 
       await supabase.from("broadcast_campaign_log").insert({
         campaign_key: CAMPAIGN_KEY,

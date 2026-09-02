@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { sendTemplateEmail } from "../_shared/transactional-email-templates/send-email.ts";
+import { logEmailSend } from "../_shared/email-send-log.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,7 +52,7 @@ function generateTempPassword(length = 10): string {
   return password;
 }
 
-// Envoie un email transactionnel via la fonction send-transactional-email
+// Envoie l'e-mail d'identifiants via l'API e-mail gérée par Lovable
 async function sendClientCredentialsEmail(
   supabaseUrl: string,
   serviceKey: string,
@@ -58,39 +60,47 @@ async function sendClientCredentialsEmail(
   tempPassword: string,
   prenom?: string | null,
 ): Promise<{ success: boolean; error?: string }> {
+  const logClient = createClient(supabaseUrl, serviceKey);
   try {
-    const res = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${serviceKey}`,
-        'apikey': serviceKey,
+    const result = await sendTemplateEmail('client-credentials', recipient, {
+      idempotencyKey: `client-credentials-${recipient}-${Date.now()}`,
+      templateData: {
+        siteUrl: DEFAULT_APP_URL,
+        recipient,
+        tempPassword,
+        prenom: prenom || '',
       },
-      body: JSON.stringify({
-        templateName: 'client-credentials',
-        recipientEmail: recipient,
-        idempotencyKey: `client-credentials-${recipient}-${Date.now()}`,
-        templateData: {
-          siteUrl: DEFAULT_APP_URL,
-          recipient,
-          tempPassword,
-          prenom: prenom || '',
-        },
-      }),
     });
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => 'Unknown error');
-      console.error('send-transactional-email failed', { status: res.status, body: text });
-      return { success: false, error: text };
+    if (!result.sent) {
+      await logEmailSend(logClient, {
+        templateName: 'client-credentials',
+        recipientEmail: recipient,
+        status: 'suppressed',
+      });
+      console.warn('client-credentials email not sent: recipient suppressed');
+      return { success: false, error: 'recipient_suppressed' };
     }
 
+    await logEmailSend(logClient, {
+      templateName: 'client-credentials',
+      recipientEmail: recipient,
+      status: 'sent',
+    });
     return { success: true };
   } catch (e) {
-    console.error('sendClientCredentialsEmail error:', e);
-    return { success: false, error: (e instanceof Error ? e.message : String(e)) };
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('sendClientCredentialsEmail error:', message);
+    await logEmailSend(logClient, {
+      templateName: 'client-credentials',
+      recipientEmail: recipient,
+      status: 'failed',
+      errorMessage: message,
+    });
+    return { success: false, error: message };
   }
 }
+
 
 // Types acceptés par le CHECK CONSTRAINT sur public.documents.type_document
 const VALID_DOC_TYPES = new Set([
