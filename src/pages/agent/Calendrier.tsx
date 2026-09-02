@@ -490,9 +490,15 @@ export default function AgentCalendrier() {
   const filteredVisites = useMemo(() => {
     return visites.filter((visite) => {
       if (filterClient !== 'all' && visite.client_id !== filterClient) return false;
+      if (confirmedOnly) {
+        const isConfirmed = isVisiteConfirmedByClient(offreStatutOf(visite));
+        const isDelegated = ['confirmee', 'deleguee', 'a_deleguer'].includes(visite.statut);
+        const hasNoOffre = !visite.offre_id;
+        if (!isConfirmed && !isDelegated && !hasNoOffre) return false;
+      }
       return true;
     });
-  }, [visites, filterClient]);
+  }, [visites, filterClient, confirmedOnly]);
 
   // Filter events
   const filteredEvents = useMemo(() => {
