@@ -157,20 +157,44 @@ Deno.serve(async (req) => {
       });
 
       if (gate.allowed && gate.email) {
-        const { error: sendError } = await supabase.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "service-notice",
-            recipientEmail: gate.email,
+        const recipient = gate.email;
+        try {
+          const result = await sendTemplateEmail("service-notice", recipient, {
             idempotencyKey: `${CAMPAIGN_KEY}-${userId}`,
             templateData: { prenom: profile?.nom || profile?.prenom || undefined },
-          },
-        });
-        if (sendError) throw new Error(`email: ${sendError.message}`);
-        emailStatus = "sent";
-        emails += 1;
+          });
+
+          if (result.sent) {
+            emailStatus = "sent";
+            emails += 1;
+            await logEmailSend(supabase as any, {
+              templateName: "service-notice",
+              recipientEmail: recipient,
+              status: "sent",
+            });
+          } else {
+            emailStatus = "suppressed";
+            skippedEmails += 1;
+            await logEmailSend(supabase as any, {
+              templateName: "service-notice",
+              recipientEmail: recipient,
+              status: "suppressed",
+            });
+          }
+        } catch (sendError) {
+          const message = sendError instanceof Error ? sendError.message : String(sendError);
+          await logEmailSend(supabase as any, {
+            templateName: "service-notice",
+            recipientEmail: recipient,
+            status: "failed",
+            errorMessage: message,
+          });
+          throw new Error(`email: ${message}`);
+        }
       } else {
         skippedEmails += 1;
       }
+
 
       await supabase.from("broadcast_campaign_log").insert({
         campaign_key: CAMPAIGN_KEY,
