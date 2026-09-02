@@ -221,7 +221,7 @@ export default function RendezVousProprietaire() {
               pour convenir d'un rendez-vous de visite sur place — en toute discrétion.
             </p>
             <p className="mt-2 text-sm text-[#8a7f6e]">
-              Une urgence ? <a className="text-[#d4a857] underline" href="tel:+41216342839">+41 21 634 28 39</a>
+              Une urgence ? <a className="text-[#d4a857] underline" href="tel:+41216343161">+41 21 634 31 61</a>
             </p>
           </div>
         ) : (

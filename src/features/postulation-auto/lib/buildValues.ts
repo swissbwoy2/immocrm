@@ -18,7 +18,7 @@ export function extractNpaVille(adresse?: string | null): string {
   return parts.length > 1 ? parts[parts.length - 1] : '';
 }
 
-/** Numéro suisse au format national avec le 0 initial (021 634 28 39). */
+/** Numéro suisse au format national avec le 0 initial (021 634 31 61). */
 export function formatPhoneCH(tel?: string | null): string {
   if (!tel) return '';
   const t = String(tel).trim();

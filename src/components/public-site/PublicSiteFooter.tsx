@@ -89,9 +89,9 @@ export function PublicSiteFooter() {
             <h4 className="font-semibold text-foreground mb-5">Contact</h4>
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li>
-                <a href="tel:+41216342839" className="hover:text-primary transition-colors inline-flex items-center gap-3 group">
+                <a href="tel:+41216343161" className="hover:text-primary transition-colors inline-flex items-center gap-3 group">
                   <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-all">📞</span>
-                  <span className="relative font-semibold text-foreground">021 634 28 39<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
+                  <span className="relative font-semibold text-foreground">021 634 31 61<span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" /></span>
                 </a>
               </li>
               <li>

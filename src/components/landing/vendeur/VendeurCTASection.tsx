@@ -103,11 +103,11 @@ export function VendeurCTASection() {
                 <p className="font-semibold mb-4">Préférez-vous nous appeler ?</p>
                 <div className="space-y-3">
                   <a 
-                    href="tel:+41216342839" 
+                    href="tel:+41216343161" 
                     className="flex items-center gap-3 text-primary hover:underline"
                   >
                     <Phone className="w-5 h-5" />
-                    021 634 28 39
+                    021 634 31 61
                   </a>
                   <a 
                     href="mailto:info@immo-rama.ch" 
