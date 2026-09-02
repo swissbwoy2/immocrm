@@ -1,6 +1,8 @@
 project_id = "ydljsdscdnqrqnjvqela"
 
 [functions]
+  [functions.broadcast-service-notice]
+    verify_jwt = false
   [functions.postulation-fill-llm]
     verify_jwt = true
   [functions.postulation-calibrate]
