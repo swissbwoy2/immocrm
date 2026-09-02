@@ -119,7 +119,22 @@ export default function SupportStaff() {
     toast.success('Statut mis à jour');
   };
 
+  const runBroadcast = async () => {
+    const { data: preview, error: previewError } = await supabase.functions.invoke('broadcast-service-notice', { body: { dryRun: true } });
+    if (previewError) { toast.error("Impossible de préparer l'envoi"); return; }
+    const nb = preview?.a_envoyer ?? 0;
+    if (nb === 0) { toast.info('Aucun client actif restant à notifier'); return; }
+    if (!window.confirm(`Envoyer la communication officielle à ${nb} client(s) actif(s) ?\nUn ticket Support sera créé pour chacun et un e-mail sera envoyé.`)) return;
+    setBroadcasting(true);
+    const { data, error } = await supabase.functions.invoke('broadcast-service-notice', { body: {} });
+    setBroadcasting(false);
+    if (error) { toast.error("Envoi impossible"); return; }
+    toast.success(`Communication envoyée : ${data?.tickets_crees ?? 0} ticket(s), ${data?.emails_envoyes ?? 0} e-mail(s)${data?.erreurs ? `, ${data.erreurs} erreur(s)` : ''}`);
+    loadTickets();
+  };
+
   const shown = tickets.filter((t) => filter === 'tous' || t.statut === filter);
+
 
   if (open) {
     return (
