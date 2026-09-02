@@ -127,6 +127,7 @@ export default function AgentCalendrier() {
 
   // Filter
   const [filterClient, setFilterClient] = useState('all');
+  const [confirmedOnly, setConfirmedOnly] = useState(true);
   // Scope: 'mine' (default, performant) | 'co' | 'all'
   const [scope, setScope] = useState<'mine' | 'co' | 'all'>('mine');
   const [showShareDialog, setShowShareDialog] = useState(false);
