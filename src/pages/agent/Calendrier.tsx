@@ -36,7 +36,7 @@ import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTim
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
-import { getInteretState } from '@/lib/offreInteret';
+import { getInteretState, isVisiteConfirmedByClient, offreStatutOf } from '@/lib/offreInteret';
 
 const candidatureStatusLabels: Record<string, string> = {
   en_attente: 'En attente',
