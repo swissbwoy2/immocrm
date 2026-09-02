@@ -322,9 +322,15 @@ export default function AdminCalendrier() {
       if (filterAgent !== 'all' && visite.agent_id !== filterAgent) return false;
       if (filterClient !== 'all' && visite.client_id !== filterClient) return false;
       if (filterStatus !== 'all' && visite.statut !== filterStatus) return false;
+      if (confirmedOnly) {
+        const isConfirmed = isVisiteConfirmedByClient(offreStatutOf(visite));
+        const isDelegated = ['confirmee', 'deleguee', 'a_deleguer'].includes(visite.statut);
+        const hasNoOffre = !visite.offre_id;
+        if (!isConfirmed && !isDelegated && !hasNoOffre) return false;
+      }
       return true;
     });
-  }, [visites, filterAgent, filterClient, filterEventType, filterStatus]);
+  }, [visites, filterAgent, filterClient, filterEventType, filterStatus, confirmedOnly]);
 
   // Events for selected day
   const selectedDayEvents = useMemo(() => {
