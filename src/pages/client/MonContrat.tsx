@@ -14,6 +14,7 @@ import { CancellationReasonForm, type CancellationReason } from '@/components/ma
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getMandatDates, MANDAT_DURATION_DAYS, REFUND_ELIGIBILITY_DAY } from '@/utils/mandatDates';
+import { isMandatCancelled, MANDAT_RENEWAL_ACOMPTE_WARNING } from '@/lib/mandatCancellation';
 
 interface ClientData {
   id: string;
@@ -167,6 +168,7 @@ export default function MonContrat() {
   // Mandate management state
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
+  const [renewConfirmOpen, setRenewConfirmOpen] = useState(false);
 
   const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
     if (!client) return;
@@ -220,6 +222,7 @@ export default function MonContrat() {
   const refundWindowOpen = (daysSinceSignature ?? 0) >= REFUND_ELIGIBILITY_DAY && (daysSinceSignature ?? 0) <= MANDAT_DURATION_DAYS;
   const refundWindowClosed = (daysSinceSignature ?? 0) > MANDAT_DURATION_DAYS;
   const refundEligibleNow = refundWindowOpen;
+  const hasCancelled = isMandatCancelled(client);
   const inReminderWindow = daysRemaining <= 30 && daysRemaining >= 0 && !isPaused && !isInactif;
   const showRefundRequested = client?.refund_status === 'pending';
 
@@ -420,7 +423,7 @@ export default function MonContrat() {
         </Card>
 
         {/* === Mandate Management Card === */}
-        {!isInactif && (
+        {(!isInactif || hasCancelled) && (
           <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl overflow-hidden">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -446,6 +449,18 @@ export default function MonContrat() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Mandat annulé — avertissement acompte */}
+              {hasCancelled && (
+                <div className="p-4 rounded-xl bg-orange-500/10 border-2 border-orange-500/40">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
+                    <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                      {MANDAT_RENEWAL_ACOMPTE_WARNING}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Paused banner */}
               {isPaused && (
                 <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
@@ -509,9 +524,9 @@ export default function MonContrat() {
               {!isPaused && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   {/* Renouveler — only visible in reminder window */}
-                  {inReminderWindow && (
+                  {(inReminderWindow || hasCancelled) && (
                     <Button
-                      onClick={() => handleMandateAction('renew')}
+                      onClick={() => hasCancelled ? setRenewConfirmOpen(true) : handleMandateAction('renew')}
                       disabled={actionLoading === 'renew'}
                       className="w-full"
                     >
@@ -562,6 +577,41 @@ export default function MonContrat() {
               onSubmit={handleCancelSubmit}
               onCancel={() => setReasonDialogOpen(false)}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Renew confirmation dialog (mandat annulé) */}
+        <Dialog open={renewConfirmOpen} onOpenChange={setRenewConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Renouveler mon mandat</DialogTitle>
+              <DialogDescription>
+                Merci de confirmer le renouvellement de votre mandat de recherche.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="p-4 rounded-xl bg-orange-500/10 border-2 border-orange-500/40">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
+                <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                  {MANDAT_RENEWAL_ACOMPTE_WARNING}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setRenewConfirmOpen(false)} disabled={actionLoading !== null}>
+                Retour
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={actionLoading !== null}
+                onClick={async () => {
+                  await handleMandateAction('renew');
+                  setRenewConfirmOpen(false);
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" /> Confirmer le renouvellement
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
 
