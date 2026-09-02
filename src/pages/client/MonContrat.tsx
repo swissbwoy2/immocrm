@@ -167,7 +167,6 @@ export default function MonContrat() {
   // Mandate management state
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'cancel' | 'cancel_with_refund' | null>(null);
 
   const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
     if (!client) return;
@@ -187,17 +186,18 @@ export default function MonContrat() {
     }
   };
 
-  const openCancelDialog = (withRefund: boolean) => {
-    setPendingAction(withRefund ? 'cancel_with_refund' : 'cancel');
+  const openCancelDialog = () => {
     setReasonDialogOpen(true);
   };
 
   const handleCancelSubmit = async (reason: CancellationReason) => {
-    if (!client || !pendingAction) return;
-    setActionLoading(pendingAction);
+    if (!client) return;
+    // Par défaut : simple cancel. Remboursement uniquement dans la fenêtre J80→J90.
+    const action = refundEligibleNow ? 'cancel_with_refund' : 'cancel';
+    setActionLoading(action);
     try {
       const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
-        body: { action: pendingAction, client_id: client.id, cancellation_reason: reason },
+        body: { action, client_id: client.id, cancellation_reason: reason },
       });
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error ?? 'Erreur');
