@@ -1074,6 +1074,23 @@ export default function AgentCalendrier() {
           </SelectContent>
         </Select>
 
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={confirmedOnly ? 'default' : 'outline'}
+            onClick={() => setConfirmedOnly(true)}
+          >
+            Confirmées par le client
+          </Button>
+          <Button
+            size="sm"
+            variant={confirmedOnly ? 'outline' : 'default'}
+            onClick={() => setConfirmedOnly(false)}
+          >
+            Toutes
+          </Button>
+        </div>
+
         <Button
           variant={showFullHistory ? 'default' : 'outline'}
           size="sm"
