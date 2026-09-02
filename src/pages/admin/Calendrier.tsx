@@ -33,7 +33,7 @@ import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisi
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
-import { getInteretState } from '@/lib/offreInteret';
+import { getInteretState, isVisiteConfirmedByClient, offreStatutOf } from '@/lib/offreInteret';
 
 interface Agent {
   id: string;
