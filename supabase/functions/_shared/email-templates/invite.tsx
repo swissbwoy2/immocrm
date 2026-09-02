@@ -3,42 +3,50 @@
 import * as React from 'npm:react@18.3.1'
 
 import {
-  Body, Button, Container, Head, Heading, Hr, Html, Link, Preview, Section, Text,
+  Body,
+  Button,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Link,
+  Preview,
+  Text,
 } from 'npm:@react-email/components@0.0.22'
 
-interface InviteEmailProps { siteName: string; siteUrl: string; confirmationUrl: string }
+interface InviteEmailProps {
+  siteName: string
+  siteUrl: string
+  confirmationUrl: string
+}
 
-export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Vous êtes invité(e) sur Logisorama</Preview>
+export const InviteEmail = ({
+  siteName,
+  siteUrl,
+  confirmationUrl,
+}: InviteEmailProps) => (
+  <Html lang="en" dir="ltr">
+    <Head>
+      <style>{darkModeCss}</style>
+    </Head>
+    <Preview>You've been invited to join {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={header}><Text style={brand}>Logisorama</Text></Section>
-        <Heading style={h1}>Vous êtes invité(e)</Heading>
-        <Text style={text}>Bonjour,</Text>
+        <Heading style={h1}>You've been invited</Heading>
         <Text style={text}>
-          Votre conseiller vient de créer votre espace personnel sur{' '}
-          <Link href={siteUrl} style={link}><strong>{siteName}</strong></Link>,
-          la plateforme suisse de gestion immobilière Immo-rama.
+          You've been invited to join{' '}
+          <Link href={siteUrl} style={link}>
+            <strong>{siteName}</strong>
+          </Link>
+          . Click the button below to accept the invitation and create your
+          account.
         </Text>
-        <Text style={text}>
-          Cliquez sur le bouton ci-dessous pour activer votre compte et définir votre mot de passe :
-        </Text>
-        <Section style={{ textAlign: 'center', margin: '32px 0' }}>
-          <Button style={button} href={confirmationUrl}>Activer mon compte</Button>
-        </Section>
-        <Text style={text}>
-          Ou copiez ce lien dans votre navigateur :<br />
-          <Link href={confirmationUrl} style={link}>{confirmationUrl}</Link>
-        </Text>
-        <Hr style={hr} />
+        <Button className="dm-btn" style={button} href={confirmationUrl}>
+          Accept Invitation
+        </Button>
         <Text style={footer}>
-          Si vous n'attendiez pas cette invitation, ignorez simplement cet email.
-        </Text>
-        <Text style={footer}>
-          Logisorama — Immo-rama Sàrl · Lausanne, Suisse ·{' '}
-          <Link href="https://logisorama.ch" style={link}>logisorama.ch</Link>
+          If you weren't expecting this invitation, you can safely ignore this
+          email.
         </Text>
       </Container>
     </Body>
@@ -47,17 +55,36 @@ export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailP
 
 export default InviteEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Helvetica, Arial, sans-serif' }
-const container = { padding: '24px', maxWidth: '560px', margin: '0 auto' }
-const header = { paddingBottom: '16px', borderBottom: '1px solid #eaeaea', marginBottom: '24px' }
-const brand = { fontSize: '20px', fontWeight: 'bold' as const, color: 'hsl(158, 55%, 38%)', margin: 0 }
-const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#0f172a', margin: '0 0 16px' }
-const text = { fontSize: '15px', color: '#374151', lineHeight: '1.6', margin: '0 0 16px' }
-const link = { color: 'hsl(158, 55%, 38%)', wordBreak: 'break-all' as const }
-const button = {
-  backgroundColor: 'hsl(158, 55%, 38%)', color: '#ffffff', fontSize: '15px',
-  fontWeight: 'bold' as const, borderRadius: '8px', padding: '14px 28px',
-  textDecoration: 'none', display: 'inline-block',
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
+const h1 = {
+  fontSize: '22px',
+  fontWeight: 'bold' as const,
+  color: '#000000',
+  margin: '0 0 20px',
 }
-const hr = { borderColor: '#eaeaea', margin: '32px 0 16px' }
-const footer = { fontSize: '12px', color: '#6b7280', lineHeight: '1.5', margin: '0 0 8px' }
+const text = {
+  fontSize: '14px',
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
+}
+const link = { color: 'inherit', textDecoration: 'underline' }
+const button = {
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  fontSize: '14px',
+  border: '1px solid #000000',
+  borderRadius: '8px',
+  padding: '12px 20px',
+  textDecoration: 'none',
+}
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const darkModeCss = `
+  @media (prefers-color-scheme: dark) {
+    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  }
+  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+`
