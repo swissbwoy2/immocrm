@@ -2218,6 +2218,36 @@ export type Database = {
           },
         ]
       }
+      broadcast_campaign_log: {
+        Row: {
+          campaign_key: string
+          created_at: string
+          email_status: string
+          error_message: string | null
+          id: string
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          campaign_key: string
+          created_at?: string
+          email_status?: string
+          error_message?: string | null
+          id?: string
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          campaign_key?: string
+          created_at?: string
+          email_status?: string
+          error_message?: string | null
+          id?: string
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       calendar_events: {
         Row: {
           agent_id: string | null
