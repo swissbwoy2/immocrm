@@ -33,7 +33,7 @@ import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisi
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
-import { getInteretState } from '@/lib/offreInteret';
+import { getInteretState, isVisiteConfirmedByClient, offreStatutOf } from '@/lib/offreInteret';
 
 interface Agent {
   id: string;
@@ -82,6 +82,7 @@ export default function AdminCalendrier() {
   const [filterClient, setFilterClient] = useState('all');
   const [filterEventType, setFilterEventType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [confirmedOnly, setConfirmedOnly] = useState(true);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -321,9 +322,15 @@ export default function AdminCalendrier() {
       if (filterAgent !== 'all' && visite.agent_id !== filterAgent) return false;
       if (filterClient !== 'all' && visite.client_id !== filterClient) return false;
       if (filterStatus !== 'all' && visite.statut !== filterStatus) return false;
+      if (confirmedOnly) {
+        const isConfirmed = isVisiteConfirmedByClient(offreStatutOf(visite));
+        const isDelegated = ['confirmee', 'deleguee', 'a_deleguer'].includes(visite.statut);
+        const hasNoOffre = !visite.offre_id;
+        if (!isConfirmed && !isDelegated && !hasNoOffre) return false;
+      }
       return true;
     });
-  }, [visites, filterAgent, filterClient, filterEventType, filterStatus]);
+  }, [visites, filterAgent, filterClient, filterEventType, filterStatus, confirmedOnly]);
 
   // Events for selected day
   const selectedDayEvents = useMemo(() => {
@@ -577,6 +584,24 @@ export default function AdminCalendrier() {
           />
         </div>
       </details>
+
+      {/* Confirmed-only toggle */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant={confirmedOnly ? 'default' : 'outline'}
+          onClick={() => setConfirmedOnly(true)}
+        >
+          Confirmées par le client
+        </Button>
+        <Button
+          size="sm"
+          variant={confirmedOnly ? 'outline' : 'default'}
+          onClick={() => setConfirmedOnly(false)}
+        >
+          Toutes
+        </Button>
+      </div>
 
       {/* Batch Calendar Export */}
       {filteredVisites.length > 0 && (

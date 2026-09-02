@@ -36,7 +36,7 @@ import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTim
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
-import { getInteretState } from '@/lib/offreInteret';
+import { getInteretState, isVisiteConfirmedByClient, offreStatutOf } from '@/lib/offreInteret';
 
 const candidatureStatusLabels: Record<string, string> = {
   en_attente: 'En attente',
@@ -127,6 +127,7 @@ export default function AgentCalendrier() {
 
   // Filter
   const [filterClient, setFilterClient] = useState('all');
+  const [confirmedOnly, setConfirmedOnly] = useState(true);
   // Scope: 'mine' (default, performant) | 'co' | 'all'
   const [scope, setScope] = useState<'mine' | 'co' | 'all'>('mine');
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -489,9 +490,15 @@ export default function AgentCalendrier() {
   const filteredVisites = useMemo(() => {
     return visites.filter((visite) => {
       if (filterClient !== 'all' && visite.client_id !== filterClient) return false;
+      if (confirmedOnly) {
+        const isConfirmed = isVisiteConfirmedByClient(offreStatutOf(visite));
+        const isDelegated = ['confirmee', 'deleguee', 'a_deleguer'].includes(visite.statut);
+        const hasNoOffre = !visite.offre_id;
+        if (!isConfirmed && !isDelegated && !hasNoOffre) return false;
+      }
       return true;
     });
-  }, [visites, filterClient]);
+  }, [visites, filterClient, confirmedOnly]);
 
   // Filter events
   const filteredEvents = useMemo(() => {
@@ -1066,6 +1073,23 @@ export default function AgentCalendrier() {
             <SelectItem value="all">Toutes (mes + co-assignées)</SelectItem>
           </SelectContent>
         </Select>
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={confirmedOnly ? 'default' : 'outline'}
+            onClick={() => setConfirmedOnly(true)}
+          >
+            Confirmées par le client
+          </Button>
+          <Button
+            size="sm"
+            variant={confirmedOnly ? 'outline' : 'default'}
+            onClick={() => setConfirmedOnly(false)}
+          >
+            Toutes
+          </Button>
+        </div>
 
         <Button
           variant={showFullHistory ? 'default' : 'outline'}
