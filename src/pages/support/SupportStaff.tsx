@@ -201,10 +201,19 @@ export default function SupportStaff() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <h1 className="text-xl font-bold flex items-center gap-2"><LifeBuoy size={20} /> Tickets support {isAdmin ? '' : '(mes tickets)'}</h1>
-        <Button size="sm" variant="ghost" onClick={() => loadTickets()}><RefreshCw size={16} /></Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button size="sm" variant="outline" onClick={runBroadcast} disabled={broadcasting}>
+              <Megaphone size={16} className="mr-1" />
+              {broadcasting ? 'Envoi en cours…' : 'Communication officielle'}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => loadTickets()}><RefreshCw size={16} /></Button>
+        </div>
       </div>
+
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button key={f} onClick={() => setFilter(f)}
