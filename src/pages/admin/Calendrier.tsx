@@ -82,6 +82,7 @@ export default function AdminCalendrier() {
   const [filterClient, setFilterClient] = useState('all');
   const [filterEventType, setFilterEventType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [confirmedOnly, setConfirmedOnly] = useState(true);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
