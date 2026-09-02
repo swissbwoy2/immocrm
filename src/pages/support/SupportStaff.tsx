@@ -39,6 +39,7 @@ export default function SupportStaff() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
+  const [broadcasting, setBroadcasting] = useState(false);
 
   const loadRoleAndAgents = useCallback(async () => {
     if (!user) return;
