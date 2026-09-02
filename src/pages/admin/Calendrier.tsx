@@ -585,6 +585,24 @@ export default function AdminCalendrier() {
         </div>
       </details>
 
+      {/* Confirmed-only toggle */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant={confirmedOnly ? 'default' : 'outline'}
+          onClick={() => setConfirmedOnly(true)}
+        >
+          Confirmées par le client
+        </Button>
+        <Button
+          size="sm"
+          variant={confirmedOnly ? 'outline' : 'default'}
+          onClick={() => setConfirmedOnly(false)}
+        >
+          Toutes
+        </Button>
+      </div>
+
       {/* Batch Calendar Export */}
       {filteredVisites.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap p-3 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm">
