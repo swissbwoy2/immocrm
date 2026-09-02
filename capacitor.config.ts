@@ -4,6 +4,10 @@ const config: CapacitorConfig = {
   appId: 'ch.logisorama.app',
   appName: 'Logisorama',
   webDir: 'dist',
+  server: {
+    url: 'https://logisorama.ch',
+    cleartext: false,
+  },
   ios: {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
