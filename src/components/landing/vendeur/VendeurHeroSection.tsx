@@ -55,8 +55,8 @@ export function VendeurHeroSection() {
               size="lg" 
               className="text-lg px-8 py-6 border-2 hover:bg-primary/5"
             >
-              <a href="tel:+41216342839">
-                Appeler : 021 634 28 39
+              <a href="tel:+41216343161">
+                Appeler : 021 634 31 61
               </a>
             </Button>
           </div>

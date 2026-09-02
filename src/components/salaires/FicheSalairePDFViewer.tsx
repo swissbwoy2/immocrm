@@ -67,7 +67,7 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
     '1023 Crissier',
     '',
     'IDE: CHE-442.303.796',
-    'Téléphone: 021 634 28 39',
+    'Téléphone: 021 634 31 61',
     'E-Mail: info@immo-rama.ch',
   ];
   let cy = height - 110;

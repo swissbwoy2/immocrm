@@ -141,7 +141,7 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        Questions ? info@immo-rama.ch — +41 21 634 28 39
+        Questions ? info@immo-rama.ch — +41 21 634 31 61
       </p>
     </div>
   );

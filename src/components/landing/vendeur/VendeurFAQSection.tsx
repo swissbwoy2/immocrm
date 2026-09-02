@@ -112,10 +112,10 @@ export function VendeurFAQSection() {
             Vous avez d'autres questions ?
           </p>
           <a 
-            href="tel:+41216342839"
+            href="tel:+41216343161"
             className="inline-flex items-center gap-2 text-primary font-semibold hover:underline"
           >
-            Appelez-nous au 021 634 28 39
+            Appelez-nous au 021 634 31 61
           </a>
         </div>
       </div>

@@ -186,7 +186,7 @@ export const ResendOfferDialog = ({
         }
         
         messageLines.push(``);
-        messageLines.push(`Pour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à ce message.`);
+        messageLines.push(`Pour toute question, n'hésitez pas à nous appeler au +41 21 634 31 61 ou à répondre directement à ce message.`);
         messageLines.push(``);
         messageLines.push(`Cordialement,`);
         messageLines.push(`L'équipe Immo-rama.ch`);

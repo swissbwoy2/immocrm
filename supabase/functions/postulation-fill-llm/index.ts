@@ -36,7 +36,7 @@ function fmtDate(d?: string | null): string {
   }).format(date).replace(/\//g, ".");
 }
 
-/** Numéro suisse national avec le 0 initial (021 634 28 39) */
+/** Numéro suisse national avec le 0 initial (021 634 31 61) */
 function formatPhoneCH(tel?: string | null): string {
   if (!tel) return "";
   const t = String(tel).trim();
@@ -86,7 +86,7 @@ const SYSTEM_PROMPT = `Tu es un assistant expert en gestion locative suisse. Tu 
 
 RÈGLES STRICTES (non négociables) :
 1. Tout champ e-mail = TOUJOURS l'e-mail de l'AGENT, jamais celui du client.
-2. Tout champ téléphone de contact = TOUJOURS le téléphone de l'AGENT, jamais celui du client. Conserve le 0 initial (ex. "021 634 28 39", jamais "21 634 28 39").
+2. Tout champ téléphone de contact = TOUJOURS le téléphone de l'AGENT, jamais celui du client. Conserve le 0 initial (ex. "021 634 31 61", jamais "21 634 31 61").
 3. Les dates sont au format JJ.MM.AAAA (fuseau Europe/Zurich). La "date du jour" est celle fournie dans le dossier.
 4. Si une donnée est manquante ou inconnue, laisse le champ VIDE (chaîne vide). N'invente JAMAIS de valeur, aucune approximation, aucun "N/A".
 5. Ne mets jamais de donnée du candidat principal dans un champ destiné au garant, au co-locataire ou au co-candidat, sauf s'il existe réellement un co-candidat dans le dossier.
