@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LifeBuoy, Send, ArrowLeft, UserCog, RefreshCw } from 'lucide-react';
+import { LifeBuoy, Send, ArrowLeft, UserCog, RefreshCw, Megaphone } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Ticket = {
@@ -39,6 +39,7 @@ export default function SupportStaff() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
+  const [broadcasting, setBroadcasting] = useState(false);
 
   const loadRoleAndAgents = useCallback(async () => {
     if (!user) return;
@@ -119,7 +120,22 @@ export default function SupportStaff() {
     toast.success('Statut mis à jour');
   };
 
+  const runBroadcast = async () => {
+    const { data: preview, error: previewError } = await supabase.functions.invoke('broadcast-service-notice', { body: { dryRun: true } });
+    if (previewError) { toast.error("Impossible de préparer l'envoi"); return; }
+    const nb = preview?.a_envoyer ?? 0;
+    if (nb === 0) { toast.info('Aucun client actif restant à notifier'); return; }
+    if (!window.confirm(`Envoyer la communication officielle à ${nb} client(s) actif(s) ?\nUn ticket Support sera créé pour chacun et un e-mail sera envoyé.`)) return;
+    setBroadcasting(true);
+    const { data, error } = await supabase.functions.invoke('broadcast-service-notice', { body: {} });
+    setBroadcasting(false);
+    if (error) { toast.error("Envoi impossible"); return; }
+    toast.success(`Communication envoyée : ${data?.tickets_crees ?? 0} ticket(s), ${data?.emails_envoyes ?? 0} e-mail(s)${data?.erreurs ? `, ${data.erreurs} erreur(s)` : ''}`);
+    loadTickets();
+  };
+
   const shown = tickets.filter((t) => filter === 'tous' || t.statut === filter);
+
 
   if (open) {
     return (
@@ -185,10 +201,19 @@ export default function SupportStaff() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <h1 className="text-xl font-bold flex items-center gap-2"><LifeBuoy size={20} /> Tickets support {isAdmin ? '' : '(mes tickets)'}</h1>
-        <Button size="sm" variant="ghost" onClick={() => loadTickets()}><RefreshCw size={16} /></Button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button size="sm" variant="outline" onClick={runBroadcast} disabled={broadcasting}>
+              <Megaphone size={16} className="mr-1" />
+              {broadcasting ? 'Envoi en cours…' : 'Communication officielle'}
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => loadTickets()}><RefreshCw size={16} /></Button>
+        </div>
       </div>
+
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button key={f} onClick={() => setFilter(f)}
