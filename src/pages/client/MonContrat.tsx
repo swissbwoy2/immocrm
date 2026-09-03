@@ -169,6 +169,8 @@ export default function MonContrat() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
   const [renewConfirmOpen, setRenewConfirmOpen] = useState(false);
+  const [refundNotAvailableOpen, setRefundNotAvailableOpen] = useState(false);
+
 
   const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
     if (!client) return;
