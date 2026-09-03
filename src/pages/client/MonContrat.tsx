@@ -624,7 +624,41 @@ export default function MonContrat() {
           </DialogContent>
         </Dialog>
 
+        {/* Refund not yet available dialog */}
+        <Dialog open={refundNotAvailableOpen} onOpenChange={setRefundNotAvailableOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Remboursement pas encore disponible</DialogTitle>
+              <DialogDescription>
+                Votre mandat est actif depuis {daysSinceSignature ?? 0} jours. Vous ne pouvez pas encore demander un remboursement — revenez à partir du 80e jour, ou annulez votre mandat sans remboursement.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setRefundNotAvailableOpen(false)}
+                disabled={actionLoading !== null}
+              >
+                Continuer
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  setRefundNotAvailableOpen(false);
+                  openCancelDialog();
+                }}
+                disabled={actionLoading !== null}
+              >
+                <Ban className="w-4 h-4 mr-2" /> Annuler sans remboursement
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
           {/* Search Criteria */}
           <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
             <CardHeader>
