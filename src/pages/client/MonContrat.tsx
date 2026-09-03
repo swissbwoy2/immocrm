@@ -169,6 +169,8 @@ export default function MonContrat() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
   const [renewConfirmOpen, setRenewConfirmOpen] = useState(false);
+  const [refundNotAvailableOpen, setRefundNotAvailableOpen] = useState(false);
+
 
   const handleMandateAction = async (action: 'renew' | 'pause' | 'resume', extra: Record<string, unknown> = {}) => {
     if (!client) return;
@@ -534,17 +536,24 @@ export default function MonContrat() {
                     </Button>
                   )}
 
-                  {/* Annuler — toujours disponible. Action = cancel par défaut, cancel_with_refund uniquement dans la fenêtre J80→J90 */}
+                  {/* Annuler + remboursement — toujours cliquable. Avant J80 : dialog explicatif ; J80→J90 : cancel_with_refund */}
                   <Button
                     variant="outline"
-                    onClick={() => openCancelDialog()}
+                    onClick={() => {
+                      if (refundEligibleNow) {
+                        openCancelDialog();
+                      } else {
+                        setRefundNotAvailableOpen(true);
+                      }
+                    }}
                     disabled={actionLoading !== null}
                     className="w-full"
                   >
-                    <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat
+                    <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat + remboursement
                   </Button>
 
                   {/* Pause */}
+
                   <Button
                     variant="ghost"
                     onClick={() => handleMandateAction('pause')}
@@ -615,7 +624,41 @@ export default function MonContrat() {
           </DialogContent>
         </Dialog>
 
+        {/* Refund not yet available dialog */}
+        <Dialog open={refundNotAvailableOpen} onOpenChange={setRefundNotAvailableOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Remboursement pas encore disponible</DialogTitle>
+              <DialogDescription>
+                Votre mandat est actif depuis {daysSinceSignature ?? 0} jours. Vous ne pouvez pas encore demander un remboursement — revenez à partir du 80e jour, ou annulez votre mandat sans remboursement.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setRefundNotAvailableOpen(false)}
+                disabled={actionLoading !== null}
+              >
+                Continuer
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  setRefundNotAvailableOpen(false);
+                  openCancelDialog();
+                }}
+                disabled={actionLoading !== null}
+              >
+                <Ban className="w-4 h-4 mr-2" /> Annuler sans remboursement
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
           {/* Search Criteria */}
           <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
             <CardHeader>
