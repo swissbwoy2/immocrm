@@ -552,8 +552,8 @@ export default function MonContrat() {
                     <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat + remboursement
                   </Button>
 
-
                   {/* Pause */}
+
                   <Button
                     variant="ghost"
                     onClick={() => handleMandateAction('pause')}
