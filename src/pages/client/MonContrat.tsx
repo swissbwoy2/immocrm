@@ -536,15 +536,22 @@ export default function MonContrat() {
                     </Button>
                   )}
 
-                  {/* Annuler — toujours disponible. Action = cancel par défaut, cancel_with_refund uniquement dans la fenêtre J80→J90 */}
+                  {/* Annuler + remboursement — toujours cliquable. Avant J80 : dialog explicatif ; J80→J90 : cancel_with_refund */}
                   <Button
                     variant="outline"
-                    onClick={() => openCancelDialog()}
+                    onClick={() => {
+                      if (refundEligibleNow) {
+                        openCancelDialog();
+                      } else {
+                        setRefundNotAvailableOpen(true);
+                      }
+                    }}
                     disabled={actionLoading !== null}
                     className="w-full"
                   >
-                    <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat
+                    <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat + remboursement
                   </Button>
+
 
                   {/* Pause */}
                   <Button
