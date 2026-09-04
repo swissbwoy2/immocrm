@@ -11,7 +11,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { FloatingMessengerProvider } from '@/hooks/useFloatingMessenger';
 import { FloatingMessenger } from '@/components/messaging/floating/FloatingMessenger';
 import { DemoModeBanner } from '@/components/DemoModeBanner';
-import { DemoWriteGuard } from '@/components/DemoWriteGuard'; import { ClientVisitDecisionGate } from '@/components/client/ClientVisitDecisionGate';
+import { DemoWriteGuard } from '@/components/DemoWriteGuard'; import { ClientVisitDecisionGate } from '@/components/client/ClientVisitDecisionGate'; import { AppUpdateAnnounceGate } from '@/components/client/AppUpdateAnnounceGate';
 import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
 import { MobileAppShell } from '@/components/mobile/MobileAppShell';
 import { useIsMobile } from '@/hooks/use-mobile';
