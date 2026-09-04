@@ -26,7 +26,7 @@ serve(async (req) => {
     try {
       const r = await fetch(url, { headers: h });
       const t = await r.text();
-      return { label, status: r.status, body: t.slice(0, 600) };
+      return { label, status: r.status, body: t.slice(0, 20000) };
     } catch (e) {
       return { label, status: 0, body: e instanceof Error ? e.message : String(e) };
     }
