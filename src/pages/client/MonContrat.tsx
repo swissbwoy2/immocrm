@@ -536,7 +536,7 @@ export default function MonContrat() {
                     </Button>
                   )}
 
-                  {/* Annuler + remboursement — toujours cliquable. Avant J80 : dialog explicatif ; J80→J90 : cancel_with_refund */}
+                  {!hasCancelled && (
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -552,7 +552,7 @@ export default function MonContrat() {
                     <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat + remboursement
                   </Button>
 
-                  {/* Pause */}
+                  )}{/* Pause */}
 
                   <Button
                     variant="ghost"
