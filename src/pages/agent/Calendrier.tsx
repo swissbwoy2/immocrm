@@ -197,7 +197,7 @@ export default function AgentCalendrier() {
       const includeCo = (scope === 'co' || scope === 'all') && coClientIds.length > 0;
 
       // --- VISITES : split queries (own + co-assigned) — same pattern as Visites.tsx ---
-      const visitesSelect = '*, offres(id, adresse, prix, pieces, surface), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))';
+      const visitesSelect = '*, offres(id, adresse, prix, pieces, surface, statut, envoi_auto), clients!visites_client_id_fkey(id, user_id), agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))';
       const eventsSelect = '*, agents:agent_id(id, user_id, profiles!agents_user_id_fkey(prenom, nom))';
 
       const buildVisiteQuery = (filter: 'mine' | 'co') => {
