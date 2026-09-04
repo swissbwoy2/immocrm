@@ -1374,7 +1374,7 @@ export default function AgentCalendrier() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               Détails de la visite
-              {selectedVisite?.est_deleguee && <Badge className="bg-green-600 text-white">Visite déléguée</Badge>}
+              {selectedVisite?.est_deleguee ? <Badge className="bg-green-600 text-white">Visite déléguée</Badge> : isVisiteConfirmedByClient(offreStatutOf(selectedVisite)) ? <Badge className="bg-emerald-600 text-white">Client s'en occupe</Badge> : null}
               {selectedVisite?.statut === 'effectuee' && <Badge variant="secondary">Effectuée</Badge>}
             </DialogTitle>
           </DialogHeader>
