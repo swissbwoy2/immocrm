@@ -156,7 +156,7 @@ export default function CoursierMissions() {
     }));
 
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0); const available = toCards(missions.filter(m => m.statut_coursier === 'en_attente')).filter((g: any) => (g._delegues || 0) > 0 && new Date(g.date_visite) >= startOfToday);
-  const myActive = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte'));
+  const myActive = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte')).filter((g: any) => new Date(g.date_visite) >= startOfToday);
   const myCompleted = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine'));
 
   const renderMissionCard = (mission: any, type: 'available' | 'active' | 'completed') => (
