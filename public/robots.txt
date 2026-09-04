@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-# Espaces applicatifs et URLs techniques sans valeur dans les résultats de recherche
+# Espaces applicatifs et URLs techniques sans valeur dans les resultats de recherche
 Disallow: /admin/
 Disallow: /agent/
 Disallow: /client/
@@ -15,5 +15,16 @@ Disallow: /call/
 Disallow: /live/
 Disallow: /.lovable/
 Disallow: /api/
+
+# Pages de connexion / inscription / utilitaires (pas de valeur SEO)
+Disallow: /login
+Disallow: /connexion
+Disallow: /inscription
+Disallow: /inscription-annonceur
+Disallow: /connexion-annonceur
+Disallow: /reset-password
+Disallow: /first-login
+Disallow: /oauth
+Disallow: /demo
 
 Sitemap: https://logisorama.ch/sitemap.xml
