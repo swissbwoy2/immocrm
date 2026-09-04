@@ -768,7 +768,7 @@ export default function AdminCalendrier() {
 
               {/* Intérêt client */}
               <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">Intérêt du client :</span>
+                <span className="text-sm font-medium">Intérêt du client :</span>{selectedVisiteGroup[0].est_deleguee ? <Badge className="bg-blue-600 text-white ml-1">Visite déléguée</Badge> : isVisiteConfirmedByClient(selectedVisiteGroup[0].offres?.statut) ? <Badge className="bg-emerald-600 text-white ml-1">Client s'en occupe</Badge> : <Badge variant="outline" className="ml-1">Décision en attente</Badge>}
                 <ClientInteretBadge statutOffre={selectedVisiteGroup[0].offres?.statut} />
                 {getInteretState(selectedVisiteGroup[0].offres?.statut).key === 'attente' && (
                   <span className="text-xs text-amber-700">
