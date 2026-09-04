@@ -64,7 +64,7 @@ export default function CoursierParametres() {
         })
         .eq('user_id', user!.id);
 
-      if (error) throw error;
+      if (error) throw error; await supabase.from('profiles').update({ prenom: form.prenom, nom: form.nom, telephone: form.telephone }).eq('id', user!.id);
       toast.success('Paramètres enregistrés');
     } catch (error) {
       toast.error('Erreur lors de la sauvegarde');
