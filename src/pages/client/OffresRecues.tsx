@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { canDecideOnOffre } from '@/lib/visitDecision';
+import { canDecideOnOffre, visiteIndicatesDone } from '@/lib/visitDecision';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -1495,7 +1495,7 @@ const OffresRecues = () => {
                             <User className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
                             Déléguer à l'agent
                           </Button>
-                          {offre.statut !== 'interesse' && (
+                          {false && (
                             <>
                               <Button 
                                 size="sm" 
@@ -1529,7 +1529,7 @@ const OffresRecues = () => {
                           Marquer visite effectuée
                         </Button>
                       )}
-                      {offre.statut === 'visite_effectuee' && (
+                      {false && (
                         <>
                           <Button 
                             size="sm"
@@ -1561,7 +1561,7 @@ const OffresRecues = () => {
                         </>
                       )}
                     </div>
-                    <VideoDecisionInlineButtons offre={offre} visites={visites} onDone={() => { loadOffres(); loadVisites(); }} />
+                    {(['visite_effectuee','candidature_deposee','souhaite_postuler'].includes(offre.statut) || visites.filter((v) => v.offre_id === offre.id).some(visiteIndicatesDone)) && (<VideoDecisionInlineButtons offre={offre} visites={visites} onDone={() => { loadOffres(); loadVisites(); }} />)}
                   </div>
                 </Card>
               );
