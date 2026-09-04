@@ -60,7 +60,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     return (
       <>
         <OfflineIndicator />
-        <DemoWriteGuard /><ClientVisitDecisionGate />
+        <DemoWriteGuard /><ClientVisitDecisionGate /><AppUpdateAnnounceGate />
         <AppSidebar />
         <MobileAppShell>
           <DemoModeBanner />
@@ -75,7 +75,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex w-full bg-background">
       <OfflineIndicator />
-      <DemoWriteGuard /><ClientVisitDecisionGate />
+      <DemoWriteGuard /><ClientVisitDecisionGate /><AppUpdateAnnounceGate />
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         <DemoModeBanner />
