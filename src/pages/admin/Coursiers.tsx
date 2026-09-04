@@ -13,7 +13,7 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
-import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge'; import { computeCoursierTimesheets } from '@/lib/coursierHours';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge'; import { computeCoursierTimesheets, fmtZurichTime } from '@/lib/coursierHours';
 
 
 export default function AdminCoursiers() {
