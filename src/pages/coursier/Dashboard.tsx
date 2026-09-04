@@ -71,7 +71,7 @@ export default function CoursierDashboard() {
       // Compteurs sur les visites REGROUPÉES (adresse + date/heure + agent)
       setStats({
         completedThisMonth: groupVisitesByPhysiqueAgent(completedThisMonth as any[]).length,
-        inProgress: groupVisitesByPhysiqueAgent(inProgress as any[]).length,
+        inProgress: groupVisitesByPhysiqueAgent(inProgress as any[]).filter((g: any) => new Date(g.representative.date_visite) >= new Date(new Date().setHours(0, 0, 0, 0))).length,
         available: groupVisitesByPhysiqueAgent(available as any[]).filter((g: any) => g.items.some((v: any) => v.est_deleguee === true) && new Date(g.representative.date_visite) >= startToday).length,
       });
     } catch (error) {
@@ -105,7 +105,7 @@ export default function CoursierDashboard() {
     [missions],
   );
   const activeGroups = useMemo(
-    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte') as any[]),
+    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte') as any[]).filter((g: any) => new Date(g.representative.date_visite) >= new Date(new Date().setHours(0, 0, 0, 0))),
     [missions, coursierId],
   );
   const availableMissions = availableGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
