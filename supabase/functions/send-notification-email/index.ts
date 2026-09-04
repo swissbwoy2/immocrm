@@ -215,7 +215,7 @@ const generateEmailHtml = (
             </td>
           </tr>
           
-          <!-- Footer -->
+          ${type === 'app_update' ? `<tr><td style="padding:8px 40px 28px;text-align:center;"><a href="https://<!-- Footer -->" style="display:inline-block;background-color:#000000;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin:6px;">Ouvrir dans App Store</a><a href="https://play.google.com/store/apps/details?id=ch.logisorama.app" style="display:inline-block;background-color:#16a34a;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin:6px;">Disponible sur Google Play</a></td></tr>` : ''}<!-- Footer -->
           <tr>
             <td style="background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
