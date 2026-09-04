@@ -316,7 +316,7 @@ export default function AdminCoursiers() {
                               <Calendar className="h-3 w-3 shrink-0" />
                               {format(new Date(v.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
                               <span className="truncate">• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
-                              <ClientInteretBadge statutOffre={v.offres?.statut} />
+                              <ClientInteretBadge statutOffre={v.offres?.statut} />{g.items.filter((i: any) => i.est_deleguee === true).length > 0 && (<Badge className="bg-blue-600 text-white text-[10px] gap-1"><Bike className="h-3 w-3" />{g.items.filter((i: any) => i.est_deleguee === true).length} délégué(s)</Badge>)}
                             </div>
                           </div>
 
