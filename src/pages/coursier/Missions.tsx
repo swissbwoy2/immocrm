@@ -152,10 +152,10 @@ export default function CoursierMissions() {
     groupVisitesByPhysiqueAgent(items as any[]).map((g) => ({
       ...(g.representative as any),
       _group: g.items,
-      _count: new Set(g.items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || g.count,
+      _count: new Set(g.items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || g.count, _delegues: g.items.filter((v: any) => v.est_deleguee === true).length,
     }));
 
-  const available = toCards(missions.filter(m => m.statut_coursier === 'en_attente'));
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0); const available = toCards(missions.filter(m => m.statut_coursier === 'en_attente')).filter((g: any) => (g._delegues || 0) > 0 && new Date(g.date_visite) >= startOfToday);
   const myActive = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte'));
   const myCompleted = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine'));
 
@@ -186,8 +186,8 @@ export default function CoursierMissions() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <ClientInteretBadge statutOffre={mission.offres?.statut} />
-          {getInteretState(mission.offres?.statut).key === 'attente' && (
+          <Badge className="bg-blue-600 text-white gap-1"><Users className="h-3 w-3" />{mission._delegues || mission._count} client(s) a visiter (delegue)</Badge>
+          {false && (
             <span className="text-[11px] text-amber-700">À CONFIRMER — réponse client en attente</span>
           )}
         </div>
@@ -791,8 +791,8 @@ export default function CoursierMissions() {
             </div>
 
             <div className="p-3 bg-green-500/10 rounded-lg flex items-center justify-between">
-              <span className="text-sm">Rémunération pour cette visite</span>
-              <span className="font-bold text-green-600">5.00 CHF</span>
+              <span className="text-sm">Rémunération : au temps travaillé (pointage)</span>
+              <span className="font-bold text-green-600">20 CHF/h</span>
             </div>
           </div>
           <DialogFooter>
