@@ -75,8 +75,11 @@ serve(async (req) => {
     return { label, status: r.status, body: (await r.text()).slice(0, 20000) };
   };
 
+  const u = String(body.person_uuid);
   const results = [
-    await probe('addresses', `${base}/addresses/v2/addresses/${String(body.person_uuid)}`),
+    await probe('addr', `${base}/addresses/v2/addresses/${u}`),
+    await probe('person', `${base}/addresses/v2/persons/${u}`),
+    await probe('list', `${base}/addresses/v2/addresses?limit=3`),
   ];
   return new Response(JSON.stringify({ results }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });
