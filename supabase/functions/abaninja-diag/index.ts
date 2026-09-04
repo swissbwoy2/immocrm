@@ -76,7 +76,7 @@ serve(async (req) => {
   };
 
   const results = [
-    await probe('addresses', `${base}/addresses/v2/addresses?limit=3&search=${encodeURIComponent(String(body.search || 'Cheriet'))}`),
+    await probe('addresses', `${base}/addresses/v2/addresses/${String(body.person_uuid)}`),
   ];
   return new Response(JSON.stringify({ results }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });
