@@ -214,7 +214,8 @@ export default function NouveauMandat() {
       // ÉTAPE 2: Créer la facture AbaNinja (si client et adresse créés)
       let abaninjaInvoiceId: string | null = null;
       let abaninjaInvoiceRef: string | null = null;
-      
+      let abaninjaInvoiceError: string | null = null;
+
       if (abaninjaClientUuid && abaninjaAddressUuid && abaninjaWorkflowToken) {
         try {
           const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
@@ -232,15 +233,24 @@ export default function NouveauMandat() {
 
           if (invoiceError) {
             console.error('Error creating AbaNinja invoice:', invoiceError);
-          } else if (invoiceResponse) {
+            abaninjaInvoiceError = invoiceError.message || 'Erreur inconnue';
+          } else if (invoiceResponse?.success) {
             abaninjaInvoiceId = invoiceResponse.invoice_id;
             abaninjaInvoiceRef = invoiceResponse.invoice_number;
             console.log('AbaNinja invoice created:', abaninjaInvoiceRef);
+          } else {
+            abaninjaInvoiceError = invoiceResponse?.error || 'Facture non créée';
           }
         } catch (abaNinjaInvoiceError) {
           console.error('AbaNinja invoice creation failed:', abaNinjaInvoiceError);
+          abaninjaInvoiceError = abaNinjaInvoiceError instanceof Error ? abaNinjaInvoiceError.message : String(abaNinjaInvoiceError);
         }
+      } else if (abaninjaClientUuid) {
+        abaninjaInvoiceError = 'Jeton de facturation manquant';
+      } else {
+        abaninjaInvoiceError = 'Client AbaNinja non créé';
       }
+
 
       // ÉTAPE 3: INSERT UNIQUE avec toutes les données
       // UUID généré côté client → pas de .select() après insert
