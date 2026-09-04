@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     const { data: group } = await admin
       .from("visites")
       .select("id, client_id, agent_id, offre_id")
-      .eq("coursier_id", coursier.id)
+      .not("id", "is", null)
       .eq("adresse", visite.adresse)
       .eq("date_visite", visite.date_visite);
 
