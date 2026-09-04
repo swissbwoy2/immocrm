@@ -52,7 +52,7 @@ export function CoursierClockCard({ time }: Props) {
             )}
           </div>
         </div>
-      </CardContent>
+      <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">Paie au <strong>temps travaillé</strong> : {tarifHoraire} CHF/heure (pas par visite). Pointez votre <strong>arrivée</strong> au début du service, puis votre <strong>départ</strong> à la fin.</p></CardContent>
     </Card>
   );
 }
