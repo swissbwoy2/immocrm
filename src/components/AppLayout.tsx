@@ -11,7 +11,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { FloatingMessengerProvider } from '@/hooks/useFloatingMessenger';
 import { FloatingMessenger } from '@/components/messaging/floating/FloatingMessenger';
 import { DemoModeBanner } from '@/components/DemoModeBanner';
-import { DemoWriteGuard } from '@/components/DemoWriteGuard';
+import { DemoWriteGuard } from '@/components/DemoWriteGuard'; import { ClientVisitDecisionGate } from '@/components/client/ClientVisitDecisionGate';
 import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
 import { MobileAppShell } from '@/components/mobile/MobileAppShell';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -60,7 +60,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     return (
       <>
         <OfflineIndicator />
-        <DemoWriteGuard />
+        <DemoWriteGuard /><ClientVisitDecisionGate />
         <AppSidebar />
         <MobileAppShell>
           <DemoModeBanner />
@@ -75,7 +75,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex w-full bg-background">
       <OfflineIndicator />
-      <DemoWriteGuard />
+      <DemoWriteGuard /><ClientVisitDecisionGate />
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         <DemoModeBanner />
