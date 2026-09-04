@@ -34,7 +34,8 @@ serve(async (req) => {
 
   const results = [
     await probe('bank-accounts', `${base}/finances/v2/bank-accounts`),
-    await probe('invoices', `${base}/documents/v2/invoices?limit=5`),
+    await probe('invoices', `${base}/documents/v2/invoices?limit=8&page=1&sort=-invoiceDate`),
+    await probe('invoices-search', `${base}/documents/v2/invoices?limit=8&page=1&orderBy=invoiceDate&orderDirection=desc`),
   ];
 
   return new Response(JSON.stringify({ hasApiKey: !!apiKey, hasAccountUuid: !!accountUuid, results }, null, 2), {
