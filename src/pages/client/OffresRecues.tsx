@@ -1484,7 +1484,7 @@ const OffresRecues = () => {
                             onClick={() => handlePlanVisit(offre)}
                           >
                             <Calendar className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-                            Planifier une visite
+                            Je m'occupe de la visite
                           </Button>
                           <Button 
                             size="sm" 
@@ -1592,7 +1592,7 @@ const OffresRecues = () => {
                 <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
                   <Calendar className="h-5 w-5 text-blue-500" />
                 </div>
-                Planifier une visite
+                Je m'occupe de la visite
               </DialogTitle>
               <DialogDescription>
                 Choisissez une date et heure pour visiter le bien
@@ -2182,7 +2182,7 @@ const OffresRecues = () => {
                 if (selectedOffre) handlePlanVisit(selectedOffre);
               }}>
                 <Calendar className="mr-2 h-4 w-4" />
-                Planifier une visite
+                Je m'occupe de la visite
               </Button>
             </DialogFooter>
           </DialogContent>
