@@ -1,5 +1,4 @@
-// Diagnostic READ-ONLY AbaNinja : vérifie les credentials et l'accès API.
-// Protégé par INTERNAL_FUNCTION_SECRET (header x-internal-secret).
+// Diagnostic AbaNinja (temporaire). Protégé par INTERNAL_FUNCTION_SECRET.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -20,25 +19,64 @@ serve(async (req) => {
   const apiKey = Deno.env.get('ABANINJA_API_KEY') ?? '';
   const accountUuid = Deno.env.get('ABANINJA_ACCOUNT_UUID') ?? '';
   const base = `https://api.abaninja.ch/accounts/${accountUuid}`;
-  const h = { 'Authorization': `Bearer ${apiKey}`, 'Accept': 'application/json' };
+  const h = {
+    'Authorization': `Bearer ${apiKey}`,
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+
+  const body = await req.json().catch(() => ({}));
+  const out: Record<string, unknown> = {};
+
+  if (body.mode === 'create-test') {
+    const personUuid = String(body.person_uuid || '');
+    const addressUuid = String(body.address_uuid || '');
+    const today = new Date();
+    const due = new Date(today); due.setDate(due.getDate() + 10);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    const payload = {
+      documents: [{
+        receiver: { personUuid, addressUuid },
+        invoiceDate: fmt(today),
+        dueDate: fmt(due),
+        currencyCode: 'CHF',
+        title: 'TEST DIAG - a supprimer',
+        reference: 'TEST-DIAG',
+        publicNotes: 'test',
+        terms: 'test',
+        footerText: 'www.immo-rama.ch',
+        paymentInstructions: { qrIban: 'CH0630808006356407396' },
+        documentTotal: 300,
+        pricesIncludeVat: true,
+        positions: [{
+          kind: 'product', positionNumber: 1,
+          productDescription: 'Test diag', additionalDescription: 'test',
+          quantity: 1, singlePrice: 300, positionTotal: 300,
+          vat: { percentage: 0, amount: 0 },
+        }],
+      }],
+    };
+    const r = await fetch(`${base}/documents/v2/invoices`, { method: 'POST', headers: h, body: JSON.stringify(payload) });
+    const t = await r.text();
+    out.create = { status: r.status, body: t.slice(0, 4000) };
+    try {
+      const j = JSON.parse(t);
+      const uuid = j.data?.[0]?.uuid || j.data?.documents?.[0]?.uuid;
+      if (uuid) {
+        const del = await fetch(`${base}/documents/v2/invoices/${uuid}`, { method: 'DELETE', headers: h });
+        out.delete = { uuid, status: del.status, body: (await del.text()).slice(0, 500) };
+      }
+    } catch { /* ignore */ }
+    return new Response(JSON.stringify(out, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
 
   const probe = async (label: string, url: string) => {
-    try {
-      const r = await fetch(url, { headers: h });
-      const t = await r.text();
-      return { label, status: r.status, body: t.slice(0, 20000) };
-    } catch (e) {
-      return { label, status: 0, body: e instanceof Error ? e.message : String(e) };
-    }
+    const r = await fetch(url, { headers: h });
+    return { label, status: r.status, body: (await r.text()).slice(0, 20000) };
   };
 
   const results = [
-    await probe('bank-accounts', `${base}/finances/v2/bank-accounts`),
-    await probe('invoices', `${base}/documents/v2/invoices?limit=8&page=1&sort=-invoiceDate`),
-    await probe('invoices-search', `${base}/documents/v2/invoices?limit=8&page=1&orderBy=invoiceDate&orderDirection=desc`),
+    await probe('addresses', `${base}/addresses/v2/addresses?limit=3&search=${encodeURIComponent(String(body.search || 'Cheriet'))}`),
   ];
-
-  return new Response(JSON.stringify({ hasApiKey: !!apiKey, hasAccountUuid: !!accountUuid, results }, null, 2), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return new Response(JSON.stringify({ results }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });
