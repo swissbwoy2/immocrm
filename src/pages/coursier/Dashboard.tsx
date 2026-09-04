@@ -66,13 +66,13 @@ export default function CoursierDashboard() {
         m.statut_coursier === 'termine' && new Date(m.updated_at) >= startOfMonth
       );
       const inProgress = myMissions.filter(m => m.statut_coursier === 'accepte');
-      const available = (allMissions || []).filter(m => m.statut_coursier === 'en_attente');
+      const startToday = new Date(); startToday.setHours(0, 0, 0, 0); const available = (allMissions || []).filter(m => m.statut_coursier === 'en_attente');
 
       // Compteurs sur les visites REGROUPÉES (adresse + date/heure + agent)
       setStats({
         completedThisMonth: groupVisitesByPhysiqueAgent(completedThisMonth as any[]).length,
         inProgress: groupVisitesByPhysiqueAgent(inProgress as any[]).length,
-        available: groupVisitesByPhysiqueAgent(available as any[]).length,
+        available: groupVisitesByPhysiqueAgent(available as any[]).filter((g: any) => g.items.some((v: any) => v.est_deleguee === true) && new Date(g.representative.date_visite) >= startToday).length,
       });
     } catch (error) {
       console.error('Error loading coursier data:', error);
@@ -101,7 +101,7 @@ export default function CoursierDashboard() {
   };
 
   const availableGroups = useMemo(
-    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.statut_coursier === 'en_attente') as any[]),
+    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.statut_coursier === 'en_attente') as any[]).filter((g: any) => g.items.some((v: any) => v.est_deleguee === true) && new Date(g.representative.date_visite) >= new Date(new Date().setHours(0, 0, 0, 0))),
     [missions],
   );
   const activeGroups = useMemo(
