@@ -13,7 +13,7 @@ import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
-import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
+import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge'; import { computeCoursierTimesheets } from '@/lib/coursierHours';
 
 
 export default function AdminCoursiers() {
@@ -168,7 +168,7 @@ export default function AdminCoursiers() {
       const active = cGroups.filter(g => (g.representative as any).statut_coursier === 'accepte');
       const sum = (gs: any[], onlyUnpaid = false) =>
         gs.reduce((s, g) => s + g.items.reduce((s2: number, m: any) => s2 + ((onlyUnpaid && m.paye_coursier) ? 0 : (m.remuneration_coursier || 0)), 0), 0);
-      return { ...c, completedCount: completed.length, activeCount: active.length, earnings: sum(completed), unpaid: sum(completed, true) };
+      const _sheets = computeCoursierTimesheets(missions.filter((m: any) => m.coursier_id === c.id)); return { ...c, completedCount: completed.length, activeCount: active.length, earnings: _sheets.reduce((s, d) => s + d.amount, 0), unpaid: _sheets.filter(d => !d.allPaid).reduce((s, d) => s + d.amount, 0), sheets: _sheets };
     });
   }, [coursiers, missionGroups]);
 
