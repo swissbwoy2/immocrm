@@ -35,7 +35,7 @@ export default function AdminCoursiers() {
     try {
       const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
         supabase.from('coursiers').select('*, profiles:user_id(prenom, nom, email, telephone)').order('created_at', { ascending: false }),
-        supabase.from('visites').select('*, offres(adresse, statut), agents:agent_id(id, user_id, profiles:user_id(prenom, nom)), coursiers:coursier_id(prenom, nom, profiles:user_id(prenom, nom))').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(100),
+        supabase.from('visites').select('*, offres(adresse, statut, lien_annonce), agents:agent_id(id, user_id, profiles:user_id(prenom, nom)), coursiers:coursier_id(prenom, nom, profiles:user_id(prenom, nom))').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(100),
         supabase.from('visites').select('*, offres(adresse, statut), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).in('statut', ['planifiee', 'confirmee', 'proposee']).gte('date_visite', new Date().toISOString()).order('date_visite', { ascending: true }).limit(50),
       ]);
       setCoursiers(coursiersData || []);
@@ -467,7 +467,7 @@ export default function AdminCoursiers() {
                             {m.statut_coursier === 'termine' && allPaid && (
                               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">Payé</Badge>
                             )}
-                            <Badge className={status.class}>{status.label}</Badge>
+                            {m.offres?.lien_annonce && (<a href={m.offres.lien_annonce} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">Voir l'offre</a>)}<Badge className={status.class}>{status.label}</Badge>
                           </div>
                         </div>
                       </CardContent>
