@@ -54,7 +54,7 @@ export default function AdminCoursiers() {
     try {
       const { error } = await supabase
         .from('visites')
-        .update({ statut_coursier: 'en_attente' })
+        .update({ statut_coursier: 'en_attente', est_deleguee: true })
         .in('id', ids);
       if (error) throw error;
       toast.success(`Visite envoyée dans le pool coursier (${ids.length} client${ids.length > 1 ? 's' : ''})`);
