@@ -503,7 +503,7 @@ export default function AdminCalendrier() {
     }
   };
 
-  const handleVisiteGroupClick = (visiteGroup: any[]) => {
+  const handleDelegateToCoursier = async (group: any[]) => { if (!group || group.length === 0) return; try { const ids = group.map((v: any) => v.id); const { error } = await supabase.from('visites').update({ statut_coursier: 'en_attente', est_deleguee: true }).in('id', ids); if (error) throw error; toast.success('Visite deleguee au pool coursier (' + ids.length + ' client' + (ids.length > 1 ? 's' : '') + ')'); setVisiteDetailDialogOpen(false); loadData(true); } catch (e: any) { toast.error('Erreur lors de la delegation'); } }; const handleVisiteGroupClick = (visiteGroup: any[]) => {
     setSelectedVisiteGroup(visiteGroup);
     setVisiteDetailDialogOpen(true);
   };
@@ -1035,7 +1035,7 @@ export default function AdminCalendrier() {
                 Ouvrir l'annonce
               </Button>
             )}
-            <Button variant="default" onClick={() => setVisiteDetailDialogOpen(false)}>
+            <Button variant="default" onClick={() => handleDelegateToCoursier(selectedVisiteGroup || [])} className='bg-blue-600 hover:bg-blue-700 text-white'>Deleguer au coursier</Button><Button variant='default' onClick={() => setVisiteDetailDialogOpen(false)}>
               Fermer
             </Button>
           </DialogFooter>
