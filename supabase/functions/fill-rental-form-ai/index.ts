@@ -78,7 +78,7 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfText, clientData, offreData } = await req.json() as { 
+    return new Response(JSON.stringify({ fields: [], warnings: ['Le remplissage automatique par IA a ete desactive.'], suggestions: [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }); const { pdfText, clientData, offreData } = await req.json() as { 
       pdfText: string; 
       clientData: ClientData;
       offreData?: OffreData | null;
