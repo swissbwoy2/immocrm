@@ -816,7 +816,7 @@ export default function AgentCalendrier() {
     }
   };
 
-  const handleOpenDetail = (visite: any) => {
+  const handleDelegateToCoursier = async (v: any) => { if (!v) return; try { const { error } = await supabase.from('visites').update({ statut_coursier: 'en_attente', est_deleguee: true }).eq('adresse', v.adresse).eq('date_visite', v.date_visite); if (error) throw error; toast.success('Visite deleguee au pool coursier'); setDetailDialogOpen(false); } catch (e: any) { toast.error('Erreur lors de la delegation'); } }; const handleOpenDetail = (visite: any) => {
     setSelectedVisite(visite);
     setDetailDialogOpen(true);
   };
@@ -1643,7 +1643,7 @@ export default function AgentCalendrier() {
             {selectedVisite && (
               <VisitVideoShareButton visite={selectedVisite} variant="outline" />
             )}
-            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+            <Button variant="outline" onClick={() => handleDelegateToCoursier(selectedVisite)} className='bg-blue-600 hover:bg-blue-700 text-white'>Deleguer au coursier</Button><Button variant='outline' onClick={() => setDetailDialogOpen(false)}>
               Fermer
             </Button>
             {selectedVisite?.statut === 'planifiee' && (
