@@ -129,14 +129,14 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Outils',
           items: [
             { name: 'Documents', icon: FileText, path: '/admin/documents', notifKey: null },
-            { name: 'Remplir PDF', icon: FilePen, path: '/admin/remplir-pdf', notifKey: null },
             
-            { name: 'Postulation auto', icon: FilePen, path: '/admin/postulation-auto', notifKey: null },
+            
+            
             { name: 'Modèles de demande', icon: FileText, path: '/admin/modeles-demande-location', notifKey: null },
             { name: 'Contacts', icon: Contact, path: '/admin/contacts', notifKey: null },
             { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
             { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
-            { name: 'Agent IA Relocation', icon: Bot, path: '/admin/agent-ia', notifKey: null },
+            
           ],
         },
         {
@@ -202,9 +202,9 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Outils',
           items: [
             { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
-            { name: 'Remplir PDF', icon: FilePen, path: '/agent/remplir-pdf', notifKey: null },
             
-            { name: 'Postulation auto', icon: FilePen, path: '/agent/postulation-auto', notifKey: null },
+            
+            
             { name: 'Modèles de demande', icon: FileText, path: '/agent/modeles-demande-location', notifKey: null },
             { name: 'Contacts', icon: Contact, path: '/agent/contacts', notifKey: null },
           ],
