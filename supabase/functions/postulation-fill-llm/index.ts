@@ -98,7 +98,7 @@ Pour les cases à cocher : réponds "Oui" (à cocher) ou "" (laisser vide).
 Pour les boutons radio / listes : réponds EXACTEMENT une des options proposées, ou "" si aucune ne correspond.
 Pour les montants : chiffres avec séparateur d'espace, ex. "5 400" ou "CHF 5 400" selon le libellé du champ.`;
 
-async function callLLM(userPrompt: string): Promise<Record<string, string>> {
+async function callLLM(userPrompt: string): Promise<Record<string, string>> { return {};
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) throw new Error("LOVABLE_API_KEY non configurée");
 
