@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
             sender_id: user.id,
             sender_type: "agent",
             content: m.name,
-            attachment_url: m.url,
+            offre_id: v.offre_id ?? visite.offre_id ?? null, attachment_url: m.url,
             attachment_type: m.type,
             attachment_name: m.name,
             attachment_size: m.size,
