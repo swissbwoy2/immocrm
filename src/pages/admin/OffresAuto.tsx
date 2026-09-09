@@ -33,11 +33,11 @@ type Row = {
   client_id: string;
   needs_agent_action?: boolean | null;
   missing_info?: string | null;
-  visites?: { id: string; date_visite: string | null; statut: string | null }[];
+  visites?: { id: string; date_visite: string | null; statut: string | null; est_deleguee?: boolean | null; client_decision?: string | null; client_confirme_visite_at?: string | null }[];
   _client?: ClientInfo;
 };
 
-function needsManualAction(row: Row): boolean {
+function visiteLabel(r: any): string { const vs = Array.isArray(r.visites) ? r.visites : []; const withDate = vs.filter((v: any) => v && v.date_visite); if (withDate.length === 0) { return r.needs_agent_action ? 'A fixer - action requise (ex: appel)' : 'Pas encore de visite'; } withDate.sort((a: any, b: any) => new Date(b.date_visite).getTime() - new Date(a.date_visite).getTime()); const v = withDate[0]; const d = new Date(v.date_visite); const dateStr = d.toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); const mode = v.est_deleguee === true ? ' - deleguee (agent/coursier)' : (v.client_confirme_visite_at ? ' - le client visite (confirme)' : ' - en attente decision client'); const dec = v.client_decision === 'souhaite_postuler' ? ' - postuler' : ((v.client_decision === 'refuse' || v.client_decision === 'refusee') ? ' - refusee' : ''); return 'Visite ' + dateStr + mode + dec; } function needsManualAction(row: Row): boolean {
   return !!row.needs_agent_action;
 }
 
@@ -82,7 +82,7 @@ export default function OffresAuto() {
       const { data, error } = await fetchAllPaginated<Row>(() => {
         let q = supabase
           .from("offres")
-          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut)")
+          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut, est_deleguee, client_decision, client_confirme_visite_at)")
           .eq("envoi_auto", true)
           .order("created_at", { ascending: false });
         if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
@@ -306,7 +306,7 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
                 </TableCell>
               )}
               <TableCell className="text-xs max-w-[280px] truncate" title={r.commentaires ?? ""}>
-                {extractVisitInfo(r.commentaires)}
+                {visiteLabel(r as any)}
               </TableCell>
 
               <TableCell>
