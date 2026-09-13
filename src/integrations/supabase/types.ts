@@ -9412,6 +9412,114 @@ export type Database = {
           },
         ]
       }
+      registre_commissions: {
+        Row: {
+          adresse: string | null
+          agent_email: string | null
+          agent_id: string | null
+          agent_nom: string | null
+          agent_prenom: string | null
+          candidature_id: string | null
+          client_email: string | null
+          client_id: string | null
+          client_nom: string | null
+          client_prenom: string | null
+          client_telephone: string | null
+          commission_agence: number | null
+          commission_agent: number | null
+          created_at: string | null
+          date_conclusion: string | null
+          date_paiement: string | null
+          facture_ref: string | null
+          honoraire_total: number | null
+          id: string
+          loyer_brut: number | null
+          montant_acompte: number | null
+          montant_verse: number | null
+          notes: string | null
+          npa: string | null
+          offre_id: string | null
+          offre_ref: string | null
+          source: string | null
+          statut_paiement: string | null
+          taux_commission: number | null
+          transaction_id: string | null
+          type_affaire: string | null
+          updated_at: string | null
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          agent_email?: string | null
+          agent_id?: string | null
+          agent_nom?: string | null
+          agent_prenom?: string | null
+          candidature_id?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_nom?: string | null
+          client_prenom?: string | null
+          client_telephone?: string | null
+          commission_agence?: number | null
+          commission_agent?: number | null
+          created_at?: string | null
+          date_conclusion?: string | null
+          date_paiement?: string | null
+          facture_ref?: string | null
+          honoraire_total?: number | null
+          id?: string
+          loyer_brut?: number | null
+          montant_acompte?: number | null
+          montant_verse?: number | null
+          notes?: string | null
+          npa?: string | null
+          offre_id?: string | null
+          offre_ref?: string | null
+          source?: string | null
+          statut_paiement?: string | null
+          taux_commission?: number | null
+          transaction_id?: string | null
+          type_affaire?: string | null
+          updated_at?: string | null
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          agent_email?: string | null
+          agent_id?: string | null
+          agent_nom?: string | null
+          agent_prenom?: string | null
+          candidature_id?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_nom?: string | null
+          client_prenom?: string | null
+          client_telephone?: string | null
+          commission_agence?: number | null
+          commission_agent?: number | null
+          created_at?: string | null
+          date_conclusion?: string | null
+          date_paiement?: string | null
+          facture_ref?: string | null
+          honoraire_total?: number | null
+          id?: string
+          loyer_brut?: number | null
+          montant_acompte?: number | null
+          montant_verse?: number | null
+          notes?: string | null
+          npa?: string | null
+          offre_id?: string | null
+          offre_ref?: string | null
+          source?: string | null
+          statut_paiement?: string | null
+          taux_commission?: number | null
+          transaction_id?: string | null
+          type_affaire?: string | null
+          updated_at?: string | null
+          ville?: string | null
+        }
+        Relationships: []
+      }
       relouer_candidates: {
         Row: {
           agent_notes: string | null
