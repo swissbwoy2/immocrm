@@ -121,6 +121,8 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           items: [
             { name: 'Factures AbaNinja', icon: Receipt, path: '/admin/factures-abaninja', notifKey: null },
             { name: 'Salaires', icon: Wallet, path: '/admin/salaires', notifKey: null },
+            { name: 'Registre commissions', icon: Receipt, path: '/admin/registre-commissions', notifKey: null },
+            { name: 'Salaires par agent', icon: Wallet, path: '/admin/salaires-agents', notifKey: null },
             { name: 'Statistiques Agents', icon: TrendingUp, path: '/admin/statistiques-agents', notifKey: null },
             { name: 'Analytics Marketing', icon: TrendingUp, path: '/admin/analytics', notifKey: null },
           ],
