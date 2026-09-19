@@ -1768,6 +1768,15 @@ export default function ClientDetail() {
                           />
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <Label>Adresse actuelle</Label>
+                        <Input
+                          value={editFormData.adresse || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, adresse: e.target.value })}
+                          placeholder="Rue, n°, NPA, ville"
+                          className="bg-card/50 backdrop-blur-sm border-border/50"
+                        />
+                      </div>
                     </div>
 
                     <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
