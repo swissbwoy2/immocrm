@@ -81,7 +81,33 @@ export function ChangePasswordCard() {
       setConfirmPassword('');
     } catch (error: any) {
       console.error('Error changing password:', error);
-      toast.error(error.message || 'Erreur lors du changement de mot de passe');
+      const rawMessage: string = error?.message || '';
+      const statusCode = error?.status ?? error?.code;
+      const isAuthIssue =
+        /reauthentication|session|not authenticated|Auth session missing/i.test(rawMessage) ||
+        statusCode === 401 || statusCode === '401' ||
+        statusCode === 403 || statusCode === '403';
+
+      if (isAuthIssue) {
+        // Bascule automatique : envoi d'un lien de réinitialisation
+        try {
+          const { data: u } = await supabase.auth.getUser();
+          const email = u?.user?.email;
+          if (email) {
+            await supabase.auth.resetPasswordForEmail(email, {
+              redirectTo: window.location.origin + '/reset-password',
+            });
+            toast.success('Un lien de réinitialisation vient de vous être envoyé par e-mail.');
+          } else {
+            toast.error(rawMessage || 'Erreur lors du changement de mot de passe');
+          }
+        } catch (resetError: any) {
+          console.error('Error sending reset link:', resetError);
+          toast.error(resetError?.message || rawMessage || 'Erreur lors du changement de mot de passe');
+        }
+      } else {
+        toast.error(rawMessage || 'Erreur lors du changement de mot de passe');
+      }
     } finally {
       setSaving(false);
     }
