@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 const LOCAL_VERSION_KEY = 'app_local_version';
@@ -35,6 +36,11 @@ export const useAppVersionCheck = () => {
   const hasNotified = useRef(false);
 
   useEffect(() => {
+    // Aucune vérification de version dans l'app native : les MAJ passent par les stores.
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
+
     // Bypass complet en dev / preview Lovable : le build id change à chaque HMR.
     if (import.meta.env.DEV || BUILD_VERSION === 'dev') {
       return;
