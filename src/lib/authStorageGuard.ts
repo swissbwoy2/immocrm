@@ -13,10 +13,13 @@
  * Aucun jeton n'est journalisé : uniquement le NOM des clés.
  */
 
+import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { authLog } from './authSession';
 
 const SDK_KEY_RE = /^sb-.*-auth-token$/;
 export const BACKUP_KEY = 'logisorama.auth.backup';
+const NATIVE_BACKUP_KEY = 'logisorama.auth.native-backup';
 
 type Tokens = { access_token: string; refresh_token: string };
 
@@ -36,6 +39,10 @@ export function mirrorSession(tokens: Tokens) {
     localStorage.setItem(BACKUP_KEY, JSON.stringify(tokens));
   } catch {
     /* noop */
+  }
+  // Miroir natif (fire-and-forget) : survit aux purges du localStorage par le WebView.
+  if (Capacitor.isNativePlatform()) {
+    void Preferences.set({ key: NATIVE_BACKUP_KEY, value: JSON.stringify(tokens) });
   }
 }
 
@@ -58,6 +65,9 @@ export function purgePersistedAuth(reason: string) {
       });
   } catch {
     /* noop */
+  }
+  if (Capacitor.isNativePlatform()) {
+    void Preferences.remove({ key: NATIVE_BACKUP_KEY });
   }
 }
 
