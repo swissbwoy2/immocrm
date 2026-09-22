@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { registerSW } from 'virtual:pwa-register';
 import { toast } from 'sonner';
-import { installAuthStorageGuard } from "./lib/authStorageGuard";
+import { installAuthStorageGuard, restoreNativeSessionBackup } from "./lib/authStorageGuard";
 import { installAudioUnlock } from "./lib/callRingtone";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
@@ -137,9 +137,11 @@ window.addEventListener('unhandledrejection', (e: any) =>
   handleStaleChunk(e?.reason?.message || String(e?.reason || '')),
 );
 
-createRoot(document.getElementById("root")!).render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>
-);
+void restoreNativeSessionBackup().finally(() => {
+  createRoot(document.getElementById("root")!).render(
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+});
 
