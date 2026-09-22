@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,15 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
   const { setOpenMobile } = useSidebar();
   const { userRole } = useAuth();
   const { immersive } = useMobileImmersive();
+
+  // Coquille native uniquement : verrouille le scroll du document (html/body)
+  // pour que seule la zone scrollable interne bouge. N'impacte pas le web public.
+  useEffect(() => {
+    document.documentElement.classList.add('imr-native-shell');
+    return () => {
+      document.documentElement.classList.remove('imr-native-shell');
+    };
+  }, []);
 
   return (
     <div

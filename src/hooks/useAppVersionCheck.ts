@@ -108,8 +108,10 @@ export const useAppVersionCheck = () => {
         return false;
       }
       if (localBuildVersion !== BUILD_VERSION) {
-        promptReload(LOCAL_BUILD_KEY, BUILD_VERSION);
-        return true;
+        // Le build qui tourne EST déjà le nouveau : on aligne silencieusement,
+        // sans toast « nouvelle version » fantôme.
+        localStorage.setItem(LOCAL_BUILD_KEY, BUILD_VERSION);
+        return false;
       }
       return false;
     };
@@ -138,6 +140,8 @@ export const useAppVersionCheck = () => {
 
           if (localVersion && localVersion !== serverVersion) {
             promptReload(LOCAL_VERSION_KEY, serverVersion);
+            // Ne pas re-prévenir à chaque ouverture : on retient la version vue.
+            localStorage.setItem(LOCAL_VERSION_KEY, serverVersion);
           } else if (!localVersion) {
             localStorage.setItem(LOCAL_VERSION_KEY, serverVersion);
           }
