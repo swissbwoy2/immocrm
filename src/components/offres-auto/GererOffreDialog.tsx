@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare } from "lucide-react";
+import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -160,6 +160,43 @@ export function GererOffreDialog({
 
   const clientName = `${offre._client?.prenom ?? ""} ${offre._client?.nom ?? ""}`.trim() || "—";
 
+  const HIDDEN_STATUTS = ["candidature_deposee", "acceptee", "signature_effectuee", "bail_conclu", "refusee"];
+  const showMarkDeposee = !!offre && !HIDDEN_STATUTS.includes(offre.statut ?? "");
+
+  async function markCandidatureDeposee() {
+    if (!offre) return;
+    setSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("candidatures")
+        .select("id")
+        .eq("offre_id", offre.id)
+        .maybeSingle();
+      if (!existing) {
+        const { error: eIns } = await supabase.from("candidatures").insert({
+          offre_id: offre.id,
+          client_id: offre.client_id,
+          statut: "en_attente",
+          date_depot: new Date().toISOString(),
+          dossier_complet: true,
+        } as any);
+        if (eIns) throw eIns;
+      }
+      const { error: eOff } = await supabase
+        .from("offres")
+        .update({ statut: "candidature_deposee" })
+        .eq("id", offre.id);
+      if (eOff) throw eOff;
+      toast.success("Candidature déposée");
+      onSaved?.();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -269,6 +306,12 @@ export function GererOffreDialog({
         </div>
 
         <DialogFooter>
+          {showMarkDeposee && (
+            <Button variant="secondary" onClick={markCandidatureDeposee} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileCheck className="h-4 w-4 mr-2" />}
+              Marquer candidature déposée
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Annuler</Button>
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
