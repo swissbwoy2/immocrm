@@ -111,7 +111,7 @@ if (isPreviewHost || isInIframe) {
 
 
 // Global safety net: stale lazy chunks after a redeploy → force one clean reload.
-const CHUNK_RELOAD_KEY = '__lovable_chunk_reload_at';
+const CHUNK_RELOAD_KEY = '__chunk_reload_at';
 const isChunkLoadError = (msg: string) =>
   /Importing a module script failed/i.test(msg) ||
   /Failed to fetch dynamically imported module/i.test(msg) ||
@@ -123,13 +123,15 @@ const handleStaleChunk = (msg: string) => {
   if ((window as any).__logisorama_in_call === true) return; // jamais pendant un appel
   try {
     const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0');
-    if (Date.now() - last < 5 * 60_000) return; // 5 min throttle to avoid reload loops
+    if (Date.now() - last < 60_000) return; // 1 reload max par 60s
     sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
   } catch {}
   console.warn('[App] Stale lazy chunk detected, reloading…', { url: window.location.href, msg });
   window.location.reload();
 };
 
+// vite:preloadError : un preload de chunk périmé après un déploiement → reload throttlé.
+window.addEventListener('vite:preloadError', () => handleStaleChunk('vite:preloadError'));
 window.addEventListener('error', (e) => handleStaleChunk(e?.message || String(e?.error || '')));
 window.addEventListener('unhandledrejection', (e: any) =>
   handleStaleChunk(e?.reason?.message || String(e?.reason || '')),

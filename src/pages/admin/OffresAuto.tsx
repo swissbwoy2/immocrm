@@ -54,7 +54,11 @@ export default function OffresAuto() {
   const [loading, setLoading] = useState(false);
   const [statut, setStatut] = useState<string>("all");
   const [clientQ, setClientQ] = useState("");
-  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 const LOCAL_VERSION_KEY = 'app_local_version';
@@ -35,6 +36,11 @@ export const useAppVersionCheck = () => {
   const hasNotified = useRef(false);
 
   useEffect(() => {
+    // Aucune vérification de version dans l'app native : les MAJ passent par les stores.
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
+
     // Bypass complet en dev / preview Lovable : le build id change à chaque HMR.
     if (import.meta.env.DEV || BUILD_VERSION === 'dev') {
       return;
@@ -102,8 +108,10 @@ export const useAppVersionCheck = () => {
         return false;
       }
       if (localBuildVersion !== BUILD_VERSION) {
-        promptReload(LOCAL_BUILD_KEY, BUILD_VERSION);
-        return true;
+        // Le build qui tourne EST déjà le nouveau : on aligne silencieusement,
+        // sans toast « nouvelle version » fantôme.
+        localStorage.setItem(LOCAL_BUILD_KEY, BUILD_VERSION);
+        return false;
       }
       return false;
     };
@@ -132,6 +140,8 @@ export const useAppVersionCheck = () => {
 
           if (localVersion && localVersion !== serverVersion) {
             promptReload(LOCAL_VERSION_KEY, serverVersion);
+            // Ne pas re-prévenir à chaque ouverture : on retient la version vue.
+            localStorage.setItem(LOCAL_VERSION_KEY, serverVersion);
           } else if (!localVersion) {
             localStorage.setItem(LOCAL_VERSION_KEY, serverVersion);
           }

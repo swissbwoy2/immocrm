@@ -1674,6 +1674,15 @@ All colors MUST be HSL.
 
 /* ===== Google Translate Widget Customization ===== */
 
+/* ==== Coquille native (Capacitor) : verrouille le scroll du document ==== */
+/* Seule la zone scrollable interne de MobileAppShell doit bouger — pas html/body. */
+html.imr-native-shell,
+html.imr-native-shell body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 /* ==== Mode immersif mobile (conversation plein écran) ==== */
 /* Aucun bouton flottant global ne doit recouvrir la barre de saisie. */
 body.imr-immersive [data-floating-widget],
