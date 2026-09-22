@@ -116,3 +116,24 @@ export function getStorageKeyNames(): string {
     return 'indisponible';
   }
 }
+
+/**
+ * Restaure la session depuis le stockage natif (Capacitor Preferences) quand le
+ * localStorage a été purgé par le WebView. Aucun effet sur le web : tout est
+ * gardé derrière Capacitor.isNativePlatform().
+ */
+export async function restoreNativeSessionBackup(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const hasSdk = Object.keys(localStorage).some((k) => /^sb-.*-auth-token$/.test(k));
+    const hasBackup = !!localStorage.getItem(BACKUP_KEY);
+    if (hasSdk || hasBackup) return; // le localStorage a survécu, rien à restaurer
+    const { value } = await Preferences.get({ key: NATIVE_BACKUP_KEY });
+    if (!value) return;
+    const parsed = JSON.parse(value);
+    if (parsed?.access_token && parsed?.refresh_token) {
+      localStorage.setItem(BACKUP_KEY, JSON.stringify({ access_token: parsed.access_token, refresh_token: parsed.refresh_token }));
+      authLog('stockage.restauration_native', { cle_sauvegarde: BACKUP_KEY });
+    }
+  } catch { /* noop */ }
+}
