@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare } from "lucide-react";
+import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -306,6 +306,12 @@ export function GererOffreDialog({
         </div>
 
         <DialogFooter>
+          {showMarkDeposee && (
+            <Button variant="secondary" onClick={markCandidatureDeposee} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileCheck className="h-4 w-4 mr-2" />}
+              Marquer candidature déposée
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Annuler</Button>
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
