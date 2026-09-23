@@ -135,21 +135,20 @@ export function useSolvabilityCheck(
     // Check for valid guarantors
     const garants = candidates.filter(c => c.type === 'garant');
     
-    // A valid guarantor must have: no poursuites, stable status, and sufficient income
-    const validGarant = garants.find(g => {
-      if (g.poursuites) return false;
-      if (!hasStableStatus(g.type_permis, g.nationalite)) return false;
-      if ((g.revenus_mensuels || 0) < budgetDemande * 3) return false;
-      return true;
-    });
+    // Garants valides : sans poursuites et statut stable. Leurs revenus sont CUMULÉS.
+    const stableGarants = garants.filter(g => !g.poursuites && hasStableStatus(g.type_permis, g.nationalite));
+    const garantsRevenusTotal = stableGarants.reduce((sum, g) => sum + (g.revenus_mensuels || 0), 0);
+    const garantsCoverBudget = budgetDemande > 0 ? garantsRevenusTotal >= budgetDemande * 3 : stableGarants.length > 0;
+    const garantCoverageValid = stableGarants.length > 0 && (budgetDemande === 0 || garantsCoverBudget);
+    const garantBudgetPossible = Math.round(garantsRevenusTotal / 3);
     
     let garantInfo;
-    if (validGarant) {
+    if (garantCoverageValid) {
       garantInfo = {
-        nom: `${validGarant.prenom} ${validGarant.nom}`,
-        revenus: validGarant.revenus_mensuels || 0,
-        maxLoyer: Math.round((validGarant.revenus_mensuels || 0) / 3),
-        permis: validGarant.type_permis || undefined,
+        nom: stableGarants.map(g => `${g.prenom} ${g.nom}`).join(' + '),
+        revenus: garantsRevenusTotal,
+        maxLoyer: garantBudgetPossible,
+        permis: stableGarants[0]?.type_permis,
       };
     }
     
@@ -166,34 +165,33 @@ export function useSolvabilityCheck(
     }
     
     // 2. Check if client has unstable permit and no valid guarantor
-    if (!clientHasStableStatus && !validGarant) {
+    if (!clientHasStableStatus && !garantCoverageValid) {
       problems.push({
         type: 'critical',
         code: 'GARANT_REQUIRED',
         message: `Votre permis (${getPermitDisplay(client.type_permis)}) nécessite un garant solvable`,
-        solution: 'Ajouter un GARANT avec permis B/C ou nationalité suisse et revenus >= 3x le loyer',
+        solution: 'Ajouter un GARANT avec permis B/C ou nationalité suisse et revenus cumulés >= 3x le loyer',
       });
     }
     
     // 3. Check if revenues are sufficient for requested budget
     // For clients with unstable status, check if guarantor can cover
     if (budgetDemande > 0) {
-      if (clientHasStableStatus && budgetDemande > budgetPossible && !validGarant) {
+      if (clientHasStableStatus && budgetDemande > budgetPossible && !garantCoverageValid) {
         problems.push({
           type: 'warning',
           code: 'INSUFFICIENT_INCOME',
           message: `Budget demandé (CHF ${budgetDemande.toLocaleString()}) supérieur au budget possible (CHF ${budgetPossible.toLocaleString()})`,
           solution: 'Ajouter un CO-DÉBITEUR (permis B/C ou suisse) ou un GARANT pour augmenter votre capacité',
         });
-      } else if (!clientHasStableStatus && validGarant) {
-        // Client unstable but has valid garant - check if garant can cover the budget
-        const garantBudgetPossible = Math.round((validGarant.revenus_mensuels || 0) / 3);
+      } else if (!clientHasStableStatus && garantCoverageValid) {
+        // Client unstable but garants (cumulated) can cover - check if their total can cover the budget
         if (budgetDemande > garantBudgetPossible) {
           problems.push({
             type: 'warning',
             code: 'GARANT_INSUFFICIENT',
-            message: `Le garant ${validGarant.prenom} ${validGarant.nom} ne peut garantir que CHF ${garantBudgetPossible.toLocaleString()}/mois`,
-            solution: `Le budget demandé (CHF ${budgetDemande.toLocaleString()}) dépasse la capacité du garant`,
+            message: `Les garants ne peuvent garantir que CHF ${garantBudgetPossible.toLocaleString()}/mois (cumulé)`,
+            solution: `Le budget demandé (CHF ${budgetDemande.toLocaleString()}) dépasse la capacité cumulée des garants`,
           });
         }
       }
@@ -223,23 +221,13 @@ export function useSolvabilityCheck(
       });
     });
     
-    // 6. Check guarantors with insufficient income (only if they have stable status)
-    const garantsInsuffisants = garants.filter(g => 
-      !g.poursuites && 
-      hasStableStatus(g.type_permis, g.nationalite) &&
-      (g.revenus_mensuels || 0) < budgetDemande * 3 &&
-      budgetDemande > 0
-    );
-    if (garantsInsuffisants.length > 0 && !validGarant) {
-      garantsInsuffisants.forEach(g => {
-        const revenus = g.revenus_mensuels || 0;
-        const minRequired = budgetDemande * 3;
-        problems.push({
-          type: 'warning',
-          code: 'GARANT_INSUFFICIENT',
-          message: `Le garant ${g.prenom} ${g.nom} a des revenus insuffisants (CHF ${revenus.toLocaleString()} < CHF ${minRequired.toLocaleString()} requis)`,
-          solution: `Le garant doit avoir des revenus >= 3x le loyer demandé (${budgetDemande} x 3 = CHF ${minRequired.toLocaleString()})`,
-        });
+    // 6. Check cumulated guarantors income (only when coverage is insufficient)
+    if (!garantsCoverBudget && budgetDemande > 0 && stableGarants.length > 0) {
+      problems.push({
+        type: 'warning',
+        code: 'GARANT_INSUFFICIENT',
+        message: `Les garants totalisent CHF ${garantsRevenusTotal.toLocaleString()} — insuffisant (min CHF ${(budgetDemande * 3).toLocaleString()} = 3× le loyer)`,
+        solution: `La somme des revenus des garants doit être ≥ 3× le loyer demandé (${budgetDemande} × 3 = CHF ${(budgetDemande * 3).toLocaleString()})`,
       });
     }
     
@@ -266,43 +254,42 @@ export function useSolvabilityCheck(
     // Determine the source of solvability
     let solvabilitySource: 'client' | 'garant' | 'combined' = 'client';
     
-    if (!clientHasStableStatus && validGarant) {
+    if (!clientHasStableStatus && garantCoverageValid) {
       solvabilitySource = 'garant';
-    } else if (clientHasStableStatus && validGarant) {
+    } else if (clientHasStableStatus && garantCoverageValid) {
       solvabilitySource = 'combined';
     }
     
     // Calculate effective budget possible based on source
     let effectiveBudgetPossible = budgetPossible;
-    if (solvabilitySource === 'garant' && validGarant) {
-      effectiveBudgetPossible = Math.round((validGarant.revenus_mensuels || 0) / 3);
+    if (solvabilitySource === 'garant') {
+      effectiveBudgetPossible = garantBudgetPossible;
     }
     
     // Solvable if:
-    // - No critical problems (or they are resolved by a valid guarantor)
-    // - Budget is covered (by client+candidates or by guarantor)
-    const criticalProblemsResolved = !hasCriticalProblems || 
-      (validGarant !== undefined && !client.poursuites);
+    // - No critical problems (or they are resolved by valid cumulated guarantors)
+    // - Budget is covered (by client+candidates or by cumulated guarantors)
+    const criticalProblemsResolved = !hasCriticalProblems || garantCoverageValid;
     
     const budgetCovered = budgetDemande === 0 || 
       (clientHasStableStatus && budgetPossible >= budgetDemande) ||
-      (validGarant !== undefined && Math.round((validGarant.revenus_mensuels || 0) / 3) >= budgetDemande);
+      garantCoverageValid;
     
     const isSolvable = criticalProblemsResolved && budgetCovered && 
-      (clientHasStableStatus || validGarant !== undefined);
+      (clientHasStableStatus || garantCoverageValid);
     
     return {
       isSolvable,
       problems,
-      budgetPossible: solvabilitySource === 'garant' && validGarant 
-        ? Math.round((validGarant.revenus_mensuels || 0) / 3) 
+      budgetPossible: solvabilitySource === 'garant' 
+        ? garantBudgetPossible 
         : budgetPossible,
       budgetDemande,
       totalRevenus,
       clientRevenus,
       candidatesRevenus,
       contributeurs,
-      hasValidGarant: validGarant !== undefined,
+      hasValidGarant: garantCoverageValid,
       garantInfo,
       clientHasStableStatus,
       excludedCandidates,
