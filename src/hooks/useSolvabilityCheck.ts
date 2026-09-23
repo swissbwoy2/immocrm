@@ -281,9 +281,7 @@ export function useSolvabilityCheck(
     return {
       isSolvable,
       problems,
-      budgetPossible: solvabilitySource === 'garant' 
-        ? garantBudgetPossible 
-        : budgetPossible,
+      budgetPossible: Math.max(budgetPossible, garantCoverageValid ? garantBudgetPossible : 0),
       budgetDemande,
       totalRevenus,
       clientRevenus,
