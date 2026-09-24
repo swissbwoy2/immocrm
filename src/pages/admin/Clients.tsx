@@ -1366,21 +1366,20 @@ const Clients = () => {
             const totalRevenus = clientHasStableStatus ? clientRevenus + candidatesRevenus : candidatesRevenus;
             const budgetPossible = Math.round(totalRevenus / 3);
             
-            // Check for valid guarantor
+            // Garants valides : revenus CUMULÉS de tous les garants stables sans poursuites
             const garants = candidates.filter(c => c.type === 'garant');
-            const validGarant = garants.find(g => 
-              !g.poursuites && 
-              hasStableStatus(g.type_permis, g.nationalite) &&
-              (g.revenus_mensuels || 0) >= budgetDemande * 3
-            );
+            const stableGarants = garants.filter(g => !g.poursuites && hasStableStatus(g.type_permis, g.nationalite));
+            const garantsRevenusTotal = stableGarants.reduce((sum, g) => sum + (g.revenus_mensuels || 0), 0);
+            const garantCoverageValid = stableGarants.length > 0 && (budgetDemande === 0 || garantsRevenusTotal >= budgetDemande * 3);
+            const validGarant = garantCoverageValid; // booléen conservé pour le badge "Garant valide"
             
             // Determine solvability (location only — never for purchase buyers)
             const isAcheteur = isBuyer(client);
-            const hasCriticalProblems = client.poursuites || (!clientHasStableStatus && !validGarant);
+            const hasCriticalProblems = client.poursuites || (!clientHasStableStatus && !garantCoverageValid);
             const budgetOk = budgetDemande === 0 ||
               (clientHasStableStatus && budgetPossible >= budgetDemande) ||
-              (validGarant && Math.round((validGarant.revenus_mensuels || 0) / 3) >= budgetDemande);
-            const isSolvable = isAcheteur ? true : (!hasCriticalProblems && budgetOk && (clientHasStableStatus || !!validGarant));
+              garantCoverageValid;
+            const isSolvable = isAcheteur ? true : (!hasCriticalProblems && budgetOk && (clientHasStableStatus || garantCoverageValid));
             
             // Count excluded candidates
             const excludedCandidates = candidates.filter(c => 
