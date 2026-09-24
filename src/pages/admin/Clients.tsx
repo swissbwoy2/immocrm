@@ -1716,7 +1716,7 @@ const Clients = () => {
                       <div className="grid grid-cols-2 gap-2">
                         <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-2 md:p-2.5 rounded-xl text-center border border-border/30">
                           <p className="text-[10px] md:text-xs text-muted-foreground">Revenu total</p>
-                          <p className="text-xs md:text-sm font-bold">CHF {totalRevenus.toLocaleString()}</p>
+                          <p className="text-xs md:text-sm font-bold">CHF {(totalRevenus > 0 ? totalRevenus : (garantCoverageValid ? garantsRevenusTotal : 0)).toLocaleString()}</p>
                         </div>
                         <div className={cn(
                           "p-2 md:p-2.5 rounded-xl text-center border transition-all",
