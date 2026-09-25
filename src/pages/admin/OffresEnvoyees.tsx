@@ -1229,6 +1229,25 @@ export default function AdminOffresEnvoyees() {
           )}
 
           <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
+            {selectedOffre && !['candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu', 'refusee'].includes(selectedOffre.statut || '') && (
+              <Button
+                variant="outline"
+                onClick={handleMarkCandidatureDeposee}
+                disabled={markingCandidature}
+              >
+                {markingCandidature ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Marquer candidature déposée
+                  </>
+                )}
+              </Button>
+            )}
             <Button 
               variant="secondary"
               onClick={() => {
