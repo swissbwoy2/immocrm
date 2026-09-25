@@ -13,6 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
+// Erreur de chunk lazy périmé après un déploiement → recharger la page
+// automatiquement (même détection et même clé que main.tsx).
+const isChunkLoadError = (m: string) =>
+  /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|error loading dynamically imported module/i.test(m);
+
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -25,6 +30,22 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public async componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Chunk lazy périmé après un déploiement : recharger automatiquement
+    // (1 fois max par 60s, jamais pendant un appel) au lieu d'afficher
+    // l'écran d'erreur — les handlers window de main.tsx ne voient jamais
+    // cette erreur car l'ErrorBoundary l'intercepte en premier.
+    const chunkMsg = error?.message || String(error);
+    if (isChunkLoadError(chunkMsg) && (window as any).__logisorama_in_call !== true) {
+      try {
+        const last = Number(sessionStorage.getItem('__chunk_reload_at') || '0');
+        if (Date.now() - last > 60000) {
+          sessionStorage.setItem('__chunk_reload_at', String(Date.now()));
+          window.location.reload();
+          return;
+        }
+      } catch {}
+    }
+
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     this.setState({ errorInfo });
 
