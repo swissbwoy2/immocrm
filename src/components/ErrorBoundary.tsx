@@ -13,6 +13,11 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
+// Erreur de chunk lazy périmé après un déploiement → recharger la page
+// automatiquement (même détection et même clé que main.tsx).
+const isChunkLoadError = (m: string) =>
+  /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|error loading dynamically imported module/i.test(m);
+
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
