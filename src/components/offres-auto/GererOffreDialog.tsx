@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck } from "lucide-react";
+import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -45,6 +46,7 @@ export function GererOffreDialog({
   visitAgentIdOverride?: string | null;
 }) {
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [prix, setPrix] = useState<string>("");
   const [adresse, setAdresse] = useState<string>("");
   const [pieces, setPieces] = useState<string>("");
