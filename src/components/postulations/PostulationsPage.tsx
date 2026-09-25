@@ -9,11 +9,12 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Loader2, RefreshCw, ExternalLink, CheckCircle2, Mailbox } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, CheckCircle2, Mailbox, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 
 type PostulationTab = 'a_faire' | 'deposees';
@@ -46,6 +47,7 @@ export function PostulationsPage({ scope, title }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tab, setTab] = useState<PostulationTab>('a_faire');
 
   async function load() {
