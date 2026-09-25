@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck } from "lucide-react";
+import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -45,6 +46,7 @@ export function GererOffreDialog({
   visitAgentIdOverride?: string | null;
 }) {
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [prix, setPrix] = useState<string>("");
   const [adresse, setAdresse] = useState<string>("");
   const [pieces, setPieces] = useState<string>("");
@@ -197,6 +199,22 @@ export function GererOffreDialog({
     }
   }
 
+  async function deleteOffre() {
+    if (!offre) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("offres").delete().eq("id", offre.id);
+      if (error) throw error;
+      toast.success("Offre supprimée");
+      onSaved?.();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast.error(e.message ?? String(e));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -306,6 +324,20 @@ export function GererOffreDialog({
         </div>
 
         <DialogFooter>
+          <ConfirmDialog
+            trigger={
+              <Button variant="destructive" disabled={deleting}>
+                {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Supprimer l'offre
+              </Button>
+            }
+            title="Supprimer l'offre"
+            description="Supprimer définitivement cette offre ? Cette action est irréversible et retire aussi la candidature/visite liée."
+            confirmText="Supprimer"
+            cancelText="Annuler"
+            variant="destructive"
+            onConfirm={deleteOffre}
+          />
           {showMarkDeposee && (
             <Button variant="secondary" onClick={markCandidatureDeposee} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileCheck className="h-4 w-4 mr-2" />}

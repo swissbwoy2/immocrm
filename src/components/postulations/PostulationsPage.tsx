@@ -9,11 +9,12 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { Loader2, RefreshCw, ExternalLink, CheckCircle2, Mailbox } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, CheckCircle2, Mailbox, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 
 type PostulationTab = 'a_faire' | 'deposees';
@@ -46,6 +47,7 @@ export function PostulationsPage({ scope, title }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tab, setTab] = useState<PostulationTab>('a_faire');
 
   async function load() {
@@ -162,6 +164,21 @@ export function PostulationsPage({ scope, title }: Props) {
     }
   };
 
+  const deleteOffre = async (row: Row) => {
+    setDeletingId(row.id);
+    try {
+      const { error } = await supabase.from('offres').delete().eq('id', row.id);
+      if (error) throw error;
+      toast.success('Offre supprimée');
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+    } catch (err: any) {
+      console.error('[Postulations] delete offre', err);
+      toast.error(err?.message || 'Erreur lors de la suppression');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -245,25 +262,46 @@ export function PostulationsPage({ scope, title }: Props) {
                     ) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    {r.statut === 'candidature_deposee' ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        disabled={savingId === r.id}
-                        onClick={() => markCandidatureDeposee(r)}
-                      >
-                        {savingId === r.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                        )}
-                        ✅ Candidature déposée
-                      </Button>
-                    )}
+                    <div className="inline-flex items-center gap-2">
+                      {r.statut === 'candidature_deposee' ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          disabled={savingId === r.id}
+                          onClick={() => markCandidatureDeposee(r)}
+                        >
+                          {savingId === r.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                          )}
+                          ✅ Candidature déposée
+                        </Button>
+                      )}
+                      {scope === 'admin' && (
+                        <ConfirmDialog
+                          trigger={
+                            <Button variant="destructive" size="sm" disabled={deletingId === r.id}>
+                              {deletingId === r.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          }
+                          title="Supprimer l'offre"
+                          description="Supprimer définitivement cette offre ? Cette action est irréversible et retire aussi la candidature/visite liée."
+                          confirmText="Supprimer"
+                          cancelText="Annuler"
+                          variant="destructive"
+                          onConfirm={() => deleteOffre(r)}
+                        />
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
