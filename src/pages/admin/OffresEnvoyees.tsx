@@ -264,6 +264,7 @@ export default function AdminOffresEnvoyees() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedTargetClient, setSelectedTargetClient] = useState<string>("");
   const [transferring, setTransferring] = useState(false);
+  const [markingCandidature, setMarkingCandidature] = useState(false);
   
   // Visites state
   const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
@@ -428,6 +429,46 @@ export default function AdminOffresEnvoyees() {
     setSelectedOffre(offre);
     setSelectedTargetClient("");
     setTransferDialogOpen(true);
+  };
+
+  const handleMarkCandidatureDeposee = async () => {
+    if (!selectedOffre) return;
+    setMarkingCandidature(true);
+    try {
+      const { data: existing } = await supabase
+        .from('candidatures')
+        .select('id')
+        .eq('offre_id', selectedOffre.id)
+        .maybeSingle();
+
+      if (!existing) {
+        const { error: insertError } = await supabase
+          .from('candidatures')
+          .insert({
+            offre_id: selectedOffre.id,
+            client_id: selectedOffre.client_id,
+            statut: 'en_attente',
+            date_depot: new Date().toISOString(),
+            dossier_complet: true,
+          });
+        if (insertError) throw insertError;
+      }
+
+      const { error: updateError } = await supabase
+        .from('offres')
+        .update({ statut: 'candidature_deposee' })
+        .eq('id', selectedOffre.id);
+      if (updateError) throw updateError;
+
+      toast.success('Candidature déposée');
+      setSelectedOffre(null);
+      setDetailDialogOpen(false);
+      await loadData();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setMarkingCandidature(false);
+    }
   };
 
   const handleTransferOffre = async () => {
@@ -1188,6 +1229,25 @@ export default function AdminOffresEnvoyees() {
           )}
 
           <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
+            {selectedOffre && !['candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu', 'refusee'].includes(selectedOffre.statut || '') && (
+              <Button
+                variant="outline"
+                onClick={handleMarkCandidatureDeposee}
+                disabled={markingCandidature}
+              >
+                {markingCandidature ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Marquer candidature déposée
+                  </>
+                )}
+              </Button>
+            )}
             <Button 
               variant="secondary"
               onClick={() => {
