@@ -164,6 +164,21 @@ export function PostulationsPage({ scope, title }: Props) {
     }
   };
 
+  const deleteOffre = async (row: Row) => {
+    setDeletingId(row.id);
+    try {
+      const { error } = await supabase.from('offres').delete().eq('id', row.id);
+      if (error) throw error;
+      toast.success('Offre supprimée');
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+    } catch (err: any) {
+      console.error('[Postulations] delete offre', err);
+      toast.error(err?.message || 'Erreur lors de la suppression');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -247,25 +262,46 @@ export function PostulationsPage({ scope, title }: Props) {
                     ) : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    {r.statut === 'candidature_deposee' ? (
-                      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        disabled={savingId === r.id}
-                        onClick={() => markCandidatureDeposee(r)}
-                      >
-                        {savingId === r.id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                        )}
-                        ✅ Candidature déposée
-                      </Button>
-                    )}
+                    <div className="inline-flex items-center gap-2">
+                      {r.statut === 'candidature_deposee' ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          disabled={savingId === r.id}
+                          onClick={() => markCandidatureDeposee(r)}
+                        >
+                          {savingId === r.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                          )}
+                          ✅ Candidature déposée
+                        </Button>
+                      )}
+                      {scope === 'admin' && (
+                        <ConfirmDialog
+                          trigger={
+                            <Button variant="destructive" size="sm" disabled={deletingId === r.id}>
+                              {deletingId === r.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          }
+                          title="Supprimer l'offre"
+                          description="Supprimer définitivement cette offre ? Cette action est irréversible et retire aussi la candidature/visite liée."
+                          confirmText="Supprimer"
+                          cancelText="Annuler"
+                          variant="destructive"
+                          onConfirm={() => deleteOffre(r)}
+                        />
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
