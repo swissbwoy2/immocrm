@@ -391,6 +391,7 @@ export default function ClientDetail() {
   // Visites à venir de ce client (statuts actifs uniquement, futures)
   const [upcomingVisites, setUpcomingVisites] = useState<any[]>([]);
   const [coursiersMap, setCoursiersMap] = useState<Record<string, string>>({});
+  const [selectedVisite, setSelectedVisite] = useState<any | null>(null);
 
   useEffect(() => {
     if (!client?.id) return;
@@ -398,7 +399,7 @@ export default function ClientDetail() {
       try {
         const { data } = await supabase
           .from('visites')
-          .select('id, date_visite, adresse, statut, est_deleguee, coursier_id, statut_coursier, offre_id, offres:offre_id(id, adresse)')
+          .select('id, date_visite, adresse, statut, est_deleguee, coursier_id, statut_coursier, offre_id, offres:offre_id(id, titre, adresse, prix, pieces, surface, etage, disponibilite, type_bien, description, lien_annonce, contact_gerance, contact_annonceur, contact_visite, concierge_nom, concierge_tel, statut)')
           .eq('client_id', client.id)
           .in('statut', ['proposee', 'planifiee', 'confirmee', 'deleguee', 'a_deleguer'])
           .gte('date_visite', new Date().toISOString())
@@ -2141,7 +2142,8 @@ export default function ClientDetail() {
                 return (
                   <div
                     key={v.id}
-                    className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30"
+                    onClick={() => setSelectedVisite(v)}
+                    className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 text-sm font-medium shrink-0">
                       <Clock className="w-4 h-4 text-primary" />
