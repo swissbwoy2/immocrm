@@ -2427,6 +2427,162 @@ export default function ClientDetail() {
           </DialogContent>
         </Dialog>
 
+        {/* Offres reçues aujourd'hui */}
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Mail className="w-5 h-5 text-primary" />
+              Offres reçues aujourd'hui
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {todayOffres.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune offre reçue aujourd'hui</p>
+            ) : (
+              todayOffres.map((o) => (
+                <div
+                  key={o.id}
+                  onClick={() => setSelectedTodayOffre(o)}
+                  className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium shrink-0">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span>{formatSwissTime(o.date_envoi).replace(':', 'h')}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{o.adresse || o.titre || 'Offre'}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <span className="text-sm font-semibold text-primary">{Number(o.prix) || 0} CHF CC</span>
+                    <Badge className="text-xs bg-muted text-muted-foreground border-border">{o.statut}</Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Dialog détail offre reçue aujourd'hui */}
+        <Dialog open={!!selectedTodayOffre} onOpenChange={(o) => !o && setSelectedTodayOffre(null)}>
+          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-start gap-2 text-base sm:text-lg">
+                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words">
+                  {selectedTodayOffre?.adresse || selectedTodayOffre?.titre || 'Offre'}
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedTodayOffre && (
+              <div className="space-y-4">
+                {/* Bloc OFFRE */}
+                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-primary font-semibold">Prix</div>
+                      <div className="text-2xl font-bold text-primary">
+                        {Number(selectedTodayOffre.prix) || 0} CHF CC
+                      </div>
+                    </div>
+                    <DollarSign className="w-6 h-6 text-primary/60" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <VisitDetailMiniStat label="Envoyée à" value={formatSwissTime(selectedTodayOffre.date_envoi).replace(':', 'h')} />
+                    {selectedTodayOffre.pieces ? (
+                      <VisitDetailMiniStat label="Pièces" value={String(selectedTodayOffre.pieces)} />
+                    ) : null}
+                    {selectedTodayOffre.surface ? (
+                      <VisitDetailMiniStat label="Surface" value={`${selectedTodayOffre.surface} m²`} />
+                    ) : null}
+                    {selectedTodayOffre.etage != null && selectedTodayOffre.etage !== '' ? (
+                      <VisitDetailMiniStat label="Étage" value={String(selectedTodayOffre.etage)} />
+                    ) : null}
+                    {selectedTodayOffre.disponibilite ? (
+                      <VisitDetailMiniStat label="Disponibilité" value={String(selectedTodayOffre.disponibilite)} />
+                    ) : null}
+                    {selectedTodayOffre.type_bien ? (
+                      <VisitDetailMiniStat label="Type de bien" value={String(selectedTodayOffre.type_bien)} />
+                    ) : null}
+                    {selectedTodayOffre.statut ? (
+                      <VisitDetailMiniStat label="Statut" value={String(selectedTodayOffre.statut)} />
+                    ) : null}
+                  </div>
+                  {selectedTodayOffre.description && (
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                      {selectedTodayOffre.description}
+                    </p>
+                  )}
+                  {selectedTodayOffre.lien_annonce && (
+                    <a
+                      href={selectedTodayOffre.lien_annonce}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                    >
+                      Voir l'annonce <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+
+                {/* Bloc CONTACTS */}
+                {(() => {
+                  const offre = selectedTodayOffre;
+                  const contacts: { label: string; value: string }[] = [];
+                  if (offre.contact_gerance) contacts.push({ label: 'Gérance', value: offre.contact_gerance });
+                  if (offre.contact_annonceur) contacts.push({ label: 'Annonceur', value: offre.contact_annonceur });
+                  if (offre.contact_visite) contacts.push({ label: 'Contact visite', value: offre.contact_visite });
+                  if (offre.concierge_nom || offre.concierge_tel) {
+                    contacts.push({ label: 'Concierge', value: [offre.concierge_nom, offre.concierge_tel].filter(Boolean).join(', ') });
+                  }
+                  if (contacts.length === 0) return null;
+                  return (
+                    <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contacts</div>
+                      {contacts.map((c, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-xs text-muted-foreground w-28 shrink-0 pt-0.5">{c.label}</span>
+                          <span className="min-w-0 break-words">{renderContactLine(c.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Bloc CLIENTS AYANT REÇU CETTE OFFRE */}
+                <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Clients ayant reçu cette offre
+                  </div>
+                  {offreRecipientsLoading ? (
+                    <p className="text-xs text-muted-foreground">Chargement…</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">
+                        {offreRecipients.length} client(s) ont reçu cette offre
+                      </p>
+                      <div className="space-y-1.5">
+                        {offreRecipients.map((r, idx) => (
+                          <div key={idx} className="flex items-center justify-between gap-2">
+                            <span className="text-sm truncate">{r.name}</span>
+                            <Badge className="text-xs bg-muted text-muted-foreground border-border shrink-0">{r.statut}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={() => setSelectedTodayOffre(null)}>
+                    Fermer
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {/* Solvability Alert - chercheur only */}
         {!isReletter && (
           <div 
