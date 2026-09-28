@@ -441,6 +441,12 @@ export default function ClientDetail() {
   const [coursiersMap, setCoursiersMap] = useState<Record<string, string>>({});
   const [selectedVisite, setSelectedVisite] = useState<any | null>(null);
 
+  // Offres reçues aujourd'hui (jour calendaire suisse)
+  const [todayOffres, setTodayOffres] = useState<any[]>([]);
+  const [selectedTodayOffre, setSelectedTodayOffre] = useState<any | null>(null);
+  const [offreRecipients, setOffreRecipients] = useState<{ name: string; statut: string }[]>([]);
+  const [offreRecipientsLoading, setOffreRecipientsLoading] = useState(false);
+
   useEffect(() => {
     if (!client?.id) return;
     const loadUpcomingVisites = async () => {
@@ -474,6 +480,80 @@ export default function ClientDetail() {
     };
     loadUpcomingVisites();
   }, [client?.id]);
+
+  useEffect(() => {
+    if (!client?.id) return;
+    const loadTodayOffres = async () => {
+      try {
+        const { data } = await supabase
+          .from('offres')
+          .select('id, titre, adresse, prix, pieces, surface, etage, disponibilite, type_bien, description, lien_annonce, contact_gerance, contact_annonceur, contact_visite, concierge_nom, concierge_tel, statut, date_envoi')
+          .eq('client_id', client.id)
+          .not('date_envoi', 'is', null)
+          .order('date_envoi', { ascending: false })
+          .limit(15000);
+
+        const todayKey = formatSwissDate(toSwissTime(new Date().toISOString()), 'yyyy-MM-dd');
+        const todays = (data || []).filter((o: any) => {
+          if (!o.date_envoi) return false;
+          return formatSwissDate(toSwissTime(o.date_envoi), 'yyyy-MM-dd') === todayKey;
+        });
+        setTodayOffres(todays);
+      } catch (error) {
+        console.error('Error loading today offres:', error);
+      }
+    };
+    loadTodayOffres();
+  }, [client?.id]);
+
+  // Charge les autres clients ayant reçu la même offre (même lien_annonce, sinon même adresse + prix)
+  useEffect(() => {
+    if (!selectedTodayOffre) {
+      setOffreRecipients([]);
+      return;
+    }
+    const loadRecipients = async () => {
+      setOffreRecipientsLoading(true);
+      try {
+        let query = supabase
+          .from('offres')
+          .select('id, client_id, statut')
+          .limit(15000);
+        if (selectedTodayOffre.lien_annonce) {
+          query = query.eq('lien_annonce', selectedTodayOffre.lien_annonce);
+        } else {
+          query = query.eq('adresse', selectedTodayOffre.adresse || '').eq('prix', selectedTodayOffre.prix);
+        }
+        const { data: sameOffres } = await query;
+        const rows = sameOffres || [];
+        const clientIds = Array.from(new Set(rows.map((r: any) => r.client_id).filter(Boolean)));
+        const nameByClientId: Record<string, string> = {};
+        if (clientIds.length > 0) {
+          const { data: cls } = await supabase.from('clients').select('id, user_id').in('id', clientIds as string[]);
+          const userIds = Array.from(new Set((cls || []).map((c: any) => c.user_id).filter(Boolean)));
+          const userToClient: Record<string, string> = {};
+          (cls || []).forEach((c: any) => { userToClient[c.user_id] = c.id; });
+          if (userIds.length > 0) {
+            const { data: profs } = await supabase.from('profiles').select('id, prenom, nom').in('id', userIds as string[]);
+            (profs || []).forEach((p: any) => {
+              const cid = userToClient[p.id];
+              if (cid) nameByClientId[cid] = [p.prenom, p.nom].filter(Boolean).join(' ') || 'Client';
+            });
+          }
+        }
+        setOffreRecipients(rows.map((r: any) => ({
+          name: nameByClientId[r.client_id] || 'Client',
+          statut: r.statut || '',
+        })));
+      } catch (error) {
+        console.error('Error loading offre recipients:', error);
+        setOffreRecipients([]);
+      } finally {
+        setOffreRecipientsLoading(false);
+      }
+    };
+    loadRecipients();
+  }, [selectedTodayOffre]);
 
   const handleUploadDocument = async () => {
     if (!selectedFile || !client) return;
