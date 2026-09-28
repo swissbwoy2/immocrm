@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw, Wallet, Ban } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw, Wallet, Ban, ExternalLink } from 'lucide-react';
 import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
@@ -153,6 +153,54 @@ const VISITE_A_VENIR_STATUT_CONFIG: Record<string, { label: string; className: s
   confirmee: { label: 'Confirmée', className: 'bg-green-500/10 text-green-600 border-green-500/30' },
   deleguee: { label: 'Déléguée', className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
   a_deleguer: { label: 'À déléguer', className: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
+};
+
+// Mini stat pour le dialog de détail visite
+const VisitDetailMiniStat = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-lg bg-card border border-border px-3 py-2">
+    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="text-sm font-semibold text-foreground mt-0.5 truncate">{value}</div>
+  </div>
+);
+
+// Rendu d'une valeur de contact : e-mails (mailto:) et téléphones (tel:) cliquables
+const renderContactLine = (raw: string) => {
+  const tokens = String(raw)
+    .split(/[\n,;]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+  return (
+    <span className="text-sm">
+      {tokens.map((token, i) => {
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(token);
+        const isPhone = /^[+0-9][0-9\s()./\-]+$/.test(token) && token.replace(/\D/g, '').length >= 8;
+        if (isEmail) {
+          return (
+            <span key={i}>
+              {i > 0 && ' · '}
+              <a href={`mailto:${token}`} className="text-primary hover:underline break-all">{token}</a>
+            </span>
+          );
+        }
+        if (isPhone) {
+          const digits = token.replace(/[^+0-9]/g, '');
+          return (
+            <span key={i}>
+              {i > 0 && ' · '}
+              <a href={`tel:${digits}`} className="text-primary hover:underline">{token}</a>
+            </span>
+          );
+        }
+        return (
+          <span key={i}>
+            {i > 0 && ' · '}
+            {token}
+          </span>
+        );
+      })}
+    </span>
+  );
 };
 
 // Premium stat mini-card
@@ -391,6 +439,7 @@ export default function ClientDetail() {
   // Visites à venir de ce client (statuts actifs uniquement, futures)
   const [upcomingVisites, setUpcomingVisites] = useState<any[]>([]);
   const [coursiersMap, setCoursiersMap] = useState<Record<string, string>>({});
+  const [selectedVisite, setSelectedVisite] = useState<any | null>(null);
 
   useEffect(() => {
     if (!client?.id) return;
@@ -398,7 +447,7 @@ export default function ClientDetail() {
       try {
         const { data } = await supabase
           .from('visites')
-          .select('id, date_visite, adresse, statut, est_deleguee, coursier_id, statut_coursier, offre_id, offres:offre_id(id, adresse)')
+          .select('id, date_visite, adresse, statut, est_deleguee, coursier_id, statut_coursier, offre_id, offres:offre_id(id, titre, adresse, prix, pieces, surface, etage, disponibilite, type_bien, description, lien_annonce, contact_gerance, contact_annonceur, contact_visite, concierge_nom, concierge_tel, statut)')
           .eq('client_id', client.id)
           .in('statut', ['proposee', 'planifiee', 'confirmee', 'deleguee', 'a_deleguer'])
           .gte('date_visite', new Date().toISOString())
@@ -2141,7 +2190,8 @@ export default function ClientDetail() {
                 return (
                   <div
                     key={v.id}
-                    className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30"
+                    onClick={() => setSelectedVisite(v)}
+                    className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30 cursor-pointer"
                   >
                     <div className="flex items-center gap-2 text-sm font-medium shrink-0">
                       <Clock className="w-4 h-4 text-primary" />
@@ -2176,6 +2226,126 @@ export default function ClientDetail() {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog détail visite + offre liée */}
+        <Dialog open={!!selectedVisite} onOpenChange={(o) => !o && setSelectedVisite(null)}>
+          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-start gap-2 text-base sm:text-lg">
+                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words">
+                  {selectedVisite?.adresse || selectedVisite?.offres?.adresse || 'Visite'}
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedVisite && (
+              <div className="space-y-4">
+                {/* Bloc VISITE */}
+                <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <Clock className="w-4 h-4 text-primary" />
+                      {formatSwissDate(toSwissTime(selectedVisite.date_visite), 'dd.MM.yyyy')} à{' '}
+                      {formatSwissTime(selectedVisite.date_visite).replace(':', 'h')}
+                    </div>
+                    <Badge className={`text-xs ${(VISITE_A_VENIR_STATUT_CONFIG[selectedVisite.statut] || { className: 'bg-muted text-muted-foreground border-border' }).className}`}>
+                      {(VISITE_A_VENIR_STATUT_CONFIG[selectedVisite.statut] || { label: selectedVisite.statut }).label}
+                    </Badge>
+                  </div>
+                  {(selectedVisite.est_deleguee || selectedVisite.coursier_id) && (
+                    <p className="text-xs text-muted-foreground">
+                      Déléguée au coursier
+                      {coursiersMap[selectedVisite.coursier_id as string] ? ` — ${coursiersMap[selectedVisite.coursier_id as string]}` : ''}
+                      {selectedVisite.statut_coursier ? ` · ${selectedVisite.statut_coursier}` : ''}
+                    </p>
+                  )}
+                </div>
+
+                {/* Bloc OFFRE */}
+                {selectedVisite.offres && (
+                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div>
+                        <div className="text-[10px] uppercase tracking-wider text-primary font-semibold">Prix de vente</div>
+                        <div className="text-2xl font-bold text-primary">
+                          {Number(selectedVisite.offres.prix) || 0} CHF CC
+                        </div>
+                      </div>
+                      <DollarSign className="w-6 h-6 text-primary/60" />
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {selectedVisite.offres.pieces ? (
+                        <VisitDetailMiniStat label="Pièces" value={String(selectedVisite.offres.pieces)} />
+                      ) : null}
+                      {selectedVisite.offres.surface ? (
+                        <VisitDetailMiniStat label="Surface" value={`${selectedVisite.offres.surface} m²`} />
+                      ) : null}
+                      {selectedVisite.offres.etage != null && selectedVisite.offres.etage !== '' ? (
+                        <VisitDetailMiniStat label="Étage" value={String(selectedVisite.offres.etage)} />
+                      ) : null}
+                      {selectedVisite.offres.disponibilite ? (
+                        <VisitDetailMiniStat label="Disponibilité" value={String(selectedVisite.offres.disponibilite)} />
+                      ) : null}
+                      {selectedVisite.offres.type_bien ? (
+                        <VisitDetailMiniStat label="Type de bien" value={String(selectedVisite.offres.type_bien)} />
+                      ) : null}
+                      {selectedVisite.offres.statut ? (
+                        <VisitDetailMiniStat label="Statut offre" value={String(selectedVisite.offres.statut)} />
+                      ) : null}
+                    </div>
+                    {selectedVisite.offres.description && (
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {selectedVisite.offres.description}
+                      </p>
+                    )}
+                    {selectedVisite.offres.lien_annonce && (
+                      <a
+                        href={selectedVisite.offres.lien_annonce}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                      >
+                        Voir l'annonce <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Bloc CONTACTS */}
+                {(() => {
+                  const offre = selectedVisite.offres;
+                  if (!offre) return null;
+                  const contacts: { label: string; value: string }[] = [];
+                  if (offre.contact_gerance) contacts.push({ label: 'Gérance', value: offre.contact_gerance });
+                  if (offre.contact_annonceur) contacts.push({ label: 'Annonceur', value: offre.contact_annonceur });
+                  if (offre.contact_visite) contacts.push({ label: 'Contact visite', value: offre.contact_visite });
+                  if (offre.concierge_nom || offre.concierge_tel) {
+                    contacts.push({ label: 'Concierge', value: [offre.concierge_nom, offre.concierge_tel].filter(Boolean).join(', ') });
+                  }
+                  if (contacts.length === 0) return null;
+                  return (
+                    <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contacts</div>
+                      {contacts.map((c, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <span className="text-xs text-muted-foreground w-28 shrink-0 pt-0.5">{c.label}</span>
+                          <span className="min-w-0 break-words">{renderContactLine(c.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={() => setSelectedVisite(null)}>
+                    Fermer
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Solvability Alert - chercheur only */}
         {!isReletter && (
