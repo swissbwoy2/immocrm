@@ -144,9 +144,19 @@ import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreate
 import { PurchaseClientDetailPremium } from '@/components/admin/purchase/PurchaseClientDetailPremium';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+
+// Configuration des statuts de visite à venir (badges colorés)
+const VISITE_A_VENIR_STATUT_CONFIG: Record<string, { label: string; className: string }> = {
+  proposee: { label: 'Proposée', className: 'bg-muted text-muted-foreground border-border' },
+  planifiee: { label: 'Planifiée', className: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
+  confirmee: { label: 'Confirmée', className: 'bg-green-500/10 text-green-600 border-green-500/30' },
+  deleguee: { label: 'Déléguée', className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
+  a_deleguer: { label: 'À déléguer', className: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
+};
 
 // Premium stat mini-card
-const PremiumStatCard = ({ 
+const PremiumStatCard = ({
   label, 
   value, 
   prefix = "", 
@@ -377,6 +387,44 @@ export default function ClientDetail() {
       loadDocuments();
     }
   }, [client]);
+
+  // Visites à venir de ce client (statuts actifs uniquement, futures)
+  const [upcomingVisites, setUpcomingVisites] = useState<any[]>([]);
+  const [coursiersMap, setCoursiersMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!client?.id) return;
+    const loadUpcomingVisites = async () => {
+      try {
+        const { data } = await supabase
+          .from('visites')
+          .select('id, date_visite, adresse, statut, est_deleguee, coursier_id, statut_coursier, offre_id, offres:offre_id(id, adresse)')
+          .eq('client_id', client.id)
+          .in('statut', ['proposee', 'planifiee', 'confirmee', 'deleguee', 'a_deleguer'])
+          .gte('date_visite', new Date().toISOString())
+          .order('date_visite', { ascending: true })
+          .limit(15000);
+
+        const visites = data || [];
+        setUpcomingVisites(visites);
+
+        const coursierIds = Array.from(new Set(visites.map((v: any) => v.coursier_id).filter(Boolean)));
+        if (coursierIds.length > 0) {
+          const { data: profs } = await supabase.from('profiles').select('id, prenom, nom').in('id', coursierIds as string[]);
+          const map: Record<string, string> = {};
+          (profs || []).forEach((p: any) => {
+            map[p.id] = [p.prenom, p.nom].filter(Boolean).join(' ') || p.id;
+          });
+          setCoursiersMap(map);
+        } else {
+          setCoursiersMap({});
+        }
+      } catch (error) {
+        console.error('Error loading upcoming visites:', error);
+      }
+    };
+    loadUpcomingVisites();
+  }, [client?.id]);
 
   const handleUploadDocument = async () => {
     if (!selectedFile || !client) return;
@@ -2071,6 +2119,63 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
+
+        {/* Visites à venir de ce client */}
+        <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Calendar className="w-5 h-5 text-primary" />
+              Visites à venir
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {upcomingVisites.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune visite à venir</p>
+            ) : (
+              upcomingVisites.map((v) => {
+                const statutCfg = VISITE_A_VENIR_STATUT_CONFIG[v.statut] || {
+                  label: v.statut,
+                  className: 'bg-muted text-muted-foreground border-border',
+                };
+                const isDeleguee = v.est_deleguee || !!v.coursier_id;
+                return (
+                  <div
+                    key={v.id}
+                    className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30"
+                  >
+                    <div className="flex items-center gap-2 text-sm font-medium shrink-0">
+                      <Clock className="w-4 h-4 text-primary" />
+                      <span>
+                        {formatSwissDate(toSwissTime(v.date_visite), 'dd.MM.yyyy')} à{' '}
+                        {formatSwissTime(v.date_visite).replace(':', 'h')}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate">
+                        {v.adresse || v.offres?.adresse || 'Adresse non renseignée'}
+                      </p>
+                      {v.offre_id && v.offres?.adresse && v.adresse && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Offre liée : {v.offres.adresse}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                      {isDeleguee && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          Déléguée au coursier
+                          {coursiersMap[v.coursier_id as string] ? ` — ${coursiersMap[v.coursier_id as string]}` : ''}
+                          {v.statut_coursier ? ` · ${v.statut_coursier}` : ''}
+                        </span>
+                      )}
+                      <Badge className={`text-xs ${statutCfg.className}`}>{statutCfg.label}</Badge>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
 
         {/* Solvability Alert - chercheur only */}
         {!isReletter && (
