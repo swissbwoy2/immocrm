@@ -3048,7 +3048,8 @@ export default function ClientDetail() {
                   {offres.map((offre, index) => (
                     <div 
                       key={offre.id}
-                      className="group p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in"
+                      onClick={() => setSelectedTodayOffre(offre)}
+                      className="group p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in cursor-pointer"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
                       <div className="flex items-start justify-between mb-3">
