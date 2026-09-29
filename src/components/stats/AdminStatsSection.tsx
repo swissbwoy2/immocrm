@@ -13,6 +13,7 @@ interface AdminStatsSectionProps {
   clients: any[];
   transactions: any[];
   offres: any[];
+  registreCommissions?: any[];
   profiles?: Map<string, any>;
 }
 
@@ -21,6 +22,7 @@ export function AdminStatsSection({
   clients,
   transactions,
   offres,
+  registreCommissions = [],
   profiles,
 }: AdminStatsSectionProps) {
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange());
@@ -41,9 +43,11 @@ export function AdminStatsSection({
   };
 
   // Current period data
-  const currentOffres = filterByDateRange(offres, 'date_envoi', dateRange);
+  const currentOffres = filterByDateRange(offres, 'date_envoi', dateRange, 'created_at');
   const currentTransactions = filterByDateRange(transactions, 'date_transaction', dateRange);
   const currentClients = filterByDateRange(clients, 'date_ajout', dateRange);
+  // Registre des commissions: source de vérité pour revenus et affaires conclues
+  const currentRegistre = filterByDateRange(registreCommissions, 'date_conclusion', dateRange);
 
   // Transactions filtered by payment date (for revenue calculations)
   const currentPaidTransactions = filterByDateRange(
@@ -54,9 +58,10 @@ export function AdminStatsSection({
   );
 
   // Previous period data
-  const previousOffres = filterByDateRange(offres, 'date_envoi', previousPeriod);
+  const previousOffres = filterByDateRange(offres, 'date_envoi', previousPeriod, 'created_at');
   const previousTransactions = filterByDateRange(transactions, 'date_transaction', previousPeriod);
   const previousClients = filterByDateRange(clients, 'date_ajout', previousPeriod);
+  const previousRegistre = filterByDateRange(registreCommissions, 'date_conclusion', previousPeriod);
 
   // Previous period paid transactions
   const previousPaidTransactions = filterByDateRange(
@@ -79,15 +84,14 @@ export function AdminStatsSection({
     const offresUniques = currentOffresUniques.length;
     const previousOffresUniquesCount = previousOffresUniques.length;
 
-    // Activity metric: Affaires conclues (based on date_transaction)
-    const transactionsConclues = currentTransactions.filter(t => t.statut === 'conclue');
-    const previousTransactionsConclues = previousTransactions.filter(t => t.statut === 'conclue');
+    // Affaires conclues + revenus: registre_commissions filtré sur date_conclusion
+    const partAgenceOf = (r: any) =>
+      r.commission_agence ?? Math.max((r.honoraire_total || 0) - (r.commission_agent || 0), 0);
 
-    // Revenue metrics: based on payment date (date_paiement_commission)
-    const revenusAgence = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agence || 0), 0);
-    const previousRevenus = previousPaidTransactions.reduce((sum, t) => sum + (t.part_agence || 0), 0);
+    const revenusAgence = currentRegistre.reduce((sum, r) => sum + partAgenceOf(r), 0);
+    const previousRevenus = previousRegistre.reduce((sum, r) => sum + partAgenceOf(r), 0);
 
-    const commissionsAgents = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
+    const commissionsAgents = currentRegistre.reduce((sum, r) => sum + (r.commission_agent || 0), 0);
 
     const nouveauxClients = currentClients.length;
     const previousNouveauxClients = previousClients.length;
@@ -97,8 +101,8 @@ export function AdminStatsSection({
       previousOffresTotal,
       offresUniques,
       previousOffresUniquesCount,
-      affairesConclues: transactionsConclues.length,
-      previousAffaires: previousTransactionsConclues.length,
+      affairesConclues: currentRegistre.length,
+      previousAffaires: previousRegistre.length,
       revenusAgence,
       previousRevenus,
       commissionsAgents,
@@ -107,25 +111,29 @@ export function AdminStatsSection({
       totalAgents: agents.length,
       agentsActifs: agents.filter(a => a.actif).length,
     };
-  }, [currentOffres, previousOffres, currentOffresUniques, previousOffresUniques, currentTransactions, previousTransactions, currentPaidTransactions, previousPaidTransactions, currentClients, previousClients, agents]);
+  }, [currentOffres, previousOffres, currentOffresUniques, previousOffresUniques, currentTransactions, previousTransactions, currentPaidTransactions, previousPaidTransactions, currentClients, previousClients, currentRegistre, previousRegistre, agents]);
 
-  // Agent leaderboard
+  // Agent leaderboard (basé sur le registre des commissions)
   const agentLeaderboard = useMemo(() => {
-    return agents.map((agent) => {
-      // Use paid transactions for commission leaderboard
-      const agentTransactions = currentPaidTransactions.filter(t => 
-        t.agent_id === agent.id
-      );
-      const totalCommission = agentTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
-      
-      return {
-        id: agent.id,
-        name: `${agent.prenom || ''} ${agent.nom || ''}`.trim() || 'Agent',
-        value: totalCommission,
-        subtitle: `${agentTransactions.length} affaire${agentTransactions.length > 1 ? 's' : ''} conclue${agentTransactions.length > 1 ? 's' : ''}`,
-      };
-    }).filter(a => a.value > 0);
-  }, [agents, currentPaidTransactions]);
+    const byAgent = new Map<string, { name: string; value: number; count: number }>();
+    currentRegistre.forEach((r) => {
+      const key = r.agent_id || `${r.agent_prenom || ''} ${r.agent_nom || ''}`.trim() || 'inconnu';
+      const agent = agents.find(a => a.id === r.agent_id);
+      const name = agent
+        ? `${agent.prenom || ''} ${agent.nom || ''}`.trim() || 'Agent'
+        : `${r.agent_prenom || ''} ${r.agent_nom || ''}`.trim() || 'Agent';
+      const entry = byAgent.get(key) || { name, value: 0, count: 0 };
+      entry.value += r.commission_agent || 0;
+      entry.count += 1;
+      byAgent.set(key, entry);
+    });
+    return Array.from(byAgent.entries()).map(([id, e]) => ({
+      id,
+      name: e.name,
+      value: e.value,
+      subtitle: `${e.count} affaire${e.count > 1 ? 's' : ''} conclue${e.count > 1 ? 's' : ''}`,
+    })).filter(a => a.value > 0);
+  }, [agents, currentRegistre]);
 
   // Agent offres leaderboard
   const agentOffresLeaderboard = useMemo(() => {
@@ -140,20 +148,20 @@ export function AdminStatsSection({
     }).filter(a => a.value > 0);
   }, [agents, currentOffres]);
 
-  // Charts data
+  // Charts data: revenus de l'agence par date de conclusion (registre)
   const revenusChartData = useMemo(() => {
-    return currentPaidTransactions.map((t) => ({
-      date: new Date(t.date_paiement_commission || t.date_transaction),
-      value: t.part_agence || 0,
+    return currentRegistre.map((r) => ({
+      date: new Date(r.date_conclusion),
+      value: r.commission_agence ?? Math.max((r.honoraire_total || 0) - (r.commission_agent || 0), 0),
     }));
-  }, [currentPaidTransactions]);
+  }, [currentRegistre]);
 
   const activitySeries = useMemo(() => [
     {
       key: 'offres',
       label: 'Offres envoyées',
       color: 'hsl(var(--primary))',
-      data: currentOffres.map(o => ({ date: new Date(o.date_envoi), value: 1 })),
+      data: currentOffres.map(o => ({ date: new Date(o.date_envoi || o.created_at), value: 1 })),
     },
     {
       key: 'transactions',
