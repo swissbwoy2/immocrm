@@ -211,6 +211,16 @@ export default function AdminCoursiers() {
     });
   }, [coursiers, missionGroups]);
 
+  // Resynchronise le coursier sélectionné après un rechargement (paiement, tarif…)
+  useEffect(() => {
+    if (!detailOpen || !selectedCoursier) return;
+    const fresh = coursierStats.find(c => c.id === selectedCoursier.id);
+    if (fresh && fresh !== selectedCoursier) {
+      setSelectedCoursier(fresh);
+      setTarifEdit(String(fresh.tarif_horaire ?? 20));
+    }
+  }, [coursierStats, detailOpen]);
+
   const filteredEligible = eligibleVisites.filter(v => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
