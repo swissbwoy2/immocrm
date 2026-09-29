@@ -411,7 +411,7 @@ export default function AdminCoursiers() {
                   <Card 
                     key={c.id} 
                     className="border-border/50 hover:shadow-lg transition-all cursor-pointer group"
-                    onClick={() => { setSelectedCoursier(c); setDetailOpen(true); }}
+                    onClick={() => { setSelectedCoursier(c); setTarifEdit(String(c.tarif_horaire ?? 20)); setDetailOpen(true); }}
                   >
                     <CardContent className="pt-5 pb-4">
                       <div className="flex items-start justify-between mb-4">
@@ -686,8 +686,15 @@ export default function AdminCoursiers() {
 
       {/* Coursier Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-md">
-          {selectedCoursier && (
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          {selectedCoursier && (() => {
+            const sheets: any[] = selectedCoursier.sheets || [];
+            const totalMinutes = sheets.reduce((s, d) => s + d.minutes, 0);
+            const totalEarned = sheets.reduce((s, d) => s + d.amount, 0);
+            const unpaidSheets = sheets.filter(d => !d.allPaid);
+            const totalUnpaidAmount = unpaidSheets.reduce((s, d) => s + d.amount, 0);
+            const allUnpaidIds = unpaidSheets.flatMap(d => d.visiteIds);
+            return (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
@@ -721,20 +728,124 @@ export default function AdminCoursiers() {
                   )}
                 </div>
 
-                {/* Stats */}
+                {/* Infos paiement */}
+                <div className="space-y-2 p-3 rounded-xl border border-border/50 bg-muted/30">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">Tarif horaire</span>
+                    <span className="text-sm font-semibold">{selectedCoursier.tarif_horaire ?? 20} CHF/h</span>
+                  </div>
+                  {selectedCoursier.iban && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">IBAN</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-medium truncate">{selectedCoursier.iban}</span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedCoursier.iban);
+                            toast.success('IBAN copié');
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <Input
+                      type="number"
+                      min="1"
+                      step="0.5"
+                      value={tarifEdit}
+                      onChange={(e) => setTarifEdit(e.target.value)}
+                      className="h-8 w-24 text-sm"
+                      placeholder="20"
+                    />
+                    <Button size="sm" variant="outline" onClick={handleSaveTarif} disabled={savingTarif} className="h-8">
+                      {savingTarif ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                      Enregistrer le tarif
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Bandeau totaux */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center p-3 bg-muted/50 rounded-xl">
-                    <p className="text-2xl font-bold">{selectedCoursier.completedCount}</p>
-                    <p className="text-xs text-muted-foreground">Missions</p>
+                    <p className="text-lg font-bold">{formatDuration(totalMinutes)}</p>
+                    <p className="text-xs text-muted-foreground">Total heures</p>
                   </div>
                   <div className="text-center p-3 bg-green-500/5 rounded-xl">
-                    <p className="text-2xl font-bold text-green-600">{selectedCoursier.earnings.toFixed(0)}</p>
+                    <p className="text-lg font-bold text-green-600">{totalEarned.toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">CHF gagnés</p>
                   </div>
-                  <div className="text-center p-3 bg-amber-500/5 rounded-xl">
-                    <p className="text-2xl font-bold text-amber-600">{selectedCoursier.unpaid.toFixed(0)}</p>
-                    <p className="text-xs text-muted-foreground">CHF dûs</p>
+                  <div className="text-center p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                    <p className="text-lg font-bold text-amber-600">{totalUnpaidAmount.toFixed(2)}</p>
+                    <p className="text-xs text-amber-700">CHF à payer</p>
                   </div>
+                </div>
+
+                {/* Relevé des heures */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" />
+                      Relevé des heures
+                    </p>
+                    {unpaidSheets.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-500/30 text-green-600 hover:bg-green-500/10 h-8"
+                        disabled={payingSheet === 'all'}
+                        onClick={() => handlePaySheet('all', allUnpaidIds)}
+                      >
+                        {payingSheet === 'all' ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="mr-1 h-3.5 w-3.5" />}
+                        Tout payer
+                      </Button>
+                    )}
+                  </div>
+                  {sheets.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">Aucune heure enregistrée</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {sheets.map((sheet) => (
+                        <div key={sheet.dateKey} className="p-3 rounded-xl border border-border/50 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium capitalize">{sheet.label}</p>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-sm font-semibold">{sheet.amount.toFixed(2)} CHF</span>
+                              {sheet.allPaid ? (
+                                <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">Payé</Badge>
+                              ) : (
+                                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">Impayé</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                            {sheet.sessions.map((s: any, i: number) => (
+                              <span key={i}>{fmtZurichTime(s.start)} – {fmtZurichTime(s.end)}</span>
+                            ))}
+                            <span>• {formatDuration(sheet.minutes)}</span>
+                            <span>• {sheet.clientsCount} client{sheet.clientsCount > 1 ? 's' : ''}</span>
+                          </div>
+                          {!sheet.allPaid && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-green-500/30 text-green-600 hover:bg-green-500/10 h-7 text-xs"
+                              disabled={payingSheet === sheet.dateKey}
+                              onClick={() => handlePaySheet(sheet.dateKey, sheet.visiteIds)}
+                            >
+                              {payingSheet === sheet.dateKey ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle className="mr-1 h-3 w-3" />}
+                              Payer
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Inscription */}
@@ -743,7 +854,8 @@ export default function AdminCoursiers() {
                 </div>
               </div>
             </>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </main>
