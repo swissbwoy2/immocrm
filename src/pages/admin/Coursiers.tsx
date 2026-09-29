@@ -29,6 +29,9 @@ export default function AdminCoursiers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCoursier, setSelectedCoursier] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [tarifEdit, setTarifEdit] = useState('');
+  const [savingTarif, setSavingTarif] = useState(false);
+  const [payingSheet, setPayingSheet] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -108,9 +111,44 @@ export default function AdminCoursiers() {
         .in('id', ids);
       if (error) throw error;
       toast.success('Visite marquée comme payée');
-      loadData();
+      await loadData();
+      if (selectedCoursier) {
+        setSelectedCoursier((prev: any) => prev ? { ...prev } : prev);
+      }
     } catch (error) {
       toast.error('Erreur');
+    }
+  };
+
+  const handlePaySheet = async (sheetKey: string, ids: string[]) => {
+    setPayingSheet(sheetKey);
+    try {
+      await handleMarkPaidGroup(ids);
+    } finally {
+      setPayingSheet(null);
+    }
+  };
+
+  const handleSaveTarif = async () => {
+    if (!selectedCoursier) return;
+    const value = parseFloat(tarifEdit);
+    if (isNaN(value) || value <= 0) {
+      toast.error('Tarif invalide');
+      return;
+    }
+    setSavingTarif(true);
+    try {
+      const { error } = await supabase
+        .from('coursiers')
+        .update({ tarif_horaire: value })
+        .eq('id', selectedCoursier.id);
+      if (error) throw error;
+      toast.success('Tarif horaire mis à jour');
+      await loadData();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erreur');
+    } finally {
+      setSavingTarif(false);
     }
   };
 
