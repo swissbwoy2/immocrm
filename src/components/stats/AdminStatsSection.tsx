@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
-import { subDays, isWithinInterval } from 'date-fns';
-import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Home } from 'lucide-react';
+import { subDays, isWithinInterval, startOfDay, startOfWeek, startOfMonth, addDays, addWeeks, addMonths, format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Home, Wallet, FileText } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
 import { PerformanceChart, MultiSeriesChart } from './PerformanceChart';
@@ -14,6 +17,8 @@ interface AdminStatsSectionProps {
   transactions: any[];
   offres: any[];
   registreCommissions?: any[];
+  mandates?: any[];
+  candidatures?: any[];
   profiles?: Map<string, any>;
 }
 
@@ -23,6 +28,8 @@ export function AdminStatsSection({
   transactions,
   offres,
   registreCommissions = [],
+  mandates = [],
+  candidatures = [],
   profiles,
 }: AdminStatsSectionProps) {
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange());
@@ -41,6 +48,69 @@ export function AdminStatsSection({
       return isWithinInterval(itemDate, { start: range.from, end: range.to });
     });
   };
+
+  // Acomptes encaissés (mandats avec acompte_montant > 0), séparés des revenus
+  const acomptes = useMemo(() => {
+    const paid = mandates.filter((m) => Number(m.acompte_montant) > 0);
+    const cur = filterByDateRange(paid, 'created_at', dateRange);
+    const prev = filterByDateRange(paid, 'created_at', previousPeriod);
+    const sum = (a: any[]) => a.reduce((s, m) => s + Number(m.acompte_montant || 0), 0);
+    return { total: sum(cur), prevTotal: sum(prev), count: cur.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mandates, dateRange]);
+
+  // Candidatures / postulations
+  const [granularity, setGranularity] = useState<'day' | 'week' | 'month'>('week');
+  const isSigned = (c: any) =>
+    c.signature_effectuee === true || ['signature_effectuee', 'bail_conclu', 'cles_remises'].includes(c.statut);
+  const candStats = useMemo(() => {
+    const depots = filterByDateRange(candidatures, 'date_depot', dateRange, 'created_at');
+    const signatures = filterByDateRange(candidatures.filter(isSigned), 'signature_effectuee_at', dateRange, 'date_depot')
+      .length || 0;
+    const sigFallback = filterByDateRange(
+      candidatures.filter((c) => isSigned(c) && !c.signature_effectuee_at && !c.date_depot),
+      'created_at',
+      dateRange,
+    ).length;
+    const sig = signatures + sigFallback;
+    return {
+      depots: depots.length,
+      signatures: sig,
+      taux: depots.length > 0 ? (sig / depots.length) * 100 : 0,
+      cles: depots.filter((c) => c.cles_remises === true || c.statut === 'cles_remises').length,
+      refus: depots.filter((c) => c.statut === 'refusee').length,
+      attente: depots.filter((c) => c.statut === 'en_attente').length,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidatures, dateRange]);
+
+  const fluxData = useMemo(() => {
+    const bucketStart = (d: Date) =>
+      granularity === 'day'
+        ? startOfDay(d)
+        : granularity === 'week'
+        ? startOfWeek(d, { weekStartsOn: 1 })
+        : startOfMonth(d);
+    const fmt = granularity === 'month' ? 'MMM yy' : 'dd.MM';
+    const map = new Map<number, { label: string; depots: number; signatures: number }>();
+    let cursor = bucketStart(dateRange.from);
+    let guard = 0;
+    while (cursor <= dateRange.to && guard++ < 800) {
+      map.set(cursor.getTime(), { label: format(cursor, fmt, { locale: fr }), depots: 0, signatures: 0 });
+      cursor = granularity === 'day' ? addDays(cursor, 1) : granularity === 'week' ? addWeeks(cursor, 1) : addMonths(cursor, 1);
+    }
+    filterByDateRange(candidatures, 'date_depot', dateRange, 'created_at').forEach((c) => {
+      const b = map.get(bucketStart(new Date(c.date_depot || c.created_at)).getTime());
+      if (b) b.depots++;
+    });
+    filterByDateRange(candidatures.filter(isSigned), 'signature_effectuee_at', dateRange).forEach((c) => {
+      const b = map.get(bucketStart(new Date(c.signature_effectuee_at)).getTime());
+      if (b) b.signatures++;
+    });
+    return Array.from(map.values());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidatures, dateRange, granularity]);
+
 
   // Current period data
   const currentOffres = filterByDateRange(offres, 'date_envoi', dateRange, 'created_at');
@@ -192,7 +262,7 @@ export function AdminStatsSection({
       </div>
 
       {/* Stats Cards with staggered animations */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
           <StatsCard
             title="Revenus agence"
@@ -201,6 +271,17 @@ export function AdminStatsSection({
             currentValue={stats.revenusAgence}
             icon={DollarSign}
             variant="success"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '25ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Acomptes encaissés"
+            value={`${acomptes.total.toLocaleString()} CHF`}
+            previousValue={acomptes.prevTotal}
+            currentValue={acomptes.total}
+            icon={Wallet}
+            variant="success"
+            description={`${acomptes.count} mandat${acomptes.count > 1 ? 's' : ''}`}
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
@@ -255,6 +336,62 @@ export function AdminStatsSection({
           />
         </div>
       </div>
+
+      {/* Candidatures / Postulations */}
+      <Card className="animate-fade-in border-primary/20">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 space-y-0">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4 text-primary" />
+            Candidatures / Postulations
+          </CardTitle>
+          <div className="flex gap-1" role="tablist" aria-label="Granularité">
+            {(['day', 'week', 'month'] as const).map((g) => (
+              <Button
+                key={g}
+                size="sm"
+                variant={granularity === g ? 'default' : 'outline'}
+                className="h-8 px-3"
+                onClick={() => setGranularity(g)}
+              >
+                {g === 'day' ? 'Jour' : g === 'week' ? 'Semaine' : 'Mois'}
+              </Button>
+            ))}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: 'Dépôts', value: candStats.depots },
+              { label: 'Signatures', value: candStats.signatures },
+              { label: 'Taux conversion', value: `${candStats.taux.toFixed(1)}%` },
+              { label: 'Clés remises', value: candStats.cles },
+              { label: 'Refus', value: candStats.refus },
+              { label: 'En attente', value: candStats.attente },
+            ].map((k) => (
+              <div key={k.label} className="rounded-lg border border-border/60 p-3">
+                <p className="text-[10px] sm:text-xs uppercase tracking-wide text-muted-foreground">{k.label}</p>
+                <p className="text-xl font-bold mt-1 tabular-nums">{k.value}</p>
+              </div>
+            ))}
+          </div>
+          <div>
+            <p className="text-sm font-medium mb-2">Flux de postulations</p>
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={fluxData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="depots" name="Dépôts" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="signatures" name="Signatures" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts with staggered animations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
