@@ -161,7 +161,7 @@ export function AdminStatsSection({
       key: 'offres',
       label: 'Offres envoyées',
       color: 'hsl(var(--primary))',
-      data: currentOffres.map(o => ({ date: new Date(o.date_envoi), value: 1 })),
+      data: currentOffres.map(o => ({ date: new Date(o.date_envoi || o.created_at), value: 1 })),
     },
     {
       key: 'transactions',
