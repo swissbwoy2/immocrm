@@ -39,6 +39,22 @@ export default function AdminDashboard() {
   const [clientAgents, setClientAgents] = useState<any[]>([]);
   const [reactionsCount, setReactionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [mandatesStats, setMandatesStats] = useState<any[]>([]);
+  const [candidaturesStats, setCandidaturesStats] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const [m, c] = await Promise.all([
+        supabase.from('mandates').select('id, acompte_montant, created_at').limit(15000),
+        supabase
+          .from('candidatures')
+          .select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at')
+          .limit(15000),
+      ]);
+      if (!m.error) setMandatesStats(m.data || []);
+      if (!c.error) setCandidaturesStats(c.data || []);
+    })();
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -395,6 +411,8 @@ export default function AdminDashboard() {
                 transactions={transactions}
                 offres={offres}
                 registreCommissions={registreCommissions}
+                mandates={mandatesStats}
+                candidatures={candidaturesStats}
               />
             </CardContent>
           </Card>
