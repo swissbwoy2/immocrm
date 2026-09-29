@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bike, Users, CheckCircle, Clock, Wallet, UserPlus, Loader2, MapPin, DollarSign, Send, Calendar, Search, TrendingUp, Eye, Phone, Mail, AlertTriangle, ArrowUpDown, Star } from 'lucide-react';
+import { Bike, Users, CheckCircle, Clock, Wallet, UserPlus, Loader2, MapPin, DollarSign, Send, Calendar, Search, TrendingUp, Eye, Phone, Mail, AlertTriangle, ArrowUpDown, Star, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge'; import { computeCoursierTimesheets, fmtZurichTime } from '@/lib/coursierHours';
+import { formatDuration } from '@/hooks/useCoursierTime';
 
 
 export default function AdminCoursiers() {
