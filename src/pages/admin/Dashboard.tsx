@@ -35,6 +35,7 @@ export default function AdminDashboard() {
   const [clients, setClients] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [offres, setOffres] = useState<any[]>([]);
+  const [registreCommissions, setRegistreCommissions] = useState<any[]>([]);
   const [clientAgents, setClientAgents] = useState<any[]>([]);
   const [reactionsCount, setReactionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -75,7 +76,7 @@ export default function AdminDashboard() {
       setAgents(transformedAgents);
 
       // === PARALLEL: Load clients, client_agents, transactions, offres simultaneously ===
-      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresCountResult, reactionsResult] = await Promise.all([
+      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresResult, reactionsResult, registreResult] = await Promise.all([
         // Clients with reduced columns
         supabase
           .from('clients')
@@ -94,15 +95,21 @@ export default function AdminDashboard() {
           .select('*')
           .order('date_transaction', { ascending: false })
           .limit(200),
-        // Offres: count-only — we only need the total count for dashboard KPI
+        // Offres: rows needed for period filtering in stats (date_envoi / created_at)
         supabase
           .from('offres')
-          .select('*', { count: 'exact', head: true }),
+          .select('id, date_envoi, created_at, agent_id')
+          .limit(15000),
         // Offres with client reactions (count only)
         supabase
           .from('offres')
           .select('id', { count: 'exact', head: true })
           .in('statut', ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation']),
+        // Registre des commissions: source de vérité pour revenus/affaires conclues
+        supabase
+          .from('registre_commissions')
+          .select('id, date_conclusion, commission_agence, commission_agent, honoraire_total, agent_id, agent_prenom, agent_nom')
+          .limit(15000),
       ]);
 
       if (clientsResult.error) throw clientsResult.error;
@@ -155,9 +162,9 @@ export default function AdminDashboard() {
       }));
       setTransactions(transformedTransactions);
 
-      // For offres, we only store the count — create a minimal array for length checks
-      const offresCount = offresCountResult.count || 0;
-      setOffres(new Array(offresCount) as any[]);
+      // Offres réelles (avec dates) pour les statistiques par période
+      setOffres(offresResult.data || []);
+      setRegistreCommissions(registreResult.data || []);
       setReactionsCount(reactionsResult.count || 0);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -387,6 +394,7 @@ export default function AdminDashboard() {
                 clients={clients}
                 transactions={transactions}
                 offres={offres}
+                registreCommissions={registreCommissions}
               />
             </CardContent>
           </Card>
