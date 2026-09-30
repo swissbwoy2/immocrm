@@ -6,8 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 /**
- * Écran bloquant pour les candidats basculés en client SANS mandat signé.
+ * Écran bloquant pour les candidats basculés en client SANS compte activé.
  * Monté uniquement si l'utilisateur possède le rôle 'candidat' (voir ProtectedRoute).
+ * Levé uniquement sur l'activation complète du compte (profiles.actif — acompte payé / validé par l'admin),
+ * le même critère que AccountActivationModal. Signature du mandat seule = toujours bloqué.
  * En cas d'erreur de lecture : on laisse passer (jamais de blocage par erreur).
  */
 export function CandidatActivationGate({ children }: { children: React.ReactNode }) {
@@ -47,7 +49,7 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">Déléguez votre recherche à nos agents immobiliers.</h1>
-          <p className="text-muted-foreground">Veuillez activer votre compte en complétant et signant votre mandat de recherche.</p>
+          <p className="text-muted-foreground">Veuillez activer votre compte : remplissez et signez votre mandat de recherche, puis réglez l'acompte de 300.- — l'accès complet s'ouvrira dès que votre compte sera activé.</p>
         </div>
         <div className="flex flex-col gap-2">
           <Button asChild size="lg" className="min-h-[44px]">
