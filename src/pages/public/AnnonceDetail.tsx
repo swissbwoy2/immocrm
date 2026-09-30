@@ -53,7 +53,7 @@ export default function AnnonceDetail() {
     queryFn: async () => {
       const select = `
           *,
-          annonceurs(id, nom, prenom, nom_entreprise, type_annonceur, logo_url, note_moyenne, nb_avis, est_verifie),
+          annonceurs(id, nom, nom_entreprise, type_annonceur, logo_url, note_moyenne),
           categories_annonces(nom, slug, icone),
           photos_annonces_publiques(id, url, est_principale, ordre)
         `;
