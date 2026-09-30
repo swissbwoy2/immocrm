@@ -43,15 +43,18 @@ export default function Login() {
       if (error) throw error;
       if (!data.user) throw new Error('Connexion échouée');
 
-      const { data: roleData, error: roleError } = await supabase
+      const { data: rolesData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', data.user.id)
-        .single();
+        .eq('user_id', data.user.id);
       if (roleError) throw roleError;
+      const ROLE_PRIORITY = ['admin', 'automation_operator', 'agent', 'agent_ia', 'closeur', 'coursier', 'apporteur', 'proprietaire', 'client', 'candidat'];
+      const roles = (rolesData || []).map((r: any) => r.role);
+      const role = ROLE_PRIORITY.find((r) => roles.includes(r)) || roles[0];
+      if (!role) throw new Error('Aucun rôle attribué');
 
       toast({ title: 'Connexion réussie', description: 'Bienvenue !' });
-      navigate(nextPath ?? `/${roleData.role}`);
+      navigate(nextPath ?? `/${role}`);
     } catch (error: any) {
       toast({ title: 'Erreur de connexion', description: error.message || 'Email ou mot de passe incorrect', variant: 'destructive' });
     } finally {

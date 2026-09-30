@@ -55,6 +55,9 @@ export default function Landing() {
         case 'apporteur':
           navigate('/apporteur', { replace: true });
           break;
+        case 'candidat':
+          navigate('/candidat', { replace: true });
+          break;
       }
     }
   }, [user, userRole, loading, navigate]);
