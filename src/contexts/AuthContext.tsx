@@ -278,6 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setUserRole(null);
+      setUserRoles([]);
       setRecovering(false);
       navigate('/login');
       intentionalSignOutRef.current = false;
@@ -285,8 +286,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   };
 
+  const switchRole = (role: UserRole) => {
+    if (!userRoles.includes(role)) return;
+    try { localStorage.setItem(ACTIVE_ROLE_KEY, role); } catch { /* noop */ }
+    setUserRole(role);
+  };
+
+  const refreshRoles = async () => {
+    if (user?.id) await fetchUserRole(user.id);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, userRole, loading, recovering, signOut }}>
+    <AuthContext.Provider value={{ user, session, userRole, userRoles, switchRole, refreshRoles, loading, recovering, signOut }}>
       {children}
     </AuthContext.Provider>
   );

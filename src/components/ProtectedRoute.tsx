@@ -5,13 +5,13 @@ import { authLog } from '@/lib/authSession';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator')[];
+  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator' | 'candidat')[];
 }
 
-const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier', 'agent_ia', 'closeur', 'automation_operator'] as const;
+const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier', 'agent_ia', 'closeur', 'automation_operator', 'candidat'] as const;
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, userRole, loading, recovering, session } = useAuth();
+  const { user, userRole, userRoles, switchRole, loading, recovering, session } = useAuth();
 
   // Ne jamais rediriger tant que l'amorçage ou une récupération silencieuse est en cours.
   if (loading || recovering) {
@@ -63,6 +63,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     (userRole === 'automation_operator' && allowedRoles.includes('admin'));
 
   if (!roleAllowed) {
+    // Double rôle : si l'utilisateur possède un autre rôle autorisé, on bascule dessus.
+    const other = userRoles.length > 1 ? allowedRoles?.find((r) => userRoles.includes(r)) : undefined;
+    if (other) {
+      switchRole(other);
+      return null;
+    }
     return <Navigate to={userRole === 'automation_operator' ? '/admin' : `/${userRole}`} replace />;
   }
 

@@ -457,6 +457,18 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
         },
       ];
 
+    case 'candidat':
+      return [
+        {
+          label: null,
+          items: [
+            { name: 'Tableau de bord', icon: LayoutDashboard, path: '/candidat', notifKey: null },
+            { name: 'Mes candidatures', icon: FileText, path: '/candidat/candidatures', notifKey: null },
+            { name: 'Ma demande de location', icon: Clipboard, path: '/candidat/demande', notifKey: null },
+          ],
+        },
+      ];
+
     default:
       return [];
   }
@@ -470,6 +482,7 @@ const roleLabels: Record<string, string> = {
   proprietaire: 'Propriétaire',
   coursier: 'Coursier',
   closeur: 'Closeur',
+  candidat: 'Candidat',
 };
 
 export function AppSidebar() {
