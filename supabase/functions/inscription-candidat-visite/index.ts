@@ -117,12 +117,17 @@ Deno.serve(async (req) => {
       userId = created.user.id;
     }
 
-    // 3. Rôle candidat (ajout seul, jamais d'autre rôle)
-    const { data: existingRole } = await admin
-      .from("user_roles").select("id").eq("user_id", userId).eq("role", "candidat").maybeSingle();
-    if (!existingRole) {
-      const { error: rErr } = await admin.from("user_roles").insert({ user_id: userId, role: "candidat" });
-      if (rErr) console.error("inscription-candidat-visite: rôle", rErr.message);
+    // 3. Rôle candidat (ajout seul, jamais d'autre rôle) — sauf si déjà client
+    const { data: clientRole } = await admin
+      .from("user_roles").select("id").eq("user_id", userId).eq("role", "client").maybeSingle();
+    const isClient = !!clientRole;
+    if (!isClient) {
+      const { data: existingRole } = await admin
+        .from("user_roles").select("id").eq("user_id", userId).eq("role", "candidat").maybeSingle();
+      if (!existingRole) {
+        const { error: rErr } = await admin.from("user_roles").insert({ user_id: userId, role: "candidat" });
+        if (rErr) console.error("inscription-candidat-visite: rôle", rErr.message);
+      }
     }
 
     // 4. Profil (sans écraser)
@@ -155,6 +160,61 @@ Deno.serve(async (req) => {
       if (iErr.code === "23505") return json({ code: "already_booked", error: "Vous avez déjà réservé ce créneau" }, 409);
       console.error("inscription-candidat-visite: candidature", iErr.message);
       return json({ code: "save_error", error: "Impossible d'enregistrer la réservation" }, 500);
+    }
+
+    // 5b. Pont pipeline client (best-effort)
+    if (isClient) {
+      try {
+        const { data: client } = await admin
+          .from("clients").select("id, agent_id").eq("user_id", userId).maybeSingle();
+        if (!client) {
+          console.warn("inscription-candidat-visite: rôle client sans ligne clients", userId);
+        } else {
+          const lien = `https://logisorama.ch/annonces/${annonce.slug || annonce.id}`;
+          const adresse = [annonce.adresse, annonce.ville].filter(Boolean).join(", ");
+          const { data: existingOffres } = await admin
+            .from("offres").select("id, lien_annonce, adresse").eq("client_id", client.id);
+          let offreId = (existingOffres || []).find((o: any) =>
+            o.lien_annonce === lien || o.adresse === adresse || o.adresse === annonce.adresse)?.id ?? null;
+          if (!offreId) {
+            const { data: newOffre, error: oErr } = await admin.from("offres").insert({
+              client_id: client.id,
+              agent_id: client.agent_id,
+              adresse,
+              prix: annonce.prix ?? 0,
+              pieces: annonce.nombre_pieces,
+              surface: annonce.surface_habitable,
+              type_bien: annonce.type_transaction,
+              titre: annonce.titre,
+              lien_annonce: lien,
+              statut: "interesse",
+              envoi_auto: false,
+              needs_agent_action: false,
+              date_envoi: new Date().toISOString(),
+            }).select("id").single();
+            if (oErr) console.error("inscription-candidat-visite: offre", oErr.message);
+            offreId = newOffre?.id ?? null;
+          }
+          const { data: existingVisite } = await admin
+            .from("visites").select("id")
+            .eq("client_id", client.id).eq("date_visite", creneau.date_heure)
+            .in("adresse", [adresse, annonce.adresse]).limit(1);
+          if (!existingVisite?.length) {
+            const { error: vErr } = await admin.from("visites").insert({
+              offre_id: offreId,
+              client_id: client.id,
+              agent_id: client.agent_id,
+              date_visite: creneau.date_heure,
+              adresse,
+              statut: "confirmee",
+              source: "portail",
+            });
+            if (vErr) console.error("inscription-candidat-visite: visite", vErr.message);
+          }
+        }
+      } catch (e) {
+        console.error("inscription-candidat-visite: pont client", (e as Error)?.message);
+      }
     }
 
     // 6. E-mail
