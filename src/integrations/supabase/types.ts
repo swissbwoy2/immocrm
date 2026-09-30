@@ -8224,6 +8224,7 @@ export type Database = {
           parcours_type: string | null
           prenom: string
           telephone: string | null
+          trial_started_at: string | null
           updated_at: string | null
           whatsapp_opt_in: boolean
           whatsapp_opt_in_date: string | null
@@ -8245,6 +8246,7 @@ export type Database = {
           parcours_type?: string | null
           prenom: string
           telephone?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           whatsapp_opt_in?: boolean
           whatsapp_opt_in_date?: string | null
@@ -8266,6 +8268,7 @@ export type Database = {
           parcours_type?: string | null
           prenom?: string
           telephone?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           whatsapp_opt_in?: boolean
           whatsapp_opt_in_date?: string | null
@@ -14141,6 +14144,7 @@ export type Database = {
         }
       }
       set_user_offline: { Args: never; Returns: undefined }
+      start_candidat_trial: { Args: never; Returns: string }
       track_email_click: {
         Args: { _log_id: string; _url: string }
         Returns: undefined
