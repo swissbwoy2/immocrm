@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useCandidatCandidatures, RETENU_BAILLEUR } from '@/hooks/useCandidatCandidatures';
+import { useCandidatCandidatures, RETENU_BAILLEUR, statutLabel } from '@/hooks/useCandidatCandidatures';
 import { PremiumDashboardHeader, PremiumKPICard } from '@/components/premium';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
