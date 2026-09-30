@@ -43,7 +43,7 @@ export default function Parametres() {
         .from('annonceurs')
         .select('notifications_email, notifications_sms')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

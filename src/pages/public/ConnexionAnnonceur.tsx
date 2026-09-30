@@ -26,18 +26,15 @@ export default function ConnexionAnnonceur() {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      const { data: annonceur, error: annonceurError } = await supabase
+      // Tout compte connecté peut devenir annonceur : profil provisionné automatiquement.
+      await supabase.rpc('ensure_annonceur_profile' as any);
+      const { data: annonceur } = await supabase
         .from('annonceurs')
         .select('id, statut')
         .eq('user_id', data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (annonceurError || !annonceur) {
-        await withAuthStorageRemoval(() => supabase.auth.signOut());
-        throw new Error("Ce compte n'est pas un compte annonceur");
-      }
-
-      if (annonceur.statut === 'suspendu') {
+      if (annonceur?.statut === 'suspendu') {
         await withAuthStorageRemoval(() => supabase.auth.signOut());
         throw new Error('Votre compte a été suspendu. Contactez le support.');
       }
