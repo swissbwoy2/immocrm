@@ -56,8 +56,10 @@ export function mergeCandidatCriteres<T extends Record<string, any>>(client: T, 
   if (isEmpty(merged.region_recherche) && cc.region_recherche) merged.region_recherche = cc.region_recherche;
   if (isEmpty(merged.budget_max) && cc.budget_max) merged.budget_max = cc.budget_max;
   if (isEmpty(merged.nombre_occupants) && cc.nombre_occupants) merged.nombre_occupants = cc.nombre_occupants;
+  // clients.poursuites vaut false par défaut : on ne le considère « renseigné » que si la solvabilité client l'est (revenu > 0).
+  const clientSolvabiliteVide = isEmpty(client.revenus_mensuels);
   if (isEmpty(merged.type_permis) && cc.type_permis) merged.type_permis = cc.type_permis;
-  if (isEmpty(merged.revenus_mensuels) && cc.revenus_mensuels) merged.revenus_mensuels = Number(cc.revenus_mensuels);
-  if ((merged.poursuites === null || merged.poursuites === undefined) && typeof cc.poursuites === 'boolean') merged.poursuites = cc.poursuites;
+  if (clientSolvabiliteVide && cc.revenus_mensuels) merged.revenus_mensuels = Number(cc.revenus_mensuels);
+  if (clientSolvabiliteVide && typeof cc.poursuites === 'boolean') merged.poursuites = cc.poursuites;
   return merged as T;
 }
