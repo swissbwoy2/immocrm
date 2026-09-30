@@ -27,8 +27,6 @@ interface AnnonceData {
   est_mise_en_avant?: boolean;
   /** Annonce « sourcée » (issue d'un portail externe) : lien de l'annonce d'origine */
   lien_annonce?: string | null;
-  /** true si le clic doit ouvrir la fiche interne (client connecté) */
-  allowInternalDetail?: boolean;
   disponible_immediatement?: boolean;
   annonceurs?: {
     id?: string;

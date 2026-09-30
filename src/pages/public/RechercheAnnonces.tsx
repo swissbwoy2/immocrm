@@ -373,7 +373,6 @@ export default function RechercheAnnonces() {
           date_publication: o.date_envoi,
           est_mise_en_avant: false,
           lien_annonce: o.lien_annonce || null,
-          allowInternalDetail: canViewExternalPhotos,
           photos_annonces_publiques: photo ? [{ url: photo, est_principale: true }] : [],
         } as any;
       }),

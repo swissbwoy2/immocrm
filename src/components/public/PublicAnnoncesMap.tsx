@@ -20,8 +20,6 @@ interface Annonce {
   photos_annonces_publiques?: { url: string; est_principale: boolean }[];
   /** Annonce sourcée : lien externe d'origine */
   lien_annonce?: string | null;
-  /** true si le clic peut ouvrir la fiche interne */
-  allowInternalDetail?: boolean;
 }
 
 interface PublicAnnoncesMapProps {
