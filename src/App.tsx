@@ -23,7 +23,6 @@ const DemoPage = lazy(() => import("./pages/Demo"));
 
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
-const MandatV3 = lazy(() => import("./pages/MandatV3"));
 const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
 const MandatRenouvellement = lazy(() => import("./pages/MandatRenouvellement"));
 // Parcours propriétaires retirés du frontend public (redirigés vers Immo-rama.ch)
@@ -314,7 +313,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/demo" element={<DemoPage />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
-              <Route path="/mandat-v3" element={<MandatV3 />} />
+              <Route path="/mandat-v3" element={<Navigate to="/nouveau-mandat" replace />} />
               <Route path="/mandat-v3/suivi" element={<MandatV3Suivi />} />
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
               <Route path="/mandat/renouvellement" element={<MandatRenouvellement />} />

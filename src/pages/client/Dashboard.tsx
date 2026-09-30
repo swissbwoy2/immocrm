@@ -617,7 +617,7 @@ function ClientDashboardLocation() {
                           void signOut().catch(() => {});
                           window.location.assign('/nouveau-mandat');
                         } else {
-                          navigate('/mandat-v3');
+                          navigate('/nouveau-mandat');
                         }
                       }}
                     >
