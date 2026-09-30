@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  CalendarClock,
   Plus, 
   Search, 
   Eye, 
@@ -50,6 +51,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnnonceCreneauxManager } from '@/components/admin/AnnonceCreneauxManager';
 
 const statusColors: Record<string, string> = {
   publie: 'bg-green-500/20 text-green-700 border-green-500/30',
@@ -75,6 +77,7 @@ export default function MesAnnonces() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [creneauxAnnonce, setCreneauxAnnonce] = useState<{ id: string; titre: string } | null>(null);
 
   // Fetch annonceur profile
   const { data: annonceur } = useQuery({
@@ -402,6 +405,12 @@ export default function MesAnnonces() {
                               <Copy className="h-4 w-4 mr-2" />
                               Dupliquer
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setCreneauxAnnonce({ id: annonce.id, titre: annonce.titre })}
+                            >
+                              <CalendarClock className="h-4 w-4 mr-2" />
+                              Créneaux de visite
+                            </DropdownMenuItem>
                             {annonce.statut === 'publie' && (
                               <DropdownMenuItem
                                 onClick={() => toggleStatusMutation.mutate({ id: annonce.id, statut: 'suspendu' })}
@@ -447,6 +456,11 @@ export default function MesAnnonces() {
           </Table>
         </div>
       </div>
+      <AnnonceCreneauxManager
+        annonce={creneauxAnnonce}
+        open={!!creneauxAnnonce}
+        onOpenChange={(o) => { if (!o) setCreneauxAnnonce(null); }}
+      />
     </AnnonceurLayout>
   );
 }
