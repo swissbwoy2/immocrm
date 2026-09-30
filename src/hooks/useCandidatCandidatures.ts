@@ -52,16 +52,18 @@ export function useCandidatCandidatures() {
     queryKey: ['candidat-candidatures', user?.id],
     enabled: !!user?.id,
     queryFn: async (): Promise<UnifiedCandidature[]> => {
-      const [{ data: c }, { data: l }] = await Promise.all([
+      const [{ data: c, error: cErr }, { data: l, error: lErr }] = await Promise.all([
         supabase
           .from('candidatures')
            .select('id, statut, date_depot, created_at, dossier_complet, offres(adresse, titre, lien_annonce, prix, pieces, surface, medias_galerie)')
           .order('created_at', { ascending: false }),
         supabase
           .from('candidatures_location')
-          .select('id, statut, created_at, documents, date_visite, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annonce_creneaux(date_heure), annonces_publiques(id, slug, titre, adresse, ville, code_postal, prix, type_transaction, lien_annonce, photos_annonces_publiques(url, est_principale))')
+          .select('id, statut, created_at, documents, date_visite, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annonce_creneaux(date_heure), annonces_publiques(id, slug, titre, adresse, ville, code_postal, prix, type_transaction, photos_annonces_publiques(url, est_principale))')
           .order('created_at', { ascending: false }),
       ]);
+      if (cErr) console.error('[candidat] candidatures', cErr);
+      if (lErr) console.error('[candidat] candidatures_location', lErr);
       const a: UnifiedCandidature[] = (c ?? []).map((r: any) => ({
         id: r.id,
         source: 'candidature',
