@@ -19,6 +19,7 @@ import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
+import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -821,7 +822,13 @@ export default function AnnonceDetail() {
                   </div>
 
                   <div className="space-y-3">
-                    <Button className="w-full" size="lg" onClick={() => setShowContactDialog(true)}>
+                    {creneauxDispo.length > 0 && (
+                      <Button className="w-full" size="lg" onClick={() => setShowReserverDialog(true)}>
+                        <CalendarCheck className="h-4 w-4 mr-2" />
+                        Réserver une visite / Postuler
+                      </Button>
+                    )}
+                    <Button className="w-full" size="lg" variant={creneauxDispo.length > 0 ? 'outline' : 'default'} onClick={() => setShowContactDialog(true)}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Contacter
                     </Button>
@@ -940,6 +947,10 @@ export default function AnnonceDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {annonce && (
+        <ReserverVisiteDialog open={showReserverDialog} onOpenChange={setShowReserverDialog} annonce={annonce} />
+      )}
 
       {/* Contact Dialog */}
       <ContactAnnonceDialog
