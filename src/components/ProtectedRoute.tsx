@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle } from 'lucide-react';
 import { authLog } from '@/lib/authSession';
 import { CandidatActivationGate } from '@/components/client/CandidatActivationGate';
+import { CandidatCriteresGate } from '@/components/candidat/CandidatCriteresGate';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -76,6 +77,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   // Candidat basculé en client sans mandat signé → écran bloquant (clients classiques jamais concernés).
   if (userRole === 'client' && userRoles.includes('candidat') && allowedRoles?.includes('client')) {
     return <CandidatActivationGate>{children}</CandidatActivationGate>;
+  }
+
+  // Espace candidat : critères de recherche obligatoires avant tout accès.
+  if (userRole === 'candidat' && allowedRoles?.includes('candidat')) {
+    return <CandidatCriteresGate>{children}</CandidatCriteresGate>;
   }
 
   return <>{children}</>;
