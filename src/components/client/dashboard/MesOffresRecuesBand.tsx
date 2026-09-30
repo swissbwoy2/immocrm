@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { FileCheck, Home } from 'lucide-react';
 import {
   ShowcaseItem,
   usePreviewImage,
@@ -34,7 +34,7 @@ const toShowcase = (o: OffreRow): ShowcaseItem => ({
   medias_galerie: o.medias_galerie ?? null,
 });
 
-function OffreBubble({ offre, onClick }: { offre: OffreRow; onClick: () => void }) {
+function OffreBubble({ offre, onClick, candidature = false }: { offre: OffreRow; onClick: () => void; candidature?: boolean }) {
   const item = useMemo(() => toShowcase(offre), [offre]);
   const img = usePreviewImage(item);
   const label = offre.titre || offre.adresse || 'Offre reçue';
@@ -52,7 +52,7 @@ function OffreBubble({ offre, onClick }: { offre: OffreRow; onClick: () => void 
               {img ? (
                 <img src={img} alt={label} loading="lazy" className="h-full w-full object-cover" />
               ) : (
-                <Home className="h-6 w-6 text-muted-foreground" />
+                 candidature ? <FileCheck className="h-6 w-6 text-muted-foreground" /> : <Home className="h-6 w-6 text-muted-foreground" />
               )}
             </span>
           </span>
@@ -68,10 +68,12 @@ function OffreBubble({ offre, onClick }: { offre: OffreRow; onClick: () => void 
 
 interface Props {
   offres: OffreRow[];
+  title?: string;
+  onItemClick?: (id: string) => void;
 }
 
 /** Bande horizontale statique des offres reçues du client connecté. */
-export function MesOffresRecuesBand({ offres }: Props) {
+export function MesOffresRecuesBand({ offres, title = 'Offres reçues', onItemClick }: Props) {
   const navigate = useNavigate();
 
   const list = useMemo(
@@ -91,14 +93,15 @@ export function MesOffresRecuesBand({ offres }: Props) {
   return (
     <section className="mb-4 rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-        Offres reçues
+         {title}
       </h2>
       <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
         {list.map((o) => (
           <OffreBubble
             key={o.id}
             offre={o}
-            onClick={() => navigate(`/client/offres-recues?offre=${o.id}`)}
+             candidature={!!onItemClick}
+             onClick={() => onItemClick ? onItemClick(o.id) : navigate(`/client/offres-recues?offre=${o.id}`)}
           />
         ))}
       </div>
