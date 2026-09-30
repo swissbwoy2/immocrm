@@ -77,6 +77,7 @@ export function DossierAnalyseSection() {
                 </a>
               </div>
 
+              {/* Trust cards */}
               <div className="relative grid sm:grid-cols-2 gap-4">
                 <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
                   <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
