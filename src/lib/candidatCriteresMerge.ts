@@ -43,7 +43,7 @@ const isEmpty = (v: unknown) => v === null || v === undefined || v === '' || v =
  */
 export function mergeCandidatCriteres<T extends Record<string, any>>(client: T, cc: CandidatCriteresLite | undefined): T {
   if (!cc) return client;
-  const merged = { ...client };
+  const merged: Record<string, any> = { ...client };
   if (isEmpty(merged.type_recherche) && cc.type_recherche) merged.type_recherche = cc.type_recherche;
   if (isEmpty(merged.type_bien) && cc.type_bien) merged.type_bien = cc.type_bien;
   if (isEmpty(merged.pieces)) {
