@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { SpaceSwitcher } from '@/components/RoleSwitcher';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 interface AnnonceurLayoutProps {
@@ -177,6 +178,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
 
         {/* User */}
         <div className="p-4 border-t border-sidebar-border space-y-2">
+          <SpaceSwitcher className="w-full justify-start bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent" />
           <Button
             variant="outline"
             className="w-full justify-start bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent"
@@ -244,7 +246,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
           </div>
 
           <div className="flex items-center gap-2">
-
+            <SpaceSwitcher variant="ghost" className="h-8 px-2 text-xs" />
             <Link to="/espace-annonceur/messages">
               <Button variant="ghost" size="icon" className="relative">
                 <MessageCircle className="h-5 w-5" />
