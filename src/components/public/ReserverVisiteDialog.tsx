@@ -103,8 +103,31 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); }, 200);
+    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); setSlotFull(false); }, 200);
   };
+
+  const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
+  const showTropTard = !done && !isLoading && (allFull || slotFull);
+  const capaciteAtteinte = creneaux.reduce((s, c) => s + (c.capacite_max ?? 0), 0) || 20;
+
+  if (showTropTard) {
+    return (
+      <Dialog open={open} onOpenChange={close}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Trop tard !</DialogTitle>
+            <DialogDescription>
+              {capaciteAtteinte} personnes ont déjà réservé les créneaux disponibles. Revenez dans 10 jours, ou activez votre recherche dès maintenant pour que nous cherchions votre logement à votre place.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
+            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Activer ma recherche</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={close}>
