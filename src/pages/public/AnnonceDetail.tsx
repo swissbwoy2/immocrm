@@ -8,6 +8,7 @@ import {
   Calendar, Building2, Check, Phone, Mail, MessageCircle, 
   Star, ChevronLeft, ChevronRight, X, User, Shield, Clock,
   Home, Car, Thermometer, Wifi, Trees, Waves, Sparkles
+  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +45,7 @@ export default function AnnonceDetail() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
+  const [showReserverDialog, setShowReserverDialog] = useState(false);
 
   // Fetch annonce details (slug, fallback sur l'id)
   const { data: annonce, isLoading, error } = useQuery({
@@ -87,6 +89,8 @@ export default function AnnonceDetail() {
   const isFavorite = annonce ? isFav(annonce.id) : false;
 
   // Fetch similar listings
+  const { data: creneauxDispo = [] } = useAnnonceCreneaux(annonce?.id);
+
   const { data: similarAnnonces = [] } = useQuery({
     queryKey: ['similar-annonces', annonce?.id, annonce?.type_transaction, annonce?.canton],
     queryFn: async () => {

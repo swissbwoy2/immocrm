@@ -16,6 +16,7 @@ export interface UnifiedCandidature {
   pieces?: number | null;
   surface?: number | null;
   medias_galerie?: unknown;
+  date_visite?: string | null;
 }
 
 const STATUT_LABELS: Record<string, string> = {
@@ -54,7 +55,7 @@ export function useCandidatCandidatures() {
           .order('created_at', { ascending: false }),
         supabase
           .from('candidatures_location')
-          .select('id, statut, created_at, documents')
+          .select('id, statut, created_at, documents, date_visite, annonces_publiques(titre, adresse, ville)')
           .order('created_at', { ascending: false }),
       ]);
       const a: UnifiedCandidature[] = (c ?? []).map((r: any) => ({
@@ -73,7 +74,10 @@ export function useCandidatCandidatures() {
       const b: UnifiedCandidature[] = (l ?? []).map((r: any) => ({
         id: r.id,
         source: 'location',
-        adresse: 'Demande de location',
+        adresse: r.annonces_publiques
+          ? [r.annonces_publiques.adresse, r.annonces_publiques.ville].filter(Boolean).join(', ') || r.annonces_publiques.titre
+          : 'Demande de location',
+        date_visite: r.date_visite,
         statut: r.statut || 'en_attente',
         date: r.created_at,
         dossier: r.statut === RETENU_BAILLEUR ? 'Pièces à fournir' : 'Demande envoyée',
