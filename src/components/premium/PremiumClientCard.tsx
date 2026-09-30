@@ -166,6 +166,9 @@ export function PremiumClientCard({
                 Non solvable
               </Badge>
             )}
+            {(client as any).candidat_garant?.garant_solvable === true && (
+              <Badge variant="outline" className="text-[10px]">Garant</Badge>
+            )}
             {hasReminders > 0 && (
               <Badge className="bg-primary/10 text-primary border border-primary/30 animate-pulse">
                 <Bell className="h-3 w-3 mr-1" />

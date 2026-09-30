@@ -45,6 +45,8 @@ import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDeta
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
+import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 
 interface Client {
   id: string;
