@@ -173,17 +173,6 @@ export function PublicAnnoncesMap({
       const position = { lat, lng };
       const existingMarker = markersRef.current.get(annonce.id) as google.maps.Marker | undefined;
 
-      if (existingMarker) {
-        existingMarker.setPosition(position);
-        existingMarker.setZIndex(isHovered ? 1000 : 1);
-        const icon = existingMarker.getIcon() as google.maps.Symbol | undefined;
-        if (icon && typeof icon === 'object' && 'path' in icon) {
-          existingMarker.setIcon({ ...icon, fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)' });
-        }
-        return;
-      }
-
-
       const showInfoWindow = () => {
         const isExternal = !!annonce.lien_annonce && !canViewExternalPhotos;
         const photo = isExternal
@@ -227,6 +216,18 @@ export function PublicAnnoncesMap({
           });
         }
       };
+
+      if (existingMarker) {
+        existingMarker.setPosition(position);
+        existingMarker.setZIndex(isHovered ? 1000 : 1);
+        const icon = existingMarker.getIcon() as google.maps.Symbol | undefined;
+        if (icon && typeof icon === 'object' && 'path' in icon) {
+          existingMarker.setIcon({ ...icon, fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)' });
+        }
+        google.maps.event.clearListeners(existingMarker, 'click');
+        existingMarker.addListener('click', showInfoWindow);
+        return;
+      }
 
       const label = annonce.prix
         ? new Intl.NumberFormat('fr-CH', { notation: 'compact', maximumFractionDigits: 0 }).format(annonce.prix)
