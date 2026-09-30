@@ -61,13 +61,25 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
       });
       let payload: any = data;
       if (error) {
-        try { payload = await (error as any).context?.json(); } catch { payload = null; }
+        payload = null;
+        try {
+          const ctx = (error as any)?.context;
+          if (ctx && typeof ctx.json === 'function') payload = await ctx.clone?.().json?.() ?? await ctx.json();
+        } catch { payload = null; }
+      }
+      if (payload?.code === 'already_booked') {
+        toast.info('Vous avez déjà réservé ce créneau — retrouvez votre visite dans votre espace candidat');
+        close(false);
+        return;
       }
       if (!payload?.ok) {
-        toast.error(payload?.error || 'Réservation impossible, réessayez');
+        toast.error(typeof payload?.error === 'string' ? payload.error : 'Réservation impossible, réessayez');
         return;
       }
       setDone(true);
+    } catch (err) {
+      console.error('[reserver-visite]', err);
+      toast.error('Réservation impossible, réessayez');
     } finally {
       setSubmitting(false);
     }
