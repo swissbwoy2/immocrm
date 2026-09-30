@@ -58,6 +58,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
             { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
+            { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
             { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
             { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
           ],
