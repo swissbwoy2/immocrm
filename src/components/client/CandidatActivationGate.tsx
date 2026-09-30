@@ -19,17 +19,14 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
     let cancelled = false;
     (async () => {
       try {
-        const { data: client, error } = await supabase.from('clients')
-          .select('mandat_signature_data, mandat_date_signature, demande_mandat_id')
-          .eq('user_id', user.id).maybeSingle();
+        // Critère d'activation complet = même critère que l'app (AccountActivationModal) :
+        // profiles.actif === true (acompte payé / validé par l'admin). Signature seule ne suffit pas.
+        const { data: profile, error } = await supabase.from('profiles')
+          .select('actif')
+          .eq('id', user.id).maybeSingle();
         if (error) throw error;
-        let signed = !!(client && ((client as any).mandat_signature_data || (client as any).mandat_date_signature || (client as any).demande_mandat_id));
-        if (!signed && user.email) {
-          const { data: dm } = await supabase.from('demandes_mandat').select('id')
-            .ilike('email', user.email).not('signature_data', 'is', null).limit(1);
-          signed = !!dm?.length;
-        }
-        if (!cancelled) setState(signed ? 'ok' : 'blocked');
+        const activated = profile?.actif === true;
+        if (!cancelled) setState(activated ? 'ok' : 'blocked');
       } catch {
         if (!cancelled) setState('ok');
       }
