@@ -45,6 +45,8 @@ import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDeta
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
+import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 
 interface Client {
   id: string;
@@ -186,7 +188,10 @@ export default function ClientDetail() {
         .single();
 
       if (clientError) throw clientError;
-      setClient(clientData);
+      // Complète les critères vides avec ceux du candidat (candidat_criteres) ;
+      // les valeurs déjà renseignées dans clients restent prioritaires.
+      const criteresMap = await fetchCandidatCriteresMap([clientData.user_id]);
+      setClient(mergeCandidatCriteres(clientData, criteresMap.get(clientData.user_id)));
       
       // Get all assigned agents via client_agents
       const { data: clientAgentsData, error: clientAgentsError } = await supabase
@@ -1648,6 +1653,13 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Garant déclaré par le candidat */}
+          {(client as any)?.candidat_garant && (
+            <div className="col-span-full">
+              <CandidatGarantCard garant={(client as any).candidat_garant} />
+            </div>
+          )}
 
           {/* Alerte de solvabilité */}
           {isAcheteur ? (
