@@ -2393,6 +2393,12 @@ export type Database = {
           date_entree_souhaitee: string | null
           decouverte_agence: string | null
           details: Json
+          garant_actes_defaut: boolean | null
+          garant_lien: string | null
+          garant_nom: string | null
+          garant_permis: string | null
+          garant_poursuites: boolean | null
+          garant_revenus: number | null
           garant_solvable: boolean | null
           nombre_occupants: number | null
           pieces_recherche: string | null
@@ -2412,6 +2418,12 @@ export type Database = {
           date_entree_souhaitee?: string | null
           decouverte_agence?: string | null
           details?: Json
+          garant_actes_defaut?: boolean | null
+          garant_lien?: string | null
+          garant_nom?: string | null
+          garant_permis?: string | null
+          garant_poursuites?: boolean | null
+          garant_revenus?: number | null
           garant_solvable?: boolean | null
           nombre_occupants?: number | null
           pieces_recherche?: string | null
@@ -2431,6 +2443,12 @@ export type Database = {
           date_entree_souhaitee?: string | null
           decouverte_agence?: string | null
           details?: Json
+          garant_actes_defaut?: boolean | null
+          garant_lien?: string | null
+          garant_nom?: string | null
+          garant_permis?: string | null
+          garant_poursuites?: boolean | null
+          garant_revenus?: number | null
           garant_solvable?: boolean | null
           nombre_occupants?: number | null
           pieces_recherche?: string | null
