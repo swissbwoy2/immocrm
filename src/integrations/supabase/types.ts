@@ -2393,6 +2393,7 @@ export type Database = {
           date_entree_souhaitee: string | null
           decouverte_agence: string | null
           details: Json
+          garant_solvable: boolean | null
           nombre_occupants: number | null
           pieces_recherche: string | null
           poursuites: boolean | null
@@ -2411,6 +2412,7 @@ export type Database = {
           date_entree_souhaitee?: string | null
           decouverte_agence?: string | null
           details?: Json
+          garant_solvable?: boolean | null
           nombre_occupants?: number | null
           pieces_recherche?: string | null
           poursuites?: boolean | null
@@ -2429,6 +2431,7 @@ export type Database = {
           date_entree_souhaitee?: string | null
           decouverte_agence?: string | null
           details?: Json
+          garant_solvable?: boolean | null
           nombre_occupants?: number | null
           pieces_recherche?: string | null
           poursuites?: boolean | null
@@ -13972,6 +13975,15 @@ export type Database = {
       }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
       is_candidat: { Args: { _uid: string }; Returns: boolean }
+      is_candidat_solvable: {
+        Args: {
+          _budget: number
+          _permis: string
+          _poursuites: boolean
+          _revenus: number
+        }
+        Returns: boolean
+      }
       is_coursier_for_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_coursier_for_agent_profile: {
         Args: { _profile_id: string }
