@@ -1654,6 +1654,13 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
+          {/* Garant déclaré par le candidat */}
+          {(client as any)?.candidat_garant && (
+            <div className="col-span-full">
+              <CandidatGarantCard garant={(client as any).candidat_garant} />
+            </div>
+          )}
+
           {/* Alerte de solvabilité */}
           {isAcheteur ? (
             <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} className="col-span-full" />
