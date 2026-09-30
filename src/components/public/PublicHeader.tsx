@@ -4,6 +4,7 @@ import { Menu, X, Search, Plus, User, LogIn, LayoutDashboard, MessageSquare, Meg
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { SpaceSwitcher } from '@/components/RoleSwitcher';
 import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
 import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 import { useAnnonceUnreadCount } from '@/hooks/useAnnonceUnreadCount';
@@ -68,12 +69,7 @@ export function PublicHeader() {
             )}
             {isAuthenticated ? (
               <>
-                <Link to={spacePath}>
-                  <Button variant="ghost" size="sm">
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Tableau de bord
-                  </Button>
-                </Link>
+                <SpaceSwitcher variant="ghost" />
                 <Link to="/espace-annonceur">
                   <Button size="sm">
                     <Megaphone className="h-4 w-4 mr-2" />
@@ -145,12 +141,7 @@ export function PublicHeader() {
                     </Button>
                   </Link>
                   {isAuthenticated && (
-                    <Link to={spacePath} onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full justify-start">
-                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                        Tableau de bord
-                      </Button>
-                    </Link>
+                    <SpaceSwitcher className="w-full justify-start" />
                   )}
 
 
