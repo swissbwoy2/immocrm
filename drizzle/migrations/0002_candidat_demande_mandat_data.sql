@@ -1,0 +1,1 @@
+ALTER TABLE public.demandes_location_candidat ADD COLUMN IF NOT EXISTS mandat_data jsonb;

@@ -3945,6 +3945,7 @@ export type Database = {
           etat_civil: string | null
           id: string
           loyer_actuel: number | null
+          mandat_data: Json | null
           motif_changement: string | null
           nationalite: string | null
           nom: string | null
@@ -3972,6 +3973,7 @@ export type Database = {
           etat_civil?: string | null
           id?: string
           loyer_actuel?: number | null
+          mandat_data?: Json | null
           motif_changement?: string | null
           nationalite?: string | null
           nom?: string | null
@@ -3999,6 +4001,7 @@ export type Database = {
           etat_civil?: string | null
           id?: string
           loyer_actuel?: number | null
+          mandat_data?: Json | null
           motif_changement?: string | null
           nationalite?: string | null
           nom?: string | null
