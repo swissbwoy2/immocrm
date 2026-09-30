@@ -34,6 +34,7 @@ import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 import { getInteretState, isVisiteConfirmedByClient, offreStatutOf } from '@/lib/offreInteret';
+import { CreneauxAVenirStrip } from '@/components/calendar/CreneauxAVenirStrip';
 
 interface Agent {
   id: string;
@@ -607,6 +608,9 @@ export default function AdminCalendrier() {
           Toutes
         </Button>
       </div>
+
+      <CreneauxAVenirStrip />
+
 
       {/* Batch Calendar Export */}
       {filteredVisites.length > 0 && (
