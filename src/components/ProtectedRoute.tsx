@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle } from 'lucide-react';
 import { authLog } from '@/lib/authSession';
+import { CandidatActivationGate } from '@/components/client/CandidatActivationGate';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -70,6 +71,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       return null;
     }
     return <Navigate to={userRole === 'automation_operator' ? '/admin' : `/${userRole}`} replace />;
+  }
+
+  // Candidat basculé en client sans mandat signé → écran bloquant (clients classiques jamais concernés).
+  if (userRole === 'client' && userRoles.includes('candidat') && allowedRoles?.includes('client')) {
+    return <CandidatActivationGate>{children}</CandidatActivationGate>;
   }
 
   return <>{children}</>;

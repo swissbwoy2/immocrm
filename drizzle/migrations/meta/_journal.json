@@ -15,6 +15,13 @@
       "when": 1790780784180,
       "tag": "0001_annonce_creneaux_candidat_visite",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790781837911,
+      "tag": "0002_candidat_demande_mandat_data",
+      "breakpoints": true
     }
   ]
 }
