@@ -5,9 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2, Plus, Power, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Power, Trash2, Users } from 'lucide-react';
+import { fetchCreneauxReservations, isCreneauFull, capaciteLabel } from '@/lib/creneauxCapacite';
 
-interface Creneau { id: string; date_heure: string; actif: boolean; reservations: number }
+interface Creneau { id: string; date_heure: string; actif: boolean; capacite_max: number | null; reservations: number }
+
+export const parseCapacite = (v: string): number | null | 'invalid' => {
+  if (!v.trim()) return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : 'invalid';
+};
 
 export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
   annonce: { id: string; titre: string } | null;
@@ -17,18 +24,14 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
   const [items, setItems] = useState<Creneau[]>([]);
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState('');
+  const [cap, setCap] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     if (!annonce) return;
     setLoading(true);
-    const { data } = await supabase.from('annonce_creneaux').select('id, date_heure, actif').eq('annonce_id', annonce.id).order('date_heure');
-    const ids = (data ?? []).map((c) => c.id);
-    const counts: Record<string, number> = {};
-    if (ids.length) {
-      const { data: res } = await supabase.from('candidatures_location').select('creneau_id').in('creneau_id', ids);
-      (res ?? []).forEach((r: any) => { counts[r.creneau_id] = (counts[r.creneau_id] || 0) + 1; });
-    }
+    const { data } = await supabase.from('annonce_creneaux').select('id, date_heure, actif, capacite_max').eq('annonce_id', annonce.id).order('date_heure');
+    const counts = await fetchCreneauxReservations((data ?? []).map((c) => c.id));
     setItems((data ?? []).map((c) => ({ ...c, reservations: counts[c.id] || 0 })));
     setLoading(false);
   };
@@ -41,17 +44,29 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
     setBusy(true);
     const { error } = await fn();
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return false; }
     toast.success(ok);
     load();
+    return true;
   };
 
-  const add = () => {
+  const add = async () => {
     if (!annonce || !value) return toast.error('Choisissez une date et une heure');
     if (activeCount >= 3) return toast.error('Maximum 3 créneaux actifs');
     const d = new Date(value);
     if (d <= new Date()) return toast.error('Le créneau doit être dans le futur');
-    run(() => supabase.from('annonce_creneaux').insert({ annonce_id: annonce.id, date_heure: d.toISOString() }), 'Créneau ajouté').then(() => setValue(''));
+    const c = parseCapacite(cap);
+    if (c === 'invalid') return toast.error('Nombre max de visiteurs invalide');
+    const ok = await run(() => supabase.from('annonce_creneaux').insert({ annonce_id: annonce.id, date_heure: d.toISOString(), capacite_max: c }), 'Créneau ajouté');
+    if (ok) { setValue(''); setCap(''); }
+  };
+
+  const editCap = (c: Creneau) => {
+    const v = window.prompt('Nombre max de visiteurs (vide = illimité)', c.capacite_max?.toString() ?? '');
+    if (v === null) return;
+    const n = parseCapacite(v);
+    if (n === 'invalid') return toast.error('Nombre invalide');
+    run(() => supabase.from('annonce_creneaux').update({ capacite_max: n }).eq('id', c.id), 'Capacité mise à jour');
   };
 
   return (
@@ -61,10 +76,12 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
           <DialogTitle>Créneaux de visite</DialogTitle>
           <DialogDescription>{annonce?.titre} — 1 à 3 créneaux actifs</DialogDescription>
         </DialogHeader>
-        <div className="flex gap-2">
-          <Input type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} />
+        <div className="flex flex-wrap gap-2">
+          <Input className="min-w-[200px] flex-1" type="datetime-local" value={value} onChange={(e) => setValue(e.target.value)} />
+          <Input className="w-40" type="number" min={1} placeholder="Max visiteurs" title="Nombre max de visiteurs (vide = illimité)" value={cap} onChange={(e) => setCap(e.target.value)} />
           <Button onClick={add} disabled={busy || activeCount >= 3}><Plus className="mr-1 h-4 w-4" />Ajouter</Button>
         </div>
+        <p className="text-xs text-muted-foreground">Nombre max de visiteurs : laisser vide pour illimité.</p>
         {loading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
         ) : items.length === 0 ? (
@@ -77,9 +94,13 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
                   <p className="text-sm font-medium capitalize text-foreground">
                     {new Date(c.date_heure).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  <p className="text-xs text-muted-foreground">{c.reservations} réservation(s)</p>
+                  <p className="text-xs text-muted-foreground">{capaciteLabel(c.reservations, c.capacite_max)}</p>
                 </div>
+                {isCreneauFull(c.reservations, c.capacite_max) && <Badge variant="destructive">Complet</Badge>}
                 <Badge variant={c.actif ? 'default' : 'secondary'}>{c.actif ? 'Actif' : 'Inactif'}</Badge>
+                <Button size="icon" variant="ghost" title="Modifier la capacité" disabled={busy} onClick={() => editCap(c)}>
+                  <Users className="h-4 w-4" />
+                </Button>
                 <Button size="icon" variant="ghost" title={c.actif ? 'Désactiver' : 'Activer'} disabled={busy}
                   onClick={() => run(() => supabase.from('annonce_creneaux').update({ actif: !c.actif }).eq('id', c.id), c.actif ? 'Créneau désactivé' : 'Créneau activé')}>
                   <Power className="h-4 w-4" />

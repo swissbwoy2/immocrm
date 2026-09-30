@@ -1052,6 +1052,7 @@ export type Database = {
         Row: {
           actif: boolean
           annonce_id: string
+          capacite_max: number | null
           created_at: string
           date_heure: string
           id: string
@@ -1059,6 +1060,7 @@ export type Database = {
         Insert: {
           actif?: boolean
           annonce_id: string
+          capacite_max?: number | null
           created_at?: string
           date_heure: string
           id?: string
@@ -1066,6 +1068,7 @@ export type Database = {
         Update: {
           actif?: boolean
           annonce_id?: string
+          capacite_max?: number | null
           created_at?: string
           date_heure?: string
           id?: string
@@ -13777,6 +13780,13 @@ export type Database = {
       get_client_agent_id: {
         Args: { _client_user_id: string }
         Returns: string
+      }
+      get_creneaux_reservations: {
+        Args: { _creneau_ids: string[] }
+        Returns: {
+          creneau_id: string
+          reservations: number
+        }[]
       }
       get_current_user_id: { Args: never; Returns: string }
       get_my_agent_id: { Args: never; Returns: string }

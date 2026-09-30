@@ -70,11 +70,25 @@ Deno.serve(async (req) => {
     // 1. Créneau valide
     const { data: creneau } = await admin
       .from("annonce_creneaux")
-      .select("id, annonce_id, date_heure, actif")
+      .select("id, annonce_id, date_heure, actif, capacite_max")
       .eq("id", creneau_id)
       .maybeSingle();
     if (!creneau || !creneau.actif || creneau.annonce_id !== annonce_id || new Date(creneau.date_heure) <= new Date()) {
       return json({ code: "slot_unavailable", error: "Ce créneau n'est plus disponible" }, 409);
+    }
+    if (creneau.capacite_max != null) {
+      const { count, error: cntErr } = await admin
+        .from("candidatures_location")
+        .select("id", { count: "exact", head: true })
+        .eq("creneau_id", creneau_id)
+        .not("statut", "in", "(desiste,refuse)");
+      if (cntErr) {
+        console.error("inscription-candidat-visite: comptage", cntErr.message);
+        return json({ code: "server_error", error: "Erreur serveur" }, 500);
+      }
+      if ((count ?? 0) >= creneau.capacite_max) {
+        return json({ code: "slot_full", error: "Ce créneau est complet, veuillez en choisir un autre" }, 409);
+      }
     }
     const { data: annonce } = await admin
       .from("annonces_publiques")

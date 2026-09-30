@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { CalendarCheck, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function useAnnonceCreneaux(annonceId?: string) {
   return useQuery({
@@ -16,13 +18,20 @@ export function useAnnonceCreneaux(annonceId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('annonce_creneaux')
-        .select('id, date_heure')
+        .select('id, date_heure, capacite_max')
         .eq('annonce_id', annonceId!)
         .eq('actif', true)
         .gt('date_heure', new Date().toISOString())
         .order('date_heure', { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+      const withCap = rows.filter((r) => r.capacite_max != null).map((r) => r.id);
+      const counts = await fetchCreneauxReservations(withCap);
+      return rows.map((r) => {
+        const reservations = counts[r.id] ?? 0;
+        const restantes = r.capacite_max != null ? Math.max(0, r.capacite_max - reservations) : null;
+        return { ...r, restantes, full: restantes === 0 };
+      });
     },
   });
 }
@@ -44,6 +53,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const { data: creneaux = [], isLoading } = useAnnonceCreneaux(annonce.id);
+  const qc = useQueryClient();
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '' });
   const [creneauId, setCreneauId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +80,12 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
       if (payload?.code === 'already_booked') {
         toast.info('Vous avez déjà réservé ce créneau — retrouvez votre visite dans votre espace candidat');
         close(false);
+        return;
+      }
+      if (payload?.code === 'slot_full') {
+        toast.error('Ce créneau est complet, veuillez en choisir un autre');
+        setCreneauId(null);
+        qc.invalidateQueries({ queryKey: ['annonce-creneaux-public', annonce.id] });
         return;
       }
       if (!payload?.ok) {
@@ -118,13 +134,20 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
                   <button
                     type="button"
                     key={c.id}
-                    onClick={() => setCreneauId(c.id)}
+                    disabled={c.full}
+                    onClick={() => !c.full && setCreneauId(c.id)}
                     className={cn(
-                      'min-h-[44px] rounded-lg border px-4 py-2 text-left text-sm capitalize transition-colors',
+                      'flex min-h-[44px] items-center justify-between gap-2 rounded-lg border px-4 py-2 text-left text-sm transition-colors',
+                      c.full ? 'cursor-not-allowed border-border opacity-50' :
                       creneauId === c.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted',
                     )}
                   >
-                    {formatCreneau(c.date_heure)}
+                    <span className="capitalize">{formatCreneau(c.date_heure)}</span>
+                    {c.full ? (
+                      <span className="text-xs font-medium text-destructive">Complet</span>
+                    ) : c.restantes != null ? (
+                      <span className="text-xs text-muted-foreground">{c.restantes} place{c.restantes > 1 ? 's' : ''} restante{c.restantes > 1 ? 's' : ''}</span>
+                    ) : null}
                   </button>
                 ))}
               </div>
