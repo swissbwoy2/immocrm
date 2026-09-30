@@ -257,9 +257,14 @@ export default function AdminCalendrier() {
   const loadDataRef = useRef(loadData);
   loadDataRef.current = loadData;
 
-  // Recharge à chaque changement de fenêtre de dates (navigation de mois)
+  // Recharge à chaque changement de fenêtre de dates (navigation de mois).
+  // Seul le 1er chargement affiche le loader plein écran : ensuite, rechargement
+  // silencieux pour ne pas démonter le calendrier (qui repartirait au mois courant).
+  const hasLoadedOnceRef = useRef(false);
   useEffect(() => {
-    loadData();
+    const isRefetch = hasLoadedOnceRef.current;
+    hasLoadedOnceRef.current = true;
+    loadData(isRefetch);
   }, [loadData]);
 
   // Debounced reload for realtime events (silent — no spinner)
