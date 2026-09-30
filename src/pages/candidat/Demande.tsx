@@ -119,6 +119,9 @@ export default function CandidatDemande() {
         <header>
           <h1 className="text-2xl font-bold text-foreground">Ma demande de location</h1>
           <p className="text-sm text-muted-foreground">Mêmes questions que le mandat de recherche — aucune pièce justificative ni signature à cette étape.</p>
+          <p className="text-xs text-muted-foreground/80">
+            Aucun document justificatif n'est demandé à cette étape — vos pièces ne seront requises que si votre dossier est retenu par un propriétaire. Vos données sont traitées conformément à la Loi fédérale sur la protection des données (LPD/nLPD) et uniquement pour le traitement de votre demande de location.
+          </p>
         </header>
 
         <div className="flex gap-1" aria-label="Progression">
