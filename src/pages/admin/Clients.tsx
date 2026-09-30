@@ -22,6 +22,7 @@ import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentVie
 import { ClientCardReletter, type ReletterRequest, type ReletterCounts } from "@/components/admin/ClientCardReletter";
 import { cn } from "@/lib/utils";
 import { isBuyerType, isPurchaseBuyer, normalizeTypeRecherche } from "@/lib/journey";
+import { fetchCandidatCriteresMap, mergeCandidatCriteres } from "@/lib/candidatCriteresMerge";
 
 type ClientAgent = {
   client_id: string;
