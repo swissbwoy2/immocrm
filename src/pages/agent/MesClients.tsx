@@ -19,6 +19,7 @@ import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { CreateClientAccountDialog } from "@/components/clients/CreateClientAccountDialog";
 import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchCandidatCriteresMap, mergeCandidatCriteres } from "@/lib/candidatCriteresMerge";
 
 const MesClients = () => {
   const navigate = useNavigate();
@@ -96,6 +97,10 @@ const MesClients = () => {
         .is('anonymise_at', null);
 
       if (error) throw error;
+
+      // Compléter les critères vides avec les critères candidat (solvabilité incluse)
+      const criteresMap = await fetchCandidatCriteresMap(clientsData?.map(c => c.user_id) || []);
+      const mergedClientsData = (clientsData || []).map(c => mergeCandidatCriteres(c as any, criteresMap.get(c.user_id)));
 
       // Load profiles separately - now including presence fields
       const userIds = clientsData?.map(c => c.user_id) || [];
@@ -190,7 +195,7 @@ const MesClients = () => {
       setOffresToday(offresMap);
 
       // Transform data to match expected format
-      const transformedClients = clientsData?.map(client => {
+      const transformedClients = mergedClientsData.map(client => {
         const profile = profilesMap.get(client.user_id);
         const candidates = candidatesMap.get(client.id) || [];
         const clientAgentsList = clientAgentsMap.get(client.id) || [];
