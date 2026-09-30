@@ -57,6 +57,13 @@
       "when": 1790793086078,
       "tag": "0007_candidat_criteres",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790795377445,
+      "tag": "0008_creneaux_capacite",
+      "breakpoints": true
     }
   ]
 }
