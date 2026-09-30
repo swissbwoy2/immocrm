@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CandidatSolvabiliteForm } from '@/components/candidat/CandidatSolvabiliteForm';
+import { CandidatGarantForm, GARANT_CRITERE } from '@/components/candidat/CandidatGarantForm';
 import { isCandidatSolvable, isSolvabiliteRenseignee } from '@/lib/candidatSolvabilite';
 
 /**
@@ -39,6 +40,7 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
   const [paused, setPaused] = useState(false);
   const [garantSaving, setGarantSaving] = useState(false);
   const [garantNon, setGarantNon] = useState(false);
+  const [garantPrompt, setGarantPrompt] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -115,7 +117,7 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
       const { error } = await (supabase.from as any)('candidat_criteres')
         .update({ garant_solvable: oui }).eq('user_id', user.id);
       if (error) throw error;
-      if (oui) { setPaused(false); setGarantNon(false); }
+      if (oui) { setPaused(false); setGarantNon(false); setGarantPrompt(true); }
       else setGarantNon(true);
     } catch (e: any) {
       toast.error(e?.message || "Impossible d'enregistrer");
@@ -198,6 +200,16 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
           </Button>
         </div>
       </div>
+      <Dialog open={garantPrompt} onOpenChange={setGarantPrompt}>
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Complétez les infos de votre garant</DialogTitle>
+            <DialogDescription>{GARANT_CRITERE} (facultatif maintenant, modifiable depuis « Mon garant ».)</DialogDescription>
+          </DialogHeader>
+          {garantPrompt && <CandidatGarantForm onSaved={() => setGarantPrompt(false)} />}
+          <Button variant="ghost" onClick={() => setGarantPrompt(false)}>Plus tard</Button>
+        </DialogContent>
+      </Dialog>
       <Dialog open={solvOpen} onOpenChange={(o) => !starting && setSolvOpen(o)}>
         <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>

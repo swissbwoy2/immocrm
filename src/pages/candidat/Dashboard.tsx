@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Clipboard, Search, Loader2, CheckCircle2, Calendar, FolderOpen, FileCheck, MessageSquare } from 'lucide-react';
+import { FileText, Clipboard, Search, Loader2, CheckCircle2, Calendar, FolderOpen, FileCheck, MessageSquare, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { CandidatCriteresForm } from '@/components/candidat/CandidatCriteresForm';
 import { CRITERES_DISCLAIMER } from '@/components/candidat/CandidatCriteresGate';
 import { useCandidatCriteres } from '@/hooks/useCandidatCriteres';
+import { CandidatGarantForm, GARANT_CRITERE } from '@/components/candidat/CandidatGarantForm';
 
 export default function CandidatDashboard() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function CandidatDashboard() {
   const isClient = userRoles.includes('client');
   const { complete: criteresComplete, isLoading: criteresLoading } = useCandidatCriteres();
   const [criteresOpen, setCriteresOpen] = useState(false);
+  const [garantOpen, setGarantOpen] = useState(() => new URLSearchParams(window.location.search).get('garant') === '1');
 
   useEffect(() => {
     if (!user?.id) return;
@@ -103,6 +105,7 @@ export default function CandidatDashboard() {
         <div className="grid gap-3">
           <QuickTileXL icon={FileCheck} variant="wide" title="Mes candidatures" subtitle={`${data.length} candidature${data.length > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />
           <QuickTileXL icon={Search} variant="wide" title="Mes critères de recherche" subtitle={criteresComplete ? 'Modifier mes critères' : 'À compléter'} onClick={() => setCriteresOpen(true)} />
+          <QuickTileXL icon={ShieldCheck} variant="wide" title="Mon garant" subtitle="Renseigner / modifier mon garant" onClick={() => setGarantOpen(true)} />
           <QuickTileXL icon={MessageSquare} variant="wide" title="Messages" subtitle="Mes échanges sur les annonces" onClick={() => navigate('/candidat/messages')} />
           {retenues > 0 && <QuickTileXL icon={FolderOpen} variant="wide" title="Pièces à fournir" subtitle={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/demande')} />}
         </div>
@@ -114,6 +117,15 @@ export default function CandidatDashboard() {
             <DialogDescription>{CRITERES_DISCLAIMER}</DialogDescription>
           </DialogHeader>
           {criteresOpen && <CandidatCriteresForm onSaved={() => setCriteresOpen(false)} />}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={garantOpen} onOpenChange={setGarantOpen}>
+        <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Mon garant</DialogTitle>
+            <DialogDescription>{GARANT_CRITERE}</DialogDescription>
+          </DialogHeader>
+          {garantOpen && <CandidatGarantForm onSaved={() => setGarantOpen(false)} />}
         </DialogContent>
       </Dialog>
     </div>

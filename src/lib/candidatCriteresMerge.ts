@@ -12,14 +12,23 @@ export type CandidatCriteresLite = {
   type_permis: string | null;
   revenus_mensuels: number | null;
   poursuites: boolean | null;
+  garant_solvable?: boolean | null;
+  garant_nom?: string | null;
+  garant_lien?: string | null;
+  garant_revenus?: number | null;
+  garant_permis?: string | null;
+  garant_poursuites?: boolean | null;
+  garant_actes_defaut?: boolean | null;
 };
+
+export type CandidatGarantInfo = Pick<CandidatCriteresLite, 'garant_solvable' | 'garant_nom' | 'garant_lien' | 'garant_revenus' | 'garant_permis' | 'garant_poursuites' | 'garant_actes_defaut'>;
 
 /** Charge en une requête les critères candidat d'une liste de user_id. */
 export async function fetchCandidatCriteresMap(userIds: string[]): Promise<Map<string, CandidatCriteresLite>> {
   const map = new Map<string, CandidatCriteresLite>();
   if (userIds.length === 0) return map;
   const { data, error } = await (supabase.from as any)('candidat_criteres')
-    .select('user_id, type_recherche, type_bien, pieces_recherche, region_recherche, budget_max, nombre_occupants, date_entree_souhaitee, type_permis, revenus_mensuels, poursuites')
+    .select('user_id, type_recherche, type_bien, pieces_recherche, region_recherche, budget_max, nombre_occupants, date_entree_souhaitee, type_permis, revenus_mensuels, poursuites, garant_solvable, garant_nom, garant_lien, garant_revenus, garant_permis, garant_poursuites, garant_actes_defaut')
     .in('user_id', userIds)
     .limit(15000);
   if (error) {
@@ -61,5 +70,13 @@ export function mergeCandidatCriteres<T extends Record<string, any>>(client: T, 
   if (isEmpty(merged.type_permis) && cc.type_permis) merged.type_permis = cc.type_permis;
   if (clientSolvabiliteVide && cc.revenus_mensuels) merged.revenus_mensuels = Number(cc.revenus_mensuels);
   if (clientSolvabiliteVide && typeof cc.poursuites === 'boolean') merged.poursuites = cc.poursuites;
+  // Garant déclaré par le candidat : information affichée uniquement (n'entre pas dans le calcul du badge).
+  if (cc.garant_solvable != null || cc.garant_nom) {
+    merged.candidat_garant = {
+      garant_solvable: cc.garant_solvable ?? null, garant_nom: cc.garant_nom ?? null, garant_lien: cc.garant_lien ?? null,
+      garant_revenus: cc.garant_revenus ?? null, garant_permis: cc.garant_permis ?? null,
+      garant_poursuites: cc.garant_poursuites ?? null, garant_actes_defaut: cc.garant_actes_defaut ?? null,
+    } as CandidatGarantInfo;
+  }
   return merged as T;
 }
