@@ -1048,6 +1048,38 @@ export type Database = {
           },
         ]
       }
+      annonce_creneaux: {
+        Row: {
+          actif: boolean
+          annonce_id: string
+          created_at: string
+          date_heure: string
+          id: string
+        }
+        Insert: {
+          actif?: boolean
+          annonce_id: string
+          created_at?: string
+          date_heure: string
+          id?: string
+        }
+        Update: {
+          actif?: boolean
+          annonce_id?: string
+          created_at?: string
+          date_heure?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annonce_creneaux_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       annonces_publiques: {
         Row: {
           acces_pmr: boolean | null
@@ -2483,9 +2515,11 @@ export type Database = {
       candidatures_location: {
         Row: {
           adresse_actuelle: string | null
+          annonce_id: string | null
           civilite: string | null
           co_candidats: Json | null
           created_at: string | null
+          creneau_id: string | null
           date_emmenagement_souhaitee: string | null
           date_engagement: string | null
           date_naissance: string | null
@@ -2494,7 +2528,7 @@ export type Database = {
           email: string | null
           employeur: string | null
           id: string
-          lot_id: string
+          lot_id: string | null
           loyer_actuel: number | null
           motif_changement: string | null
           motif_refus: string | null
@@ -2515,9 +2549,11 @@ export type Database = {
         }
         Insert: {
           adresse_actuelle?: string | null
+          annonce_id?: string | null
           civilite?: string | null
           co_candidats?: Json | null
           created_at?: string | null
+          creneau_id?: string | null
           date_emmenagement_souhaitee?: string | null
           date_engagement?: string | null
           date_naissance?: string | null
@@ -2526,7 +2562,7 @@ export type Database = {
           email?: string | null
           employeur?: string | null
           id?: string
-          lot_id: string
+          lot_id?: string | null
           loyer_actuel?: number | null
           motif_changement?: string | null
           motif_refus?: string | null
@@ -2547,9 +2583,11 @@ export type Database = {
         }
         Update: {
           adresse_actuelle?: string | null
+          annonce_id?: string | null
           civilite?: string | null
           co_candidats?: Json | null
           created_at?: string | null
+          creneau_id?: string | null
           date_emmenagement_souhaitee?: string | null
           date_engagement?: string | null
           date_naissance?: string | null
@@ -2558,7 +2596,7 @@ export type Database = {
           email?: string | null
           employeur?: string | null
           id?: string
-          lot_id?: string
+          lot_id?: string | null
           loyer_actuel?: number | null
           motif_changement?: string | null
           motif_refus?: string | null
@@ -2578,6 +2616,20 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "candidatures_location_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidatures_location_creneau_id_fkey"
+            columns: ["creneau_id"]
+            isOneToOne: false
+            referencedRelation: "annonce_creneaux"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "candidatures_location_lot_id_fkey"
             columns: ["lot_id"]
