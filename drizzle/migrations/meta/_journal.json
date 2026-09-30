@@ -36,6 +36,13 @@
       "when": 1790786020476,
       "tag": "0004_demande_candidat_annonce_id",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790787015994,
+      "tag": "0005_candidature_relocation_workflow",
+      "breakpoints": true
     }
   ]
 }

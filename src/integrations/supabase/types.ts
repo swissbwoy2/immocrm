@@ -2516,13 +2516,21 @@ export type Database = {
         Row: {
           adresse_actuelle: string | null
           annonce_id: string | null
+          candidat_confirme_at: string | null
           civilite: string | null
           co_candidats: Json | null
           created_at: string | null
           creneau_id: string | null
+          date_cles_remises: string | null
+          date_decision: string | null
+          date_depot: string | null
+          date_documents_demandes: string | null
           date_emmenagement_souhaitee: string | null
           date_engagement: string | null
+          date_etat_lieux: string | null
+          date_etat_lieux_effectue: string | null
           date_naissance: string | null
+          date_signature: string | null
           date_visite: string | null
           documents: Json | null
           email: string | null
@@ -2550,13 +2558,21 @@ export type Database = {
         Insert: {
           adresse_actuelle?: string | null
           annonce_id?: string | null
+          candidat_confirme_at?: string | null
           civilite?: string | null
           co_candidats?: Json | null
           created_at?: string | null
           creneau_id?: string | null
+          date_cles_remises?: string | null
+          date_decision?: string | null
+          date_depot?: string | null
+          date_documents_demandes?: string | null
           date_emmenagement_souhaitee?: string | null
           date_engagement?: string | null
+          date_etat_lieux?: string | null
+          date_etat_lieux_effectue?: string | null
           date_naissance?: string | null
+          date_signature?: string | null
           date_visite?: string | null
           documents?: Json | null
           email?: string | null
@@ -2584,13 +2600,21 @@ export type Database = {
         Update: {
           adresse_actuelle?: string | null
           annonce_id?: string | null
+          candidat_confirme_at?: string | null
           civilite?: string | null
           co_candidats?: Json | null
           created_at?: string | null
           creneau_id?: string | null
+          date_cles_remises?: string | null
+          date_decision?: string | null
+          date_depot?: string | null
+          date_documents_demandes?: string | null
           date_emmenagement_souhaitee?: string | null
           date_engagement?: string | null
+          date_etat_lieux?: string | null
+          date_etat_lieux_effectue?: string | null
           date_naissance?: string | null
+          date_signature?: string | null
           date_visite?: string | null
           documents?: Json | null
           email?: string | null
@@ -13639,6 +13663,14 @@ export type Database = {
       }
       can_read_offer_attachment: { Args: { _name: string }; Returns: boolean }
       can_read_visite_media: { Args: { _name: string }; Returns: boolean }
+      candidat_confirmer_attribution: {
+        Args: { _id: string }
+        Returns: undefined
+      }
+      candidat_deposer_candidature: {
+        Args: { _id: string }
+        Returns: undefined
+      }
       check_demande_by_email: {
         Args: { check_email: string }
         Returns: boolean
@@ -14155,6 +14187,10 @@ export type Database = {
         }
       }
       set_user_offline: { Args: never; Returns: undefined }
+      staff_update_candidature_location: {
+        Args: { _action: string; _date?: string; _id: string; _motif?: string }
+        Returns: undefined
+      }
       start_candidat_trial: { Args: never; Returns: string }
       track_email_click: {
         Args: { _log_id: string; _url: string }

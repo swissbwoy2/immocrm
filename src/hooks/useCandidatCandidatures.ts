@@ -17,6 +17,7 @@ export interface UnifiedCandidature {
   surface?: number | null;
   medias_galerie?: unknown;
   date_visite?: string | null;
+  raw?: any;
 }
 
 const STATUT_LABELS: Record<string, string> = {
@@ -38,6 +39,9 @@ const STATUT_LABELS: Record<string, string> = {
   etat_lieux_fixe: 'État des lieux fixé',
   cles_remises: 'Clés remises',
   retenu_bailleur: 'Retenu — à présenter au bailleur',
+  candidature_deposee: 'Candidature déposée',
+  bail_signe: 'Bail signé',
+  etat_lieux_effectue: 'État des lieux effectué',
 };
 
 export const statutLabel = (s: string) => STATUT_LABELS[s] ?? s;
@@ -55,7 +59,7 @@ export function useCandidatCandidatures() {
           .order('created_at', { ascending: false }),
         supabase
           .from('candidatures_location')
-          .select('id, statut, created_at, documents, date_visite, creneau_id, annonce_creneaux(date_heure), annonces_publiques(titre, adresse, ville)')
+          .select('id, statut, created_at, documents, date_visite, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annonce_creneaux(date_heure), annonces_publiques(titre, adresse, ville)')
           .order('created_at', { ascending: false }),
       ]);
       const a: UnifiedCandidature[] = (c ?? []).map((r: any) => ({
@@ -80,7 +84,8 @@ export function useCandidatCandidatures() {
         date_visite: r.annonce_creneaux?.date_heure || r.date_visite,
         statut: r.statut || 'en_attente',
         date: r.created_at,
-        dossier: r.statut === RETENU_BAILLEUR ? 'Pièces à fournir' : 'Demande envoyée',
+        dossier: r.statut === RETENU_BAILLEUR || r.statut === 'documents_demandes' ? 'Pièces à fournir' : 'Demande envoyée',
+        raw: r,
       }));
       return [...a, ...b].sort((x, y) => (y.date || '').localeCompare(x.date || ''));
     },
