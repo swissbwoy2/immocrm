@@ -1,31 +1,19 @@
-# Rôle candidat — Phase 2 : réservation de visite depuis une annonce
+# Rattacher la demande de location à une offre visitée
 
-## Ce que le visiteur verra
-1. Sur la fiche d'une annonce publique : bouton « Réserver une visite / Postuler » (seulement si l'annonce a au moins 1 créneau actif à venir).
-2. Une fenêtre liste les 1 à 3 créneaux ; il saisit prénom, nom, e-mail, téléphone et choisit un créneau.
-3. Message final : « Votre visite est réservée — vérifiez votre e-mail pour vos identifiants et la confirmation ».
-4. E-mail : adresse du bien, date/heure (heure suisse), identifiants (e-mail + mot de passe provisoire, seulement pour un nouveau compte) et bouton vers /candidat.
+## Base de données (migration)
+- Ajouter `demandes_location_candidat.annonce_id uuid` (peut rester vide), avec un lien vers `annonces_publiques` (ON DELETE SET NULL).
+- Aucune règle d'accès modifiée : le candidat ne voit et n'écrit que ses propres lignes.
 
-## Côté admin / agent
-- Dans l'écran admin des annonces publiques (détail/édition d'une annonce) : bloc « Créneaux de visite » — ajouter (date + heure, max 3 actifs), activer/désactiver, supprimer, avec le nombre de réservations par créneau.
+## Page « Ma demande de location » (seulement src/pages/candidat/Demande.tsx)
+- Un menu déroulant « Rattacher ma demande à une offre visitée » en haut du formulaire, au-dessus des étapes.
+- Choix proposés : uniquement les `candidatures_location` du candidat avec `annonce_id` et `creneau_id` remplis. Libellé : titre + ville/adresse de l'annonce + date du créneau (heure de Zurich). Si une même annonce apparaît plusieurs fois, on ne la montre qu'une fois.
+- Aucune visite réservée : le menu est grisé avec le message « Réservez d'abord une visite sur une annonce pour pouvoir y rattacher votre demande. »
+- Si la demande est déjà rattachée à une annonce, ce choix est présélectionné.
 
-## Détails techniques
-**Base de données (une migration)**
-- Nouvelle table `annonce_creneaux` (id, annonce_id → annonces_publiques ON DELETE CASCADE, date_heure timestamptz, actif bool default true, created_at). GRANT : SELECT à anon/authenticated, ALL à service_role. RLS : lecture publique si `actif`, écriture via `has_role(admin|agent)`. Trigger de validation : max 3 créneaux actifs par annonce.
-- `candidatures_location` : ajout colonnes nullables `annonce_id` et `creneau_id`. La colonne `lot_id` est aujourd'hui obligatoire ; elle devient facultative (`DROP NOT NULL`) — cette étape vous demandera une confirmation. Aucune donnée existante n'est modifiée.
-- Index unique (creneau_id, user_id) pour éviter les doublons de réservation.
+## Enregistrement
+- Le même enregistrement qu'aujourd'hui (par utilisateur), avec en plus `annonce_id`.
+- Si une offre est choisie : mise à jour de la candidature `candidatures_location` qui correspond (même user_id + annonce_id). On y reporte `mandat_data` et les champs à plat déjà repris, seulement pour les colonnes qui existent dans cette table (vérifié avant de coder).
+- Si cette mise à jour échoue, la demande reste enregistrée et un message d'avertissement s'affiche.
 
-**Edge Function `inscription-candidat-visite`** (publique, validation Zod, rate-limit via `consume_edge_rate_limit`)
-- Vérifie que le créneau existe, est actif, futur et appartient à l'annonce publiée → sinon « créneau indisponible ».
-- Recherche l'utilisateur par e-mail. Absent : `auth.admin.createUser` (email_confirm, mot de passe fort aléatoire 14 car.). Présent : aucun nouveau mot de passe.
-- Ajoute le rôle `candidat` si absent (service role, jamais côté client), complète `profiles` (prenom, nom, telephone) sans écraser les valeurs existantes.
-- Insère `candidatures_location` (user_id, annonce_id, creneau_id, date_visite = créneau, statut `en_attente`) — aucune ligne `clients`.
-- E-mail via le système d'e-mail managé existant (`sendTemplateEmail`) avec un nouveau modèle `candidat-visite-confirmation` ; le mot de passe n'est jamais logué ni renvoyé au navigateur.
-- Réponses : `ok` / `slot_unavailable` / `invalid_email` / `already_booked`.
-
-**Frontend**
-- `AnnonceDetail.tsx` : bouton + nouveau `ReserverVisiteDialog`.
-- Admin annonces : composant `AnnonceCreneauxManager`.
-- Espace candidat : `useCandidatCandidatures` lit `date_visite` + adresse de l'annonce liée ; l'Agenda candidat affiche les visites réservées avec date/heure.
-
-**Hors périmètre** : aucun changement pour les autres rôles, RLS candidat inchangée.
+## Vérification
+- tsgo.
