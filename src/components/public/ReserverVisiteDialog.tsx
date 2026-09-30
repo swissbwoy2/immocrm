@@ -10,6 +10,7 @@ import { CalendarCheck, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 export function useAnnonceCreneaux(annonceId?: string) {
   return useQuery({
@@ -54,6 +55,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const { data: creneaux = [], isLoading } = useAnnonceCreneaux(annonce.id);
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [slotFull, setSlotFull] = useState(false);
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '' });
   const [creneauId, setCreneauId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -83,7 +86,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
         return;
       }
       if (payload?.code === 'slot_full') {
-        toast.error('Ce créneau est complet, veuillez en choisir un autre');
+        setSlotFull(true);
         setCreneauId(null);
         qc.invalidateQueries({ queryKey: ['annonce-creneaux-public', annonce.id] });
         return;
@@ -103,8 +106,31 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); }, 200);
+    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); setSlotFull(false); }, 200);
   };
+
+  const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
+  const showTropTard = !done && !isLoading && (allFull || slotFull);
+  const capaciteAtteinte = creneaux.reduce((s, c) => s + (c.capacite_max ?? 0), 0) || 20;
+
+  if (showTropTard) {
+    return (
+      <Dialog open={open} onOpenChange={close}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Trop tard !</DialogTitle>
+            <DialogDescription>
+              {capaciteAtteinte} personnes ont déjà réservé les créneaux disponibles. Revenez dans 10 jours, ou activez votre recherche dès maintenant pour que nous cherchions votre logement à votre place.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
+            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Activer ma recherche</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={close}>

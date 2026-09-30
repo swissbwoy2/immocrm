@@ -24,7 +24,7 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
   const [items, setItems] = useState<Creneau[]>([]);
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState('');
-  const [cap, setCap] = useState('');
+  const [cap, setCap] = useState('20');
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -58,7 +58,7 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
     const c = parseCapacite(cap);
     if (c === 'invalid') return toast.error('Nombre max de visiteurs invalide');
     const ok = await run(() => supabase.from('annonce_creneaux').insert({ annonce_id: annonce.id, date_heure: d.toISOString(), capacite_max: c }), 'Créneau ajouté');
-    if (ok) { setValue(''); setCap(''); }
+    if (ok) { setValue(''); setCap('20'); }
   };
 
   const editCap = (c: Creneau) => {
