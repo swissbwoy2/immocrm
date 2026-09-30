@@ -165,19 +165,19 @@ export default function CandidatAgenda() {
             {upcoming.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">À venir</h2>
-                {upcoming.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} canViewPhotos={canViewPhotos} />)}
+                {upcoming.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
               </section>
             )}
             {past.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Passées</h2>
-                {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past canViewPhotos={canViewPhotos} />)}
+                {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past />)}
               </section>
             )}
             {others.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Autres candidatures</h2>
-                {others.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} canViewPhotos={canViewPhotos} />)}
+                {others.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
               </section>
             )}
           </div>
