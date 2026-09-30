@@ -94,11 +94,13 @@ async function addToCalendar(c: UnifiedCandidature) {
   }
 }
 
-function VisiteCard({ c, past, canViewPhotos }: { c: UnifiedCandidature; past?: boolean; canViewPhotos: boolean }) {
+function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
   const a = annonceOf(c);
-  // Règle métier : seuls les clients actifs voient les vraies photos ;
-  // les candidats (et tout autre cas) voient le placeholder « Annonce externe ».
-  const photo = canViewPhotos ? photoOf(a) : null;
+  // Règle métier : le placeholder « Annonce externe » ne s'applique qu'aux annonces
+  // externes (reprises d'autres sites, identifiées par lien_annonce — même critère
+  // que PublicAnnonceCard). Annonces internes/clients : vraie photo pour tous les rôles.
+  const isExternal = !!a?.lien_annonce;
+  const photo = isExternal ? null : photoOf(a);
   const url = annonceUrl(a);
   const prix = fmtPrix(a);
   return (
@@ -145,16 +147,6 @@ function VisiteCard({ c, past, canViewPhotos }: { c: UnifiedCandidature; past?: 
 
 export default function CandidatAgenda() {
   const { data = [], isLoading } = useCandidatCandidatures();
-  const { user, userRoles } = useAuth();
-  const [canViewPhotos, setCanViewPhotos] = useState(false);
-  useEffect(() => {
-    // Vraies photos réservées aux clients actifs (profiles.actif = true + rôle client).
-    if (!user || !userRoles.includes('client')) { setCanViewPhotos(false); return; }
-    let cancelled = false;
-    supabase.from('profiles').select('actif').eq('id', user.id).maybeSingle()
-      .then(({ data: p, error }) => { if (!cancelled) setCanViewPhotos(!error && p?.actif === true); });
-    return () => { cancelled = true; };
-  }, [user, userRoles]);
   const now = Date.now();
   const withDate = data.filter((c) => c.date_visite);
   const upcoming = withDate.filter((c) => new Date(c.date_visite!).getTime() >= now).sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
