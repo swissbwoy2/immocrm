@@ -1674,7 +1674,7 @@ const Clients = () => {
                             Non solvable
                           </Badge>
                         )}
-                        {client.candidat_garant?.garant_solvable === true && (
+                        {(client as any).candidat_garant?.garant_solvable === true && (
                           <Badge variant="outline" className="text-[10px]">Garant</Badge>
                         )}
                       </div>

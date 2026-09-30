@@ -2255,7 +2255,7 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        {client?.candidat_garant && <CandidatGarantCard garant={client.candidat_garant} />}
+        {(client as any)?.candidat_garant && <CandidatGarantCard garant={(client as any).candidat_garant} />}
 
         {/* Visites à venir de ce client */}
         <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">
