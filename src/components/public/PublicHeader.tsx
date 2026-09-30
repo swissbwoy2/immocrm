@@ -141,12 +141,7 @@ export function PublicHeader() {
                     </Button>
                   </Link>
                   {isAuthenticated && (
-                    <Link to={spacePath} onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full justify-start">
-                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                        Tableau de bord
-                      </Button>
-                    </Link>
+                    <SpaceSwitcher className="w-full justify-start" />
                   )}
 
 

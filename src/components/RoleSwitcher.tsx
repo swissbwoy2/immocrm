@@ -65,7 +65,7 @@ export function SpaceSwitcher({ className, variant = 'outline' }: { className?: 
 
   const spaces = SPACES.filter((s) => userRoles.includes(s.role as any));
   const current = spaces.find((s) => pathname === s.path || pathname.startsWith(s.path + '/'));
-  const home = spaces.find((s) => s.role === userRole && s.role !== 'annonceur')
+  const home = spaces.find((s) => s.role === (userRole as string) && s.role !== 'annonceur')
     || spaces.find((s) => s.role !== 'annonceur') || spaces[0];
 
   const go = (s: (typeof SPACES)[number]) => {
