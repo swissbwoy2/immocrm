@@ -12,6 +12,10 @@ import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBann
 import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
 import { StoriesBar } from '@/components/stories/StoriesBar';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CandidatCriteresForm } from '@/components/candidat/CandidatCriteresForm';
+import { CRITERES_DISCLAIMER } from '@/components/candidat/CandidatCriteresGate';
+import { useCandidatCriteres } from '@/hooks/useCandidatCriteres';
 
 export default function CandidatDashboard() {
   const navigate = useNavigate();
@@ -20,6 +24,8 @@ export default function CandidatDashboard() {
   const [activating, setActivating] = useState(false);
   const [prenom, setPrenom] = useState<string>();
   const isClient = userRoles.includes('client');
+  const { complete: criteresComplete, isLoading: criteresLoading } = useCandidatCriteres();
+  const [criteresOpen, setCriteresOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -71,6 +77,13 @@ export default function CandidatDashboard() {
             </Button>
           )}
         />
+        {!criteresLoading && !criteresComplete && (
+          <button type="button" onClick={() => setCriteresOpen(true)} className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-left text-sm text-foreground min-h-[44px]">
+            <Search className="h-5 w-5 shrink-0 text-primary" />
+            <span className="flex-1">{CRITERES_DISCLAIMER}</span>
+            <span className="font-semibold text-primary">Compléter</span>
+          </button>
+        )}
         {candidaturesAvecOffre.length > 0 && (
           <MesOffresRecuesBand
             title="Offres / candidatures"
@@ -89,10 +102,20 @@ export default function CandidatDashboard() {
         </div>
         <div className="grid gap-3">
           <QuickTileXL icon={FileCheck} variant="wide" title="Mes candidatures" subtitle={`${data.length} candidature${data.length > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />
+          <QuickTileXL icon={Search} variant="wide" title="Mes critères de recherche" subtitle={criteresComplete ? 'Modifier mes critères' : 'À compléter'} onClick={() => setCriteresOpen(true)} />
           <QuickTileXL icon={MessageSquare} variant="wide" title="Messages" subtitle="Mes échanges sur les annonces" onClick={() => navigate('/candidat/messages')} />
           {retenues > 0 && <QuickTileXL icon={FolderOpen} variant="wide" title="Pièces à fournir" subtitle={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/demande')} />}
         </div>
       </PremiumPageShellV2>
+      <Dialog open={criteresOpen} onOpenChange={setCriteresOpen}>
+        <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Mes critères de recherche</DialogTitle>
+            <DialogDescription>{CRITERES_DISCLAIMER}</DialogDescription>
+          </DialogHeader>
+          {criteresOpen && <CandidatCriteresForm onSaved={() => setCriteresOpen(false)} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
