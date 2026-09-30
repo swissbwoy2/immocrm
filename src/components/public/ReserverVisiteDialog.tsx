@@ -10,6 +10,7 @@ import { CalendarCheck, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 export function useAnnonceCreneaux(annonceId?: string) {
   return useQuery({
@@ -54,6 +55,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const { data: creneaux = [], isLoading } = useAnnonceCreneaux(annonce.id);
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [slotFull, setSlotFull] = useState(false);
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '' });
   const [creneauId, setCreneauId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -83,7 +86,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
         return;
       }
       if (payload?.code === 'slot_full') {
-        toast.error('Ce créneau est complet, veuillez en choisir un autre');
+        setSlotFull(true);
         setCreneauId(null);
         qc.invalidateQueries({ queryKey: ['annonce-creneaux-public', annonce.id] });
         return;
