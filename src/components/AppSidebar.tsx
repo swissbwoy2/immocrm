@@ -1,3 +1,4 @@
+import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy} from 'lucide-react';
 import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
