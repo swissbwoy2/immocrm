@@ -173,6 +173,7 @@ const CandidatDashboard = lazy(() => import("./pages/candidat/Dashboard"));
 const CandidatCandidatures = lazy(() => import("./pages/candidat/Candidatures"));
 const CandidatDemande = lazy(() => import("./pages/candidat/Demande"));
 const CandidatAgenda = lazy(() => import("./pages/candidat/Agenda"));
+const CandidatMessages = lazy(() => import("./pages/candidat/Messages"));
 const CoursierMissions = lazy(() => import("./pages/coursier/Missions"));
 const CoursierCarte = lazy(() => import("./pages/coursier/Carte"));
 const CoursierCalendrier = lazy(() => import("./pages/coursier/Calendrier"));
@@ -560,7 +561,7 @@ const App = () => (
               <Route path="/candidat/candidatures" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatCandidatures /></AppLayout></ProtectedRoute>} />
               <Route path="/candidat/demande" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatDemande /></AppLayout></ProtectedRoute>} />
               <Route path="/candidat/agenda" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatAgenda /></AppLayout></ProtectedRoute>} />
-              <Route path="/candidat/messages" element={<ProtectedRoute allowedRoles={['candidat']}><MesMessagesAnnonces /></ProtectedRoute>} />
+              <Route path="/candidat/messages" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatMessages /></AppLayout></ProtectedRoute>} />
               <Route path="/candidat/support" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><SupportClient /></AppLayout></ProtectedRoute>} />
 
               {/* Closeur Routes */}
