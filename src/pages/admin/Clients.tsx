@@ -22,6 +22,7 @@ import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentVie
 import { ClientCardReletter, type ReletterRequest, type ReletterCounts } from "@/components/admin/ClientCardReletter";
 import { cn } from "@/lib/utils";
 import { isBuyerType, isPurchaseBuyer, normalizeTypeRecherche } from "@/lib/journey";
+import { fetchCandidatCriteresMap, mergeCandidatCriteres } from "@/lib/candidatCriteresMerge";
 
 type ClientAgent = {
   client_id: string;
@@ -205,11 +206,14 @@ const Clients = () => {
 
 
       if (clientsError) throw clientsError;
-      setClients(clientsData || []);
-
 
       // Load all client profiles - now including presence fields
       const clientUserIds = clientsData?.map(c => c.user_id) || [];
+
+      // Complète les critères vides avec ceux saisis par les candidats
+      // (candidat_criteres) — les valeurs déjà présentes dans clients restent prioritaires.
+      const criteresMap = await fetchCandidatCriteresMap(clientUserIds);
+      setClients((clientsData || []).map((c) => mergeCandidatCriteres(c, criteresMap.get(c.user_id))));
       const clientIds = clientsData?.map(c => c.id) || [];
 
       if (clientUserIds.length > 0) {
