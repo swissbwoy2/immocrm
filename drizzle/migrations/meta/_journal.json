@@ -78,6 +78,13 @@
       "when": 1790803087911,
       "tag": "0010_candidat_solvabilite_trial",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790803645796,
+      "tag": "0011_candidat_garant_solvable",
+      "breakpoints": true
     }
   ]
 }
