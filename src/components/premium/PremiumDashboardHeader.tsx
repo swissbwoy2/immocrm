@@ -1,4 +1,5 @@
 import { Sparkles, Bell, Send, Home, Hammer, Tag, KeyRound, Search } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,9 @@ interface PremiumDashboardHeaderProps {
   onMessagesClick?: () => void;
   onOffersClick?: () => void;
   className?: string;
+  subtitle?: string;
+  headingBadge?: string;
+  action?: ReactNode;
 }
 
 const PARCOURS_CONFIG: Record<ParcoursType, { label: string; icon: typeof Home; subtitle: string }> = {
@@ -54,6 +58,9 @@ export function PremiumDashboardHeader({
   onMessagesClick,
   onOffersClick,
   className,
+  subtitle,
+  headingBadge,
+  action,
 }: PremiumDashboardHeaderProps) {
   // Resolve effective parcours: explicit prop wins, else legacy isAcheteur fallback
   const effective: ParcoursType = parcoursType ?? (isAcheteur ? 'achat' : 'location');
@@ -86,7 +93,7 @@ export function PremiumDashboardHeader({
               className="px-3 py-1 text-xs sm:text-sm font-medium text-primary/80 uppercase tracking-wider border-primary/30 bg-primary/5"
             >
               <Icon className="w-3 h-3 mr-1.5" />
-              {cfg.label}
+               {headingBadge ?? cfg.label}
             </Badge>
           </div>
 
@@ -95,11 +102,12 @@ export function PremiumDashboardHeader({
           </h1>
 
           <p className="text-muted-foreground text-sm sm:text-base max-w-xl">
-            {cfg.subtitle}
+             {subtitle ?? cfg.subtitle}
           </p>
         </div>
 
         <div className="flex gap-2 flex-wrap">
+           {action}
           {messageCount > 0 && (
             <Button
               variant="outline"
