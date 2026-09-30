@@ -42,6 +42,7 @@ export default function HomePage() {
       userRole === 'agent' ? '/agent' :
       userRole === 'client' ? '/client' :
       userRole === 'apporteur' ? '/apporteur' :
+      userRole === 'candidat' ? '/candidat' :
       null;
 
     if (target) {
