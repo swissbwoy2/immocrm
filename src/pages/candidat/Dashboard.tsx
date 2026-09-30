@@ -55,7 +55,7 @@ export default function CandidatDashboard() {
     <div className="flex-1 overflow-y-auto">
       <PremiumPageShellV2>
         <DashboardAdBanner />
-        <StoriesBar className="rounded-xl overflow-hidden" />
+        <StoriesBar className="rounded-xl overflow-hidden" showVisites={false} />
         <PremiumDashboardHeader
           userName={prenom}
           headingBadge="Espace candidat"

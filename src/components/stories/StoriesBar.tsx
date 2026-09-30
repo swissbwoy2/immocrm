@@ -18,6 +18,8 @@ import { useSourcedListingAccess } from "@/hooks/useSourcedListingAccess";
 
 interface Props {
   className?: string;
+  /** Masque la bande « Visites à venir » (utilisé pour le dashboard candidat). */
+  showVisites?: boolean;
 }
 
 /** Round anonymized bubble for an upcoming public visit (no client data). */
@@ -69,7 +71,7 @@ function VisitBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => voi
  * - Everyone sees active stories grouped by author.
  * - Plus a static (no auto-scroll) "Visites à venir" strip of anonymized public visits.
  */
-export function StoriesBar({ className }: Props) {
+export function StoriesBar({ className, showVisites = true }: Props) {
   const { userRole } = useAuth();
   const { groups, loading, refresh } = useStories();
   const { visites } = useShowcase();
@@ -79,7 +81,7 @@ export function StoriesBar({ className }: Props) {
 
   const canPublish = userRole === "admin" || userRole === "agent";
 
-  if (!loading && groups.length === 0 && !canPublish && visites.length === 0) return null;
+  if (!loading && groups.length === 0 && !canPublish && (!showVisites || visites.length === 0)) return null;
 
 
   return (
@@ -127,7 +129,7 @@ export function StoriesBar({ className }: Props) {
           </button>
         ))}
 
-        {visites.length > 0 && (
+        {showVisites && visites.length > 0 && (
           <>
             <div className="shrink-0 self-stretch w-px bg-border/70 mx-1" />
             <div className="flex flex-col gap-1 shrink-0">
