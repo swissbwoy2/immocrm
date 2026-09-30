@@ -120,6 +120,7 @@ const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminSalaires = lazy(() => import("./pages/admin/Salaires"));
 const AdminRegistreCommissions = lazy(() => import("./pages/admin/RegistreCommissions"));
+const AdminCandidaturesRelocation = lazy(() => import("./pages/admin/CandidaturesRelocation"));
 const AdminSalairesAgents = lazy(() => import("./pages/admin/SalairesAgents"));
 const AdminMetaLeads = lazy(() => import("./pages/admin/MetaLeads"));
 const AdminCampagnesSuivi = lazy(() => import("./pages/admin/CampagnesSuivi"));
@@ -434,6 +435,7 @@ const App = () => (
               <Route path="/admin/postulations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminPostulations /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/postulations" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentPostulations /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/salaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminSalaires /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/candidatures-relocation" element={<ProtectedRoute allowedRoles={['admin','agent']}><AppLayout><AdminCandidaturesRelocation /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/registre-commissions" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRegistreCommissions /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/salaires-agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminSalairesAgents /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnalytics /></AppLayout></ProtectedRoute>} />

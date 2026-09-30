@@ -32,7 +32,7 @@ export default function CandidatDemande() {
   const { user, switchRole } = useAuth() as any;
   const navigate = useNavigate();
   const { data: candidatures = [] } = useCandidatCandidatures();
-  const retenu = candidatures.some((c) => c.statut === RETENU_BAILLEUR);
+  const retenu = candidatures.some((c) => c.statut === RETENU_BAILLEUR || c.statut === 'documents_demandes');
   const [form, setForm] = useState<MandatFormData>({ ...initialFormData, journey: 'rental' as any });
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
