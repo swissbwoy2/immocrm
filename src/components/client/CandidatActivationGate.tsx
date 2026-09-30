@@ -35,6 +35,10 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
   const [now, setNow] = useState(Date.now());
   const location = useLocation();
 
+  const [paused, setPaused] = useState(false);
+  const [garantSaving, setGarantSaving] = useState(false);
+  const [garantNon, setGarantNon] = useState(false);
+
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -46,6 +50,14 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
         if (error) throw error;
         if (cancelled) return;
         if (profile?.actif === true) { setState('ok'); return; }
+        // Blocage « dossier non solvable » (solvabilité renseignée, non solvable, pas de garant solvable)
+        const { data: cc } = await (supabase.from as any)('candidat_criteres')
+          .select('type_permis, revenus_mensuels, poursuites, budget_max, garant_solvable')
+          .eq('user_id', user.id).maybeSingle();
+        if (cancelled) return;
+        const isPaused = !!cc && isSolvabiliteRenseignee(cc) && !isCandidatSolvable(cc) && cc.garant_solvable !== true;
+        setPaused(isPaused);
+        setGarantNon(cc?.garant_solvable === false);
         const started = (profile as any)?.trial_started_at as string | null;
         if (!started) { setCanTrial(true); setTrialEnd(null); setState('blocked'); return; }
         const end = new Date(started).getTime() + TRIAL_MS;
