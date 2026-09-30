@@ -75,7 +75,7 @@ export default function CandidatDashboard() {
         {candidaturesAvecOffre.length > 0 && (
           <MesOffresRecuesBand
             title="Offres / candidatures"
-            offres={candidaturesAvecOffre.map((c) => ({ id: c.id, adresse: c.adresse, created_at: c.date, statut: c.statut }))}
+            offres={candidaturesAvecOffre.map((c) => ({ id: c.id, adresse: c.adresse, created_at: c.date, statut: c.statut, lien_annonce: c.lien_annonce, prix: c.prix, pieces: c.pieces, surface: c.surface, medias_galerie: c.medias_galerie }))}
             onItemClick={() => navigate('/candidat/candidatures')}
           />
         )}

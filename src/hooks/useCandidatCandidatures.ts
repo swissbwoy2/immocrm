@@ -11,6 +11,11 @@ export interface UnifiedCandidature {
   statut: string;
   date: string;
   dossier: string;
+  lien_annonce?: string | null;
+  prix?: number | null;
+  pieces?: number | null;
+  surface?: number | null;
+  medias_galerie?: unknown;
 }
 
 const STATUT_LABELS: Record<string, string> = {
@@ -45,7 +50,7 @@ export function useCandidatCandidatures() {
       const [{ data: c }, { data: l }] = await Promise.all([
         supabase
           .from('candidatures')
-          .select('id, statut, date_depot, created_at, dossier_complet, offres(adresse, titre)')
+           .select('id, statut, date_depot, created_at, dossier_complet, offres(adresse, titre, lien_annonce, prix, pieces, surface, medias_galerie)')
           .order('created_at', { ascending: false }),
         supabase
           .from('candidatures_location')
@@ -59,6 +64,11 @@ export function useCandidatCandidatures() {
         statut: r.statut || 'en_attente',
         date: r.date_depot || r.created_at,
         dossier: r.statut === RETENU_BAILLEUR ? 'Pièces à fournir' : r.dossier_complet ? 'Dossier complet' : 'Demande envoyée',
+        lien_annonce: r.offres?.lien_annonce,
+        prix: r.offres?.prix,
+        pieces: r.offres?.pieces,
+        surface: r.offres?.surface,
+        medias_galerie: r.offres?.medias_galerie,
       }));
       const b: UnifiedCandidature[] = (l ?? []).map((r: any) => ({
         id: r.id,
