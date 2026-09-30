@@ -405,6 +405,12 @@ export default function MesAnnonces() {
                               <Copy className="h-4 w-4 mr-2" />
                               Dupliquer
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setCreneauxAnnonce({ id: annonce.id, titre: annonce.titre })}
+                            >
+                              <CalendarClock className="h-4 w-4 mr-2" />
+                              Créneaux de visite
+                            </DropdownMenuItem>
                             {annonce.statut === 'publie' && (
                               <DropdownMenuItem
                                 onClick={() => toggleStatusMutation.mutate({ id: annonce.id, statut: 'suspendu' })}
@@ -450,6 +456,11 @@ export default function MesAnnonces() {
           </Table>
         </div>
       </div>
+      <AnnonceCreneauxManager
+        annonce={creneauxAnnonce}
+        open={!!creneauxAnnonce}
+        onOpenChange={(o) => { if (!o) setCreneauxAnnonce(null); }}
+      />
     </AnnonceurLayout>
   );
 }
