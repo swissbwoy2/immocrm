@@ -6,8 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 
 /**
- * Écran bloquant pour les candidats basculés en client SANS mandat signé.
+ * Écran bloquant pour les candidats basculés en client SANS compte activé.
  * Monté uniquement si l'utilisateur possède le rôle 'candidat' (voir ProtectedRoute).
+ * Levé uniquement sur l'activation complète du compte (profiles.actif — acompte payé / validé par l'admin),
+ * le même critère que AccountActivationModal. Signature du mandat seule = toujours bloqué.
  * En cas d'erreur de lecture : on laisse passer (jamais de blocage par erreur).
  */
 export function CandidatActivationGate({ children }: { children: React.ReactNode }) {
@@ -19,17 +21,14 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
     let cancelled = false;
     (async () => {
       try {
-        const { data: client, error } = await supabase.from('clients')
-          .select('mandat_signature_data, mandat_date_signature, demande_mandat_id')
-          .eq('user_id', user.id).maybeSingle();
+        // Critère d'activation complet = même critère que l'app (AccountActivationModal) :
+        // profiles.actif === true (acompte payé / validé par l'admin). Signature seule ne suffit pas.
+        const { data: profile, error } = await supabase.from('profiles')
+          .select('actif')
+          .eq('id', user.id).maybeSingle();
         if (error) throw error;
-        let signed = !!(client && ((client as any).mandat_signature_data || (client as any).mandat_date_signature || (client as any).demande_mandat_id));
-        if (!signed && user.email) {
-          const { data: dm } = await supabase.from('demandes_mandat').select('id')
-            .ilike('email', user.email).not('signature_data', 'is', null).limit(1);
-          signed = !!dm?.length;
-        }
-        if (!cancelled) setState(signed ? 'ok' : 'blocked');
+        const activated = profile?.actif === true;
+        if (!cancelled) setState(activated ? 'ok' : 'blocked');
       } catch {
         if (!cancelled) setState('ok');
       }
@@ -50,7 +49,7 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">Déléguez votre recherche à nos agents immobiliers.</h1>
-          <p className="text-muted-foreground">Veuillez activer votre compte en complétant et signant votre mandat de recherche.</p>
+          <p className="text-muted-foreground">Veuillez activer votre compte : remplissez et signez votre mandat de recherche, puis réglez l'acompte de 300.- — l'accès complet s'ouvrira dès que votre compte sera activé.</p>
         </div>
         <div className="flex flex-col gap-2">
           <Button asChild size="lg" className="min-h-[44px]">
