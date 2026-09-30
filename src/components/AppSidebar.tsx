@@ -623,6 +623,8 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
+      {!collapsed && <RoleSwitcher />}
+
       {/* User card */}
       {!collapsed && (
         <div className="px-4 py-3 border-b border-sidebar-border bg-sidebar-accent/30">
