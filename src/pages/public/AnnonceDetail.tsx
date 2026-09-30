@@ -19,6 +19,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
+import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
+import { useAuth } from '@/contexts/AuthContext';
 import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
 import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
@@ -42,6 +44,8 @@ export default function AnnonceDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isFavorite: isFav, toggleFavorite } = usePublicFavoris();
+  const { userRoles } = useAuth();
+  const hideExternalPhotos = !userRoles.some((role) => role === 'admin' || role === 'agent');
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
@@ -157,7 +161,7 @@ export default function AnnonceDetail() {
       description,
       url: canonical.href,
       datePosted: annonce.date_publication,
-      image: annonce.photos_annonces_publiques?.map((p: any) => p.url).slice(0, 5),
+      image: annonce.lien_annonce && hideExternalPhotos ? [] : annonce.photos_annonces_publiques?.map((p: any) => p.url).slice(0, 5),
       address: {
         '@type': 'PostalAddress',
         addressLocality: annonce.ville,
@@ -174,7 +178,7 @@ export default function AnnonceDetail() {
     });
     document.head.appendChild(ld);
     return () => { ld.remove(); };
-  }, [annonce]);
+  }, [annonce, hideExternalPhotos]);
 
   const handleShare = async () => {
     const ogBase = import.meta.env.VITE_SUPABASE_URL;
@@ -217,12 +221,13 @@ export default function AnnonceDetail() {
     toast.info('Signalement envoyé. Merci de votre vigilance.');
   };
 
-  const photos = annonce?.photos_annonces_publiques?.sort((a: any, b: any) => {
+  const photos = annonce?.lien_annonce && hideExternalPhotos ? [] : annonce?.photos_annonces_publiques?.sort((a: any, b: any) => {
     if (a.est_principale) return -1;
     if (b.est_principale) return 1;
     return (a.ordre || 0) - (b.ordre || 0);
   }) || [];
 
+  const showExternalPlaceholder = !!annonce?.lien_annonce && hideExternalPhotos;
   const mainPhoto = photos[currentPhotoIndex]?.url || '/placeholder.svg';
 
   const formatPrice = (price: number, type: string) => {
@@ -313,13 +318,17 @@ export default function AnnonceDetail() {
             {/* Main Photo */}
             <div 
               className="relative aspect-[16/9] max-h-[500px] rounded-xl overflow-hidden cursor-pointer group"
-              onClick={() => setShowGallery(true)}
+              onClick={() => !showExternalPlaceholder && setShowGallery(true)}
             >
-              <img 
-                src={mainPhoto} 
-                alt={annonce.titre}
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-              />
+              {showExternalPlaceholder ? (
+                <ExternalListingPlaceholder />
+              ) : (
+                <img
+                  src={mainPhoto}
+                  alt={annonce.titre}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               
               {/* Photo counter */}

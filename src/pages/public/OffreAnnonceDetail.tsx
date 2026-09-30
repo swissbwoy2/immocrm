@@ -10,7 +10,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { galerieUrls } from '@/hooks/usePortailOffres';
-import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   ArrowLeft, ExternalLink, MapPin, Ruler, Layers, Home, CalendarDays, Flame,
@@ -52,8 +51,7 @@ export default function OffreAnnonceDetail() {
   const { id = '' } = useParams();
   const [activePhoto, setActivePhoto] = useState(0);
   const [brokenPhotos, setBrokenPhotos] = useState<string[]>([]);
-  const { canViewInternalListing, isLoading: accessLoading } = useSourcedListingAccess();
-  const { userRoles } = useAuth();
+  const { userRoles, loading: accessLoading } = useAuth();
   const canViewExternalPhotos = userRoles.some((role) => role === 'admin' || role === 'agent');
 
   const { data: offre, isLoading } = useQuery({

@@ -87,7 +87,7 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
   const advertiserName = annonce.annonceurs?.nom_entreprise || annonce.annonceurs?.nom || 'Annonceur';
 
   // Annonce sourcée + visiteur public : on n'héberge pas la fiche, on renvoie à la source
-  const externalOnly = !!annonce.lien_annonce && !(annonce.allowInternalDetail && userRoles.some((role) => role === 'admin' || role === 'agent'));
+  const externalOnly = !!annonce.lien_annonce && !userRoles.some((role) => role === 'admin' || role === 'agent');
 
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     externalOnly ? (
