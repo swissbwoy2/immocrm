@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw, Wallet, Ban, ExternalLink } from 'lucide-react';
 import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
+import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
@@ -2253,6 +2254,8 @@ export default function ClientDetail() {
             </div>
           </div>
         </div>
+
+        {client?.candidat_garant && <CandidatGarantCard garant={client.candidat_garant} />}
 
         {/* Visites à venir de ce client */}
         <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">
