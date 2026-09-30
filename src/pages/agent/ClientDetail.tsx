@@ -188,7 +188,10 @@ export default function ClientDetail() {
         .single();
 
       if (clientError) throw clientError;
-      setClient(clientData);
+      // Complète les critères vides avec ceux du candidat (candidat_criteres) ;
+      // les valeurs déjà renseignées dans clients restent prioritaires.
+      const criteresMap = await fetchCandidatCriteresMap([clientData.user_id]);
+      setClient(mergeCandidatCriteres(clientData, criteresMap.get(clientData.user_id)));
       
       // Get all assigned agents via client_agents
       const { data: clientAgentsData, error: clientAgentsError } = await supabase
