@@ -34,11 +34,14 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
     queryKey: ['annonceur-check', user?.id],
     queryFn: async () => {
       if (!user) return null;
+      // Provisionne le profil annonceur du compte connecté (idempotent, même compte).
+      const { error: ensureError } = await supabase.rpc('ensure_annonceur_profile' as any);
+      if (ensureError) console.error('[Annonceur] Provision profil:', ensureError.message);
       const { data, error } = await supabase
         .from('annonceurs')
         .select('id, nom, prenom, nom_entreprise, type_annonceur, logo_url')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;

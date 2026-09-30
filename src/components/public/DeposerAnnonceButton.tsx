@@ -16,9 +16,8 @@ interface DeposerAnnonceButtonProps {
 
 /**
  * Bouton public « Déposer une annonce ».
- * - Non connecté → inscription annonceur
- * - Connecté avec profil annonceur → formulaire de dépôt
- * - Connecté sans profil annonceur → inscription annonceur (complétion du profil)
+ * - Non connecté → connexion
+ * - Connecté (tout rôle) → profil annonceur auto-provisionné puis formulaire de dépôt
  */
 export function DeposerAnnonceButton({
   variant = 'outline',
@@ -36,17 +35,13 @@ export function DeposerAnnonceButton({
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        navigate('/inscription-annonceur');
+        navigate('/connexion-annonceur');
         return;
       }
 
-      const { data: annonceur } = await supabase
-        .from('annonceurs')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      navigate(annonceur?.id ? '/espace-annonceur/nouvelle-annonce' : '/inscription-annonceur');
+      // Même compte : le profil annonceur est provisionné automatiquement.
+      await supabase.rpc('ensure_annonceur_profile' as any);
+      navigate('/espace-annonceur/nouvelle-annonce');
     } finally {
       setLoading(false);
       onNavigate?.();
