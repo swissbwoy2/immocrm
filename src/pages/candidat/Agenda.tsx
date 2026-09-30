@@ -15,7 +15,7 @@ export default function CandidatAgenda() {
           <Card><CardContent className="p-6 text-sm text-muted-foreground">Aucun événement pour le moment.</CardContent></Card>
         ) : (
           <div className="space-y-3">
-            {[...data].sort((a, b) => (b.date_visite ? 1 : 0) - (a.date_visite ? 1 : 0)).map((c) => (
+            {[...data].sort((a, b) => (b.date_visite ? 1 : 0) - (a.date_visite ? 1 : 0) || (a.date_visite || '').localeCompare(b.date_visite || '')).map((c) => (
               <Card key={`${c.source}-${c.id}`}>
                 <CardContent className="flex items-center gap-4 p-4">
                   <CalendarDays className="h-5 w-5 shrink-0 text-primary" />
