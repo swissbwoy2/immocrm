@@ -33,6 +33,9 @@ export default function CandidatDashboard() {
   const enCours = data.filter((c) => !['refuse', 'refusee', 'desiste'].includes(c.statut)).length;
   const retenues = data.filter((c) => c.statut === RETENU_BAILLEUR).length;
   const candidaturesAvecOffre = data.filter((c) => c.source === 'candidature');
+  const visitesAVenir = data
+    .filter((c) => c.date_visite && new Date(c.date_visite).getTime() >= Date.now())
+    .sort((a, b) => (a.date_visite || '').localeCompare(b.date_visite || ''));
 
   const activate = async () => {
     if (activating) return;
@@ -77,6 +80,21 @@ export default function CandidatDashboard() {
             offres={candidaturesAvecOffre.map((c) => ({ id: c.id, adresse: c.adresse, created_at: c.date, statut: c.statut, lien_annonce: c.lien_annonce, prix: c.prix, pieces: c.pieces, surface: c.surface, medias_galerie: c.medias_galerie }))}
             onItemClick={() => navigate('/candidat/candidatures')}
           />
+        )}
+        {!isLoading && visitesAVenir.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold text-foreground">Mes visites à venir</h2>
+            {visitesAVenir.map((c) => (
+              <QuickTileXL
+                key={`visite-${c.source}-${c.id}`}
+                icon={Calendar}
+                variant="wide"
+                title={c.adresse}
+                subtitle={`Visite le ${new Date(c.date_visite!).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })} à ${new Date(c.date_visite!).toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }).replace(':', 'h')} — ${statutLabel(c.statut)}`}
+                onClick={() => navigate('/candidat/agenda')}
+              />
+            ))}
+          </div>
         )}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 items-stretch">
           <PremiumKPICard title="Candidatures" value={isLoading ? '—' : data.length} icon={FileText} onClick={() => navigate('/candidat/candidatures')} />
