@@ -52,7 +52,7 @@ function OffreBubble({ offre, onClick, candidature = false }: { offre: OffreRow;
               {img ? (
                 <img src={img} alt={label} loading="lazy" className="h-full w-full object-cover" />
               ) : (
-                 {candidature ? <FileCheck className="h-6 w-6 text-muted-foreground" /> : <Home className="h-6 w-6 text-muted-foreground" />}
+                 candidature ? <FileCheck className="h-6 w-6 text-muted-foreground" /> : <Home className="h-6 w-6 text-muted-foreground" />
               )}
             </span>
           </span>
