@@ -2383,6 +2383,54 @@ export type Database = {
         }
         Relationships: []
       }
+      candidat_criteres: {
+        Row: {
+          budget_max: number | null
+          created_at: string
+          date_entree_souhaitee: string | null
+          decouverte_agence: string | null
+          details: Json
+          nombre_occupants: number | null
+          pieces_recherche: string | null
+          region_recherche: string | null
+          souhaits_particuliers: string | null
+          type_bien: string | null
+          type_recherche: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_max?: number | null
+          created_at?: string
+          date_entree_souhaitee?: string | null
+          decouverte_agence?: string | null
+          details?: Json
+          nombre_occupants?: number | null
+          pieces_recherche?: string | null
+          region_recherche?: string | null
+          souhaits_particuliers?: string | null
+          type_bien?: string | null
+          type_recherche?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_max?: number | null
+          created_at?: string
+          date_entree_souhaitee?: string | null
+          decouverte_agence?: string | null
+          details?: Json
+          nombre_occupants?: number | null
+          pieces_recherche?: string | null
+          region_recherche?: string | null
+          souhaits_particuliers?: string | null
+          type_bien?: string | null
+          type_recherche?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       candidatures: {
         Row: {
           agent_valide_regie: boolean | null
