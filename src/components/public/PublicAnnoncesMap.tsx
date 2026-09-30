@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { MapPin, Loader2 } from 'lucide-react';
 import { externalListingPlaceholderHtml } from '@/components/public/ExternalListingPlaceholder';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 interface Annonce {
@@ -19,8 +20,6 @@ interface Annonce {
   photos_annonces_publiques?: { url: string; est_principale: boolean }[];
   /** Annonce sourcée : lien externe d'origine */
   lien_annonce?: string | null;
-  /** true si le clic peut ouvrir la fiche interne */
-  allowInternalDetail?: boolean;
 }
 
 interface PublicAnnoncesMapProps {
@@ -47,6 +46,8 @@ export function PublicAnnoncesMap({
   searchCenter,
   radiusKm = 20
 }: PublicAnnoncesMapProps) {
+  const { userRoles } = useAuth();
+  const canViewExternalPhotos = userRoles.some((role) => role === 'admin' || role === 'agent');
   const { isLoaded, isLoading, isFallback } = useGoogleMapsLoader();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -170,19 +171,8 @@ export function PublicAnnoncesMap({
       const position = { lat, lng };
       const existingMarker = markersRef.current.get(annonce.id) as google.maps.Marker | undefined;
 
-      if (existingMarker) {
-        existingMarker.setPosition(position);
-        existingMarker.setZIndex(isHovered ? 1000 : 1);
-        const icon = existingMarker.getIcon() as google.maps.Symbol | undefined;
-        if (icon && typeof icon === 'object' && 'path' in icon) {
-          existingMarker.setIcon({ ...icon, fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)' });
-        }
-        return;
-      }
-
-
       const showInfoWindow = () => {
-        const isExternal = !!annonce.lien_annonce && !annonce.allowInternalDetail;
+        const isExternal = !!annonce.lien_annonce && !canViewExternalPhotos;
         const photo = isExternal
           ? undefined
           : annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
@@ -202,7 +192,7 @@ export function PublicAnnoncesMap({
               ${annonce.surface_habitable ? `${annonce.surface_habitable} m²` : ''}
             </p>
             <p style="font-size: 12px; color: #666;">${annonce.code_postal} ${annonce.ville}</p>
-            ${annonce.lien_annonce && !annonce.allowInternalDetail ? '<p style="font-size: 11px; color: #16a34a; margin-top: 6px; font-weight: 600;">Voir l\'annonce d\'origine ↗</p>' : ''}
+            ${isExternal ? '<p style="font-size: 11px; color: #16a34a; margin-top: 6px; font-weight: 600;">Voir l\'annonce d\'origine ↗</p>' : ''}
           </div>
         `;
 
@@ -214,7 +204,7 @@ export function PublicAnnoncesMap({
             const infoEl = document.getElementById(`info-${annonce.id}`);
             if (infoEl) {
               infoEl.addEventListener('click', () => {
-                if (annonce.lien_annonce && !annonce.allowInternalDetail) {
+                if (isExternal && annonce.lien_annonce) {
                   window.open(annonce.lien_annonce, '_blank', 'noopener,noreferrer');
                   return;
                 }
@@ -224,6 +214,18 @@ export function PublicAnnoncesMap({
           });
         }
       };
+
+      if (existingMarker) {
+        existingMarker.setPosition(position);
+        existingMarker.setZIndex(isHovered ? 1000 : 1);
+        const icon = existingMarker.getIcon() as google.maps.Symbol | undefined;
+        if (icon && typeof icon === 'object' && 'path' in icon) {
+          existingMarker.setIcon({ ...icon, fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)' });
+        }
+        google.maps.event.clearListeners(existingMarker, 'click');
+        existingMarker.addListener('click', showInfoWindow);
+        return;
+      }
 
       const label = annonce.prix
         ? new Intl.NumberFormat('fr-CH', { notation: 'compact', maximumFractionDigits: 0 }).format(annonce.prix)
@@ -270,7 +272,7 @@ export function PublicAnnoncesMap({
       });
       void listener;
     }
-  }, [mapReady, annoncesWithCoords, hoveredAnnonceId, onAnnonceClick, onMarkerHover]);
+  }, [mapReady, annoncesWithCoords, hoveredAnnonceId, onAnnonceClick, onMarkerHover, canViewExternalPhotos]);
 
 
   // Loading state

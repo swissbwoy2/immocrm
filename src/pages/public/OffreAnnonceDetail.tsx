@@ -10,7 +10,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { galerieUrls } from '@/hooks/usePortailOffres';
-import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
+import { useAuth } from '@/contexts/AuthContext';
+import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
 import {
   ArrowLeft, ExternalLink, MapPin, Ruler, Layers, Home, CalendarDays, Flame,
   Compass, Zap, Building2, Phone, ImageOff,
@@ -51,7 +52,8 @@ export default function OffreAnnonceDetail() {
   const { id = '' } = useParams();
   const [activePhoto, setActivePhoto] = useState(0);
   const [brokenPhotos, setBrokenPhotos] = useState<string[]>([]);
-  const { canViewInternalListing, isLoading: accessLoading } = useSourcedListingAccess();
+  const { userRoles, loading: accessLoading } = useAuth();
+  const canViewExternalPhotos = userRoles.some((role) => role === 'admin' || role === 'agent');
 
   const { data: offre, isLoading } = useQuery({
     queryKey: ['portail-offre', id],
@@ -65,7 +67,7 @@ export default function OffreAnnonceDetail() {
 
   const { data: previewImage } = useQuery({
     queryKey: ['portail-offre-preview', offre?.lien_annonce],
-    enabled: !!offre?.lien_annonce && galerieUrls(offre?.medias_galerie).length === 0,
+    enabled: canViewExternalPhotos && !!offre?.lien_annonce && galerieUrls(offre?.medias_galerie).length === 0,
     queryFn: async (): Promise<string | null> => {
       const { data, error } = await supabase.functions.invoke('get-public-showcase-preview', {
         body: { urls: [offre!.lien_annonce] },
@@ -79,14 +81,15 @@ export default function OffreAnnonceDetail() {
   });
 
   const photos = useMemo(() => {
+    if (offre?.lien_annonce && !canViewExternalPhotos) return [];
     const g = galerieUrls(offre?.medias_galerie).filter((u) => !brokenPhotos.includes(u));
     if (g.length) return g;
     return previewImage && !brokenPhotos.includes(previewImage) ? [previewImage] : [];
-  }, [offre?.medias_galerie, previewImage, brokenPhotos]);
+  }, [offre?.lien_annonce, offre?.medias_galerie, previewImage, brokenPhotos, canViewExternalPhotos]);
 
   // Annonce sourcée : la fiche interne est réservée aux clients connectés.
   // Le visiteur public est renvoyé vers l'annonce d'origine.
-  const redirectToSource = !accessLoading && !canViewInternalListing && !!offre?.lien_annonce;
+  const redirectToSource = !accessLoading && !canViewExternalPhotos && !!offre?.lien_annonce;
   useEffect(() => {
     if (redirectToSource && offre?.lien_annonce) {
       window.location.replace(offre.lien_annonce);
@@ -121,11 +124,14 @@ export default function OffreAnnonceDetail() {
     );
   }
 
-  if (offre && !canViewInternalListing) {
+  if (offre && !canViewExternalPhotos && offre.lien_annonce) {
     return (
       <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
         <div className="container mx-auto px-4 pt-28 pb-16 max-w-xl text-center space-y-4">
+          <div className="h-52 overflow-hidden rounded-lg border border-border">
+            <ExternalListingPlaceholder />
+          </div>
           <h1 className="text-2xl font-semibold">Annonce publiée sur un portail partenaire</h1>
           <p className="text-muted-foreground">
             Le détail complet de ce bien est consultable sur l'annonce d'origine, ou dans votre espace
