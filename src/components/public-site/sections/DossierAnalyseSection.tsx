@@ -65,7 +65,17 @@ export function DossierAnalyseSection() {
                 </Link>
               </div>
 
-              {/* Trust cards */}
+              {/* CTA activation — pleine largeur */}
+              <div className="flex flex-col w-full">
+                <a
+                  href="/nouveau-mandat"
+                  className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)] w-full"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-sm uppercase tracking-wide">Active ta recherche MAINTENANT et décroche ton bail</span>
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </div>
 
               <div className="relative grid sm:grid-cols-2 gap-4">
                 <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
