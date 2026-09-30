@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     }
     const { data: annonce } = await admin
       .from("annonces_publiques")
-      .select("id, titre, adresse, ville, slug, statut")
+      .select("id, titre, adresse, ville, slug, statut, prix, nombre_pieces, surface_habitable, sous_type")
       .eq("id", annonce_id)
       .maybeSingle();
     if (!annonce || annonce.statut !== "publie") {
@@ -182,9 +182,9 @@ Deno.serve(async (req) => {
               agent_id: client.agent_id,
               adresse,
               prix: annonce.prix ?? 0,
-              pieces: annonce.nombre_pieces,
-              surface: annonce.surface_habitable,
-              type_bien: annonce.type_transaction,
+              pieces: annonce.nombre_pieces ?? null,
+              surface: annonce.surface_habitable ?? null,
+              type_bien: annonce.sous_type ?? null,
               titre: annonce.titre,
               lien_annonce: lien,
               statut: "interesse",
