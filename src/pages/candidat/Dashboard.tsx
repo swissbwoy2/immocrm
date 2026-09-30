@@ -32,7 +32,6 @@ export default function CandidatDashboard() {
 
   const enCours = data.filter((c) => !['refuse', 'refusee', 'desiste'].includes(c.statut)).length;
   const retenues = data.filter((c) => c.statut === RETENU_BAILLEUR).length;
-  const visites = data.filter((c) => c.statut === 'visite_planifiee').length;
   const candidaturesAvecOffre = data.filter((c) => c.source === 'candidature');
 
   const activate = async () => {
@@ -86,7 +85,7 @@ export default function CandidatDashboard() {
         </div>
         <div className="grid grid-cols-2 gap-3 md:gap-4 items-stretch">
           <QuickTileXL icon={Clipboard} title="Ma demande de location" subtitle="Compléter mes informations" onClick={() => navigate('/candidat/demande')} />
-          <QuickTileXL icon={Calendar} title="Mes visites" subtitle={`${visites} planifiée${visites > 1 ? 's' : ''}`} badge={visites || undefined} onClick={() => navigate('/candidat/agenda')} />
+          <QuickTileXL icon={Calendar} title="Agenda" subtitle="Suivi des candidatures" onClick={() => navigate('/candidat/agenda')} />
         </div>
         <div className="grid gap-3">
           <QuickTileXL icon={FileCheck} variant="wide" title="Mes candidatures" subtitle={`${data.length} candidature${data.length > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />
