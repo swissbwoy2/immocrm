@@ -53,5 +53,5 @@ export function mergeCandidatCriteres<T extends Record<string, any>>(client: T, 
   if (isEmpty(merged.region_recherche) && cc.region_recherche) merged.region_recherche = cc.region_recherche;
   if (isEmpty(merged.budget_max) && cc.budget_max) merged.budget_max = cc.budget_max;
   if (isEmpty(merged.nombre_occupants) && cc.nombre_occupants) merged.nombre_occupants = cc.nombre_occupants;
-  return merged;
+  return merged as T;
 }
