@@ -9,6 +9,9 @@ export type CandidatCriteresLite = {
   budget_max: number | null;
   nombre_occupants: number | null;
   date_entree_souhaitee: string | null;
+  type_permis: string | null;
+  revenus_mensuels: number | null;
+  poursuites: boolean | null;
 };
 
 /** Charge en une requête les critères candidat d'une liste de user_id. */
@@ -16,7 +19,7 @@ export async function fetchCandidatCriteresMap(userIds: string[]): Promise<Map<s
   const map = new Map<string, CandidatCriteresLite>();
   if (userIds.length === 0) return map;
   const { data, error } = await (supabase.from as any)('candidat_criteres')
-    .select('user_id, type_recherche, type_bien, pieces_recherche, region_recherche, budget_max, nombre_occupants, date_entree_souhaitee')
+    .select('user_id, type_recherche, type_bien, pieces_recherche, region_recherche, budget_max, nombre_occupants, date_entree_souhaitee, type_permis, revenus_mensuels, poursuites')
     .in('user_id', userIds)
     .limit(15000);
   if (error) {
@@ -53,5 +56,8 @@ export function mergeCandidatCriteres<T extends Record<string, any>>(client: T, 
   if (isEmpty(merged.region_recherche) && cc.region_recherche) merged.region_recherche = cc.region_recherche;
   if (isEmpty(merged.budget_max) && cc.budget_max) merged.budget_max = cc.budget_max;
   if (isEmpty(merged.nombre_occupants) && cc.nombre_occupants) merged.nombre_occupants = cc.nombre_occupants;
+  if (isEmpty(merged.type_permis) && cc.type_permis) merged.type_permis = cc.type_permis;
+  if (isEmpty(merged.revenus_mensuels) && cc.revenus_mensuels) merged.revenus_mensuels = Number(cc.revenus_mensuels);
+  if ((merged.poursuites === null || merged.poursuites === undefined) && typeof cc.poursuites === 'boolean') merged.poursuites = cc.poursuites;
   return merged as T;
 }

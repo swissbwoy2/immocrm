@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CandidatSolvabiliteForm } from '@/components/candidat/CandidatSolvabiliteForm';
 
 /**
  * Écran bloquant pour les candidats basculés en client SANS compte activé.
@@ -29,6 +31,7 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
   const [trialEnd, setTrialEnd] = useState<number | null>(null);
   const [canTrial, setCanTrial] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [solvOpen, setSolvOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
   const location = useLocation();
 
@@ -117,7 +120,7 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
             <Link to="/nouveau-mandat"><FileSignature className="mr-2 h-4 w-4" /> Activer mon compte</Link>
           </Button>
           {canTrial && (
-            <Button variant="outline" size="lg" className="min-h-[44px]" disabled={starting} onClick={startTrial}>
+            <Button variant="outline" size="lg" className="min-h-[44px]" disabled={starting} onClick={() => setSolvOpen(true)}>
               {starting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />} Essayer gratuitement (3 jours)
             </Button>
           )}
@@ -126,6 +129,15 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
           </Button>
         </div>
       </div>
+      <Dialog open={solvOpen} onOpenChange={(o) => !starting && setSolvOpen(o)}>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Votre solvabilité</DialogTitle>
+            <DialogDescription>Pour démarrer votre essai gratuit de 3 jours, renseignez ces 3 informations : elles nous permettent de vérifier votre solvabilité auprès des bailleurs.</DialogDescription>
+          </DialogHeader>
+          {solvOpen && <CandidatSolvabiliteForm submitLabel="Démarrer mon essai gratuit" onSaved={startTrial} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
