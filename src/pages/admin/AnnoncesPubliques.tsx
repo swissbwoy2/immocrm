@@ -16,6 +16,8 @@ import {
   TableRow
 } from '@/components/premium';
 import { Button } from '@/components/ui/button';
+import { AnnonceCreneauxManager } from '@/components/admin/AnnonceCreneauxManager';
+import { CalendarClock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
@@ -77,6 +79,7 @@ const AnnoncesPubliques = () => {
   const [statutFilter, setStatutFilter] = useState<string>('en_attente');
   const [selectedAnnonce, setSelectedAnnonce] = useState<AnnoncePublique | null>(null);
   const [showRefusDialog, setShowRefusDialog] = useState(false);
+  const [creneauxAnnonce, setCreneauxAnnonce] = useState<AnnoncePublique | null>(null);
   const [motifRefus, setMotifRefus] = useState('');
   const [processing, setProcessing] = useState(false);
 
@@ -465,6 +468,14 @@ const AnnoncesPubliques = () => {
                         <XCircle className="w-4 h-4" />
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => { e.stopPropagation(); setCreneauxAnnonce(annonce); }}
+                      title="Créneaux de visite"
+                    >
+                      <CalendarClock className="w-4 h-4" />
+                    </Button>
                     {annonce.statut === 'publie' && (
                       <Button
                         size="sm"
@@ -487,6 +498,12 @@ const AnnoncesPubliques = () => {
           </TableBody>
         </PremiumTable>
       )}
+
+      <AnnonceCreneauxManager
+        annonce={creneauxAnnonce}
+        open={!!creneauxAnnonce}
+        onOpenChange={(o) => { if (!o) setCreneauxAnnonce(null); }}
+      />
 
       {/* Refus Dialog */}
       <Dialog open={showRefusDialog} onOpenChange={setShowRefusDialog}>

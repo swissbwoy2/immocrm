@@ -7,7 +7,8 @@ import {
   ArrowLeft, Heart, Share2, Flag, MapPin, Bed, Bath, Maximize, 
   Calendar, Building2, Check, Phone, Mail, MessageCircle, 
   Star, ChevronLeft, ChevronRight, X, User, Shield, Clock,
-  Home, Car, Thermometer, Wifi, Trees, Waves, Sparkles
+  Home, Car, Thermometer, Wifi, Trees, Waves, Sparkles,
+  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
+import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -43,6 +45,7 @@ export default function AnnonceDetail() {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
   const [showContactDialog, setShowContactDialog] = useState(false);
+  const [showReserverDialog, setShowReserverDialog] = useState(false);
 
   // Fetch annonce details (slug, fallback sur l'id)
   const { data: annonce, isLoading, error } = useQuery({
@@ -86,6 +89,8 @@ export default function AnnonceDetail() {
   const isFavorite = annonce ? isFav(annonce.id) : false;
 
   // Fetch similar listings
+  const { data: creneauxDispo = [] } = useAnnonceCreneaux(annonce?.id);
+
   const { data: similarAnnonces = [] } = useQuery({
     queryKey: ['similar-annonces', annonce?.id, annonce?.type_transaction, annonce?.canton],
     queryFn: async () => {
@@ -821,7 +826,13 @@ export default function AnnonceDetail() {
                   </div>
 
                   <div className="space-y-3">
-                    <Button className="w-full" size="lg" onClick={() => setShowContactDialog(true)}>
+                    {creneauxDispo.length > 0 && (
+                      <Button className="w-full" size="lg" onClick={() => setShowReserverDialog(true)}>
+                        <CalendarCheck className="h-4 w-4 mr-2" />
+                        Réserver une visite / Postuler
+                      </Button>
+                    )}
+                    <Button className="w-full" size="lg" variant={creneauxDispo.length > 0 ? 'outline' : 'default'} onClick={() => setShowContactDialog(true)}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Contacter
                     </Button>
@@ -940,6 +951,10 @@ export default function AnnonceDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {annonce && (
+        <ReserverVisiteDialog open={showReserverDialog} onOpenChange={setShowReserverDialog} annonce={annonce} />
+      )}
 
       {/* Contact Dialog */}
       <ContactAnnonceDialog

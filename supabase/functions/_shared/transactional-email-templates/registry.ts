@@ -1,5 +1,6 @@
 import { template as clientCredentials } from './client-credentials.tsx'
 import { template as serviceNotice } from './service-notice.tsx'
+import { template as candidatVisiteConfirmation } from './candidat-visite-confirmation.tsx'
 
 export type TemplateEntry = {
   component: React.ComponentType<any>
@@ -12,4 +13,5 @@ export type TemplateEntry = {
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'client-credentials': clientCredentials,
   'service-notice': serviceNotice,
+  'candidat-visite-confirmation': candidatVisiteConfirmation,
 }

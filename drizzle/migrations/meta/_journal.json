@@ -8,6 +8,13 @@
       "when": 1790778638158,
       "tag": "0000_candidat_role_phase1",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790780784180,
+      "tag": "0001_annonce_creneaux_candidat_visite",
+      "breakpoints": true
     }
   ]
 }
