@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  CalendarClock,
   Plus, 
   Search, 
   Eye, 
@@ -50,6 +51,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnnonceCreneauxManager } from '@/components/admin/AnnonceCreneauxManager';
 
 const statusColors: Record<string, string> = {
   publie: 'bg-green-500/20 text-green-700 border-green-500/30',
@@ -75,6 +77,7 @@ export default function MesAnnonces() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [creneauxAnnonce, setCreneauxAnnonce] = useState<{ id: string; titre: string } | null>(null);
 
   // Fetch annonceur profile
   const { data: annonceur } = useQuery({
