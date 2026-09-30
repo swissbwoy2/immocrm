@@ -1,3 +1,4 @@
+import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy} from 'lucide-react';
 import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
@@ -457,6 +458,18 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
         },
       ];
 
+    case 'candidat':
+      return [
+        {
+          label: null,
+          items: [
+            { name: 'Tableau de bord', icon: LayoutDashboard, path: '/candidat', notifKey: null },
+            { name: 'Mes candidatures', icon: FileText, path: '/candidat/candidatures', notifKey: null },
+            { name: 'Ma demande de location', icon: Clipboard, path: '/candidat/demande', notifKey: null },
+          ],
+        },
+      ];
+
     default:
       return [];
   }
@@ -470,6 +483,7 @@ const roleLabels: Record<string, string> = {
   proprietaire: 'Propriétaire',
   coursier: 'Coursier',
   closeur: 'Closeur',
+  candidat: 'Candidat',
 };
 
 export function AppSidebar() {
@@ -609,6 +623,8 @@ export function AppSidebar() {
           )}
         </div>
       </SidebarHeader>
+
+      {!collapsed && <RoleSwitcher />}
 
       {/* User card */}
       {!collapsed && (

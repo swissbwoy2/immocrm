@@ -2511,6 +2511,7 @@ export type Database = {
           type_contrat: string | null
           type_permis: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           adresse_actuelle?: string | null
@@ -2542,6 +2543,7 @@ export type Database = {
           type_contrat?: string | null
           type_permis?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           adresse_actuelle?: string | null
@@ -2573,6 +2575,7 @@ export type Database = {
           type_contrat?: string | null
           type_permis?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3874,6 +3877,90 @@ export type Database = {
           target_min?: number
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      demandes_location_candidat: {
+        Row: {
+          adresse_actuelle: string | null
+          budget_max: number | null
+          civilite: string | null
+          created_at: string
+          date_entree_souhaitee: string | null
+          date_naissance: string | null
+          email: string | null
+          employeur: string | null
+          etat_civil: string | null
+          id: string
+          loyer_actuel: number | null
+          motif_changement: string | null
+          nationalite: string | null
+          nom: string | null
+          nombre_occupants: number | null
+          pieces_min: number | null
+          prenom: string | null
+          profession: string | null
+          region_recherchee: string | null
+          revenus_mensuels: number | null
+          telephone: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adresse_actuelle?: string | null
+          budget_max?: number | null
+          civilite?: string | null
+          created_at?: string
+          date_entree_souhaitee?: string | null
+          date_naissance?: string | null
+          email?: string | null
+          employeur?: string | null
+          etat_civil?: string | null
+          id?: string
+          loyer_actuel?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nom?: string | null
+          nombre_occupants?: number | null
+          pieces_min?: number | null
+          prenom?: string | null
+          profession?: string | null
+          region_recherchee?: string | null
+          revenus_mensuels?: number | null
+          telephone?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          adresse_actuelle?: string | null
+          budget_max?: number | null
+          civilite?: string | null
+          created_at?: string
+          date_entree_souhaitee?: string | null
+          date_naissance?: string | null
+          email?: string | null
+          employeur?: string | null
+          etat_civil?: string | null
+          id?: string
+          loyer_actuel?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nom?: string | null
+          nombre_occupants?: number | null
+          pieces_min?: number | null
+          prenom?: string | null
+          profession?: string | null
+          region_recherchee?: string | null
+          revenus_mensuels?: number | null
+          telephone?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -13461,6 +13548,7 @@ export type Database = {
     Functions: {
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
+      activate_candidat_searches: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
       annonceur_has_published_annonce: {
@@ -13523,6 +13611,7 @@ export type Database = {
         }
         Returns: string
       }
+      current_auth_email: { Args: never; Returns: string }
       decrement_agent_clients: {
         Args: { agent_uuid: string }
         Returns: undefined
@@ -13713,6 +13802,7 @@ export type Database = {
         Returns: boolean
       }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
+      is_candidat: { Args: { _uid: string }; Returns: boolean }
       is_coursier_for_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_coursier_for_agent_profile: {
         Args: { _profile_id: string }
@@ -14016,6 +14106,7 @@ export type Database = {
         | "agent_ia"
         | "closeur"
         | "automation_operator"
+        | "candidat"
       approval_status: "pending" | "approved" | "rejected" | "modified"
       approval_type: "offer" | "visit" | "external_action"
       connector_type:
@@ -14280,6 +14371,7 @@ export const Constants = {
         "agent_ia",
         "closeur",
         "automation_operator",
+        "candidat",
       ],
       approval_status: ["pending", "approved", "rejected", "modified"],
       approval_type: ["offer", "visit", "external_action"],

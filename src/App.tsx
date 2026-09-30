@@ -169,6 +169,9 @@ const AgentFormationChapitre = lazy(() => import("./pages/agent/FormationChapitr
 
 // Coursier pages
 const CoursierDashboard = lazy(() => import("./pages/coursier/Dashboard"));
+const CandidatDashboard = lazy(() => import("./pages/candidat/Dashboard"));
+const CandidatCandidatures = lazy(() => import("./pages/candidat/Candidatures"));
+const CandidatDemande = lazy(() => import("./pages/candidat/Demande"));
 const CoursierMissions = lazy(() => import("./pages/coursier/Missions"));
 const CoursierCarte = lazy(() => import("./pages/coursier/Carte"));
 const CoursierCalendrier = lazy(() => import("./pages/coursier/Calendrier"));
@@ -550,6 +553,11 @@ const App = () => (
               <Route path="/coursier/parametres" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/coursier/visites/:id/compte-rendu" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierCompteRenduVisite /></AppLayout></ProtectedRoute>} />
 
+
+              {/* Candidat Routes */}
+              <Route path="/candidat" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatDashboard /></AppLayout></ProtectedRoute>} />
+              <Route path="/candidat/candidatures" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatCandidatures /></AppLayout></ProtectedRoute>} />
+              <Route path="/candidat/demande" element={<ProtectedRoute allowedRoles={['candidat']}><AppLayout><CandidatDemande /></AppLayout></ProtectedRoute>} />
 
               {/* Closeur Routes */}
               <Route path="/closeur" element={<ProtectedRoute allowedRoles={['closeur']}><AppLayout><CloseurDashboard /></AppLayout></ProtectedRoute>} />

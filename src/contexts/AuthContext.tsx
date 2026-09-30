@@ -11,12 +11,21 @@ import {
 } from '@/lib/authSession';
 import { purgePersistedAuth, withAuthStorageRemoval, mirrorSession } from '@/lib/authStorageGuard';
 
-type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator';
+type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator' | 'candidat';
+
+const ACTIVE_ROLE_KEY = 'logisorama.active-role';
+const ROLE_PRIORITY: UserRole[] = ['admin', 'automation_operator', 'agent', 'agent_ia', 'closeur', 'coursier', 'apporteur', 'proprietaire', 'client', 'candidat'];
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: UserRole | null;
+  /** Tous les rôles de l'utilisateur (double rôle candidat + client) */
+  userRoles: UserRole[];
+  /** Change l'espace actif (uniquement vers un rôle possédé) */
+  switchRole: (role: UserRole) => void;
+  /** Relit les rôles depuis la base (après activation) */
+  refreshRoles: () => Promise<void>;
   /** true tant que l'amorçage (lecture stockage + récupération silencieuse) n'est pas terminé */
   loading: boolean;
   /** true quand une récupération de session est en cours après une erreur temporaire */
@@ -30,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [recovering, setRecovering] = useState(false);
   const navigate = useNavigate();
@@ -210,15 +220,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: rows, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .single();
+        .eq('user_id', userId);
 
       if (error) throw error;
+      if (!rows || rows.length === 0) throw new Error('Aucun rôle');
       if (!mountedRef.current) return;
-      setUserRole(data.role as UserRole);
+      const roles = rows.map((r) => r.role as UserRole);
+      setUserRoles(roles);
+      // Mono-rôle : comportement strictement identique à avant.
+      let active: UserRole = roles[0];
+      if (roles.length > 1) {
+        let stored: string | null = null;
+        try { stored = localStorage.getItem(ACTIVE_ROLE_KEY); } catch { /* noop */ }
+        active = (stored && roles.includes(stored as UserRole))
+          ? (stored as UserRole)
+          : (ROLE_PRIORITY.find((r) => roles.includes(r)) ?? roles[0]);
+      }
+      const data = { role: active };
+      setUserRole(active);
+
 
       if (data.role === 'agent') {
         await supabase.rpc('activate_agent_on_login');
@@ -255,6 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setUserRole(null);
+      setUserRoles([]);
       setRecovering(false);
       navigate('/login');
       intentionalSignOutRef.current = false;
@@ -262,8 +286,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   };
 
+  const switchRole = (role: UserRole) => {
+    if (!userRoles.includes(role)) return;
+    try { localStorage.setItem(ACTIVE_ROLE_KEY, role); } catch { /* noop */ }
+    setUserRole(role);
+  };
+
+  const refreshRoles = async () => {
+    if (user?.id) await fetchUserRole(user.id);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, userRole, loading, recovering, signOut }}>
+    <AuthContext.Provider value={{ user, session, userRole, userRoles, switchRole, refreshRoles, loading, recovering, signOut }}>
       {children}
     </AuthContext.Provider>
   );
