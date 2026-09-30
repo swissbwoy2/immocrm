@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { galerieUrls } from '@/hooks/usePortailOffres';
 import { useAuth } from '@/contexts/AuthContext';
+import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
 import {
   ArrowLeft, ExternalLink, MapPin, Ruler, Layers, Home, CalendarDays, Flame,
   Compass, Zap, Building2, Phone, ImageOff,
@@ -128,6 +129,9 @@ export default function OffreAnnonceDetail() {
       <div className="theme-luxury min-h-screen bg-background">
         <PublicHeader />
         <div className="container mx-auto px-4 pt-28 pb-16 max-w-xl text-center space-y-4">
+          <div className="h-52 overflow-hidden rounded-lg border border-border">
+            <ExternalListingPlaceholder />
+          </div>
           <h1 className="text-2xl font-semibold">Annonce publiée sur un portail partenaire</h1>
           <p className="text-muted-foreground">
             Le détail complet de ce bien est consultable sur l'annonce d'origine, ou dans votre espace

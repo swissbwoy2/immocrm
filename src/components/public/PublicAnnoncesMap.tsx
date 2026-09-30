@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { MapPin, Loader2 } from 'lucide-react';
 import { externalListingPlaceholderHtml } from '@/components/public/ExternalListingPlaceholder';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 interface Annonce {
@@ -47,6 +48,8 @@ export function PublicAnnoncesMap({
   searchCenter,
   radiusKm = 20
 }: PublicAnnoncesMapProps) {
+  const { userRoles } = useAuth();
+  const canViewExternalPhotos = userRoles.some((role) => role === 'admin' || role === 'agent');
   const { isLoaded, isLoading, isFallback } = useGoogleMapsLoader();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -182,7 +185,7 @@ export function PublicAnnoncesMap({
 
 
       const showInfoWindow = () => {
-        const isExternal = !!annonce.lien_annonce && !annonce.allowInternalDetail;
+        const isExternal = !!annonce.lien_annonce && !canViewExternalPhotos;
         const photo = isExternal
           ? undefined
           : annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url
@@ -202,7 +205,7 @@ export function PublicAnnoncesMap({
               ${annonce.surface_habitable ? `${annonce.surface_habitable} m²` : ''}
             </p>
             <p style="font-size: 12px; color: #666;">${annonce.code_postal} ${annonce.ville}</p>
-            ${annonce.lien_annonce && !annonce.allowInternalDetail ? '<p style="font-size: 11px; color: #16a34a; margin-top: 6px; font-weight: 600;">Voir l\'annonce d\'origine ↗</p>' : ''}
+            ${isExternal ? '<p style="font-size: 11px; color: #16a34a; margin-top: 6px; font-weight: 600;">Voir l\'annonce d\'origine ↗</p>' : ''}
           </div>
         `;
 
@@ -214,7 +217,7 @@ export function PublicAnnoncesMap({
             const infoEl = document.getElementById(`info-${annonce.id}`);
             if (infoEl) {
               infoEl.addEventListener('click', () => {
-                if (annonce.lien_annonce && !annonce.allowInternalDetail) {
+                if (isExternal && annonce.lien_annonce) {
                   window.open(annonce.lien_annonce, '_blank', 'noopener,noreferrer');
                   return;
                 }
@@ -270,7 +273,7 @@ export function PublicAnnoncesMap({
       });
       void listener;
     }
-  }, [mapReady, annoncesWithCoords, hoveredAnnonceId, onAnnonceClick, onMarkerHover]);
+  }, [mapReady, annoncesWithCoords, hoveredAnnonceId, onAnnonceClick, onMarkerHover, canViewExternalPhotos]);
 
 
   // Loading state
