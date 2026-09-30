@@ -13717,6 +13717,7 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      ensure_annonceur_profile: { Args: never; Returns: string }
       generate_parrainage_code: { Args: never; Returns: string }
       get_available_phone_slots: {
         Args: { p_from: string; p_to: string }
