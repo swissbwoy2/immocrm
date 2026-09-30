@@ -71,6 +71,13 @@
       "when": 1790795844591,
       "tag": "0009_creneaux_capacite_default_20",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790803087911,
+      "tag": "0010_candidat_solvabilite_trial",
+      "breakpoints": true
     }
   ]
 }

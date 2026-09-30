@@ -2395,9 +2395,12 @@ export type Database = {
           details: Json
           nombre_occupants: number | null
           pieces_recherche: string | null
+          poursuites: boolean | null
           region_recherche: string | null
+          revenus_mensuels: number | null
           souhaits_particuliers: string | null
           type_bien: string | null
+          type_permis: string | null
           type_recherche: string
           updated_at: string
           user_id: string
@@ -2410,9 +2413,12 @@ export type Database = {
           details?: Json
           nombre_occupants?: number | null
           pieces_recherche?: string | null
+          poursuites?: boolean | null
           region_recherche?: string | null
+          revenus_mensuels?: number | null
           souhaits_particuliers?: string | null
           type_bien?: string | null
+          type_permis?: string | null
           type_recherche?: string
           updated_at?: string
           user_id: string
@@ -2425,9 +2431,12 @@ export type Database = {
           details?: Json
           nombre_occupants?: number | null
           pieces_recherche?: string | null
+          poursuites?: boolean | null
           region_recherche?: string | null
+          revenus_mensuels?: number | null
           souhaits_particuliers?: string | null
           type_bien?: string | null
+          type_permis?: string | null
           type_recherche?: string
           updated_at?: string
           user_id?: string
