@@ -1,8 +1,5 @@
-import { useEffect, useState } from 'react';
 import { CalendarDays, CalendarPlus, ExternalLink, Home } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
