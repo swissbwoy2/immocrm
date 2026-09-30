@@ -22,6 +22,7 @@ import { LocalitesMultiSelect, parseLocalite, type LocaliteOption } from '@/comp
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
+import { useAuth } from '@/contexts/AuthContext';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
@@ -318,18 +319,19 @@ export default function RechercheAnnonces() {
     });
   }, [offresBrutes, transactionType, neufOnly, lieux, categorieSlugs, prixMin, prixMax, piecesMin, piecesMax, surfaceMin, surfaceMax, motsCles]);
 
-  const { canViewInternalListing } = useSourcedListingAccess();
+  const { userRoles } = useAuth();
+  const canViewExternalPhotos = userRoles.some((role) => role === 'admin' || role === 'agent');
 
   // En public : aucune récupération d'image tierce (og:image / galerie)
   const previewUrls = useMemo(
     () =>
-      canViewInternalListing
+      canViewExternalPhotos
         ? offresFiltrees
             .filter((o) => galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce)
             .slice(0, 60)
             .map((o) => o.lien_annonce as string)
         : [],
-    [offresFiltrees, canViewInternalListing],
+    [offresFiltrees, canViewExternalPhotos],
   );
   const { data: previews = {} } = useOffresPreviews(previewUrls);
 
@@ -339,13 +341,13 @@ export default function RechercheAnnonces() {
       offresFiltrees
         .filter(
           (o) =>
-            (canViewInternalListing && galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce) ||
+            (canViewExternalPhotos && galerieUrls(o.medias_galerie).length === 0 && !!o.lien_annonce) ||
             o.latitude == null ||
             o.longitude == null,
         )
         .slice(0, 8)
         .map((o) => o.id),
-    [offresFiltrees, canViewInternalListing],
+    [offresFiltrees, canViewExternalPhotos],
   );
   useOffresImageExtraction(extractionIds);
 
@@ -353,7 +355,7 @@ export default function RechercheAnnonces() {
     () =>
       offresFiltrees.map((o) => {
         const gal = galerieUrls(o.medias_galerie);
-        const photo = canViewInternalListing
+        const photo = (!o.lien_annonce || canViewExternalPhotos)
           ? gal[0] || (o.lien_annonce ? previews[o.lien_annonce] : undefined)
           : undefined;
         return {
@@ -371,11 +373,11 @@ export default function RechercheAnnonces() {
           date_publication: o.date_envoi,
           est_mise_en_avant: false,
           lien_annonce: o.lien_annonce || null,
-          allowInternalDetail: canViewInternalListing,
+          allowInternalDetail: canViewExternalPhotos,
           photos_annonces_publiques: photo ? [{ url: photo, est_principale: true }] : [],
         } as any;
       }),
-    [offresFiltrees, previews, canViewInternalListing],
+    [offresFiltrees, previews, canViewExternalPhotos],
   );
 
 

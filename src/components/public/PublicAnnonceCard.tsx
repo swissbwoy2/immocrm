@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { usePublicFavoris } from '@/hooks/usePublicFavoris';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 
@@ -57,6 +58,7 @@ interface PublicAnnonceCardProps {
 
 export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceCardProps) {
   const navigate = useNavigate();
+  const { userRoles } = useAuth();
   const { isFavorite: isFav, toggleFavorite } = usePublicFavoris();
 
   const [, setIsHovered] = useState(false);
@@ -85,7 +87,7 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
   const advertiserName = annonce.annonceurs?.nom_entreprise || annonce.annonceurs?.nom || 'Annonceur';
 
   // Annonce sourcée + visiteur public : on n'héberge pas la fiche, on renvoie à la source
-  const externalOnly = !!annonce.lien_annonce && !annonce.allowInternalDetail;
+  const externalOnly = !!annonce.lien_annonce && !(annonce.allowInternalDetail && userRoles.some((role) => role === 'admin' || role === 'agent'));
 
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     externalOnly ? (
