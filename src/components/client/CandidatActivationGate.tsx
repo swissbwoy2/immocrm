@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Clock, FileSignature, Loader2, UserRound } from 'lucide-react';
+import { Clock, FileSignature, Loader2, Phone, ShieldAlert, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CandidatSolvabiliteForm } from '@/components/candidat/CandidatSolvabiliteForm';
+import { isCandidatSolvable, isSolvabiliteRenseignee } from '@/lib/candidatSolvabilite';
 
 /**
  * Écran bloquant pour les candidats basculés en client SANS compte activé.
@@ -86,6 +87,13 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
   const startTrial = async () => {
     setStarting(true);
     try {
+      const { data: cc } = await (supabase.from as any)('candidat_criteres')
+        .select('type_permis, revenus_mensuels, poursuites, budget_max, garant_solvable')
+        .eq('user_id', user.id).maybeSingle();
+      if (cc && !isCandidatSolvable(cc) && cc.garant_solvable !== true) {
+        setSolvOpen(false); setPaused(true); setStarting(false);
+        return;
+      }
       const { error } = await (supabase.rpc as any)('start_candidat_trial');
       if (error) throw error;
       window.location.reload();
@@ -99,6 +107,55 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
     return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
   if (state === 'ok') return <>{children}</>;
+
+  const answerGarant = async (oui: boolean) => {
+    if (!user?.id) return;
+    setGarantSaving(true);
+    try {
+      const { error } = await (supabase.from as any)('candidat_criteres')
+        .update({ garant_solvable: oui }).eq('user_id', user.id);
+      if (error) throw error;
+      if (oui) { setPaused(false); setGarantNon(false); }
+      else setGarantNon(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Impossible d'enregistrer");
+    } finally {
+      setGarantSaving(false);
+    }
+  };
+
+  if (paused) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background p-6">
+        <div className="max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+            <ShieldAlert className="h-8 w-8 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Votre dossier n'est pas solvable</h1>
+            <p className="text-muted-foreground">
+              Contactez notre service au{' '}
+              <a href="tel:+41216343161" className="font-semibold text-primary underline">021 634 31 61</a>{' '}
+              pour débloquer votre compte.
+            </p>
+          </div>
+          <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+            <p className="font-medium text-foreground">Mon garant est-il solvable ? *</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="lg" className="min-h-[44px]" disabled={garantSaving} onClick={() => answerGarant(true)}>Oui</Button>
+              <Button size="lg" variant={garantNon ? 'secondary' : 'outline'} className="min-h-[44px]" disabled={garantSaving} onClick={() => answerGarant(false)}>Non</Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-left">
+              * Votre garant doit gagner au moins 3× le loyer que vous visez, avoir un permis B ou C ou la nationalité suisse, et ne pas avoir de poursuites ni d'actes de défaut de biens.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="min-h-[44px]">
+            <a href="tel:+41216343161"><Phone className="mr-2 h-4 w-4" /> Appeler le 021 634 31 61</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (state === 'trial' && trialEnd) {
     return (
       <>
