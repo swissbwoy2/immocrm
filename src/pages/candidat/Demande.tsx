@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCandidatCandidatures, RETENU_BAILLEUR } from '@/hooks/useCandidatCandidatures';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
 import MandatFormStep1 from '@/components/mandat/MandatFormStep1';
@@ -38,11 +40,34 @@ export default function CandidatDemande() {
   const [saved, setSaved] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [annonceId, setAnnonceId] = useState<string>('');
+  const [visitees, setVisitees] = useState<{ id: string; label: string }[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data: rows } = await (supabase as any).from('candidatures_location')
+        .select('annonce_id, creneau_id, annonces_publiques(titre, adresse, ville), annonce_creneaux(date_heure)')
+        .eq('user_id', user.id).not('annonce_id', 'is', null).not('creneau_id', 'is', null);
+      const map = new Map<string, string>();
+      (rows ?? []).forEach((r: any) => {
+        if (map.has(r.annonce_id)) return;
+        const a = r.annonces_publiques ?? {};
+        const lieu = [a.adresse, a.ville].filter(Boolean).join(', ');
+        const d = r.annonce_creneaux?.date_heure
+          ? new Date(r.annonce_creneaux.date_heure).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', dateStyle: 'short', timeStyle: 'short' })
+          : '';
+        map.set(r.annonce_id, [a.titre || 'Annonce', lieu, d && `visite ${d}`].filter(Boolean).join(' — '));
+      });
+      setVisitees(Array.from(map, ([id, label]) => ({ id, label })));
+    })();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
       const { data } = await (supabase as any).from('demandes_location_candidat').select('*').eq('user_id', user.id).maybeSingle();
+      if (data?.annonce_id) setAnnonceId(data.annonce_id);
       const base: MandatFormData = { ...initialFormData, journey: 'rental' as any, email: user.email ?? '' };
       if (data?.mandat_data) setForm({ ...base, ...data.mandat_data });
       else if (data) setForm({ ...base, prenom: data.prenom ?? '', nom: data.nom ?? '', email: data.email ?? base.email, telephone: data.telephone ?? '',
@@ -62,7 +87,7 @@ export default function CandidatDemande() {
     setSaving(true);
     const { signature_data, documents_uploades, ...mandat_data } = form as any;
     const payload = {
-      user_id: user.id, mandat_data, updated_at: new Date().toISOString(),
+      user_id: user.id, mandat_data, updated_at: new Date().toISOString(), annonce_id: annonceId || null,
       prenom: form.prenom || null, nom: form.nom || null, email: form.email || user.email, telephone: form.telephone || null,
       date_naissance: form.date_naissance || null, nationalite: form.nationalite || null, type_permis: form.type_permis || null,
       etat_civil: form.etat_civil || null, adresse_actuelle: form.adresse || null, loyer_actuel: num(form.loyer_actuel),
@@ -71,8 +96,19 @@ export default function CandidatDemande() {
       region_recherchee: form.region_recherche || null, budget_max: num(form.budget_max), pieces_min: num(parseFloat(form.pieces_recherche)),
     };
     const { error } = await (supabase as any).from('demandes_location_candidat').upsert(payload, { onConflict: 'user_id' });
+    if (error) { setSaving(false); return toast.error(error.message); }
+    if (annonceId) {
+      // Report sur la candidature de la visite (colonnes existantes de candidatures_location uniquement).
+      const { error: cErr } = await (supabase as any).from('candidatures_location').update({
+        prenom: payload.prenom, nom: payload.nom, email: payload.email, telephone: payload.telephone,
+        date_naissance: payload.date_naissance, nationalite: payload.nationalite, type_permis: payload.type_permis,
+        profession: payload.profession, employeur: payload.employeur, revenus_mensuels: payload.revenus_mensuels,
+        adresse_actuelle: payload.adresse_actuelle, loyer_actuel: payload.loyer_actuel, motif_changement: payload.motif_changement,
+        nombre_occupants: payload.nombre_occupants, updated_at: payload.updated_at,
+      }).eq('user_id', user.id).eq('annonce_id', annonceId);
+      if (cErr) toast.warning("Demande enregistrée, mais la candidature liée n'a pas pu être mise à jour.");
+    }
     setSaving(false);
-    if (error) return toast.error(error.message);
     toast.success('Demande enregistrée');
     setSaved(true);
   };
@@ -123,6 +159,19 @@ export default function CandidatDemande() {
             Aucun document justificatif n'est demandé à cette étape — vos pièces ne seront requises que si votre dossier est retenu par un propriétaire. Vos données sont traitées conformément à la Loi fédérale sur la protection des données (LPD/nLPD) et uniquement pour le traitement de votre demande de location.
           </p>
         </header>
+
+        <div className="space-y-2">
+          <Label htmlFor="annonce-visitee">Rattacher ma demande à une offre visitée</Label>
+          <Select value={annonceId} onValueChange={setAnnonceId} disabled={visitees.length === 0}>
+            <SelectTrigger id="annonce-visitee" className="min-h-[44px]"><SelectValue placeholder="Choisir une offre visitée" /></SelectTrigger>
+            <SelectContent>
+              {visitees.map((v) => <SelectItem key={v.id} value={v.id}>{v.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {visitees.length === 0 && (
+            <p className="text-xs text-muted-foreground">Réservez d'abord une visite sur une annonce pour pouvoir y rattacher votre demande.</p>
+          )}
+        </div>
 
         <div className="flex gap-1" aria-label="Progression">
           {STEPS.map((s, i) => (

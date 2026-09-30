@@ -1,0 +1,1 @@
+ALTER TABLE public.demandes_location_candidat ADD COLUMN IF NOT EXISTS annonce_id uuid REFERENCES public.annonces_publiques(id) ON DELETE SET NULL;

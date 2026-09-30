@@ -3935,6 +3935,7 @@ export type Database = {
       demandes_location_candidat: {
         Row: {
           adresse_actuelle: string | null
+          annonce_id: string | null
           budget_max: number | null
           civilite: string | null
           created_at: string
@@ -3963,6 +3964,7 @@ export type Database = {
         }
         Insert: {
           adresse_actuelle?: string | null
+          annonce_id?: string | null
           budget_max?: number | null
           civilite?: string | null
           created_at?: string
@@ -3991,6 +3993,7 @@ export type Database = {
         }
         Update: {
           adresse_actuelle?: string | null
+          annonce_id?: string | null
           budget_max?: number | null
           civilite?: string | null
           created_at?: string
@@ -4017,7 +4020,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "demandes_location_candidat_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demandes_mandat: {
         Row: {
