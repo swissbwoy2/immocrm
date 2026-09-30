@@ -195,7 +195,7 @@ const MesClients = () => {
       setOffresToday(offresMap);
 
       // Transform data to match expected format
-      const transformedClients = clientsData?.map(client => {
+      const transformedClients = mergedClientsData.map(client => {
         const profile = profilesMap.get(client.user_id);
         const candidates = candidatesMap.get(client.id) || [];
         const clientAgentsList = clientAgentsMap.get(client.id) || [];
