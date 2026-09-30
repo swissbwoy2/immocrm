@@ -22,6 +22,13 @@
       "when": 1790781837911,
       "tag": "0002_candidat_demande_mandat_data",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790782307420,
+      "tag": "0003_candidat_trial",
+      "breakpoints": true
     }
   ]
 }
