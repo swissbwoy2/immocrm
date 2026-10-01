@@ -132,6 +132,7 @@ export function PostulationsPage({ scope, title }: Props) {
 
       setRows(offres.map((o) => ({
         ...o,
+        demande_at: decisionByOffre.get(o.id) ?? o.date_envoi ?? o.created_at ?? null,
         _client: profileByUser.get(clientToUser.get(o.client_id) ?? '') ?? {},
       })));
     } finally {
