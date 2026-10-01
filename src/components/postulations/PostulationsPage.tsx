@@ -263,12 +263,34 @@ export function PostulationsPage({ scope, title }: Props) {
       </Tabs>
 
       <Card>
-        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2">
             <label className="text-xs text-muted-foreground">Recherche (client, email, adresse)</label>
             <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" />
           </div>
-          <div className="flex items-end">
+          <div>
+            <label className="text-xs text-muted-foreground">Trier par</label>
+            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Plus récentes</SelectItem>
+                <SelectItem value="oldest">Plus anciennes</SelectItem>
+                <SelectItem value="client_az">Par client (A–Z)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Période</label>
+            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="7d">7 derniers jours</SelectItem>
+                <SelectItem value="30d">30 derniers jours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-4 -mt-1">
             <Badge variant="outline" className={tab === 'a_faire' ? 'bg-violet-100 text-violet-800 border-violet-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}>
               {filtered.length} {tab === 'a_faire' ? 'à traiter' : 'déposée(s)'}
             </Badge>
