@@ -46,6 +46,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
+import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { useIsMobile } from "@/hooks/use-mobile";
