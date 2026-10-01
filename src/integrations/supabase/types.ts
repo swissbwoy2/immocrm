@@ -7940,6 +7940,7 @@ export type Database = {
           needs_agent_action: boolean
           orientation: string | null
           pieces: number | null
+          postulation_demandee_at: string | null
           prix: number
           statut: string | null
           surface: number | null
@@ -7984,6 +7985,7 @@ export type Database = {
           needs_agent_action?: boolean
           orientation?: string | null
           pieces?: number | null
+          postulation_demandee_at?: string | null
           prix: number
           statut?: string | null
           surface?: number | null
@@ -8028,6 +8030,7 @@ export type Database = {
           needs_agent_action?: boolean
           orientation?: string | null
           pieces?: number | null
+          postulation_demandee_at?: string | null
           prix?: number
           statut?: string | null
           surface?: number | null

@@ -853,7 +853,7 @@ const OffresRecues = () => {
       });
 
       // L'offre passe en 'souhaite_postuler' pour apparaître dans l'onglet Postulations (admin/agent)
-      await supabase.from('offres').update({ statut: 'souhaite_postuler' }).eq('id', offre.id);
+      await supabase.from('offres').update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() }).eq('id', offre.id);
 
       if (clientData.agent_id) {
         let { data: conv } = await supabase
@@ -1031,8 +1031,19 @@ const OffresRecues = () => {
 
       await supabase
         .from('offres')
-        .update({ statut: 'candidature_deposee' })
+        .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
         .eq('id', selectedOffre.id);
+
+      try {
+        await notifyPostulationRequest({
+          clientId: clientData.id,
+          agentId: clientData.agent_id,
+          offreId: selectedOffre.id,
+          address: selectedOffre.adresse,
+          displayName: await getClientDisplayName(user!.id),
+          choice: 'souhaite_postuler',
+        });
+      } catch (e) { console.error('notifyPostulationRequest', e); }
 
       if (clientData.agent_id) {
         let { data: conv } = await supabase
