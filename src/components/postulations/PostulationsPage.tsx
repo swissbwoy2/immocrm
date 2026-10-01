@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -25,6 +26,7 @@ type Row = {
   id: string;
   created_at: string;
   updated_at: string;
+  date_envoi?: string | null;
   adresse: string | null;
   prix: number | null;
   pieces: number | null;
@@ -32,8 +34,12 @@ type Row = {
   lien_annonce: string | null;
   client_id: string;
   agent_id?: string | null;
+  demande_at?: string | null;
   _client?: ClientInfo;
 };
+
+type SortKey = 'recent' | 'oldest' | 'client_az';
+type PeriodKey = 'all' | '7d' | '30d';
 
 interface Props {
   scope: 'agent' | 'admin';
@@ -50,6 +56,8 @@ export function PostulationsPage({ scope, title }: Props) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tab, setTab] = useState<PostulationTab>('a_faire');
+  const [sortKey, setSortKey] = useState<SortKey>('recent');
+  const [period, setPeriod] = useState<PeriodKey>('all');
 
   async function load() {
     if (!user) return;
@@ -75,17 +83,40 @@ export function PostulationsPage({ scope, title }: Props) {
       const { data, error } = await fetchAllPaginated<Row>(() => {
         let q = supabase
           .from('offres')
-          .select('id, created_at, updated_at, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
+          .select('id, created_at, updated_at, date_envoi, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
           .in('statut', ['souhaite_postuler', 'candidature_deposee'])
-          .order('updated_at', { ascending: false });
+          .order('created_at', { ascending: false });
         if (allowedClientIds) q = q.in('client_id', allowedClientIds);
         return q;
       });
       if (error) { console.error('[Postulations] load', error); setRows([]); return; }
 
       const offres = (data ?? []) as Row[];
+
+      // Real request date: most recent visit decision "souhaite_postuler" per offer.
+      const offreIds = offres.map((o) => o.id).filter(Boolean);
+      const decisionByOffre = new Map<string, string>();
+      if (offreIds.length > 0) {
+        const { data: visites, error: visErr } = await fetchAllPaginated<{ offre_id: string | null; client_decision_at: string | null }>(() => {
+          let q = supabase
+            .from('visites')
+            .select('offre_id, client_decision_at')
+            .eq('client_decision', 'souhaite_postuler')
+            .not('client_decision_at', 'is', null)
+            .order('client_decision_at', { ascending: false });
+          q = q.in('offre_id', offreIds);
+          return q;
+        });
+        if (visErr) console.error('[Postulations] visites decision fetch', visErr);
+        for (const v of visites ?? []) {
+          if (!v.offre_id || !v.client_decision_at) continue;
+          const prev = decisionByOffre.get(v.offre_id);
+          if (!prev || v.client_decision_at > prev) decisionByOffre.set(v.offre_id, v.client_decision_at);
+        }
+      }
+
       const clientIds = Array.from(new Set(offres.map((o) => o.client_id).filter(Boolean)));
-      if (clientIds.length === 0) { setRows(offres); return; }
+      if (clientIds.length === 0) { setRows([]); return; }
 
       const { data: clients } = await supabase
         .from('clients').select('id, user_id').in('id', clientIds);
@@ -101,6 +132,7 @@ export function PostulationsPage({ scope, title }: Props) {
 
       setRows(offres.map((o) => ({
         ...o,
+        demande_at: decisionByOffre.get(o.id) ?? o.date_envoi ?? o.created_at ?? null,
         _client: profileByUser.get(clientToUser.get(o.client_id) ?? '') ?? {},
       })));
     } finally {
@@ -118,14 +150,35 @@ export function PostulationsPage({ scope, title }: Props) {
   const filtered = useMemo(() => rows.filter((r) => {
     const targetStatut = tab === 'a_faire' ? 'souhaite_postuler' : 'candidature_deposee';
     if (r.statut !== targetStatut) return false;
+    if (period !== 'all') {
+      if (!r.demande_at) return false;
+      const d = new Date(r.demande_at).getTime();
+      const cutoff = Date.now() - (period === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000;
+      if (d < cutoff) return false;
+    }
     if (!clientQ) return true;
     const q = clientQ.toLowerCase();
     const name = `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`.toLowerCase();
     return name.includes(q);
-  }), [rows, clientQ, tab]);
+  }), [rows, clientQ, tab, period]);
 
-  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab]);
-  const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize]);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const t = (r: Row) => new Date(r.demande_at || r.created_at || 0).getTime();
+    if (sortKey === 'client_az') {
+      arr.sort((a, b) => {
+        const na = `${a._client?.nom ?? ''} ${a._client?.prenom ?? ''}`.trim().toLowerCase();
+        const nb = `${b._client?.nom ?? ''} ${b._client?.prenom ?? ''}`.trim().toLowerCase();
+        return na.localeCompare(nb, 'fr');
+      });
+    } else {
+      arr.sort((a, b) => (sortKey === 'recent' ? t(b) - t(a) : t(a) - t(b)));
+    }
+    return arr;
+  }, [filtered, sortKey]);
+
+  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab, sortKey, period]);
+  const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [sorted, page, pageSize]);
 
   const markCandidatureDeposee = async (row: Row) => {
     setSavingId(row.id);
@@ -210,12 +263,34 @@ export function PostulationsPage({ scope, title }: Props) {
       </Tabs>
 
       <Card>
-        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2">
             <label className="text-xs text-muted-foreground">Recherche (client, email, adresse)</label>
             <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" />
           </div>
-          <div className="flex items-end">
+          <div>
+            <label className="text-xs text-muted-foreground">Trier par</label>
+            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Plus récentes</SelectItem>
+                <SelectItem value="oldest">Plus anciennes</SelectItem>
+                <SelectItem value="client_az">Par client (A–Z)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Période</label>
+            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="7d">7 derniers jours</SelectItem>
+                <SelectItem value="30d">30 derniers jours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="md:col-span-4 -mt-1">
             <Badge variant="outline" className={tab === 'a_faire' ? 'bg-violet-100 text-violet-800 border-violet-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}>
               {filtered.length} {tab === 'a_faire' ? 'à traiter' : 'déposée(s)'}
             </Badge>
@@ -245,7 +320,7 @@ export function PostulationsPage({ scope, title }: Props) {
               {paged.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap text-xs">
-                    {format(new Date(r.updated_at || r.created_at), 'dd MMM HH:mm', { locale: fr })}
+                    {r.demande_at ? format(new Date(r.demande_at), 'dd MMM HH:mm', { locale: fr }) : '—'}
                   </TableCell>
                   <TableCell className="text-sm">
                     <div className="font-medium">{r._client?.prenom ?? ''} {r._client?.nom ?? ''}</div>
