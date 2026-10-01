@@ -1676,6 +1676,11 @@ All colors MUST be HSL.
 
 /* ==== Coquille native (Capacitor) : verrouille le scroll du document ==== */
 /* Seule la zone scrollable interne de MobileAppShell doit bouger — pas html/body. */
+.imr-mobile-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
 html.imr-native-shell,
 html.imr-native-shell body {
   height: 100%;
