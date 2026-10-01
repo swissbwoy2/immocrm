@@ -320,7 +320,7 @@ export function PostulationsPage({ scope, title }: Props) {
               {paged.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap text-xs">
-                    {format(new Date(r.updated_at || r.created_at), 'dd MMM HH:mm', { locale: fr })}
+                    {r.demande_at ? format(new Date(r.demande_at), 'dd MMM HH:mm', { locale: fr }) : '—'}
                   </TableCell>
                   <TableCell className="text-sm">
                     <div className="font-medium">{r._client?.prenom ?? ''} {r._client?.nom ?? ''}</div>
