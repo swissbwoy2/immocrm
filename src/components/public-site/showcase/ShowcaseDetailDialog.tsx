@@ -1,4 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { setStoryDialogOpen } from './storyDialogState';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,8 +23,37 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+type Reloc = { id: string; statut: string; visite: string | null } | null;
+
 export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
-  const { openDialog, dialog, isOpen: disclaimer } = useImmoRamaCandidacyDialog();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [reloc, setReloc] = useState<Reloc>(null);
+
+  useEffect(() => {
+    setReloc(null);
+    if (!item?.is_native || !user) return;
+    (async () => {
+      const { data } = await (supabase as any).from('candidatures_location')
+        .select('id, statut, date_visite, annonce_creneaux(date_heure)')
+        .eq('annonce_id', item.id).eq('user_id', user.id)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (data) setReloc({ id: data.id, statut: data.statut, visite: data.annonce_creneaux?.date_heure || data.date_visite });
+    })();
+  }, [item?.id, item?.is_native, user]);
+
+  const deposer = async () => {
+    if (!reloc) { navigate('/nouveau-mandat'); return; }
+    const { error } = await (supabase as any).rpc('candidat_deposer_candidature', { _id: reloc.id });
+    if (error) { console.error('[deposer]', error); toast.error(error.message || 'Impossible de déposer la candidature'); return; }
+    supabase.functions.invoke('candidature-relocation-notify', { body: { candidature_id: reloc.id, etape: 'candidature_deposee' } }).catch(() => {});
+    toast.success('Candidature déposée');
+    setReloc({ ...reloc, statut: 'candidature_deposee' });
+    qc.invalidateQueries({ queryKey: ['candidat-candidatures'] });
+  };
+
+  const { openDialog, dialog, isOpen: disclaimer } = useImmoRamaCandidacyDialog({ onConfirm: deposer });
   const open = !!item || disclaimer;
 
   useEffect(() => {
@@ -32,7 +66,7 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
     <>
       <Dialog open={!!item} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[200] pb-24">
-          {item && <DetailBody item={item} onDeposer={openDialog} />}
+          {item && <DetailBody item={item} onDeposer={openDialog} reloc={reloc} />}
         </DialogContent>
       </Dialog>
 
@@ -42,7 +76,9 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
 }
 
 
-function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => void }) {
+function DetailBody({ item, onDeposer, reloc }: { item: ShowcaseItem; onDeposer: () => void; reloc: Reloc }) {
+  const visitePassee = !!reloc?.visite && new Date(reloc.visite).getTime() < Date.now();
+  const deja = !!reloc && reloc.statut !== 'en_attente';
   const { canViewInternalListing } = useSourcedListingAccess();
   const allowImages = canViewInternalListing || !!item.is_native;
   const gallery = allowImages ? galleryUrls(item) : [];
@@ -116,9 +152,18 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
 
       <div className="flex flex-col gap-2 sm:flex-row">
         {item.type_transaction !== 'vente' && (
-          <Button className="flex-1" onClick={onDeposer}>
-            Déposer mon dossier
-          </Button>
+          reloc && deja ? (
+            <Button className="flex-1" disabled>Candidature déposée</Button>
+          ) : reloc && !visitePassee ? (
+            <div className="flex-1 space-y-1">
+              <Button className="w-full" disabled>Déposer mon dossier</Button>
+              <p className="text-center text-xs text-muted-foreground">Disponible après la visite</p>
+            </div>
+          ) : (
+            <Button className="flex-1" onClick={onDeposer}>
+              Déposer mon dossier
+            </Button>
+          )
         )}
         {item.lien_annonce && (
           <Button asChild variant="outline" className="flex-1">
