@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { notifyAnnulation } from '@/components/admin/AnnonceCreneauxManager';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
@@ -210,6 +211,8 @@ const AnnoncesPubliques = () => {
       supabase.functions.invoke('annonce-moderation-notify', {
         body: { annonce_id: selectedAnnonce.id, action: 'refused', motif_refus: motifRefus },
       }).catch((e) => console.error('Notification annonceur échouée', e));
+
+      if (selectedAnnonce.statut === 'publie') notifyAnnulation({ annonce_id: selectedAnnonce.id });
 
       toast.success('Annonce refusée');
       setShowRefusDialog(false);

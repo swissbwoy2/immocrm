@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { CalendarCheck, ChevronDown, ChevronRight, ExternalLink, Loader2, Power, Users } from 'lucide-react';
 import { fetchCreneauxReservations, isCreneauFull, capaciteLabel } from '@/lib/creneauxCapacite';
-import { parseCapacite } from '@/components/admin/AnnonceCreneauxManager';
+import { parseCapacite, notifyAnnulation } from '@/components/admin/AnnonceCreneauxManager';
 
 interface Row {
   id: string; date_heure: string; actif: boolean; capacite_max: number | null; annonce_id: string;
@@ -81,6 +81,7 @@ export default function AdminVisites() {
     if (error) return toast.error(error.message);
     toast.success(ok);
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    if (patch.actif === false) notifyAnnulation({ creneau_id: id });
   };
 
   const editCap = (r: Row) => {
