@@ -2,7 +2,6 @@
 // - Rappels de visite (rappel_48h, rappel_24h) : canal transactionnel (sendTemplateEmail).
 // - Activation (activation_bienvenue, activation_post_visite) : canal marketing via Resend,
 //   avec lien de désinscription (email_unsubscribe_tokens → email_unsubscribes).
-// GET ?unsubscribe=<token> : traite la désinscription et affiche une page de confirmation.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { sendTemplateEmail } from '../_shared/transactional-email-templates/send-email.ts'
@@ -14,8 +13,7 @@ const RAW_FROM = (Deno.env.get('RESEND_FROM_EMAIL') || '').trim()
 const SENDER_EMAIL =
   RAW_FROM && RAW_FROM.includes('@') && !RAW_FROM.includes('notify.logisorama.ch') ? RAW_FROM : 'support@logisorama.ch'
 const FROM = SENDER_EMAIL.includes('<') ? SENDER_EMAIL : `Logisorama <${SENDER_EMAIL}>`
-const FUNCTION_URL = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/candidat-suivi-emails`
-const CAMPAIGN_KEY = 'candidat_suivi_activation'
+const UNSUB_FN = `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/handle-email-unsubscribe`
 const H = 3600_000
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
@@ -52,30 +50,13 @@ Immo-Rama · Logisorama — Agence de relocation en Suisse romande · <a href="h
 </td></tr></table></td></tr></table></body></html>`
 }
 
-async function handleUnsubscribe(token: string): Promise<Response> {
-  const page = (msg: string) =>
-    new Response(
-      `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Désinscription</title></head><body style="font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:90vh;color:#0f172a;"><div style="max-width:420px;text-align:center;padding:24px;"><div style="font-weight:bold;color:hsl(158,55%,38%);letter-spacing:2px;margin-bottom:16px;">IMMO-RAMA</div><p>${msg}</p><a href="https://logisorama.ch" style="color:hsl(158,55%,38%);">logisorama.ch</a></div></body></html>`,
-      { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
-    )
-  if (!/^[0-9a-f-]{36}$/i.test(token)) return page('Lien de désinscription invalide.')
-  const { data: row } = await admin.from('email_unsubscribe_tokens').select('email, used_at').eq('token', token).maybeSingle()
-  if (!row?.email) return page('Lien de désinscription invalide ou expiré.')
-  const email = String(row.email).toLowerCase()
-  const { data: exists } = await admin.from('email_unsubscribes').select('id').ilike('email', email).limit(1)
-  if (!exists?.length) {
-    await admin.from('email_unsubscribes').insert({ email, campaign_key: CAMPAIGN_KEY, source: 'candidat_suivi' })
-  }
-  if (!row.used_at) await admin.from('email_unsubscribe_tokens').update({ used_at: new Date().toISOString() }).eq('token', token)
-  return page('Vous êtes désinscrit(e). Vous ne recevrez plus nos e-mails de suivi commerciaux.')
-}
-
 async function sendActivation(email: string, prenom: string, subject: string): Promise<boolean> {
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY manquant')
   const token = crypto.randomUUID()
   const { error: tErr } = await admin.from('email_unsubscribe_tokens').insert({ email: email.toLowerCase(), token })
   if (tErr) throw new Error(`token: ${tErr.message}`)
-  const unsubscribeUrl = `${FUNCTION_URL}?unsubscribe=${token}`
+  const unsubscribeUrl = `https://logisorama.ch/unsubscribe?token=${token}`
+  const oneClickUrl = `${UNSUB_FN}?token=${token}`
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
@@ -84,7 +65,7 @@ async function sendActivation(email: string, prenom: string, subject: string): P
       to: [email],
       subject,
       html: activationHtml(prenom, unsubscribeUrl),
-      headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+      headers: { 'List-Unsubscribe': `<${oneClickUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
     }),
   })
   if (!res.ok) {
@@ -98,10 +79,6 @@ type Due = { etape: string; creneau_id: string | null; channel: 'tx' | 'mkt' }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-  const url = new URL(req.url)
-  const unsub = url.searchParams.get('unsubscribe')
-  if (unsub) return handleUnsubscribe(unsub)
-  if (req.method === 'POST' && url.searchParams.get('unsubscribe_post')) return handleUnsubscribe(url.searchParams.get('unsubscribe_post')!)
 
   const now = new Date()
   const nowMs = now.getTime()
