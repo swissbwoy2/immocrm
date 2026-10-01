@@ -83,17 +83,40 @@ export function PostulationsPage({ scope, title }: Props) {
       const { data, error } = await fetchAllPaginated<Row>(() => {
         let q = supabase
           .from('offres')
-          .select('id, created_at, updated_at, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
+          .select('id, created_at, updated_at, date_envoi, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
           .in('statut', ['souhaite_postuler', 'candidature_deposee'])
-          .order('updated_at', { ascending: false });
+          .order('created_at', { ascending: false });
         if (allowedClientIds) q = q.in('client_id', allowedClientIds);
         return q;
       });
       if (error) { console.error('[Postulations] load', error); setRows([]); return; }
 
       const offres = (data ?? []) as Row[];
+
+      // Real request date: most recent visit decision "souhaite_postuler" per offer.
+      const offreIds = offres.map((o) => o.id).filter(Boolean);
+      const decisionByOffre = new Map<string, string>();
+      if (offreIds.length > 0) {
+        const { data: visites, error: visErr } = await fetchAllPaginated<{ offre_id: string | null; client_decision_at: string | null }>(() => {
+          let q = supabase
+            .from('visites')
+            .select('offre_id, client_decision_at')
+            .eq('client_decision', 'souhaite_postuler')
+            .not('client_decision_at', 'is', null)
+            .order('client_decision_at', { ascending: false });
+          q = q.in('offre_id', offreIds);
+          return q;
+        });
+        if (visErr) console.error('[Postulations] visites decision fetch', visErr);
+        for (const v of visites ?? []) {
+          if (!v.offre_id || !v.client_decision_at) continue;
+          const prev = decisionByOffre.get(v.offre_id);
+          if (!prev || v.client_decision_at > prev) decisionByOffre.set(v.offre_id, v.client_decision_at);
+        }
+      }
+
       const clientIds = Array.from(new Set(offres.map((o) => o.client_id).filter(Boolean)));
-      if (clientIds.length === 0) { setRows(offres); return; }
+      if (clientIds.length === 0) { setRows([]); return; }
 
       const { data: clients } = await supabase
         .from('clients').select('id, user_id').in('id', clientIds);
