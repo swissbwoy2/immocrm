@@ -738,8 +738,19 @@ const Messagerie = () => {
 
           await supabase
             .from('offres')
-            .update({ statut: 'candidature_deposee' })
+            .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
             .eq('id', offreId);
+
+          try {
+            await notifyPostulationRequest({
+              clientId: clientData.id,
+              agentId: (clientData as any).agent_id ?? null,
+              offreId,
+              address: offre.adresse,
+              displayName: await getClientDisplayName(user.id),
+              choice: 'souhaite_postuler',
+            });
+          } catch (e) { console.error('notifyPostulationRequest', e); }
 
           await supabase.from('messages').insert({
             conversation_id: selectedConv,
@@ -1240,8 +1251,19 @@ const Messagerie = () => {
 
       await supabase
         .from('offres')
-        .update({ statut: 'candidature_deposee' })
+        .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
         .eq('id', selectedOffre.id);
+
+      try {
+        await notifyPostulationRequest({
+          clientId: clientData.id,
+          agentId: clientData.agent_id,
+          offreId: selectedOffre.id,
+          address: selectedOffre.adresse,
+          displayName: await getClientDisplayName(user.id),
+          choice: 'souhaite_postuler',
+        });
+      } catch (e) { console.error('notifyPostulationRequest', e); }
 
       await supabase.from('messages').insert({
         conversation_id: selectedConv,
