@@ -92,6 +92,13 @@
       "when": 1790803798488,
       "tag": "0012_candidat_garant_details",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790840285146,
+      "tag": "0013_candidat_suivi_emails",
+      "breakpoints": true
     }
   ]
 }
