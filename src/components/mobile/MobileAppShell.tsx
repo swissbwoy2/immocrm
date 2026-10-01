@@ -28,8 +28,7 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="flex w-full flex-col overflow-hidden bg-background"
-      style={{ height: '100dvh', maxHeight: '100dvh' }}
+      className="imr-mobile-shell fixed inset-0 flex w-full flex-col overflow-hidden bg-background"
     >
       {/* HEADER FIXE (masqué en mode immersif : conversation plein écran) */}
       {!immersive && (
@@ -65,7 +64,7 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
 
       {/* ZONE SCROLLABLE UNIQUE */}
       <main
-        className="imr-app-scroll min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
+        className="imr-app-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden"
         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
       >
         {children}

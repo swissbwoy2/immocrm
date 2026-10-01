@@ -48,8 +48,7 @@ export function MobileMessenger({
   if (!selectedConversation) {
     return (
       <div
-        className="imr-chat flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden bg-card"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="imr-chat flex h-full min-h-0 flex-col overflow-hidden bg-card"
       >
         {conversationsList}
       </div>
