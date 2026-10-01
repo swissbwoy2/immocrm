@@ -24,6 +24,7 @@ type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string 
 type Row = {
   id: string;
   created_at: string;
+  updated_at: string;
   adresse: string | null;
   prix: number | null;
   pieces: number | null;
@@ -74,9 +75,9 @@ export function PostulationsPage({ scope, title }: Props) {
       const { data, error } = await fetchAllPaginated<Row>(() => {
         let q = supabase
           .from('offres')
-          .select('id, created_at, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
+          .select('id, created_at, updated_at, adresse, prix, pieces, statut, lien_annonce, client_id, agent_id')
           .in('statut', ['souhaite_postuler', 'candidature_deposee'])
-          .order('created_at', { ascending: false });
+          .order('updated_at', { ascending: false });
         if (allowedClientIds) q = q.in('client_id', allowedClientIds);
         return q;
       });
@@ -231,7 +232,7 @@ export function PostulationsPage({ scope, title }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
+                <TableHead>Demandé le</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Adresse</TableHead>
                 <TableHead>Prix (CHF/mois CC)</TableHead>
@@ -244,7 +245,7 @@ export function PostulationsPage({ scope, title }: Props) {
               {paged.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap text-xs">
-                    {format(new Date(r.created_at), 'dd MMM HH:mm', { locale: fr })}
+                    {format(new Date(r.updated_at || r.created_at), 'dd MMM HH:mm', { locale: fr })}
                   </TableCell>
                   <TableCell className="text-sm">
                     <div className="font-medium">{r._client?.prenom ?? ''} {r._client?.nom ?? ''}</div>
