@@ -26,6 +26,7 @@ type Row = {
   id: string;
   created_at: string;
   updated_at: string;
+  date_envoi?: string | null;
   adresse: string | null;
   prix: number | null;
   pieces: number | null;
@@ -33,8 +34,12 @@ type Row = {
   lien_annonce: string | null;
   client_id: string;
   agent_id?: string | null;
+  demande_at?: string | null;
   _client?: ClientInfo;
 };
+
+type SortKey = 'recent' | 'oldest' | 'client_az';
+type PeriodKey = 'all' | '7d' | '30d';
 
 interface Props {
   scope: 'agent' | 'admin';
