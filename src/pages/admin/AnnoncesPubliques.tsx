@@ -211,6 +211,8 @@ const AnnoncesPubliques = () => {
         body: { annonce_id: selectedAnnonce.id, action: 'refused', motif_refus: motifRefus },
       }).catch((e) => console.error('Notification annonceur échouée', e));
 
+      if (selectedAnnonce.statut === 'publie') notifyAnnulation({ annonce_id: selectedAnnonce.id });
+
       toast.success('Annonce refusée');
       setShowRefusDialog(false);
       setMotifRefus('');

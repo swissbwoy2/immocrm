@@ -81,6 +81,7 @@ export default function AdminVisites() {
     if (error) return toast.error(error.message);
     toast.success(ok);
     setRows((p) => p.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    if (patch.actif === false) notifyAnnulation({ creneau_id: id });
   };
 
   const editCap = (r: Row) => {

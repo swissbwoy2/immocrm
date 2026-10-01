@@ -10,6 +10,18 @@ import { fetchCreneauxReservations, isCreneauFull, capaciteLabel } from '@/lib/c
 
 interface Creneau { id: string; date_heure: string; actif: boolean; capacite_max: number | null; reservations: number }
 
+/** Prévient les candidats inscrits qu'une visite est annulée (best-effort, jamais bloquant). */
+export const notifyAnnulation = async (body: { creneau_id: string } | { annonce_id: string }) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('notify-visite-annulee', { body });
+    if (error) throw error;
+    if (data?.targeted) toast.info(`${data.targeted} candidat(s) prévenu(s) de l'annulation`);
+  } catch (e) {
+    console.error('notify-visite-annulee', e);
+    toast.error("Les candidats n'ont pas pu être prévenus de l'annulation");
+  }
+};
+
 export const parseCapacite = (v: string): number | null | 'invalid' => {
   if (!v.trim()) return null;
   const n = Number(v);
@@ -102,11 +114,18 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
                   <Users className="h-4 w-4" />
                 </Button>
                 <Button size="icon" variant="ghost" title={c.actif ? 'Désactiver' : 'Activer'} disabled={busy}
-                  onClick={() => run(() => supabase.from('annonce_creneaux').update({ actif: !c.actif }).eq('id', c.id), c.actif ? 'Créneau désactivé' : 'Créneau activé')}>
-                  <Power className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="text-destructive" title="Supprimer" disabled={busy}
-                  onClick={() => { if (window.confirm('Supprimer ce créneau ?')) run(() => supabase.from('annonce_creneaux').delete().eq('id', c.id), 'Créneau supprimé'); }}>
+                  onClick={async () => {
+                    const wasActive = c.actif;
+                    const ok = await run(() => supabase.from('annonce_creneaux').update({ actif: !c.actif }).eq('id', c.id), c.actif ? 'Créneau désactivé' : 'Créneau activé');
+                    if (ok && wasActive) notifyAnnulation({ creneau_id: c.id });
+                  }}>
+...
+                  onClick={async () => {
+                    if (!window.confirm('Supprimer ce créneau ?')) return;
+                    // Prévenir AVANT la suppression (la réservation perd son lien au créneau ensuite)
+                    if (c.reservations > 0) await notifyAnnulation({ creneau_id: c.id });
+                    run(() => supabase.from('annonce_creneaux').delete().eq('id', c.id), 'Créneau supprimé');
+                  }}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
