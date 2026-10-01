@@ -150,14 +150,35 @@ export function PostulationsPage({ scope, title }: Props) {
   const filtered = useMemo(() => rows.filter((r) => {
     const targetStatut = tab === 'a_faire' ? 'souhaite_postuler' : 'candidature_deposee';
     if (r.statut !== targetStatut) return false;
+    if (period !== 'all') {
+      if (!r.demande_at) return false;
+      const d = new Date(r.demande_at).getTime();
+      const cutoff = Date.now() - (period === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000;
+      if (d < cutoff) return false;
+    }
     if (!clientQ) return true;
     const q = clientQ.toLowerCase();
     const name = `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`.toLowerCase();
     return name.includes(q);
-  }), [rows, clientQ, tab]);
+  }), [rows, clientQ, tab, period]);
 
-  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab]);
-  const paged = useMemo(() => filtered.slice((page - 1) * pageSize, page * pageSize), [filtered, page, pageSize]);
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const t = (r: Row) => new Date(r.demande_at || r.created_at || 0).getTime();
+    if (sortKey === 'client_az') {
+      arr.sort((a, b) => {
+        const na = `${a._client?.nom ?? ''} ${a._client?.prenom ?? ''}`.trim().toLowerCase();
+        const nb = `${b._client?.nom ?? ''} ${b._client?.prenom ?? ''}`.trim().toLowerCase();
+        return na.localeCompare(nb, 'fr');
+      });
+    } else {
+      arr.sort((a, b) => (sortKey === 'recent' ? t(b) - t(a) : t(a) - t(b)));
+    }
+    return arr;
+  }, [filtered, sortKey]);
+
+  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab, sortKey, period]);
+  const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [sorted, page, pageSize]);
 
   const markCandidatureDeposee = async (row: Row) => {
     setSavingId(row.id);
