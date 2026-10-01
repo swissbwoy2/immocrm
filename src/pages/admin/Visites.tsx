@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { CalendarCheck, ChevronDown, ChevronRight, ExternalLink, Loader2, Power, Users } from 'lucide-react';
 import { fetchCreneauxReservations, isCreneauFull, capaciteLabel } from '@/lib/creneauxCapacite';
-import { parseCapacite } from '@/components/admin/AnnonceCreneauxManager';
+import { parseCapacite, notifyAnnulation } from '@/components/admin/AnnonceCreneauxManager';
 
 interface Row {
   id: string; date_heure: string; actif: boolean; capacite_max: number | null; annonce_id: string;
