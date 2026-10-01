@@ -130,17 +130,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Profil (sans écraser)
+    // 4. Profil (sans écraser). Nouveau compte candidat créé ici → actif=false
+    // (le profil a pu être auto-créé par trigger avec le DEFAULT true).
+    const isNewCandidat = !!tempPassword && !isClient;
     const { data: profile } = await admin
       .from("profiles").select("id, prenom, nom, telephone").eq("id", userId).maybeSingle();
     if (profile) {
-      const patch: Record<string, string> = {};
+      const patch: Record<string, string | boolean> = {};
       if (!profile.prenom) patch.prenom = prenom;
       if (!profile.nom) patch.nom = nom;
       if (!profile.telephone) patch.telephone = telephone;
-      if (Object.keys(patch).length) await admin.from("profiles").update(patch).eq("id", userId);
+      if (isNewCandidat) patch.actif = false;
+      if (Object.keys(patch).length) {
+        const { error: uErr } = await admin.from("profiles").update(patch).eq("id", userId);
+        if (uErr) console.error("inscription-candidat-visite: profil maj", uErr.message);
+      }
     } else {
-      const { error: pErr } = await admin.from("profiles").insert({ id: userId, email, prenom, nom, telephone });
+      const { error: pErr } = await admin.from("profiles").insert({
+        id: userId, email, prenom, nom, telephone, ...(isNewCandidat ? { actif: false } : {}),
+      });
       if (pErr) console.warn("inscription-candidat-visite: profil", pErr.message);
     }
 
