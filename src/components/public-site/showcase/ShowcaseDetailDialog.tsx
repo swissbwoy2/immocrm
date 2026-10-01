@@ -76,7 +76,9 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
 }
 
 
-function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => void }) {
+function DetailBody({ item, onDeposer, reloc }: { item: ShowcaseItem; onDeposer: () => void; reloc: Reloc }) {
+  const visitePassee = !!reloc?.visite && new Date(reloc.visite).getTime() < Date.now();
+  const deja = !!reloc && reloc.statut !== 'en_attente';
   const { canViewInternalListing } = useSourcedListingAccess();
   const allowImages = canViewInternalListing || !!item.is_native;
   const gallery = allowImages ? galleryUrls(item) : [];
@@ -150,9 +152,18 @@ function DetailBody({ item, onDeposer }: { item: ShowcaseItem; onDeposer: () => 
 
       <div className="flex flex-col gap-2 sm:flex-row">
         {item.type_transaction !== 'vente' && (
-          <Button className="flex-1" onClick={onDeposer}>
-            Déposer mon dossier
-          </Button>
+          reloc && deja ? (
+            <Button className="flex-1" disabled>Candidature déposée</Button>
+          ) : reloc && !visitePassee ? (
+            <div className="flex-1 space-y-1">
+              <Button className="w-full" disabled>Déposer mon dossier</Button>
+              <p className="text-center text-xs text-muted-foreground">Disponible après la visite</p>
+            </div>
+          ) : (
+            <Button className="flex-1" onClick={onDeposer}>
+              Déposer mon dossier
+            </Button>
+          )
         )}
         {item.lien_annonce && (
           <Button asChild variant="outline" className="flex-1">
