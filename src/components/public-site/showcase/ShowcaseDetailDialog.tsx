@@ -1,4 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { setStoryDialogOpen } from './storyDialogState';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -18,8 +23,37 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+type Reloc = { id: string; statut: string; visite: string | null } | null;
+
 export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
-  const { openDialog, dialog, isOpen: disclaimer } = useImmoRamaCandidacyDialog();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [reloc, setReloc] = useState<Reloc>(null);
+
+  useEffect(() => {
+    setReloc(null);
+    if (!item?.is_native || !user) return;
+    (async () => {
+      const { data } = await (supabase as any).from('candidatures_location')
+        .select('id, statut, date_visite, annonce_creneaux(date_heure)')
+        .eq('annonce_id', item.id).eq('user_id', user.id)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (data) setReloc({ id: data.id, statut: data.statut, visite: data.annonce_creneaux?.date_heure || data.date_visite });
+    })();
+  }, [item?.id, item?.is_native, user]);
+
+  const deposer = async () => {
+    if (!reloc) { navigate('/nouveau-mandat'); return; }
+    const { error } = await (supabase as any).rpc('candidat_deposer_candidature', { _id: reloc.id });
+    if (error) { console.error('[deposer]', error); toast.error(error.message || 'Impossible de déposer la candidature'); return; }
+    supabase.functions.invoke('candidature-relocation-notify', { body: { candidature_id: reloc.id, etape: 'candidature_deposee' } }).catch(() => {});
+    toast.success('Candidature déposée');
+    setReloc({ ...reloc, statut: 'candidature_deposee' });
+    qc.invalidateQueries({ queryKey: ['candidat-candidatures'] });
+  };
+
+  const { openDialog, dialog, isOpen: disclaimer } = useImmoRamaCandidacyDialog({ onConfirm: deposer });
   const open = !!item || disclaimer;
 
   useEffect(() => {
@@ -32,7 +66,7 @@ export function ShowcaseDetailDialog({ item, onOpenChange }: Props) {
     <>
       <Dialog open={!!item} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[200] pb-24">
-          {item && <DetailBody item={item} onDeposer={openDialog} />}
+          {item && <DetailBody item={item} onDeposer={openDialog} reloc={reloc} />}
         </DialogContent>
       </Dialog>
 
