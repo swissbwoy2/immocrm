@@ -208,3 +208,9 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.support-ticket]
     verify_jwt = true
+  [functions.candidat-suivi-emails]
+    verify_jwt = false
+    [functions.candidat-suivi-emails.schedule]
+      cron = "0 6,17 * * *"
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false

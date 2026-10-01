@@ -2464,6 +2464,30 @@ export type Database = {
         }
         Relationships: []
       }
+      candidat_suivi_emails: {
+        Row: {
+          creneau_id: string | null
+          etape: string
+          id: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          creneau_id?: string | null
+          etape: string
+          id?: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          creneau_id?: string | null
+          etape?: string
+          id?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       candidatures: {
         Row: {
           agent_valide_regie: boolean | null
