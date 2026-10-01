@@ -214,3 +214,6 @@ project_id = "ydljsdscdnqrqnjvqela"
       cron = "0 6,17 * * *"
   [functions.handle-email-unsubscribe]
     verify_jwt = false
+
+[functions.notify-visite-annulee]
+  verify_jwt = false
