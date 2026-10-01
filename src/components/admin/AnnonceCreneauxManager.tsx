@@ -119,7 +119,9 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
                     const ok = await run(() => supabase.from('annonce_creneaux').update({ actif: !c.actif }).eq('id', c.id), c.actif ? 'Créneau désactivé' : 'Créneau activé');
                     if (ok && wasActive) notifyAnnulation({ creneau_id: c.id });
                   }}>
-...
+                  <Power className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="ghost" title="Supprimer" disabled={busy}
                   onClick={async () => {
                     if (!window.confirm('Supprimer ce créneau ?')) return;
                     // Prévenir AVANT la suppression (la réservation perd son lien au créneau ensuite)
