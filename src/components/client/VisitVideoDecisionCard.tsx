@@ -83,7 +83,13 @@ export async function submitVisitVideoDecision(params: {
 
   if (offreId) {
     const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';
-    await supabase.from('offres').update({ statut: nextStatut }).eq('id', offreId);
+    let q = supabase.from('offres').update({ statut: nextStatut }).eq('id', offreId);
+    // Ne jamais rétrograder une demande de postulation déjà enregistrée.
+    if (choice === 'refuse') {
+      q = q.not('statut', 'in', '(souhaite_postuler,candidature_deposee,acceptee)');
+    }
+    const { error: oErr } = await q;
+    if (oErr) throw oErr;
   }
 
   const { data: clientRow } = await supabase
