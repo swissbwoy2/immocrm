@@ -56,6 +56,8 @@ export function PostulationsPage({ scope, title }: Props) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [tab, setTab] = useState<PostulationTab>('a_faire');
+  const [sortKey, setSortKey] = useState<SortKey>('recent');
+  const [period, setPeriod] = useState<PeriodKey>('all');
 
   async function load() {
     if (!user) return;
