@@ -12813,6 +12813,36 @@ export type Database = {
           },
         ]
       }
+      user_credits: {
+        Row: {
+          coins_mandat: number
+          coins_visite: number
+          created_at: string
+          derniere_decrementation: string | null
+          mandat_statut: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coins_mandat?: number
+          coins_visite?: number
+          created_at?: string
+          derniere_decrementation?: string | null
+          mandat_statut?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coins_mandat?: number
+          coins_visite?: number
+          created_at?: string
+          derniere_decrementation?: string | null
+          mandat_statut?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -13787,6 +13817,7 @@ export type Database = {
         Args: { _offre_id: string }
         Returns: string
       }
+      consommer_coin_visite: { Args: never; Returns: number }
       consume_edge_rate_limit: {
         Args: {
           p_identity_hash: string
@@ -13825,6 +13856,7 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      decrement_mandat_coins_daily: { Args: never; Returns: number }
       ensure_annonceur_profile: { Args: never; Returns: string }
       generate_parrainage_code: { Args: never; Returns: string }
       get_available_phone_slots: {
@@ -14135,6 +14167,7 @@ export type Database = {
         }
         Returns: string
       }
+      renouveler_mandat_coins: { Args: never; Returns: undefined }
       renovation_agent_can_access_immeuble: {
         Args: { _immeuble_id: string }
         Returns: boolean
@@ -14194,6 +14227,7 @@ export type Database = {
         Args: { _project_id: string }
         Returns: boolean
       }
+      resilier_mandat: { Args: never; Returns: undefined }
       search_annonces_radius: {
         Args: {
           category_id?: string
