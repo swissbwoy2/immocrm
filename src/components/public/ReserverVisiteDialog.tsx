@@ -111,7 +111,6 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
   const showTropTard = !done && !isLoading && (allFull || slotFull);
-  const capaciteAtteinte = creneaux.reduce((s, c) => s + (c.capacite_max ?? 0), 0) || 20;
 
   if (showTropTard) {
     return (
@@ -120,12 +119,12 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <DialogHeader>
             <DialogTitle>Trop tard !</DialogTitle>
             <DialogDescription>
-              {capaciteAtteinte} personnes ont déjà réservé les créneaux disponibles. Revenez dans 10 jours, ou activez votre recherche dès maintenant pour que nous cherchions votre logement à votre place.
+              Les créneaux disponibles sont complets. Revenez dans 24 heures, ou passez au compte premium pour que nous cherchions votre logement à votre place.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
-            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Activer ma recherche</Button>
+            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Passer au compte premium</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -169,11 +168,9 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
                     )}
                   >
                     <span className="capitalize">{formatCreneau(c.date_heure)}</span>
-                    {c.full ? (
+                    {c.full && (
                       <span className="text-xs font-medium text-destructive">Complet</span>
-                    ) : c.restantes != null ? (
-                      <span className="text-xs text-muted-foreground">{c.restantes} place{c.restantes > 1 ? 's' : ''} restante{c.restantes > 1 ? 's' : ''}</span>
-                    ) : null}
+                    )}
                   </button>
                 ))}
               </div>

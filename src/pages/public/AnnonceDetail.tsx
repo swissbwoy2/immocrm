@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
 import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
+import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -314,6 +315,7 @@ export default function AnnonceDetail() {
       {/* Photo Gallery */}
       <section className="py-6">
         <div className="container mx-auto px-4">
+          <PortailBannieres className="mb-4" />
           <div className="relative">
             {/* Main Photo */}
             <div 
