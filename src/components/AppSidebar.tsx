@@ -573,6 +573,10 @@ export function AppSidebar() {
       // Insère juste après le "Tableau de bord" (premier élément) du premier bloc
       items.splice(1, 0, portail);
     }
+    if ((userRole === 'admin' || userRole === 'agent') && !items.some((i) => i.path === '/admin/portail-bannieres')) {
+      const idx = items.findIndex((i) => i.path === '/annonces');
+      items.splice(idx >= 0 ? idx + 1 : items.length, 0, { name: 'Bannières du portail', icon: Globe, path: '/admin/portail-bannieres', notifKey: null });
+    }
     if (!items.some((i) => i.path === '/espace-annonceur')) {
       const idx = items.findIndex((i) => i.path === '/annonces');
       items.splice(idx >= 0 ? idx + 1 : items.length, 0, espaceAnnonceur);

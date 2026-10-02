@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { usePortailOffres, useOffresPreviews, useOffresImageExtraction, galerieUrls } from '@/hooks/usePortailOffres';
 import { findNeighbourLocalites, geocodeLocalite } from '@/lib/swissLocalities';
 
@@ -636,6 +637,7 @@ export default function RechercheAnnonces() {
     <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
       <DashboardBanner wrapperClassName="container mx-auto px-4 pt-20" />
+      <PortailBannieres className="container mx-auto px-4 pt-20 pb-3 [&:not(:first-child)]:pt-0" />
 
       {/* Barre de recherche */}
       <div className="sticky top-16 z-40 bg-background border-b border-border shadow-sm">

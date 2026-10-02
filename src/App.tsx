@@ -102,6 +102,7 @@ const AdminHistoriqueEmails = lazyWithRetry(() => import("./pages/admin/Historiq
 const AdminBoiteReception = lazyWithRetry(() => import("./pages/admin/BoiteReception"));
 const AdminCalendrier = lazyWithRetry(() => import("./pages/admin/Calendrier"));
 const AdminVisites = lazyWithRetry(() => import("./pages/admin/Visites"));
+const AdminPortailBannieres = lazyWithRetry(() => import("./pages/admin/PortailBannieres"));
 const AdminRappels = lazyWithRetry(() => import("./pages/admin/Rappels"));
 const AdminCandidatures = lazyWithRetry(() => import("./pages/admin/Candidatures"));
 const AdminDeposerCandidature = lazyWithRetry(() => import("./pages/admin/DeposerCandidature"));
@@ -419,6 +420,7 @@ const App = () => (
               <Route path="/admin/historique-emails" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminHistoriqueEmails /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/boite-reception" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBoiteReception /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/calendrier" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCalendrier /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/portail-bannieres" element={<ProtectedRoute allowedRoles={['admin','agent']}><AppLayout><AdminPortailBannieres /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/visites" element={<ProtectedRoute allowedRoles={['admin','agent']}><AppLayout><AdminVisites /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/rappels" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRappels /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/candidatures" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCandidatures /></AppLayout></ProtectedRoute>} />
