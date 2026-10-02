@@ -11,6 +11,7 @@ import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
 import { StoriesBar } from '@/components/stories/StoriesBar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CandidatCriteresForm } from '@/components/candidat/CandidatCriteresForm';
@@ -86,6 +87,7 @@ export default function CandidatDashboard() {
             <span className="font-semibold text-primary">Compléter</span>
           </button>
         )}
+        <MesCreditsCard />
         {candidaturesAvecOffre.length > 0 && (
           <MesOffresRecuesBand
             title="Offres / candidatures"

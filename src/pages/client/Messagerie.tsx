@@ -50,6 +50,7 @@ import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulatio
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { consumeVisitCoin } from "@/hooks/useUserCredits";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1090,6 +1091,12 @@ const Messagerie = () => {
     // If proposed slots exist, a date must be selected
     if (delegateProposedSlots.length > 0 && !delegateDate) {
       toast({ title: "Erreur", description: "Veuillez sélectionner un créneau", variant: "destructive" });
+      return;
+    }
+
+    const coin = await consumeVisitCoin();
+    if (!coin.ok) {
+      toast({ title: "Délégation impossible", description: coin.message, variant: "destructive" });
       return;
     }
 

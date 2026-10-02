@@ -36,6 +36,7 @@ import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDeta
 import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
 import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
 import { Loader2 } from "lucide-react";
+import { consumeVisitCoin } from "@/hooks/useUserCredits";
 
 // Skeleton card for loading state
 const OffreSkeletonCard = ({ index }: { index: number }) => (
@@ -691,6 +692,12 @@ const OffresRecues = () => {
         description: 'Veuillez sélectionner un créneau pour la visite',
         variant: 'destructive'
       });
+      return;
+    }
+
+    const coin = await consumeVisitCoin();
+    if (!coin.ok) {
+      toast({ title: 'Délégation impossible', description: coin.message, variant: 'destructive' });
       return;
     }
 

@@ -4,6 +4,7 @@ import { template as candidatVisiteConfirmation } from './candidat-visite-confir
 import { template as candidatureRelocationEtape } from './candidature-relocation-etape.tsx'
 import { template as candidatSuiviRappelVisite } from './candidat-suivi-rappel-visite.tsx'
 import { template as candidatVisiteAnnulee } from './candidat-visite-annulee.tsx'
+import { template as mandatResilieRemboursement } from './mandat-resilie-remboursement.tsx'
 
 export type TemplateEntry = {
   component: React.ComponentType<any>
@@ -20,4 +21,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'candidature-relocation-etape': candidatureRelocationEtape,
   'candidat-suivi-rappel-visite': candidatSuiviRappelVisite,
   'candidat-visite-annulee': candidatVisiteAnnulee,
+  'mandat-resilie-remboursement': mandatResilieRemboursement,
 }
