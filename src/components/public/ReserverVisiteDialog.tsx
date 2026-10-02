@@ -169,11 +169,9 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
                     )}
                   >
                     <span className="capitalize">{formatCreneau(c.date_heure)}</span>
-                    {c.full ? (
+                    {c.full && (
                       <span className="text-xs font-medium text-destructive">Complet</span>
-                    ) : c.restantes != null ? (
-                      <span className="text-xs text-muted-foreground">{c.restantes} place{c.restantes > 1 ? 's' : ''} restante{c.restantes > 1 ? 's' : ''}</span>
-                    ) : null}
+                    )}
                   </button>
                 ))}
               </div>
