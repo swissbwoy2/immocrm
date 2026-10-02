@@ -46,6 +46,7 @@ import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreate
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
+import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 
 interface Client {
@@ -1653,6 +1654,10 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+
+          <div className="col-span-full">
+            <AdminCreditsCard userId={(client as any)?.user_id} />
+          </div>
 
           {/* Garant déclaré par le candidat */}
           {(client as any)?.candidat_garant && (

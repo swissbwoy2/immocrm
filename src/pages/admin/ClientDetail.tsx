@@ -4,6 +4,7 @@ import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, H
 import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
+import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
@@ -2256,6 +2257,8 @@ export default function ClientDetail() {
         </div>
 
         {(client as any)?.candidat_garant && <CandidatGarantCard garant={(client as any).candidat_garant} />}
+
+        <AdminCreditsCard userId={(client as any)?.user_id} />
 
         {/* Visites à venir de ce client */}
         <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">

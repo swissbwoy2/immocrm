@@ -50,6 +50,8 @@ import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
+import { MandatCreditsGate } from '@/components/credits/MandatCreditsGate';
 
 import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
 import VenteClientDashboard from './dashboards/VenteClientDashboard';
@@ -567,6 +569,9 @@ function ClientDashboardLocation() {
               onOffersClick={() => navigate('/client/offres-recues')}
             />
           </SectionErrorBoundary>
+
+          <MandatCreditsGate />
+          <MesCreditsCard />
 
           {/* Bande horizontale — mes offres reçues */}
           <SectionErrorBoundary sectionName="MesOffresRecuesBand">
