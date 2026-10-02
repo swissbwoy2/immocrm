@@ -8351,6 +8351,39 @@ export type Database = {
           },
         ]
       }
+      portail_bannieres: {
+        Row: {
+          actif: boolean
+          created_at: string
+          id: string
+          image_url: string
+          lien: string | null
+          ordre: number
+          titre: string | null
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          image_url: string
+          lien?: string | null
+          ordre?: number
+          titre?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          id?: string
+          image_url?: string
+          lien?: string | null
+          ordre?: number
+          titre?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           actif: boolean | null
