@@ -120,7 +120,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <DialogHeader>
             <DialogTitle>Trop tard !</DialogTitle>
             <DialogDescription>
-              {capaciteAtteinte} personnes ont déjà réservé les créneaux disponibles. Revenez dans 10 jours, ou activez votre recherche dès maintenant pour que nous cherchions votre logement à votre place.
+              « Les créneaux disponibles sont complets. Revenez dans 24 heures, ou passez au compte premium pour que nous cherchions votre logement à votre place. »
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
