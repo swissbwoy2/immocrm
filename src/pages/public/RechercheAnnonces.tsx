@@ -637,7 +637,6 @@ export default function RechercheAnnonces() {
     <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
       <div className="container mx-auto px-4 pt-20 empty:hidden">
-        <DashboardBanner />
         <PortailBannieres className="mb-3 md:mb-4" />
       </div>
 
