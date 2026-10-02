@@ -125,7 +125,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           </DialogHeader>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
-            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Activer ma recherche</Button>
+            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Passer au compte premium</Button>
           </div>
         </DialogContent>
       </Dialog>
