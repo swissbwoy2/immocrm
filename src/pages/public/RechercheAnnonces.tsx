@@ -25,7 +25,6 @@ import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
-import { DashboardBanner } from '@/components/common/DashboardBanner';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { usePortailOffres, useOffresPreviews, useOffresImageExtraction, galerieUrls } from '@/hooks/usePortailOffres';
 import { findNeighbourLocalites, geocodeLocalite } from '@/lib/swissLocalities';
