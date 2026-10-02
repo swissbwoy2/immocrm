@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
 import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
+import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
