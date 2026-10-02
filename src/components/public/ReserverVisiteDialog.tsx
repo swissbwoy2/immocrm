@@ -111,7 +111,6 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
   const showTropTard = !done && !isLoading && (allFull || slotFull);
-  const capaciteAtteinte = creneaux.reduce((s, c) => s + (c.capacite_max ?? 0), 0) || 20;
 
   if (showTropTard) {
     return (
@@ -120,7 +119,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <DialogHeader>
             <DialogTitle>Trop tard !</DialogTitle>
             <DialogDescription>
-              « Les créneaux disponibles sont complets. Revenez dans 24 heures, ou passez au compte premium pour que nous cherchions votre logement à votre place. »
+              Les créneaux disponibles sont complets. Revenez dans 24 heures, ou passez au compte premium pour que nous cherchions votre logement à votre place.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
