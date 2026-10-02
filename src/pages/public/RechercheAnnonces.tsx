@@ -636,8 +636,10 @@ export default function RechercheAnnonces() {
   return (
     <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
-      <DashboardBanner wrapperClassName="container mx-auto px-4 pt-20" />
-      <PortailBannieres className="container mx-auto px-4 pt-20 pb-3 [&:not(:first-child)]:pt-0" />
+      <div className="container mx-auto px-4 pt-20 empty:hidden">
+        <DashboardBanner />
+        <PortailBannieres className="mb-3 md:mb-4" />
+      </div>
 
       {/* Barre de recherche */}
       <div className="sticky top-16 z-40 bg-background border-b border-border shadow-sm">
