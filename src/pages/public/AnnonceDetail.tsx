@@ -314,6 +314,7 @@ export default function AnnonceDetail() {
       {/* Photo Gallery */}
       <section className="py-6">
         <div className="container mx-auto px-4">
+          <PortailBannieres className="mb-4" />
           <div className="relative">
             {/* Main Photo */}
             <div 
