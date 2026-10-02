@@ -25,7 +25,6 @@ import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
-import { DashboardBanner } from '@/components/common/DashboardBanner';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { usePortailOffres, useOffresPreviews, useOffresImageExtraction, galerieUrls } from '@/hooks/usePortailOffres';
 import { findNeighbourLocalites, geocodeLocalite } from '@/lib/swissLocalities';
@@ -637,7 +636,6 @@ export default function RechercheAnnonces() {
     <div className="theme-luxury min-h-screen bg-background">
       <PublicHeader />
       <div className="container mx-auto px-4 pt-20 empty:hidden">
-        <DashboardBanner />
         <PortailBannieres className="mb-3 md:mb-4" />
       </div>
 
