@@ -261,6 +261,8 @@ serve(async (req) => {
     // pre-existing demandes_mandat row matching this email (public mandate flow).
     // Otherwise reject — prevents anonymous email spam / account-creation abuse.
     let isAuthorized = false;
+    let callerId: string | null = null;
+    let callerIsStaff = false;
     const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     if (authHeader) {
       const token = authHeader.replace(/^Bearer\s+/i, '');
@@ -270,6 +272,7 @@ serve(async (req) => {
       );
       const { data: u } = await userClient.auth.getUser(token);
       if (u?.user) {
+        callerId = u.user.id;
         const { data: roles } = await supabaseAdmin
           .from('user_roles')
           .select('role')
@@ -277,6 +280,7 @@ serve(async (req) => {
         const role = (roles ?? []).map((r: { role: string }) => r.role);
         if (role.includes('admin') || role.includes('agent')) {
           isAuthorized = true;
+          callerIsStaff = true;
         }
       }
     }
@@ -301,7 +305,21 @@ serve(async (req) => {
     // Check if user already exists in auth.users (case-insensitive)
     const normalizedEmail = (email || '').trim().toLowerCase();
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 10000 });
-    const existingUser = existingUsers?.users?.find(u => (u.email || '').toLowerCase() === normalizedEmail);
+    // Résolution par identifiant AVANT l'e-mail : un e-mail modifié dans profiles (non synchronisé
+    // dans l'auth) ne doit jamais créer un second compte / une seconde fiche client.
+    let resolvedUserId: string | null = null;
+    if (clientId) {
+      const { data: c } = await supabaseAdmin.from('clients').select('user_id').eq('id', clientId).maybeSingle();
+      resolvedUserId = (c?.user_id as string | null) ?? null;
+    }
+    const selfFlow = !callerIsStaff && !!callerId && !resolvedUserId;
+    if (selfFlow) resolvedUserId = callerId;
+    let existingUser = resolvedUserId
+      ? (await supabaseAdmin.auth.admin.getUserById(resolvedUserId)).data?.user ?? null
+      : null;
+    if (!existingUser) {
+      existingUser = existingUsers?.users?.find(u => (u.email || '').toLowerCase() === normalizedEmail) ?? null;
+    }
 
     console.log('Existing user:', existingUser ? { id: existingUser.id, email: existingUser.email } : null);
 
@@ -320,7 +338,13 @@ serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const tempPassword = generateTempPassword();
 
-    if (existingUser) {
+    if (existingUser && selfFlow && existingUser.id === callerId) {
+      // Utilisateur déjà connecté (ex. candidat → client) : on complète son compte existant,
+      // sans changer son mot de passe ni créer quoi que ce soit.
+      userId = existingUser.id;
+      message = 'Compte existant complété';
+      isNewUser = false;
+    } else if (existingUser) {
       // User exists - set a new temporary password and mark as must-change
       console.log('User exists, setting temporary password and sending credentials');
 
@@ -341,7 +365,7 @@ serve(async (req) => {
         throw updateError;
       }
 
-      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, email, tempPassword, prenom);
+      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, existingUser.email || email, tempPassword, prenom);
       if (!emailRes.success) {
         console.error('Failed to send credentials email for existing user:', emailRes.error);
       }
