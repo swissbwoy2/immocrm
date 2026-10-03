@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { useCandidatCandidatures, statutLabel, type UnifiedCandidature } from '@/hooks/useCandidatCandidatures';
 import { toast } from 'sonner';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { ReserverVisiteDialog } from '@/components/public/ReserverVisiteDialog';
+import { VisiteConfirmGate } from '@/components/candidature/VisiteConfirmGate';
 
 const fmtVisite = (d: string) =>
   new Date(d).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
@@ -94,7 +99,7 @@ async function addToCalendar(c: UnifiedCandidature) {
   }
 }
 
-function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
+function VisiteCard({ c, past, nextSlot, onReserve }: { c: UnifiedCandidature; past?: boolean; nextSlot?: string; onReserve?: () => void }) {
   const a = annonceOf(c);
   const annulee = !!c.annulee;
   // Règle métier : le placeholder « Annonce externe » ne s'applique qu'aux annonces
@@ -136,6 +141,12 @@ function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
           {annulee && c.annulation_message && (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
           )}
+          {annulee && nextSlot && (
+            <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 sm:flex-row sm:items-center">
+              <p className="flex-1 text-sm font-medium text-primary">📅 Nouvelle date disponible : {fmtVisite(nextSlot)}</p>
+              <Button size="sm" className="min-h-[36px]" onClick={onReserve}>Réserver ce créneau</Button>
+            </div>
+          )}
           {prix && <p className="text-sm font-semibold text-foreground">{prix}</p>}
           <div className="flex flex-wrap gap-2 pt-1">
             {url && (
@@ -164,9 +175,24 @@ export default function CandidatAgenda() {
   const upcoming = active.filter((c) => new Date(c.date_visite!).getTime() >= now).sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
   const past = active.filter((c) => new Date(c.date_visite!).getTime() < now).sort((a, b) => b.date_visite!.localeCompare(a.date_visite!));
   const others = data.filter((c) => !c.date_visite);
+  const [reserve, setReserve] = useState<{ id: string; titre: string } | null>(null);
+  const cancelledIds = Array.from(new Set(cancelled.map((c) => c.raw?.annonce_id).filter(Boolean))) as string[];
+  const { data: slots = {} } = useQuery({
+    queryKey: ['candidat-new-slots', cancelledIds.join(',')],
+    enabled: cancelledIds.length > 0,
+    queryFn: async () => {
+      const { data: rows } = await (supabase as any).from('annonce_creneaux').select('annonce_id, date_heure')
+        .in('annonce_id', cancelledIds).eq('actif', true).gt('date_heure', new Date().toISOString()).order('date_heure');
+      const m: Record<string, string> = {};
+      (rows ?? []).forEach((r: any) => { if (!m[r.annonce_id]) m[r.annonce_id] = r.date_heure; });
+      return m;
+    },
+  });
 
   return (
     <div className="flex-1 overflow-y-auto">
+      <VisiteConfirmGate list={data} />
+      {reserve && <ReserverVisiteDialog open onOpenChange={(o) => !o && setReserve(null)} annonce={reserve} />}
       <PremiumPageShellV2>
         <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
         <p className="text-sm text-muted-foreground">Vos visites et candidatures</p>
@@ -189,7 +215,11 @@ export default function CandidatAgenda() {
             {cancelled.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-destructive">Annulées</h2>
-                {cancelled.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
+                {cancelled.map((c) => {
+                  const aid = c.raw?.annonce_id as string | undefined;
+                  return <VisiteCard key={`${c.source}-${c.id}`} c={c} nextSlot={aid ? (slots as Record<string, string>)[aid] : undefined}
+                    onReserve={() => aid && setReserve({ id: aid, titre: annonceOf(c)?.titre || c.adresse })} />;
+                })}
               </section>
             )}
             {others.length > 0 && (
