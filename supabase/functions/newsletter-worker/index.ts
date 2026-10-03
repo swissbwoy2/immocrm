@@ -159,12 +159,13 @@ Deno.serve(async (req) => {
     }
     check(await db.rpc("newsletter_finish"));
     return Response.json({ processed });
-  } catch {
+  } catch (error) {
+    const detail = error instanceof Error ? error.message.slice(0, 300) : "Erreur de base de données";
     await db
       .from("newsletters")
       .update({
         worker_error:
-          "Envoi suspendu : vérifier la configuration Resend et la synchronisation des désinscriptions. Reprise automatique au prochain passage.",
+          `Envoi suspendu : ${detail}. Reprise automatique au prochain passage.`,
       })
       .eq("status", "queued")
       .lte("scheduled_at", new Date().toISOString());
