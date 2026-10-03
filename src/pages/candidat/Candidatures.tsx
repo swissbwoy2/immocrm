@@ -96,11 +96,18 @@ export default function CandidatCandidatures() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant={c.statut === RETENU_BAILLEUR ? 'default' : CLOSED.includes(c.statut) ? 'destructive' : 'secondary'}>
-                      {statutLabel(c.statut)}
-                    </Badge>
+                    {c.annulee ? (
+                      <Badge variant="destructive">Annulé — nouvelle date à venir</Badge>
+                    ) : (
+                      <Badge variant={c.statut === RETENU_BAILLEUR ? 'default' : CLOSED.includes(c.statut) ? 'destructive' : 'secondary'}>
+                        {statutLabel(c.statut)}
+                      </Badge>
+                    )}
                     <Badge variant="outline">{c.dossier}</Badge>
                   </div>
+                  {c.annulee && c.annulation_message && (
+                    <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
+                  )}
                   {c.source === 'location' && c.raw?.date_depot && <RelocationTimeline r={c.raw} />}
                   {c.source === 'location' && c.statut === RETENU_BAILLEUR && !c.raw?.candidat_confirme_at && (
                     <Button size="sm" disabled={busy} onClick={() => confirmer(c.id)} className="min-h-[44px] w-full">Je confirme vouloir conclure</Button>
