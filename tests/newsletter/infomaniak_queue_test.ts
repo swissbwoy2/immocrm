@@ -14,7 +14,7 @@ Deno.test("Infomaniak SQL : secrets réservés, verrou, exclusions tardives et a
       create function auth.uid() returns uuid language sql as $$select null::uuid$$;
       create function public.has_role(uuid,text) returns boolean language sql as $$select false$$;
       create function cron.schedule(text,text,text) returns bigint language sql as $$select 1::bigint$$;
-      create table public.email_unsubscribe_tokens(id uuid primary key default gen_random_uuid(),email text not null,token text not null unique);
+      create table public.email_unsubscribe_tokens(id uuid primary key default gen_random_uuid(),email text not null unique,token text not null unique);
       create table public.email_unsubscribes(id uuid primary key default gen_random_uuid(),email text not null,campaign_key text,source text);
       insert into auth.users values ('11111111-1111-4111-8111-111111111111');`,
     );
@@ -37,6 +37,14 @@ Deno.test("Infomaniak SQL : secrets réservés, verrou, exclusions tardives et a
     );
     await db.exec(
       `insert into vault.secrets(name,decrypted_secret) values ('infomaniak_newsletter_api_key','test-key'),('infomaniak_newsletter_config','{"domain_id":123,"sender_email":"support@example.ch","sender_name":"Logisorama"}');`,
+    );
+    await db.exec(
+      await Deno.readTextFile(
+        new URL(
+          "../../supabase/migrations/20261003233000_newsletter_repeat_recipients.sql",
+          import.meta.url,
+        ),
+      ),
     );
     const one = async (sql: string, args: unknown[] = []) =>
       (await db.query<Record<string, unknown>>(sql, args)).rows[0];
@@ -134,6 +142,49 @@ Deno.test("Infomaniak SQL : secrets réservés, verrou, exclusions tardives et a
       (await db.query("select * from newsletter_infomaniak_claim()")).rows
         .length,
       0,
+    );
+    // A new campaign for the same recipient must preserve both unsubscribe links.
+    const oldToken = await one(
+      "select token from email_unsubscribe_tokens where email='a@example.ch'",
+    );
+    const repeat = await one(
+      "insert into newsletters(name,subject,html,created_by) values ('Repeat','Objet','<p>Test</p>','11111111-1111-4111-8111-111111111111') returning id",
+    );
+    const queued = await one(
+      "select newsletter_enqueue($1,1,$2::uuid[],now(),'ignored') as n",
+      [repeat.id, [a.id, b.id]],
+    );
+    assertEquals(queued.n, 1); // b remains excluded after unsubscribing.
+    assertEquals(
+      (await one(
+        "select count(*)::int as n from email_unsubscribe_tokens where email='a@example.ch'",
+      )).n,
+      2,
+    );
+    assertEquals(
+      (await one("select email from email_unsubscribe_tokens where token=$1", [
+        oldToken.token,
+      ])).email,
+      "a@example.ch",
+    );
+    assertEquals(
+      (await one(
+        "select count(*)::int as n from newsletter_deliveries d join email_unsubscribe_tokens t on t.token=d.unsubscribe_token::text and t.email=d.email where d.newsletter_id=$1",
+        [repeat.id],
+      )).n,
+      1,
+    );
+    await assertRejects(() =>
+      db.query(
+        "insert into email_unsubscribe_tokens(email,token) values ('other@example.ch',$1)",
+        [oldToken.token],
+      )
+    );
+    await assertRejects(() =>
+      db.query("select newsletter_enqueue($1,1,$2::uuid[],now(),'ignored')", [
+        repeat.id,
+        [a.id],
+      ])
     );
     await db.exec("set role authenticated");
     await assertRejects(() =>
