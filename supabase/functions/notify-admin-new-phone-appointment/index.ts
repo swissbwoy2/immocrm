@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("notify-admin-new-phone-appointment");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 // Notify admin (email + WhatsApp + in-app) when a new bureau RDV is booked.
 // Public endpoint (no auth) — called right after the public form insert.
@@ -63,7 +65,7 @@ Deno.serve(async (req) => {
             </div>
             ` });
 
-        const res = await fetch('https://api.resend.com/emails', {
+        const res = await sendTrackedEmail('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({

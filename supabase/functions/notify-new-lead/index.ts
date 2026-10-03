@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("notify-new-lead");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
@@ -57,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       qualificationReasons.push("Poursuites sans garant");
     }
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await sendTrackedEmail("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

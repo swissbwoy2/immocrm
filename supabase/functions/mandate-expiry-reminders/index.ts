@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("mandate-expiry-reminders");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -310,7 +312,7 @@ serve(async (req) => {
                         </a>
                       </td></tr>
                     </table>` });
-              await fetch("https://api.resend.com/emails", {
+              await sendTrackedEmail("https://api.resend.com/emails", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -415,7 +417,7 @@ serve(async (req) => {
             refundUrl,
             pauseUrl,
           });
-          await fetch("https://api.resend.com/emails", {
+          await sendTrackedEmail("https://api.resend.com/emails", {
             method: "POST",
             headers: {
               Authorization: `Bearer ${resendApiKey}`,

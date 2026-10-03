@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   Code2,
@@ -48,6 +49,7 @@ import {
 } from "@/features/newsletter/model";
 import { NEWSLETTER_TEMPLATES } from "@/features/newsletter/templates";
 
+import NewsletterTracking from "@/features/newsletter/Tracking";
 import NewsletterForms from "@/features/newsletter/Forms";
 const VisualEditor = lazy(
   () => import("@/features/newsletter/editor/VisualEditor"),
@@ -537,6 +539,7 @@ export default function Newsletter() {
               icon: LayoutDashboard,
             },
             { id: "history", label: "Campagnes", icon: Mail },
+            { id: "tracking", label: "Suivi & statistiques", icon: Activity },
             { id: "contacts", label: "Abonnés", icon: Users },
             { id: "forms", label: "Formulaires", icon: FileInput },
           ].map(({ id, label, icon: Icon }) => (
@@ -605,8 +608,9 @@ export default function Newsletter() {
                 Actualiser
               </Button>
             </div>
+            <TabsContent value="tracking">{tab === "tracking" && <NewsletterTracking />}</TabsContent>
             <TabsContent value="dashboard" className="space-y-6">
-              <h2 className="text-2xl font-semibold">Tableau de bord</h2>
+              <div className="flex flex-wrap justify-between gap-3"><h2 className="text-2xl font-semibold">Tableau de bord</h2><Button variant="outline" onClick={()=>setTab("tracking")}><Activity size={16} className="mr-2"/>Suivi des emails et notifications</Button></div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   [
@@ -695,8 +699,8 @@ export default function Newsletter() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Les chiffres portent sur les campagnes créées dans Logisorama
-                (100 dernières). Le suivi des ouvertures et clics n’est pas
-                activé pour ces campagnes.
+                (100 dernières). Retrouvez les ouvertures, clics et notifications
+                dans « Suivi & statistiques ».
               </p>
             </TabsContent>
             <TabsContent value="forms">

@@ -168,6 +168,13 @@ export const useNotifications = () => {
     }
   }, [user]);
 
+  const recordClick = useCallback(async (notificationId: string) => {
+    if (!user) return;
+    const { error } = await supabase.rpc('communication_notification_click', { p_id: notificationId });
+    if (error) { console.error('Notification click tracking unavailable'); await markAsRead(notificationId); return; }
+    setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
+  }, [user, markAsRead]);
+
   const markAllAsRead = useCallback(async () => {
     if (!user) return;
 
@@ -239,6 +246,7 @@ export const useNotifications = () => {
     counts,
     loading,
     markAsRead,
+    recordClick,
     markAllAsRead,
     markTypeAsRead,
     deleteNotification,

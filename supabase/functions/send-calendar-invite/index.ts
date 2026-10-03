@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("send-calendar-invite");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -136,7 +138,7 @@ serve(async (req) => {
         </p>
       ` });
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await sendTrackedEmail('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,

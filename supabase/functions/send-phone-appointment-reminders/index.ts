@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("send-phone-appointment-reminders");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 // Multi-tier reminders for office phone appointments: 24h, 3h, 1h, 30min
 // Email + WhatsApp. Idempotent via per-tier *_sent_at columns. Run every 5 min.
@@ -132,7 +134,7 @@ Deno.serve(async (req) => {
         if (RESEND_API_KEY && !appt[tier.emailCol] && appt.prospect_email) {
           try {
             const html = buildEmailHtml(appt.prospect_name || '', dateStr, timeStr, tier.emailIntro);
-            const res = await fetch('https://api.resend.com/emails', {
+            const res = await sendTrackedEmail('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,

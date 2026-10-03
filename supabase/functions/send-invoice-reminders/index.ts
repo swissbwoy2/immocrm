@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("send-invoice-reminders");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/require-admin.ts";
@@ -78,7 +80,7 @@ serve(async (req) => {
 
               ` });
 
-          const emailResponse = await fetch('https://api.resend.com/emails', {
+          const emailResponse = await sendTrackedEmail('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${resendApiKey}`,

@@ -1,7 +1,7 @@
 import { renderNotificationEmail as generateEmailHtml } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
 
 const corsHeaders = {
@@ -75,7 +75,7 @@ serve(async (req) => {
       );
     }
 
-    const resend = new Resend(resendApiKey);
+    const resend = new Resend(resendApiKey, "send-pending-notification-emails");
 
     // Initialize Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

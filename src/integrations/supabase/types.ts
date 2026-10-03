@@ -14094,6 +14094,10 @@ export type Database = {
       }
     }
     Functions: {
+      communication_notification_click: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_candidat_searches: { Args: never; Returns: undefined }

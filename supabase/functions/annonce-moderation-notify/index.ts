@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("annonce-moderation-notify");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { requireAuth } from "../_shared/require-admin.ts";
@@ -25,7 +27,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   html = renderCorporateEmail({ title: subject, category: 'VOTRE ANNONCE', bodyHtml: html });
   if (!RESEND_API_KEY || !to) return;
   try {
-    await fetch("https://api.resend.com/emails", {
+    await sendTrackedEmail("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,7 +1,7 @@
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
 
 const corsHeaders = {
@@ -38,7 +38,7 @@ serve(async (req) => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const resend = resendApiKey ? new Resend(resendApiKey) : null;
+    const resend = resendApiKey ? new Resend(resendApiKey, "send-signature-reminders") : null;
 
     const now = new Date();
     console.log(`[${now.toISOString()}] Checking for signature reminders...`);

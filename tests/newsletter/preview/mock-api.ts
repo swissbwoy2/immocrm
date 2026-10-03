@@ -1,3 +1,4 @@
+import { trackingFixture } from "./tracking-fixtures";
 // Local-only fixture: never imports Supabase and never makes network requests.
 import type {
   Campaign,
@@ -40,6 +41,7 @@ let contacts: Contact[] = [
 let campaigns: Campaign[] = [];
 const forms: Record<string, unknown>[] = [];
 export async function newsletterApi<T>(b: Record<string, unknown>): Promise<T> {
+  if(String(b.action).startsWith("tracking-")) return trackingFixture(b) as T;
   let result: unknown;
   switch (b.action) {
     case "sync-leads":

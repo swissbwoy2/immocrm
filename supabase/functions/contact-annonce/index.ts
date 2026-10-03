@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("contact-annonce");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -147,7 +149,7 @@ serve(async (req: Request): Promise<Response> => {
         <p style="color:#6b7280;font-size:12px">Message envoyé via le portail d'annonces Logisorama.</p>
       ` });
 
-      const res = await fetch("https://api.resend.com/emails", {
+      const res = await sendTrackedEmail("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

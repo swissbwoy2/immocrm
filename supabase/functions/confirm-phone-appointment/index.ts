@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("confirm-phone-appointment");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
@@ -161,7 +163,7 @@ Deno.serve(async (req) => {
             </p>
             ` });
 
-        await fetch('https://api.resend.com/emails', {
+        await sendTrackedEmail('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,

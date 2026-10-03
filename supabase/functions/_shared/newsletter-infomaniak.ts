@@ -149,8 +149,8 @@ export class Infomaniak {
       lang: "fr_FR",
       subject,
       content_html: infomaniakHtml(html),
-      tracking_link: false,
-      tracking_opening: false,
+      tracking_link: true,
+      tracking_opening: true,
     };
   }
 }
