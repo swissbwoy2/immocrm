@@ -52,7 +52,10 @@ export class Infomaniak {
         method,
         headers: {
           Authorization: `Bearer ${this.config.api_key}`,
-          "Content-Type": "application/json",
+          Accept: "application/json",
+          // Infomaniak rejects GET expansion parameters when an empty request
+          // declares a JSON body (422: "with field is prohibited").
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
         signal: AbortSignal.timeout(12000),

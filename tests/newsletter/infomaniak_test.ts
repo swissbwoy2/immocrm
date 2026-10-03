@@ -19,6 +19,21 @@ const response = (data: unknown) =>
   new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
   });
+Deno.test("Infomaniak : les lectures avec expansions ne déclarent pas de corps JSON", async () => {
+  const requests: { method?: string; headers: Headers; body: unknown }[] = [];
+  const api = new Infomaniak(config, ((_input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ method: init?.method, headers: new Headers(init?.headers), body: init?.body });
+    return Promise.resolve(response({ result: "success", data: {} }));
+  }) as typeof fetch, 0);
+  await api.call('/campaigns/42?with=content,recipients');
+  await api.call('/campaigns/42', 'PUT', { subject: 'Visite annulée' });
+  assertEquals(requests[0].method, 'GET');
+  assertEquals(requests[0].headers.get('Content-Type'), null);
+  assertEquals(requests[0].headers.get('Accept'), 'application/json');
+  assertEquals(requests[0].body, undefined);
+  assertEquals(requests[1].headers.get('Content-Type'), 'application/json');
+  assertEquals(requests[1].body, JSON.stringify({ subject: 'Visite annulée' }));
+});
 Deno.test("Infomaniak : attente DNS et mauvais expéditeur bloquent l’envoi", async () => {
   for (
     const domain of [{
