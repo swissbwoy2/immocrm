@@ -113,6 +113,13 @@
       "when": 1791058459633,
       "tag": "0015_candidat_trial_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791058476768,
+      "tag": "0016_user_credits_statut_essai",
+      "breakpoints": true
     }
   ]
 }
