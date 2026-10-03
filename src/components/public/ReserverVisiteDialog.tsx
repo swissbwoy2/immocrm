@@ -111,7 +111,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   };
 
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
-  const showTropTard = !done && !accountOnly && !isLoading && (allFull || slotFull);
+  const showTropTard = !done && !accountOnly && !isLoading && (creneaux.length === 0 || allFull || slotFull);
 
   if (showTropTard) {
     return (

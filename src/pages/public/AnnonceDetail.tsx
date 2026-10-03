@@ -837,13 +837,11 @@ export default function AnnonceDetail() {
                   </div>
 
                   <div className="space-y-3">
-                    {creneauxDispo.length > 0 && (
-                      <Button className="w-full" size="lg" onClick={() => setShowReserverDialog(true)}>
-                        <CalendarCheck className="h-4 w-4 mr-2" />
-                        Réserver une visite / Postuler
-                      </Button>
-                    )}
-                    <Button className="w-full" size="lg" variant={creneauxDispo.length > 0 ? 'outline' : 'default'} onClick={() => setShowContactDialog(true)}>
+                    <Button className="w-full" size="lg" onClick={() => setShowReserverDialog(true)}>
+                      <CalendarCheck className="h-4 w-4 mr-2" />
+                      Réserver une visite / Postuler
+                    </Button>
+                    <Button className="w-full" size="lg" variant="outline" onClick={() => setShowContactDialog(true)}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Contacter
                     </Button>
