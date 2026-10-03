@@ -89,6 +89,8 @@ export function useCandidatCandidatures() {
         statut: r.statut || 'en_attente',
         date: r.created_at,
         dossier: r.statut === RETENU_BAILLEUR || r.statut === 'documents_demandes' ? 'Pièces à fournir' : 'Demande envoyée',
+        annulee: r.annulee ?? false,
+        annulation_message: r.annulation_message ?? null,
         raw: r,
       }));
       return [...a, ...b].sort((x, y) => (y.date || '').localeCompare(x.date || ''));
