@@ -46,7 +46,7 @@ import {
   parseContactCsv,
   STATUS_LABELS,
 } from "@/features/newsletter/model";
-import referenceHtml from "@/features/newsletter/reference.html?raw";
+import { NEWSLETTER_TEMPLATES } from "@/features/newsletter/templates";
 
 import NewsletterForms from "@/features/newsletter/Forms";
 const VisualEditor = lazy(
@@ -1018,36 +1018,32 @@ export default function Newsletter() {
                       {!locked && step !== 3 && (
                         <>
                           <div className="grid gap-3">
-                            <button
-                              className="rounded-xl border bg-[#f3f1e9] p-5 text-left hover:border-[#205a43]"
-                              onClick={() => {
-                                if (
-                                  draft.html &&
-                                  !window.confirm(
-                                    "Remplacer le contenu actuel par le modèle Logisorama ?",
-                                  )
-                                ) {
-                                  return;
-                                }
-                                changeDraft({
-                                  html: referenceHtml,
-                                  subject: draft.subject ||
-                                    "Bonjour, vous avez trouvé un appart ?",
-                                  name: draft.name || "Newsletter Logisorama",
-                                });
-                              }}
-                            >
-                              <span className="text-xs uppercase tracking-widest text-[#205a43]">
-                                Modèle Logisorama
-                              </span>
-                              <strong className="mt-2 block text-xl">
-                                Votre dossier en haut de la pile.
-                              </strong>
-                              <span className="mt-2 block text-sm text-muted-foreground">
-                                640 px · vert profond & crème · images et blocs
-                                alternés
-                              </span>
-                            </button>
+                            {NEWSLETTER_TEMPLATES.map((template) => (
+                              <button
+                                key={template.id}
+                                aria-label={`Utiliser le modèle ${template.name}`}
+                                className="overflow-hidden rounded-xl border bg-[#f3f1e9] text-left hover:border-[#205a43]"
+                                onClick={() => {
+                                  if (
+                                    (draft.html || draft.subject || draft.name || draft.preheader) &&
+                                    !window.confirm("Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?")
+                                  ) return;
+                                  changeDraft({
+                                    html: template.html,
+                                    subject: template.subject,
+                                    name: template.name,
+                                    preheader: template.preheader,
+                                  });
+                                }}
+                              >
+                                <img src={template.image} alt="" className="aspect-[3/1] w-full object-cover" loading="lazy" />
+                                <span className="block p-4">
+                                  <span className="text-xs uppercase tracking-widest text-[#205a43]">{template.audience}</span>
+                                  <strong className="mt-1 block text-lg">{template.name}</strong>
+                                  <span className="mt-1 block text-sm text-muted-foreground">{template.description}</span>
+                                </span>
+                              </button>
+                            ))}
                             <Button
                               variant="outline"
                               onClick={() => {

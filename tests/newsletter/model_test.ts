@@ -125,3 +125,27 @@ Deno.test("Désinscriptions Resend : lecture et échec fermé", async () => {
       Promise.resolve(new Response("", { status: 403 }))) as typeof fetch),
   );
 });
+Deno.test("Nouveaux modèles : liens, dates et images conservés après nettoyage email", async () => {
+  for (const [file, target, expected] of [
+    ["candidature", "nouveau-mandat", "RECHERCHE"],
+    ["visite-annulee", "login", "4 octobre 2026"],
+  ]) {
+    const raw = await Deno.readTextFile(new URL(`../../src/features/newsletter/templates/${file}.html`, import.meta.url));
+    const html = cleanHtml(raw);
+    assertEquals(html.includes(expected), true);
+    assertEquals(html.includes("max-width:640px"), true);
+    assertEquals(html.includes("{{unsubscribe_url}}"), true);
+    const links = [...html.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
+    assertEquals(links.filter(x => x !== "{{unsubscribe_url}}").every(x => x === `https://logisorama.ch/${target}`), true);
+    assertEquals(links.length >= 3, true);
+    for (const m of html.matchAll(/src="https:\/\/logisorama.ch\/newsletter\/([^"]+)"/g)) {
+      const asset = await Deno.stat(new URL(`../../public/newsletter/${m[1]}`, import.meta.url));
+      assertEquals(asset.isFile, true);
+      assertEquals(asset.size < 250_000, true);
+    }
+    if (file === "visite-annulee") {
+      assertEquals(html.includes("inscrites à cette visite et connectées"), true);
+      assertEquals(html.includes("nouveau-mandat"), false);
+    }
+  }
+});
