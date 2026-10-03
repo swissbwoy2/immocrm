@@ -41,7 +41,7 @@ export function CandidatCriteresForm({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <div className="space-y-5">
-      <MandatFormStep4 data={data} onChange={(p) => setData((prev) => ({ ...prev, ...p }))} />
+      <MandatFormStep4 data={data} onChange={(p) => setData((prev) => ({ ...prev, ...p }))} hideAmountHints />
       <div className="space-y-1.5">
         <label htmlFor="crit-date-entree" className="text-sm font-medium text-muted-foreground">Date d'entrée souhaitée</label>
         <input

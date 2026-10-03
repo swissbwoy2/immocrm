@@ -12,6 +12,8 @@ interface Props {
   data: MandatFormData;
   onChange: (data: Partial<MandatFormData>) => void;
   onAddCoBuyer?: () => void;
+  /** Masque les mentions de montants (acompte/activation) dans le choix du type de recherche. */
+  hideAmountHints?: boolean;
 }
 
 function GoldCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -35,7 +37,7 @@ function StatusBadge({ viable, labelOk, labelNok }: { viable: boolean; labelOk: 
   );
 }
 
-export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props) {
+export default function MandatFormStep4({ data, onChange, onAddCoBuyer, hideAmountHints }: Props) {
   const isRental = data.type_recherche === 'Louer';
   const isPurchase = data.type_recherche === 'Acheter';
   const isCommercial = data.type_bien === 'Local commercial';
@@ -79,8 +81,8 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
       <LandingRadioGroup
         label="Que recherchez-vous ?"
         options={[
-          { value: 'Louer', label: 'Louer', description: 'Acompte: 300 CHF', icon: <Home size={20} strokeWidth={1.5} /> },
-          { value: 'Acheter', label: 'Acheter', description: "Activation: 2’500 CHF · commission 1 % du prix", icon: <Building2 size={20} strokeWidth={1.5} /> },
+          { value: 'Louer', label: 'Louer', description: hideAmountHints ? undefined : 'Acompte: 300 CHF', icon: <Home size={20} strokeWidth={1.5} /> },
+          { value: 'Acheter', label: 'Acheter', description: hideAmountHints ? undefined : "Activation: 2’500 CHF · commission 1 % du prix", icon: <Building2 size={20} strokeWidth={1.5} /> },
         ]}
         value={data.type_recherche}
         onChange={(v) => onChange({ type_recherche: v, budget_max: 0, apport_personnel: 0 })}
