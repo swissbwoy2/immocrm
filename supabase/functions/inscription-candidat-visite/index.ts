@@ -14,7 +14,7 @@ const json = (body: unknown, status = 200) =>
 
 const Body = z.object({
   annonce_id: z.string().uuid(),
-  creneau_id: z.string().uuid(),
+  creneau_id: z.string().uuid().optional(),
   prenom: z.string().trim().min(1).max(80),
   nom: z.string().trim().min(1).max(80),
   email: z.string().trim().toLowerCase().email().max(255),
@@ -67,16 +67,20 @@ Deno.serve(async (req) => {
   const { annonce_id, creneau_id, prenom, nom, email, telephone } = parsed.data;
 
   try {
-    // 1. Créneau valide
-    const { data: creneau } = await admin
-      .from("annonce_creneaux")
-      .select("id, annonce_id, date_heure, actif, capacite_max")
-      .eq("id", creneau_id)
-      .maybeSingle();
-    if (!creneau || !creneau.actif || creneau.annonce_id !== annonce_id || new Date(creneau.date_heure) <= new Date()) {
-      return json({ code: "slot_unavailable", error: "Ce créneau n'est plus disponible" }, 409);
+    // 1. Créneau valide si une visite est réservée ; sans créneau, compte uniquement.
+    let creneau: { date_heure: string; capacite_max: number | null } | null = null;
+    if (creneau_id) {
+      const { data: selected } = await admin
+        .from("annonce_creneaux")
+        .select("id, annonce_id, date_heure, actif, capacite_max")
+        .eq("id", creneau_id)
+        .maybeSingle();
+      if (!selected || !selected.actif || selected.annonce_id !== annonce_id || new Date(selected.date_heure) <= new Date()) {
+        return json({ code: "slot_unavailable", error: "Ce créneau n'est plus disponible" }, 409);
+      }
+      creneau = selected;
     }
-    if (creneau.capacite_max != null) {
+    if (creneau_id && creneau?.capacite_max != null) {
       const { count, error: cntErr } = await admin
         .from("candidatures_location")
         .select("id", { count: "exact", head: true })
@@ -101,6 +105,8 @@ Deno.serve(async (req) => {
 
     // 2. Compte
     let userId = await findUserByEmail(admin, email);
+    // Sans réservation, ne jamais ajouter un rôle à un compte existant sur la seule base d'un e-mail fourni.
+    if (userId && !creneau_id) return json({ ok: true });
     let tempPassword: string | null = null;
     if (!userId) {
       tempPassword = generatePassword();
@@ -152,6 +158,19 @@ Deno.serve(async (req) => {
       if (pErr) console.warn("inscription-candidat-visite: profil", pErr.message);
     }
 
+    if (!creneau_id) {
+      try {
+        await sendTemplateEmail("client-credentials", email, {
+          templateData: { recipient: email, tempPassword: tempPassword ?? undefined, prenom },
+          idempotencyKey: `candidat-compte-${userId}`,
+        });
+      } catch (e) {
+        console.error("inscription-candidat-visite: e-mail compte non envoyé", (e as Error)?.message);
+      }
+      return json({ ok: true });
+    }
+
+    if (!creneau) return json({ code: "slot_unavailable", error: "Ce créneau n'est plus disponible" }, 409);
     // 5. Candidature + visite
     const { error: iErr } = await admin.from("candidatures_location").insert({
       user_id: userId,
