@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { useCandidatCandidatures, RETENU_BAILLEUR } from '@/hooks/useCandidatCandidatures';
 import { PremiumDashboardHeader, PremiumKPICard } from '@/components/premium';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
-import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
@@ -64,7 +63,6 @@ export default function CandidatDashboard() {
   return (
     <div className="flex-1 overflow-y-auto">
       <PremiumPageShellV2>
-        <DashboardAdBanner />
         <PortailBannieres />
         <StoriesBar className="rounded-xl overflow-hidden" showVisites={false} />
         <PremiumDashboardHeader
