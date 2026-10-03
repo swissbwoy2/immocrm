@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
@@ -177,16 +178,14 @@ serve(async (req: Request): Promise<Response> => {
         )
         .join("");
 
-      const html = `
-        <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:600px;margin:auto">
-          <h2 style="color:#111827">${toSend.length > 1 ? "Nouvelles annonces" : "Nouvelle annonce"} correspondant à votre recherche</h2>
+      const html = renderCorporateEmail({ title: `${toSend.length > 1 ? 'Nouvelles annonces' : 'Nouvelle annonce'} correspondant à votre recherche`, category: "VOTRE RECHERCHE", bodyHtml: `
           <p style="color:#4b5563">Alerte : <strong>${esc(alerte.nom || "Ma recherche")}</strong></p>
           ${cards}
           <p style="color:#9ca3af;font-size:12px;margin-top:20px">
             Vous recevez cet e-mail car vous avez créé une alerte sur Logisorama.
             <a href="${unsubUrl}" style="color:#9ca3af">Se désinscrire de cette alerte</a>.
           </p>
-        </div>`;
+        ` });
 
       const ok = await sendEmail(
         optOut.email as string,

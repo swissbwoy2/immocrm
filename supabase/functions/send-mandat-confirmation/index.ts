@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
@@ -31,118 +32,73 @@ serve(async (req) => {
     const data: MandatConfirmationRequest = await req.json();
     console.log('Sending confirmation email to:', data.email);
 
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-    .header h1 { margin: 0; font-size: 24px; }
-    .content { background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; }
-    .section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
-    .section h3 { color: #1a365d; margin-top: 0; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
-    .info-label { color: #64748b; }
-    .info-value { font-weight: 600; color: #1e293b; }
-    .highlight-box { background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 20px; margin: 20px 0; }
-    .highlight-box h4 { color: #1e40af; margin-top: 0; }
-    .amount { font-size: 28px; color: #1e40af; font-weight: bold; }
-    .bank-details { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0; }
-    .bank-details h4 { color: #92400e; margin-top: 0; }
-    .bank-info { font-family: monospace; background: white; padding: 10px; border-radius: 4px; margin: 5px 0; }
-    .footer { text-align: center; padding: 20px; color: #64748b; font-size: 12px; }
-    .cta { background: #2563eb; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>🏠 Immo-rama.ch</h1>
-      <p style="margin: 10px 0 0 0; opacity: 0.9;">Confirmation de votre demande de mandat</p>
-    </div>
-    
-    <div class="content">
-      <p>Bonjour <strong>${data.prenom} ${data.nom}</strong>,</p>
-      
-      <p>Nous avons bien reçu votre demande de mandat de recherche. Voici un récapitulatif :</p>
-      
-      <div class="section">
-        <h3>📋 Votre recherche</h3>
-        <div class="info-row">
-          <span class="info-label">Type de recherche</span>
-          <span class="info-value">${data.type_recherche}</span>
+    const emailHtml = renderCorporateEmail({ title: 'Confirmation de votre demande de mandat', category: "VOTRE MANDAT", bodyHtml: `
+      <p style="margin:0 0 18px;">Bonjour <strong>${data.prenom} ${data.nom}</strong>,</p>
+
+      <p style="margin:0 0 18px;">Nous avons bien reçu votre demande de mandat de recherche. Voici un récapitulatif :</p>
+
+      <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
+        <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Votre recherche</h3>
+        <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+          <span style="display:block;color:#677a6c;font-size:12px;line-height:20px;">Type de recherche</span>
+          <span style="display:block;color:#202b22;font-weight:600;">${data.type_recherche}</span>
         </div>
-        <div class="info-row">
-          <span class="info-label">Type de bien</span>
-          <span class="info-value">${data.type_bien}</span>
+        <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+          <span style="display:block;color:#677a6c;font-size:12px;line-height:20px;">Type de bien</span>
+          <span style="display:block;color:#202b22;font-weight:600;">${data.type_bien}</span>
         </div>
-        <div class="info-row">
-          <span class="info-label">Nombre de pièces</span>
-          <span class="info-value">${data.pieces_recherche}</span>
+        <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+          <span style="display:block;color:#677a6c;font-size:12px;line-height:20px;">Nombre de pièces</span>
+          <span style="display:block;color:#202b22;font-weight:600;">${data.pieces_recherche}</span>
         </div>
-        <div class="info-row">
-          <span class="info-label">Région</span>
-          <span class="info-value">${data.region_recherche}</span>
+        <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+          <span style="display:block;color:#677a6c;font-size:12px;line-height:20px;">Région</span>
+          <span style="display:block;color:#202b22;font-weight:600;">${data.region_recherche}</span>
         </div>
-        <div class="info-row">
-          <span class="info-label">Budget maximum</span>
-          <span class="info-value">${data.budget_max.toLocaleString('fr-CH')} CHF</span>
+        <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+          <span style="display:block;color:#677a6c;font-size:12px;line-height:20px;">Budget maximum</span>
+          <span style="display:block;color:#202b22;font-weight:600;">${data.budget_max.toLocaleString('fr-CH')} CHF</span>
         </div>
       </div>
-      
-      <div class="highlight-box">
-        <h4>💰 Montant de l'acompte à régler</h4>
-        <p class="amount">${data.montant_acompte.toLocaleString('fr-CH')} CHF</p>
-        <p style="margin-bottom: 0; color: #1e40af;">
-          ${data.type_recherche === 'Acheter' 
+
+      <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
+        <h4 style="font-size:16px;line-height:24px;color:#193d2c;margin:0 0 12px;">Montant de l'acompte à régler</h4>
+        <p style="font-size:28px;line-height:36px;color:#205a43;font-weight:700;margin:10px 0;">${data.montant_acompte.toLocaleString('fr-CH')} CHF</p>
+        <p style="margin-bottom: 0; color: #205a43;">
+          ${data.type_recherche === 'Acheter'
             ? 'Acompte pour recherche d\'achat immobilier'
             : 'Acompte pour recherche de logement à louer'}
         </p>
       </div>
-      
+
       ${(data.payment_method ?? 'qr_invoice') === 'twint' ? `
-      <div class="bank-details">
-        <h4>📱 Paiement TWINT instantané</h4>
-        <p>Payez l'acompte par TWINT au numéro :</p>
+      <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
+        <h4 style="font-size:16px;line-height:24px;color:#193d2c;margin:0 0 12px;">Paiement TWINT instantané</h4>
+        <p style="margin:0 0 18px;">Payez l'acompte par TWINT au numéro :</p>
         <div class="bank-info" style="font-size:18px;font-weight:bold;text-align:center;">079 483 91 99</div>
-        <p style="margin-top:10px;">⚠️ <strong>Mention obligatoire</strong> dans le message TWINT :</p>
+        <p style="margin-top:10px;"><strong>Mention obligatoire</strong> dans le message TWINT :</p>
         <div class="bank-info" style="text-align:center;">${data.prenom} ${data.nom} - Acompte mandat</div>
       </div>
       ` : `
-      <div class="bank-details" style="background:#dbeafe;border-color:#3b82f6;">
-        <h4 style="color:#1e40af;">🧾 Facture QR par email</h4>
-        <p>Vous recevrez votre facture QR par email sous quelques minutes. Vous pourrez la régler depuis votre application bancaire (e-banking, mobile banking).</p>
+      <div class="bank-details" style="background:#f3f4ed;border-color:#205a43;">
+        <h4 style="color:#205a43;">Facture QR par email</h4>
+        <p style="margin:0 0 18px;">Vous recevrez votre facture QR par email sous quelques minutes. Vous pourrez la régler depuis votre application bancaire (e-banking, mobile banking).</p>
       </div>
       `}
-      
-      <div class="section">
-        <h3>📌 Prochaines étapes</h3>
+
+      <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
+        <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Prochaines étapes</h3>
         <ol style="padding-left: 20px;">
-          <li><strong>Effectuez le paiement</strong> de l'acompte via virement bancaire</li>
-          <li><strong>Vous recevrez une facture</strong> par email de notre système de facturation</li>
-          <li><strong>Dès réception du paiement</strong>, votre compte sera activé</li>
-          <li><strong>Votre agent</strong> commencera immédiatement vos recherches</li>
+          <li style="margin-bottom:8px;"><strong>Effectuez le paiement</strong> de l'acompte via virement bancaire</li>
+          <li style="margin-bottom:8px;"><strong>Vous recevrez une facture</strong> par email de notre système de facturation</li>
+          <li style="margin-bottom:8px;"><strong>Dès réception du paiement</strong>, votre compte sera activé</li>
+          <li style="margin-bottom:8px;"><strong>Votre agent</strong> commencera immédiatement vos recherches</li>
         </ol>
       </div>
-      
-      <p>Pour toute question, n'hésitez pas à nous contacter.</p>
-      
-      <p>Cordialement,<br><strong>L'équipe Immo-rama.ch</strong></p>
-    </div>
-    
-    <div class="footer">
-      <p>Immo-rama.ch<br>
-      Chemin de l'Esparcette 5, 1023 Crissier<br>
-      Tél: 021 634 31 61 | Email: info@immo-rama.ch</p>
-      <p>© ${new Date().getFullYear()} Immo-rama.ch - Tous droits réservés</p>
-    </div>
-  </div>
-</body>
-</html>
-    `;
+
+      <p style="margin:0 0 18px;">Pour toute question, n'hésitez pas à nous contacter.</p>
+
+      <p style="margin:0 0 18px;">Cordialement,<br><strong>L'équipe Immo-rama.ch</strong></p>` });
 
     const emailResponse = await resend.emails.send({
       from: `Immo-rama.ch <${fromEmail}>`,

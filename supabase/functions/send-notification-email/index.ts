@@ -1,3 +1,4 @@
+import { renderNotificationEmail as generateEmailHtml, escapeEmailHtml, emailUrl } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
@@ -74,53 +75,7 @@ const getNotificationIcon = (type: string): string => {
   return icons[type] || '🔔';
 };
 
-const getNotificationColor = (type: string): string => {
-  const colors: Record<string, string> = {
-    new_client_activated: '#10b981',
-    client_assigned: '#3b82f6',
-    new_message: '#8b5cf6',
-    new_offer: '#f59e0b',
-    new_visit: '#06b6d4',
-    visit_reminder: '#ef4444',
-    signature_reminder: '#ec4899',
-    etat_lieux_reminder: '#14b8a6',
-    // Candidature status colors (client)
-    candidature_acceptee: '#10b981',
-    candidature_refusee: '#ef4444',
-    candidature_bail_conclu: '#3b82f6',
-    candidature_attente_bail: '#f59e0b',
-    candidature_bail_recu: '#8b5cf6',
-    candidature_signature_planifiee: '#06b6d4',
-    candidature_signature_effectuee: '#10b981',
-    candidature_etat_lieux_fixe: '#14b8a6',
-    candidature_cles_remises: '#10b981',
-    // Candidature status colors (admin)
-    candidature_acceptee_admin: '#10b981',
-    candidature_refusee_admin: '#ef4444',
-    candidature_bail_conclu_admin: '#3b82f6',
-    candidature_attente_bail_admin: '#f59e0b',
-    candidature_bail_recu_admin: '#8b5cf6',
-    candidature_signature_planifiee_admin: '#06b6d4',
-    candidature_signature_effectuee_admin: '#10b981',
-    candidature_etat_lieux_fixe_admin: '#14b8a6',
-    candidature_cles_remises_admin: '#10b981',
-    // Agent notifications
-    bail_conclu: '#10b981',
-    date_signature_choisie: '#3b82f6',
-    // Visit notifications (client)
-    visit_confirmed: '#10b981',
-    visit_refused: '#ef4444',
-    // Visit notifications (admin)
-    visit_confirmed_admin: '#10b981',
-    visit_refused_admin: '#ef4444',
-    new_offer_admin: '#f59e0b',
-    new_visit_admin: '#06b6d4',
-    coagent_added: '#6366f1',
-    coagent_assignment: '#6366f1',
-    badge_earned: '#f59e0b',
-  };
-  return colors[type] || '#6366f1';
-};
+
 
 // Send push notification to user
 async function sendPushNotification(
@@ -158,83 +113,7 @@ async function sendPushNotification(
   }
 }
 
-const generateEmailHtml = (
-  title: string,
-  message: string,
-  type: string,
-  link?: string,
-  userName?: string
-): string => {
-  const icon = getNotificationIcon(type);
-  const color = getNotificationColor(type);
-  const baseUrl = 'https://logisorama.ch';
-  const fullLink = link ? `${baseUrl}${link}` : null;
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%); padding: 32px 40px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 16px;">${icon}</div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">${title}</h1>
-            </td>
-          </tr>
-          
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              ${userName ? `<p style="margin: 0 0 20px; color: #6b7280; font-size: 16px;">Bonjour ${userName},</p>` : ''}
-              
-              <div style="background-color: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">${message}</p>
-              </div>
-              
-              ${fullLink ? `
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${fullLink}" style="display: inline-block; background-color: ${color}; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                      Voir les détails
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              ` : ''}
-            </td>
-          </tr>
-          
-          ${type === 'app_update' ? `<tr><td style="padding:8px 40px 28px;text-align:center;"><a href="https://<!-- Footer -->" style="display:inline-block;background-color:#000000;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin:6px;">Ouvrir dans App Store</a><a href="https://play.google.com/store/apps/details?id=ch.logisorama.app" style="display:inline-block;background-color:#16a34a;color:#ffffff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin:6px;">Disponible sur Google Play</a></td></tr>` : ''}<!-- Footer -->
-          <tr>
-            <td style="background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
-                Cet email est une notification automatique de Logisorama
-              </p>
-              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} Logisorama - Tous droits réservés
-              </p>
-            </td>
-          </tr>
-          
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -263,7 +142,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const requestData: NotificationEmailRequest = await req.json();
-    
+
     let user_id: string;
     let notification_type: string;
     let title: string;
@@ -275,7 +154,7 @@ serve(async (req) => {
     if (requestData.notification_id) {
       notificationId = requestData.notification_id;
       console.log(`Fetching notification from DB: ${notificationId}`);
-      
+
       const { data: notification, error: notifError } = await supabase
         .from("notifications")
         .select("*")
@@ -295,7 +174,7 @@ serve(async (req) => {
       title = notification.title;
       message = notification.message;
       link = notification.link;
-      
+
       console.log(`Notification loaded: user=${user_id}, type=${notification_type}, title=${title}`);
     } else {
       // Legacy support: use direct values
@@ -376,7 +255,8 @@ serve(async (req) => {
           emailHtml = emailHtml.replace("</body>", `${pixel}</body>`);
           if (requestData.cta_url) {
             const tracked = `${base}/track-email-click?id=${trackingLogId}&url=${encodeURIComponent(requestData.cta_url)}`;
-            emailHtml = emailHtml.split(requestData.cta_url).join(tracked);
+            const originalHref = `href="${escapeEmailHtml(emailUrl(requestData.cta_url))}"`;
+            emailHtml = emailHtml.split(originalHref).join(`href="${escapeEmailHtml(tracked)}"`);
           }
         }
       } catch (e) {
@@ -389,14 +269,14 @@ serve(async (req) => {
 
     // Send email via Resend - use hardcoded value to avoid env variable issues
     const fromEmail = "Logisorama <support@logisorama.ch>";
-    
+
     console.log(`Sending email from: ${fromEmail} to: ${profile.email}`);
-    
+
     // Retry logic with exponential backoff for rate limiting
     const maxRetries = 3;
     let lastError: any = null;
     let emailSent = false;
-    
+
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         // Add delay for retries (exponential backoff)
@@ -405,7 +285,7 @@ serve(async (req) => {
           console.log(`Rate limited, waiting ${delay}ms before retry ${attempt + 1}/${maxRetries}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
-        
+
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: fromEmail,
           to: [profile.email],
@@ -434,29 +314,29 @@ serve(async (req) => {
             .update({ status: "sent", provider_message_id: emailData?.id ?? null })
             .eq("id", trackingLogId);
         }
-        
+
         // Mark notification as email_sent if we have notification_id
         if (notificationId) {
           const { error: updateError } = await supabase
             .from("notifications")
             .update({ email_sent: true })
             .eq("id", notificationId);
-          
+
           if (updateError) {
             console.warn("Failed to mark notification as email_sent:", updateError);
           } else {
             console.log(`Notification ${notificationId} marked as email_sent`);
           }
         }
-        
+
         // Wait for push notification to complete
         await pushPromise;
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             message: "Notification email and push sent",
-            email_id: emailData?.id 
+            email_id: emailData?.id
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -469,7 +349,7 @@ serve(async (req) => {
         throw err;
       }
     }
-    
+
     // All retries exhausted
     console.error("Max retries reached, email not sent:", lastError);
     throw new Error("Rate limit exceeded after retries");
@@ -478,9 +358,9 @@ serve(async (req) => {
     console.error("Error in send-notification-email:", error);
     return new Response(
       JSON.stringify({ success: false, error: (error instanceof Error ? error.message : String(error)) }),
-      { 
+      {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
   }

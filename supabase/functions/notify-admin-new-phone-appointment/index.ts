@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 // Notify admin (email + WhatsApp + in-app) when a new bureau RDV is booked.
 // Public endpoint (no auth) — called right after the public form insert.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -49,27 +50,19 @@ Deno.serve(async (req) => {
     // 1) EMAIL admin (Resend)
     if (RESEND_API_KEY) {
       try {
-        const html = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 28px; color: white; margin-bottom: 20px;">
-              <div style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Nouveau RDV bureau</div>
-              <h1 style="margin: 0; font-size: 22px;">🚨 ${appt.prospect_name || 'Prospect'}</h1>
-            </div>
-            <div style="background: #f8f9fa; border-radius: 12px; padding: 24px;">
+        const html = renderCorporateEmail({ title: 'Nouveau rendez-vous au bureau', category: "SUIVI ÉQUIPE", bodyHtml: `<div style="background: #f3f4ed; border-radius: 12px; padding: 24px;">
               <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-                <tr><td style="padding: 6px 0; color: #666; width: 110px;">📆 Date</td><td style="padding: 6px 0; font-weight: 600;">${dateStr}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">🕐 Heure</td><td style="padding: 6px 0; font-weight: 600;">${timeStr}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">👤 Nom</td><td style="padding: 6px 0; font-weight: 600;">${appt.prospect_name || '—'}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">📞 Téléphone</td><td style="padding: 6px 0; font-weight: 600;"><a href="tel:${appt.prospect_phone}">${appt.prospect_phone || '—'}</a></td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">✉️ Email</td><td style="padding: 6px 0; font-weight: 600;"><a href="mailto:${appt.prospect_email}">${appt.prospect_email || '—'}</a></td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">🔗 Source</td><td style="padding: 6px 0;">${appt.source_form || '—'}</td></tr>
-                ${appt.notes_admin ? `<tr><td style="padding: 6px 0; color: #666; vertical-align: top;">📝 Note</td><td style="padding: 6px 0; font-style: italic;">${appt.notes_admin}</td></tr>` : ''}
+                <tr><td style="padding: 6px 0; color: #666; width: 110px;">Date</td><td style="padding: 6px 0; font-weight: 600;">${dateStr}</td></tr>
+                <tr><td style="padding: 6px 0; color: #666;">Heure</td><td style="padding: 6px 0; font-weight: 600;">${timeStr}</td></tr>
+                <tr><td style="padding: 6px 0; color: #666;">Nom</td><td style="padding: 6px 0; font-weight: 600;">${appt.prospect_name || '—'}</td></tr>
+                <tr><td style="padding: 6px 0; color: #666;">Téléphone</td><td style="padding: 6px 0; font-weight: 600;"><a href="tel:${appt.prospect_phone}">${appt.prospect_phone || '—'}</a></td></tr>
+                <tr><td style="padding: 6px 0; color: #666;">Email</td><td style="padding: 6px 0; font-weight: 600;"><a href="mailto:${appt.prospect_email}">${appt.prospect_email || '—'}</a></td></tr>
+                <tr><td style="padding: 6px 0; color: #666;">Source</td><td style="padding: 6px 0;">${appt.source_form || '—'}</td></tr>
+                ${appt.notes_admin ? `<tr><td style="padding: 6px 0; color: #666; vertical-align: top;">Note</td><td style="padding: 6px 0; font-style: italic;">${appt.notes_admin}</td></tr>` : ''}
               </table>
             </div>
-            <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
-              Logisorama by Immo-Rama · Notification interne
-            </p>
-          </div>`;
+            ` });
+
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },

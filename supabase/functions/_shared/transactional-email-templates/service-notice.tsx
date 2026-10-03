@@ -1,8 +1,7 @@
+import { EmailLayout, emailStyles } from '../email-layout.tsx'
 import type { TemplateEntry } from './registry.ts'
 import * as React from 'npm:react@18.3.1'
-import {
-  Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text,
-} from 'npm:@react-email/components@0.0.22'
+import { Button, Heading, Section, Text } from 'npm:@react-email/components@0.0.22'
 
 interface ServiceNoticeProps {
   prenom?: string
@@ -12,17 +11,8 @@ interface ServiceNoticeProps {
 const SITE_URL = 'https://logisorama.ch'
 
 export const ServiceNoticeEmail = ({ prenom, siteUrl = SITE_URL }: ServiceNoticeProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Communication officielle — vos demandes sont désormais traitées exclusivement via l'onglet Support</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Section style={header}>
-          <Text style={brand}>Logisorama</Text>
-          <Text style={brandSub}>by Immo-rama.ch</Text>
-        </Section>
-
-        <Heading style={h1}>Communication officielle</Heading>
+  <EmailLayout preview={`Communication officielle — vos demandes sont désormais traitées exclusivement via l'onglet Support`}>
+<Heading className="email-heading" style={h1}>Communication officielle</Heading>
         <Text style={text}>{prenom ? `Madame, Monsieur ${prenom},` : 'Madame, Monsieur,'}</Text>
 
         <Text style={text}>
@@ -85,14 +75,7 @@ export const ServiceNoticeEmail = ({ prenom, siteUrl = SITE_URL }: ServiceNotice
         <Text style={text}>
           Nous vous renouvelons nos excuses pour ce désagrément et vous remercions de votre compréhension.
         </Text>
-
-        <Hr style={hr} />
-        <Text style={footer}>
-          Logisorama — Immo-rama.ch · +41 21 634 31 61 · info@immo-rama.ch
-        </Text>
-      </Container>
-    </Body>
-  </Html>
+    </EmailLayout>
 )
 
 export const template = {
@@ -102,30 +85,4 @@ export const template = {
   previewData: { prenom: 'Dupont' },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Helvetica, Arial, sans-serif' }
-const container = { padding: '24px 28px', maxWidth: '640px' }
-const header = { paddingBottom: '8px' }
-const brand = { fontSize: '20px', fontWeight: 700, color: '#0f766e', margin: '0' }
-const brandSub = { fontSize: '12px', color: '#64748b', margin: '2px 0 0' }
-const h1 = { fontSize: '22px', color: '#0f172a', margin: '20px 0 12px' }
-const text = { fontSize: '15px', lineHeight: '24px', color: '#334155', margin: '0 0 14px' }
-const box = {
-  backgroundColor: '#f8fafc',
-  border: '1px solid #e2e8f0',
-  borderRadius: '10px',
-  padding: '14px 16px',
-  margin: '0 0 12px',
-}
-const boxTitle = { fontSize: '14px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }
-const boxText = { fontSize: '14px', lineHeight: '22px', color: '#334155', margin: '0' }
-const button = {
-  backgroundColor: '#0f766e',
-  color: '#ffffff',
-  fontSize: '15px',
-  fontWeight: 600,
-  padding: '12px 24px',
-  borderRadius: '8px',
-  textDecoration: 'none',
-}
-const hr = { borderColor: '#e2e8f0', margin: '24px 0 12px' }
-const footer = { fontSize: '12px', color: '#64748b', margin: '0' }
+const { box, boxText, boxTitle, button, h1, text } = emailStyles

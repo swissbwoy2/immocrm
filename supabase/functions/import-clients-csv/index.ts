@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -70,32 +71,14 @@ interface ImportResult {
 
 // Generate welcome email for newly created accounts (with password)
 function generateCreationEmailHtml(prenom: string, nom: string, email: string, password: string, appUrl: string): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 40px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
-          <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 600;">Bienvenue chez Immo-Rama</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 40px 30px;">
+  return renderCorporateEmail({ title: 'Bienvenue chez Immo-Rama', category: 'VOTRE COMPTE', bodyHtml: `
               <p style="margin: 0 0 20px; color: #333; font-size: 16px; line-height: 1.6;">
                 Bonjour <strong>${prenom} ${nom}</strong>,
               </p>
               <p style="margin: 0 0 30px; color: #666; font-size: 15px; line-height: 1.6;">
                 Votre compte client a été créé avec succès sur la plateforme Immo-Rama.
               </p>
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; border-radius: 8px; padding: 24px; margin-bottom: 30px;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4ed; border-radius: 8px; padding: 24px; margin-bottom: 30px;">
                 <tr>
                   <td>
                     <p style="margin: 0 0 16px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -115,7 +98,7 @@ function generateCreationEmailHtml(prenom: string, nom: string, email: string, p
                           <span style="color: #666; font-size: 14px;">🔐 Mot de passe :</span>
                         </td>
                         <td style="padding: 8px 0;">
-                          <code style="background-color: white; padding: 4px 8px; border-radius: 4px; color: #667eea; font-size: 15px; font-weight: 600;">${password}</code>
+                          <code style="background-color: white; padding: 4px 8px; border-radius: 4px; color: #205a43; font-size: 15px; font-weight: 600;">${password}</code>
                         </td>
                       </tr>
                     </table>
@@ -125,7 +108,7 @@ function generateCreationEmailHtml(prenom: string, nom: string, email: string, p
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
                   <td align="center">
-                    <a href="${appUrl}/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                    <a href="${appUrl}/login" style="display: inline-block; background: #205a43; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; ">
                       Se connecter maintenant →
                     </a>
                   </td>
@@ -135,7 +118,7 @@ function generateCreationEmailHtml(prenom: string, nom: string, email: string, p
                 <tr>
                   <td>
                     <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.5;">
-                      ⚠️ <strong>Important :</strong> Pour votre sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.
+                      <strong>Important :</strong> Pour votre sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.
                     </p>
                   </td>
                 </tr>
@@ -143,49 +126,12 @@ function generateCreationEmailHtml(prenom: string, nom: string, email: string, p
               <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
                 Besoin d'aide ? N'hésitez pas à contacter votre agent ou notre support.
               </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 24px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-              <p style="margin: 0 0 8px; color: #666; font-size: 13px;">
-                Cordialement,<br>
-                <strong style="color: #333;">L'équipe Immo-Rama</strong>
-              </p>
-              <p style="margin: 8px 0 0; color: #999; font-size: 12px;">
-                Cet email a été envoyé automatiquement, merci de ne pas y répondre.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+            ` });
 }
 
 // Generate activation email for accounts that were activated (without password)
 function generateActivationEmailHtml(prenom: string, nom: string, appUrl: string): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 40px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
-          <tr>
-            <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px 20px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
-              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 600;">Votre compte est activé !</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 40px 30px;">
+  return renderCorporateEmail({ title: 'Votre compte est activé !', category: 'VOTRE COMPTE', bodyHtml: `
               <p style="margin: 0 0 20px; color: #333; font-size: 16px; line-height: 1.6;">
                 Bonjour <strong>${prenom} ${nom}</strong>,
               </p>
@@ -193,57 +139,39 @@ function generateActivationEmailHtml(prenom: string, nom: string, appUrl: string
                 Excellente nouvelle ! Nous avons bien reçu votre mandat de recherche et votre acompte a été comptabilisé.
               </p>
               <p style="margin: 0 0 30px; color: #666; font-size: 15px; line-height: 1.6;">
-                <strong style="color: #22c55e;">Votre compte Immo-Rama est maintenant pleinement activé</strong> et vous pouvez accéder à toutes les fonctionnalités de votre espace client.
+                <strong style="color: #205a43;">Votre compte Immo-Rama est maintenant pleinement activé</strong> et vous pouvez accéder à toutes les fonctionnalités de votre espace client.
               </p>
-              
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f0fdf4; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #bbf7d0;">
+
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4ed; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #bbf7d0;">
                 <tr>
                   <td>
-                    <p style="margin: 0 0 16px; color: #166534; font-size: 14px; font-weight: 600;">
+                    <p style="margin: 0 0 16px; color: #205a43; font-size: 14px; font-weight: 600;">
                       ✅ Ce que vous pouvez faire maintenant :
                     </p>
-                    <ul style="margin: 0; padding-left: 20px; color: #166534; font-size: 14px; line-height: 1.8;">
-                      <li>Consulter les offres de biens qui correspondent à vos critères</li>
-                      <li>Planifier des visites avec votre agent</li>
-                      <li>Gérer vos documents et votre dossier</li>
-                      <li>Échanger avec votre agent via la messagerie</li>
+                    <ul style="margin: 0; padding-left: 20px; color: #205a43; font-size: 14px; line-height: 1.8;">
+                      <li style="margin-bottom:8px;">Consulter les offres de biens qui correspondent à vos critères</li>
+                      <li style="margin-bottom:8px;">Planifier des visites avec votre agent</li>
+                      <li style="margin-bottom:8px;">Gérer vos documents et votre dossier</li>
+                      <li style="margin-bottom:8px;">Échanger avec votre agent via la messagerie</li>
                     </ul>
                   </td>
                 </tr>
               </table>
-              
+
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                 <tr>
                   <td align="center">
-                    <a href="${appUrl}/login" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
+                    <a href="${appUrl}/login" style="display: inline-block; background: #205a43; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; ">
                       Accéder à mon espace client →
                     </a>
                   </td>
                 </tr>
               </table>
-              
+
               <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
                 Votre agent va bientôt vous contacter pour commencer votre recherche. En attendant, n'hésitez pas à compléter votre dossier si ce n'est pas déjà fait.
               </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 24px 30px; text-align: center; border-top: 1px solid #e9ecef;">
-              <p style="margin: 0 0 8px; color: #666; font-size: 13px;">
-                Cordialement,<br>
-                <strong style="color: #333;">L'équipe Immo-Rama</strong>
-              </p>
-              <p style="margin: 8px 0 0; color: #999; font-size: 12px;">
-                Cet email a été envoyé automatiquement, merci de ne pas y répondre.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+            ` });
 }
 
 serve(async (req) => {
@@ -309,7 +237,7 @@ serve(async (req) => {
     for (const clientData of clients) {
       let isNewClient = false;
       let wasActivated = false;
-      
+
       try {
         let userId: string;
         let isUpdate = false;
@@ -325,10 +253,10 @@ serve(async (req) => {
           // User exists - we'll update their data
           userId = existingProfile.id;
           isUpdate = true;
-          
+
           // Check if account was inactive (will be activated)
           wasActivated = existingProfile.actif === false;
-          
+
           console.log(`User ${clientData.user.email} already exists (actif: ${existingProfile.actif}), updating...`);
         } else {
           // Create new user in auth
@@ -365,7 +293,7 @@ serve(async (req) => {
             console.error('Profile update error:', profileError);
             throw profileError;
           }
-          
+
           if (wasActivated) {
             console.log(`Account ${clientData.user.email} has been ACTIVATED`);
           }
@@ -448,11 +376,11 @@ serve(async (req) => {
           if (wasActivated) {
             result.activated++;
             console.log(`Successfully activated: ${clientData.user.email}`);
-            
+
             // Send activation email (different from creation email - no password)
             try {
               console.log(`Sending activation email to: ${clientData.user.email}`);
-              
+
               const emailHtml = generateActivationEmailHtml(
                 clientData.user.prenom,
                 clientData.user.nom,
@@ -465,7 +393,7 @@ serve(async (req) => {
                 subject: '🎉 Votre compte Immo-Rama est maintenant activé !',
                 html: emailHtml,
               });
-              
+
               result.emailsSent++;
               console.log(`Activation email sent successfully to: ${clientData.user.email}`);
             } catch (emailError) {
@@ -498,7 +426,7 @@ serve(async (req) => {
               .select('nombre_clients_assignes')
               .eq('id', agentId)
               .single();
-            
+
             if (agent) {
               await supabase
                 .from('agents')
@@ -514,7 +442,7 @@ serve(async (req) => {
           if (isNewClient) {
             try {
               console.log(`Sending welcome email to: ${clientData.user.email}`);
-              
+
               const emailHtml = generateCreationEmailHtml(
                 clientData.user.prenom,
                 clientData.user.nom,
@@ -529,7 +457,7 @@ serve(async (req) => {
                 subject: 'Bienvenue chez Immo-Rama - Vos identifiants de connexion',
                 html: emailHtml,
               });
-              
+
               result.emailsSent++;
               console.log(`Welcome email sent successfully to: ${clientData.user.email}`);
             } catch (emailError) {

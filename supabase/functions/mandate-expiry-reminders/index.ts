@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -31,18 +32,8 @@ function buildEmailHtml(opts: {
   const endDateStr = endDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
     day: "2-digit", month: "long", year: "numeric",
   });
-  const isUrgent = daysRemaining <= 7;
-  const isCritical = daysRemaining <= 3;
-  const headerColor = isCritical ? "#dc2626" : isUrgent ? "#ea580c" : "#1e40af";
-  const emoji = isCritical ? "🚨" : isUrgent ? "⚠️" : "⏰";
 
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
-    <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-      <div style="background:${headerColor};color:white;padding:30px 24px;text-align:center;">
-        <div style="font-size:48px;margin-bottom:8px;">${emoji}</div>
-        <h1 style="margin:0;font-size:24px;font-weight:700;">Votre mandat se termine dans ${daysRemaining} jour${daysRemaining > 1 ? "s" : ""}</h1>
-      </div>
-      <div style="padding:30px 24px;color:#1f2937;">
+  return renderCorporateEmail({ title: `Votre mandat se termine dans ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''}`, category: 'VOTRE MANDAT', bodyHtml: `
         <p style="font-size:16px;margin:0 0 16px;">Bonjour ${prenom} ${nom},</p>
         <p style="font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 24px;">
           Votre mandat de recherche immobilière arrive à échéance le <strong>${endDateStr}</strong>.
@@ -56,15 +47,15 @@ function buildEmailHtml(opts: {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
           <tr>
             <td style="padding:0 0 10px 0;">
-              <a href="${renewUrl}" style="display:block;background:#1e40af;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+              <a href="${renewUrl}" style="display:block;background:#205a43;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
                 ✓ Renouveler maintenant
               </a>
             </td>
           </tr>
           ${refundEligible ? `<tr>
             <td style="padding:0 0 10px 0;">
-              <a href="${refundUrl}" style="display:block;background:#16a34a;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-                💰 Annuler + Demander mon remboursement
+              <a href="${refundUrl}" style="display:block;background:#205a43;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                Annuler + Demander mon remboursement
               </a>
             </td>
           </tr>` : ""}
@@ -77,18 +68,18 @@ function buildEmailHtml(opts: {
           </tr>
           <tr>
             <td style="padding:0 0 10px 0;">
-              <a href="${pauseUrl}" style="display:block;background:#eff6ff;color:#1e40af;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #bfdbfe;">
-                ⏸️ Mettre en pause
+              <a href="${pauseUrl}" style="display:block;background:#f3f4ed;color:#205a43;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #bfdbfe;">
+                Mettre en pause
               </a>
             </td>
           </tr>
         </table>
-        ${!refundEligible ? `<div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:12px;border-radius:6px;margin:0 0 16px;">
-          <p style="margin:0;font-size:13px;color:#1e3a8a;">
-            ℹ️ Le remboursement deviendra disponible à partir du <strong>${REFUND_ELIGIBILITY_DAY}ème jour</strong> de votre mandat (jour actuel : ${daysSinceSignature}).
+        ${!refundEligible ? `<div style="background:#f3f4ed;border-left:4px solid #205a43;padding:12px;border-radius:6px;margin:0 0 16px;">
+          <p style="margin:0;font-size:13px;color:#205a43;">
+            Le remboursement deviendra disponible à partir du <strong>${REFUND_ELIGIBILITY_DAY}ème jour</strong> de votre mandat (jour actuel : ${daysSinceSignature}).
           </p>
-        </div>` : `<div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:12px;border-radius:6px;margin:0 0 16px;">
-          <p style="margin:0;font-size:13px;color:#166534;">
+        </div>` : `<div style="background:#f3f4ed;border-left:4px solid #205a43;padding:12px;border-radius:6px;margin:0 0 16px;">
+          <p style="margin:0;font-size:13px;color:#205a43;">
             ✅ Vous êtes <strong>éligible au remboursement</strong> (sauf si vous avez trouvé par vos propres moyens).
           </p>
         </div>`}
@@ -96,14 +87,8 @@ function buildEmailHtml(opts: {
           Vous pouvez aussi gérer votre mandat depuis votre espace client.
         </p>
         <p style="font-size:13px;color:#6b7280;margin:0;">
-          <a href="${APP_BASE_URL}/client/mon-contrat" style="color:#1e40af;">Accéder à mon espace</a>
-        </p>
-      </div>
-      <div style="background:#f9fafb;padding:16px 24px;text-align:center;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;">
-        Immo-rama.ch — Votre partenaire pour trouver votre logement
-      </div>
-    </div>
-  </body></html>`;
+          <a href="${APP_BASE_URL}/client/mon-contrat" style="color:#205a43;">Accéder à mon espace</a>
+        </p>` });
 }
 
 serve(async (req) => {
@@ -295,27 +280,21 @@ serve(async (req) => {
               refundWindowEnd.setDate(refundWindowEnd.getDate() + MANDAT_DURATION_DAYS);
               const refundStartStr = refundWindowStart.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
               const refundEndStr = refundWindowEnd.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
-              const autoRenewHtml = `<!DOCTYPE html><html><body style="font-family:-apple-system,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
-                <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                  <div style="background:#1e40af;color:white;padding:30px 24px;text-align:center;">
-                    <div style="font-size:48px;margin-bottom:8px;">🔄</div>
-                    <h1 style="margin:0;font-size:22px;font-weight:700;">Votre mandat a été renouvelé automatiquement pour 90 jours</h1>
-                  </div>
-                  <div style="padding:30px 24px;color:#1f2937;">
+              const autoRenewHtml = renderCorporateEmail({ title: 'Votre mandat a été renouvelé automatiquement pour 90 jours', category: 'VOTRE MANDAT', bodyHtml: `
                     <p style="font-size:16px;margin:0 0 16px;">Bonjour ${profile.prenom ?? ""} ${profile.nom ?? ""},</p>
                     <p style="font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 20px;">
                       Votre mandat de recherche a été <strong>renouvelé automatiquement pour une nouvelle période de 90 jours</strong>, jusqu'au <strong>${newEndStr}</strong>. Nous continuons activement les recherches pour vous.
                     </p>
                     <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;border-radius:8px;margin:0 0 20px;">
                       <p style="margin:0;font-size:14px;color:#991b1b;font-weight:600;">
-                        ⚠️ Aucun remboursement n'est possible pendant cette période.
+                        Aucun remboursement n'est possible pendant cette période.
                       </p>
                     </div>
-                    <div style="background:#eff6ff;border-left:4px solid #3b82f6;padding:16px;border-radius:8px;margin:0 0 20px;">
-                      <p style="margin:0 0 8px;font-size:14px;color:#1e3a8a;">
-                        ℹ️ <strong>Fenêtre de remboursement</strong>
+                    <div style="background:#f3f4ed;border-left:4px solid #205a43;padding:16px;border-radius:8px;margin:0 0 20px;">
+                      <p style="margin:0 0 8px;font-size:14px;color:#205a43;">
+                        <strong>Fenêtre de remboursement</strong>
                       </p>
-                      <p style="margin:0;font-size:14px;color:#1e3a8a;line-height:1.6;">
+                      <p style="margin:0;font-size:14px;color:#205a43;line-height:1.6;">
                         Pour bénéficier d'un remboursement, vous devez en faire la demande pendant la <strong>fenêtre de 10 jours</strong>, valable du <strong>80ème au 90ème jour</strong> de votre mandat de recherche — soit entre le <strong>${refundStartStr}</strong> et le <strong>${refundEndStr}</strong>. Un rappel automatique vous sera envoyé au 80ème jour.
                       </p>
                     </div>
@@ -326,17 +305,11 @@ serve(async (req) => {
                     </div>
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
                       <tr><td>
-                        <a href="${APP_BASE_URL}/client/mon-contrat" style="display:block;background:#1e40af;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                        <a href="${APP_BASE_URL}/client/mon-contrat" style="display:block;background:#205a43;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
                           Accéder à mon espace
                         </a>
                       </td></tr>
-                    </table>
-                  </div>
-                  <div style="background:#f9fafb;padding:16px 24px;text-align:center;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;">
-                    Logisorama — Immo-rama.ch · Votre partenaire pour trouver votre logement
-                  </div>
-                </div>
-              </body></html>`;
+                    </table>` });
               await fetch("https://api.resend.com/emails", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },

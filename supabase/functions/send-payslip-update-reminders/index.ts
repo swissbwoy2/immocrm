@@ -1,3 +1,4 @@
+import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -298,22 +299,5 @@ function buildContent(level: Level, fullName: string, targetMonth: string, lates
 }
 
 function buildEmailHtml(opts: { title: string; bodyHtml: string; ctaUrl: string; ctaLabel: string; color: string }) {
-  return `<!DOCTYPE html><html><body style="font-family:-apple-system,Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8fafc;">
-    <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-      <div style="background:${opts.color};color:white;padding:24px;text-align:center;">
-        <h1 style="margin:0;font-size:20px;font-weight:700;">${opts.title}</h1>
-      </div>
-      <div style="padding:24px;color:#1f2937;font-size:15px;line-height:1.6;">
-        ${opts.bodyHtml}
-        <div style="text-align:center;margin:28px 0 8px;">
-          <a href="${opts.ctaUrl}" style="display:inline-block;background:${opts.color};color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
-            ${opts.ctaLabel}
-          </a>
-        </div>
-      </div>
-      <div style="background:#f9fafb;padding:14px 24px;text-align:center;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;">
-        Immo-rama.ch — Votre partenaire pour trouver votre logement
-      </div>
-    </div>
-  </body></html>`;
+  return renderCorporateEmail({ title: opts.title, category: 'VOTRE DOSSIER', bodyHtml: opts.bodyHtml + emailButton(opts.ctaLabel, opts.ctaUrl) });
 }
