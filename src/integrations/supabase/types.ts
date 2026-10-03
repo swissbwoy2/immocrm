@@ -7803,6 +7803,153 @@ export type Database = {
           },
         ]
       }
+      newsletter_contacts: {
+        Row: {
+          categories: string[]
+          created_at: string
+          email: string
+          excluded: boolean
+          first_name: string
+          id: string
+          kind: string
+          last_name: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          categories?: string[]
+          created_at?: string
+          email: string
+          excluded?: boolean
+          first_name?: string
+          id?: string
+          kind?: string
+          last_name?: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          categories?: string[]
+          created_at?: string
+          email?: string
+          excluded?: boolean
+          first_name?: string
+          id?: string
+          kind?: string
+          last_name?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      newsletter_deliveries: {
+        Row: {
+          attempts: number
+          contact_id: string
+          email: string
+          error: string | null
+          first_attempt_at: string | null
+          id: string
+          lease_until: string | null
+          newsletter_id: string
+          provider_id: string | null
+          retry_at: string
+          sent_at: string | null
+          status: string
+          unsubscribe_token: string
+        }
+        Insert: {
+          attempts?: number
+          contact_id: string
+          email: string
+          error?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          lease_until?: string | null
+          newsletter_id: string
+          provider_id?: string | null
+          retry_at?: string
+          sent_at?: string | null
+          status?: string
+          unsubscribe_token?: string
+        }
+        Update: {
+          attempts?: number
+          contact_id?: string
+          email?: string
+          error?: string | null
+          first_attempt_at?: string | null
+          id?: string
+          lease_until?: string | null
+          newsletter_id?: string
+          provider_id?: string | null
+          retry_at?: string
+          sent_at?: string | null
+          status?: string
+          unsubscribe_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_deliveries_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_deliveries_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletters: {
+        Row: {
+          created_at: string
+          created_by: string
+          html: string
+          id: string
+          name: string
+          revision: number
+          scheduled_at: string | null
+          sender: string | null
+          status: string
+          subject: string
+          updated_at: string
+          worker_error: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          html: string
+          id?: string
+          name: string
+          revision?: number
+          scheduled_at?: string | null
+          sender?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          worker_error?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          html?: string
+          id?: string
+          name?: string
+          revision?: number
+          scheduled_at?: string | null
+          sender?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          worker_error?: string | null
+        }
+        Relationships: []
+      }
       notification_preferences: {
         Row: {
           agent_messages_enabled: boolean
@@ -14165,6 +14312,59 @@ export type Database = {
         Returns: string
       }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      newsletter_cancel: { Args: { p_id: string }; Returns: undefined }
+      newsletter_claim: {
+        Args: never
+        Returns: {
+          attempts: number
+          contact_id: string
+          email: string
+          error: string | null
+          first_attempt_at: string | null
+          id: string
+          lease_until: string | null
+          newsletter_id: string
+          provider_id: string | null
+          retry_at: string
+          sent_at: string | null
+          status: string
+          unsubscribe_token: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "newsletter_deliveries"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      newsletter_enqueue: {
+        Args: {
+          p_id: string
+          p_ids: string[]
+          p_revision: number
+          p_scheduled: string
+          p_sender: string
+        }
+        Returns: number
+      }
+      newsletter_finish: { Args: never; Returns: undefined }
+      newsletter_import_contacts: {
+        Args: {
+          p_categories: string[]
+          p_kind: string
+          p_rows: Json
+          p_source: string
+        }
+        Returns: number
+      }
+      newsletter_record_optouts: {
+        Args: { p_emails: string[] }
+        Returns: undefined
+      }
+      newsletter_verify_dispatch: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       notify_offre_action_required: {
         Args: {
           _link_prefix: string
