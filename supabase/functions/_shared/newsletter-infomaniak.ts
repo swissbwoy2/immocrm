@@ -65,8 +65,26 @@ export class Infomaniak {
         /[^a-zA-Z0-9_-]/g,
         "",
       ).slice(0, 80);
+      // Diagnostic minimal et sûr : méthode, chemin sans querystring, statut,
+      // code machine et uniquement les NOMS des champs de validation rejetés
+      // (jamais leurs valeurs, jamais de corps, destinataires ou secret).
+      const endpoint = `${method} ${path.split("?")[0]}`;
+      const fieldNames = new Set<string>();
+      const collect = (v: unknown) => {
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+          for (const k of Object.keys(v as Record<string, unknown>)) {
+            if (/^[a-zA-Z0-9_.[\]-]{1,80}$/.test(k)) fieldNames.add(k);
+          }
+        }
+      };
+      collect(result.error?.fields);
+      collect(result.error?.errors);
+      collect(result.error?.validation);
+      const fields = [...fieldNames].slice(0, 30).join(",");
       throw new Error(
-        `Infomaniak (${response.status}, ${code}). Vérifiez le domaine, les crédits et les droits de la clé.`,
+        `Infomaniak (${response.status}, ${code}) sur ${endpoint}${
+          fields ? ` — champs rejetés: ${fields}` : ""
+        }. Vérifiez le domaine, les crédits et les droits de la clé.`,
       );
     }
     return result;
