@@ -38,9 +38,53 @@ let contacts: Contact[] = [
   },
 ];
 let campaigns: Campaign[] = [];
+const forms: Record<string, unknown>[] = [];
 export async function newsletterApi<T>(b: Record<string, unknown>): Promise<T> {
   let result: unknown;
   switch (b.action) {
+    case "asset-upload":
+      result = { url: "https://logisorama.ch/newsletter/visuel-premium.jpg" };
+      break;
+    case "forms-list":
+      result = { forms };
+      break;
+    case "form-save": {
+      const id = String(b.id || b.request_id);
+      const f = {
+        ...b,
+        id,
+        provider_form_id: 123,
+        provider_domain_id: 66294,
+        updated_at: new Date().toISOString(),
+      };
+      const index = forms.findIndex((x) => x.id === id);
+      if (index >= 0) forms[index] = f;
+      else forms.push(f);
+      result = { id };
+      break;
+    }
+    case "form-get": {
+      const f = forms.find((x) => x.id === b.id)!;
+      result = {
+        local: f,
+        form: {
+          ...f,
+          fields: [
+            { id: 2, selected: f.firstname },
+            { id: 3, selected: f.lastname },
+          ],
+          codes: {
+            js: '<script src="https://example.com/form.js"></script>',
+            html: "<form>Exemple local</form>",
+          },
+          statistics: { display: 0, conversions: 0 },
+        },
+      };
+      break;
+    }
+    case "form-sync":
+      result = { imported: 0 };
+      break;
     case "connection":
       result = {
         ready: true,

@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
+  LayoutDashboard,
+  FileInput,
+  ArrowRight,
+  ArrowLeft,
+  Paintbrush,
   Mail,
   Users,
   Code2,
@@ -19,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -43,12 +48,17 @@ import {
 } from "@/features/newsletter/model";
 import referenceHtml from "@/features/newsletter/reference.html?raw";
 
+import NewsletterForms from "@/features/newsletter/Forms";
+const VisualEditor = lazy(
+  () => import("@/features/newsletter/editor/VisualEditor"),
+);
+
 const selectClass =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
 const tz = "Europe/Zurich";
 const dateLabel = (value: string | null) =>
   value ? formatInTimeZone(value, tz, "dd.MM.yyyy à HH:mm") : "";
-const initial = { name: "", subject: "", html: "" };
+const initial = { name: "", subject: "", preheader: "", html: "" };
 function CategoryPicker({
   value,
   onChange,
@@ -83,7 +93,13 @@ function download(name: string, content: string, type: string) {
   URL.revokeObjectURL(url);
 }
 export default function Newsletter() {
-  const [tab, setTab] = useState("create");
+  const [tab, setTab] = useState("dashboard");
+  const [step, setStep] = useState(0);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [campaignFilter, setCampaignFilter] = useState("all");
+  const [campaignQuery, setCampaignQuery] = useState("");
+  const [dirty, setDirty] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [busy, setBusy] = useState(false);
@@ -190,6 +206,7 @@ export default function Newsletter() {
   }
   function changeDraft(patch: Partial<typeof initial>) {
     setDraft((d) => ({ ...d, ...patch }));
+    setDirty(true);
     testKey.current = crypto.randomUUID();
   }
   async function save(): Promise<Campaign> {
@@ -200,7 +217,13 @@ export default function Newsletter() {
       revision: campaign?.revision,
     });
     setCampaign(saved);
-    setDraft({ name: saved.name, subject: saved.subject, html: saved.html });
+    setDraft({
+      name: saved.name,
+      subject: saved.subject,
+      preheader: saved.preheader || "",
+      html: saved.html,
+    });
+    setDirty(false);
     return saved;
   }
   async function openCampaign(id: string) {
@@ -211,10 +234,13 @@ export default function Newsletter() {
         issues: typeof issues;
       }>({ action: "get", id });
       setCampaign(data.campaign);
+      setStep(0);
+      setDirty(false);
       setDraft({
         name: data.campaign.name,
         subject: data.campaign.subject,
         html: data.campaign.html,
+        preheader: data.campaign.preheader || "",
       });
       setCounts(data.counts);
       setIssues(data.issues);
@@ -222,6 +248,34 @@ export default function Newsletter() {
       setSelected(new Set());
       setTab("create");
     });
+  }
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  function newCampaign() {
+    if (
+      dirty &&
+      !window.confirm(
+        "Créer une nouvelle campagne sans enregistrer le brouillon actuel ?",
+      )
+    )
+      return;
+    setCampaign(null);
+    setDraft(initial);
+    setCounts({});
+    setIssues([]);
+    setWhen("");
+    setSelected(new Set());
+    setStep(0);
+    setDirty(false);
+    setTab("create");
   }
   function openImport(source: "csv" | "application") {
     setImportSource(source);
@@ -420,504 +474,904 @@ export default function Newsletter() {
     </div>
   );
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
-      <section className="rounded-2xl bg-[#1c4734] p-6 text-white md:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[.2em] text-[#d8ddc9]">
-              <Mail className="h-4 w-4" />
-              Logisorama · Communication
+    <div className="mx-auto max-w-[1600px] p-4 md:p-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[.2em] text-[#205a43]">
+            Logisorama · Communication
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold">Newsletter</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Créez, partagez et suivez vos campagnes immobilières.
+          </p>
+        </div>
+        <Button disabled={busy} onClick={newCampaign}>
+          <Plus className="mr-2 h-4 w-4" />
+          Créer une campagne
+        </Button>
+      </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[210px_minmax(0,1fr)]">
+        <nav
+          aria-label="Navigation Newsletter"
+          className="flex gap-1 overflow-auto rounded-xl border bg-white p-2 lg:sticky lg:top-5 lg:flex-col"
+        >
+          {[
+            {
+              id: "dashboard",
+              label: "Tableau de bord",
+              icon: LayoutDashboard,
+            },
+            { id: "history", label: "Campagnes", icon: Mail },
+            { id: "contacts", label: "Abonnés", icon: Users },
+            { id: "forms", label: "Formulaires", icon: FileInput },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              aria-current={
+                tab === id || (id === "history" && tab === "create")
+                  ? "page"
+                  : undefined
+              }
+              onClick={() => setTab(id)}
+              className={`flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-left text-sm ${tab === id || (id === "history" && tab === "create") ? "bg-[#e8efe9] font-semibold text-[#205a43]" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              <Icon size={17} />
+              {label}
+            </button>
+          ))}
+          <div className="mt-4 hidden border-t px-4 pt-4 text-xs text-muted-foreground lg:block">
+            logisorama.ch
+            <br />
+            Envois via Infomaniak
+          </div>
+        </nav>
+        <div className="min-w-0 space-y-5">
+          <div
+            role="status"
+            className={`rounded-xl border p-4 text-sm ${connection.ready ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-950"}`}
+          >
+            <p className="font-medium">{connection.message}</p>
+            {connection.sender && (
+              <p>Expéditeur : Logisorama &lt;{connection.sender}&gt;</p>
+            )}
+          </div>
+          {loadError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive p-4"
+            >
+              <p>Le module n’est pas disponible : {loadError}</p>
+              <Button
+                variant="outline"
+                onClick={() => void refresh()}
+                className="mt-2"
+              >
+                Réessayer
+              </Button>
             </div>
-            <h1 className="text-3xl font-semibold">Newsletter</h1>
-            <p className="mt-2 max-w-xl text-sm text-white/75">
-              Vos contacts, votre HTML, vos envois. Préparez une newsletter
-              adaptée à chaque projet immobilier.
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            disabled={busy}
-            onClick={() => {
-              setCampaign(null);
-              setDraft(initial);
-              setCounts({});
-              setIssues([]);
-              setWhen("");
-              setSelected(new Set());
-              setTab("create");
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Nouvelle newsletter
-          </Button>
-        </div>
-      </section>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {Object.entries(CONTACT_CATEGORIES).map(([key, label]) => (
-          <button
-            key={key}
-            className={`rounded-xl border bg-card p-4 text-left transition hover:border-[#205a43] ${category === key ? "ring-1 ring-[#205a43]" : ""}`}
-            onClick={() => {
-              setCategory(key);
-              setTab("contacts");
-            }}
-          >
-            <span className="block text-2xl font-semibold text-[#205a43]">
-              {
-                contacts.filter((c) => c.categories.includes(key as Category))
-                  .length
-              }
-            </span>
-            <span className="text-sm text-muted-foreground">{label}</span>
-          </button>
-        ))}
-      </div>
-      <div
-        role="status"
-        className={`rounded-xl border p-4 text-sm ${connection.ready ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-950"}`}
-      >
-        <p className="font-medium">{connection.message}</p>
-        {connection.sender && (
-          <p>Expéditeur : Logisorama &lt;{connection.sender}&gt;</p>
-        )}
-      </div>
-      {loadError && (
-        <div role="alert" className="rounded-lg border border-destructive p-4">
-          <p>Le module n’est pas disponible : {loadError}</p>
-          <Button
-            variant="outline"
-            onClick={() => void refresh()}
-            className="mt-2"
-          >
-            Réessayer
-          </Button>
-        </div>
-      )}
-      <Tabs value={tab} onValueChange={setTab}>
-        <div className="flex flex-wrap justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="create">
-              <Code2 className="mr-2 h-4 w-4" />
-              Créer
-            </TabsTrigger>
-            <TabsTrigger value="contacts">
-              <Users className="mr-2 h-4 w-4" />
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger value="history">Historique</TabsTrigger>
-          </TabsList>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={loading || busy}
-            onClick={() => void refresh()}
-          >
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-            />
-            Actualiser
-          </Button>
-        </div>
-        <TabsContent value="contacts" className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => openImport("csv")} disabled={busy}>
-              Importer un CSV
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => openImport("application")}
-              disabled={busy}
-            >
-              Ajouter des clients de l’application
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() =>
-                download(
-                  "modele-contacts.csv",
-                  "email;prenom;nom\nexemple@example.com;Prénom;Nom\n",
-                  "text/csv;charset=utf-8",
-                )
-              }
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Modèle CSV
-            </Button>
-          </div>
-          {selectionPanel}
-        </TabsContent>
-        <TabsContent value="create" className="space-y-5">
-          {locked && (
-            <Card>
-              <CardContent className="space-y-3 pt-6">
-                <p className="font-medium">
-                  {STATUS_LABELS[campaign.status]}{" "}
-                  {dateLabel(campaign.scheduled_at)} · heure suisse
-                </p>
-                {campaign.provider_campaign_id &&
-                  campaign.provider_domain_id && (
-                    <a
-                      className="text-sm underline"
-                      href={`https://newsletter.infomaniak.com/v3/${campaign.provider_domain_id}/campaigns`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Campagne Infomaniak n° {campaign.provider_campaign_id} —
-                      ouvrir le suivi
-                    </a>
-                  )}
-                {campaign.worker_error && (
-                  <p role="alert" className="text-sm text-destructive">
-                    {campaign.worker_error}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-3 text-sm">
-                  <span>{counts.sent || 0} transmis au prestataire</span>
-                  <span>
-                    {(counts.pending || 0) + (counts.processing || 0)} en
-                    attente
-                  </span>
-                  <span>{counts.failed || 0} échecs</span>
-                  <span>{counts.skipped || 0} exclus</span>
-                  <span>{counts.attention || 0} à vérifier</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  « Transmis » signifie accepté par le prestataire ; ce n’est
-                  pas une confirmation de livraison.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void openCampaign(campaign.id)}
-                  >
-                    Actualiser le suivi
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setCampaign(null);
-                      setDraft({ ...draft, name: draft.name + " (copie)" });
-                      setSelected(new Set());
-                      setWhen("");
-                    }}
-                  >
-                    Dupliquer en brouillon
-                  </Button>
-                  {campaign.status === "queued" &&
-                    campaign.scheduled_at &&
-                    new Date(campaign.scheduled_at) > new Date() && (
-                      <Button
-                        variant="destructive"
-                        disabled={busy}
-                        onClick={() =>
-                          void run(async () => {
-                            await api({ action: "cancel", id: campaign.id });
-                            await openCampaign(campaign.id);
-                            await refresh();
-                          })
-                        }
-                      >
-                        Annuler la programmation
-                      </Button>
-                    )}
-                </div>
-                {issues.length > 0 && (
-                  <details>
-                    <summary className="cursor-pointer text-sm">
-                      Voir les erreurs et exclusions
-                    </summary>
-                    <ul className="mt-2 space-y-1 text-xs">
-                      {issues.map((i) => (
-                        <li key={i.email}>
-                          {i.email} : {i.error || i.status}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </CardContent>
-            </Card>
           )}
-          <div className="grid gap-5 xl:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>1. Votre contenu</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <Tabs value={tab} onValueChange={setTab}>
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={loading || busy}
+                onClick={() => void refresh()}
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+                Actualiser
+              </Button>
+            </div>
+            <TabsContent value="dashboard" className="space-y-6">
+              <h2 className="text-2xl font-semibold">Tableau de bord</h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  [
+                    "Abonnés disponibles",
+                    contacts.filter((c) => !c.excluded && !c.unsubscribed)
+                      .length,
+                  ],
+                  [
+                    "Brouillons",
+                    campaigns.filter((c) => c.status === "draft").length,
+                  ],
+                  [
+                    "En attente / en cours",
+                    campaigns.filter((c) => c.status === "queued").length,
+                  ],
+                  [
+                    "Traitements terminés",
+                    campaigns.filter((c) => c.status === "completed").length,
+                  ],
+                ].map(([label, n]) => (
+                  <Card key={String(label)}>
+                    <CardContent className="pt-5">
+                      <p className="text-sm text-muted-foreground">{label}</p>
+                      <p className="mt-2 text-3xl font-semibold">
+                        {loading ? "—" : n}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <section className="rounded-2xl bg-[#1c4734] p-7 text-white">
+                <p className="text-xs uppercase tracking-widest text-[#dbdec9]">
+                  De l’idée à l’envoi
+                </p>
+                <h3 className="mt-3 text-2xl font-semibold">
+                  Une newsletter à votre image.
+                </h3>
+                <p className="mt-2 max-w-xl text-sm text-white/80">
+                  Choisissez un modèle, composez votre message avec l’éditeur
+                  visuel, sélectionnez vos abonnés et programmez votre campagne.
+                </p>
+                <Button
+                  variant="secondary"
+                  className="mt-5"
+                  onClick={newCampaign}
+                >
+                  Créer ma campagne
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+              </section>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Développer votre audience</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Importez vos listes CSV en choisissant leur catégorie
+                      avant l’import.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTab("contacts");
+                        openImport("csv");
+                      }}
+                    >
+                      Importer des abonnés
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Collecter des inscriptions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Un formulaire adapté à chaque projet, avec confirmation de
+                      l’adresse email.
+                    </p>
+                    <Button variant="outline" onClick={() => setTab("forms")}>
+                      Gérer les formulaires
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Les chiffres portent sur les campagnes créées dans Logisorama
+                (100 dernières). Le suivi des ouvertures et clics n’est pas
+                activé pour ces campagnes.
+              </p>
+            </TabsContent>
+            <TabsContent value="forms">
+              <NewsletterForms onContactsChanged={() => void refresh()} />
+            </TabsContent>
+            <TabsContent value="contacts" className="space-y-4">
+              <h2 className="text-2xl font-semibold">Abonnés</h2>
+              <p className="text-sm text-muted-foreground">
+                Clients et prospects, organisés selon leur projet immobilier.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {Object.entries(CONTACT_CATEGORIES).map(([k, v]) => (
+                  <button
+                    key={k}
+                    onClick={() => {
+                      setCategory(k);
+                      setImportCategories([k as Category]);
+                    }}
+                    className={`rounded-xl border p-4 text-left ${category === k ? "border-[#205a43] bg-[#eef3ee]" : "bg-white"}`}
+                  >
+                    <strong className="block text-2xl text-[#205a43]">
+                      {
+                        contacts.filter((c) =>
+                          c.categories.includes(k as Category),
+                        ).length
+                      }
+                    </strong>
+                    <span className="text-xs">{v}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => openImport("csv")} disabled={busy}>
+                  Importer un CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => openImport("application")}
+                  disabled={busy}
+                >
+                  Ajouter des clients de l’application
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    download(
+                      "modele-contacts.csv",
+                      "email;prenom;nom\nexemple@example.com;Prénom;Nom\n",
+                      "text/csv;charset=utf-8",
+                    )
+                  }
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Modèle CSV
+                </Button>
+              </div>
+              {selectionPanel}
+            </TabsContent>
+            <TabsContent value="create" className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <Label htmlFor="newsletter-name">Nom interne</Label>
-                  <Input
-                    id="newsletter-name"
-                    value={draft.name}
-                    maxLength={120}
-                    disabled={locked || busy}
-                    onChange={(e) => changeDraft({ name: e.target.value })}
-                    placeholder="Newsletter octobre — Recherche de logement"
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    Campagnes / {campaign?.name || "Nouvelle campagne"}
+                  </p>
+                  <h2 className="mt-1 text-2xl font-semibold">
+                    {locked ? "Suivi de la campagne" : "Créer une campagne"}
+                  </h2>
                 </div>
-                <div>
-                  <Label htmlFor="newsletter-subject">Objet de l’email</Label>
-                  <Input
-                    id="newsletter-subject"
-                    value={draft.subject}
-                    maxLength={200}
-                    disabled={locked || busy}
-                    onChange={(e) => changeDraft({ subject: e.target.value })}
-                    placeholder="Bonjour, vous avez trouvé un appart ?"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
+                {!locked && (
                   <Button
                     variant="outline"
-                    disabled={locked || busy}
+                    disabled={
+                      busy || !draft.html || !draft.name || !draft.subject
+                    }
                     onClick={() =>
-                      changeDraft({
-                        html: referenceHtml,
-                        subject:
-                          draft.subject ||
-                          "Bonjour, vous avez trouvé un appart ?",
-                        name: draft.name || "Newsletter Logisorama",
+                      void run(async () => {
+                        await save();
+                        await refresh();
+                        toast.success("Brouillon enregistré");
                       })
                     }
                   >
-                    Utiliser le modèle Logisorama
+                    {busy
+                      ? "Enregistrement…"
+                      : dirty || !campaign
+                        ? "Enregistrer le brouillon"
+                        : "Brouillon enregistré"}
                   </Button>
-                  <label className="text-sm">
-                    Importer un fichier HTML
-                    <Input
-                      type="file"
-                      accept=".html,.htm,text/html"
-                      disabled={locked || busy}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f)
-                          void run(async () => {
-                            if (f.size > 250000)
-                              throw new Error("Fichier HTML limité à 250 Ko");
-                            changeDraft({ html: await f.text() });
-                          });
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Référence du 3 octobre : largeur 640 px, vert profond et
-                  crème, grande image puis blocs alternés. Les images de votre
-                  HTML doivent être hébergées en HTTPS.
-                </p>
-                <div>
-                  <Label htmlFor="newsletter-html">
-                    Collez votre code HTML
-                  </Label>
-                  <Textarea
-                    id="newsletter-html"
-                    className="min-h-[330px] font-mono text-xs"
-                    value={draft.html}
-                    disabled={locked || busy}
-                    onChange={(e) => changeDraft({ html: e.target.value })}
-                    placeholder="<!DOCTYPE html>…"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Infomaniak ajoute automatiquement un lien de désinscription
-                  personnel au pied de chaque email.
-                </p>
-                <Button
-                  disabled={
-                    locked ||
-                    busy ||
-                    !draft.html ||
-                    !draft.name ||
-                    !draft.subject
-                  }
-                  onClick={() =>
-                    void run(async () => {
-                      await save();
-                      await refresh();
-                      toast.success("Brouillon enregistré");
-                    })
-                  }
+                )}
+              </div>
+              {!locked && (
+                <nav
+                  aria-label="Étapes de création"
+                  className="grid grid-cols-5 gap-2"
                 >
-                  {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enregistrer le brouillon
-                </Button>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex-row items-center justify-between">
-                <CardTitle>Aperçu</CardTitle>
-                <div className="flex gap-1">
-                  <Button
-                    aria-label="Aperçu ordinateur"
-                    variant={mobile ? "ghost" : "secondary"}
-                    size="icon"
-                    onClick={() => setMobile(false)}
-                  >
-                    <Monitor className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    aria-label="Aperçu mobile"
-                    variant={mobile ? "secondary" : "ghost"}
-                    size="icon"
-                    onClick={() => setMobile(true)}
-                  >
-                    <Smartphone className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-auto rounded-xl bg-[#eef0eb] p-2">
-                  {draft.html ? (
-                    <iframe
-                      title="Aperçu de la newsletter"
-                      sandbox=""
-                      referrerPolicy="no-referrer"
-                      srcDoc={htmlPreview}
-                      className="mx-auto h-[700px] border-0 bg-white"
-                      style={{ width: mobile ? 375 : 640, maxWidth: "100%" }}
-                    />
-                  ) : (
-                    <div className="flex h-[700px] items-center justify-center p-8 text-center text-muted-foreground">
-                      Collez votre code HTML ou utilisez le modèle Logisorama
-                      pour voir le résultat.
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          {!locked && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>2. Vos destinataires</CardTitle>
-                </CardHeader>
-                <CardContent>{selectionPanel}</CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>3. Vérifier et envoyer</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div className="min-w-64 flex-1">
-                      <Label htmlFor="newsletter-test">Recevoir un test</Label>
-                      <Input
-                        id="newsletter-test"
-                        type="email"
-                        value={testEmail}
-                        onChange={(e) => {
-                          setTestEmail(e.target.value);
-                          testKey.current = crypto.randomUUID();
-                        }}
-                        placeholder="votre@email.ch"
-                      />
-                    </div>
-                    <Button
-                      variant="outline"
-                      disabled={
-                        busy ||
-                        !connection.ready ||
-                        !draft.html ||
-                        !draft.subject ||
-                        !testEmail
-                      }
-                      onClick={() =>
-                        void run(async () => {
-                          await api({
-                            action: "test",
-                            email: testEmail,
-                            subject: draft.subject,
-                            html: draft.html,
-                            request_id: testKey.current,
-                          });
-                          testKey.current = crypto.randomUUID();
-                          toast.success("Test transmis à Infomaniak");
-                        })
-                      }
+                  {[
+                    "Détails",
+                    "Contenu",
+                    "Destinataires",
+                    "Réviser",
+                    "Planifier",
+                  ].map((label, i) => (
+                    <button
+                      key={label}
+                      onClick={() => setStep(i)}
+                      className={`border-b-4 pb-3 text-xs sm:text-sm ${step === i ? "border-[#205a43] font-semibold text-[#205a43]" : "border-slate-200 text-slate-500"}`}
                     >
-                      Envoyer un test
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div>
-                      <Label htmlFor="newsletter-time">
-                        Programmer — heure suisse (facultatif)
-                      </Label>
-                      <Input
-                        id="newsletter-time"
-                        type="datetime-local"
-                        value={when}
-                        onChange={(e) => setWhen(e.target.value)}
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Vide = dès validation. Les envois démarrent à partir de
-                        l’heure choisie et se poursuivent même si vous fermez
-                        l’application.
+                      {i + 1}. {label}
+                    </button>
+                  ))}
+                </nav>
+              )}
+
+              {locked && (
+                <Card>
+                  <CardContent className="space-y-3 pt-6">
+                    <p className="font-medium">
+                      {STATUS_LABELS[campaign.status]}{" "}
+                      {dateLabel(campaign.scheduled_at)} · heure suisse
+                    </p>
+                    {campaign.provider_campaign_id &&
+                      campaign.provider_domain_id && (
+                        <a
+                          className="text-sm underline"
+                          href={`https://newsletter.infomaniak.com/v3/${campaign.provider_domain_id}/campaigns`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Campagne Infomaniak n° {campaign.provider_campaign_id}{" "}
+                          — ouvrir le suivi
+                        </a>
+                      )}
+                    {campaign.worker_error && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {campaign.worker_error}
                       </p>
+                    )}
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <span>{counts.sent || 0} transmis au prestataire</span>
+                      <span>
+                        {(counts.pending || 0) + (counts.processing || 0)} en
+                        attente
+                      </span>
+                      <span>{counts.failed || 0} échecs</span>
+                      <span>{counts.skipped || 0} exclus</span>
+                      <span>{counts.attention || 0} à vérifier</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      « Transmis » signifie accepté par le prestataire ; ce
+                      n’est pas une confirmation de livraison.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void openCampaign(campaign.id)}
+                      >
+                        Actualiser le suivi
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setCampaign(null);
+                          setDraft({ ...draft, name: draft.name + " (copie)" });
+                          setSelected(new Set());
+                          setWhen("");
+                        }}
+                      >
+                        Dupliquer en brouillon
+                      </Button>
+                      {campaign.status === "queued" &&
+                        campaign.scheduled_at &&
+                        new Date(campaign.scheduled_at) > new Date() && (
+                          <Button
+                            variant="destructive"
+                            disabled={busy}
+                            onClick={() =>
+                              void run(async () => {
+                                await api({
+                                  action: "cancel",
+                                  id: campaign.id,
+                                });
+                                await openCampaign(campaign.id);
+                                await refresh();
+                              })
+                            }
+                          >
+                            Annuler la programmation
+                          </Button>
+                        )}
+                    </div>
+                    {issues.length > 0 && (
+                      <details>
+                        <summary className="cursor-pointer text-sm">
+                          Voir les erreurs et exclusions
+                        </summary>
+                        <ul className="mt-2 space-y-1 text-xs">
+                          {issues.map((i) => (
+                            <li key={i.email}>
+                              {i.email} : {i.error || i.status}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {!locked && step === 0 && (
+                <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Détails de la campagne</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                      <div>
+                        <Label htmlFor="newsletter-name">Nom interne</Label>
+                        <Input
+                          id="newsletter-name"
+                          value={draft.name}
+                          maxLength={120}
+                          onChange={(e) =>
+                            changeDraft({ name: e.target.value })
+                          }
+                          placeholder="Newsletter octobre — Recherche de logement"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="newsletter-subject">
+                          Objet de l’email
+                        </Label>
+                        <Input
+                          id="newsletter-subject"
+                          value={draft.subject}
+                          maxLength={200}
+                          onChange={(e) =>
+                            changeDraft({ subject: e.target.value })
+                          }
+                          placeholder="Bonjour, vous avez trouvé un appart ?"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="newsletter-preheader">
+                          Prévisualisation texte email
+                        </Label>
+                        <Input
+                          id="newsletter-preheader"
+                          value={draft.preheader}
+                          maxLength={200}
+                          onChange={(e) =>
+                            changeDraft({ preheader: e.target.value })
+                          }
+                          placeholder="Le texte qui accompagne votre objet dans la boîte de réception."
+                        />
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-4 text-sm">
+                        <strong>Expéditeur</strong>
+                        <p className="mt-2">
+                          Logisorama &lt;
+                          {connection.sender || "support@logisorama.ch"}&gt;
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Langue : français · Lien de désinscription personnel
+                          ajouté par Infomaniak.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Dans la boîte de réception</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-xl bg-[#f5f6f7] p-5">
+                        <div className="mb-4 h-8 rounded bg-slate-200/50" />
+                        <div className="rounded-lg bg-white p-4 shadow-sm">
+                          <strong>Logisorama</strong>
+                          <p className="mt-2 font-medium">
+                            {draft.subject || "L’objet de votre newsletter"}
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {draft.preheader ||
+                              "La prévisualisation de votre message apparaîtra ici."}
+                          </p>
+                        </div>
+                        <div className="mt-4 h-8 rounded bg-slate-200/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              {(locked || step === 1 || step === 3) && (
+                <div className="grid gap-5 xl:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        {step === 3
+                          ? "Vérifier votre message"
+                          : "Composez votre newsletter"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {!locked && step !== 3 && (
+                        <>
+                          <div className="grid gap-3">
+                            <button
+                              className="rounded-xl border bg-[#f3f1e9] p-5 text-left hover:border-[#205a43]"
+                              onClick={() => {
+                                if (
+                                  draft.html &&
+                                  !window.confirm(
+                                    "Remplacer le contenu actuel par le modèle Logisorama ?",
+                                  )
+                                )
+                                  return;
+                                changeDraft({
+                                  html: referenceHtml,
+                                  subject:
+                                    draft.subject ||
+                                    "Bonjour, vous avez trouvé un appart ?",
+                                  name: draft.name || "Newsletter Logisorama",
+                                });
+                              }}
+                            >
+                              <span className="text-xs uppercase tracking-widest text-[#205a43]">
+                                Modèle Logisorama
+                              </span>
+                              <strong className="mt-2 block text-xl">
+                                Votre dossier en haut de la pile.
+                              </strong>
+                              <span className="mt-2 block text-sm text-muted-foreground">
+                                640 px · vert profond & crème · images et blocs
+                                alternés
+                              </span>
+                            </button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                if (
+                                  draft.html &&
+                                  !window.confirm(
+                                    "Remplacer le contenu actuel par une page blanche ?",
+                                  )
+                                )
+                                  return;
+                                changeDraft({
+                                  html: '<html><head></head><body style="background:#f4f1e8"><table role="presentation" width="640" align="center" style="width:100%;max-width:640px;background:#fff"><tr><td style="padding:32px;font-family:Arial;color:#1c4734"><h1>Votre titre</h1><p>Écrivez votre message ici.</p></td></tr></table></body></html>',
+                                });
+                              }}
+                            >
+                              Partir d’une page blanche
+                            </Button>
+                          </div>
+                          <Button
+                            className="w-full bg-[#205a43]"
+                            disabled={!draft.html}
+                            onClick={() => setEditorOpen(true)}
+                          >
+                            <Paintbrush size={17} className="mr-2" />
+                            Ouvrir l’éditeur visuel
+                          </Button>
+                          <p className="text-sm text-muted-foreground">
+                            Ajoutez et déplacez des blocs, modifiez les textes,
+                            remplacez les images et personnalisez les couleurs.
+                          </p>
+                          <Button
+                            variant="ghost"
+                            onClick={() => setShowCode(!showCode)}
+                          >
+                            <Code2 size={15} className="mr-2" />
+                            {showCode
+                              ? "Masquer le code"
+                              : "Importer ou modifier le HTML"}
+                          </Button>
+                          {showCode && (
+                            <div className="space-y-3">
+                              <Label htmlFor="newsletter-html-file">
+                                Importer un fichier HTML
+                              </Label>
+                              <Input
+                                id="newsletter-html-file"
+                                type="file"
+                                accept=".html,.htm,text/html"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f)
+                                    void run(async () => {
+                                      if (f.size > 250000)
+                                        throw new Error(
+                                          "Fichier HTML limité à 250 Ko",
+                                        );
+                                      changeDraft({ html: await f.text() });
+                                    });
+                                  e.target.value = "";
+                                }}
+                              />
+                              <Label htmlFor="newsletter-html">Code HTML</Label>
+                              <Textarea
+                                id="newsletter-html"
+                                className="min-h-[300px] font-mono text-xs"
+                                value={draft.html}
+                                onChange={(e) =>
+                                  changeDraft({ html: e.target.value })
+                                }
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {(locked || step === 3) && (
+                        <dl className="space-y-3 text-sm">
+                          <div>
+                            <dt className="text-muted-foreground">Objet</dt>
+                            <dd className="font-medium">{draft.subject}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">
+                              Prévisualisation texte
+                            </dt>
+                            <dd>{draft.preheader || "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">
+                              Expéditeur
+                            </dt>
+                            <dd>{connection.sender}</dd>
+                          </div>
+                          {!locked && (
+                            <div>
+                              <dt className="text-muted-foreground">
+                                Destinataires sélectionnés
+                              </dt>
+                              <dd>{recipients.length} abonnés disponibles</dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Infomaniak ajoute automatiquement le lien de
+                        désinscription.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex-row items-center justify-between">
+                      <CardTitle>Aperçu</CardTitle>
+                      <div className="flex gap-1">
+                        <Button
+                          aria-label="Aperçu ordinateur"
+                          variant={mobile ? "ghost" : "secondary"}
+                          size="icon"
+                          onClick={() => setMobile(false)}
+                        >
+                          <Monitor className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          aria-label="Aperçu mobile"
+                          variant={mobile ? "secondary" : "ghost"}
+                          size="icon"
+                          onClick={() => setMobile(true)}
+                        >
+                          <Smartphone className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-auto rounded-xl bg-[#eef0eb] p-2">
+                        {draft.html ? (
+                          <iframe
+                            title="Aperçu de la newsletter"
+                            sandbox=""
+                            referrerPolicy="no-referrer"
+                            srcDoc={htmlPreview}
+                            className="mx-auto h-[700px] border-0 bg-white"
+                            style={{
+                              width: mobile ? 375 : 640,
+                              maxWidth: "100%",
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-[700px] items-center justify-center p-8 text-center text-muted-foreground">
+                            Collez votre code HTML ou utilisez le modèle
+                            Logisorama pour voir le résultat.
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+              {!locked && (
+                <>
+                  {step === 2 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Vos destinataires</CardTitle>
+                      </CardHeader>
+                      <CardContent>{selectionPanel}</CardContent>
+                    </Card>
+                  )}
+                  {(step === 3 || step === 4) && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>
+                          {step === 3
+                            ? "Recevoir un test"
+                            : "Planifier votre campagne"}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-5">
+                        {step === 3 && (
+                          <div className="flex flex-wrap items-end gap-3">
+                            <div className="min-w-64 flex-1">
+                              <Label htmlFor="newsletter-test">
+                                Recevoir un test
+                              </Label>
+                              <Input
+                                id="newsletter-test"
+                                type="email"
+                                value={testEmail}
+                                onChange={(e) => {
+                                  setTestEmail(e.target.value);
+                                  testKey.current = crypto.randomUUID();
+                                }}
+                                placeholder="votre@email.ch"
+                              />
+                            </div>
+                            <Button
+                              variant="outline"
+                              disabled={
+                                busy ||
+                                !connection.ready ||
+                                !draft.html ||
+                                !draft.subject ||
+                                !testEmail
+                              }
+                              onClick={() =>
+                                void run(async () => {
+                                  await api({
+                                    action: "test",
+                                    email: testEmail,
+                                    subject: draft.subject,
+                                    preheader: draft.preheader,
+                                    html: draft.html,
+                                    request_id: testKey.current,
+                                  });
+                                  testKey.current = crypto.randomUUID();
+                                  toast.success("Test transmis à Infomaniak");
+                                })
+                              }
+                            >
+                              Envoyer un test
+                            </Button>
+                          </div>
+                        )}
+                        {step === 4 && (
+                          <div className="flex flex-wrap items-end gap-3">
+                            <div>
+                              <Label htmlFor="newsletter-time">
+                                Programmer — heure suisse (facultatif)
+                              </Label>
+                              <Input
+                                id="newsletter-time"
+                                type="datetime-local"
+                                value={when}
+                                onChange={(e) => setWhen(e.target.value)}
+                              />
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Vide = dès validation. Les envois démarrent à
+                                partir de l’heure choisie et se poursuivent même
+                                si vous fermez l’application.
+                              </p>
+                            </div>
+                            <Button
+                              className="bg-[#205a43] hover:bg-[#1c4734]"
+                              disabled={
+                                busy ||
+                                loading ||
+                                !!loadError ||
+                                !connection.ready ||
+                                !recipients.length ||
+                                !draft.name ||
+                                !draft.subject ||
+                                !draft.html
+                              }
+                              onClick={() => setConfirm(true)}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              {when ? "Programmer" : "Envoyer"} à{" "}
+                              {recipients.length} contacts
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                  <div className="flex justify-between border-t pt-5">
                     <Button
-                      className="bg-[#205a43] hover:bg-[#1c4734]"
-                      disabled={
-                        busy ||
-                        loading ||
-                        !!loadError ||
-                        !connection.ready ||
-                        !recipients.length ||
-                        !draft.name ||
-                        !draft.subject ||
-                        !draft.html
-                      }
-                      onClick={() => setConfirm(true)}
+                      variant="ghost"
+                      disabled={step === 0}
+                      onClick={() => setStep(step - 1)}
                     >
-                      <Send className="mr-2 h-4 w-4" />
-                      {when ? "Programmer" : "Envoyer"} à {recipients.length}{" "}
-                      contacts
+                      <ArrowLeft size={16} className="mr-2" />
+                      Précédent
                     </Button>
+                    {step < 4 && (
+                      <Button
+                        disabled={
+                          (step === 0 && (!draft.name || !draft.subject)) ||
+                          (step === 1 && !draft.html) ||
+                          (step === 2 && !recipients.length)
+                        }
+                        onClick={() => setStep(step + 1)}
+                      >
+                        Continuer
+                        <ArrowRight size={16} className="ml-2" />
+                      </Button>
+                    )}
                   </div>
+                </>
+              )}
+            </TabsContent>
+            <TabsContent value="history">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campagnes</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex flex-wrap gap-3">
+                    <Input
+                      aria-label="Rechercher une campagne"
+                      className="max-w-xs"
+                      placeholder="Rechercher une campagne…"
+                      value={campaignQuery}
+                      onChange={(e) => setCampaignQuery(e.target.value)}
+                    />
+                    <select
+                      aria-label="Statut des campagnes"
+                      className={selectClass + " max-w-xs"}
+                      value={campaignFilter}
+                      onChange={(e) => setCampaignFilter(e.target.value)}
+                    >
+                      <option value="all">Toutes les campagnes</option>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {!campaigns.length && (
+                    <p className="text-muted-foreground">
+                      Vos brouillons et envois apparaîtront ici.
+                    </p>
+                  )}
+                  {campaigns
+                    .filter(
+                      (c) =>
+                        (campaignFilter === "all" ||
+                          c.status === campaignFilter) &&
+                        `${c.name} ${c.subject}`
+                          .toLowerCase()
+                          .includes(campaignQuery.toLowerCase()),
+                    )
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-left hover:bg-muted/40"
+                        disabled={busy}
+                        onClick={() => void openCampaign(c.id)}
+                      >
+                        <span>
+                          <span className="block font-medium">{c.name}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {c.subject}
+                          </span>
+                        </span>
+                        <span className="text-right">
+                          <Badge variant="secondary">
+                            {STATUS_LABELS[c.status]}
+                          </Badge>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {dateLabel(c.scheduled_at)}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
                 </CardContent>
               </Card>
-            </>
-          )}
-        </TabsContent>
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vos newsletters</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {!campaigns.length && (
-                <p className="text-muted-foreground">
-                  Vos brouillons et envois apparaîtront ici.
-                </p>
-              )}
-              {campaigns.map((c) => (
-                <button
-                  key={c.id}
-                  className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-left hover:bg-muted/40"
-                  disabled={busy}
-                  onClick={() => void openCampaign(c.id)}
-                >
-                  <span>
-                    <span className="block font-medium">{c.name}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {c.subject}
-                    </span>
-                  </span>
-                  <span className="text-right">
-                    <Badge variant="secondary">{STATUS_LABELS[c.status]}</Badge>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {dateLabel(c.scheduled_at)}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+      {editorOpen && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-[100] grid place-items-center bg-white">
+              Chargement de l’éditeur…
+            </div>
+          }
+        >
+          <VisualEditor
+            html={draft.html}
+            onClose={() => setEditorOpen(false)}
+            onApply={(html) => {
+              changeDraft({ html });
+              setEditorOpen(false);
+              toast.success(
+                "Contenu appliqué. Enregistrez le brouillon pour le conserver.",
+              );
+            }}
+          />
+        </Suspense>
+      )}
       <Dialog
         open={importOpen}
         onOpenChange={(v) => {
