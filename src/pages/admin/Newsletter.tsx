@@ -2,21 +2,21 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
-  LayoutDashboard,
-  FileInput,
-  ArrowRight,
   ArrowLeft,
-  Paintbrush,
-  Mail,
-  Users,
+  ArrowRight,
   Code2,
-  Send,
-  Monitor,
-  Smartphone,
   Download,
+  FileInput,
+  LayoutDashboard,
+  Loader2,
+  Mail,
+  Monitor,
+  Paintbrush,
   Plus,
   RefreshCw,
-  Loader2,
+  Send,
+  Smartphone,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,23 +28,23 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { newsletterApi as api } from "@/features/newsletter/api";
 import {
-  CONTACT_CATEGORIES,
-  STATUS_LABELS,
-  filterContacts,
-  parseContactCsv,
+  type Campaign,
   type Category,
   type Contact,
+  CONTACT_CATEGORIES,
   type ContactKind,
-  type Campaign,
+  filterContacts,
   type ImportRow,
+  parseContactCsv,
+  STATUS_LABELS,
 } from "@/features/newsletter/model";
 import referenceHtml from "@/features/newsletter/reference.html?raw";
 
@@ -74,9 +74,10 @@ function CategoryPicker({
             checked={value.includes(k as Category)}
             onCheckedChange={(v) =>
               onChange(
-                v ? [...value, k as Category] : value.filter((c) => c !== k),
-              )
-            }
+                v ? [...value, k as Category] : value.filter((c) =>
+                  c !== k
+                ),
+              )}
           />
           {label}
         </label>
@@ -127,6 +128,9 @@ export default function Newsletter() {
     { email: string; error: string; status: string }[]
   >([]);
   const [importOpen, setImportOpen] = useState(false);
+  const [automaticImport, setAutomaticImport] = useState(true);
+  const [answers, setAnswers] = useState<unknown>(null);
+  const [answersOpen, setAnswersOpen] = useState(false);
   const [importRows, setImportRows] = useState<ImportRow[]>([]);
   const [importKind, setImportKind] = useState<ContactKind>("prospect");
   const [importCategories, setImportCategories] = useState<Category[]>([
@@ -165,7 +169,8 @@ export default function Newsletter() {
         "meta",
       ],
     });
-    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline'; font-src https:; base-uri 'none'; form-action 'none'">`;
+    const csp =
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline'; font-src https:; base-uri 'none'; form-action 'none'">`;
     return safe.replace(/<head>/i, `<head>${csp}`);
   }, [draft.html]);
   async function refresh() {
@@ -265,8 +270,9 @@ export default function Newsletter() {
       !window.confirm(
         "Créer une nouvelle campagne sans enregistrer le brouillon actuel ?",
       )
-    )
+    ) {
       return;
+    }
     setCampaign(null);
     setDraft(initial);
     setCounts({});
@@ -279,6 +285,7 @@ export default function Newsletter() {
   }
   function openImport(source: "csv" | "application") {
     setImportSource(source);
+    setAutomaticImport(true);
     setImportRows([]);
     setImportSelection(new Set());
     setImportInfo("");
@@ -286,14 +293,14 @@ export default function Newsletter() {
       source === "application"
         ? "client"
         : kind === "client"
-          ? "client"
-          : "prospect",
+        ? "client"
+        : "prospect",
     );
     setImportCategories([
-      category === "all" ? "renter" : (category as Category),
+      category in CONTACT_CATEGORIES ? (category as Category) : "renter",
     ]);
     setImportOpen(true);
-    if (source === "application")
+    if (source === "application") {
       void run(async () => {
         const data = await api<{ clients: ImportRow[] }>({ action: "clients" });
         setImportRows(data.clients);
@@ -301,6 +308,7 @@ export default function Newsletter() {
           "Sélectionnez les clients à ajouter dans la catégorie choisie.",
         );
       });
+    }
   }
   async function readCsv(file?: File) {
     if (!file) return;
@@ -308,13 +316,20 @@ export default function Newsletter() {
     setImportInfo("");
     setImportSelection(new Set());
     try {
-      if (file.size > 2_000_000)
-        throw new Error("Le CSV doit peser moins de 2 Mo");
+      if (file.size > 20_000_000) {
+        throw new Error("Le CSV doit peser moins de 20 Mo");
+      }
       const parsed = parseContactCsv(await file.text());
       setImportRows(parsed.rows);
       setImportSelection(new Set(parsed.rows.map((r) => r.email)));
       setImportInfo(
-        `${parsed.rows.length} adresses valides · ${parsed.duplicates} doublons retirés${parsed.invalid.length ? ` · ${parsed.invalid.length} lignes ignorées (email invalide) : ${parsed.invalid.slice(0, 12).join(", ")}` : ""}`,
+        `${parsed.rows.length} adresses valides · ${parsed.duplicates} doublons retirés${
+          parsed.invalid.length
+            ? ` · ${parsed.invalid.length} lignes ignorées (email invalide) : ${
+              parsed.invalid.slice(0, 12).join(", ")
+            }`
+            : ""
+        }`,
       );
     } catch (e) {
       setImportInfo((e as Error).message);
@@ -346,6 +361,7 @@ export default function Newsletter() {
           onChange={(e) => setCategory(e.target.value)}
         >
           <option value="all">Toutes les catégories</option>
+          <option value="unclassified">À classer</option>
           {Object.entries(CONTACT_CATEGORIES).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
@@ -359,8 +375,7 @@ export default function Newsletter() {
           size="sm"
           disabled={locked || busy}
           onClick={() =>
-            setSelected(new Set([...selected, ...eligible.map((c) => c.id)]))
-          }
+            setSelected(new Set([...selected, ...eligible.map((c) => c.id)]))}
         >
           Sélectionner les {eligible.length} contacts éligibles affichés
         </Button>
@@ -398,11 +413,11 @@ export default function Newsletter() {
                     onCheckedChange={(checked) =>
                       setSelected((prev) => {
                         const next = new Set(prev);
-                        if (checked) next.add(c.id);
-                        else next.delete(c.id);
+                        if (checked) {
+                          next.add(c.id);
+                        } else next.delete(c.id);
                         return next;
-                      })
-                    }
+                      })}
                   />
                 </td>
                 <td className="p-3">
@@ -417,23 +432,43 @@ export default function Newsletter() {
                     {c.kind === "client" ? "Client" : "Prospect"}
                   </Badge>
                   <div className="mt-1 max-w-xs text-xs text-muted-foreground">
-                    {c.categories.map((v) => CONTACT_CATEGORIES[v]).join(" · ")}
+                    {c.categories.map((v) =>
+                      CONTACT_CATEGORIES[v]
+                    ).join(" · ") || "À classer"}
                   </div>
                 </td>
                 <td className="p-3">
                   {c.unsubscribed
                     ? "Désinscrit"
                     : c.excluded
-                      ? "Exclu"
-                      : "Disponible"}
+                    ? "Exclu"
+                    : "Disponible"}
                 </td>
                 <td className="p-3">
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => setEditContact({ ...c })}
+                    onClick={() =>
+                      setEditContact({ ...c })}
                   >
                     Classer
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        setAnswers(null);
+                        const data = await api({
+                          action: "contact-answers",
+                          id: c.id,
+                        });
+                        setAnswers(data);
+                        setAnswersOpen(true);
+                      })}
+                  >
+                    Réponses au formulaire
                   </Button>
                 </td>
               </tr>
@@ -507,13 +542,15 @@ export default function Newsletter() {
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              aria-current={
-                tab === id || (id === "history" && tab === "create")
-                  ? "page"
-                  : undefined
-              }
+              aria-current={tab === id || (id === "history" && tab === "create")
+                ? "page"
+                : undefined}
               onClick={() => setTab(id)}
-              className={`flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-left text-sm ${tab === id || (id === "history" && tab === "create") ? "bg-[#e8efe9] font-semibold text-[#205a43]" : "text-slate-600 hover:bg-slate-50"}`}
+              className={`flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-left text-sm ${
+                tab === id || (id === "history" && tab === "create")
+                  ? "bg-[#e8efe9] font-semibold text-[#205a43]"
+                  : "text-slate-600 hover:bg-slate-50"
+              }`}
             >
               <Icon size={17} />
               {label}
@@ -528,7 +565,11 @@ export default function Newsletter() {
         <div className="min-w-0 space-y-5">
           <div
             role="status"
-            className={`rounded-xl border p-4 text-sm ${connection.ready ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-950"}`}
+            className={`rounded-xl border p-4 text-sm ${
+              connection.ready
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : "border-amber-200 bg-amber-50 text-amber-950"
+            }`}
           >
             <p className="font-medium">{connection.message}</p>
             {connection.sender && (
@@ -566,7 +607,7 @@ export default function Newsletter() {
             </div>
             <TabsContent value="dashboard" className="space-y-6">
               <h2 className="text-2xl font-semibold">Tableau de bord</h2>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 {[
                   [
                     "Abonnés disponibles",
@@ -666,7 +707,7 @@ export default function Newsletter() {
               <p className="text-sm text-muted-foreground">
                 Clients et prospects, organisés selon leur projet immobilier.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 {Object.entries(CONTACT_CATEGORIES).map(([k, v]) => (
                   <button
                     key={k}
@@ -674,14 +715,16 @@ export default function Newsletter() {
                       setCategory(k);
                       setImportCategories([k as Category]);
                     }}
-                    className={`rounded-xl border p-4 text-left ${category === k ? "border-[#205a43] bg-[#eef3ee]" : "bg-white"}`}
+                    className={`rounded-xl border p-4 text-left ${
+                      category === k
+                        ? "border-[#205a43] bg-[#eef3ee]"
+                        : "bg-white"
+                    }`}
                   >
                     <strong className="block text-2xl text-[#205a43]">
-                      {
-                        contacts.filter((c) =>
-                          c.categories.includes(k as Category),
-                        ).length
-                      }
+                      {contacts.filter((c) =>
+                        c.categories.includes(k as Category)
+                      ).length}
                     </strong>
                     <span className="text-xs">{v}</span>
                   </button>
@@ -689,6 +732,20 @@ export default function Newsletter() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      await api({ action: "sync-leads" });
+                      await refresh();
+                      toast.success(
+                        "Shortlist et Meta synchronisés. Les nouveaux leads sont ajoutés automatiquement.",
+                      );
+                    })}
+                >
+                  Synchroniser Shortlist et Meta
+                </Button>
                 <Button onClick={() => openImport("csv")} disabled={busy}>
                   Importer un CSV
                 </Button>
@@ -706,8 +763,7 @@ export default function Newsletter() {
                       "modele-contacts.csv",
                       "email;prenom;nom\nexemple@example.com;Prénom;Nom\n",
                       "text/csv;charset=utf-8",
-                    )
-                  }
+                    )}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Modèle CSV
@@ -728,22 +784,20 @@ export default function Newsletter() {
                 {!locked && (
                   <Button
                     variant="outline"
-                    disabled={
-                      busy || !draft.html || !draft.name || !draft.subject
-                    }
+                    disabled={busy || !draft.html || !draft.name ||
+                      !draft.subject}
                     onClick={() =>
                       void run(async () => {
                         await save();
                         await refresh();
                         toast.success("Brouillon enregistré");
-                      })
-                    }
+                      })}
                   >
                     {busy
                       ? "Enregistrement…"
                       : dirty || !campaign
-                        ? "Enregistrer le brouillon"
-                        : "Brouillon enregistré"}
+                      ? "Enregistrer le brouillon"
+                      : "Brouillon enregistré"}
                   </Button>
                 )}
               </div>
@@ -762,7 +816,11 @@ export default function Newsletter() {
                     <button
                       key={label}
                       onClick={() => setStep(i)}
-                      className={`border-b-4 pb-3 text-xs sm:text-sm ${step === i ? "border-[#205a43] font-semibold text-[#205a43]" : "border-slate-200 text-slate-500"}`}
+                      className={`border-b-4 pb-3 text-xs sm:text-sm ${
+                        step === i
+                          ? "border-[#205a43] font-semibold text-[#205a43]"
+                          : "border-slate-200 text-slate-500"
+                      }`}
                     >
                       {i + 1}. {label}
                     </button>
@@ -779,16 +837,17 @@ export default function Newsletter() {
                     </p>
                     {campaign.provider_campaign_id &&
                       campaign.provider_domain_id && (
-                        <a
-                          className="text-sm underline"
-                          href={`https://newsletter.infomaniak.com/v3/${campaign.provider_domain_id}/campaigns`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Campagne Infomaniak n° {campaign.provider_campaign_id}{" "}
-                          — ouvrir le suivi
-                        </a>
-                      )}
+                      <a
+                        className="text-sm underline"
+                        href={`https://newsletter.infomaniak.com/v3/${campaign.provider_domain_id}/campaigns`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Campagne Infomaniak n° {campaign.provider_campaign_id}
+                        {" "}
+                        — ouvrir le suivi
+                      </a>
+                    )}
                     {campaign.worker_error && (
                       <p role="alert" className="text-sm text-destructive">
                         {campaign.worker_error}
@@ -797,8 +856,8 @@ export default function Newsletter() {
                     <div className="flex flex-wrap gap-3 text-sm">
                       <span>{counts.sent || 0} transmis au prestataire</span>
                       <span>
-                        {(counts.pending || 0) + (counts.processing || 0)} en
-                        attente
+                        {(counts.pending || 0) + (counts.processing || 0)}{" "}
+                        en attente
                       </span>
                       <span>{counts.failed || 0} échecs</span>
                       <span>{counts.skipped || 0} exclus</span>
@@ -830,23 +889,22 @@ export default function Newsletter() {
                       {campaign.status === "queued" &&
                         campaign.scheduled_at &&
                         new Date(campaign.scheduled_at) > new Date() && (
-                          <Button
-                            variant="destructive"
-                            disabled={busy}
-                            onClick={() =>
-                              void run(async () => {
-                                await api({
-                                  action: "cancel",
-                                  id: campaign.id,
-                                });
-                                await openCampaign(campaign.id);
-                                await refresh();
-                              })
-                            }
-                          >
-                            Annuler la programmation
-                          </Button>
-                        )}
+                        <Button
+                          variant="destructive"
+                          disabled={busy}
+                          onClick={() =>
+                            void run(async () => {
+                              await api({
+                                action: "cancel",
+                                id: campaign.id,
+                              });
+                              await openCampaign(campaign.id);
+                              await refresh();
+                            })}
+                        >
+                          Annuler la programmation
+                        </Button>
+                      )}
                     </div>
                     {issues.length > 0 && (
                       <details>
@@ -880,8 +938,7 @@ export default function Newsletter() {
                           value={draft.name}
                           maxLength={120}
                           onChange={(e) =>
-                            changeDraft({ name: e.target.value })
-                          }
+                            changeDraft({ name: e.target.value })}
                           placeholder="Newsletter octobre — Recherche de logement"
                         />
                       </div>
@@ -894,8 +951,7 @@ export default function Newsletter() {
                           value={draft.subject}
                           maxLength={200}
                           onChange={(e) =>
-                            changeDraft({ subject: e.target.value })
-                          }
+                            changeDraft({ subject: e.target.value })}
                           placeholder="Bonjour, vous avez trouvé un appart ?"
                         />
                       </div>
@@ -908,8 +964,7 @@ export default function Newsletter() {
                           value={draft.preheader}
                           maxLength={200}
                           onChange={(e) =>
-                            changeDraft({ preheader: e.target.value })
-                          }
+                            changeDraft({ preheader: e.target.value })}
                           placeholder="Le texte qui accompagne votre objet dans la boîte de réception."
                         />
                       </div>
@@ -971,12 +1026,12 @@ export default function Newsletter() {
                                   !window.confirm(
                                     "Remplacer le contenu actuel par le modèle Logisorama ?",
                                   )
-                                )
+                                ) {
                                   return;
+                                }
                                 changeDraft({
                                   html: referenceHtml,
-                                  subject:
-                                    draft.subject ||
+                                  subject: draft.subject ||
                                     "Bonjour, vous avez trouvé un appart ?",
                                   name: draft.name || "Newsletter Logisorama",
                                 });
@@ -1001,10 +1056,12 @@ export default function Newsletter() {
                                   !window.confirm(
                                     "Remplacer le contenu actuel par une page blanche ?",
                                   )
-                                )
+                                ) {
                                   return;
+                                }
                                 changeDraft({
-                                  html: '<html><head></head><body style="background:#f4f1e8"><table role="presentation" width="640" align="center" style="width:100%;max-width:640px;background:#fff"><tr><td style="padding:32px;font-family:Arial;color:#1c4734"><h1>Votre titre</h1><p>Écrivez votre message ici.</p></td></tr></table></body></html>',
+                                  html:
+                                    '<html><head></head><body style="background:#f4f1e8"><table role="presentation" width="640" align="center" style="width:100%;max-width:640px;background:#fff"><tr><td style="padding:32px;font-family:Arial;color:#1c4734"><h1>Votre titre</h1><p>Écrivez votre message ici.</p></td></tr></table></body></html>',
                                 });
                               }}
                             >
@@ -1043,14 +1100,16 @@ export default function Newsletter() {
                                 accept=".html,.htm,text/html"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0];
-                                  if (f)
+                                  if (f) {
                                     void run(async () => {
-                                      if (f.size > 250000)
+                                      if (f.size > 250000) {
                                         throw new Error(
                                           "Fichier HTML limité à 250 Ko",
                                         );
+                                      }
                                       changeDraft({ html: await f.text() });
                                     });
+                                  }
                                   e.target.value = "";
                                 }}
                               />
@@ -1060,8 +1119,7 @@ export default function Newsletter() {
                                 className="min-h-[300px] font-mono text-xs"
                                 value={draft.html}
                                 onChange={(e) =>
-                                  changeDraft({ html: e.target.value })
-                                }
+                                  changeDraft({ html: e.target.value })}
                               />
                             </div>
                           )}
@@ -1125,24 +1183,26 @@ export default function Newsletter() {
                     </CardHeader>
                     <CardContent>
                       <div className="overflow-auto rounded-xl bg-[#eef0eb] p-2">
-                        {draft.html ? (
-                          <iframe
-                            title="Aperçu de la newsletter"
-                            sandbox=""
-                            referrerPolicy="no-referrer"
-                            srcDoc={htmlPreview}
-                            className="mx-auto h-[700px] border-0 bg-white"
-                            style={{
-                              width: mobile ? 375 : 640,
-                              maxWidth: "100%",
-                            }}
-                          />
-                        ) : (
-                          <div className="flex h-[700px] items-center justify-center p-8 text-center text-muted-foreground">
-                            Collez votre code HTML ou utilisez le modèle
-                            Logisorama pour voir le résultat.
-                          </div>
-                        )}
+                        {draft.html
+                          ? (
+                            <iframe
+                              title="Aperçu de la newsletter"
+                              sandbox=""
+                              referrerPolicy="no-referrer"
+                              srcDoc={htmlPreview}
+                              className="mx-auto h-[700px] border-0 bg-white"
+                              style={{
+                                width: mobile ? 375 : 640,
+                                maxWidth: "100%",
+                              }}
+                            />
+                          )
+                          : (
+                            <div className="flex h-[700px] items-center justify-center p-8 text-center text-muted-foreground">
+                              Collez votre code HTML ou utilisez le modèle
+                              Logisorama pour voir le résultat.
+                            </div>
+                          )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1187,13 +1247,11 @@ export default function Newsletter() {
                             </div>
                             <Button
                               variant="outline"
-                              disabled={
-                                busy ||
+                              disabled={busy ||
                                 !connection.ready ||
                                 !draft.html ||
                                 !draft.subject ||
-                                !testEmail
-                              }
+                                !testEmail}
                               onClick={() =>
                                 void run(async () => {
                                   await api({
@@ -1206,8 +1264,7 @@ export default function Newsletter() {
                                   });
                                   testKey.current = crypto.randomUUID();
                                   toast.success("Test transmis à Infomaniak");
-                                })
-                              }
+                                })}
                             >
                               Envoyer un test
                             </Button>
@@ -1233,16 +1290,14 @@ export default function Newsletter() {
                             </div>
                             <Button
                               className="bg-[#205a43] hover:bg-[#1c4734]"
-                              disabled={
-                                busy ||
+                              disabled={busy ||
                                 loading ||
                                 !!loadError ||
                                 !connection.ready ||
                                 !recipients.length ||
                                 !draft.name ||
                                 !draft.subject ||
-                                !draft.html
-                              }
+                                !draft.html}
                               onClick={() => setConfirm(true)}
                             >
                               <Send className="mr-2 h-4 w-4" />
@@ -1265,11 +1320,10 @@ export default function Newsletter() {
                     </Button>
                     {step < 4 && (
                       <Button
-                        disabled={
-                          (step === 0 && (!draft.name || !draft.subject)) ||
+                        disabled={(step === 0 &&
+                          (!draft.name || !draft.subject)) ||
                           (step === 1 && !draft.html) ||
-                          (step === 2 && !recipients.length)
-                        }
+                          (step === 2 && !recipients.length)}
                         onClick={() => setStep(step + 1)}
                       >
                         Continuer
@@ -1386,9 +1440,10 @@ export default function Newsletter() {
                 : "Ajouter des clients"}
             </DialogTitle>
             <DialogDescription>
-              Choisissez le type et les catégories avant l’import. Les doublons
-              sont fusionnés ; les exclusions et désinscriptions sont
-              conservées.
+              Le classement automatique utilise les réponses et le formulaire.
+              Les projets incertains restent à classer ; les activités Immo-rama
+              hors périmètre sont ignorées. Les doublons sont fusionnés ; les
+              exclusions et désinscriptions sont conservées.
             </DialogDescription>
           </DialogHeader>
           <Label>
@@ -1403,10 +1458,18 @@ export default function Newsletter() {
               <option value="client">Client</option>
             </select>
           </Label>
-          <CategoryPicker
-            value={importCategories}
-            onChange={setImportCategories}
-          />
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={automaticImport}
+              onCheckedChange={(v) => setAutomaticImport(!!v)}
+            />Classer automatiquement selon le projet
+          </label>
+          {!automaticImport && (
+            <CategoryPicker
+              value={importCategories}
+              onChange={setImportCategories}
+            />
+          )}
           {importSource === "csv" && (
             <Input
               aria-label="Fichier CSV"
@@ -1434,8 +1497,7 @@ export default function Newsletter() {
                         ? []
                         : importRows.map((r) => r.email),
                     ),
-                  )
-                }
+                  )}
               >
                 Tout sélectionner / désélectionner ({importRows.length})
               </Button>
@@ -1454,8 +1516,7 @@ export default function Newsletter() {
                           if (v) next.add(r.email);
                           else next.delete(r.email);
                           return next;
-                        })
-                      }
+                        })}
                     />
                     <span>
                       {r.first_name} {r.last_name} — {r.email}
@@ -1466,33 +1527,53 @@ export default function Newsletter() {
             </>
           )}
           <Button
-            disabled={busy || !importSelection.size || !importCategories.length}
+            disabled={busy || !importSelection.size ||
+              (!automaticImport && !importCategories.length)}
             onClick={() =>
               void run(async () => {
                 const rows = importRows.filter((r) =>
-                  importSelection.has(r.email),
+                  importSelection.has(r.email)
                 );
                 let imported = 0;
+                let skipped = 0;
                 for (let i = 0; i < rows.length; i += 1000) {
-                  const result = await api<{ imported: number }>({
+                  const result = await api<
+                    { imported: number; out_of_scope?: number }
+                  >({
                     action: "import",
+                    automatic: automaticImport,
                     rows: rows.slice(i, i + 1000),
                     kind: importKind,
                     categories: importCategories,
                     source: importSource,
                   });
                   imported += result.imported;
+                  skipped += result.out_of_scope || 0;
                 }
-                toast.success(`${imported} contacts importés ou mis à jour`);
+                toast.success(
+                  `${imported} contacts importés ou mis à jour${
+                    skipped ? ` · ${skipped} hors périmètre` : ""
+                  }`,
+                );
                 setImportOpen(false);
                 await refresh();
-              })
-            }
+              })}
           >
             {busy
               ? "Import en cours…"
               : `Importer les ${importSelection.size} contacts sélectionnés`}
           </Button>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={answersOpen} onOpenChange={setAnswersOpen}>
+        <DialogContent className="max-h-[85dvh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Réponses aux formulaires</DialogTitle>
+            <DialogDescription>
+              Réponses d’origine, regroupées par source.
+            </DialogDescription>
+          </DialogHeader>
+          <FormAnswerTree value={answers} />
         </DialogContent>
       </Dialog>
       <Dialog
@@ -1516,8 +1597,7 @@ export default function Newsletter() {
                   setEditContact({
                     ...editContact,
                     kind: e.target.value as ContactKind,
-                  })
-                }
+                  })}
               >
                 <option value="client">Client</option>
                 <option value="prospect">Prospect</option>
@@ -1525,15 +1605,13 @@ export default function Newsletter() {
               <CategoryPicker
                 value={editContact.categories}
                 onChange={(v) =>
-                  setEditContact({ ...editContact, categories: v })
-                }
+                  setEditContact({ ...editContact, categories: v })}
               />
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={editContact.excluded}
                   onCheckedChange={(v) =>
-                    setEditContact({ ...editContact, excluded: !!v })
-                  }
+                    setEditContact({ ...editContact, excluded: !!v })}
                 />
                 Exclure des newsletters
               </label>
@@ -1550,8 +1628,7 @@ export default function Newsletter() {
                     await api({ action: "contact-update", ...editContact });
                     setEditContact(null);
                     await refresh();
-                  })
-                }
+                  })}
               >
                 Enregistrer
               </Button>
@@ -1576,8 +1653,7 @@ export default function Newsletter() {
           </DialogHeader>
           <p className="font-medium">{draft.subject}</p>
           <p>
-            {recipients.length} contacts sélectionnés ·{" "}
-            {when
+            {recipients.length} contacts sélectionnés · {when
               ? `${when.replace("T", " à ")} — heure suisse`
               : "Dès maintenant"}
           </p>
@@ -1596,14 +1672,16 @@ export default function Newsletter() {
                     !Number.isFinite(d.getTime()) ||
                     d.getTime() < Date.now() + 60000 ||
                     d.getTime() > Date.now() + 30 * 86400000
-                  )
+                  ) {
                     throw new Error(
                       "Choisissez une date entre une minute et 30 jours dans le futur",
                     );
-                  if (formatInTimeZone(d, tz, "yyyy-MM-dd'T'HH:mm") !== when)
+                  }
+                  if (formatInTimeZone(d, tz, "yyyy-MM-dd'T'HH:mm") !== when) {
                     throw new Error(
                       "Cette heure n’existe pas lors du changement d’heure",
                     );
+                  }
                   scheduled = d.toISOString();
                 }
                 const saved = await save();
@@ -1620,17 +1698,65 @@ export default function Newsletter() {
                 setConfirm(false);
                 await openCampaign(saved.id);
                 await refresh();
-              })
-            }
+              })}
           >
             {busy
               ? "Enregistrement…"
               : when
-                ? "Confirmer la programmation"
-                : "Confirmer l’envoi"}
+              ? "Confirmer la programmation"
+              : "Confirmer l’envoi"}
           </Button>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function FormAnswerTree({ value }: { value: unknown }) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "object") {
+    return (
+      <span className="whitespace-pre-wrap break-words">{String(value)}</span>
+    );
+  }
+  const labels: Record<string, string> = {
+    shortlist: "Shortlist",
+    meta: "Meta Ads",
+    imports: "Imports CSV / HubSpot",
+    form_name: "Formulaire",
+    formulaire: "Formulaire",
+    raw_answers: "Réponses",
+    raw_meta_payload: "Données du formulaire",
+    answers: "Réponses",
+    source: "Source",
+    field_data: "Questions",
+    name: "Question",
+    values: "Réponse",
+  };
+  const entries = Object.entries(value).filter(([, v]) =>
+    v !== null && v !== "" && !(Array.isArray(v) && !v.length)
+  );
+  if (!entries.length) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Aucune réponse enregistrée.
+      </p>
+    );
+  }
+  return (
+    <dl className="space-y-3">
+      {entries.map(([key, item]) => (
+        <div key={key} className="rounded-lg border p-3">
+          {!/^\d+$/.test(key) && (
+            <dt className="mb-1 text-sm font-semibold">
+              {labels[key] || key.replace(/_/g, " ")}
+            </dt>
+          )}
+          <dd className="text-sm">
+            <FormAnswerTree value={item} />
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }

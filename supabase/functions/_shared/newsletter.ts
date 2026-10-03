@@ -1,7 +1,7 @@
 // @deno-types="npm:@types/sanitize-html@2.16.0"
 import sanitizeHtml from "npm:sanitize-html@2.17.0";
 
-export const CATEGORIES = ["landlord", "seller", "renter", "buyer"];
+export const CATEGORIES = ["landlord", "seller", "renter", "buyer", "cleaning"];
 export function email(value: unknown): string {
   const s = String(value ?? "")
     .trim()

@@ -74,6 +74,65 @@ Deno.serve(async (req) => {
         const provider = await infomaniak(db);
         return json(await provider.readiness());
       }
+      case "sync-leads": {
+        return json(check(await db.rpc("newsletter_sync_leads")).data);
+      }
+      case "contact-answers": {
+        const { data: contact } = check(
+          await db.from("newsletter_contacts").select("email").eq("id", b.id)
+            .single(),
+        );
+        if (!contact) throw new Error("Contact introuvable");
+        const { data: shortlist } = check(
+          await db.from("leads").select(
+            "formulaire,type_recherche,localite,budget,notes,statut_emploi,permis_nationalite,poursuites,a_garant,accord_bancaire,apport_personnel,type_bien,statut_suisse,situation_pro,poursuites_statut,nb_pieces,localite_recherche,budget_max_chf,revenu_net_mensuel_chf",
+          ).ilike("email", String(contact.email).replace(/[\\%_]/g, "\\$&")),
+        );
+        const { data: meta } = check(
+          await db.from("meta_leads").select(
+            "form_name,raw_answers,raw_meta_payload",
+          ).ilike("email", String(contact.email).replace(/[\\%_]/g, "\\$&")),
+        );
+        const { data: imports } = check(
+          await db.from("newsletter_contact_answers").select("source,answers")
+            .eq("contact_id", b.id),
+        );
+        const internal =
+          /^(id|email|prenom|nom|telephone|created|updated|statut|status|source|utm_|meta_|assigned|sync|last_|hubspot|convert|client_id|user_id)/;
+        return json({
+          shortlist: (shortlist || []).map((r: Record<string, unknown>) =>
+            Object.fromEntries(
+              Object.entries(r).filter(([k, v]) =>
+                !internal.test(k) && v !== null && v !== ""
+              ),
+            )
+          ),
+          meta: (meta || []).map((r: Record<string, unknown>) => {
+            const payload = r.raw_meta_payload as
+              | Record<string, unknown>
+              | null;
+            const fields = Array.isArray(payload?.field_data)
+              ? payload.field_data
+              : [];
+            const answers = {
+              ...Object.fromEntries(
+                Object.entries(payload || {}).filter(([k, v]) =>
+                  !/^(original_|import_|utm_|campaign_|ad_|adset_|form_|field_data|id$)/
+                    .test(k) && v !== null
+                ),
+              ),
+              ...Object.fromEntries(
+                fields.filter((x) => x && typeof x.name === "string").map(
+                  (x) => [x.name, x.values],
+                ),
+              ),
+              ...(r.raw_answers as Record<string, unknown> || {}),
+            };
+            return { form_name: r.form_name, answers };
+          }),
+          imports,
+        });
+      }
       case "contacts": {
         const contacts = await all(
           "newsletter_contacts",
@@ -116,6 +175,7 @@ Deno.serve(async (req) => {
               first_name: p.prenom,
               last_name: p.nom,
               id: p.id,
+              classification_input: eligible.get(p.id),
             })),
         });
       }
@@ -136,11 +196,26 @@ Deno.serve(async (req) => {
                   email: e,
                   first_name: String(r.first_name || "").slice(0, 150),
                   last_name: String(r.last_name || "").slice(0, 150),
+                  classification_input: r.classification_input || {},
+                  form_answers: r.form_answers || {},
+                  suppressed: r.suppressed === true,
+                  kind: r.kind === "client" ? "client" : b.kind,
                 },
               ];
             }),
           ).values(),
         ];
+        if (b.automatic === true) {
+          return json(
+            check(
+              await db.rpc("newsletter_import_auto", {
+                p_rows: rows,
+                p_kind: b.kind,
+                p_source: b.source === "application" ? "application" : "csv",
+              }),
+            ).data,
+          );
+        }
         const { data } = check(
           await db.rpc("newsletter_import_contacts", {
             p_rows: rows,
@@ -157,6 +232,7 @@ Deno.serve(async (req) => {
             .from("newsletter_contacts")
             .update({
               categories: categories(b.categories),
+              classification_manual: true,
               kind: b.kind === "client" ? "client" : "prospect",
               excluded: b.excluded === true,
               updated_at: new Date().toISOString(),
@@ -182,14 +258,16 @@ Deno.serve(async (req) => {
           await db.from("newsletters").select("*").eq("id", b.id).single(),
         );
         const counts: Record<string, number> = {};
-        for (const s of [
-          "pending",
-          "processing",
-          "sent",
-          "failed",
-          "skipped",
-          "attention",
-        ]) {
+        for (
+          const s of [
+            "pending",
+            "processing",
+            "sent",
+            "failed",
+            "skipped",
+            "attention",
+          ]
+        ) {
           const r = check(
             await db
               .from("newsletter_deliveries")
