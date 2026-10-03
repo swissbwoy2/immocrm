@@ -1,3 +1,4 @@
+// @ts-nocheck — types linkedom non compatibles avec la lib Deno, vérification désactivée (runtime inchangé)
 // Parsing de la page détail d'une annonce (immobilier.ch & similaires).
 // Factorisé depuis auto-offers-run pour être réutilisé par le backfill.
 import { parseHTML } from "npm:linkedom@0.18.5";
