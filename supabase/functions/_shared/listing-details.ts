@@ -29,7 +29,7 @@ function parseNumber(s: string | null | undefined): number | null {
 }
 
 export function parseListingDetails(html: string): ListingDetails {
-  const { document } = parseHTML(html) as unknown as { document: Document };
+  const { document } = parseHTML(html) as unknown as { document: any };
   const body = document.querySelector("main") ?? document.body;
   const text = (body?.textContent ?? "").replace(/\u00a0|\u202f/g, " ").replace(/[ \t]+/g, " ");
 
