@@ -94,7 +94,7 @@ export const emailStyles = {
   },
 };
 export const EMAIL_RESPONSIVE_CSS =
-  "@media screen and (max-width:520px){.email-outer{padding:0!important}.email-pad{padding-left:24px!important;padding-right:24px!important}.email-heading{font-size:26px!important;line-height:32px!important}.email-brandline{font-size:9px!important;letter-spacing:.7px!important}}";
+  "@media screen and (max-width:520px){.email-stack{display:block!important;width:100%!important;padding-left:0!important;padding-right:0!important;box-sizing:border-box!important}.email-outer{padding:0!important}.email-pad{padding-left:24px!important;padding-right:24px!important}.email-heading{font-size:26px!important;line-height:32px!important}.email-brandline{font-size:9px!important;letter-spacing:.7px!important}}";
 export function escapeEmailHtml(value: unknown): string {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -124,15 +124,17 @@ export function renderCorporateEmail(
     category = "VOTRE ESPACE IMMOBILIER",
     bodyHtml,
     footerHtml = "",
+    signatureHtml,
   }: {
     title: string;
     preview?: string;
     category?: string;
     bodyHtml: string;
     footerHtml?: string;
+    signatureHtml?: string;
   },
 ): string {
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="logisorama-email-layout" content="corporate-v1"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${
     escapeEmailHtml(title)
   }</title><style>${EMAIL_RESPONSIVE_CSS}</style></head>
 <body style="margin:0;padding:0;background:${EMAIL_BRAND.background};font-family:Arial,Helvetica,sans-serif;">
@@ -149,7 +151,10 @@ export function renderCorporateEmail(
 <h1 class="email-heading" style="margin:0 0 22px;font:700 30px/36px Arial,Helvetica,sans-serif;letter-spacing:-.7px;color:#1c523c;">${
     escapeEmailHtml(title)
   }</h1>${bodyHtml}</td></tr>
-<tr><td class="email-pad" style="padding:22px 36px;background:${EMAIL_BRAND.cream};border-top:1px solid ${EMAIL_BRAND.border};font-size:13px;line-height:22px;color:#435b47;"><strong>L’équipe Logisorama</strong><br>Votre recherche de logement, au même endroit.</td></tr>
+<tr><td class="email-pad" style="padding:22px 36px;background:${EMAIL_BRAND.cream};border-top:1px solid ${EMAIL_BRAND.border};font-size:13px;line-height:22px;color:#435b47;">${
+    signatureHtml ||
+    "<strong>L’équipe Logisorama</strong><br>Votre recherche de logement, au même endroit."
+  }</td></tr>
 <tr><td class="email-pad" style="padding:22px 36px;font-size:12px;line-height:20px;color:#7b847a;"><strong>Logisorama · Immo-rama</strong><br><a href="${EMAIL_BRAND.site}" style="color:${EMAIL_BRAND.green};">logisorama.ch</a> · <a href="mailto:support@logisorama.ch" style="color:${EMAIL_BRAND.green};">support@logisorama.ch</a>${
     footerHtml ? `<div style="margin-top:12px;">${footerHtml}</div>` : ""
   }</td></tr>

@@ -1,0 +1,114 @@
+[
+  {
+    "label": "location",
+    "urls": [
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=location&utm_content=cta_activation_secondaire#dossier-form",
+      "https://logisorama.ch/unsubscribe/demo-unsubscribe"
+    ]
+  },
+  {
+    "label": "achat",
+    "urls": [
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=achat&utm_content=avis_google_site#avis",
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=achat&utm_content=cta_rdv_bureau_final#analyse-dossier",
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=achat&utm_content=cta_rdv_bureau_hero#analyse-dossier",
+      "https://logisorama.ch/construire-renover",
+      "https://logisorama.ch/nouveau-mandat?a=1&b=2",
+      "https://logisorama.ch/relouer-mon-appartement",
+      "https://logisorama.ch/unsubscribe/demo-unsubscribe",
+      "https://logisorama.ch/vendre-mon-bien",
+      "https://www.google.com/maps/place/Immo-rama.ch/@46.553728,6.572675,17z/data=!4m8!3m7!1s0x478c31710ee69131:0x868b9609d0284202!8m2!3d46.553728!4d6.572675!9m1!1b1!16s%2Fg%2F11ml0y1pmv?entry=ttu&g_ep=EgoyMDI2MDQyOC4wIKXMDSoASAFQAw%3D%3D"
+    ]
+  },
+  {
+    "label": "vente",
+    "urls": [
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=vente&utm_content=avis_google_site#avis",
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=vente&utm_content=cta_rdv_bureau_final#analyse-dossier",
+      "https://logisorama.ch/construire-renover",
+      "https://logisorama.ch/nouveau-mandat?a=1&b=2",
+      "https://logisorama.ch/relouer-mon-appartement",
+      "https://logisorama.ch/unsubscribe/demo-unsubscribe",
+      "https://logisorama.ch/vendre-mon-bien",
+      "https://www.google.com/maps/place/Immo-rama.ch/@46.553728,6.572675,17z/data=!4m8!3m7!1s0x478c31710ee69131:0x868b9609d0284202!8m2!3d46.553728!4d6.572675!9m1!1b1!16s%2Fg%2F11ml0y1pmv?entry=ttu&g_ep=EgoyMDI2MDQyOC4wIKXMDSoASAFQAw%3D%3D"
+    ]
+  },
+  {
+    "label": "renovation",
+    "urls": [
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=renovation&utm_content=avis_google_site#avis",
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=renovation&utm_content=cta_rdv_bureau_final#analyse-dossier",
+      "https://logisorama.ch/?utm_source=campagne_suivi&utm_medium=email&utm_campaign=renovation&utm_content=cta_rdv_bureau_hero#analyse-dossier",
+      "https://logisorama.ch/construire-renover",
+      "https://logisorama.ch/nouveau-mandat?a=1&b=2",
+      "https://logisorama.ch/relouer-mon-appartement",
+      "https://logisorama.ch/unsubscribe/demo-unsubscribe",
+      "https://logisorama.ch/vendre-mon-bien",
+      "https://www.google.com/maps/place/Immo-rama.ch/@46.553728,6.572675,17z/data=!4m8!3m7!1s0x478c31710ee69131:0x868b9609d0284202!8m2!3d46.553728!4d6.572675!9m1!1b1!16s%2Fg%2F11ml0y1pmv?entry=ttu&g_ep=EgoyMDI2MDQyOC4wIKXMDSoASAFQAw%3D%3D"
+    ]
+  },
+  {
+    "label": "relance-j1",
+    "urls": [
+      "https://immocrm.lovable.app/mandat?email=marie%40example.test"
+    ]
+  },
+  {
+    "label": "relance-j3",
+    "urls": [
+      "https://immocrm.lovable.app/mandat?email=marie%40example.test"
+    ]
+  },
+  {
+    "label": "relance-j7",
+    "urls": [
+      "https://immocrm.lovable.app/mandat?email=marie%40example.test"
+    ]
+  },
+  {
+    "label": "activationHtml",
+    "urls": [
+      "https://example.test/unsubscribe?token=demo",
+      "https://logisorama.ch/nouveau-mandat"
+    ]
+  },
+  {
+    "label": "offres-0",
+    "urls": [
+      "https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email",
+      "https://www.instagram.com/immo_rama",
+      "https://www.linkedin.com/company/immo-rama",
+      "mailto:info@immo-rama.ch",
+      "tel:+41764839199"
+    ]
+  },
+  {
+    "label": "offres-1",
+    "urls": [
+      "https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email",
+      "https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email&utm_content=offres",
+      "https://www.instagram.com/immo_rama",
+      "https://www.linkedin.com/company/immo-rama",
+      "mailto:info@immo-rama.ch",
+      "tel:+41764839199"
+    ]
+  },
+  {
+    "label": "offres-3",
+    "urls": [
+      "https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email",
+      "https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email&utm_content=offres",
+      "https://www.instagram.com/immo_rama",
+      "https://www.linkedin.com/company/immo-rama",
+      "mailto:info@immo-rama.ch",
+      "tel:+41764839199"
+    ]
+  },
+  {
+    "label": "recommandation",
+    "urls": [
+      "https://g.page/r/CQpCCH4CyVqsEBM/review",
+      "https://immo-rama.ch/contact"
+    ]
+  }
+]

@@ -1,3 +1,4 @@
+import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
 // Campagne de suivi candidat (planifiée 2×/jour).
 // - Rappels de visite (rappel_48h, rappel_24h) : canal transactionnel (sendTemplateEmail).
 // - Activation (activation_bienvenue, activation_post_visite) : canal marketing via Resend,
@@ -23,31 +24,12 @@ const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 function activationHtml(prenom: string, unsubscribeUrl: string): string {
-  const G = 'hsl(158,55%,38%)', GD = 'hsl(158,60%,24%)'
-  const pill = (t: string) =>
-    `<td align="center" style="padding:0 6px;"><span style="display:inline-block;background:#eaf7f1;color:${GD};border:1px solid #cdeadc;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:bold;font-family:Arial,sans-serif;">${t}</span></td>`
-  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pas le temps de chercher ? On s'occupe de tout</title></head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;padding:20px 10px;"><tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border:1px solid #e5efe9;border-radius:14px;overflow:hidden;">
-<tr><td style="background:${G};background:linear-gradient(135deg,${G} 0%,${GD} 100%);padding:22px 28px;">
-<table role="presentation" width="100%"><tr>
-<td><div style="font-size:20px;font-weight:bold;color:#fff;letter-spacing:2px;">IMMO-RAMA</div><div style="font-size:12px;color:#d6f2e6;margin-top:2px;">Logisorama</div></td>
-<td align="right" style="font-size:13px;font-weight:bold;color:#fff;">Déléguez votre recherche</td>
-</tr></table></td></tr>
-<tr><td style="padding:32px 28px 12px;">
-<h1 style="margin:0 0 16px;font-size:24px;color:#0f172a;">Pas le temps de visiter ?</h1>
-${prenom ? `<p style="margin:0 0 14px;font-size:15px;color:#374151;">Bonjour ${esc(prenom)},</p>` : ''}
-<p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:#374151;">La recherche d'un appartement peut vite devenir stressante. Laissez nos agents immobiliers faire le travail pour vous ! Recherche, visites, postulations : on s'occupe de tout, de A à Z, pour vous trouver votre futur logement. Activez votre recherche en un clic.</p>
-<table role="presentation" align="center" style="margin:0 auto 26px;"><tr>${pill('🔍 Recherche')}${pill('🏠 Visites')}${pill('📝 Postulations')}</tr></table>
-<table role="presentation" align="center" style="margin:0 auto 10px;"><tr><td bgcolor="${G}" style="border-radius:10px;background:${G};">
-<a href="https://logisorama.ch/nouveau-mandat" target="_blank" style="display:inline-block;padding:15px 30px;font-size:15px;font-weight:bold;color:#fff;text-decoration:none;border-radius:10px;">Activer ma recherche</a>
-</td></tr></table>
-</td></tr>
-<tr><td style="background:#f6faf8;padding:18px 28px;border-top:1px solid #e5efe9;text-align:center;font-size:12px;color:#6b7280;line-height:1.6;">
-Immo-Rama · Logisorama — Agence de relocation en Suisse romande · <a href="https://logisorama.ch" style="color:${G};">logisorama.ch</a><br>
-<a href="${unsubscribeUrl}" style="color:#6b7280;text-decoration:underline;">Se désinscrire de ces e-mails</a>
-</td></tr></table></td></tr></table></body></html>`
+  return renderCorporateEmail({title:'Pas le temps de visiter ?', preview:"Pas le temps de chercher ? On s’occupe de tout", category:'VOTRE RECHERCHE', bodyHtml:`
+    ${prenom ? `<p>Bonjour ${esc(prenom)},</p>` : ''}
+    <p>La recherche d'un appartement peut vite devenir stressante. Laissez nos agents immobiliers faire le travail pour vous ! Recherche, visites, postulations : on s'occupe de tout, de A à Z, pour vous trouver votre futur logement. Activez votre recherche en un clic.</p>
+    <div style="padding:22px;background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;color:#193d2c;">Recherche · Visites · Postulations</div>
+    ${emailButton('Activer ma recherche','https://logisorama.ch/nouveau-mandat')}
+  `, footerHtml:`Agence de relocation en Suisse romande<br><a href="${esc(unsubscribeUrl)}" style="color:#205a43;">Se désinscrire de ces e-mails</a>`});
 }
 
 async function sendActivation(email: string, prenom: string, subject: string): Promise<boolean> {

@@ -22,3 +22,15 @@ await Deno.writeTextFile(
     "Marie",
   ),
 );
+
+const { renderCorrespondenceEmail } = await import(
+  "../../supabase/functions/_shared/correspondence-email.ts"
+);
+await Deno.writeTextFile(
+  `${dir}/correspondance.html`,
+  renderCorrespondenceEmail(
+    "Candidature — Appartement à Lausanne",
+    "Madame, Monsieur,\n\nVeuillez trouver en pièces jointes le dossier de candidature de Marie Exemple pour le logement visité.\n\nJe reste à votre disposition pour tout complément d’information.",
+    '<strong>Christ Ramazani</strong><br>Immo-rama · Logisorama<br><a href="mailto:support@logisorama.ch" style="color:#205a43;">support@logisorama.ch</a>',
+  ),
+);
