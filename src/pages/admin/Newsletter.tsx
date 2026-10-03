@@ -89,6 +89,11 @@ export default function Newsletter() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [connection, setConnection] = useState<{
+    ready: boolean;
+    sender?: string;
+    message: string;
+  }>({ ready: false, message: "Vérification de la connexion Infomaniak…" });
   const [draft, setDraft] = useState(initial);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [query, setQuery] = useState("");
@@ -151,12 +156,16 @@ export default function Newsletter() {
     setLoading(true);
     setLoadError("");
     try {
-      const [c, n] = await Promise.all([
+      const [c, n, health] = await Promise.all([
         api<{ contacts: Contact[] }>({ action: "contacts" }),
         api<{ campaigns: Campaign[] }>({ action: "list" }),
+        api<{ ready: boolean; sender?: string; message: string }>({
+          action: "connection",
+        }).catch((e: Error) => ({ ready: false, message: e.message })),
       ]);
       setContacts(c.contacts);
       setCampaigns(n.campaigns);
+      setConnection(health);
     } catch (e) {
       setLoadError((e as Error).message);
     } finally {
@@ -463,6 +472,15 @@ export default function Newsletter() {
           </button>
         ))}
       </div>
+      <div
+        role="status"
+        className={`rounded-xl border p-4 text-sm ${connection.ready ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-950"}`}
+      >
+        <p className="font-medium">{connection.message}</p>
+        {connection.sender && (
+          <p>Expéditeur : Logisorama &lt;{connection.sender}&gt;</p>
+        )}
+      </div>
       {loadError && (
         <div role="alert" className="rounded-lg border border-destructive p-4">
           <p>Le module n’est pas disponible : {loadError}</p>
@@ -536,13 +554,25 @@ export default function Newsletter() {
                   {STATUS_LABELS[campaign.status]}{" "}
                   {dateLabel(campaign.scheduled_at)} · heure suisse
                 </p>
+                {campaign.provider_campaign_id &&
+                  campaign.provider_domain_id && (
+                    <a
+                      className="text-sm underline"
+                      href={`https://newsletter.infomaniak.com/v3/${campaign.provider_domain_id}/campaigns`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Campagne Infomaniak n° {campaign.provider_campaign_id} —
+                      ouvrir le suivi
+                    </a>
+                  )}
                 {campaign.worker_error && (
                   <p role="alert" className="text-sm text-destructive">
                     {campaign.worker_error}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-3 text-sm">
-                  <span>{counts.sent || 0} transmis à Resend</span>
+                  <span>{counts.sent || 0} transmis au prestataire</span>
                   <span>
                     {(counts.pending || 0) + (counts.processing || 0)} en
                     attente
@@ -552,8 +582,8 @@ export default function Newsletter() {
                   <span>{counts.attention || 0} à vérifier</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  « Transmis » signifie accepté par Resend ; ce n’est pas une
-                  confirmation de livraison.
+                  « Transmis » signifie accepté par le prestataire ; ce n’est
+                  pas une confirmation de livraison.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -691,8 +721,8 @@ export default function Newsletter() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Le lien de désinscription est ajouté automatiquement. Vous
-                  pouvez le placer avec {"{{unsubscribe_url}}"}.
+                  Infomaniak ajoute automatiquement un lien de désinscription
+                  personnel au pied de chaque email.
                 </p>
                 <Button
                   disabled={
@@ -788,7 +818,11 @@ export default function Newsletter() {
                     <Button
                       variant="outline"
                       disabled={
-                        busy || !draft.html || !draft.subject || !testEmail
+                        busy ||
+                        !connection.ready ||
+                        !draft.html ||
+                        !draft.subject ||
+                        !testEmail
                       }
                       onClick={() =>
                         void run(async () => {
@@ -800,7 +834,7 @@ export default function Newsletter() {
                             request_id: testKey.current,
                           });
                           testKey.current = crypto.randomUUID();
-                          toast.success("Test transmis à Resend");
+                          toast.success("Test transmis à Infomaniak");
                         })
                       }
                     >
@@ -830,6 +864,7 @@ export default function Newsletter() {
                         busy ||
                         loading ||
                         !!loadError ||
+                        !connection.ready ||
                         !recipients.length ||
                         !draft.name ||
                         !draft.subject ||

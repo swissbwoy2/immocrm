@@ -28,6 +28,9 @@ export type Campaign = {
   html: string;
   revision: number;
   worker_error?: string | null;
+  provider?: string;
+  provider_campaign_id?: number | null;
+  provider_domain_id?: number | null;
   status: "draft" | "queued" | "completed" | "cancelled";
   scheduled_at: string | null;
   updated_at: string;
