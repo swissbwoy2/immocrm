@@ -34,7 +34,7 @@ function b64url(bytes: Uint8Array | string): string {
   return btoa(raw).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function pemToDer(pem: string): Uint8Array {
+function pemToDer(pem: string): Uint8Array<ArrayBuffer> {
   const contents = pem
     .replace(/-----BEGIN [^-]+-----/g, "")
     .replace(/-----END [^-]+-----/g, "")
