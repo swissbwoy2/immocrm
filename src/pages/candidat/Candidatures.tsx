@@ -4,7 +4,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RelocationTimeline } from '@/components/candidature/RelocationTimeline';
-import { Home } from 'lucide-react';
+import { Home, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { VisiteConfirmGate } from '@/components/candidature/VisiteConfirmGate';
+import { CandidatDocumentsSection } from '@/components/candidature/CandidatDocumentsSection';
+import { ouvrirConversationAnnonce } from '@/components/messaging/ConversationsAnnoncePanel';
+import type { UnifiedCandidature } from '@/hooks/useCandidatCandidatures';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,18 +24,18 @@ export default function CandidatCandidatures() {
   const qc = useQueryClient();
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
+  const [askVisit, setAskVisit] = useState<UnifiedCandidature | null>(null);
+  const navigate = useNavigate();
   const now = Date.now();
-  const eligibles = data.filter((c) => c.source === 'location' && !c.annulee && (c.statut === 'en_attente') && c.date_visite && new Date(c.date_visite).getTime() < now);
+  const eligibles = data.filter((c) => c.source === 'location' && !c.annulee && ['en_attente', 'visite_effectuee'].includes(c.statut) && c.date_visite && new Date(c.date_visite).getTime() < now);
 
-  const deposer = async () => {
-    if (!selected || busy) return;
-    setBusy(true);
-    const { error } = await (supabase as any).rpc('candidat_deposer_candidature', { _id: selected });
-    if (error) { setBusy(false); toast.error(error.message); return; }
-    supabase.functions.invoke('candidature-relocation-notify', { body: { candidature_id: selected, etape: 'candidature_deposee' } }).catch(() => {});
-    toast.success('Candidature envoyée');
-    setSelected(''); setBusy(false);
-    qc.invalidateQueries({ queryKey: ['candidat-candidatures'] });
+  const deposer = () => {
+    if (!selected) return;
+    navigate(`/candidat/demande?candidature=${selected}`);
+  };
+  const contacter = async (annonceId: string) => {
+    const id = await ouvrirConversationAnnonce(annonceId);
+    if (id) navigate(`/candidat/messages?conversation=${id}`);
   };
 
   const confirmer = async (id: string) => {
@@ -52,6 +57,7 @@ export default function CandidatCandidatures() {
 
   return (
     <div className="flex-1 overflow-y-auto">
+      <VisiteConfirmGate list={data} force={askVisit} onClose={() => setAskVisit(null)} />
       <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
         <h1 className="text-2xl font-bold text-foreground">Mes candidatures</h1>
         <Card>
@@ -108,7 +114,14 @@ export default function CandidatCandidatures() {
                   {c.annulee && c.annulation_message && (
                     <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
                   )}
-                  {c.source === 'location' && c.raw?.date_depot && <RelocationTimeline r={c.raw} />}
+                  {c.source === 'location' && (c.raw?.date_depot || ['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises', 'refusee', 'desiste'].includes(c.statut)) && <RelocationTimeline r={{ ...c.raw, statut: c.statut }} />}
+                  {c.source === 'location' && <CandidatDocumentsSection candidatureId={c.id} />}
+                  {c.source === 'location' && !c.annulee && c.raw?.visite_confirmee !== true && ['en_attente', 'visite_planifiee'].includes(c.statut) && c.date_visite && new Date(c.date_visite).getTime() < now && (
+                    <Button size="sm" variant="outline" className="min-h-[44px] w-full" onClick={() => setAskVisit(c)}>Avez-vous visité cet objet ? Répondre</Button>
+                  )}
+                  {c.source === 'location' && c.raw?.annonce_id && (
+                    <Button size="sm" variant="outline" className="min-h-[44px] w-full" onClick={() => contacter(c.raw.annonce_id)}><MessageCircle className="mr-1 h-4 w-4" />Contacter</Button>
+                  )}
                   {c.source === 'location' && c.statut === RETENU_BAILLEUR && !c.raw?.candidat_confirme_at && (
                     <Button size="sm" disabled={busy} onClick={() => confirmer(c.id)} className="min-h-[44px] w-full">Je confirme vouloir conclure</Button>
                   )}

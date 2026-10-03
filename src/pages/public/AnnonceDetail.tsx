@@ -841,7 +841,7 @@ export default function AnnonceDetail() {
                       <CalendarCheck className="h-4 w-4 mr-2" />
                       Réserver une visite / Postuler
                     </Button>
-                    <Button className="w-full" size="lg" variant="outline" onClick={() => setShowContactDialog(true)}>
+                    <Button className="w-full" size="lg" variant="outline" onClick={async () => { if (userRoles.includes('candidat' as any)) { const { ouvrirConversationAnnonce } = await import('@/components/messaging/ConversationsAnnoncePanel'); const id = await ouvrirConversationAnnonce(annonce.id); if (id) navigate(`/candidat/messages?conversation=${id}`); return; } setShowContactDialog(true); }}>
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Contacter
                     </Button>

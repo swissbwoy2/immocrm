@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { statutLabel } from '@/hooks/useCandidatCandidatures';
 import { RelocationTimeline } from '@/components/candidature/RelocationTimeline';
+import { AdminGenererDocuments } from '@/components/candidature/AdminGenererDocuments';
 
 const STATUTS = ['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'refusee', 'bail_signe', 'etat_lieux_effectue', 'cles_remises'];
 const fmt = (d?: string | null) => d ? new Date(d).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', dateStyle: 'short', timeStyle: 'short' }) : '—';
@@ -143,6 +144,9 @@ export default function CandidaturesRelocation() {
                     <button key={d.id} className="block text-left text-primary underline" onClick={() => openDoc(d.url)}>{d.type_document || d.nom} — {d.nom}</button>
                   ))}
                 </section>
+                {['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe'].includes(s) && (
+                  <section className="space-y-1"><p className="font-semibold">Documents</p><AdminGenererDocuments candidatureId={sel.id} onDone={async () => { const { data } = await (supabase as any).from('candidatures_location').select(SELECT).eq('id', sel.id).maybeSingle(); if (data) setSel(data); load(); }} /></section>
+                )}
                 <section><p className="mb-1 font-semibold">Suivi</p><RelocationTimeline r={sel} /></section>
                 <section className="space-y-2 border-t pt-3">
                   <p className="font-semibold">Actions</p>
