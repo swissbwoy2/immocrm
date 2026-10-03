@@ -177,6 +177,39 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
       )).rows[0].classification_manual,
       true,
     );
+    await db.exec(`
+      create table profiles(id uuid primary key, email text, actif boolean default false, anonymise_at timestamptz, notifications_email boolean default true);
+      create table clients(user_id uuid, anonymise_at timestamptz);
+      create table email_unsubscribes(email text);
+      create table annonces_publiques(id uuid primary key, titre text);
+      create table annonce_creneaux(id uuid primary key, annonce_id uuid, date_heure timestamptz, actif boolean);
+      create table candidatures_location(id uuid primary key default gen_random_uuid(),email text,prenom text,nom text,creneau_id uuid,user_id uuid,statut text,created_at timestamptz default now());
+      insert into annonce_creneaux values('00000000-0000-0000-0000-000000000001',null,'2026-10-04 12:00Z',false);
+      insert into profiles(id,email) values('00000000-0000-0000-0000-000000000002','visitor@example.ch');
+      insert into email_unsubscribes values('unsub@example.ch');
+      insert into newsletter_contact_suppressions values('suppressed@example.ch');
+      insert into profiles(id,email,anonymise_at) values('00000000-0000-0000-0000-000000000003','forgotten@example.ch',now());
+      insert into candidatures_location(email,prenom,creneau_id,user_id) values(' VISITOR@example.ch ','Alice','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002');
+    `);
+    await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003210000_newsletter_visit_contacts.sql', import.meta.url)));
+    await db.exec("select newsletter_sync_visits(); select newsletter_sync_visits()");
+    assertEquals((await db.query("select categories,excluded,kind from newsletter_contacts where email='visitor@example.ch'")).rows,
+      [{categories:['renter','visit'],excluded:false,kind:'prospect'}]);
+    await db.exec(`
+      insert into candidatures_location(email,creneau_id) select email,'00000000-0000-0000-0000-000000000001' from unnest(array['visitor@example.ch','a@example.ch','unsub@example.ch','suppressed@example.ch','not-an-email','forgotten@example.ch']) email;
+      insert into candidatures_location(email) values('no-slot@example.ch');
+      insert into profiles(id,email,notifications_email) values('00000000-0000-0000-0000-000000000004','optout@example.ch',false);
+      insert into candidatures_location(email,creneau_id) values('optout@example.ch','00000000-0000-0000-0000-000000000001');
+    `);
+    assertEquals((await db.query("select categories,excluded,kind from newsletter_contacts where email='a@example.ch'")).rows,
+      [{categories:['cleaning','visit'],excluded:true,kind:'client'}]);
+    assertEquals((await db.query("select count(*)::int n from newsletter_contacts where email in ('visitor@example.ch','forgotten@example.ch','no-slot@example.ch','not-an-email')")).rows,[{n:1}]);
+    assertEquals((await db.query("select bool_and(excluded) blocked from newsletter_contacts where email in ('unsub@example.ch','suppressed@example.ch','optout@example.ch')")).rows,[{blocked:true}]);
+    assertEquals((await db.query("select n from (select count(*)::int n from newsletter_contact_answers a cross join lateral jsonb_object_keys(a.answers) where a.contact_id=(select id from newsletter_contacts where email='visitor@example.ch') and source='visites') q")).rows,[{n:2}]);
+    await db.exec("update candidatures_location set statut='desiste' where email='visitor@example.ch'; select newsletter_sync_leads()");
+    assertEquals((await db.query("select count(*)::int n from newsletter_contacts where email='visitor@example.ch'")).rows,[{n:1}]);
+    await db.query("select newsletter_import_contacts($1::jsonb,'prospect',array['visit'],'csv')",[JSON.stringify([{email:'manualvisit@example.ch'}])]);
+    assertEquals((await db.query("select has_function_privilege('anon','newsletter_sync_visits()','execute') allowed")).rows,[{allowed:false}]);
   } finally {
     await db.close();
   }

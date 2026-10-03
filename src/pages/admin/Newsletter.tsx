@@ -705,7 +705,7 @@ export default function Newsletter() {
             <TabsContent value="contacts" className="space-y-4">
               <h2 className="text-2xl font-semibold">Abonnés</h2>
               <p className="text-sm text-muted-foreground">
-                Clients et prospects, organisés selon leur projet immobilier.
+                Clients et prospects, organisés selon leur projet immobilier et leurs inscriptions aux visites.
               </p>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {Object.entries(CONTACT_CATEGORIES).map(([k, v]) => (
@@ -740,11 +740,11 @@ export default function Newsletter() {
                       await api({ action: "sync-leads" });
                       await refresh();
                       toast.success(
-                        "Shortlist et Meta synchronisés. Les nouveaux leads sont ajoutés automatiquement.",
+                        "Shortlist, Meta et visites synchronisés. Les nouveaux contacts sont ajoutés automatiquement.",
                       );
                     })}
                 >
-                  Synchroniser Shortlist et Meta
+                  Synchroniser Shortlist, Meta et visites
                 </Button>
                 <Button onClick={() => openImport("csv")} disabled={busy}>
                   Importer un CSV
@@ -1718,7 +1718,8 @@ function FormAnswerTree({ value }: { value: unknown }) {
   const labels: Record<string, string> = {
     shortlist: "Shortlist",
     meta: "Meta Ads",
-    imports: "Imports CSV / HubSpot",
+    imports: "Imports et inscriptions",
+    visites: "Inscriptions aux visites",
     form_name: "Formulaire",
     formulaire: "Formulaire",
     raw_answers: "Réponses",
