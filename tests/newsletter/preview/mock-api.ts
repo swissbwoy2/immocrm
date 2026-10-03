@@ -1,9 +1,9 @@
 // Local-only fixture: never imports Supabase and never makes network requests.
 import type {
   Campaign,
+  Category,
   Contact,
   ImportRow,
-  Category,
 } from "../../../src/features/newsletter/model";
 let contacts: Contact[] = [
   {
@@ -42,6 +42,23 @@ const forms: Record<string, unknown>[] = [];
 export async function newsletterApi<T>(b: Record<string, unknown>): Promise<T> {
   let result: unknown;
   switch (b.action) {
+    case "sync-leads":
+      result = { shortlist: { imported: 2 }, meta: { imported: 1 } };
+      break;
+    case "contact-answers":
+      result = {
+        shortlist: [{
+          formulaire: "Recherche de logement",
+          type_recherche: "location",
+          localite: "Lausanne",
+        }],
+        meta: [{
+          form_name: "Projet immobilier",
+          answers: { "Souhaitez-vous acheter ou louer ?": "Louer" },
+        }],
+        imports: [],
+      };
+      break;
     case "asset-upload":
       result = { url: "https://logisorama.ch/newsletter/visuel-premium.jpg" };
       break;
@@ -113,11 +130,11 @@ export async function newsletterApi<T>(b: Record<string, unknown>): Promise<T> {
       const rows = b.rows as ImportRow[];
       for (const r of rows) {
         const prior = contacts.find((c) => c.email === r.email);
-        if (prior)
+        if (prior) {
           prior.categories = [
             ...new Set([...prior.categories, ...(b.categories as Category[])]),
           ];
-        else
+        } else {
           contacts.push({
             ...r,
             id: crypto.randomUUID(),
@@ -126,13 +143,14 @@ export async function newsletterApi<T>(b: Record<string, unknown>): Promise<T> {
             excluded: false,
             unsubscribed: false,
           });
+        }
       }
       result = { imported: rows.length };
       break;
     }
     case "contact-update":
       contacts = contacts.map((c) =>
-        c.id === b.id ? ({ ...c, ...b } as Contact) : c,
+        c.id === b.id ? ({ ...c, ...b } as Contact) : c
       );
       result = {};
       break;

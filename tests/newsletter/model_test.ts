@@ -38,7 +38,7 @@ Deno.test("CSV : emails invalides signalés et doublons normalisés", () => {
   assertThrows(() => parseContactCsv("nom,prenom\nA,B"));
   assertThrows(() => parseContactCsv('email\n"unfinished'));
   assertThrows(() =>
-    parseContactCsv("email\n" + Array(1001).fill("a@example.ch").join("\n")),
+    parseContactCsv("email\n" + Array(10001).fill("a@example.ch").join("\n")),
   );
 });
 Deno.test(

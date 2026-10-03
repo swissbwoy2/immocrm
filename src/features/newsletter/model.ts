@@ -3,6 +3,7 @@ export const CONTACT_CATEGORIES = {
   seller: "Propriétaires vendeurs",
   renter: "Chercheurs à louer",
   buyer: "Chercheurs à acheter",
+  cleaning: "Nettoyage",
 } as const;
 export type Category = keyof typeof CONTACT_CATEGORIES;
 export type ContactKind = "client" | "prospect";
@@ -17,6 +18,10 @@ export type Contact = {
   unsubscribed: boolean;
 };
 export type ImportRow = {
+  classification_input?: Record<string, unknown>;
+  form_answers?: Record<string, string>;
+  suppressed?: boolean;
+  kind?: ContactKind;
   email: string;
   first_name: string;
   last_name: string;
@@ -88,8 +93,9 @@ export function parseContactCsv(input: string): {
       continue;
     }
     if (c === '"') {
-      if (cell.trim() || afterQuote)
+      if (cell.trim() || afterQuote) {
         throw new Error("Guillemets CSV mal formés");
+      }
       quoted = true;
       continue;
     }
@@ -108,17 +114,20 @@ export function parseContactCsv(input: string): {
       afterQuote = false;
       continue;
     }
-    if (afterQuote && !/\s/.test(c))
+    if (afterQuote && !/\s/.test(c)) {
       throw new Error("Séparateur manquant après un champ entre guillemets");
+    }
     cell += c;
   }
   if (quoted) throw new Error("Champ CSV entre guillemets non terminé");
   row.push(cell);
   if (row.some((v) => v.trim())) matrix.push(row);
-  if (matrix.length < 2)
+  if (matrix.length < 2) {
     throw new Error("Le CSV doit contenir un en-tête et au moins un contact");
-  if (matrix.length > 1001)
-    throw new Error("Maximum 1 000 contacts par fichier");
+  }
+  if (matrix.length > 10001) {
+    throw new Error("Maximum 10 000 contacts par fichier");
+  }
   const normalize = (s: string) =>
     s
       .trim()
@@ -126,7 +135,8 @@ export function parseContactCsv(input: string): {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[ _-]/g, "");
-  const headers = matrix.shift()!.map(normalize);
+  const originalHeaders = matrix.shift()!;
+  const headers = originalHeaders.map(normalize);
   const index = (names: string[]) =>
     headers.findIndex((h) => names.includes(h));
   const emailIndex = index([
@@ -135,15 +145,16 @@ export function parseContactCsv(input: string): {
     "adresseemail",
     "courriel",
   ]);
-  if (emailIndex < 0)
+  if (emailIndex < 0) {
     throw new Error(
       "Colonne « email » introuvable. Colonnes acceptées : email, prenom, nom.",
     );
+  }
   const first = index(["prenom", "firstname"]);
   const last = index(["nom", "lastname"]);
   const rows: ImportRow[] = [];
   const invalid: number[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, ImportRow>();
   let duplicates = 0;
   matrix.forEach((r, i) => {
     const e = (r[emailIndex] || "").trim().toLowerCase();
@@ -151,16 +162,61 @@ export function parseContactCsv(input: string): {
       invalid.push(i + 2);
       return;
     }
-    if (seen.has(e)) {
+    const input: Record<string, string> = {};
+    const answers: Record<string, string> = {};
+    let suppressed = false;
+    let isClient = false;
+    originalHeaders.forEach((header, column) => {
+      const value = (r[column] || "").trim();
+      if (!value) return;
+      const key = header.toLowerCase().normalize("NFD").replace(
+        /[\u0300-\u036f]/g,
+        "",
+      );
+      if (
+        /(type[_ ]recherche|journey[_ ]type|formulaire|form[_ ]name|conversion|campaign|souhaitez|souhaites|vous souhaitez|quand.*proprietaire|type de nettoyage|objectif.*projet|projet concernant)/
+          .test(key)
+      ) input[header] = value;
+      if (
+        /(\?|souhaitez|souhaites|vous souhaitez|quand.*proprietaire|type de nettoyage|type de bien|type[_ ]recherche)/
+          .test(key)
+      ) answers[header] = value;
+      if (
+        (/(desabonne de tous|adresse e.mail invalide|unsubscribed)/.test(key) &&
+          /^(true|oui|yes|1)$/i.test(value)) ||
+        /raison du rejet permanent/.test(key)
+      ) suppressed = true;
+      if (/phase du cycle/.test(key) && /^client$/i.test(value)) {
+        isClient = true;
+      }
+    });
+    const previous = seen.get(e);
+    if (previous) {
       duplicates++;
+      if (Object.keys(input).length) {
+        previous.classification_input = {
+          ...previous.classification_input,
+          ...input,
+        };
+      }
+      if (Object.keys(answers).length) {
+        previous.form_answers = { ...previous.form_answers, ...answers };
+      }
+      if (suppressed) previous.suppressed = true;
+      if (isClient) previous.kind = "client";
       return;
     }
-    seen.add(e);
-    rows.push({
+    const contact: ImportRow = {
       email: e,
       first_name: (r[first] || "").trim().slice(0, 150),
       last_name: (r[last] || "").trim().slice(0, 150),
-    });
+      ...(Object.keys(input).length ? { classification_input: input } : {}),
+      ...(Object.keys(answers).length ? { form_answers: answers } : {}),
+      ...(suppressed ? { suppressed: true } : {}),
+      ...(isClient ? { kind: "client" as const } : {}),
+    };
+    seen.set(e, contact);
+    rows.push(contact);
   });
   return { rows, invalid, duplicates };
 }
@@ -174,7 +230,9 @@ export function filterContacts(
   return contacts.filter(
     (c) =>
       (kind === "all" || c.kind === kind) &&
-      (category === "all" || c.categories.includes(category as Category)) &&
+      (category === "all" || (category === "unclassified"
+        ? !c.categories.length
+        : c.categories.includes(category as Category))) &&
       `${c.email} ${c.first_name} ${c.last_name}`
         .toLocaleLowerCase()
         .includes(q),
