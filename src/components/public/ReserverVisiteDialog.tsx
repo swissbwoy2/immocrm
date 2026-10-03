@@ -10,6 +10,7 @@ import { CalendarCheck, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 export function useAnnonceCreneaux(annonceId?: string) {
   return useQuery({
@@ -54,6 +55,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const { data: creneaux = [], isLoading } = useAnnonceCreneaux(annonce.id);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [slotFull, setSlotFull] = useState(false);
   const [accountOnly, setAccountOnly] = useState(false);
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '' });
@@ -143,7 +145,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
             <CheckCircle2 className="h-12 w-12 text-primary" />
             <p className="text-lg font-semibold text-foreground">{accountOnly ? 'Votre demande est enregistrée' : 'Votre visite est réservée'}</p>
             <p className="text-sm text-muted-foreground">{accountOnly ? 'Si votre compte vient d’être créé, vos identifiants vous ont été envoyés par e-mail. Sinon, connectez-vous avec votre compte existant.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
-            <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>
+            {accountOnly ? <Button className="mt-2" onClick={() => { close(false); navigate('/login'); }}>Se connecter</Button> : <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>}
           </div>
         ) : isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
