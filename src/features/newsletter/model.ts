@@ -26,6 +26,7 @@ export type Campaign = {
   name: string;
   subject: string;
   html: string;
+  preheader?: string;
   revision: number;
   worker_error?: string | null;
   provider?: string;

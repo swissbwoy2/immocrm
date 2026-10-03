@@ -1,0 +1,94 @@
+.newsletter-editor .gjs-one-bg {
+  background-color: #fff;
+}
+.newsletter-editor .gjs-two-color {
+  color: #33453c;
+}
+.newsletter-editor .gjs-three-bg {
+  background-color: #205a43;
+  color: #fff;
+}
+.newsletter-editor .gjs-four-color,
+.newsletter-editor .gjs-four-color-h:hover {
+  color: #205a43;
+}
+.newsletter-editor .gjs-cv-canvas {
+  width: 100%;
+  height: 100%;
+  top: 0;
+  background: #e8ebe7;
+}
+.newsletter-editor .gjs-block {
+  width: 44%;
+  min-height: 74px;
+  box-shadow: none;
+  border: 1px solid #e0e6e0;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.newsletter-editor .gjs-block:hover {
+  border-color: #205a43;
+  background: #f1f6f1;
+}
+.newsletter-editor .gjs-block svg {
+  max-height: 32px;
+}
+.newsletter-editor .gjs-title {
+  font-size: 12px;
+  font-weight: 600;
+  background: #f6f7f4;
+  border-bottom: 1px solid #e6e9e4;
+}
+.newsletter-editor .gjs-field {
+  background: #f3f5f1;
+  border: 1px solid #dce2da;
+  border-radius: 4px;
+}
+.newsletter-editor .gjs-sm-sector-title {
+  background: #f6f7f4;
+}
+.newsletter-editor .gjs-trt-trait {
+  padding: 8px 10px;
+}
+.newsletter-editor .gjs-label {
+  font-size: 12px;
+}
+.newsletter-editor .gjs-mdl-dialog {
+  max-width: 850px;
+  background: #fff;
+  color: #202a27;
+}
+.newsletter-editor .gjs-am-add-field input {
+  color: #202a27;
+}
+.newsletter-editor .gjs-pn-panels {
+  display: none;
+}
+.newsletter-editor .gjs-sm-properties {
+  padding: 10px;
+}
+.newsletter-editor .gjs-cv-canvas__frames {
+  background: #e8ebe7;
+}
+.newsletter-editor .gjs-toolbar {
+  background: #205a43;
+}
+@media (max-width: 1000px) {
+  .newsletter-editor aside {
+    width: 200px;
+  }
+}
+@media (max-width: 760px) {
+  .newsletter-editor aside:last-child {
+    width: 175px;
+  }
+  .newsletter-editor aside:first-child {
+    width: 145px;
+  }
+  .newsletter-editor .gjs-block {
+    width: 90%;
+  }
+  .newsletter-editor header {
+    padding: 8px;
+  }
+}

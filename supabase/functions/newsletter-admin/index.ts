@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { studioAction, withPreheader } from "../_shared/newsletter-studio.ts";
 import { infomaniak } from "../_shared/newsletter-infomaniak.ts";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 import { categories, cleanHtml, email, text } from "../_shared/newsletter.ts";
@@ -58,11 +59,17 @@ Deno.serve(async (req) => {
   }
   try {
     const raw = await req.text();
-    if (raw.length > 2_000_000) {
+    if (raw.length > 7_200_000) {
       return json({ error: "Fichier trop volumineux" }, 413);
     }
     const b = JSON.parse(raw);
     switch (b.action) {
+      case "asset-upload":
+      case "forms-list":
+      case "form-save":
+      case "form-get":
+      case "form-sync":
+        return json(await studioAction(db, auth.userId, b));
       case "connection": {
         const provider = await infomaniak(db);
         return json(await provider.readiness());
@@ -175,16 +182,14 @@ Deno.serve(async (req) => {
           await db.from("newsletters").select("*").eq("id", b.id).single(),
         );
         const counts: Record<string, number> = {};
-        for (
-          const s of [
-            "pending",
-            "processing",
-            "sent",
-            "failed",
-            "skipped",
-            "attention",
-          ]
-        ) {
+        for (const s of [
+          "pending",
+          "processing",
+          "sent",
+          "failed",
+          "skipped",
+          "attention",
+        ]) {
           const r = check(
             await db
               .from("newsletter_deliveries")
@@ -208,7 +213,8 @@ Deno.serve(async (req) => {
         const draft = {
           name: text(b.name, 120),
           subject: text(b.subject, 200),
-          html: cleanHtml(b.html),
+          html: withPreheader(cleanHtml(b.html), b.preheader),
+          preheader: String(b.preheader || "").trim(),
           updated_at: new Date().toISOString(),
         };
         if (!b.id) {
@@ -265,7 +271,7 @@ Deno.serve(async (req) => {
         return json({ success: true });
       case "test": {
         const to = email(b.email);
-        const html = cleanHtml(b.html);
+        const html = withPreheader(cleanHtml(b.html), b.preheader);
         const subject = text(b.subject, 200);
         if (!/^[0-9a-f-]{36}$/i.test(b.request_id || "")) {
           throw new Error("Identifiant de test manquant");
@@ -279,9 +285,12 @@ Deno.serve(async (req) => {
         if (inserted.error) {
           if (inserted.error.code !== "23505") check(inserted);
           const { data: previous } = check(
-            await db.from("newsletter_test_requests").select(
-              "state,provider_campaign_id",
-            ).eq("id", b.request_id).eq("created_by", auth.userId).single(),
+            await db
+              .from("newsletter_test_requests")
+              .select("state,provider_campaign_id")
+              .eq("id", b.request_id)
+              .eq("created_by", auth.userId)
+              .single(),
           );
           if (previous?.state === "accepted") {
             return json({
@@ -303,10 +312,13 @@ Deno.serve(async (req) => {
             throw new Error("Identifiant de campagne Infomaniak invalide");
           }
           check(
-            await db.from("newsletter_test_requests").update({
-              state: "submitting",
-              provider_campaign_id: remote.id,
-            }).eq("id", b.request_id),
+            await db
+              .from("newsletter_test_requests")
+              .update({
+                state: "submitting",
+                provider_campaign_id: remote.id,
+              })
+              .eq("id", b.request_id),
           );
           const result = await provider.call<boolean>(
             `/campaigns/${remote.id}/test`,
@@ -317,17 +329,23 @@ Deno.serve(async (req) => {
             throw new Error("Infomaniak n’a pas confirmé le test");
           }
           check(
-            await db.from("newsletter_test_requests").update({
-              state: "accepted",
-            }).eq("id", b.request_id),
+            await db
+              .from("newsletter_test_requests")
+              .update({
+                state: "accepted",
+              })
+              .eq("id", b.request_id),
           );
           return json({ success: true, provider_id: remote.id });
         } catch (error) {
-          await db.from("newsletter_test_requests").update({
-            state: "attention",
-            error:
-              "Résultat du test à vérifier chez Infomaniak avant toute relance.",
-          }).eq("id", b.request_id);
+          await db
+            .from("newsletter_test_requests")
+            .update({
+              state: "attention",
+              error:
+                "Résultat du test à vérifier chez Infomaniak avant toute relance.",
+            })
+            .eq("id", b.request_id);
           throw new Error(
             `${
               error instanceof Error ? error.message : "Erreur Infomaniak"
