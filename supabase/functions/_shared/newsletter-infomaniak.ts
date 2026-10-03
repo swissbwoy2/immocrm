@@ -83,6 +83,12 @@ export class Infomaniak {
       collect(result.error?.fields);
       collect(result.error?.errors);
       collect(result.error?.validation);
+      if (Array.isArray(result.error?.errors)) {
+        for (const error of result.error.errors) {
+          const field = error?.context?.attribute;
+          if (typeof field === 'string' && /^[a-zA-Z0-9_.[\]-]{1,80}$/.test(field)) fieldNames.add(field);
+        }
+      }
       const fields = [...fieldNames].slice(0, 30).join(",");
       throw new Error(
         `Infomaniak (${response.status}, ${code}) sur ${endpoint}${
@@ -182,6 +188,10 @@ export function groupRecipients(groupId: number) {
     segments: { include: [], exclude: [] },
     expert: { id: 0, conditions: null },
   };
+}
+// Leave time for provider pacing, network transit and clock differences.
+export function immediateScheduleStart(now = Date.now()) {
+  return Math.floor(now / 1000) + 120;
 }
 export function sameAudience(expected: string[], actual: string[]) {
   const sorted = [...actual].sort();
