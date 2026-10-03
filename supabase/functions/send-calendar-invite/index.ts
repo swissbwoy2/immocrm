@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -116,31 +117,24 @@ serve(async (req) => {
       ? 'Journée entière'
       : `${startDate.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} – ${endDateObj.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} (Heure de Zurich)`;
 
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 30px; color: white; margin-bottom: 20px;">
-          <h1 style="margin: 0 0 10px 0; font-size: 24px;">📅 Invitation calendrier</h1>
-          <p style="margin: 0; opacity: 0.9; font-size: 16px;">${title}</p>
-        </div>
-        <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
+    const htmlBody = renderCorporateEmail({ title: 'Invitation calendrier', category: "VOTRE RENDEZ-VOUS", bodyHtml: `<h2 style="font-size:22px;line-height:28px;color:#193d2c;margin:0 0 18px;">${title}</h2><div style="background: #f3f4ed; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 0; color: #666; width: 100px;">📆 Date</td>
+              <td style="padding: 8px 0; color: #666; width: 100px;">Date</td>
               <td style="padding: 8px 0; font-weight: 600;">${dateStr}</td>
             </tr>
             <tr>
-              <td style="padding: 8px 0; color: #666;">🕐 Heure</td>
+              <td style="padding: 8px 0; color: #666;">Heure</td>
               <td style="padding: 8px 0; font-weight: 600;">${timeStr}</td>
             </tr>
-            ${location ? `<tr><td style="padding: 8px 0; color: #666;">📍 Lieu</td><td style="padding: 8px 0; font-weight: 600;">${location}</td></tr>` : ''}
-            ${description ? `<tr><td style="padding: 8px 0; color: #666;">📝 Détails</td><td style="padding: 8px 0;">${description}</td></tr>` : ''}
+            ${location ? `<tr><td style="padding: 8px 0; color: #666;">Lieu</td><td style="padding: 8px 0; font-weight: 600;">${location}</td></tr>` : ''}
+            ${description ? `<tr><td style="padding: 8px 0; color: #666;">Détails</td><td style="padding: 8px 0;">${description}</td></tr>` : ''}
           </table>
         </div>
         <p style="color: #666; font-size: 14px; text-align: center;">
           Ouvrez le fichier joint pour ajouter cet événement à votre calendrier.
         </p>
-      </div>
-    `;
+      ` });
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',

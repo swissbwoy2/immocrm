@@ -1,0 +1,164 @@
+[
+  {
+    "name": "send-signature-reminders",
+    "urls": []
+  },
+  {
+    "name": "send-etat-lieux-reminders",
+    "urls": []
+  },
+  {
+    "name": "send-invoice-reminders",
+    "urls": []
+  },
+  {
+    "name": "send-mandat-confirmation",
+    "urls": []
+  },
+  {
+    "name": "send-mandat-pdf",
+    "urls": []
+  },
+  {
+    "name": "send-mandat-confirmation",
+    "urls": []
+  },
+  {
+    "name": "send-mandat-pdf",
+    "urls": []
+  },
+  {
+    "name": "staff-send-mandate-for-signature",
+    "urls": [
+      "https://logisorama.ch/mandat?token=demo"
+    ]
+  },
+  {
+    "name": "mandate-submit-signature",
+    "urls": [
+      "https://logisorama.ch/suivi?token=demo"
+    ]
+  },
+  {
+    "name": "confirm-phone-appointment",
+    "urls": [
+      "https://maps.google.com/?q=Lausanne"
+    ]
+  },
+  {
+    "name": "notify-admin-new-phone-appointment",
+    "urls": [
+      "mailto:marie@example.test",
+      "tel:+41000000000"
+    ]
+  },
+  {
+    "name": "send-calendar-invite",
+    "urls": []
+  },
+  {
+    "name": "send-phone-appointment-reminders",
+    "urls": []
+  },
+  {
+    "name": "send-document-update-reminders",
+    "urls": [
+      "https://logisorama.ch/client/documents"
+    ]
+  },
+  {
+    "name": "send-payslip-update-reminders",
+    "urls": [
+      "https://logisorama.ch/client/documents"
+    ]
+  },
+  {
+    "name": "mandate-expiry-reminders",
+    "urls": [
+      "https://immocrm.lovable.app/client/mon-contrat",
+      "https://logisorama.ch/cancel?token=demo",
+      "https://logisorama.ch/pause?token=demo",
+      "https://logisorama.ch/renew?token=demo"
+    ]
+  },
+  {
+    "name": "mandate-expiry-reminders",
+    "urls": [
+      "https://immocrm.lovable.app/client/mon-contrat",
+      "https://logisorama.ch/cancel?token=demo",
+      "https://logisorama.ch/pause?token=demo",
+      "https://logisorama.ch/refund?token=demo",
+      "https://logisorama.ch/renew?token=demo"
+    ]
+  },
+  {
+    "name": "mandate-expiry-reminders",
+    "urls": [
+      "https://immocrm.lovable.app/client/mon-contrat"
+    ]
+  },
+  {
+    "name": "mandate-renewal-action",
+    "urls": [
+      "https://logisorama.ch/client/mon-contrat"
+    ]
+  },
+  {
+    "name": "mandate-renewal-action",
+    "urls": [
+      "https://logisorama.ch/client/mon-contrat"
+    ]
+  },
+  {
+    "name": "mandate-renewal-action",
+    "urls": [
+      "https://logisorama.ch/client/mon-contrat"
+    ]
+  },
+  {
+    "name": "mandate-renewal-action",
+    "urls": [
+      "https://logisorama.ch/client/mon-contrat"
+    ]
+  },
+  {
+    "name": "import-clients-csv",
+    "urls": [
+      "https://logisorama.ch/login"
+    ]
+  },
+  {
+    "name": "import-clients-csv",
+    "urls": [
+      "https://logisorama.ch/login"
+    ]
+  },
+  {
+    "name": "contact-annonce",
+    "urls": [
+      "https://logisorama.ch/annonces/exemple"
+    ]
+  },
+  {
+    "name": "annonce-alertes-run",
+    "urls": [
+      "https://logisorama.ch/unsubscribe?token=example"
+    ]
+  },
+  {
+    "name": "auto-offers-daily-digest",
+    "urls": [
+      "https://logisorama.ch/admin/offres-auto"
+    ]
+  },
+  {
+    "name": "ai-relocation-api",
+    "urls": []
+  },
+  {
+    "name": "notify-new-lead",
+    "urls": [
+      "https://app.immo-rama.ch/admin/leads"
+    ]
+  }
+]

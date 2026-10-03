@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
@@ -79,10 +80,8 @@ serve(async (req) => {
       lien: o.lien_annonce ?? "",
     }));
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color: #111;">
-        <h2 style="color:#1e40af;">Récap Auto-Offres — ${startOfDay.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}</h2>
-        <p><strong>${totalOffres}</strong> offres automatiques envoyées à <strong>${clientsServis}</strong> client(s).</p>
+    const html = renderCorporateEmail({ title: `Récap Auto-Offres — ${startOfDay.toLocaleDateString('fr-CH', {timeZone:'Europe/Zurich'})}`, category: "SUIVI ÉQUIPE", bodyHtml: `
+        <p style="margin:0 0 18px;"><strong>${totalOffres}</strong> offres automatiques envoyées à <strong>${clientsServis}</strong> client(s).</p>
 
         <h3 style="margin-top:24px;color:#065f46;">Visites planifiées aujourd'hui (${visitesFixees.length})</h3>
         ${visitesFixees.length === 0 ? '<p style="color:#666;">Aucune visite planifiée.</p>' : `
@@ -100,9 +99,8 @@ serve(async (req) => {
           </table>
         `}
 
-        <p style="margin-top:32px;"><a href="${APP_URL}/admin/offres-auto" style="background:#1e40af;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;">Ouvrir /admin/offres-auto</a></p>
-      </div>
-    `;
+        <p style="margin-top:32px;"><a href="${APP_URL}/admin/offres-auto" style="background:#205a43;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;">Ouvrir /admin/offres-auto</a></p>
+      ` });
 
     if (!resendApiKey) {
       console.log("RESEND_API_KEY not configured, skipping email");

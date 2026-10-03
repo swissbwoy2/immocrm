@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { createClient, SupabaseClient as SupabaseClientGeneric } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 // Use a permissive client type so PostgREST query result inference doesn't collapse to SelectQueryError
@@ -1370,16 +1371,13 @@ async function handleOfferSend(
     </div>
   `).join('');
 
-  const emailBody = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-      <h2 style="color:#1f2937;">Bonjour ${clientName},</h2>
+  const emailBody = renderCorporateEmail({ title: 'Nouvelles offres immobilières pour vous', category: "VOTRE RECHERCHE", bodyHtml: `<h2 style="color:#1f2937;">Bonjour ${clientName},</h2>
       <p style="color:#4b5563;">Nous avons trouvé des biens correspondant à vos critères de recherche :</p>
       ${messageText ? `<p style="color:#4b5563;background:#f3f4f6;padding:12px;border-radius:6px;">${messageText}</p>` : ''}
       ${propertiesHtml}
       <p style="color:#4b5563;margin-top:24px;">N'hésitez pas à nous contacter pour organiser des visites.</p>
       <p style="color:#6b7280;">Cordialement,<br/>L'équipe Logisorama</p>
-    </div>
-  `;
+    ` });
 
   // 6. Call send-smtp-email with caller's JWT
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

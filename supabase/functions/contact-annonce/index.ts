@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -135,17 +136,16 @@ serve(async (req: Request): Promise<Response> => {
 
 
     if (RESEND_API_KEY && to) {
-      const html = `
-        <h2>Nouveau message concernant votre annonce</h2>
-        <p><strong>${esc(annonce.titre)}</strong>${annonce.reference ? ` — réf. ${esc(annonce.reference)}` : ""}<br/>
+      const html = renderCorporateEmail({ title: 'Nouveau message concernant votre annonce', category: "VOTRE ANNONCE", bodyHtml: `
+        <p style="margin:0 0 18px;"><strong>${esc(annonce.titre)}</strong>${annonce.reference ? ` — réf. ${esc(annonce.reference)}` : ""}<br/>
         <a href="${url}">${url}</a></p>
         <hr/>
-        <p><strong>Nom :</strong> ${esc(nom)}<br/>
+        <p style="margin:0 0 18px;"><strong>Nom :</strong> ${esc(nom)}<br/>
         <strong>E-mail :</strong> ${esc(email)}<br/>
         <strong>Téléphone :</strong> ${esc(telephone) || "—"}</p>
         <p style="white-space:pre-wrap;background:#f6f8f7;padding:12px;border-radius:8px">${esc(message)}</p>
         <p style="color:#6b7280;font-size:12px">Message envoyé via le portail d'annonces Logisorama.</p>
-      `;
+      ` });
 
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",

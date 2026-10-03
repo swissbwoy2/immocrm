@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -166,23 +167,17 @@ Deno.serve(async (req) => {
             from: fromEmail,
             to: [email],
             subject: "Confirmation de votre mandat de recherche – Immo-rama.ch",
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #1a1a2e;">Confirmation de signature</h2>
-                <p>Bonjour,</p>
-                <p>Votre mandat de recherche immobilière a bien été signé électroniquement.</p>
-                <p><strong>Statut actuel :</strong> ${newStatus === "active" ? "Actif" : "En attente de paiement de l'acompte"}</p>
-                <p>Vous pouvez suivre l'avancement de votre dossier en cliquant sur le lien ci-dessous :</p>
+html: renderCorporateEmail({ title: 'Confirmation de signature', category: 'VOTRE MANDAT', bodyHtml: `<p style="margin:0 0 18px;">Bonjour,</p>
+                <p style="margin:0 0 18px;">Votre mandat de recherche immobilière a bien été signé électroniquement.</p>
+                <p style="margin:0 0 18px;"><strong>Statut actuel :</strong> ${newStatus === "active" ? "Actif" : "En attente de paiement de l'acompte"}</p>
+                <p style="margin:0 0 18px;">Vous pouvez suivre l'avancement de votre dossier en cliquant sur le lien ci-dessous :</p>
                 <p style="text-align: center; margin: 30px 0;">
-                  <a href="${trackingUrl}" style="background-color: #1a1a2e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                  <a href="${trackingUrl}" style="background-color: #205a43; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                     Suivre mon dossier
                   </a>
                 </p>
                 <p style="color: #666; font-size: 12px;">Ce lien est personnel et confidentiel. Ne le partagez pas.</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-                <p style="color: #999; font-size: 11px;">Immo-rama.ch — Mandat de recherche immobilière</p>
-              </div>
-            `,
+                ` }),
           }),
         });
       } catch (emailErr) {

@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
@@ -81,7 +82,7 @@ function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString);
     const day = date.getDate().toString().padStart(2, '0');
-    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
                     'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const month = months[date.getMonth()];
     const year = date.getFullYear();
@@ -102,26 +103,26 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  
+
   const pageWidth = 595;
   const pageHeight = 842;
   const margin = 50;
   const lineHeight = 14;
-  
+
   let page = pdfDoc.addPage([pageWidth, pageHeight]);
   let yPosition = pageHeight - margin;
-  
+
   const isPurchase = data.type_recherche === 'Acheter';
   const acompte = isPurchase ? 2500 : 300;
   const mandatTotal = isPurchase ? 0 : 300; // commission achat = 1 % du prix (variable)
   const solde = isPurchase ? 2500 : 0;
-  
+
   // Helper function to add text with sanitization
   const addText = (text: string, x: number, y: number, size: number, font = helveticaFont, color = rgb(0, 0, 0)) => {
     const safeText = sanitizeText(text);
     page.drawText(safeText, { x, y, size, font, color });
   };
-  
+
   // Helper function to check and add new page if needed
   const checkNewPage = () => {
     if (yPosition < margin + 100) {
@@ -129,7 +130,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       yPosition = pageHeight - margin;
     }
   };
-  
+
   // Title
   addText('MANDAT DE RECHERCHE', margin, yPosition, 18, helveticaBold);
   yPosition -= 25;
@@ -137,110 +138,110 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   yPosition -= 10;
   addText(`Date: ${formatDate(new Date().toISOString())}`, margin, yPosition, 10, helveticaFont, rgb(0.4, 0.4, 0.4));
   yPosition -= 30;
-  
+
   // Section 1: Informations personnelles
   addText('1. INFORMATIONS PERSONNELLES', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
-  
+
   const personalInfo = [
     [`Nom complet: ${data.prenom} ${data.nom}`, `Email: ${data.email}`],
     [`Telephone: ${data.telephone}`, `Adresse: ${data.adresse}`],
     [`Date de naissance: ${formatDate(data.date_naissance)}`, `Nationalite: ${data.nationalite}`],
     [`Type de permis: ${data.type_permis}`, `Etat civil: ${data.etat_civil}`],
   ];
-  
+
   for (const row of personalInfo) {
     addText(row[0], margin, yPosition, 10);
     addText(row[1], margin + 270, yPosition, 10);
     yPosition -= lineHeight;
   }
   yPosition -= 15;
-  
+
   // Section 2: Situation actuelle
   checkNewPage();
   addText('2. SITUATION ACTUELLE', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
-  
+
   const currentSituation = [
     [`Gerance actuelle: ${data.gerance_actuelle}`, `Contact: ${data.contact_gerance}`],
     [`Loyer actuel: ${formatCurrency(data.loyer_actuel)}`, `Pieces: ${data.pieces_actuel}`],
     [`Locataire depuis: ${formatDate(data.depuis_le)}`, `Motif: ${data.motif_changement}`],
   ];
-  
+
   for (const row of currentSituation) {
     addText(row[0], margin, yPosition, 10);
     addText(row[1], margin + 270, yPosition, 10);
     yPosition -= lineHeight;
   }
   yPosition -= 15;
-  
+
   // Section 3: Situation financière
   checkNewPage();
   addText('3. SITUATION PROFESSIONNELLE ET FINANCIERE', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
-  
+
   const financialInfo = [
     [`Profession: ${data.profession}`, `Employeur: ${data.employeur}`],
     [`Revenus mensuels: ${formatCurrency(data.revenus_mensuels)}`, `Utilisation: ${data.utilisation_logement}`],
     [`Charges extraordinaires: ${data.charges_extraordinaires ? 'Oui' : 'Non'}`, data.charges_extraordinaires ? `Montant: ${formatCurrency(data.montant_charges_extra)}` : ''],
     [`Poursuites: ${data.poursuites ? 'Oui' : 'Non'}`, `Curatelle: ${data.curatelle ? 'Oui' : 'Non'}`],
   ];
-  
+
   for (const row of financialInfo) {
     addText(row[0], margin, yPosition, 10);
     if (row[1]) addText(row[1], margin + 270, yPosition, 10);
     yPosition -= lineHeight;
   }
   yPosition -= 15;
-  
+
   // Section 4: Critères de recherche
   checkNewPage();
   addText('4. CRITERES DE RECHERCHE', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
-  
+
   const searchCriteria = [
     [`Type de recherche: ${data.type_recherche}`, `Type de bien: ${data.type_bien}`],
     [`Pieces: ${data.pieces_recherche}`, `Region: ${data.region_recherche}`],
     [`Budget max: ${formatCurrency(data.budget_max)}`, `Occupants: ${data.nombre_occupants}`],
   ];
-  
+
   if (isPurchase) {
     searchCriteria.push([`Apport personnel: ${formatCurrency(data.apport_personnel)}`, '']);
   }
-  
+
   for (const row of searchCriteria) {
     addText(row[0], margin, yPosition, 10);
     if (row[1]) addText(row[1], margin + 270, yPosition, 10);
     yPosition -= lineHeight;
   }
-  
+
   if (data.souhaits_particuliers) {
     yPosition -= 5;
     addText(`Souhaits particuliers: ${data.souhaits_particuliers}`, margin, yPosition, 10);
     yPosition -= lineHeight;
   }
   yPosition -= 15;
-  
+
   // Section 5: Informations complémentaires
   checkNewPage();
   addText('5. INFORMATIONS COMPLEMENTAIRES', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
-  
+
   const vehiculeInfo = data.vehicules ? `Oui${data.numero_plaques ? ` (${data.numero_plaques})` : ''}` : 'Non';
   addText(`Animaux: ${data.animaux ? 'Oui' : 'Non'}`, margin, yPosition, 10);
   addText(`Instrument: ${data.instrument_musique ? 'Oui' : 'Non'}`, margin + 150, yPosition, 10);
   addText(`Vehicule: ${vehiculeInfo}`, margin + 300, yPosition, 10);
   yPosition -= 20;
-  
+
   // Section 6: Candidats associés (avec informations complètes)
   if (data.candidats && data.candidats.length > 0) {
     checkNewPage();
     addText(`6. CANDIDATS ASSOCIES (${data.candidats.length})`, margin, yPosition, 12, helveticaBold);
     yPosition -= 25;
-    
+
     for (let i = 0; i < data.candidats.length; i++) {
       const candidat = data.candidats[i];
-      
+
       // Check if we need a new page for this candidate (need at least 200px)
       if (yPosition < margin + 200) {
         page = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -248,7 +249,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
         addText(`6. CANDIDATS ASSOCIES (suite)`, margin, yPosition, 12, helveticaBold);
         yPosition -= 25;
       }
-      
+
       // Header du candidat avec type et lien
       const typeLabel = candidat.type === 'garant' ? 'GARANT' : candidat.type === 'colocataire' ? 'COLOCATAIRE' : 'CANDIDAT';
       addText(`${typeLabel}: ${candidat.prenom || ''} ${candidat.nom || ''}`, margin, yPosition, 11, helveticaBold);
@@ -256,7 +257,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
         addText(`(${candidat.lien_avec_client})`, margin + 250, yPosition, 10, helveticaFont, rgb(0.4, 0.4, 0.4));
       }
       yPosition -= lineHeight + 5;
-      
+
       // Ligne de séparation
       page.drawLine({
         start: { x: margin, y: yPosition + 5 },
@@ -265,75 +266,75 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
         color: rgb(0.8, 0.8, 0.8),
       });
       yPosition -= 10;
-      
+
       // Informations personnelles
       addText('Informations personnelles', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
       yPosition -= lineHeight;
-      
+
       const personalRow1Left = `Date naissance: ${candidat.date_naissance ? formatDate(candidat.date_naissance) : '-'}`;
       const personalRow1Right = `Nationalite: ${candidat.nationalite || '-'}`;
       addText(personalRow1Left, margin, yPosition, 9);
       addText(personalRow1Right, margin + 270, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       const personalRow2Left = `Type permis: ${candidat.type_permis || '-'}`;
       const personalRow2Right = `Situation familiale: ${candidat.situation_familiale || '-'}`;
       addText(personalRow2Left, margin, yPosition, 9);
       addText(personalRow2Right, margin + 270, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       if (candidat.email || candidat.telephone) {
         const contactRow = `Email: ${candidat.email || '-'}   |   Tel: ${candidat.telephone || '-'}`;
         addText(contactRow, margin, yPosition, 9);
         yPosition -= lineHeight;
       }
-      
+
       if (candidat.adresse) {
         addText(`Adresse: ${candidat.adresse}`, margin, yPosition, 9);
         yPosition -= lineHeight;
       }
       yPosition -= 5;
-      
+
       // Situation actuelle (si disponible)
       if (candidat.gerance_actuelle || candidat.loyer_actuel || candidat.depuis_le) {
         addText('Situation actuelle', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
         yPosition -= lineHeight;
-        
+
         const situationRow1Left = `Gerance: ${candidat.gerance_actuelle || '-'}`;
         const situationRow1Right = `Loyer actuel: ${candidat.loyer_actuel ? formatCurrency(candidat.loyer_actuel) : '-'}`;
         addText(situationRow1Left, margin, yPosition, 9);
         addText(situationRow1Right, margin + 270, yPosition, 9);
         yPosition -= lineHeight;
-        
+
         const situationRow2Left = `Depuis le: ${candidat.depuis_le ? formatDate(candidat.depuis_le) : '-'}`;
         const situationRow2Right = `Pieces: ${candidat.pieces_actuel || '-'}`;
         addText(situationRow2Left, margin, yPosition, 9);
         addText(situationRow2Right, margin + 270, yPosition, 9);
         yPosition -= lineHeight;
-        
+
         if (candidat.motif_changement) {
           addText(`Motif changement: ${candidat.motif_changement}`, margin, yPosition, 9);
           yPosition -= lineHeight;
         }
         yPosition -= 5;
       }
-      
+
       // Situation professionnelle
       addText('Situation professionnelle', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
       yPosition -= lineHeight;
-      
+
       const proRow1Left = `Profession: ${candidat.profession || '-'}`;
       const proRow1Right = `Employeur: ${candidat.employeur || '-'}`;
       addText(proRow1Left, margin, yPosition, 9);
       addText(proRow1Right, margin + 270, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       const proRow2Left = `Secteur: ${candidat.secteur_activite || '-'}`;
       const proRow2Right = `Type contrat: ${candidat.type_contrat || '-'}`;
       addText(proRow2Left, margin, yPosition, 9);
       addText(proRow2Right, margin + 270, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       if (candidat.anciennete_mois || candidat.date_engagement) {
         const proRow3Left = `Anciennete: ${candidat.anciennete_mois ? candidat.anciennete_mois + ' mois' : '-'}`;
         const proRow3Right = `Engage le: ${candidat.date_engagement ? formatDate(candidat.date_engagement) : '-'}`;
@@ -342,23 +343,23 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
         yPosition -= lineHeight;
       }
       yPosition -= 5;
-      
+
       // Situation financière
       addText('Situation financiere', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
       yPosition -= lineHeight;
-      
+
       const finRow1Left = `Revenus mensuels: ${candidat.revenus_mensuels ? formatCurrency(candidat.revenus_mensuels) : '-'}`;
       const finRow1Right = `Source: ${candidat.source_revenus || '-'}`;
       addText(finRow1Left, margin, yPosition, 9);
       addText(finRow1Right, margin + 270, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       const finRow2Left = `Charges mensuelles: ${candidat.charges_mensuelles ? formatCurrency(candidat.charges_mensuelles) : '-'}`;
       const finRow2Right = `Apport personnel: ${candidat.apport_personnel ? formatCurrency(candidat.apport_personnel) : '-'}`;
       addText(finRow2Left, margin, yPosition, 9);
       addText(finRow2Right, margin + 270, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       // Ligne pour les indicateurs booléens
       const indicators = [];
       indicators.push(`Poursuites: ${candidat.poursuites ? 'Oui' : 'Non'}`);
@@ -366,22 +367,22 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       indicators.push(`Autres credits: ${candidat.autres_credits ? 'Oui' : 'Non'}`);
       addText(indicators.join('   |   '), margin, yPosition, 9);
       yPosition -= lineHeight;
-      
+
       if (candidat.charges_extraordinaires && candidat.montant_charges_extra) {
         addText(`Charges extraordinaires: ${formatCurrency(candidat.montant_charges_extra)}`, margin, yPosition, 9);
         yPosition -= lineHeight;
       }
-      
+
       // Espacement entre candidats
       yPosition -= 20;
     }
   }
-  
+
   // Section 7: Acompte
   checkNewPage();
   addText('HONORAIRES ET ACOMPTE', margin, yPosition, 12, helveticaBold);
   yPosition -= 20;
-  
+
   if (isPurchase) {
     addText(`Commission de courtage: 1 % du prix de vente (min. CHF 500), + TVA si due`, margin, yPosition, 11, helveticaBold);
     yPosition -= lineHeight;
@@ -397,7 +398,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     addText("Pour l'activation de vos recherches de logement", margin, yPosition, 10);
     yPosition -= 20;
   }
-  
+
   const paymentMethod = (data.payment_method ?? 'qr_invoice');
   if (paymentMethod === 'twint') {
     addText('Mode de paiement choisi: TWINT instantane', margin, yPosition, 10, helveticaBold);
@@ -412,21 +413,21 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     addText('Vous recevrez une facture QR par email, payable depuis votre app bancaire.', margin, yPosition, 10);
     yPosition -= 30;
   }
-  
+
   // Dispositions complètes du mandat selon le type
   checkNewPage();
-  
+
   // Helper function for wrapped text
   const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number): number => {
     const safeText = sanitizeText(text);
     const words = safeText.split(' ');
     let currentLine = '';
     let linesDrawn = 0;
-    
+
     for (const word of words) {
       const testLine = currentLine ? `${currentLine} ${word}` : word;
       const textWidth = helveticaFont.widthOfTextAtSize(testLine, fontSize);
-      
+
       if (textWidth > maxWidth && currentLine) {
         page.drawText(currentLine, { x, y: yPosition, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
         yPosition -= lineHeight;
@@ -437,23 +438,23 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
         currentLine = testLine;
       }
     }
-    
+
     if (currentLine) {
       page.drawText(currentLine, { x, y: yPosition, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
       yPosition -= lineHeight;
       linesDrawn++;
     }
-    
+
     return linesDrawn;
   };
-  
+
   const maxTextWidth = pageWidth - 2 * margin;
-  
+
   if (isPurchase) {
     // ACHAT - 5 articles officiels
     addText('DISPOSITIONS DU MANDAT DE RECHERCHE - ACHAT', margin, yPosition, 12, helveticaBold);
     yPosition -= 25;
-    
+
     // Article 1
     addText('1. MANDAT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= lineHeight;
@@ -467,7 +468,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
-    
+
     // Article 2
     checkNewPage();
     addText('2. DUREE', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -477,7 +478,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
-    
+
     // Article 3
     checkNewPage();
     addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -512,7 +513,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
-    
+
     // Article 4
     checkNewPage();
     addText('4. MODIFICATION DU CONTRAT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -522,7 +523,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
-    
+
     // Article 5
     checkNewPage();
     addText('5. ELECTION DE FOR ET DE DROIT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -532,12 +533,12 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin, maxTextWidth, 9
     );
     yPosition -= 15;
-    
+
   } else {
     // LOCATION - 11 articles officiels
     addText('DISPOSITIONS DU MANDAT DE RECHERCHE - LOCATION', margin, yPosition, 12, helveticaBold);
     yPosition -= 25;
-    
+
     // Article 1
     addText('1.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     addWrappedText(
@@ -545,7 +546,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 2
     checkNewPage();
     addText('2.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -554,7 +555,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 2.1
     checkNewPage();
     addText('2.1', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -563,7 +564,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
-    
+
     // Article 2.2
     checkNewPage();
     addText('2.2', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -572,7 +573,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
-    
+
     // Article 2.3
     checkNewPage();
     addText('2.3', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -581,7 +582,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
-    
+
     // Article 2.4
     checkNewPage();
     addText('2.4', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -590,7 +591,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
-    
+
     // Article 3
     checkNewPage();
     addText('3.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -599,7 +600,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 4
     checkNewPage();
     addText('4.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -608,7 +609,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 5
     checkNewPage();
     addText('5.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -617,7 +618,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 6
     checkNewPage();
     addText('6.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -626,7 +627,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 7
     checkNewPage();
     addText('7.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -635,7 +636,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 8
     checkNewPage();
     addText('8.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -644,7 +645,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 9
     checkNewPage();
     addText('9. Position de Immo-Rama', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -654,7 +655,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 20, maxTextWidth - 20, 9
     );
     yPosition -= 8;
-    
+
     // Article 10
     checkNewPage();
     addText('10.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -663,7 +664,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
-    
+
     // Article 11
     checkNewPage();
     addText('11.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
@@ -673,41 +674,41 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     );
     yPosition -= 15;
   }
-  
+
   yPosition -= 10;
-  
+
   // Code promo
   if (data.code_promo) {
     addText(`Code promo: ${data.code_promo}`, margin, yPosition, 10);
     yPosition -= 20;
   }
-  
+
   // Signature section
   checkNewPage();
   yPosition = Math.min(yPosition, 200);
-  
+
   addText('SIGNATURE', margin, yPosition, 12, helveticaBold);
   yPosition -= 15;
   addText(`Fait à Crissier, le ${formatDate(new Date().toISOString())}`, margin, yPosition, 10);
   yPosition -= 25;
-  
+
   // Add signature image if available
   if (data.signature_data && data.signature_data.startsWith('data:image')) {
     try {
       const base64Data = data.signature_data.split(',')[1];
       const signatureBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       const signatureImage = await pdfDoc.embedPng(signatureBytes);
-      
+
       const signatureWidth = 200;
       const signatureHeight = (signatureImage.height / signatureImage.width) * signatureWidth;
-      
+
       page.drawImage(signatureImage, {
         x: margin,
         y: yPosition - signatureHeight,
         width: signatureWidth,
         height: signatureHeight,
       });
-      
+
       yPosition -= signatureHeight + 10;
     } catch (error) {
       console.error('Error embedding signature:', error);
@@ -715,11 +716,11 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       yPosition -= 20;
     }
   }
-  
+
   addText(`${data.prenom} ${data.nom}`, margin, yPosition, 10, helveticaBold);
   yPosition -= lineHeight;
   addText('Mandant', margin, yPosition, 9, helveticaFont, rgb(0.4, 0.4, 0.4));
-  
+
   // Footer on each page
   const pages = pdfDoc.getPages();
   pages.forEach((p, index) => {
@@ -731,7 +732,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
       color: rgb(0.5, 0.5, 0.5),
     });
   });
-  
+
   return pdfDoc.save();
 }
 
@@ -742,9 +743,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const data: MandatData = await req.json();
-    
+
     console.log(`Generating PDF for ${data.prenom} ${data.nom}...`);
-    
+
     // Initialize Supabase client for storage
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -756,23 +757,23 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
     );
-    
+
     // Generate PDF
     const pdfBytes = await generateMandatPDF(data);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
-    
+
     console.log(`PDF generated, size: ${pdfBytes.length} bytes`);
-    
+
     // Upload PDF to storage
     let storedPdfPath: string | null = null;
     const timestamp = new Date().toISOString().split('T')[0];
     const safeName = sanitizeText(`${data.nom}_${data.prenom}`).replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `mandat_${safeName}_${timestamp}.pdf`;
-    
+
     // Use demande_id or client_id if available, otherwise use email hash
     const folderId = data.demande_id || data.client_id || btoa(data.email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
     const storagePath = `${folderId}/${fileName}`;
-    
+
     try {
       const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from('mandat-contracts')
@@ -780,32 +781,32 @@ const handler = async (req: Request): Promise<Response> => {
           contentType: 'application/pdf',
           upsert: true
         });
-      
+
       if (uploadError) {
         console.error('Error uploading PDF to storage:', uploadError);
       } else {
         storedPdfPath = storagePath;
         console.log('PDF uploaded to storage:', storedPdfPath);
-        
+
         // If demande_id provided, update demandes_mandat with PDF path
         if (data.demande_id) {
           const { error: updateError } = await supabaseAdmin
             .from('demandes_mandat')
             .update({ mandat_pdf_url: storedPdfPath })
             .eq('id', data.demande_id);
-          
+
           if (updateError) {
             console.error('Error updating demande with PDF URL:', updateError);
           }
         }
-        
+
         // If client_id provided, update clients with PDF path
         if (data.client_id) {
           const { error: updateError } = await supabaseAdmin
             .from('clients')
             .update({ mandat_pdf_url: storedPdfPath })
             .eq('id', data.client_id);
-          
+
           if (updateError) {
             console.error('Error updating client with PDF URL:', updateError);
           }
@@ -814,86 +815,54 @@ const handler = async (req: Request): Promise<Response> => {
     } catch (storageError) {
       console.error('Storage error:', storageError);
     }
-    
+
     // Send email with PDF attachment
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@immo-rama.ch";
     const isPurchase = data.type_recherche === 'Acheter';
     const acompte = isPurchase ? 2500 : 300;
-    
+
     // Format budget without Unicode issues
     const budgetFormatted = data.budget_max.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
-    
+
     const emailResponse = await resend.emails.send({
       from: `IMMO-RAMA <${fromEmail}>`,
       to: [data.email],
       subject: `Votre mandat de recherche signe - IMMO-RAMA`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #1a365d 0%, #2d5a87 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
-            .footer { background: #1a365d; color: white; padding: 20px; text-align: center; font-size: 12px; border-radius: 0 0 10px 10px; }
-            .highlight { background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2d5a87; }
-            .bank-info { background: white; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            h1 { margin: 0; font-size: 24px; }
-            h2 { color: #1a365d; font-size: 18px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>IMMO-RAMA</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Mandat de recherche signe</p>
-            </div>
-            <div class="content">
-              <h2>Bonjour ${sanitizeText(data.prenom)},</h2>
-              
-              <p>Nous vous confirmons la reception de votre mandat de recherche pour ${isPurchase ? "l'achat d'un bien immobilier" : "la location d'un logement"}.</p>
-              
-              <p>Vous trouverez en piece jointe votre mandat signe au format PDF.</p>
-              
-              <div class="highlight">
+html: renderCorporateEmail({ title: 'Votre mandat de recherche signé', category: 'VOTRE MANDAT', bodyHtml: `
+              <h2 style="font-size:22px;line-height:28px;color:#193d2c;margin:0 0 18px;">Bonjour ${sanitizeText(data.prenom)},</h2>
+
+              <p style="margin:0 0 18px;">Nous vous confirmons la reception de votre mandat de recherche pour ${isPurchase ? "l'achat d'un bien immobilier" : "la location d'un logement"}.</p>
+
+              <p style="margin:0 0 18px;">Vous trouverez en piece jointe votre mandat signe au format PDF.</p>
+
+              <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
                 <strong>Recapitulatif de votre recherche:</strong>
                 <ul style="margin: 10px 0;">
-                  <li>Type: ${sanitizeText(data.type_recherche)}</li>
-                  <li>Bien recherche: ${sanitizeText(data.type_bien)} - ${sanitizeText(data.pieces_recherche)} pieces</li>
-                  <li>Region: ${sanitizeText(data.region_recherche)}</li>
-                  <li>Budget: ${budgetFormatted} CHF</li>
+                  <li style="margin-bottom:8px;">Type: ${sanitizeText(data.type_recherche)}</li>
+                  <li style="margin-bottom:8px;">Bien recherche: ${sanitizeText(data.type_bien)} - ${sanitizeText(data.pieces_recherche)} pieces</li>
+                  <li style="margin-bottom:8px;">Region: ${sanitizeText(data.region_recherche)}</li>
+                  <li style="margin-bottom:8px;">Budget: ${budgetFormatted} CHF</li>
                 </ul>
               </div>
-              
+
               ${(data.payment_method ?? 'qr_invoice') === 'twint' ? `
               <div class="bank-info" style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:8px;">
-                <strong style="color:#92400e;">📱 Paiement TWINT instantane</strong>
+                <strong style="color:#92400e;">Paiement TWINT instantane</strong>
                 <p style="margin:10px 0 5px 0;">Acompte de <strong>${acompte} CHF</strong> a payer par TWINT au :</p>
                 <p style="font-size:20px;font-weight:bold;font-family:monospace;background:white;padding:10px;border-radius:4px;text-align:center;margin:10px 0;">079 483 91 99</p>
-                <p style="margin:5px 0;color:#92400e;">⚠️ <strong>Mention obligatoire</strong> dans le message TWINT :</p>
+                <p style="margin:5px 0;color:#92400e;"><strong>Mention obligatoire</strong> dans le message TWINT :</p>
                 <p style="background:white;padding:8px;border-radius:4px;text-align:center;font-weight:600;">${sanitizeText(data.prenom)} ${sanitizeText(data.nom)} - Acompte mandat</p>
               </div>
               ` : `
-              <div class="bank-info" style="background:#dbeafe;border-left:4px solid #3b82f6;padding:16px;margin:20px 0;border-radius:8px;">
-                <strong style="color:#1e40af;">🧾 Facture QR par email</strong>
+              <div class="bank-info" style="background:#f3f4ed;border-left:4px solid #205a43;padding:16px;margin:20px 0;border-radius:8px;">
+                <strong style="color:#205a43;">Facture QR par email</strong>
                 <p style="margin:10px 0;">Vous recevrez votre facture QR (acompte de <strong>${acompte} CHF</strong>) par email sous quelques minutes. Vous pourrez la regler depuis votre application bancaire (e-banking, mobile banking).</p>
               </div>
               `}
-              
-              <p>Votre dossier sera active des reception du paiement.</p>
-              
-              <p>Cordialement,<br><strong>L'equipe IMMO-RAMA</strong></p>
-            </div>
-            <div class="footer">
-              <p>Immo-rama.ch | Crissier, Suisse</p>
-              <p>${new Date().getFullYear()} Tous droits reserves</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+
+              <p style="margin:0 0 18px;">Votre dossier sera active des reception du paiement.</p>
+
+              <p style="margin:0 0 18px;">Cordialement,<br><strong>L'equipe IMMO-RAMA</strong></p>` }),
       attachments: [
         {
           filename: `Mandat_IMMO-RAMA_${sanitizeText(data.nom)}_${sanitizeText(data.prenom)}.pdf`,
@@ -905,8 +874,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Email sent successfully:", emailResponse);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         emailId: emailResponse.data?.id,
         pdfPath: storedPdfPath
       }),

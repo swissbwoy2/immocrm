@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
@@ -42,7 +43,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
@@ -93,7 +94,7 @@ serve(async (req) => {
       const etatLieuxDate = new Date(candidature.date_etat_lieux);
       const offre = Array.isArray(candidature.offres) ? candidature.offres[0] : candidature.offres;
       const client = Array.isArray(candidature.clients) ? candidature.clients[0] : candidature.clients;
-      
+
       // Get client info
       if (client?.user_id) {
         const { data: clientProfile } = await supabase
@@ -172,14 +173,14 @@ serve(async (req) => {
     for (const reminder of remindersToSend) {
       const { candidature, recipientEmail, recipientName, recipientRole, recipientUserId } = reminder;
       const etatLieuxDate = new Date(candidature.date_etat_lieux);
-      
+
       const formattedDate = etatLieuxDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       });
-      
+
       const heureText = candidature.heure_etat_lieux || etatLieuxDate.toLocaleTimeString("fr-CH", { timeZone: 'Europe/Zurich',
         hour: "2-digit",
         minute: "2-digit",
@@ -192,65 +193,33 @@ serve(async (req) => {
       const emailOptOut = await canSendNotificationEmail(supabase, { userId: recipientUserId, email: recipientEmail });
       if (resend && emailOptOut.allowed) {
         try {
-          const emailHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
-                .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
-                .highlight { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
-                .info-row { margin: 10px 0; }
-                .label { font-weight: bold; color: #6b7280; }
-                .value { color: #111827; }
-                .cta { display: inline-block; background: #10b981; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin-top: 20px; }
-                .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1>🔑 Rappel : État des lieux demain</h1>
-                </div>
-                <div class="content">
-                  <p>Bonjour ${recipientName},</p>
-                  <p>Ceci est un rappel automatique pour votre <strong>état des lieux et remise des clés</strong> prévu <strong>demain</strong>.</p>
-                  
-                  <div class="highlight">
-                    <div class="info-row">
-                      <span class="label">📅 Date :</span>
-                      <span class="value">${formattedDate}</span>
+          const emailHtml = renderCorporateEmail({ title: 'Rappel : état des lieux demain', category: "VOTRE LOGEMENT", bodyHtml: `
+                  <p style="margin:0 0 18px;">Bonjour ${recipientName},</p>
+                  <p style="margin:0 0 18px;">Ceci est un rappel automatique pour votre <strong>état des lieux et remise des clés</strong> prévu <strong>demain</strong>.</p>
+
+                  <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
+                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+                      <span style="color:#677a6c;font-weight:600;">Date :</span>
+                      <span style="color:#202b22;">${formattedDate}</span>
                     </div>
-                    <div class="info-row">
-                      <span class="label">⏰ Heure :</span>
-                      <span class="value">${heureText}</span>
+                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+                      <span style="color:#677a6c;font-weight:600;">Heure :</span>
+                      <span style="color:#202b22;">${heureText}</span>
                     </div>
-                    <div class="info-row">
-                      <span class="label">🏠 Bien :</span>
-                      <span class="value">${adresse}</span>
+                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
+                      <span style="color:#677a6c;font-weight:600;">Bien :</span>
+                      <span style="color:#202b22;">${adresse}</span>
                     </div>
                   </div>
-                  
-                  <h3>📋 Documents à apporter :</h3>
+
+                  <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Documents à apporter :</h3>
                   <ul>
-                    <li>Pièce d'identité valide</li>
-                    <li>Attestation d'assurance RC ménage</li>
-                    <li>Premier loyer (si pas encore réglé)</li>
+                    <li style="margin-bottom:8px;">Pièce d'identité valide</li>
+                    <li style="margin-bottom:8px;">Attestation d'assurance RC ménage</li>
+                    <li style="margin-bottom:8px;">Premier loyer (si pas encore réglé)</li>
                   </ul>
-                  
-                  <p>N'hésitez pas à contacter votre agent si vous avez des questions.</p>
-                  
-                  <div class="footer">
-                    <p>ImmoRama - Votre partenaire immobilier</p>
-                  </div>
-                </div>
-              </div>
-            </body>
-            </html>
-          `;
+
+                  <p style="margin:0 0 18px;">N'hésitez pas à contacter votre agent si vous avez des questions.</p>` });
 
           const emailResponse = await resend.emails.send({
             from: "ImmoRama <noreply@resend.dev>",

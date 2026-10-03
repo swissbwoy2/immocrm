@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -40,11 +41,11 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("New lead notification:", leadData);
 
     const adminEmail = "info@immo-rama.ch";
-    
-    const qualificationStatus = leadData.is_qualified 
-      ? "✅ QUALIFIÉ" 
+
+    const qualificationStatus = leadData.is_qualified
+      ? "✅ QUALIFIÉ"
       : "❌ NON QUALIFIÉ";
-    
+
     const qualificationReasons: string[] = [];
     if (leadData.statut_emploi !== 'salarie') {
       qualificationReasons.push("Non salarié");
@@ -66,9 +67,8 @@ const handler = async (req: Request): Promise<Response> => {
         from: `Immo-Rama <${SENDER_EMAIL}>`,
         to: [adminEmail],
         subject: `${qualificationStatus} - Nouveau lead shortlist: ${leadData.prenom || ''} ${leadData.nom || ''}`,
-        html: `
-          <h2>Nouveau lead via le formulaire shortlist</h2>
-          
+html: renderCorporateEmail({ title: 'Nouveau lead via le formulaire shortlist', category: 'SUIVI ÉQUIPE', bodyHtml: `
+
           <div style="background-color: ${leadData.is_qualified ? '#d4edda' : '#f8d7da'}; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
             <strong style="font-size: 18px;">${qualificationStatus}</strong>
             ${!leadData.is_qualified && qualificationReasons.length > 0 ? `
@@ -77,57 +77,57 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
             ` : ''}
           </div>
-          
-          <h3>👤 Informations personnelles</h3>
+
+          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Informations personnelles</h3>
           <ul>
-            <li><strong>Prénom:</strong> ${leadData.prenom || 'Non renseigné'}</li>
-            <li><strong>Nom:</strong> ${leadData.nom || 'Non renseigné'}</li>
-            <li><strong>Email:</strong> ${leadData.email}</li>
-            <li><strong>Téléphone:</strong> ${leadData.telephone || 'Non renseigné'}</li>
+            <li style="margin-bottom:8px;"><strong>Prénom:</strong> ${leadData.prenom || 'Non renseigné'}</li>
+            <li style="margin-bottom:8px;"><strong>Nom:</strong> ${leadData.nom || 'Non renseigné'}</li>
+            <li style="margin-bottom:8px;"><strong>Email:</strong> ${leadData.email}</li>
+            <li style="margin-bottom:8px;"><strong>Téléphone:</strong> ${leadData.telephone || 'Non renseigné'}</li>
           </ul>
-          
-          <h3>🏠 Critères de recherche</h3>
+
+          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Critères de recherche</h3>
           <ul>
-            <li><strong>Localité:</strong> ${leadData.localite || 'Non renseignée'}</li>
-            <li><strong>Budget:</strong> ${leadData.budget || 'Non renseigné'}</li>
+            <li style="margin-bottom:8px;"><strong>Localité:</strong> ${leadData.localite || 'Non renseignée'}</li>
+            <li style="margin-bottom:8px;"><strong>Budget:</strong> ${leadData.budget || 'Non renseigné'}</li>
           </ul>
-          
-          <h3>📋 Qualification</h3>
+
+          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Qualification</h3>
           <ul>
-            <li><strong>Statut emploi:</strong> ${leadData.statut_emploi === 'salarie' ? 'Salarié(e)' : 'Autre'}</li>
-            <li><strong>Permis/Nationalité:</strong> ${leadData.permis_nationalite || 'Non renseigné'}</li>
-            <li><strong>Poursuites:</strong> ${leadData.poursuites ? 'Oui' : 'Non'}</li>
-            ${leadData.poursuites ? `<li><strong>A un garant:</strong> ${leadData.a_garant ? 'Oui' : 'Non'}</li>` : ''}
+            <li style="margin-bottom:8px;"><strong>Statut emploi:</strong> ${leadData.statut_emploi === 'salarie' ? 'Salarié(e)' : 'Autre'}</li>
+            <li style="margin-bottom:8px;"><strong>Permis/Nationalité:</strong> ${leadData.permis_nationalite || 'Non renseigné'}</li>
+            <li style="margin-bottom:8px;"><strong>Poursuites:</strong> ${leadData.poursuites ? 'Oui' : 'Non'}</li>
+            ${leadData.poursuites ? `<li style="margin-bottom:8px;"><strong>A un garant:</strong> ${leadData.a_garant ? 'Oui' : 'Non'}</li>` : ''}
           </ul>
-          
+
           ${(leadData.utm_source || leadData.utm_medium || leadData.utm_campaign) ? `
-          <h3>📊 Source marketing</h3>
+          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">📊 Source marketing</h3>
           <ul>
-            ${leadData.utm_source ? `<li><strong>Source:</strong> ${leadData.utm_source}</li>` : ''}
-            ${leadData.utm_medium ? `<li><strong>Medium:</strong> ${leadData.utm_medium}</li>` : ''}
-            ${leadData.utm_campaign ? `<li><strong>Campagne:</strong> ${leadData.utm_campaign}</li>` : ''}
+            ${leadData.utm_source ? `<li style="margin-bottom:8px;"><strong>Source:</strong> ${leadData.utm_source}</li>` : ''}
+            ${leadData.utm_medium ? `<li style="margin-bottom:8px;"><strong>Medium:</strong> ${leadData.utm_medium}</li>` : ''}
+            ${leadData.utm_campaign ? `<li style="margin-bottom:8px;"><strong>Campagne:</strong> ${leadData.utm_campaign}</li>` : ''}
           </ul>
           ` : `
-          <h3>📊 Source marketing</h3>
+          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">📊 Source marketing</h3>
           <p style="color: #888;">Organique (pas de paramètre UTM)</p>
           `}
-          
+
           <hr style="margin: 20px 0;" />
           <p style="color: #666; font-size: 12px;">
-            Lead reçu le ${new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', 
-              day: '2-digit', 
-              month: '2-digit', 
+            Lead reçu le ${new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich',
+              day: '2-digit',
+              month: '2-digit',
               year: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
             })}
           </p>
-          
-          <a href="https://app.immo-rama.ch/admin/leads" 
+
+          <a href="https://app.immo-rama.ch/admin/leads"
              style="display: inline-block; background: #e94560; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
             Voir tous les leads
           </a>
-        `,
+        ` }),
       }),
     });
 

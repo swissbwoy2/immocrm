@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
@@ -107,15 +108,7 @@ Deno.serve(async (req) => {
     }
 
     const resend = new Resend(RESEND_KEY);
-    const html = `
-      <!DOCTYPE html>
-      <html><head><meta charset="utf-8"><title>Votre mandat de recherche</title></head>
-      <body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
-        <div style="max-width:600px;margin:0 auto;background:#ffffff;padding:40px 32px;">
-          <div style="text-align:center;margin-bottom:32px;">
-            <h1 style="margin:0;font-size:22px;color:#0a0a0a;">Logisorama by Immo-rama.ch</h1>
-          </div>
-          <h2 style="font-size:20px;color:#0a0a0a;margin:0 0 16px;">Bonjour ${prenom} ${nom},</h2>
+    const html = renderCorporateEmail({ title: 'Votre mandat de recherche est prêt à signer', category: "VOTRE MANDAT", bodyHtml: `<h2 style="font-size:20px;color:#205a43;margin:0 0 16px;">Bonjour ${prenom} ${nom},</h2>
           <p style="font-size:15px;line-height:1.6;color:#333;margin:0 0 16px;">
             Votre agent a pré-rempli votre <strong>mandat de recherche immobilière</strong>.
             Il ne vous reste plus qu'à le vérifier, accepter les clauses et le signer en ligne.
@@ -125,13 +118,13 @@ Deno.serve(async (req) => {
           </p>
           <div style="text-align:center;margin:32px 0;">
             <a href="${signLink}"
-               style="display:inline-block;background:#0a0a0a;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+               style="display:inline-block;background:#205a43;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
               Vérifier et signer mon mandat
             </a>
           </div>
           <p style="font-size:13px;color:#666;line-height:1.6;margin:24px 0 0;">
             Ou copiez ce lien dans votre navigateur :<br>
-            <span style="word-break:break-all;color:#0a0a0a;">${signLink}</span>
+            <span style="word-break:break-all;color:#205a43;">${signLink}</span>
           </p>
           <hr style="border:none;border-top:1px solid #eee;margin:32px 0;">
           <p style="font-size:12px;color:#999;line-height:1.6;margin:0;">
@@ -142,9 +135,7 @@ Deno.serve(async (req) => {
             Directeur d'agence — Logisorama<br>
             Chemin de l'Esparcette 4, 1023 Crissier
           </p>
-        </div>
-      </body></html>
-    `;
+        ` });
 
     const { error: emailErr } = await resend.emails.send({
       from: FROM,
