@@ -38,11 +38,15 @@ export async function prepareEmailTracking(
     let existing = original?.match(/track-email-open\?id=([0-9a-f-]{36})/i)
       ?.[1];
     if (existing) {
-      const { data } = await db.from("lead_email_logs").select("id").eq(
+      const { data } = await db.from("lead_email_logs").select(
+        "id,recipient_email",
+      ).eq(
         "id",
         existing,
-      ).eq("recipient_email", list(mail.to)[0]).maybeSingle();
-      if (!data) existing = undefined;
+      ).maybeSingle();
+      if (data?.recipient_email?.toLowerCase() !== list(mail.to)[0]) {
+        existing = undefined;
+      }
     }
     if (!single || !existing) {
       html = original ? stripLegacyTracking(original) : original;
@@ -61,7 +65,9 @@ export async function prepareEmailTracking(
         tracking_provider: provider,
         tracking_note: single
           ? null
-          : "Envoi groupé : interactions non attribuables à une personne",
+          : recipients.length > 1
+          ? "Envoi groupé : interactions non attribuables à une personne"
+          : "Message texte : interactions non mesurées",
       };
       if (id) {
         const { error } = await db.from("lead_email_logs").update(patch).eq(
@@ -79,8 +85,16 @@ export async function prepareEmailTracking(
           tracking_key: key ? `${provider}:${key}:${recipient}` : null,
           ...patch,
         }).select("id").single();
-        if (error) throw error;
-        id = data.id;
+        if (error?.code === "23505" && key) {
+          // Concurrent retries must reuse the winning row and therefore the same URLs.
+          const winner = await db.from("lead_email_logs").select("id")
+            .eq("tracking_key", `${provider}:${key}:${recipient}`).single();
+          if (winner.error || !winner.data) throw winner.error || error;
+          id = winner.data.id;
+        } else {
+          if (error) throw error;
+          id = data.id;
+        }
       }
       ids.push(id!);
     }
@@ -106,10 +120,12 @@ export async function prepareEmailTracking(
     // Observability must never suppress an otherwise valid transactional email.
     console.error("Communication tracking setup failed");
     if (ids.length) {
-      await db.from("lead_email_logs").update({
-        tracking_enabled: false,
-        tracking_note: "Instrumentation indisponible lors de cet envoi",
-      }).in("id", ids);
+      try {
+        await db.from("lead_email_logs").update({
+          tracking_enabled: false,
+          tracking_note: "Instrumentation indisponible lors de cet envoi",
+        }).in("id", ids);
+      } catch { /* Preserve the original send even if logging is offline. */ }
     }
     html = original;
   }
@@ -128,7 +144,7 @@ export async function prepareEmailTracking(
           provider_message_id: messageId || null,
           sent_at: status === "sent" ? new Date().toISOString() : null,
           error_message: error?.slice(0, 500) || null,
-        }).in("id", ids);
+        }).in("id", ids).neq("status", "sent");
         if (err) console.error("Communication tracking outcome failed");
       } catch {
         console.error("Communication tracking outcome unavailable");
