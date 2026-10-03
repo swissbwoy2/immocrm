@@ -7,6 +7,7 @@ import {
   groupRecipients,
   Infomaniak,
   infomaniakHtml,
+  immediateScheduleStart,
   sameAudience,
 } from "../../supabase/functions/_shared/newsletter-infomaniak.ts";
 const config = {
@@ -19,6 +20,21 @@ const response = (data: unknown) =>
   new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json" },
   });
+Deno.test('Infomaniak : la programmation reste future après le délai réseau', () => {
+  const now = 1791051400999;
+  const start = immediateScheduleStart(now);
+  assertEquals(Number.isInteger(start), true);
+  assertEquals(start, Math.floor(now / 1000) + 120);
+  assertEquals(start > Math.ceil((now + 30000) / 1000), true);
+});
+Deno.test('Infomaniak : erreurs de validation exposent les champs sans leurs valeurs', async () => {
+  const api = new Infomaniak(config, (() => Promise.resolve(new Response(JSON.stringify({
+    result: 'error', error: {code:'validation_failed', errors:[{context:{attribute:'started_at', value:config.api_key},description:config.api_key}]}
+  }), {status:422}))) as typeof fetch, 0);
+  const error=await assertRejects(()=>api.call('/campaigns/42/schedule','PUT',{}));
+  assertStringIncludes(String(error), 'started_at');
+  assertEquals(String(error).includes(config.api_key), false);
+});
 Deno.test("Infomaniak : les lectures avec expansions ne déclarent pas de corps JSON", async () => {
   const requests: { method?: string; headers: Headers; body: unknown }[] = [];
   const api = new Infomaniak(config, ((_input: RequestInfo | URL, init?: RequestInit) => {

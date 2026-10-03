@@ -4,6 +4,7 @@ import {
   check,
   groupRecipients,
   infomaniak,
+  immediateScheduleStart,
   sameAudience,
 } from "../_shared/newsletter-infomaniak.ts";
 const db = createClient(
@@ -213,7 +214,7 @@ Deno.serve(async (req) => {
     const result = await provider.call<boolean>(
       `/campaigns/${campaignId}/schedule`,
       "PUT",
-      { started_at: Math.floor(Date.now() / 1000) },
+      { started_at: immediateScheduleStart() },
     );
     if (result.data !== true) {
       throw new Error("Infomaniak n’a pas confirmé la prise en charge");
