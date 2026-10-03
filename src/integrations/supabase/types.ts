@@ -7905,6 +7905,42 @@ export type Database = {
           },
         ]
       }
+      newsletter_forms: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          provider_domain_id: number
+          provider_form_id: number | null
+          provider_group_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          provider_domain_id: number
+          provider_form_id?: number | null
+          provider_group_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          provider_domain_id?: number
+          provider_form_id?: number | null
+          provider_group_id?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_test_requests: {
         Row: {
           created_at: string
@@ -7943,6 +7979,7 @@ export type Database = {
           html: string
           id: string
           name: string
+          preheader: string
           provider: string
           provider_campaign_id: number | null
           provider_domain_id: number | null
@@ -7965,6 +8002,7 @@ export type Database = {
           html: string
           id?: string
           name: string
+          preheader?: string
           provider?: string
           provider_campaign_id?: number | null
           provider_domain_id?: number | null
@@ -7987,6 +8025,7 @@ export type Database = {
           html?: string
           id?: string
           name?: string
+          preheader?: string
           provider?: string
           provider_campaign_id?: number | null
           provider_domain_id?: number | null
@@ -14428,6 +14467,7 @@ export type Database = {
           html: string
           id: string
           name: string
+          preheader: string
           provider: string
           provider_campaign_id: number | null
           provider_domain_id: number | null
