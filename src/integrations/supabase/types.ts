@@ -14493,6 +14493,7 @@ export type Database = {
         }
         Returns: number
       }
+      newsletter_import_visit: { Args: { p_id: string }; Returns: boolean }
       newsletter_infomaniak_accept: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -14553,6 +14554,7 @@ export type Database = {
         Returns: undefined
       }
       newsletter_sync_leads: { Args: never; Returns: Json }
+      newsletter_sync_visits: { Args: never; Returns: Json }
       newsletter_verify_dispatch: {
         Args: { p_token: string }
         Returns: boolean
