@@ -7803,9 +7803,48 @@ export type Database = {
           },
         ]
       }
+      newsletter_contact_answers: {
+        Row: {
+          answers: Json
+          contact_id: string
+          source: string
+        }
+        Insert: {
+          answers?: Json
+          contact_id: string
+          source: string
+        }
+        Update: {
+          answers?: Json
+          contact_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_contact_answers_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_contact_suppressions: {
+        Row: {
+          email: string
+        }
+        Insert: {
+          email: string
+        }
+        Update: {
+          email?: string
+        }
+        Relationships: []
+      }
       newsletter_contacts: {
         Row: {
           categories: string[]
+          classification_manual: boolean
           created_at: string
           email: string
           excluded: boolean
@@ -7818,6 +7857,7 @@ export type Database = {
         }
         Insert: {
           categories?: string[]
+          classification_manual?: boolean
           created_at?: string
           email: string
           excluded?: boolean
@@ -7830,6 +7870,7 @@ export type Database = {
         }
         Update: {
           categories?: string[]
+          classification_manual?: boolean
           created_at?: string
           email?: string
           excluded?: boolean
@@ -14427,6 +14468,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      newsletter_classify: { Args: { p: Json }; Returns: Json }
       newsletter_enqueue: {
         Args: {
           p_id: string
@@ -14438,6 +14480,10 @@ export type Database = {
         Returns: number
       }
       newsletter_finish: { Args: never; Returns: undefined }
+      newsletter_import_auto: {
+        Args: { p_kind?: string; p_rows: Json; p_source?: string }
+        Returns: Json
+      }
       newsletter_import_contacts: {
         Args: {
           p_categories: string[]
@@ -14501,10 +14547,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      newsletter_normalize: { Args: { v: string }; Returns: string }
       newsletter_record_optouts: {
         Args: { p_emails: string[] }
         Returns: undefined
       }
+      newsletter_sync_leads: { Args: never; Returns: Json }
       newsletter_verify_dispatch: {
         Args: { p_token: string }
         Returns: boolean
