@@ -1,23 +1,25 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
-import { resendOptouts } from "../_shared/newsletter-optouts.ts";
-import { recipientHtml, retryStatus } from "../_shared/newsletter.ts";
-const url = Deno.env.get("SUPABASE_URL")!;
-const db = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
-  auth: { persistSession: false },
-});
-function check<T extends { error: unknown }>(r: T): T {
-  if (r.error) throw r.error;
-  return r;
-}
+import {
+  check,
+  groupRecipients,
+  infomaniak,
+  sameAudience,
+} from "../_shared/newsletter-infomaniak.ts";
+const db = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false } },
+);
 Deno.serve(async (req) => {
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return new Response("Unauthorized", { status: 403 });
-  const dispatchToken = req.headers.get("x-newsletter-dispatch-token") || "";
+  }
+  const token = req.headers.get("x-newsletter-dispatch-token") || "";
   let authorized = false;
-  if (/^[0-9a-f-]{72}$/.test(dispatchToken)) {
+  if (/^[0-9a-f-]{72}$/.test(token)) {
     const verified = await db.rpc("newsletter_verify_dispatch", {
-      p_token: dispatchToken,
+      p_token: token,
     });
     authorized = !verified.error && verified.data === true;
   } else {
@@ -25,153 +27,215 @@ Deno.serve(async (req) => {
     authorized = caller.ok && ["service", "secret"].includes(caller.kind);
   }
   if (!authorized) return new Response("Unauthorized", { status: 403 });
-  const key = Deno.env.get("RESEND_API_KEY");
-
-  let processed = 0;
-  try {
-    const { data: due } = check(
-      await db
-        .from("newsletters")
-        .select("id")
-        .eq("status", "queued")
-        .lte("scheduled_at", new Date().toISOString())
-        .limit(1),
-    );
-    if (!due?.length) return Response.json({ processed: 0 });
-    if (!key) throw new Error("RESEND_API_KEY missing");
+  const body = await req.json().catch(() => ({}));
+  if (body.action === "check") {
+    try {
+      return Response.json(await (await infomaniak(db)).readiness());
+    } catch (e) {
+      return Response.json({
+        error: e instanceof Error ? e.message : "Configuration indisponible",
+      }, { status: 503 });
+    }
+  }
+  const { data: claimed, error } = await db.rpc("newsletter_infomaniak_claim");
+  if (error) {
+    return Response.json({ error: "File Newsletter indisponible" }, {
+      status: 500,
+    });
+  }
+  const c = claimed?.[0];
+  if (!c) return Response.json({ processed: 0 });
+  const lease = { p_id: c.id, p_token: c.dispatch_token };
+  let submitting = false;
+  const update = async (values: Record<string, unknown>) =>
     check(
-      await db.rpc("newsletter_record_optouts", {
-        p_emails: await resendOptouts(key),
+      await db.from("newsletters").update(values).eq("id", c.id).eq(
+        "dispatch_token",
+        c.dispatch_token,
+      ),
+    );
+  try {
+    const provider = await infomaniak(db);
+    if (provider.config.domain_id !== c.provider_domain_id) {
+      throw new Error("Le domaine Infomaniak a changé depuis la programmation");
+    }
+    await provider.assertReady();
+    const subscribers = await provider.syncOptouts(db);
+    const byEmail = new Map(subscribers.map((s) => [s.email, s]));
+    let { data: recipients } = check(
+      await db.rpc("newsletter_infomaniak_recipients", lease),
+    );
+    let audience = (recipients || []) as { id: string; email: string }[];
+    // Only create absent subscribers. Never update/re-activate an existing opt-out.
+    const missing = audience.filter((r) => !byEmail.has(r.email));
+    if (missing.length) {
+      for (const r of missing.slice(0, 15)) {
+        await provider.call("/subscribers", "POST", { email: r.email });
+      }
+      await update({
+        worker_error: `Préparation des contacts Infomaniak : ${
+          Math.max(0, missing.length - 15)
+        } restants.`,
+        dispatch_retry_at: new Date(Date.now() + 60000).toISOString(),
+      });
+      return Response.json({ preparing: true });
+    }
+    const blocked = audience.filter((r) =>
+      byEmail.get(r.email)?.status !== "active"
+    ).map((r) => r.email);
+    if (blocked.length) {
+      check(
+        await db.rpc("newsletter_infomaniak_skip", {
+          ...lease,
+          p_emails: blocked,
+          p_reason:
+            "Abonné non actif chez Infomaniak (désinscrit, adresse rejetée ou non confirmée)",
+        }),
+      );
+    }
+    ({ data: recipients } = check(
+      await db.rpc("newsletter_infomaniak_recipients", lease),
+    ));
+    audience = recipients || [];
+    if (!audience.length) {
+      await update({
+        status: "completed",
+        dispatch_state: "accepted",
+        worker_error: "Aucun destinataire éligible : aucun envoi.",
+      });
+      return Response.json({ processed: 0 });
+    }
+    let groupId = c.provider_group_id as number | null;
+    if (!groupId) {
+      const { data: group } = await provider.call<{ id: number }>(
+        "/groups",
+        "POST",
+        { name: `Logisorama ${c.id}` },
+      );
+      if (!Number.isSafeInteger(group?.id)) {
+        throw new Error("Groupe Infomaniak invalide");
+      }
+      groupId = group.id;
+      await update({ provider_group_id: groupId });
+    }
+    const emails = audience.map((r) => r.email);
+    const current = await provider.subscribers(
+      `/groups/${groupId}/subscribers`,
+    );
+    const extra = current.filter((s) => !emails.includes(s.email)).map((s) =>
+      s.id
+    );
+    if (extra.length) {
+      await provider.call(`/groups/${groupId}/subscribers/unassign`, "POST", {
+        subscriber_ids: extra,
+      });
+    }
+    const add = audience.filter((r) =>
+      !current.some((s) => s.email === r.email)
+    ).map((r) => byEmail.get(r.email)!.id);
+    if (add.length) {
+      await provider.call(`/groups/${groupId}/subscribers/assign`, "POST", {
+        subscriber_ids: add,
+      });
+    }
+    const verified = await provider.subscribers(
+      `/groups/${groupId}/subscribers`,
+    );
+    if (
+      !sameAudience(
+        emails,
+        verified.filter((s) => s.status === "active").map((s) => s.email),
+      )
+    ) {
+      throw new Error(
+        "Le groupe Infomaniak ne correspond pas aux destinataires : envoi suspendu",
+      );
+    }
+    let campaignId = c.provider_campaign_id as number | null;
+    const payload = {
+      ...provider.campaignBody(c.subject, c.html, c.sender),
+      recipients: groupRecipients(groupId),
+    };
+    if (!campaignId) {
+      const { data: remote } = await provider.call<{ id: number }>(
+        "/campaigns",
+        "POST",
+        payload,
+      );
+      if (!Number.isSafeInteger(remote?.id)) {
+        throw new Error("Campagne Infomaniak invalide");
+      }
+      campaignId = remote.id;
+      await update({ provider_campaign_id: campaignId });
+    } else {
+      const { data: remote } = await provider.call<{ status: string }>(
+        `/campaigns/${campaignId}`,
+      );
+      if (remote.status !== "draft") {
+        throw new Error(
+          "Campagne déjà modifiée chez Infomaniak : vérification manuelle nécessaire",
+        );
+      }
+      await provider.call(`/campaigns/${campaignId}`, "PUT", payload);
+    }
+    const { data: remote } = await provider.call<
+      {
+        status: string;
+        subscribers_count: number;
+        recipients: {
+          all_subscribers: boolean;
+          groups: { include: { id: number }[]; exclude: unknown[] };
+          segments: { include: unknown[]; exclude: unknown[] };
+          expert: { id: number; conditions: unknown };
+        };
+      }
+    >(`/campaigns/${campaignId}?with=content,recipients`);
+    const target = remote.recipients;
+    if (
+      remote.status !== "draft" || remote.subscribers_count !== emails.length ||
+      target?.all_subscribers !== false || target.groups.include.length !== 1 ||
+      target.groups.include[0].id !== groupId || target.groups.exclude.length ||
+      target.segments.include.length || target.segments.exclude.length ||
+      target.expert.conditions || target.expert.id
+    ) {
+      throw new Error(
+        "Ciblage de campagne Infomaniak non conforme : envoi suspendu",
+      );
+    }
+    check(
+      await db.rpc("newsletter_infomaniak_begin_send", {
+        ...lease,
+        p_emails: emails,
       }),
     );
-    check(
-      await db
-        .from("newsletters")
-        .update({ worker_error: null })
-        .eq("status", "queued"),
+    submitting = true;
+    const result = await provider.call<boolean>(
+      `/campaigns/${campaignId}/schedule`,
+      "PUT",
+      { started_at: Math.floor(Date.now() / 1000) },
     );
-    const start = Date.now();
-    // Keep each invocation bounded. pg_cron continues the queue after the app closes.
-    while (processed < 50 && Date.now() - start < 45000) {
-      const { data } = check(await db.rpc("newsletter_claim"));
-      const d = data?.[0];
-      if (!d) break;
-      try {
-        const { data: c } = check(
-          await db
-            .from("newsletters")
-            .select("subject,html,sender,status")
-            .eq("id", d.newsletter_id)
-            .single(),
-        );
-        const { data: contact } = check(
-          await db
-            .from("newsletter_contacts")
-            .select("excluded")
-            .eq("id", d.contact_id)
-            .single(),
-        );
-        const { data: unsub } = check(
-          await db
-            .from("email_unsubscribes")
-            .select("id")
-            .ilike("email", d.email)
-            .limit(1),
-        );
-        if (!c || !contact)
-          throw new Error("Newsletter ou contact introuvable");
-        if (c.status !== "queued" || contact.excluded || unsub?.length) {
-          check(
-            await db
-              .from("newsletter_deliveries")
-              .update({
-                status: "skipped",
-                error: "Contact exclu ou désinscrit",
-                lease_until: null,
-              })
-              .eq("id", d.id),
-          );
-          processed++;
-          continue;
-        }
-        let httpStatus = 0;
-        let providerId: string | null = null;
-        let problem = "Résultat Resend inconnu";
-        try {
-          const res = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${key}`,
-              "Content-Type": "application/json",
-              "Idempotency-Key": `newsletter/${d.id}`,
-            },
-            body: JSON.stringify({
-              from: c.sender,
-              to: [d.email],
-              subject: c.subject,
-              html: recipientHtml(c.html, d.unsubscribe_token),
-              headers: {
-                "List-Unsubscribe": `<${url}/functions/v1/handle-email-unsubscribe?token=${d.unsubscribe_token}>`,
-                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-              },
-            }),
-            signal: AbortSignal.timeout(15000),
-          });
-          httpStatus = res.status;
-          const result = await res.json();
-          if (res.ok && result.id) providerId = result.id;
-          else if (res.ok) httpStatus = 0;
-          else
-            problem = String(result.message || `Resend ${res.status}`).slice(
-              0,
-              400,
-            );
-        } catch {
-          httpStatus = 0;
-          problem =
-            "Connexion Resend interrompue ; nouvelle tentative avec la même clé.";
-        }
-        const status = providerId
-          ? "sent"
-          : retryStatus(d.attempts, httpStatus);
-        check(
-          await db
-            .from("newsletter_deliveries")
-            .update({
-              status,
-              provider_id: providerId,
-              error: providerId ? null : problem,
-              lease_until: null,
-              sent_at: providerId ? new Date().toISOString() : null,
-              retry_at: new Date(
-                Date.now() + Math.min(60, d.attempts * 5) * 60000,
-              ).toISOString(),
-            })
-            .eq("id", d.id),
-        );
-      } catch {
-        // Do not turn an unknown provider result into a fresh send. Keep the lease;
-        // the next invocation recovers it with the exact same idempotency key.
-        console.error("newsletter-worker: recipient lease retained", d.id);
-      }
-      processed++;
-      await new Promise((r) => setTimeout(r, 600));
+    if (result.data !== true) {
+      throw new Error("Infomaniak n’a pas confirmé la prise en charge");
     }
-    check(await db.rpc("newsletter_finish"));
-    return Response.json({ processed });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message.slice(0, 300) : "Erreur de base de données";
-    await db
-      .from("newsletters")
-      .update({
-        worker_error:
-          `Envoi suspendu : ${detail}. Reprise automatique au prochain passage.`,
-      })
-      .eq("status", "queued")
-      .lte("scheduled_at", new Date().toISOString());
-    return Response.json(
-      { error: "Traitement interrompu, reprise automatique", processed },
-      { status: 500 },
-    );
+    check(await db.rpc("newsletter_infomaniak_accept", lease));
+    return Response.json({ processed: emails.length, provider_id: campaignId });
+  } catch (e) {
+    const detail = e instanceof Error
+      ? e.message.slice(0, 300)
+      : "Erreur inattendue";
+    await update({
+      worker_error: submitting
+        ? `${detail} Résultat incertain : vérifier Infomaniak avant toute relance.`
+        : detail,
+      ...(submitting
+        ? { dispatch_state: "attention" }
+        : { dispatch_retry_at: new Date(Date.now() + 300000).toISOString() }),
+    });
+    return Response.json({
+      error: "Traitement suspendu, consulter le suivi de la campagne",
+    }, { status: 503 });
+  } finally {
+    await db.from("newsletters").update({ dispatch_lease: null }).eq("id", c.id)
+      .eq("dispatch_token", c.dispatch_token).eq("dispatch_state", "preparing");
   }
 });

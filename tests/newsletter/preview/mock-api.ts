@@ -41,6 +41,13 @@ let campaigns: Campaign[] = [];
 export async function newsletterApi<T>(b: Record<string, unknown>): Promise<T> {
   let result: unknown;
   switch (b.action) {
+    case "connection":
+      result = {
+        ready: true,
+        sender: "support@logisorama.ch",
+        message: "Infomaniak connecté (démonstration)",
+      };
+      break;
     case "contacts":
       result = { contacts };
       break;

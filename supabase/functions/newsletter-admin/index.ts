@@ -1,13 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { resendOptouts } from "../_shared/newsletter-optouts.ts";
+import { infomaniak } from "../_shared/newsletter-infomaniak.ts";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
-import {
-  categories,
-  cleanHtml,
-  email,
-  text,
-  recipientHtml,
-} from "../_shared/newsletter.ts";
+import { categories, cleanHtml, email, text } from "../_shared/newsletter.ts";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -25,15 +19,14 @@ const json = (data: unknown, status = 200) =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 function check<T extends { error: unknown }>(result: T): T {
-  if (result.error)
+  if (result.error) {
     throw new Error(
       (result.error as { message?: string }).message ||
         "Erreur de base de données",
     );
+  }
   return result;
 }
-const sender = () =>
-  Deno.env.get("NEWSLETTER_FROM_EMAIL") || "Logisorama <info@immo-rama.ch>";
 async function all(table: string, columns: string) {
   const rows: Record<string, unknown>[] = [];
   for (let offset = 0; offset <= 10000; offset += 1000) {
@@ -45,27 +38,35 @@ async function all(table: string, columns: string) {
         .range(offset, offset + 999),
     );
     rows.push(...((data || []) as unknown as Record<string, unknown>[]));
-    if (rows.length > 10000)
+    if (rows.length > 10000) {
       throw new Error(
         "Plus de 10 000 contacts : scindez la sélection avant de poursuivre.",
       );
+    }
     if (!data || data.length < 1000) return rows;
   }
   return rows;
 }
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return json({ error: "Méthode non autorisée" }, 405);
+  }
   const auth = await verifyInternalCaller(req);
-  if (!auth.ok || !auth.userId || !auth.roles?.includes("admin"))
+  if (!auth.ok || !auth.userId || !auth.roles?.includes("admin")) {
     return json({ error: "Accès administrateur requis" }, 403);
+  }
   try {
     const raw = await req.text();
-    if (raw.length > 2_000_000)
+    if (raw.length > 2_000_000) {
       return json({ error: "Fichier trop volumineux" }, 413);
+    }
     const b = JSON.parse(raw);
     switch (b.action) {
+      case "connection": {
+        const provider = await infomaniak(db);
+        return json(await provider.readiness());
+      }
       case "contacts": {
         const contacts = await all(
           "newsletter_contacts",
@@ -112,10 +113,12 @@ Deno.serve(async (req) => {
         });
       }
       case "import": {
-        if (!Array.isArray(b.rows) || !b.rows.length || b.rows.length > 1000)
+        if (!Array.isArray(b.rows) || !b.rows.length || b.rows.length > 1000) {
           throw new Error("Importez de 1 à 1 000 contacts par lot");
-        if (!["client", "prospect"].includes(b.kind))
+        }
+        if (!["client", "prospect"].includes(b.kind)) {
           throw new Error("Type de contact invalide");
+        }
         const rows = [
           ...new Map(
             b.rows.map((r: Record<string, unknown>) => {
@@ -172,14 +175,16 @@ Deno.serve(async (req) => {
           await db.from("newsletters").select("*").eq("id", b.id).single(),
         );
         const counts: Record<string, number> = {};
-        for (const s of [
-          "pending",
-          "processing",
-          "sent",
-          "failed",
-          "skipped",
-          "attention",
-        ]) {
+        for (
+          const s of [
+            "pending",
+            "processing",
+            "sent",
+            "failed",
+            "skipped",
+            "attention",
+          ]
+        ) {
           const r = check(
             await db
               .from("newsletter_deliveries")
@@ -226,20 +231,17 @@ Deno.serve(async (req) => {
             .select("*")
             .maybeSingle(),
         );
-        if (!data)
+        if (!data) {
           throw new Error(
             "Brouillon modifié ailleurs ou déjà programmé. Rechargez la page.",
           );
+        }
         return json({ campaign: data });
       }
       case "queue": {
-        if (!Deno.env.get("RESEND_API_KEY"))
-          throw new Error("Resend n’est pas configuré côté serveur");
-        check(
-          await db.rpc("newsletter_record_optouts", {
-            p_emails: await resendOptouts(Deno.env.get("RESEND_API_KEY")!),
-          }),
-        );
+        const provider = await infomaniak(db);
+        await provider.assertReady();
+        await provider.syncOptouts(db);
         const { data: c } = check(
           await db.from("newsletters").select("html").eq("id", b.id).single(),
         );
@@ -253,7 +255,7 @@ Deno.serve(async (req) => {
             p_revision: b.revision,
             p_ids: b.contact_ids,
             p_scheduled: date.toISOString(),
-            p_sender: sender(),
+            p_sender: provider.config.sender_email,
           }),
         );
         return json({ queued: data });
@@ -265,41 +267,73 @@ Deno.serve(async (req) => {
         const to = email(b.email);
         const html = cleanHtml(b.html);
         const subject = text(b.subject, 200);
-        const key = Deno.env.get("RESEND_API_KEY");
-        if (!key) throw new Error("Resend n’est pas configuré");
-        if (!/^[0-9a-f-]{36}$/i.test(b.request_id || ""))
+        if (!/^[0-9a-f-]{36}$/i.test(b.request_id || "")) {
           throw new Error("Identifiant de test manquant");
-        const token = b.request_id;
-        check(
-          await db
-            .from("email_unsubscribe_tokens")
-            .upsert(
-              { email: to, token },
-              { onConflict: "token", ignoreDuplicates: true },
-            ),
-        );
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": `newsletter-test/${auth.userId}/${b.request_id}`,
-          },
-          body: JSON.stringify({
-            from: sender(),
-            to: [to],
-            subject: `[TEST] ${subject}`,
-            html: recipientHtml(html, token),
-          }),
-          signal: AbortSignal.timeout(15000),
+        }
+        const provider = await infomaniak(db);
+        await provider.assertReady();
+        const inserted = await db.from("newsletter_test_requests").insert({
+          id: b.request_id,
+          created_by: auth.userId,
         });
-        const result = await res.json();
-        if (!res.ok)
-          return json(
-            { error: result.message || "Envoi refusé par Resend" },
-            502,
+        if (inserted.error) {
+          if (inserted.error.code !== "23505") check(inserted);
+          const { data: previous } = check(
+            await db.from("newsletter_test_requests").select(
+              "state,provider_campaign_id",
+            ).eq("id", b.request_id).eq("created_by", auth.userId).single(),
           );
-        return json({ success: true, provider_id: result.id });
+          if (previous?.state === "accepted") {
+            return json({
+              success: true,
+              provider_id: previous.provider_campaign_id,
+            });
+          }
+          throw new Error(
+            "Test déjà demandé ou résultat incertain. Vérifiez Infomaniak avant une nouvelle demande.",
+          );
+        }
+        try {
+          const { data: remote } = await provider.call<{ id: number }>(
+            "/campaigns",
+            "POST",
+            provider.campaignBody(`[TEST] ${subject}`, html),
+          );
+          if (!Number.isSafeInteger(remote?.id)) {
+            throw new Error("Identifiant de campagne Infomaniak invalide");
+          }
+          check(
+            await db.from("newsletter_test_requests").update({
+              state: "submitting",
+              provider_campaign_id: remote.id,
+            }).eq("id", b.request_id),
+          );
+          const result = await provider.call<boolean>(
+            `/campaigns/${remote.id}/test`,
+            "POST",
+            { email: to },
+          );
+          if (result.data !== true) {
+            throw new Error("Infomaniak n’a pas confirmé le test");
+          }
+          check(
+            await db.from("newsletter_test_requests").update({
+              state: "accepted",
+            }).eq("id", b.request_id),
+          );
+          return json({ success: true, provider_id: remote.id });
+        } catch (error) {
+          await db.from("newsletter_test_requests").update({
+            state: "attention",
+            error:
+              "Résultat du test à vérifier chez Infomaniak avant toute relance.",
+          }).eq("id", b.request_id);
+          throw new Error(
+            `${
+              error instanceof Error ? error.message : "Erreur Infomaniak"
+            } Résultat du test à vérifier avant toute relance.`,
+          );
+        }
       }
       default:
         return json({ error: "Action inconnue" }, 400);
