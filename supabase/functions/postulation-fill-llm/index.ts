@@ -127,7 +127,7 @@ async function callLLM(userPrompt: string): Promise<Record<string, string>> { re
   } catch {
     const m = content.match(/\{[\s\S]*\}/);
     if (!m) throw new Error("Réponse IA illisible");
-    parsed = JSON.parse(m[0]);
+    parsed = JSON.parse(m![0]);
   }
   if (parsed && typeof parsed === "object" && parsed.fields && typeof parsed.fields === "object") {
     parsed = parsed.fields;
