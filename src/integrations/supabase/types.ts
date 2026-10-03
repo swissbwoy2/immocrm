@@ -3620,6 +3620,128 @@ export type Database = {
           },
         ]
       }
+      communication_events: {
+        Row: {
+          event_type: string
+          external_id: string | null
+          id: string
+          occurred_at: string
+          provider: string
+          recorded_at: string
+          source_id: string
+          time_basis: string
+          url: string | null
+        }
+        Insert: {
+          event_type: string
+          external_id?: string | null
+          id?: string
+          occurred_at?: string
+          provider: string
+          recorded_at?: string
+          source_id: string
+          time_basis?: string
+          url?: string | null
+        }
+        Update: {
+          event_type?: string
+          external_id?: string | null
+          id?: string
+          occurred_at?: string
+          provider?: string
+          recorded_at?: string
+          source_id?: string
+          time_basis?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      communication_links: {
+        Row: {
+          id: string
+          log_id: string
+          url: string
+        }
+        Insert: {
+          id?: string
+          log_id: string
+          url: string
+        }
+        Update: {
+          id?: string
+          log_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_links_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "lead_email_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_receipts: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          message_id: string
+          occurred_at: string
+          provider: string
+          recipient: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          message_id: string
+          occurred_at: string
+          provider: string
+          recipient?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          message_id?: string
+          occurred_at?: string
+          provider?: string
+          recipient?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      communication_sync_state: {
+        Row: {
+          cursor: string | null
+          error: string | null
+          id: string
+          last_synced_at: string | null
+          since: string | null
+          until: string | null
+        }
+        Insert: {
+          cursor?: string | null
+          error?: string | null
+          id: string
+          last_synced_at?: string | null
+          since?: string | null
+          until?: string | null
+        }
+        Update: {
+          cursor?: string | null
+          error?: string | null
+          id?: string
+          last_synced_at?: string | null
+          since?: string | null
+          until?: string | null
+        }
+        Relationships: []
+      }
       compte_rendu_alerts: {
         Row: {
           agent_id: string | null
@@ -6296,12 +6418,16 @@ export type Database = {
           complained_at: string | null
           created_at: string
           delivered_at: string | null
+          delivery_confirmed_at: string | null
+          delivery_status: string | null
+          delivery_status_at: string | null
           error_message: string | null
           id: string
           last_click_url: string | null
           last_clicked_at: string | null
           last_opened_at: string | null
           lead_id: string | null
+          notification_id: string | null
           opened_at: string | null
           opens_count: number
           provider_message_id: string | null
@@ -6310,6 +6436,10 @@ export type Database = {
           status: string
           subject: string
           test_send: boolean
+          tracking_enabled: boolean
+          tracking_key: string | null
+          tracking_note: string | null
+          tracking_provider: string
           unsubscribe_token: string | null
         }
         Insert: {
@@ -6321,12 +6451,16 @@ export type Database = {
           complained_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_confirmed_at?: string | null
+          delivery_status?: string | null
+          delivery_status_at?: string | null
           error_message?: string | null
           id?: string
           last_click_url?: string | null
           last_clicked_at?: string | null
           last_opened_at?: string | null
           lead_id?: string | null
+          notification_id?: string | null
           opened_at?: string | null
           opens_count?: number
           provider_message_id?: string | null
@@ -6335,6 +6469,10 @@ export type Database = {
           status?: string
           subject: string
           test_send?: boolean
+          tracking_enabled?: boolean
+          tracking_key?: string | null
+          tracking_note?: string | null
+          tracking_provider?: string
           unsubscribe_token?: string | null
         }
         Update: {
@@ -6346,12 +6484,16 @@ export type Database = {
           complained_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_confirmed_at?: string | null
+          delivery_status?: string | null
+          delivery_status_at?: string | null
           error_message?: string | null
           id?: string
           last_click_url?: string | null
           last_clicked_at?: string | null
           last_opened_at?: string | null
           lead_id?: string | null
+          notification_id?: string | null
           opened_at?: string | null
           opens_count?: number
           provider_message_id?: string | null
@@ -6360,6 +6502,10 @@ export type Database = {
           status?: string
           subject?: string
           test_send?: boolean
+          tracking_enabled?: boolean
+          tracking_key?: string | null
+          tracking_note?: string | null
+          tracking_provider?: string
           unsubscribe_token?: string | null
         }
         Relationships: [
@@ -7892,48 +8038,84 @@ export type Database = {
       newsletter_deliveries: {
         Row: {
           attempts: number
+          bounced_at: string | null
+          clicked_at: string | null
+          clicks_count: number | null
+          complained_at: string | null
           contact_id: string
+          delivered_at: string | null
           email: string
           error: string | null
           first_attempt_at: string | null
           id: string
+          last_clicked_at: string | null
+          last_opened_at: string | null
           lease_until: string | null
           newsletter_id: string
+          opened_at: string | null
+          opens_count: number | null
           provider_id: string | null
           retry_at: string
           sent_at: string | null
           status: string
+          tracking_observed_at: string | null
+          tracking_outcomes: string[]
           unsubscribe_token: string
+          unsubscribed_at: string | null
         }
         Insert: {
           attempts?: number
+          bounced_at?: string | null
+          clicked_at?: string | null
+          clicks_count?: number | null
+          complained_at?: string | null
           contact_id: string
+          delivered_at?: string | null
           email: string
           error?: string | null
           first_attempt_at?: string | null
           id?: string
+          last_clicked_at?: string | null
+          last_opened_at?: string | null
           lease_until?: string | null
           newsletter_id: string
+          opened_at?: string | null
+          opens_count?: number | null
           provider_id?: string | null
           retry_at?: string
           sent_at?: string | null
           status?: string
+          tracking_observed_at?: string | null
+          tracking_outcomes?: string[]
           unsubscribe_token?: string
+          unsubscribed_at?: string | null
         }
         Update: {
           attempts?: number
+          bounced_at?: string | null
+          clicked_at?: string | null
+          clicks_count?: number | null
+          complained_at?: string | null
           contact_id?: string
+          delivered_at?: string | null
           email?: string
           error?: string | null
           first_attempt_at?: string | null
           id?: string
+          last_clicked_at?: string | null
+          last_opened_at?: string | null
           lease_until?: string | null
           newsletter_id?: string
+          opened_at?: string | null
+          opens_count?: number | null
           provider_id?: string | null
           retry_at?: string
           sent_at?: string | null
           status?: string
+          tracking_observed_at?: string | null
+          tracking_outcomes?: string[]
           unsubscribe_token?: string
+          unsubscribed_at?: string | null
         }
         Relationships: [
           {
@@ -8036,6 +8218,9 @@ export type Database = {
           sender: string | null
           status: string
           subject: string
+          tracking_enabled: boolean
+          tracking_error: string | null
+          tracking_synced_at: string | null
           updated_at: string
           worker_error: string | null
         }
@@ -8059,6 +8244,9 @@ export type Database = {
           sender?: string | null
           status?: string
           subject: string
+          tracking_enabled?: boolean
+          tracking_error?: string | null
+          tracking_synced_at?: string | null
           updated_at?: string
           worker_error?: string | null
         }
@@ -8082,6 +8270,9 @@ export type Database = {
           sender?: string | null
           status?: string
           subject?: string
+          tracking_enabled?: boolean
+          tracking_error?: string | null
+          tracking_synced_at?: string | null
           updated_at?: string
           worker_error?: string | null
         }
@@ -8149,6 +8340,7 @@ export type Database = {
           message: string | null
           metadata: Json | null
           read: boolean | null
+          read_at: string | null
           title: string
           type: string
           user_id: string
@@ -8161,6 +8353,7 @@ export type Database = {
           message?: string | null
           metadata?: Json | null
           read?: boolean | null
+          read_at?: string | null
           title: string
           type: string
           user_id: string
@@ -8173,6 +8366,7 @@ export type Database = {
           message?: string | null
           metadata?: Json | null
           read?: boolean | null
+          read_at?: string | null
           title?: string
           type?: string
           user_id?: string
@@ -12302,6 +12496,7 @@ export type Database = {
           sent_at: string | null
           status: string | null
           subject: string
+          tracking_log_id: string | null
         }
         Insert: {
           attachments?: Json | null
@@ -12315,6 +12510,7 @@ export type Database = {
           sent_at?: string | null
           status?: string | null
           subject: string
+          tracking_log_id?: string | null
         }
         Update: {
           attachments?: Json | null
@@ -12328,6 +12524,7 @@ export type Database = {
           sent_at?: string | null
           status?: string | null
           subject?: string
+          tracking_log_id?: string | null
         }
         Relationships: [
           {
@@ -14010,6 +14207,36 @@ export type Database = {
       }
     }
     Views: {
+      communication_tracking: {
+        Row: {
+          bounced_at: string | null
+          campaign: string | null
+          channel: string | null
+          clicked_at: string | null
+          clicks_count: number | null
+          complained_at: string | null
+          created_at: string | null
+          delivered_at: string | null
+          error: string | null
+          id: string | null
+          is_read: boolean | null
+          last_clicked_at: string | null
+          last_opened_at: string | null
+          opened_at: string | null
+          opens_count: number | null
+          provider: string | null
+          read_at: string | null
+          recipient: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string | null
+          synced_at: string | null
+          tracking_enabled: boolean | null
+          tracking_note: string | null
+          unsubscribed_at: string | null
+        }
+        Relationships: []
+      }
       renovation_my_company_score_view: {
         Row: {
           company_id: string | null
@@ -14094,10 +14321,6 @@ export type Database = {
       }
     }
     Functions: {
-      communication_notification_click: {
-        Args: { p_id: string }
-        Returns: undefined
-      }
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_candidat_searches: { Args: never; Returns: undefined }
@@ -14133,6 +14356,48 @@ export type Database = {
       check_demande_by_email: {
         Args: { check_email: string }
         Returns: boolean
+      }
+      communication_apply_receipt: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
+      communication_newsletter_activity: {
+        Args: { p_campaign: string; p_rows: Json }
+        Returns: undefined
+      }
+      communication_newsletter_outcomes: {
+        Args: { p_campaign: string; p_emails: string[]; p_type: string }
+        Returns: undefined
+      }
+      communication_notification_click: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      communication_receipt: {
+        Args: {
+          p_at: string
+          p_event_id: string
+          p_message_id: string
+          p_provider: string
+          p_recipient: string
+          p_type: string
+        }
+        Returns: undefined
+      }
+      communication_report: {
+        Args: {
+          p_campaign?: string
+          p_channel?: string
+          p_days?: number
+          p_page?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      communication_webhook_secret: {
+        Args: { p_secret?: string }
+        Returns: string
       }
       compute_offre_missing_info: {
         Args: { _offre_id: string }
@@ -14458,18 +14723,30 @@ export type Database = {
         Args: never
         Returns: {
           attempts: number
+          bounced_at: string | null
+          clicked_at: string | null
+          clicks_count: number | null
+          complained_at: string | null
           contact_id: string
+          delivered_at: string | null
           email: string
           error: string | null
           first_attempt_at: string | null
           id: string
+          last_clicked_at: string | null
+          last_opened_at: string | null
           lease_until: string | null
           newsletter_id: string
+          opened_at: string | null
+          opens_count: number | null
           provider_id: string | null
           retry_at: string
           sent_at: string | null
           status: string
+          tracking_observed_at: string | null
+          tracking_outcomes: string[]
           unsubscribe_token: string
+          unsubscribed_at: string | null
         }[]
         SetofOptions: {
           from: "*"
@@ -14534,6 +14811,9 @@ export type Database = {
           sender: string | null
           status: string
           subject: string
+          tracking_enabled: boolean
+          tracking_error: string | null
+          tracking_synced_at: string | null
           updated_at: string
           worker_error: string | null
         }[]
