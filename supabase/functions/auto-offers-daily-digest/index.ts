@@ -1,7 +1,7 @@
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -109,7 +109,7 @@ serve(async (req) => {
       });
     }
 
-    const resend = new Resend(resendApiKey);
+    const resend = new Resend(resendApiKey, "auto-offers-daily-digest");
     const { data, error } = await resend.emails.send({
       from: "Logisorama <support@logisorama.ch>",
       to: [ADMIN_EMAIL],

@@ -1,10 +1,10 @@
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"), "send-mandat-pdf");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

@@ -1,7 +1,7 @@
 import { renderNotificationEmail as generateEmailHtml, escapeEmailHtml, emailUrl } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
 import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
@@ -134,7 +134,7 @@ serve(async (req) => {
       );
     }
 
-    const resend = new Resend(resendApiKey);
+    const resend = new Resend(resendApiKey, "send-notification-email");
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -241,7 +241,7 @@ serve(async (req) => {
             campaign_key: requestData.campaign_key ?? "broadcast",
             recipient_email: profile.email,
             subject: title,
-            status: "sending",
+            status: "pending",
             sent_at: new Date().toISOString(),
           })
           .select("id")

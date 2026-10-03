@@ -95,9 +95,7 @@ export default function ApporteurNotifications() {
     }
   };
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read) {
-      markAsRead(notification.id);
-    }
+    void supabase.rpc('communication_notification_click', { p_id: notification.id }).then(({error}) => { if(error) void markAsRead(notification.id); else setNotifications(prev=>prev.map(n=>n.id===notification.id?{...n,read:true}:n)); });
     
     // Get the correct link using centralized logic
     const url = getCorrectNotificationLink(

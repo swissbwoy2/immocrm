@@ -54,20 +54,28 @@ function isAllowed(rawUrl: string): boolean {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'GET') return new Response(null, { status: 405 });
 
   const url = new URL(req.url);
   const logId = url.searchParams.get('id');
   const target = url.searchParams.get('url');
 
-  const dest = target && isAllowed(target) ? target : FALLBACK;
+  let dest = target && isAllowed(target) ? target : FALLBACK;
+  let trackedId = logId;
+  const linkId = url.searchParams.get('link');
+  if (linkId && /^[0-9a-f-]{36}$/i.test(linkId)) {
+    const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const {data} = await db.from('communication_links').select('log_id,url').eq('id',linkId).maybeSingle();
+    if (data && /^https?:\/\//i.test(data.url)) { dest=data.url; trackedId=data.log_id; }
+  }
 
   try {
-    if (logId && /^[0-9a-f-]{36}$/i.test(logId)) {
+    if (trackedId && /^[0-9a-f-]{36}$/i.test(trackedId)) {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       );
-      supabase.rpc('track_email_click', { _log_id: logId, _url: dest }).then(({ error }) => {
+      await supabase.rpc('track_email_click', { _log_id: trackedId, _url: dest }).then(({ error }) => {
         if (error) console.error('track_email_click error:', error.message);
       });
     }
@@ -77,6 +85,6 @@ Deno.serve(async (req) => {
 
   return new Response(null, {
     status: 302,
-    headers: { ...corsHeaders, Location: dest },
+    headers: { ...corsHeaders, Location: dest, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" },
   });
 });

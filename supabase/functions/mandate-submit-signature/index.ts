@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("mandate-submit-signature");
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -157,7 +159,7 @@ Deno.serve(async (req) => {
       const trackingUrl = `https://immocrm.lovable.app/mandat-v3/suivi?token=${mandate.access_token}`;
 
       try {
-        await fetch("https://api.resend.com/emails", {
+        await sendTrackedEmail("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

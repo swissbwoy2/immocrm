@@ -1,8 +1,8 @@
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"), "send-mandat-confirmation");
 const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@immo-rama.ch";
 
 const corsHeaders = {

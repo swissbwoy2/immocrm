@@ -1,7 +1,7 @@
 import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 
 const ADMIN_EMAIL = "info@immo-rama.ch";
 const STAFF_FROM = "Logisorama <support@logisorama.ch>";
@@ -741,7 +741,7 @@ async function sendBrandedEmailResult(
   const toUniq = Array.from(new Set(to.filter(Boolean)));
   const ccUniq = Array.from(new Set(cc.filter(Boolean))).filter((e) => !toUniq.includes(e));
   if (toUniq.length === 0) return { ok: false, error: "Aucun destinataire" };
-  const resend = new Resend(apiKey);
+  const resend = new Resend(apiKey, "mandate-renewal-action");
   const { data, error } = await resend.emails.send({
     from: STAFF_FROM,
     to: toUniq,

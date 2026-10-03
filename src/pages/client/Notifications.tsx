@@ -66,7 +66,7 @@ const getNotificationTypeName = (type: string) => {
 };
 
 export default function ClientNotifications() {
-  const { notifications, counts, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, counts, loading, recordClick, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
@@ -75,9 +75,7 @@ export default function ClientNotifications() {
     : notifications;
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read) {
-      markAsRead(notification.id);
-    }
+    void recordClick(notification.id);
     
     // Get the correct link using centralized logic
     const url = getCorrectNotificationLink(

@@ -1,3 +1,4 @@
+import { prepareEmailTracking } from '../_shared/communication-email.ts';
 import { renderCorrespondenceEmail } from '../_shared/correspondence-email.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
@@ -31,6 +32,8 @@ serve(async (req) => {
   }
 
   let client: SMTPClient | null = null;
+  let transportAccepted = false;
+  let tracking: Awaited<ReturnType<typeof prepareEmailTracking>> | null = null;
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -181,12 +184,13 @@ serve(async (req) => {
       encoding: "binary" as const,
     }));
 
+    tracking = await prepareEmailTracking({to:recipient_email,cc,bcc,subject,html:fullBodyHtml}, 'smtp', 'Email manuel');
     // Build email options
     const emailOptions: any = {
       from: fromAddress,
       to: toAddress,
       subject: subject,
-      html: fullBodyHtml,
+      html: tracking.html,
       attachments: denomailerAttachments.length > 0 ? denomailerAttachments : undefined,
     };
 
@@ -202,6 +206,8 @@ serve(async (req) => {
 
     // Send email
     await client.send(emailOptions);
+    transportAccepted = true;
+    await tracking.finish('sent');
 
     // Close connection
     await client.close();
@@ -211,6 +217,7 @@ serve(async (req) => {
     const { error: logError } = await supabase
       .from('sent_emails')
       .insert({
+        tracking_log_id: tracking.ids[0] || null,
         sender_id: user.id,
         client_id: client_id || null,
         recipient_email,
@@ -231,6 +238,7 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
+    if (!transportAccepted) await tracking?.finish('failed',null,'Échec du transport SMTP');
     const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('Error sending email:', error);
 

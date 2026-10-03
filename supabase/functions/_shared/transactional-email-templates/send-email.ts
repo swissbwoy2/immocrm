@@ -1,3 +1,4 @@
+import { prepareEmailTracking } from '../communication-email.ts'
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
@@ -66,14 +67,15 @@ export async function sendTemplateEmail(
       ? template.subject(templateData)
       : template.subject
 
+  const tracking=await prepareEmailTracking({to:recipient,subject,html},'lovable',templateName,options.idempotencyKey)
   try {
-    await sendLovableEmail(
+    const result=await sendLovableEmail(
       {
         to: recipient,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
-        html,
+        html: tracking.html,
         text,
         purpose: 'transactional',
         label: templateName,
@@ -82,10 +84,13 @@ export async function sendTemplateEmail(
       },
       { apiKey, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
     )
+    await tracking.finish('sent',result.message_id)
   } catch (error) {
     if (error instanceof EmailAPIError && error.code === 'recipient_suppressed') {
+      await tracking.finish('skipped',null,'Destinataire désinscrit ou bloqué')
       return { sent: false, reason: 'recipient_suppressed' }
     }
+    await tracking.finish('failed',null,'Échec du transport email')
     throw error
   }
 

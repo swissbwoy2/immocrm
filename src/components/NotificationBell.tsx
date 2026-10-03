@@ -50,7 +50,7 @@ const getNotificationIcon = (type: string) => {
 };
 
 export function NotificationBell() {
-  const { notifications, counts, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, counts, recordClick, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
@@ -69,9 +69,7 @@ export function NotificationBell() {
   }, [counts.total]);
 
   const handleNotificationClick = (notification: Notification) => {
-    if (!notification.read) {
-      markAsRead(notification.id);
-    }
+    void recordClick(notification.id);
 
     // Prefer the authenticated role, fall back to the current URL
     const pathRole = detectRoleFromPath(location.pathname);

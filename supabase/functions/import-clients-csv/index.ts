@@ -2,7 +2,7 @@ import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -230,7 +230,7 @@ serve(async (req) => {
     };
 
     // Initialize Resend
-    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+    const resend = new Resend(Deno.env.get('RESEND_API_KEY'), "import-clients-csv");
     const appUrl = Deno.env.get('VITE_SUPABASE_URL')?.replace('.supabase.co', '.lovable.app').replace('https://', 'https://app-') || 'https://ydljsdscdnqrqnjvqela.lovable.app';
 
     // Process each client

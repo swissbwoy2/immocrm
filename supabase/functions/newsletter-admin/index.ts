@@ -1,3 +1,4 @@
+import { communicationAction } from "../_shared/communication-admin.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { studioAction, withPreheader } from "../_shared/newsletter-studio.ts";
 import { infomaniak } from "../_shared/newsletter-infomaniak.ts";
@@ -63,6 +64,7 @@ Deno.serve(async (req) => {
       return json({ error: "Fichier trop volumineux" }, 413);
     }
     const b = JSON.parse(raw);
+    if (String(b.action).startsWith("tracking-")) return json(await communicationAction(db,b));
     switch (b.action) {
       case "asset-upload":
       case "forms-list":

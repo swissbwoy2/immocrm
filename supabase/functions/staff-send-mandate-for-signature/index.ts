@@ -1,6 +1,6 @@
 import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { Resend } from "../_shared/tracked-resend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const resend = new Resend(RESEND_KEY);
+    const resend = new Resend(RESEND_KEY, "staff-send-mandate-for-signature");
     const html = renderCorporateEmail({ title: 'Votre mandat de recherche est prêt à signer', category: "VOTRE MANDAT", bodyHtml: `<h2 style="font-size:20px;color:#205a43;margin:0 0 16px;">Bonjour ${prenom} ${nom},</h2>
           <p style="font-size:15px;line-height:1.6;color:#333;margin:0 0 16px;">
             Votre agent a pré-rempli votre <strong>mandat de recherche immobilière</strong>.

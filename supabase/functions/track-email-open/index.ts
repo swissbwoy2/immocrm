@@ -23,6 +23,7 @@ const pixelHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'GET') return new Response(null, { status: 405 });
 
   try {
     const url = new URL(req.url);
@@ -32,8 +33,8 @@ Deno.serve(async (req) => {
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       );
-      // fire and forget
-      supabase.rpc('track_email_open', { _log_id: logId }).then(({ error }) => {
+      // Persist before returning the pixel/redirect.
+      await supabase.rpc('track_email_open', { _log_id: logId }).then(({ error }) => {
         if (error) console.error('track_email_open error:', error.message);
       });
     }

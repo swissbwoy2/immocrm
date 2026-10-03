@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("smart-followups");
 import { renderCorporateEmail, emailButton, escapeEmailHtml } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -77,7 +79,7 @@ serve(async (req) => {
           `});
 
           try {
-            await fetch('https://api.resend.com/emails', {
+            await sendTrackedEmail('https://api.resend.com/emails', {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({ from: fromEmail, to: lead.email, subject: subjectMap[days], html }),

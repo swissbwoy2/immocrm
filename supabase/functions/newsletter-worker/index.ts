@@ -208,6 +208,7 @@ Deno.serve(async (req) => {
         p_emails: emails,
       }),
     );
+    await update({ tracking_enabled: true });
     submitting = true;
     const result = await provider.call<boolean>(
       `/campaigns/${campaignId}/schedule`,

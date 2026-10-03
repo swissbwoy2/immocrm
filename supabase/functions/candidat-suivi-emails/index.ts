@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("candidat-suivi-emails");
 import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
 // Campagne de suivi candidat (planifiée 2×/jour).
 // - Rappels de visite (rappel_48h, rappel_24h) : canal transactionnel (sendTemplateEmail).
@@ -39,7 +41,7 @@ async function sendActivation(email: string, prenom: string, subject: string): P
   if (tErr) throw new Error(`token: ${tErr.message}`)
   const unsubscribeUrl = `https://logisorama.ch/unsubscribe?token=${token}`
   const oneClickUrl = `${UNSUB_FN}?token=${token}`
-  const res = await fetch('https://api.resend.com/emails', {
+  const res = await sendTrackedEmail('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({

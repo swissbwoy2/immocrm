@@ -1,3 +1,5 @@
+import { trackedResendFetch } from "../_shared/tracked-resend.ts";
+const sendTrackedEmail = trackedResendFetch("send-followup-campaign");
 import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
@@ -319,7 +321,7 @@ async function sendViaResend(
     if (options?.bcc && options.bcc.length > 0) {
       payload.bcc = options.bcc;
     }
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await sendTrackedEmail('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
