@@ -145,7 +145,7 @@ export default function CandidaturesRelocation() {
                   ))}
                 </section>
                 {['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe'].includes(s) && (
-                  <section className="space-y-1"><p className="font-semibold">Documents</p><AdminGenererDocuments candidatureId={sel.id} onDone={refresh} /></section>
+                  <section className="space-y-1"><p className="font-semibold">Documents</p><AdminGenererDocuments candidatureId={sel.id} onDone={async () => { const { data } = await (supabase as any).from('candidatures_location').select(SELECT).eq('id', sel.id).maybeSingle(); if (data) setSel(data); load(); }} /></section>
                 )}
                 <section><p className="mb-1 font-semibold">Suivi</p><RelocationTimeline r={sel} /></section>
                 <section className="space-y-2 border-t pt-3">
