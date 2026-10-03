@@ -41,6 +41,7 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
     await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003180000_newsletter_audience_aliases.sql',import.meta.url)));
   await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003181000_newsletter_rental_campaigns.sql',import.meta.url)));
   await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003190000_newsletter_relocation.sql',import.meta.url)));
+  await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003200000_newsletter_confirmed_projects.sql',import.meta.url)));
   const classify = async (input: unknown) =>
       (await db.query<{ c: { categories: string[]; outside: boolean } }>(
         "select newsletter_classify($1::jsonb) c",
@@ -107,6 +108,11 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
     for (const name of ['Jessie 2','RECHERCHE','EB PRMN VUE PRIME-copy','FORMS2']) assertEquals(await classify({form_name:name}),{categories:['renter'],outside:false});
     assertEquals(await classify({form_name:'Jessie 2',type_recherche:'acheter'}),{categories:['buyer'],outside:false});
     for (const name of ['Trouve ton locataire','One reloc','NEW 2026 RELOC','Relocation']) assertEquals(await classify({form_name:name}),{categories:['relocation'],outside:false});
+    assertEquals(await classify({'Conversion récente':'Facebook Lead Ads: augmentation de loyer-copy-copy'}),{categories:['landlord'],outside:false});
+    assertEquals(await classify({form_name:'ACOMPTE 300-copy'}),{categories:['renter'],outside:false});
+    assertEquals(await classify({form_name:'ti kreyol',type_recherche:'Acheter'}),{categories:['commerce_buyer'],outside:false});
+    assertEquals(await classify({raw_meta_payload:{original_formulaire:'TI_KREYOL',type_recherche:'Acheter'}}),{categories:['commerce_buyer'],outside:false});
+    assertEquals(await classify({form_name:'Vendre mon commerce'}),{categories:[],outside:true});
     const imp = async (rows: unknown[]) =>
       await db.query("select newsletter_import_auto($1::jsonb)", [
         JSON.stringify(rows),
@@ -162,7 +168,7 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
         .rows;
     assertEquals(rows, [{ categories: ["cleaning"], excluded: true }]);
     await db.query(
-      "select newsletter_import_contacts($1::jsonb,'prospect',array['cleaning'],'csv')",
+      "select newsletter_import_contacts($1::jsonb,'prospect',array['commerce_buyer'],'csv')",
       [JSON.stringify([{ email: "c@example.ch" }])],
     );
     assertEquals(

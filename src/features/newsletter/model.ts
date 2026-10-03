@@ -5,6 +5,7 @@ export const CONTACT_CATEGORIES = {
   buyer: "Chercheurs à acheter",
   cleaning: "Nettoyage",
   relocation: "Locataires sortants / relocation",
+  commerce_buyer: "Acheteurs de commerces",
 } as const;
 export type Category = keyof typeof CONTACT_CATEGORIES;
 export type ContactKind = "client" | "prospect";
