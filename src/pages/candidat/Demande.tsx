@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import { rowToFormData } from '@/hooks/useCandidatCriteres';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Loader2, Lock, Search, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +45,23 @@ export default function CandidatDemande() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [annonceId, setAnnonceId] = useState<string>('');
   const [visitees, setVisitees] = useState<{ id: string; label: string }[]>([]);
+  const [sp] = useSearchParams();
+  const candId = sp.get('candidature');
+  const qc = useQueryClient();
+  type CoCand = { prenom: string; nom: string; date_naissance: string; lien: string };
+  const [extra, setExtra] = useState<{ civilite: string; type_contrat: string; date_emmenagement_souhaitee: string; co_candidats: CoCand[] }>({ civilite: '', type_contrat: '', date_emmenagement_souhaitee: '', co_candidats: [] });
+  const [errors, setErrors] = useState<string[]>([]);
+  const [depositing, setDepositing] = useState(false);
+
+  useEffect(() => {
+    if (!candId) return;
+    (async () => {
+      const { data: r } = await (supabase as any).from('candidatures_location').select('annonce_id, civilite, type_contrat, date_emmenagement_souhaitee, co_candidats').eq('id', candId).maybeSingle();
+      if (!r) return;
+      if (r.annonce_id) setAnnonceId(r.annonce_id);
+      setExtra({ civilite: r.civilite ?? '', type_contrat: r.type_contrat ?? '', date_emmenagement_souhaitee: r.date_emmenagement_souhaitee ?? '', co_candidats: Array.isArray(r.co_candidats) ? r.co_candidats : [] });
+    })();
+  }, [candId]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -75,7 +95,15 @@ export default function CandidatDemande() {
         adresse: data.adresse_actuelle ?? '', loyer_actuel: data.loyer_actuel ?? 0, motif_changement: data.motif_changement ?? '', profession: data.profession ?? '',
         employeur: data.employeur ?? '', revenus_mensuels: data.revenus_mensuels ?? 0, nombre_occupants: data.nombre_occupants ?? 1,
         region_recherche: data.region_recherchee ?? '', budget_max: data.budget_max ?? 0 });
-      else setForm(base);
+      else {
+        const [{ data: crit }, { data: prof }] = await Promise.all([
+          (supabase as any).from('candidat_criteres').select('*').eq('user_id', user.id).maybeSingle(),
+          (supabase as any).from('profiles').select('prenom, nom, telephone').eq('id', user.id).maybeSingle(),
+        ]);
+        const f = crit ? rowToFormData(crit) : initialFormData;
+        const keep = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== '' && v != null && !(typeof v === 'number' && v === 0)));
+        setForm({ ...base, ...keep, prenom: prof?.prenom ?? '', nom: prof?.nom ?? '', telephone: prof?.telephone ?? '', email: base.email, journey: 'rental' as any });
+      }
       setLoading(false);
     })();
   }, [user?.id]);
@@ -113,6 +141,38 @@ export default function CandidatDemande() {
     setSaved(true);
   };
 
+  const deposer = async () => {
+    if (!candId || depositing) return;
+    const errs: string[] = [];
+    if (!form.prenom) errs.push('Prénom manquant (étape 1)');
+    if (!form.nom) errs.push('Nom manquant (étape 1)');
+    if (!form.telephone) errs.push('Téléphone manquant (étape 1)');
+    if (!num(form.revenus_mensuels)) errs.push('Revenus mensuels manquants (étape 3)');
+    if (!extra.civilite) errs.push('Civilité manquante');
+    if (!extra.date_emmenagement_souhaitee) errs.push("Date d'emménagement souhaitée manquante");
+    if (extra.co_candidats.some((c) => !c.prenom || !c.nom)) errs.push('Nom et prénom requis pour chaque co-candidat');
+    setErrors(errs);
+    if (errs.length) return;
+    setDepositing(true);
+    const { error: uErr } = await (supabase as any).from('candidatures_location').update({
+      civilite: extra.civilite, type_contrat: extra.type_contrat || null, date_emmenagement_souhaitee: extra.date_emmenagement_souhaitee,
+      co_candidats: extra.co_candidats, prenom: form.prenom, nom: form.nom, telephone: form.telephone,
+      date_naissance: form.date_naissance || null, nationalite: form.nationalite || null, type_permis: form.type_permis || null,
+      profession: form.profession || null, employeur: form.employeur || null, revenus_mensuels: num(form.revenus_mensuels),
+      loyer_actuel: num(form.loyer_actuel), adresse_actuelle: form.adresse || null, motif_changement: form.motif_changement || null,
+      nombre_occupants: num(form.nombre_occupants),
+    }).eq('id', candId);
+    if (uErr) { setDepositing(false); return toast.error(uErr.message); }
+    const { error } = await (supabase as any).rpc('candidat_deposer_candidature', { _id: candId });
+    if (error) { setDepositing(false); return toast.error(error.message); }
+    supabase.functions.invoke('candidature-relocation-notify', { body: { candidature_id: candId, etape: 'candidature_deposee' } }).catch(() => {});
+    await save();
+    setDepositing(false);
+    toast.success('Candidature déposée');
+    qc.invalidateQueries({ queryKey: ['candidat-candidatures'] });
+    navigate('/candidat/candidatures');
+  };
+
   const switchToClient = async () => {
     if (switching) return;
     setSwitching(true);
@@ -146,8 +206,11 @@ export default function CandidatDemande() {
 
   if (loading) return <div className="flex flex-1 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
-  const Step = STEPS[step].C as any;
-  const last = step === STEPS.length - 1;
+  const total = STEPS.length + (candId ? 1 : 0);
+  const isExtra = !!candId && step === STEPS.length;
+  const Step = (isExtra ? null : STEPS[step].C) as any;
+  const last = step === total - 1;
+  const setCo = (i: number, k: keyof CoCand, v: string) => setExtra((p) => ({ ...p, co_candidats: p.co_candidats.map((c, j) => (j === i ? { ...c, [k]: v } : c)) }));
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -174,22 +237,62 @@ export default function CandidatDemande() {
         </div>
 
         <div className="flex gap-1" aria-label="Progression">
-          {STEPS.map((s, i) => (
+          {[...STEPS, ...(candId ? [{ key: 'depot', title: 'Dépôt' }] : [])].map((s, i) => (
             <button key={s.key} type="button" onClick={() => setStep(i)} aria-label={s.title}
               className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-primary' : 'bg-muted'}`} />
           ))}
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">{step + 1}. {STEPS[step].title}</CardTitle></CardHeader>
-          <CardContent><Step data={form} onChange={onChange} /></CardContent>
+          <CardHeader><CardTitle className="text-base">{step + 1}. {isExtra ? 'Dépôt de la candidature' : STEPS[step].title}</CardTitle></CardHeader>
+          <CardContent>
+            {isExtra ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1"><Label>Civilité *</Label>
+                    <Select value={extra.civilite} onValueChange={(v) => setExtra((p) => ({ ...p, civilite: v }))}>
+                      <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                      <SelectContent>{['Madame', 'Monsieur'].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1"><Label>Type de contrat</Label>
+                    <Select value={extra.type_contrat} onValueChange={(v) => setExtra((p) => ({ ...p, type_contrat: v }))}>
+                      <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                      <SelectContent>{['CDI', 'CDD', 'Indépendant', 'Temporaire', 'Étudiant', 'Retraité', 'Sans emploi'].map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1"><Label>Date d'emménagement souhaitée *</Label>
+                    <Input type="date" className="min-h-[44px]" value={extra.date_emmenagement_souhaitee} onChange={(e) => setExtra((p) => ({ ...p, date_emmenagement_souhaitee: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Co-candidats</Label>
+                  {extra.co_candidats.map((c, i) => (
+                    <div key={i} className="grid gap-2 rounded-lg border p-2 sm:grid-cols-2">
+                      <Input placeholder="Prénom *" value={c.prenom} onChange={(e) => setCo(i, 'prenom', e.target.value)} className="min-h-[44px]" />
+                      <Input placeholder="Nom *" value={c.nom} onChange={(e) => setCo(i, 'nom', e.target.value)} className="min-h-[44px]" />
+                      <Input type="date" value={c.date_naissance} onChange={(e) => setCo(i, 'date_naissance', e.target.value)} className="min-h-[44px]" />
+                      <Input placeholder="Lien (conjoint, colocataire…)" value={c.lien} onChange={(e) => setCo(i, 'lien', e.target.value)} className="min-h-[44px]" />
+                      <Button variant="ghost" size="sm" className="sm:col-span-2" onClick={() => setExtra((p) => ({ ...p, co_candidats: p.co_candidats.filter((_, j) => j !== i) }))}>Retirer</Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" className="min-h-[40px]" onClick={() => setExtra((p) => ({ ...p, co_candidats: [...p.co_candidats, { prenom: '', nom: '', date_naissance: '', lien: '' }] }))}>+ Ajouter un co-candidat</Button>
+                </div>
+                {errors.length > 0 && <ul className="space-y-1 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
+              </div>
+            ) : <Step data={form} onChange={onChange} />}
+          </CardContent>
         </Card>
 
         <div className="flex justify-between gap-2">
           <Button variant="outline" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-[44px]">
             <ArrowLeft className="mr-2 h-4 w-4" /> Précédent
           </Button>
-          {last ? (
+          {last && candId ? (
+            <Button onClick={deposer} disabled={depositing} className="min-h-[44px]">
+              {depositing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Déposer ma candidature
+            </Button>
+          ) : last ? (
             <Button onClick={save} disabled={saving} className="min-h-[44px]">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Enregistrer ma demande
             </Button>
