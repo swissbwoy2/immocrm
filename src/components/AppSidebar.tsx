@@ -81,6 +81,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
 
             { name: 'Leads Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
             { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
+            { name: 'Newsletter', icon: Mail, path: '/admin/newsletter', notifKey: null },
             { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },
             { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
             { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },

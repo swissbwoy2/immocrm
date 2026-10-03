@@ -1,0 +1,4 @@
+email;prenom;nom
+csv@example.com;Contact;CSV
+CSV@example.com;Doublon;Exemple
+invalide;Sans;Email
