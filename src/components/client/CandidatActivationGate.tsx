@@ -127,8 +127,11 @@ export function CandidatActivationGate({ children }: { children: React.ReactNode
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <Button asChild size="lg" className="min-h-[44px]">
-            <Link to="/nouveau-mandat"><FileSignature className="mr-2 h-4 w-4" /> Activer mon compte</Link>
+          <Button asChild size="lg" className="min-h-[44px] h-auto whitespace-normal">
+            <Link to="/nouveau-mandat">
+              <FileSignature className="mr-2 h-4 w-4 shrink-0" />
+              {trialEnd && !canTrial ? 'Réactiver votre recherche en moins de 5 minutes' : 'Activer mon compte'}
+            </Link>
           </Button>
           {canTrial && (
             <Button variant="outline" size="lg" className="min-h-[44px]" disabled={starting} onClick={() => setSolvOpen(true)}>
