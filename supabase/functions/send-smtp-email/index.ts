@@ -1,3 +1,4 @@
+import { renderCorrespondenceEmail } from '../_shared/correspondence-email.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
@@ -45,7 +46,7 @@ serve(async (req) => {
     // Get user from token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
+
     if (userError || !user) {
       throw new Error('Invalid authentication token');
     }
@@ -70,15 +71,12 @@ serve(async (req) => {
     }
 
 
-    // Build email body with signature
-    let fullBodyHtml = body_html.replace(/\n/g, '<br/>');
-    if (emailConfig.signature_html) {
-      fullBodyHtml += `<br/><br/>${emailConfig.signature_html}`;
-    }
+    // Apply the shared identity to manual emails, replies and dossier templates.
+    const fullBodyHtml = renderCorrespondenceEmail(subject, body_html, emailConfig.signature_html);
 
     // Process attachments (from URL or base64 content)
     const emailAttachments: Array<{ filename: string; content: Uint8Array; contentType: string }> = [];
-    
+
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         try {
@@ -98,7 +96,7 @@ serve(async (req) => {
           } else if (attachment.url) {
             // Handle Supabase storage URLs
             let fetchUrl = attachment.url;
-            
+
             // If it's not an HTTP URL, treat as a storage path
             if (!attachment.url.startsWith('http')) {
               let storageKey = attachment.url;
@@ -110,7 +108,7 @@ serve(async (req) => {
               const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                 .from('client-documents')
                 .createSignedUrl(storageKey, 300);
-              
+
               if (signedUrlError) {
                 console.warn(`Failed to create signed URL for ${storageKey}:`, signedUrlError.message);
                 continue; // Skip this attachment instead of failing
@@ -152,8 +150,8 @@ serve(async (req) => {
     // Determine TLS mode based on port
     const port = emailConfig.smtp_port || 465;
     const useTLS = port === 465;
-    
-    
+
+
     client = new SMTPClient({
       connection: {
         hostname: emailConfig.smtp_host,
@@ -167,11 +165,11 @@ serve(async (req) => {
     });
 
     // Build from address
-    const fromAddress = emailConfig.display_name 
+    const fromAddress = emailConfig.display_name
       ? `${emailConfig.display_name} <${emailConfig.email_from}>`
       : emailConfig.email_from;
 
-    const toAddress = recipient_name 
+    const toAddress = recipient_name
       ? `${recipient_name} <${recipient_email}>`
       : recipient_email;
 
@@ -235,7 +233,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('Error sending email:', error);
-    
+
     // Try to close client if open
     if (client) {
       try {
@@ -244,18 +242,18 @@ serve(async (req) => {
         console.error('Error closing SMTP client:', e);
       }
     }
-    
+
     // Provide helpful error message for common TLS issues
     let userFriendlyMessage = errorMessage;
     if (errorMessage.includes('InvalidContentType') || errorMessage.includes('corrupt message')) {
       userFriendlyMessage = 'Erreur de connexion SMTP. Si vous utilisez le port 587, essayez de passer au port 465 avec TLS activé dans vos paramètres email.';
     }
-    
+
     return new Response(
       JSON.stringify({ success: false, error: userFriendlyMessage }),
-      { 
+      {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

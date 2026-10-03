@@ -1,3 +1,4 @@
+import { renderCorporateEmail, emailButton, escapeEmailHtml } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -68,19 +69,12 @@ serve(async (req) => {
 
           const ctaUrl = `https://immocrm.lovable.app/mandat?email=${encodeURIComponent(lead.email)}`;
 
-          const html = `
-            <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-              <h2 style="color:#1e40af;">Bonjour ${lead.prenom || ''} ${lead.nom || ''},</h2>
+          const html = renderCorporateEmail({title:'Votre recherche immobilière', category:'VOTRE RECHERCHE', bodyHtml:`
+              <p>Bonjour ${escapeEmailHtml(lead.prenom || '')} ${escapeEmailHtml(lead.nom || '')},</p>
               <p>Vous avez manifesté votre intérêt pour nos services de recherche immobilière il y a ${days} jour${days > 1 ? 's' : ''}.</p>
               <p>${days === 1 ? 'Nos chasseurs immobiliers sont prêts à vous accompagner.' : days === 3 ? 'Chaque jour compte sur le marché immobilier suisse.' : 'Les meilleurs biens partent vite. Ne tardez pas !'}</p>
-              <div style="text-align:center;margin:30px 0;">
-                <a href="${ctaUrl}" style="background:#1e40af;color:white;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:bold;">
-                  Lancer ma recherche →
-                </a>
-              </div>
-              <p style="color:#666;font-size:12px;">Immo-rama.ch - Votre partenaire immobilier</p>
-            </body></html>
-          `;
+              ${emailButton('Lancer ma recherche →',ctaUrl)}
+          `});
 
           try {
             await fetch('https://api.resend.com/emails', {

@@ -1,3 +1,4 @@
+import { renderCorporateEmail } from '../_shared/email-brand.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
@@ -41,9 +42,9 @@ serve(async (req) => {
     // Determine TLS mode based on port
     const port = smtp_port || 465;
     const useTLS = port === 465;
-    
+
     console.log(`SMTP test: host=${smtp_host}, port=${port}, implicitTLS=${useTLS}`);
-    
+
     if (port === 587) {
       console.warn('WARNING: Port 587 (STARTTLS) may not work reliably. Consider using port 465.');
     }
@@ -64,25 +65,26 @@ serve(async (req) => {
     // Test by sending an email to self - this forces connection and auth
     // Use a minimal test that will validate credentials
     console.log('Attempting SMTP connection and authentication...');
-    
+
     // Send a test email to the sender's own address
     await client.send({
       from: email_from,
       to: email_from,
       subject: '[Test] Connexion SMTP vérifiée',
       content: 'Ce message confirme que votre configuration SMTP fonctionne correctement.',
+      html: renderCorporateEmail({title:'Connexion SMTP vérifiée', category:'CONFIGURATION EMAIL', bodyHtml:'<p>Ce message confirme que votre configuration SMTP fonctionne correctement.</p>'}),
     });
-    
+
     console.log('SMTP test email sent successfully');
-    
+
     // Close the connection
     await client.close();
     client = null;
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Connexion SMTP réussie ! Un email de test a été envoyé à votre adresse.' 
+      JSON.stringify({
+        success: true,
+        message: 'Connexion SMTP réussie ! Un email de test a été envoyé à votre adresse.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -90,7 +92,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? (error instanceof Error ? error.message : String(error)) : 'Unknown error';
     console.error('SMTP connection test failed:', errorMessage);
-    
+
     // Try to close client if it exists
     if (client) {
       try {
@@ -100,10 +102,10 @@ serve(async (req) => {
         console.log('Note: Could not close client (may not have connected)');
       }
     }
-    
+
     // Provide helpful error messages in French
     let userFriendlyMessage = errorMessage;
-    
+
     if (errorMessage.includes('InvalidContentType') || errorMessage.includes('corrupt message')) {
       userFriendlyMessage = 'Erreur de connexion TLS. Essayez le port 465 avec TLS activé.';
     } else if (errorMessage.includes('535') || errorMessage.includes('Invalid login') || errorMessage.includes('authentication') || errorMessage.includes('password')) {
@@ -115,13 +117,13 @@ serve(async (req) => {
     } else if (errorMessage.includes('getaddrinfo') || errorMessage.includes('ENOTFOUND')) {
       userFriendlyMessage = 'Serveur SMTP introuvable. Vérifiez l\'adresse du serveur.';
     }
-    
+
     // Return with 200 status so frontend can properly parse the JSON response
     return new Response(
       JSON.stringify({ success: false, error: userFriendlyMessage }),
-      { 
+      {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
