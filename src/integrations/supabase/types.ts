@@ -7905,13 +7905,48 @@ export type Database = {
           },
         ]
       }
+      newsletter_test_requests: {
+        Row: {
+          created_at: string
+          created_by: string
+          error: string | null
+          id: string
+          provider_campaign_id: number | null
+          state: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          error?: string | null
+          id: string
+          provider_campaign_id?: number | null
+          state?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          id?: string
+          provider_campaign_id?: number | null
+          state?: string
+        }
+        Relationships: []
+      }
       newsletters: {
         Row: {
           created_at: string
           created_by: string
+          dispatch_lease: string | null
+          dispatch_retry_at: string
+          dispatch_state: string
+          dispatch_token: string | null
           html: string
           id: string
           name: string
+          provider: string
+          provider_campaign_id: number | null
+          provider_domain_id: number | null
+          provider_group_id: number | null
           revision: number
           scheduled_at: string | null
           sender: string | null
@@ -7923,9 +7958,17 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          dispatch_lease?: string | null
+          dispatch_retry_at?: string
+          dispatch_state?: string
+          dispatch_token?: string | null
           html: string
           id?: string
           name: string
+          provider?: string
+          provider_campaign_id?: number | null
+          provider_domain_id?: number | null
+          provider_group_id?: number | null
           revision?: number
           scheduled_at?: string | null
           sender?: string | null
@@ -7937,9 +7980,17 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          dispatch_lease?: string | null
+          dispatch_retry_at?: string
+          dispatch_state?: string
+          dispatch_token?: string | null
           html?: string
           id?: string
           name?: string
+          provider?: string
+          provider_campaign_id?: number | null
+          provider_domain_id?: number | null
+          provider_group_id?: number | null
           revision?: number
           scheduled_at?: string | null
           sender?: string | null
@@ -14356,6 +14407,59 @@ export type Database = {
           p_source: string
         }
         Returns: number
+      }
+      newsletter_infomaniak_accept: {
+        Args: { p_id: string; p_token: string }
+        Returns: undefined
+      }
+      newsletter_infomaniak_begin_send: {
+        Args: { p_emails: string[]; p_id: string; p_token: string }
+        Returns: undefined
+      }
+      newsletter_infomaniak_claim: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          dispatch_lease: string | null
+          dispatch_retry_at: string
+          dispatch_state: string
+          dispatch_token: string | null
+          html: string
+          id: string
+          name: string
+          provider: string
+          provider_campaign_id: number | null
+          provider_domain_id: number | null
+          provider_group_id: number | null
+          revision: number
+          scheduled_at: string | null
+          sender: string | null
+          status: string
+          subject: string
+          updated_at: string
+          worker_error: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "newsletters"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      newsletter_infomaniak_credentials: { Args: never; Returns: Json }
+      newsletter_infomaniak_recipients: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
+      newsletter_infomaniak_skip: {
+        Args: {
+          p_emails: string[]
+          p_id: string
+          p_reason: string
+          p_token: string
+        }
+        Returns: undefined
       }
       newsletter_record_optouts: {
         Args: { p_emails: string[] }
