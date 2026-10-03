@@ -78,7 +78,7 @@ async function fetchListings(locality: string): Promise<any[]> {
 }
 
 function parseListings(html: string, sourceLocality: string): any[] {
-  const { document } = parseHTML(html);
+  const { document } = parseHTML(html) as unknown as { document: Document };
   const cards = document.querySelectorAll("article, .filter-item, [class*='listing'], [class*='result-card']");
   const results: any[] = [];
   cards.forEach((card: any) => {
