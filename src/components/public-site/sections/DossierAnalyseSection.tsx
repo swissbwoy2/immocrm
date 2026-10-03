@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Sparkles, Megaphone } from 'lucide-react';
+import { ArrowRight, Megaphone } from 'lucide-react';
 
 const StoriesShowcaseSection = lazy(() =>
   import('./StoriesShowcaseSection').then((m) => ({ default: m.StoriesShowcaseSection }))
@@ -63,32 +63,6 @@ export function DossierAnalyseSection() {
                   <Megaphone className="h-5 w-5" />
                   Déposer une annonce
                 </Link>
-              </div>
-
-              {/* CTA activation — pleine largeur */}
-              <div className="flex flex-col w-full">
-                <a
-                  href="/nouveau-mandat"
-                  className="group inline-flex items-center justify-center gap-2 h-auto py-3 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)] w-full"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span className="text-sm uppercase tracking-wide">Active ta recherche MAINTENANT et décroche ton bail</span>
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </a>
-              </div>
-
-              {/* Trust cards */}
-              <div className="relative grid sm:grid-cols-2 gap-4">
-                <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
-                  <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Commission</p>
-                  <p className="text-foreground text-lg font-semibold">1 mois de loyer brut</p>
-                  <p className="text-muted-foreground text-xs mt-1">Acompte 300.- remboursé à 100% si échec après 3 mois</p>
-                </div>
-                <div className="relative p-4 rounded-xl bg-card border border-primary/20 shadow-sm">
-                  <p className="text-primary text-[10px] font-bold uppercase tracking-[0.15em] mb-1">Confiance</p>
-                  <p className="text-foreground text-lg font-semibold">500+ familles</p>
-                  <p className="text-muted-foreground text-xs mt-1">Accompagnées avec succès</p>
-                </div>
               </div>
 
             </div>
