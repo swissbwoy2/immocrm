@@ -186,6 +186,12 @@ export default function CandidatAgenda() {
                 {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past />)}
               </section>
             )}
+            {cancelled.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-destructive">Annulées</h2>
+                {cancelled.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
+              </section>
+            )}
             {others.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Autres candidatures</h2>
