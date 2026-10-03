@@ -5,6 +5,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
+import { rowToFormData } from '@/hooks/useCandidatCriteres';
 import MandatFormStep0Journey from '@/components/mandat/MandatFormStep0Journey';
 import MandatFormStep1 from '@/components/mandat/MandatFormStep1';
 import MandatFormStep2 from '@/components/mandat/MandatFormStep2';
@@ -82,13 +83,46 @@ export default function NouveauMandat() {
     }
   }, []);
 
+  // Utilisateur déjà connecté (ex. candidat → client) : pré-remplit depuis son profil et ses critères,
+  // sans écraser le brouillon, et verrouille l'e-mail sur celui du compte (jamais de nouveau compte).
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const [{ data: p }, { data: cc }] = await Promise.all([
+        supabase.from('profiles').select('prenom, nom, telephone').eq('id', user.id).maybeSingle(),
+        (supabase.from as any)('candidat_criteres').select('*').eq('user_id', user.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const src: Record<string, any> = {
+        prenom: p?.prenom, nom: p?.nom, telephone: p?.telephone,
+        type_permis: cc?.type_permis, revenus_mensuels: cc?.revenus_mensuels, poursuites: cc?.poursuites,
+      };
+      if (cc) Object.assign(src, rowToFormData(cc));
+      setAuthEmail(user.email ?? null);
+      setFormData((prev) => {
+        const next: any = { ...prev };
+        Object.entries(src).forEach(([k, v]) => {
+          const cur = next[k];
+          if (v !== undefined && v !== null && v !== '' && (cur === undefined || cur === '' || cur === 0 || cur === null || cur === false)) next[k] = v;
+        });
+        if (user.email) next.email = user.email;
+        if (!next.journey && cc) next.journey = cc.type_recherche === 'Acheter' ? 'purchase' : 'rental';
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Sauvegarder automatiquement
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
   }, [formData]);
 
   const handleChange = (data: Partial<MandatFormData>) => {
-    setFormData(prev => ({ ...prev, ...data }));
+    setFormData(prev => ({ ...prev, ...data, ...(authEmail ? { email: authEmail } : {}) }));
   };
 
   const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
