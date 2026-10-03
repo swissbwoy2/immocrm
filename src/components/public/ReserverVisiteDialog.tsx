@@ -10,7 +10,6 @@ import { CalendarCheck, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 
 export function useAnnonceCreneaux(annonceId?: string) {
   return useQuery({
@@ -55,8 +54,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const { data: creneaux = [], isLoading } = useAnnonceCreneaux(annonce.id);
   const qc = useQueryClient();
-  const navigate = useNavigate();
   const [slotFull, setSlotFull] = useState(false);
+  const [accountOnly, setAccountOnly] = useState(false);
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '' });
   const [creneauId, setCreneauId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -66,11 +65,11 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
     e.preventDefault();
     if (!form.prenom.trim() || !form.nom.trim() || !form.telephone.trim()) return toast.error('Veuillez remplir tous les champs');
     if (!EMAIL_RE.test(form.email.trim())) return toast.error('Adresse e-mail invalide');
-    if (!creneauId) return toast.error('Choisissez un créneau');
+    if (!accountOnly && !creneauId) return toast.error('Choisissez un créneau');
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke('inscription-candidat-visite', {
-        body: { annonce_id: annonce.id, creneau_id: creneauId, ...form },
+        body: { annonce_id: annonce.id, ...(accountOnly ? {} : { creneau_id: creneauId }), ...form },
       });
       let payload: any = data;
       if (error) {
@@ -106,11 +105,11 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); setSlotFull(false); }, 200);
+    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); setSlotFull(false); setAccountOnly(false); }, 200);
   };
 
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
-  const showTropTard = !done && !isLoading && (allFull || slotFull);
+  const showTropTard = !done && !accountOnly && !isLoading && (allFull || slotFull);
 
   if (showTropTard) {
     return (
@@ -119,12 +118,12 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <DialogHeader>
             <DialogTitle>Trop tard !</DialogTitle>
             <DialogDescription>
-              Les créneaux disponibles sont complets. Revenez dans 24 heures, ou passez au compte premium pour que nous cherchions votre logement à votre place.
+              Tu viens de louper le dernier créneau disponible ! Connecte-toi pour recevoir les prochaines dates disponibles avant tout le monde !
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
-            <Button onClick={() => { close(false); navigate('/nouveau-mandat'); }}>Passer au compte premium</Button>
+            <Button onClick={() => setAccountOnly(true)}>Créer mon compte / Se connecter</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -135,24 +134,24 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><CalendarCheck className="h-5 w-5 text-primary" />Réserver une visite</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><CalendarCheck className="h-5 w-5 text-primary" />{accountOnly ? 'Créer mon compte / Se connecter' : 'Réserver une visite'}</DialogTitle>
           <DialogDescription>{annonce.titre}</DialogDescription>
         </DialogHeader>
 
         {done ? (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-primary" />
-            <p className="text-lg font-semibold text-foreground">Votre visite est réservée</p>
-            <p className="text-sm text-muted-foreground">Vérifiez votre e-mail pour vos identifiants et la confirmation.</p>
+            <p className="text-lg font-semibold text-foreground">{accountOnly ? 'Votre demande est enregistrée' : 'Votre visite est réservée'}</p>
+            <p className="text-sm text-muted-foreground">{accountOnly ? 'Si votre compte vient d’être créé, vos identifiants vous ont été envoyés par e-mail. Sinon, connectez-vous avec votre compte existant.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
             <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>
           </div>
         ) : isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : creneaux.length === 0 ? (
+        ) : creneaux.length === 0 && !accountOnly ? (
           <p className="py-6 text-sm text-muted-foreground">Aucun créneau de visite disponible pour le moment.</p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2">
+            {!accountOnly && <div className="space-y-2">
               <Label>Choisissez un créneau *</Label>
               <div className="grid gap-2">
                 {creneaux.map((c) => (
@@ -174,18 +173,18 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
                   </button>
                 ))}
               </div>
-            </div>
+            </div>}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1"><Label htmlFor="rv-prenom">Prénom *</Label><Input id="rv-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} /></div>
               <div className="space-y-1"><Label htmlFor="rv-nom">Nom *</Label><Input id="rv-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} /></div>
             </div>
             <div className="space-y-1"><Label htmlFor="rv-email">E-mail *</Label><Input id="rv-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
             <div className="space-y-1"><Label htmlFor="rv-tel">Téléphone *</Label><Input id="rv-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
-            <p className="text-xs text-muted-foreground">Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.</p>
+            <p className="text-xs text-muted-foreground">{accountOnly ? 'Si vous avez déjà un compte, connectez-vous avec vos identifiants habituels.' : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}</p>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => close(false)}>Annuler</Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}Réserver
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}{accountOnly ? 'Créer mon compte / Se connecter' : 'Réserver'}
               </Button>
             </div>
           </form>
