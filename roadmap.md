@@ -1,0 +1,1 @@
+- [ ] Remplacer les stories de la landing publique par un carrousel de biens internes excellents ; vérifier le rendu et les types.
