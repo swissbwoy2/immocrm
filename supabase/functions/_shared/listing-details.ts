@@ -1,3 +1,4 @@
+// @ts-nocheck — types linkedom non compatibles avec la lib Deno, vérification désactivée (runtime inchangé)
 // Parsing de la page détail d'une annonce (immobilier.ch & similaires).
 // Factorisé depuis auto-offers-run pour être réutilisé par le backfill.
 import { parseHTML } from "npm:linkedom@0.18.5";
@@ -29,7 +30,7 @@ function parseNumber(s: string | null | undefined): number | null {
 }
 
 export function parseListingDetails(html: string): ListingDetails {
-  const { document } = parseHTML(html);
+  const { document } = parseHTML(html) as unknown as { document: any };
   const body = document.querySelector("main") ?? document.body;
   const text = (body?.textContent ?? "").replace(/\u00a0|\u202f/g, " ").replace(/[ \t]+/g, " ");
 
