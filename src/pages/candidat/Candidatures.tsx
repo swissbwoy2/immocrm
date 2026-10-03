@@ -20,7 +20,7 @@ export default function CandidatCandidatures() {
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
   const now = Date.now();
-  const eligibles = data.filter((c) => c.source === 'location' && (c.statut === 'en_attente') && c.date_visite && new Date(c.date_visite).getTime() < now);
+  const eligibles = data.filter((c) => c.source === 'location' && !c.annulee && (c.statut === 'en_attente') && c.date_visite && new Date(c.date_visite).getTime() < now);
 
   const deposer = async () => {
     if (!selected || busy) return;

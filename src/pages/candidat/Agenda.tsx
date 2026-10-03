@@ -159,8 +159,10 @@ export default function CandidatAgenda() {
   const { data = [], isLoading } = useCandidatCandidatures();
   const now = Date.now();
   const withDate = data.filter((c) => c.date_visite);
-  const upcoming = withDate.filter((c) => new Date(c.date_visite!).getTime() >= now).sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
-  const past = withDate.filter((c) => new Date(c.date_visite!).getTime() < now).sort((a, b) => b.date_visite!.localeCompare(a.date_visite!));
+  const cancelled = withDate.filter((c) => c.annulee);
+  const active = withDate.filter((c) => !c.annulee);
+  const upcoming = active.filter((c) => new Date(c.date_visite!).getTime() >= now).sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
+  const past = active.filter((c) => new Date(c.date_visite!).getTime() < now).sort((a, b) => b.date_visite!.localeCompare(a.date_visite!));
   const others = data.filter((c) => !c.date_visite);
 
   return (
