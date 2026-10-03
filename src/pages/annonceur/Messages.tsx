@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AnnonceurLayout } from '@/components/annonceur/AnnonceurLayout';
 import { AnnonceMessagesPanel } from '@/components/annonces/AnnonceMessagesPanel';
 import { MessageSquare } from 'lucide-react';
+import { ConversationsAnnoncePanel } from '@/components/messaging/ConversationsAnnoncePanel';
 
 export default function Messages() {
   const { conversationId } = useParams();
@@ -19,6 +20,7 @@ export default function Messages() {
             Vos échanges avec les personnes intéressées par vos annonces.
           </p>
         </div>
+        {user && <ConversationsAnnoncePanel userId={user.id} mode="annonceur" initialId={conversationId || null} />}
         <div className="flex-1 min-h-[70vh]">
           {user && (
             <AnnonceMessagesPanel

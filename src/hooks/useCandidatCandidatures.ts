@@ -61,7 +61,7 @@ export function useCandidatCandidatures() {
           .order('created_at', { ascending: false }),
         supabase
           .from('candidatures_location')
-          .select('id, statut, created_at, documents, date_visite, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annulee, annulation_message, annonce_creneaux(date_heure), annonces_publiques(id, slug, titre, adresse, ville, code_postal, prix, type_transaction, photos_annonces_publiques(url, est_principale))')
+          .select('id, statut, created_at, documents, date_visite, annonce_id, visite_confirmee, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annulee, annulation_message, annonce_creneaux(date_heure), annonces_publiques(id, slug, titre, adresse, ville, code_postal, prix, type_transaction, photos_annonces_publiques(url, est_principale))')
           .order('created_at', { ascending: false }),
       ]);
       if (cErr) console.error('[candidat] candidatures', cErr);
