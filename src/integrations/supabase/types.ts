@@ -2488,6 +2488,68 @@ export type Database = {
         }
         Relationships: []
       }
+      candidature_documents: {
+        Row: {
+          candidature_id: string
+          contenu_html: string
+          created_at: string
+          genere_par: string | null
+          id: string
+          pdf_path: string | null
+          signature_data: string | null
+          signature_lieu: string | null
+          signe_at: string | null
+          signe_par: string | null
+          statut: string
+          template_code: string
+          titre: string
+          updated_at: string
+          valeurs: Json
+        }
+        Insert: {
+          candidature_id: string
+          contenu_html: string
+          created_at?: string
+          genere_par?: string | null
+          id?: string
+          pdf_path?: string | null
+          signature_data?: string | null
+          signature_lieu?: string | null
+          signe_at?: string | null
+          signe_par?: string | null
+          statut?: string
+          template_code: string
+          titre: string
+          updated_at?: string
+          valeurs?: Json
+        }
+        Update: {
+          candidature_id?: string
+          contenu_html?: string
+          created_at?: string
+          genere_par?: string | null
+          id?: string
+          pdf_path?: string | null
+          signature_data?: string | null
+          signature_lieu?: string | null
+          signe_at?: string | null
+          signe_par?: string | null
+          statut?: string
+          template_code?: string
+          titre?: string
+          updated_at?: string
+          valeurs?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidature_documents_candidature_id_fkey"
+            columns: ["candidature_id"]
+            isOneToOne: false
+            referencedRelation: "candidatures_location"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidatures: {
         Row: {
           agent_valide_regie: boolean | null
@@ -2661,6 +2723,8 @@ export type Database = {
           type_permis: string | null
           updated_at: string | null
           user_id: string | null
+          visite_confirmee: boolean | null
+          visite_confirmee_at: string | null
         }
         Insert: {
           adresse_actuelle?: string | null
@@ -2705,6 +2769,8 @@ export type Database = {
           type_permis?: string | null
           updated_at?: string | null
           user_id?: string | null
+          visite_confirmee?: boolean | null
+          visite_confirmee_at?: string | null
         }
         Update: {
           adresse_actuelle?: string | null
@@ -2749,6 +2815,8 @@ export type Database = {
           type_permis?: string | null
           updated_at?: string | null
           user_id?: string | null
+          visite_confirmee?: boolean | null
+          visite_confirmee_at?: string | null
         }
         Relationships: [
           {
@@ -3884,6 +3952,8 @@ export type Database = {
         Row: {
           admin_user_id: string | null
           agent_id: string
+          annonce_id: string | null
+          annonceur_user_id: string | null
           client_id: string | null
           client_name: string | null
           conversation_type: string | null
@@ -3897,6 +3967,8 @@ export type Database = {
         Insert: {
           admin_user_id?: string | null
           agent_id: string
+          annonce_id?: string | null
+          annonceur_user_id?: string | null
           client_id?: string | null
           client_name?: string | null
           conversation_type?: string | null
@@ -3910,6 +3982,8 @@ export type Database = {
         Update: {
           admin_user_id?: string | null
           agent_id?: string
+          annonce_id?: string | null
+          annonceur_user_id?: string | null
           client_id?: string | null
           client_name?: string | null
           conversation_type?: string | null
@@ -4606,6 +4680,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      document_templates: {
+        Row: {
+          actif: boolean
+          champs: Json
+          code: string
+          contenu_html: string
+          created_at: string
+          description: string | null
+          id: string
+          nom: string
+          source_fichier: string | null
+          updated_at: string
+        }
+        Insert: {
+          actif?: boolean
+          champs?: Json
+          code: string
+          contenu_html: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom: string
+          source_fichier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actif?: boolean
+          champs?: Json
+          code?: string
+          contenu_html?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          nom?: string
+          source_fichier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       document_update_confirmations: {
         Row: {
@@ -14349,9 +14462,17 @@ export type Database = {
         Args: { _id: string }
         Returns: undefined
       }
+      candidat_confirmer_visite: {
+        Args: { p_a_visite: boolean; p_candidature_id: string }
+        Returns: boolean
+      }
       candidat_deposer_candidature: {
         Args: { _id: string }
         Returns: undefined
+      }
+      candidat_signer_document: {
+        Args: { p_document_id: string; p_lieu?: string; p_signature: string }
+        Returns: string
       }
       check_demande_by_email: {
         Args: { check_email: string }
@@ -14445,6 +14566,10 @@ export type Database = {
       decrement_mandat_coins_daily: { Args: never; Returns: number }
       ensure_annonceur_profile: { Args: never; Returns: string }
       generate_parrainage_code: { Args: never; Returns: string }
+      generer_documents_candidature: {
+        Args: { p_candidature_id: string; p_valeurs?: Json }
+        Returns: number
+      }
       get_available_phone_slots: {
         Args: { p_from: string; p_to: string }
         Returns: {
@@ -14857,6 +14982,10 @@ export type Database = {
           _type: string
         }
         Returns: undefined
+      }
+      ouvrir_conversation_annonce: {
+        Args: { p_annonce_id: string }
+        Returns: string
       }
       purge_old_data: { Args: never; Returns: Json }
       push_offre: {
