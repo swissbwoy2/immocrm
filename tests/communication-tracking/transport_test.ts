@@ -33,3 +33,22 @@ Deno.test('Resend instrumentation preserves recipients, attachments and headers;
   assertEquals(sends[3].headers,{'X-Custom':'keep'});
  }finally{globalThis.fetch=original;Deno.env.delete('SUPABASE_URL');Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');}
 });
+
+Deno.test('concurrent idempotent retries reuse winning IDs and cannot overwrite an accepted send',async()=>{
+ const {prepareEmailTracking}=await import('../../supabase/functions/_shared/communication-email.ts');
+ const original=globalThis.fetch;let lookups=0;let outcomeUrl='';
+ Deno.env.set('SUPABASE_URL','https://tracking-db.example.test');Deno.env.set('SUPABASE_SERVICE_ROLE_KEY','test-only');
+ globalThis.fetch=async(input,init)=>{
+  const url=String(input);if(!url.startsWith('https://tracking-db.example.test/'))throw new Error('External request blocked');
+  if(url.includes('communication_links'))return Response.json([{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',url:'https://logisorama.ch/login'}]);
+  if(init?.method==='POST')return Response.json({code:'23505',message:'concurrent insert'},{status:409});
+  if(init?.method==='PATCH'){outcomeUrl=url;return new Response(null,{status:204});}
+  lookups++;return lookups===1?new Response(null,{status:204}):Response.json({id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'});
+ };
+ try{
+  const t=await prepareEmailTracking({to:'one@example.test',subject:'Retry',html:'<a href="https://logisorama.ch/login">Compte</a>'},'resend','test','same-logical-send');
+  assertEquals(t.ids,['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']);
+  assert(t.html?.includes('link=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'));
+  await t.finish('failed',null,'retry error');assert(outcomeUrl.includes('status=neq.sent'));
+ }finally{globalThis.fetch=original;Deno.env.delete('SUPABASE_URL');Deno.env.delete('SUPABASE_SERVICE_ROLE_KEY');}
+});
