@@ -353,6 +353,11 @@ serve(async (req) => {
         {
           password: tempPassword,
           email_confirm: true,
+          // Fiche résolue par id avec un e-mail modifié : synchroniser l'e-mail de connexion
+          // (si libre) sur le même compte, jamais de nouveau compte.
+          ...(normalizedEmail && (existingUser.email || '').toLowerCase() !== normalizedEmail
+            && !existingUsers?.users?.some(u => (u.email || '').toLowerCase() === normalizedEmail)
+            ? { email: normalizedEmail } : {}),
           user_metadata: {
             ...(existingUser.user_metadata || {}),
             must_change_password: true,
@@ -365,7 +370,7 @@ serve(async (req) => {
         throw updateError;
       }
 
-      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, existingUser.email || email, tempPassword, prenom);
+      const emailRes = await sendClientCredentialsEmail(supabaseUrl, serviceKey, email, tempPassword, prenom);
       if (!emailRes.success) {
         console.error('Failed to send credentials email for existing user:', emailRes.error);
       }
