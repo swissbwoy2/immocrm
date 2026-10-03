@@ -83,6 +83,7 @@ export default function NewsletterTracking() {
     page: 0,
   });
   const [search, setSearch] = useState("");
+  const [receiptSecret, setReceiptSecret] = useState("");
   const [report, setReport] = useState<Report | null>(null),
     [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false),
@@ -178,6 +179,22 @@ export default function NewsletterTracking() {
       setBusy(false);
     }
   }
+  async function saveReceiptSecret() {
+    setBusy(true);
+    try {
+      const result = await api<{ message: string }>({
+        action: "tracking-secret",
+        secret: receiptSecret,
+      });
+      setReceiptSecret("");
+      setNotice(result.message);
+      await refresh();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : "Raccordement indisponible");
+    } finally {
+      setBusy(false);
+    }
+  }
   const s = report?.summary;
   const filter = (key: string, value: string | number) =>
     setFilters((f) => ({ ...f, [key]: value, page: 0 }));
@@ -267,6 +284,38 @@ export default function NewsletterTracking() {
             Raccorder les accusés de réception
           </Button>
         </div>
+      )}
+      {report && !report.health.receipts_configured && (
+        <details className="rounded-lg border p-4 text-sm">
+          <summary className="cursor-pointer font-medium">
+            Raccordement manuel depuis Resend
+          </summary>
+          <p className="my-3 text-muted-foreground">
+            Si votre clé autorise seulement l’envoi, créez le webhook dans
+            Resend puis enregistrez ici son secret de signature. Il sera
+            conservé dans le coffre sécurisé.
+          </p>
+          <label htmlFor="receipt-secret" className="mb-2 block">
+            Secret de signature du webhook Resend
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              id="receipt-secret"
+              type="password"
+              autoComplete="off"
+              value={receiptSecret}
+              onChange={(e) => setReceiptSecret(e.target.value)}
+              placeholder="whsec_…"
+              className="min-w-0 flex-1"
+            />
+            <Button
+              disabled={busy || !receiptSecret.trim()}
+              onClick={saveReceiptSecret}
+            >
+              Enregistrer le raccordement
+            </Button>
+          </div>
+        </details>
       )}
       {report?.health.system.filter((x) => x.error).map((x) => (
         <p role="status" key={x.id} className="text-sm text-amber-800">

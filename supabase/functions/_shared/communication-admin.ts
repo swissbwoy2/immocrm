@@ -71,6 +71,14 @@ export async function communicationAction(
   b: Record<string, unknown>,
 ) {
   switch (b.action) {
+    case "tracking-secret": {
+      const secret = String(b.secret || "").trim();
+      if (!/^whsec_[A-Za-z0-9+/=_-]{20,250}$/.test(secret)) {
+        throw new Error("Secret de signature Resend invalide");
+      }
+      check(await db.rpc("communication_webhook_secret", { p_secret: secret }));
+      return { ready: true, message: "Accusés de réception raccordés" };
+    }
     case "tracking-connect":
       return connectReceipts(db);
     case "tracking-sync":
