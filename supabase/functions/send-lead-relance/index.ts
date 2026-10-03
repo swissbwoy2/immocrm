@@ -26,7 +26,7 @@ function generateOffreCard(offre: Offre): string {
   const badge = offre.statut === 'envoyee' ? '<span style="display:inline-block;background:#f3f4ed;color:#5c665e;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;">Disponible</span>'
     : '<span style="display:inline-block;background:#fef9c3;color:#5c665e;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;">En cours</span>';
 
-  return `<td width="50%" style="padding:8px;vertical-align:top;">
+  return `<td class="email-stack" width="50%" style="padding:8px;vertical-align:top;">
   <div style="border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;">
     <div style="padding:12px;">
       <div style="font-size:16px;font-weight:800;color:#5c665e;">CHF ${formatPrix(offre.prix)}/mois</div>
@@ -47,7 +47,7 @@ function generateOffresSection(offres: Offre[]): string {
     const card1 = generateOffreCard(offres[i]);
     const card2 = i + 1 < offres.length
       ? generateOffreCard(offres[i + 1])
-      : '<td width="50%" style="padding:8px;"></td>';
+      : '<td class="email-stack" width="50%" style="padding:8px;"></td>';
     rows += `<tr>${card1}${card2}</tr>`;
   }
 
@@ -87,19 +87,19 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 <tr><td style="padding:25px 0;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
-      <td width="33%" style="text-align:center;padding:10px;">
+      <td class="email-stack" width="33%" style="text-align:center;padding:10px;">
         <div style="background:#f3f4ed;border-radius:5px;padding:20px 10px;">
           <div style="font-size:28px;font-weight:800;color:#5c665e;">1100+</div>
           <div style="font-size:11px;color:#5c665e;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Offres actives</div>
         </div>
       </td>
-      <td width="33%" style="text-align:center;padding:10px;">
+      <td class="email-stack" width="33%" style="text-align:center;padding:10px;">
         <div style="background:#f3f4ed;border-radius:5px;padding:20px 10px;">
           <div style="font-size:28px;font-weight:800;color:#5c665e;">95%</div>
           <div style="font-size:11px;color:#5c665e;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Satisfaction</div>
         </div>
       </td>
-      <td width="33%" style="text-align:center;padding:10px;">
+      <td class="email-stack" width="33%" style="text-align:center;padding:10px;">
         <div style="background:#f3f4ed;border-radius:5px;padding:20px 10px;">
           <div style="font-size:28px;font-weight:800;color:#5c665e;">48h</div>
           <div style="font-size:11px;color:#5c665e;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Délai moyen</div>
@@ -118,17 +118,17 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 <tr><td style="padding:20px 0 25px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
-      <td width="33%" style="text-align:center;padding:10px;vertical-align:top;">
+      <td class="email-stack" width="33%" style="text-align:center;padding:10px;vertical-align:top;">
         <div style="font-size:36px;margin-bottom:8px;">🔍</div>
         <div style="font-size:14px;font-weight:700;color:#5c665e;">1. On cherche</div>
         <div style="font-size:12px;color:#5c665e;margin-top:4px;line-height:1.4;">On active ta recherche personnalisée${budget ? ' dans ton budget de ' + escapeEmailHtml(budget) : ''}</div>
       </td>
-      <td width="33%" style="text-align:center;padding:10px;vertical-align:top;">
+      <td class="email-stack" width="33%" style="text-align:center;padding:10px;vertical-align:top;">
         <div style="font-size:36px;margin-bottom:8px;">🏠</div>
         <div style="font-size:14px;font-weight:700;color:#5c665e;">2. Tu visites</div>
         <div style="font-size:12px;color:#5c665e;margin-top:4px;line-height:1.4;">On organise les visites, tu choisis ton créneau</div>
       </td>
-      <td width="33%" style="text-align:center;padding:10px;vertical-align:top;">
+      <td class="email-stack" width="33%" style="text-align:center;padding:10px;vertical-align:top;">
         <div style="font-size:36px;margin-bottom:8px;">🔑</div>
         <div style="font-size:14px;font-weight:700;color:#5c665e;">3. Tu emménages</div>
         <div style="font-size:12px;color:#5c665e;margin-top:4px;line-height:1.4;">On gère le dossier, la régie, et le bail</div>

@@ -94,7 +94,7 @@ export const emailStyles = {
   },
 };
 export const EMAIL_RESPONSIVE_CSS =
-  "@media screen and (max-width:520px){.email-outer{padding:0!important}.email-pad{padding-left:24px!important;padding-right:24px!important}.email-heading{font-size:26px!important;line-height:32px!important}.email-brandline{font-size:9px!important;letter-spacing:.7px!important}}";
+  "@media screen and (max-width:520px){.email-stack{display:block!important;width:100%!important;padding-left:0!important;padding-right:0!important;box-sizing:border-box!important}.email-outer{padding:0!important}.email-pad{padding-left:24px!important;padding-right:24px!important}.email-heading{font-size:26px!important;line-height:32px!important}.email-brandline{font-size:9px!important;letter-spacing:.7px!important}}";
 export function escapeEmailHtml(value: unknown): string {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
