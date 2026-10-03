@@ -38,7 +38,10 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
         ),
       ),
     );
-    const classify = async (input: unknown) =>
+    await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003180000_newsletter_audience_aliases.sql',import.meta.url)));
+  await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003181000_newsletter_rental_campaigns.sql',import.meta.url)));
+  await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261003190000_newsletter_relocation.sql',import.meta.url)));
+  const classify = async (input: unknown) =>
       (await db.query<{ c: { categories: string[]; outside: boolean } }>(
         "select newsletter_classify($1::jsonb) c",
         [JSON.stringify(input)],
@@ -97,6 +100,13 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
       }),
       { categories: ["renter"], outside: false },
     );
+    assertEquals(await classify({form_name:'NEW ACHTEUR 2025-copy'}),{categories:['buyer'],outside:false});
+    assertEquals(await classify({form_name:'Facebook Lead Ads: ACHAT'}),{categories:['buyer'],outside:false});
+    assertEquals(await classify({form_name:'vente rapide 2'}),{categories:['seller'],outside:false});
+    assertEquals(await classify({form_name:'Achat/Location'}),{categories:[],outside:false});
+    for (const name of ['Jessie 2','RECHERCHE','EB PRMN VUE PRIME-copy','FORMS2']) assertEquals(await classify({form_name:name}),{categories:['renter'],outside:false});
+    assertEquals(await classify({form_name:'Jessie 2',type_recherche:'acheter'}),{categories:['buyer'],outside:false});
+    for (const name of ['Trouve ton locataire','One reloc','NEW 2026 RELOC','Relocation']) assertEquals(await classify({form_name:name}),{categories:['relocation'],outside:false});
     const imp = async (rows: unknown[]) =>
       await db.query("select newsletter_import_auto($1::jsonb)", [
         JSON.stringify(rows),

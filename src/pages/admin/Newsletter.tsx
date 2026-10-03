@@ -607,7 +607,7 @@ export default function Newsletter() {
             </div>
             <TabsContent value="dashboard" className="space-y-6">
               <h2 className="text-2xl font-semibold">Tableau de bord</h2>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   [
                     "Abonnés disponibles",
@@ -707,7 +707,7 @@ export default function Newsletter() {
               <p className="text-sm text-muted-foreground">
                 Clients et prospects, organisés selon leur projet immobilier.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {Object.entries(CONTACT_CATEGORIES).map(([k, v]) => (
                   <button
                     key={k}
