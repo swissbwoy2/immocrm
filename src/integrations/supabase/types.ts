@@ -2621,6 +2621,8 @@ export type Database = {
         Row: {
           adresse_actuelle: string | null
           annonce_id: string | null
+          annulation_message: string | null
+          annulee: boolean
           candidat_confirme_at: string | null
           civilite: string | null
           co_candidats: Json | null
@@ -2663,6 +2665,8 @@ export type Database = {
         Insert: {
           adresse_actuelle?: string | null
           annonce_id?: string | null
+          annulation_message?: string | null
+          annulee?: boolean
           candidat_confirme_at?: string | null
           civilite?: string | null
           co_candidats?: Json | null
@@ -2705,6 +2709,8 @@ export type Database = {
         Update: {
           adresse_actuelle?: string | null
           annonce_id?: string | null
+          annulation_message?: string | null
+          annulee?: boolean
           candidat_confirme_at?: string | null
           civilite?: string | null
           co_candidats?: Json | null

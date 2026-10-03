@@ -96,6 +96,7 @@ async function addToCalendar(c: UnifiedCandidature) {
 
 function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
   const a = annonceOf(c);
+  const annulee = !!c.annulee;
   // Règle métier : le placeholder « Annonce externe » ne s'applique qu'aux annonces
   // externes (reprises d'autres sites, identifiées par lien_annonce — même critère
   // que PublicAnnonceCard). Annonces internes/clients : vraie photo pour tous les rôles.
@@ -104,7 +105,7 @@ function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
   const url = annonceUrl(a);
   const prix = fmtPrix(a);
   return (
-    <Card className={past ? 'opacity-70' : undefined}>
+    <Card className={annulee ? 'opacity-80' : past ? 'opacity-70' : undefined}>
       <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:p-4">
         <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-24 sm:w-32">
           {photo ? (
@@ -118,13 +119,22 @@ function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-start justify-between gap-2">
             <p className="line-clamp-2 font-medium text-foreground">{a?.titre || c.adresse}</p>
-            <Badge variant="secondary" className="shrink-0">{statutLabel(c.statut)}</Badge>
+            {annulee ? (
+              <Badge variant="destructive" className="shrink-0">Annulé — nouvelle date à venir</Badge>
+            ) : (
+              <Badge variant="secondary" className="shrink-0">{statutLabel(c.statut)}</Badge>
+            )}
           </div>
           {a?.titre && <p className="truncate text-xs text-muted-foreground">{c.adresse}</p>}
           {c.date_visite ? (
-            <p className="text-sm font-medium text-primary">Visite le {fmtVisite(c.date_visite)}</p>
+            <p className={annulee ? 'text-sm font-medium text-muted-foreground line-through' : 'text-sm font-medium text-primary'}>
+              Visite le {fmtVisite(c.date_visite)}
+            </p>
           ) : (
             <p className="text-xs text-muted-foreground">Candidature du {c.date ? new Date(c.date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—'}</p>
+          )}
+          {annulee && c.annulation_message && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
           )}
           {prix && <p className="text-sm font-semibold text-foreground">{prix}</p>}
           <div className="flex flex-wrap gap-2 pt-1">
@@ -133,7 +143,7 @@ function VisiteCard({ c, past }: { c: UnifiedCandidature; past?: boolean }) {
                 <a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Voir l'annonce</a>
               </Button>
             )}
-            {c.date_visite && !past && (
+            {c.date_visite && !past && !annulee && (
               <Button size="sm" className="min-h-[36px]" onClick={() => addToCalendar(c)}>
                 <CalendarPlus className="mr-1 h-4 w-4" />Ajouter à mon agenda
               </Button>
@@ -149,8 +159,10 @@ export default function CandidatAgenda() {
   const { data = [], isLoading } = useCandidatCandidatures();
   const now = Date.now();
   const withDate = data.filter((c) => c.date_visite);
-  const upcoming = withDate.filter((c) => new Date(c.date_visite!).getTime() >= now).sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
-  const past = withDate.filter((c) => new Date(c.date_visite!).getTime() < now).sort((a, b) => b.date_visite!.localeCompare(a.date_visite!));
+  const cancelled = withDate.filter((c) => c.annulee);
+  const active = withDate.filter((c) => !c.annulee);
+  const upcoming = active.filter((c) => new Date(c.date_visite!).getTime() >= now).sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
+  const past = active.filter((c) => new Date(c.date_visite!).getTime() < now).sort((a, b) => b.date_visite!.localeCompare(a.date_visite!));
   const others = data.filter((c) => !c.date_visite);
 
   return (
@@ -172,6 +184,12 @@ export default function CandidatAgenda() {
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Passées</h2>
                 {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past />)}
+              </section>
+            )}
+            {cancelled.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-destructive">Annulées</h2>
+                {cancelled.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
               </section>
             )}
             {others.length > 0 && (

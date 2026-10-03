@@ -17,6 +17,8 @@ export interface UnifiedCandidature {
   surface?: number | null;
   medias_galerie?: unknown;
   date_visite?: string | null;
+  annulee?: boolean;
+  annulation_message?: string | null;
   raw?: any;
 }
 
@@ -59,7 +61,7 @@ export function useCandidatCandidatures() {
           .order('created_at', { ascending: false }),
         supabase
           .from('candidatures_location')
-          .select('id, statut, created_at, documents, date_visite, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annonce_creneaux(date_heure), annonces_publiques(id, slug, titre, adresse, ville, code_postal, prix, type_transaction, photos_annonces_publiques(url, est_principale))')
+          .select('id, statut, created_at, documents, date_visite, creneau_id, date_depot, date_documents_demandes, date_decision, candidat_confirme_at, date_signature, date_etat_lieux, date_etat_lieux_effectue, date_cles_remises, motif_refus, annulee, annulation_message, annonce_creneaux(date_heure), annonces_publiques(id, slug, titre, adresse, ville, code_postal, prix, type_transaction, photos_annonces_publiques(url, est_principale))')
           .order('created_at', { ascending: false }),
       ]);
       if (cErr) console.error('[candidat] candidatures', cErr);
@@ -87,6 +89,8 @@ export function useCandidatCandidatures() {
         statut: r.statut || 'en_attente',
         date: r.created_at,
         dossier: r.statut === RETENU_BAILLEUR || r.statut === 'documents_demandes' ? 'Pièces à fournir' : 'Demande envoyée',
+        annulee: r.annulee ?? false,
+        annulation_message: r.annulation_message ?? null,
         raw: r,
       }));
       return [...a, ...b].sort((x, y) => (y.date || '').localeCompare(x.date || ''));
