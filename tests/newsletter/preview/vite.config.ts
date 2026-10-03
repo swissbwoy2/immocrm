@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "node:path";
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: { entries: ["tests/newsletter/preview/index.html"] },
   resolve: {
     alias: [
       {
