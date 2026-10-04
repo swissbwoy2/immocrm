@@ -8338,8 +8338,9 @@ export type Database = {
           enrolled_at: string
           form_id: string | null
           id: string
-          meta_lead_id: string
+          meta_lead_id: string | null
           reason: string | null
+          received_email_id: string | null
           state: string
           stopped_at: string | null
           updated_at: string
@@ -8351,8 +8352,9 @@ export type Database = {
           enrolled_at?: string
           form_id?: string | null
           id?: string
-          meta_lead_id: string
+          meta_lead_id?: string | null
           reason?: string | null
+          received_email_id?: string | null
           state?: string
           stopped_at?: string | null
           updated_at?: string
@@ -8364,8 +8366,9 @@ export type Database = {
           enrolled_at?: string
           form_id?: string | null
           id?: string
-          meta_lead_id?: string
+          meta_lead_id?: string | null
           reason?: string | null
+          received_email_id?: string | null
           state?: string
           stopped_at?: string | null
           updated_at?: string
@@ -8391,6 +8394,13 @@ export type Database = {
             columns: ["meta_lead_id"]
             isOneToOne: false
             referencedRelation: "meta_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_sequence_enrollments_received_email_id_fkey"
+            columns: ["received_email_id"]
+            isOneToOne: false
+            referencedRelation: "received_emails"
             referencedColumns: ["id"]
           },
           {
@@ -9189,6 +9199,114 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      portal_visit_aliases: {
+        Row: {
+          annonce_id: string
+          reference: string
+          source: string
+        }
+        Insert: {
+          annonce_id: string
+          reference: string
+          source: string
+        }
+        Update: {
+          annonce_id?: string
+          reference?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_visit_aliases_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_visit_automation: {
+        Row: {
+          enabled: boolean
+          last_checked_at: string | null
+          last_error: string | null
+          mailbox: string
+          starts_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          mailbox: string
+          starts_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          mailbox?: string
+          starts_at?: string
+        }
+        Relationships: []
+      }
+      portal_visit_requests: {
+        Row: {
+          annonce_id: string | null
+          created_at: string
+          email: string | null
+          id: string
+          newsletter_id: string | null
+          reason: string | null
+          received_email_id: string
+          source: string
+          status: string
+        }
+        Insert: {
+          annonce_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          newsletter_id?: string | null
+          reason?: string | null
+          received_email_id: string
+          source: string
+          status: string
+        }
+        Update: {
+          annonce_id?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          newsletter_id?: string | null
+          reason?: string | null
+          received_email_id?: string
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_visit_requests_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_visit_requests_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_visit_requests_received_email_id_fkey"
+            columns: ["received_email_id"]
+            isOneToOne: true
+            referencedRelation: "received_emails"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -15289,6 +15407,52 @@ export type Database = {
       ouvrir_conversation_annonce: {
         Args: { p_annonce_id: string }
         Returns: string
+      }
+      portal_visit_configure: {
+        Args: { p_enabled: boolean }
+        Returns: undefined
+      }
+      portal_visit_pending: {
+        Args: never
+        Returns: {
+          ai_analyzed: boolean | null
+          ai_analyzed_at: string | null
+          attachments: Json | null
+          body_html: string | null
+          body_text: string | null
+          created_at: string | null
+          folder: string | null
+          from_email: string
+          from_name: string | null
+          id: string
+          is_read: boolean | null
+          is_starred: boolean | null
+          message_id: string
+          received_at: string | null
+          subject: string | null
+          to_email: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "received_emails"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      portal_visit_process: {
+        Args: {
+          p_annonce: string
+          p_email: string
+          p_first: string
+          p_html: string
+          p_last: string
+          p_message: string
+          p_reason: string
+          p_source: string
+          p_subject: string
+        }
+        Returns: Json
       }
       purge_old_data: { Args: never; Returns: Json }
       push_offre: {
