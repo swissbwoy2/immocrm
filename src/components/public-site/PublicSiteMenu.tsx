@@ -91,7 +91,7 @@ export function PublicSiteMenu({ open, onClose }: PublicSiteMenuProps) {
 
   if (!open) return null;
 
-  const handleClick = (item: typeof menuGroups[0]['items'][0]) => {
+  const handleClick = (item: MenuGroupItem) => {
     if (item.anchor) {
       onClose();
       setTimeout(() => {
