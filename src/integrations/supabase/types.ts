@@ -4785,6 +4785,7 @@ export type Database = {
       documents: {
         Row: {
           candidate_id: string | null
+          candidature_id: string | null
           client_id: string | null
           commentaire_admin: string | null
           created_at: string | null
@@ -4804,6 +4805,7 @@ export type Database = {
         }
         Insert: {
           candidate_id?: string | null
+          candidature_id?: string | null
           client_id?: string | null
           commentaire_admin?: string | null
           created_at?: string | null
@@ -4823,6 +4825,7 @@ export type Database = {
         }
         Update: {
           candidate_id?: string | null
+          candidature_id?: string | null
           client_id?: string | null
           commentaire_admin?: string | null
           created_at?: string | null
@@ -4846,6 +4849,13 @@ export type Database = {
             columns: ["candidate_id"]
             isOneToOne: false
             referencedRelation: "client_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_candidature_id_fkey"
+            columns: ["candidature_id"]
+            isOneToOne: false
+            referencedRelation: "candidatures_location"
             referencedColumns: ["id"]
           },
           {
@@ -15133,6 +15143,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_candidature_owner: { Args: { _cand: string }; Returns: boolean }
+      is_candidature_piece_path: { Args: { _path: string }; Returns: boolean }
       is_coursier_for_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_coursier_for_agent_profile: {
         Args: { _profile_id: string }

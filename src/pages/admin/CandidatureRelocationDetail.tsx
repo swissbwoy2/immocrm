@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { statutLabel } from '@/hooks/useCandidatCandidatures';
 import { RelocationTimeline } from '@/components/candidature/RelocationTimeline';
+import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { AdminGenererDocuments } from '@/components/candidature/AdminGenererDocuments';
 
 export const CAND_SELECT = '*, annonces_publiques(titre, adresse, ville, slug), annonce_creneaux(date_heure)';
@@ -157,6 +158,9 @@ export default function CandidatureRelocationDetail() {
           {docs.length === 0 ? <p className="text-muted-foreground">Aucune pièce.</p> : docs.map((d) => (
             <button key={d.id} className="block min-h-[36px] text-left text-primary underline" onClick={() => openDoc(d.url)}>{d.type_document || d.nom} — {d.nom}</button>
           ))}
+          {['documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises'].includes(s) && sel.user_id && (
+            <div className="border-t pt-2"><CandidateDocumentsSection clientId="" clientUserId={sel.user_id} clientName="Pièces justificatives du candidat" candidates={[]} candidatureId={sel.id} readOnly /></div>
+          )}
           {['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe'].includes(s) && (
             <div className="space-y-1 border-t pt-2"><p className="font-semibold">Documents de candidature</p><AdminGenererDocuments candidatureId={sel.id} onDone={refresh} /></div>
           )}

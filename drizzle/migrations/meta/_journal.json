@@ -141,6 +141,13 @@
       "when": 1791141937920,
       "tag": "0019_candidat_annonce_conv_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791142585968,
+      "tag": "0020_candidature_pieces_justificatives",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SignaturePad from '@/components/mandat/SignaturePad';
 import { DocumentPreviewDialog } from './DocumentPreviewDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { CandidatureDoc, DOC_ORDER, SIGNABLE, generateAndStorePdf } from '@/lib/candidatureDocs';
 
 export function useCandidatureDocs(candidatureId?: string) {
@@ -38,7 +40,11 @@ export function CandidatDocumentsSection({ candidatureId, canSign = true }: { ca
   const [sig, setSig] = useState('');
   const [lieu, setLieu] = useState('');
   const [busy, setBusy] = useState(false);
-  if (!docs.length) return null;
+  const { user } = useAuth();
+  const pieces = canSign && user ? (
+    <CandidateDocumentsSection clientId="" clientUserId={user.id} clientName="Mes pièces justificatives" candidates={[]} candidatureId={candidatureId} />
+  ) : null;
+  if (!docs.length) return pieces;
 
   const signer = async () => {
     if (!signing || !sig || !lieu.trim() || busy) return;
@@ -68,6 +74,8 @@ export function CandidatDocumentsSection({ candidatureId, canSign = true }: { ca
   };
 
   return (
+    <div className="space-y-3">
+    {pieces}
     <div className="space-y-2 rounded-lg border p-3">
       <p className="text-sm font-semibold text-foreground">Mes documents</p>
       {docs.map((d) => (
@@ -96,6 +104,7 @@ export function CandidatDocumentsSection({ candidatureId, canSign = true }: { ca
           </div>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 }
