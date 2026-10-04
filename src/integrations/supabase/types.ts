@@ -3969,7 +3969,7 @@ export type Database = {
       conversations: {
         Row: {
           admin_user_id: string | null
-          agent_id: string
+          agent_id: string | null
           annonce_id: string | null
           annonceur_user_id: string | null
           client_id: string | null
@@ -3984,7 +3984,7 @@ export type Database = {
         }
         Insert: {
           admin_user_id?: string | null
-          agent_id: string
+          agent_id?: string | null
           annonce_id?: string | null
           annonceur_user_id?: string | null
           client_id?: string | null
@@ -3999,7 +3999,7 @@ export type Database = {
         }
         Update: {
           admin_user_id?: string | null
-          agent_id?: string
+          agent_id?: string | null
           annonce_id?: string | null
           annonceur_user_id?: string | null
           client_id?: string | null
@@ -14824,17 +14824,15 @@ export type Database = {
         Args: { p_candidature_id: string; p_souhaite: boolean }
         Returns: boolean
       }
-      candidat_soumettre_demande:
-        | { Args: { p_candidature_id: string; p_data: Json }; Returns: string }
-        | {
-            Args: {
-              p_autorise_references?: boolean
-              p_candidature_id: string
-              p_confirme_pret_louer?: boolean
-              p_data: Json
-            }
-            Returns: string
-          }
+      candidat_soumettre_demande: {
+        Args: {
+          p_autorise_references?: boolean
+          p_candidature_id: string
+          p_confirme_pret_louer?: boolean
+          p_data: Json
+        }
+        Returns: string
+      }
       check_demande_by_email: {
         Args: { check_email: string }
         Returns: boolean
