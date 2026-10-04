@@ -127,6 +127,13 @@
       "when": 1791061573315,
       "tag": "0017_candidature_documents_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791141255105,
+      "tag": "0018_fix_candidat_rpcs_pipeline_and_conv_agent",
+      "breakpoints": true
     }
   ]
 }
