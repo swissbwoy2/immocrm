@@ -515,7 +515,6 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
   handleNavClick: () => void;
   isRootPath: (path: string) => boolean;
 }) {
-  const { pathname } = useLocation();
   const label = section.label ?? 'Au quotidien';
   const storageKey = `logisorama.sidebar-section.${role}.${label}`;
   const [open, setOpen] = useState(() => {
@@ -526,8 +525,7 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
     setOpen(next);
     try { localStorage.setItem(storageKey, next ? 'open' : 'closed'); } catch { /* storage unavailable */ }
   };
-  const containsActiveRoute = section.items.some(item => pathname === item.path || (!isRootPath(item.path) && pathname.startsWith(`${item.path}/`)));
-  const visible = collapsed || searching || open || containsActiveRoute;
+  const visible = collapsed || searching || open;
 
   return (
     <SidebarGroup>
