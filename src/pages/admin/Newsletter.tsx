@@ -45,6 +45,7 @@ import {
   filterContacts,
   type ImportRow,
   parseContactCsv,
+  sourceLabel,
   STATUS_LABELS,
 } from "@/features/newsletter/model";
 import { NEWSLETTER_TEMPLATES } from "@/features/newsletter/templates";
@@ -119,6 +120,20 @@ export default function Newsletter() {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("all");
   const [category, setCategory] = useState("all");
+  const [contactSource, setContactSource] = useState("all");
+  const [contactForm, setContactForm] = useState("all");
+  const origins = contacts.flatMap((c) => c.provenance || []);
+  const sourceOptions = [...new Set(origins.map((p) => p.source))].sort((
+    a,
+    b,
+  ) => sourceLabel(a).localeCompare(sourceLabel(b), "fr"));
+  const formOptions = [
+    ...new Map(
+      origins.filter((p) =>
+        p.form_key && (contactSource === "all" || p.source === contactSource)
+      ).map((p) => [p.form_key, p]),
+    ).values(),
+  ].sort((a, b) => a.form_name.localeCompare(b.form_name, "fr"));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [mobile, setMobile] = useState(false);
@@ -149,8 +164,16 @@ export default function Newsletter() {
   const [editContact, setEditContact] = useState<Contact | null>(null);
   const locked = !!campaign && campaign.status !== "draft";
   const visible = useMemo(
-    () => filterContacts(contacts, query, kind, category),
-    [contacts, query, kind, category],
+    () =>
+      filterContacts(
+        contacts,
+        query,
+        kind,
+        category,
+        contactSource,
+        contactForm,
+      ),
+    [contacts, query, kind, category, contactSource, contactForm],
   );
   const eligible = visible.filter((c) => !c.excluded && !c.unsubscribed);
   const recipients = contacts.filter(
@@ -201,7 +224,17 @@ export default function Newsletter() {
   }, []);
   useEffect(() => {
     setPage(1);
-  }, [query, kind, category]);
+  }, [query, kind, category, contactSource, contactForm]);
+  useEffect(() => {
+    if (tab !== "contacts") return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void api<{ contacts: Contact[] }>({ action: "contacts" }).then((c) =>
+        setContacts(c.contacts)
+      ).catch(() => {});
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, [tab]);
   async function run(task: () => Promise<void>) {
     setBusy(true);
     try {
@@ -371,6 +404,36 @@ export default function Newsletter() {
             </option>
           ))}
         </select>
+        <select
+          aria-label="Source des contacts"
+          className={selectClass}
+          value={contactSource}
+          onChange={(e) => {
+            setContactSource(e.target.value);
+            setContactForm("all");
+          }}
+        >
+          <option value="all">Toutes les sources</option>
+          {sourceOptions.map((source) => (
+            <option key={source} value={source}>{sourceLabel(source)}</option>
+          ))}
+        </select>
+        <select
+          aria-label="Formulaire des contacts"
+          className={selectClass}
+          value={contactForm}
+          onChange={(e) => setContactForm(e.target.value)}
+        >
+          <option value="all">Tous les formulaires</option>
+          {formOptions.map((form) => (
+            <option key={form.form_key} value={form.form_key}>
+              {form.form_name} · {sourceLabel(form.source)}
+            </option>
+          ))}
+        </select>
+        <p className="self-center text-sm text-muted-foreground">
+          Plus récents en premier · heure suisse
+        </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button
@@ -400,6 +463,8 @@ export default function Newsletter() {
             <tr>
               <th className="p-3">Choix</th>
               <th className="p-3">Contact</th>
+              <th className="p-3">Dernier lead ↓</th>
+              <th className="p-3">Source / formulaire</th>
               <th className="p-3">Type et catégories</th>
               <th className="p-3">Statut</th>
               <th />
@@ -429,6 +494,36 @@ export default function Newsletter() {
                       c.email}
                   </div>
                   <div className="text-muted-foreground">{c.email}</div>
+                </td>
+                <td className="p-3 whitespace-nowrap">
+                  {c.latest_lead_at
+                    ? formatInTimeZone(
+                      new Date(c.latest_lead_at),
+                      "Europe/Zurich",
+                      "dd.MM.yyyy · HH:mm",
+                    )
+                    : "Date non renseignée"}
+                  {c.latest_date_kind === "added" && (
+                    <div className="text-xs text-muted-foreground">
+                      Date d’ajout · date du lead inconnue
+                    </div>
+                  )}
+                </td>
+                <td className="p-3 min-w-52">
+                  {(c.provenance || []).map((p) => (
+                    <div
+                      key={`${p.source}:${p.form_key}`}
+                      className="mb-2 last:mb-0"
+                    >
+                      <Badge variant="secondary">{sourceLabel(p.source)}</Badge>
+                      {p.form_name && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {p.form_name}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {!c.provenance?.length && sourceLabel(c.source || "unknown")}
                 </td>
                 <td className="p-3">
                   <Badge variant="outline">
@@ -480,8 +575,7 @@ export default function Newsletter() {
         </table>
         {!visible.length && (
           <p className="p-6 text-center text-muted-foreground">
-            Aucun contact. Importez un CSV ou ajoutez des clients de
-            l’application.
+            Aucun contact ne correspond aux filtres sélectionnés.
           </p>
         )}
       </div>
@@ -540,7 +634,11 @@ export default function Newsletter() {
               icon: LayoutDashboard,
             },
             { id: "history", label: "Campagnes", icon: Mail },
-            { id: "sequences", label: "Séquences automatiques", icon: RefreshCw },
+            {
+              id: "sequences",
+              label: "Séquences automatiques",
+              icon: RefreshCw,
+            },
             { id: "tracking", label: "Suivi & statistiques", icon: Activity },
             { id: "contacts", label: "Abonnés", icon: Users },
             { id: "forms", label: "Formulaires", icon: FileInput },
@@ -610,10 +708,20 @@ export default function Newsletter() {
                 Actualiser
               </Button>
             </div>
-            <TabsContent value="sequences">{tab === "sequences" && <NewsletterSequences />}</TabsContent>
-            <TabsContent value="tracking">{tab === "tracking" && <NewsletterTracking />}</TabsContent>
+            <TabsContent value="sequences">
+              {tab === "sequences" && <NewsletterSequences />}
+            </TabsContent>
+            <TabsContent value="tracking">
+              {tab === "tracking" && <NewsletterTracking />}
+            </TabsContent>
             <TabsContent value="dashboard" className="space-y-6">
-              <div className="flex flex-wrap justify-between gap-3"><h2 className="text-2xl font-semibold">Tableau de bord</h2><Button variant="outline" onClick={()=>setTab("tracking")}><Activity size={16} className="mr-2"/>Suivi des emails et notifications</Button></div>
+              <div className="flex flex-wrap justify-between gap-3">
+                <h2 className="text-2xl font-semibold">Tableau de bord</h2>
+                <Button variant="outline" onClick={() => setTab("tracking")}>
+                  <Activity size={16} className="mr-2" />Suivi des emails et
+                  notifications
+                </Button>
+              </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                   [
@@ -702,8 +810,8 @@ export default function Newsletter() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Les chiffres portent sur les campagnes créées dans Logisorama
-                (100 dernières). Retrouvez les ouvertures, clics et notifications
-                dans « Suivi & statistiques ».
+                (100 dernières). Retrouvez les ouvertures, clics et
+                notifications dans « Suivi & statistiques ».
               </p>
             </TabsContent>
             <TabsContent value="forms">
@@ -712,7 +820,8 @@ export default function Newsletter() {
             <TabsContent value="contacts" className="space-y-4">
               <h2 className="text-2xl font-semibold">Abonnés</h2>
               <p className="text-sm text-muted-foreground">
-                Clients et prospects, organisés selon leur projet immobilier et leurs inscriptions aux visites.
+                Clients et prospects, organisés selon leur projet immobilier et
+                leurs inscriptions aux visites.
               </p>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {Object.entries(CONTACT_CATEGORIES).map(([k, v]) => (
@@ -1032,8 +1141,11 @@ export default function Newsletter() {
                                 className="overflow-hidden rounded-xl border bg-[#f3f1e9] text-left hover:border-[#205a43]"
                                 onClick={() => {
                                   if (
-                                    (draft.html || draft.subject || draft.name || draft.preheader) &&
-                                    !window.confirm("Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?")
+                                    (draft.html || draft.subject ||
+                                      draft.name || draft.preheader) &&
+                                    !window.confirm(
+                                      "Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?",
+                                    )
                                   ) return;
                                   changeDraft({
                                     html: template.html,
@@ -1043,11 +1155,22 @@ export default function Newsletter() {
                                   });
                                 }}
                               >
-                                <img src={template.image} alt="" className="aspect-[3/1] w-full object-cover" loading="lazy" />
+                                <img
+                                  src={template.image}
+                                  alt=""
+                                  className="aspect-[3/1] w-full object-cover"
+                                  loading="lazy"
+                                />
                                 <span className="block p-4">
-                                  <span className="text-xs uppercase tracking-widest text-[#205a43]">{template.audience}</span>
-                                  <strong className="mt-1 block text-lg">{template.name}</strong>
-                                  <span className="mt-1 block text-sm text-muted-foreground">{template.description}</span>
+                                  <span className="text-xs uppercase tracking-widest text-[#205a43]">
+                                    {template.audience}
+                                  </span>
+                                  <strong className="mt-1 block text-lg">
+                                    {template.name}
+                                  </strong>
+                                  <span className="mt-1 block text-sm text-muted-foreground">
+                                    {template.description}
+                                  </span>
                                 </span>
                               </button>
                             ))}
@@ -1074,7 +1197,8 @@ export default function Newsletter() {
                           <Button
                             className="w-full bg-[#205a43]"
                             disabled={!draft.html}
-                            onClick={() => setEditorOpen(true)}
+                            onClick={() =>
+                              setEditorOpen(true)}
                           >
                             <Paintbrush size={17} className="mr-2" />
                             Ouvrir l’éditeur visuel

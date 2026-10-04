@@ -10,7 +10,33 @@ export const CONTACT_CATEGORIES = {
 } as const;
 export type Category = keyof typeof CONTACT_CATEGORIES;
 export type ContactKind = "client" | "prospect";
+export const SOURCE_LABELS: Record<string, string> = {
+  meta: "Meta Ads",
+  shortlist: "Lead Shortlist",
+  hubspot: "HubSpot",
+  visites: "Visites",
+  "immobilier.ch": "immobilier.ch",
+  "homegate.ch": "Homegate (SMG)",
+  smg: "SMG / ImmoScout24",
+  portails_email: "Portails immobiliers · email",
+  csv: "Import CSV",
+  application: "Application",
+  unknown: "Source non renseignée",
+};
+export const sourceLabel = (source: string) => SOURCE_LABELS[source] || source;
+export type ContactOrigin = {
+  source: string;
+  form_key: string;
+  form_name: string;
+  received_at: string | null;
+  date_kind: "lead" | "added";
+};
 export type Contact = {
+  source?: string;
+  created_at?: string;
+  latest_lead_at?: string | null;
+  latest_date_kind?: "lead" | "added";
+  provenance?: ContactOrigin[];
   id: string;
   email: string;
   first_name: string;
@@ -228,16 +254,27 @@ export function filterContacts(
   query: string,
   kind: string,
   category: string,
+  source = "all",
+  form = "all",
 ) {
   const q = query.toLocaleLowerCase();
   return contacts.filter(
     (c) =>
       (kind === "all" || c.kind === kind) &&
-      (category === "all" || (category === "unclassified"
-        ? !c.categories.length
-        : c.categories.includes(category as Category))) &&
+      (source === "all" && form === "all" || (c.provenance || []).some((p) =>
+        (source === "all" || p.source === source) &&
+        (form === "all" || p.form_key === form)
+      )) &&
+      (category === "all" ||
+        (category === "unclassified"
+          ? !c.categories.length
+          : c.categories.includes(category as Category))) &&
       `${c.email} ${c.first_name} ${c.last_name}`
         .toLocaleLowerCase()
         .includes(q),
+  ).sort((a, b) =>
+    (Date.parse(b.latest_lead_at || b.created_at || "") || 0) -
+      (Date.parse(a.latest_lead_at || a.created_at || "") || 0) ||
+    a.id.localeCompare(b.id)
   );
 }
