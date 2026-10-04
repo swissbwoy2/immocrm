@@ -737,10 +737,21 @@ export function AppSidebar() {
       {/* Header — Logo */}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 p-4">
-          <img
-            src={logoLogisorama}
-            alt="Logo Logisorama"
-            className="h-10 w-auto object-contain flex-shrink-0"
+          <span
+            role="img"
+            aria-label="Logo Logisorama"
+            className="h-7 w-24 flex-shrink-0"
+            style={{
+              maskImage: `url(${logoLogisorama})`,
+              WebkitMaskImage: `url(${logoLogisorama})`,
+              maskSize: 'contain',
+              WebkitMaskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              WebkitMaskRepeat: 'no-repeat',
+              maskPosition: 'left center',
+              WebkitMaskPosition: 'left center',
+              backgroundColor: 'hsl(var(--imr-green))',
+            }}
           />
           {!collapsed && <div className="min-w-0 flex-1" />}
           {!collapsed && (
