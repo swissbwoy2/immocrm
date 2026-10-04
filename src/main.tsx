@@ -132,5 +132,11 @@ void restoreNativeSessionBackup().finally(() => {
       <App />
     </ErrorBoundary>
   );
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const splash = document.getElementById("boot-splash");
+    if (!splash) return;
+    splash.style.opacity = "0";
+    setTimeout(() => splash.remove(), 260);
+  }));
 });
 
