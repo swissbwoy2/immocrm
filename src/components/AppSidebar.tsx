@@ -2,7 +2,7 @@ import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy, ChevronDown, Search } from 'lucide-react';
 import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
@@ -11,7 +11,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
