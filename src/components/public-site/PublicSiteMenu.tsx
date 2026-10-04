@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock } from 'lucide-react';
+import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock, type LucideIcon } from 'lucide-react';
 import logo from '@/assets/logisorama-logo.png';
 
 interface PublicSiteMenuProps {
@@ -8,11 +8,32 @@ interface PublicSiteMenuProps {
   onClose: () => void;
 }
 
-const menuGroups = [
+interface MenuGroupItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  anchor?: boolean;
+  external?: boolean;
+  highlight?: boolean;
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuGroupItem[];
+}
+
+const menuGroups: MenuGroup[] = [
   {
-    title: 'Navigation',
+    title: 'Accès rapide',
     items: [
       { to: '/', label: 'Accueil', icon: Home },
+      { to: '/login', label: 'Mon espace', icon: LogIn },
+      { to: '/nouveau-mandat', label: 'Activer ma recherche', icon: Rocket, highlight: true },
+    ],
+  },
+  {
+    title: 'Découvrir',
+    items: [
       { to: '#comment-ca-marche', label: 'Comment ça marche', icon: HelpCircle, anchor: true },
       { to: '#services', label: 'Services', icon: Briefcase, anchor: true },
       { to: '#tarifs', label: 'Tarifs', icon: DollarSign, anchor: true },
@@ -33,10 +54,8 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Actions',
+    title: 'Contact',
     items: [
-      { to: '/nouveau-mandat', label: 'Activer ma recherche', icon: Rocket, highlight: true },
-      { to: '/login', label: 'Mon espace', icon: LogIn },
       { to: '#programme-partenaire', label: 'Devenir partenaire', icon: Handshake, anchor: true },
       { to: 'mailto:info@immo-rama.ch', label: 'Contact', icon: Mail, external: true },
     ],
@@ -72,7 +91,7 @@ export function PublicSiteMenu({ open, onClose }: PublicSiteMenuProps) {
 
   if (!open) return null;
 
-  const handleClick = (item: typeof menuGroups[0]['items'][0]) => {
+  const handleClick = (item: MenuGroupItem) => {
     if (item.anchor) {
       onClose();
       setTimeout(() => {
