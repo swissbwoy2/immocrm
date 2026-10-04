@@ -40,7 +40,7 @@ export function DossierAnalyseSection() {
                   className="group inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base transition-all shadow-[0_8px_24px_-8px_hsl(var(--primary)/0.5)]"
                 >
                   <Megaphone className="h-5 w-5" />
-                  Accéder au portail
+                  Voir les annonces
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
                 <Link
