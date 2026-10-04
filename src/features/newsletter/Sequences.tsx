@@ -72,7 +72,7 @@ export default function NewsletterSequences() {
       ),
       db.from("newsletter_sequence_enrollments").select(
         "id,category,state,reason,enrolled_at,form_id,newsletter_contacts(email),meta_leads(form_name),newsletter_sequence_messages(step,due_at,newsletter_id)",
-      ).order("enrolled_at", { ascending: false }).limit(200),
+      ).order("enrolled_at", { ascending: false }).limit(200).returns<Enrollment[]>(),
     ]);
     if (a.error || b.error) {
       setError((a.error || b.error).message);
