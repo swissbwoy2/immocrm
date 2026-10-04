@@ -134,6 +134,13 @@
       "when": 1791141255105,
       "tag": "0018_fix_candidat_rpcs_pipeline_and_conv_agent",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791141937920,
+      "tag": "0019_candidat_annonce_conv_rls",
+      "breakpoints": true
     }
   ]
 }
