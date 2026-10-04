@@ -137,7 +137,7 @@ export default function VisualEditor({
           "recherche.jpg",
           "dossier.jpg",
           "logisorama-logo.png",
-        ].map((n) => n === "logisorama-logo.png" ? "https://logisorama.ch/__l5e/assets-v1/620cc5b1-18df-42ab-86d6-2ea17731daef/logisorama-email-logo.png" : `https://logisorama.ch/newsletter/${n}`),
+        ].map((n) => n === "logisorama-logo.png" ? "https://logisorama.ch/email/logo-logisorama.png" : `https://logisorama.ch/newsletter/${n}`),
         upload: false,
         embedAsBase64: false,
         showUrlInput: true,
