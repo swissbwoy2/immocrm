@@ -54,7 +54,10 @@ serve(async (req) => {
         .in('email', leadEmails);
 
       const mandatEmails = new Set((existingMandats || []).map(m => m.email?.toLowerCase()));
-      const unconverted = coldLeads.filter(l => l.email && !mandatEmails.has(l.email.toLowerCase()));
+      const { data: managed, error: managedError } = await supabase.rpc('newsletter_sequence_managed_emails', {p_emails: leadEmails});
+      if (managedError) throw managedError; // Never fall back to a duplicate marketing sender.
+      const managedEmails = new Set((managed || []).map((r: {email:string})=>r.email));
+      const unconverted = coldLeads.filter(l => l.email && !mandatEmails.has(l.email.toLowerCase()) && !managedEmails.has(l.email.toLowerCase()));
 
       const details: string[] = [];
 

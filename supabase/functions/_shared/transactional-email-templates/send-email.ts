@@ -75,7 +75,7 @@ export async function sendTemplateEmail(
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
-        html: tracking.html,
+        html: tracking.html ?? html,
         text,
         purpose: 'transactional',
         label: templateName,

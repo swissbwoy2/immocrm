@@ -50,6 +50,7 @@ import {
 import { NEWSLETTER_TEMPLATES } from "@/features/newsletter/templates";
 
 import NewsletterTracking from "@/features/newsletter/Tracking";
+import NewsletterSequences from "@/features/newsletter/Sequences";
 import NewsletterForms from "@/features/newsletter/Forms";
 const VisualEditor = lazy(
   () => import("@/features/newsletter/editor/VisualEditor"),
@@ -539,6 +540,7 @@ export default function Newsletter() {
               icon: LayoutDashboard,
             },
             { id: "history", label: "Campagnes", icon: Mail },
+            { id: "sequences", label: "Séquences automatiques", icon: RefreshCw },
             { id: "tracking", label: "Suivi & statistiques", icon: Activity },
             { id: "contacts", label: "Abonnés", icon: Users },
             { id: "forms", label: "Formulaires", icon: FileInput },
@@ -608,6 +610,7 @@ export default function Newsletter() {
                 Actualiser
               </Button>
             </div>
+            <TabsContent value="sequences">{tab === "sequences" && <NewsletterSequences />}</TabsContent>
             <TabsContent value="tracking">{tab === "tracking" && <NewsletterTracking />}</TabsContent>
             <TabsContent value="dashboard" className="space-y-6">
               <div className="flex flex-wrap justify-between gap-3"><h2 className="text-2xl font-semibold">Tableau de bord</h2><Button variant="outline" onClick={()=>setTab("tracking")}><Activity size={16} className="mr-2"/>Suivi des emails et notifications</Button></div>
