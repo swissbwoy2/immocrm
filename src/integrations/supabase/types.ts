@@ -2685,9 +2685,12 @@ export type Database = {
           annonce_id: string | null
           annulation_message: string | null
           annulee: boolean
+          autorise_references: boolean | null
           candidat_confirme_at: string | null
           civilite: string | null
           co_candidats: Json | null
+          confirme_at: string | null
+          confirme_pret_louer: boolean | null
           created_at: string | null
           creneau_id: string | null
           date_cles_remises: string | null
@@ -2701,6 +2704,7 @@ export type Database = {
           date_naissance: string | null
           date_signature: string | null
           date_visite: string | null
+          demande_data: Json
           documents: Json | null
           email: string | null
           employeur: string | null
@@ -2717,6 +2721,8 @@ export type Database = {
           profession: string | null
           revenus_mensuels: number | null
           score_dossier: number | null
+          souhaite_deposer: boolean | null
+          souhaite_deposer_at: string | null
           statut: string | null
           telephone: string | null
           type_contrat: string | null
@@ -2731,9 +2737,12 @@ export type Database = {
           annonce_id?: string | null
           annulation_message?: string | null
           annulee?: boolean
+          autorise_references?: boolean | null
           candidat_confirme_at?: string | null
           civilite?: string | null
           co_candidats?: Json | null
+          confirme_at?: string | null
+          confirme_pret_louer?: boolean | null
           created_at?: string | null
           creneau_id?: string | null
           date_cles_remises?: string | null
@@ -2747,6 +2756,7 @@ export type Database = {
           date_naissance?: string | null
           date_signature?: string | null
           date_visite?: string | null
+          demande_data?: Json
           documents?: Json | null
           email?: string | null
           employeur?: string | null
@@ -2763,6 +2773,8 @@ export type Database = {
           profession?: string | null
           revenus_mensuels?: number | null
           score_dossier?: number | null
+          souhaite_deposer?: boolean | null
+          souhaite_deposer_at?: string | null
           statut?: string | null
           telephone?: string | null
           type_contrat?: string | null
@@ -2777,9 +2789,12 @@ export type Database = {
           annonce_id?: string | null
           annulation_message?: string | null
           annulee?: boolean
+          autorise_references?: boolean | null
           candidat_confirme_at?: string | null
           civilite?: string | null
           co_candidats?: Json | null
+          confirme_at?: string | null
+          confirme_pret_louer?: boolean | null
           created_at?: string | null
           creneau_id?: string | null
           date_cles_remises?: string | null
@@ -2793,6 +2808,7 @@ export type Database = {
           date_naissance?: string | null
           date_signature?: string | null
           date_visite?: string | null
+          demande_data?: Json
           documents?: Json | null
           email?: string | null
           employeur?: string | null
@@ -2809,6 +2825,8 @@ export type Database = {
           profession?: string | null
           revenus_mensuels?: number | null
           score_dossier?: number | null
+          souhaite_deposer?: boolean | null
+          souhaite_deposer_at?: string | null
           statut?: string | null
           telephone?: string | null
           type_contrat?: string | null
@@ -8325,6 +8343,7 @@ export type Database = {
           state: string
           stopped_at: string | null
           updated_at: string
+          welcome_campaign_id: string | null
         }
         Insert: {
           category?: string | null
@@ -8337,6 +8356,7 @@ export type Database = {
           state?: string
           stopped_at?: string | null
           updated_at?: string
+          welcome_campaign_id?: string | null
         }
         Update: {
           category?: string | null
@@ -8349,6 +8369,7 @@ export type Database = {
           state?: string
           stopped_at?: string | null
           updated_at?: string
+          welcome_campaign_id?: string | null
         }
         Relationships: [
           {
@@ -8371,6 +8392,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "meta_leads"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_sequence_enrollments_welcome_campaign_id_fkey"
+            columns: ["welcome_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_sequence_welcomes"
+            referencedColumns: ["campaign_id"]
           },
         ]
       }
@@ -8409,6 +8437,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      newsletter_sequence_welcomes: {
+        Row: {
+          campaign_id: string
+          enabled: boolean
+          html: string
+          name: string
+          normal_delay_hours: number
+          preheader: string
+          starts_at: string
+          subject: string
+        }
+        Insert: {
+          campaign_id: string
+          enabled?: boolean
+          html: string
+          name: string
+          normal_delay_hours?: number
+          preheader?: string
+          starts_at?: string
+          subject: string
+        }
+        Update: {
+          campaign_id?: string
+          enabled?: boolean
+          html?: string
+          name?: string
+          normal_delay_hours?: number
+          preheader?: string
+          starts_at?: string
+          subject?: string
+        }
+        Relationships: []
       }
       newsletter_sequences: {
         Row: {
@@ -14628,6 +14689,21 @@ export type Database = {
         Args: { p_document_id: string; p_lieu?: string; p_signature: string }
         Returns: string
       }
+      candidat_souhaite_deposer: {
+        Args: { p_candidature_id: string; p_souhaite: boolean }
+        Returns: boolean
+      }
+      candidat_soumettre_demande:
+        | { Args: { p_candidature_id: string; p_data: Json }; Returns: string }
+        | {
+            Args: {
+              p_autorise_references?: boolean
+              p_candidature_id: string
+              p_confirme_pret_louer?: boolean
+              p_data: Json
+            }
+            Returns: string
+          }
       check_demande_by_email: {
         Args: { check_email: string }
         Returns: boolean
