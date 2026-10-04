@@ -24,6 +24,7 @@ type Enrollment = {
   reason: string | null;
   enrolled_at: string;
   form_id: string;
+  welcome_campaign_id: string | null;
   newsletter_contacts: { email: string };
   meta_leads: { form_name: string };
   newsletter_sequence_messages: {
@@ -59,6 +60,15 @@ const safe = (html: string) =>
   });
 export default function NewsletterSequences() {
   const [sequences, setSequences] = useState<Sequence[]>([]);
+  const [welcomes, setWelcomes] = useState<
+    {
+      campaign_id: string;
+      name: string;
+      enabled: boolean;
+      subject: string;
+      normal_delay_hours: number;
+    }[]
+  >([]);
   const [rows, setRows] = useState<Enrollment[]>([]);
   const [error, setError] = useState("");
   const [edit, setEdit] = useState<Sequence | null>(null);
@@ -66,21 +76,27 @@ export default function NewsletterSequences() {
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
   const load = async () => {
-    const [a, b] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       db.from("newsletter_sequences").select("category,enabled,steps").order(
         "category",
       ),
       db.from("newsletter_sequence_enrollments").select(
-        "id,category,state,reason,enrolled_at,form_id,newsletter_contacts(email),meta_leads(form_name),newsletter_sequence_messages(step,due_at,newsletter_id)",
-      ).order("enrolled_at", { ascending: false }).limit(200).returns<Enrollment[]>(),
+        "id,category,state,reason,enrolled_at,form_id,welcome_campaign_id,newsletter_contacts(email),meta_leads(form_name),newsletter_sequence_messages(step,due_at,newsletter_id)",
+      ).order("enrolled_at", { ascending: false }).limit(200).returns<
+        Enrollment[]
+      >(),
+      db.from("newsletter_sequence_welcomes").select(
+        "campaign_id,name,enabled,subject,normal_delay_hours",
+      ).order("name"),
     ]);
-    if (a.error || b.error) {
-      setError((a.error || b.error).message);
+    if (a.error || b.error || c.error) {
+      setError((a.error || b.error || c.error).message);
       return;
     }
     setError("");
     setSequences(a.data || []);
     setRows(b.data || []);
+    setWelcomes(c.data || []);
   };
   useEffect(() => {
     void load();
@@ -150,6 +166,25 @@ export default function NewsletterSequences() {
         </CardContent>
       </Card>
       {error && <p role="alert" className="text-destructive">{error}</p>}
+      {welcomes.map((w) => (
+        <Card key={w.campaign_id}>
+          <CardContent className="pt-5 text-sm space-y-2">
+            <p className="font-semibold">
+              {w.name} · email préalable {w.enabled ? "actif" : "suspendu"}
+            </p>
+            <p>{w.subject}</p>
+            <p>
+              Invitation à consulter l’annonce et réserver une visite dès
+              réception du lead Meta. Les six emails habituels démarrent{" "}
+              {w.normal_delay_hours} heures après l’envoi de cette invitation.
+            </p>
+            <p className="text-muted-foreground">
+              Campagne Meta :{" "}
+              {w.campaign_id}. Modèle disponible dans la bibliothèque.
+            </p>
+          </CardContent>
+        </Card>
+      ))}
       <div className="grid gap-4 md:grid-cols-2">
         {sequences.map((s) => (
           <Card key={s.category}>
@@ -215,11 +250,18 @@ export default function NewsletterSequences() {
                   </td>
                   <td className="p-3">
                     {CONTACT_CATEGORIES[r.category] || "À classer"}
+                    {r.welcome_campaign_id && (
+                      <div className="text-xs text-muted-foreground">
+                        Invitation Druey 18 + 6 emails
+                      </div>
+                    )}
                   </td>
                   <td className="p-3">
-                    {sent}/6 mis en file{r.state === "active" && next && (
+                    {sent}/{r.welcome_campaign_id ? 7 : 6}{" "}
+                    mis en file{r.state === "active" && next && (
                       <div className="text-xs">
                         Prochain :{" "}
+                        {next.step === -1 ? "Invitation visite · " : ""}{" "}
                         {new Date(next.due_at).toLocaleString("fr-CH", {
                           timeZone: "Europe/Zurich",
                         })}

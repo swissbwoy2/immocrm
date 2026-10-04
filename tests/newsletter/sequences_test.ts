@@ -22,7 +22,7 @@ Deno.test("Séquences : nouvelles entrées, six étapes, doublons, conversion et
  create table demandes_mandat(id uuid primary key,email text,signature_data text,cgv_acceptees boolean,statut text);
  create table mandates(email text,status text,signed_at timestamptz,signature_data text,activation_deposit_paid boolean);
  create table proprietaires(user_id uuid,statut text);
- create table meta_leads(id uuid primary key default gen_random_uuid(),email text,form_id text,source text default 'meta_leadgen',lead_created_time_meta timestamptz default now(),raw_answers jsonb);
+ create table meta_leads(id uuid primary key default gen_random_uuid(),email text,form_id text,campaign_id text,source text default 'meta_leadgen',lead_created_time_meta timestamptz default now(),raw_answers jsonb);
  create function newsletter_classify_meta(p jsonb) returns jsonb language sql as $$select '{"categories":["renter"],"outside":false}'::jsonb$$;`,
     );
     for (
@@ -51,6 +51,14 @@ Deno.test("Séquences : nouvelles entrées, six étapes, doublons, conversion et
       await Deno.readTextFile(
         new URL(
           "../../supabase/migrations/20261004160000_newsletter_sequences.sql",
+          import.meta.url,
+        ),
+      ),
+    );
+    await db.exec(
+      await Deno.readTextFile(
+        new URL(
+          "../../supabase/migrations/20261004170000_newsletter_campaign_welcome.sql",
           import.meta.url,
         ),
       ),
@@ -238,6 +246,103 @@ Deno.test("Séquences : nouvelles entrées, six étapes, doublons, conversion et
         "select count(*)::int n from newsletter_deliveries where email='test@example.ch'",
       )).n,
       0,
+    );
+
+    // An exact campaign match adds a welcome; reusing the form in another campaign does not.
+    await db.query(
+      `insert into newsletter_sequence_welcomes(campaign_id,name,subject,html,enabled,starts_at) values('druey','Druey 18','Votre visite Druey', $1,true,now()-interval '1 day')`,
+      [steps[0].html],
+    );
+    const campaignLead = async (email: string, campaign: string) => {
+      await db.query(
+        `insert into newsletter_contacts(email) values($1) on conflict(email) do nothing`,
+        [email],
+      );
+      await db.query(
+        `insert into meta_leads(email,form_id,campaign_id) values($1,'shared-form',$2)`,
+        [email, campaign],
+      );
+      return one(
+        `select e.id from newsletter_sequence_enrollments e join newsletter_contacts c on c.id=e.contact_id where c.email=$1`,
+        [email],
+      );
+    };
+    const druey = await campaignLead("druey@example.ch", "druey");
+    await campaignLead("druey@example.ch", "druey");
+    const other = await campaignLead("other-campaign@example.ch", "other");
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_sequence_messages where enrollment_id=$1",
+        [druey.id],
+      )).n,
+      7,
+    );
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_sequence_messages where enrollment_id=$1",
+        [other.id],
+      )).n,
+      6,
+    );
+    assertEquals(
+      (await one(
+        `select extract(epoch from (max(due_at) filter(where step=0)-max(due_at) filter(where step=-1)))::int seconds from newsletter_sequence_messages where enrollment_id=$1`,
+        [druey.id],
+      )).seconds,
+      86400,
+    );
+    await db.query("select newsletter_sequence_tick()");
+    const welcome = await one(
+      `select n.id,n.subject from newsletter_sequence_messages m join newsletters n on n.id=m.newsletter_id where m.enrollment_id=$1 and m.step=-1`,
+      [druey.id],
+    );
+    assertEquals(welcome.subject, "Votre visite Druey");
+    // Even all overdue steps must wait until 24h AFTER actual provider acceptance of the invitation.
+    await db.query(
+      `update newsletter_sequence_messages set due_at=now()-interval '1 day' where enrollment_id=$1`,
+      [druey.id],
+    );
+    await db.query(
+      `update newsletter_deliveries set status='sent',sent_at=now() where newsletter_id=$1`,
+      [welcome.id],
+    );
+    await db.query("select newsletter_sequence_tick()");
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_sequence_messages where enrollment_id=$1 and newsletter_id is not null",
+        [druey.id],
+      )).n,
+      1,
+    );
+    await db.query(
+      `update newsletter_deliveries set sent_at=now()-interval '25 hours' where newsletter_id=$1`,
+      [welcome.id],
+    );
+    await db.query("select newsletter_sequence_tick()");
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_sequence_messages where enrollment_id=$1 and newsletter_id is not null",
+        [druey.id],
+      )).n,
+      2,
+    );
+    assertEquals(
+      (await one(
+        `select n.subject from newsletter_sequence_messages m join newsletters n on n.id=m.newsletter_id where m.enrollment_id=$1 and m.step=0`,
+        [druey.id],
+      )).subject,
+      "Étape 0",
+    );
+    await db.query(
+      `insert into email_unsubscribes(email) values('druey@example.ch')`,
+    );
+    await db.query("select newsletter_sequence_tick()");
+    assertEquals(
+      (await one(
+        "select state from newsletter_sequence_enrollments where id=$1",
+        [druey.id],
+      )).state,
+      "stopped",
     );
 
     // Unknown form is visible for review, not silently dropped or guessed.
