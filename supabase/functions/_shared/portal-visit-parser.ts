@@ -54,7 +54,11 @@ const normalized = (s: string) =>
   ).trim();
 function value(block: string, label: string): string {
   return block.match(
-    new RegExp("^(?:" + label + ")\\s*:?\\s*\\n?([^\\n]+)$", "im"),
+    new RegExp(
+      "^(?:" + label +
+        ")(?:[ \t]*:[ \t]*(?:\\n[ \t]*)?|[ \t]*\\n[ \t]*)([^\\n]+)$",
+      "im",
+    ),
   )?.[1]?.trim() || "";
 }
 export function parsePortalInquiry(
