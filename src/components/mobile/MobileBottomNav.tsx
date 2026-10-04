@@ -38,7 +38,7 @@ export function getBottomNavItems(role: string | null): BottomNavItem[] {
     case 'candidat':
       return [
         { name: 'Accueil', icon: LayoutDashboard, path: '/candidat' },
-        { name: 'Offres', icon: Home, path: '/candidat/candidatures' },
+        { name: 'Dossiers', icon: Mailbox, path: '/candidat/candidatures' },
         { name: 'Messages', icon: MessageSquare, path: '/candidat/messages' },
         { name: 'Agenda', icon: Calendar, path: '/candidat/agenda' },
         { name: 'Support', icon: LifeBuoy, path: '/candidat/support' },
