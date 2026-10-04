@@ -146,7 +146,7 @@ export default function AutoOffres() {
       <Card>
         <CardHeader><CardTitle>Candidats du run sélectionné</CardTitle></CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto"><Table>
             <TableHeader><TableRow>
               <TableHead>Client</TableHead><TableHead>Bien</TableHead>
               <TableHead>Pièces</TableHead><TableHead>Surface</TableHead>
