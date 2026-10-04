@@ -1,3 +1,4 @@
+import { enrichContactOrigins } from "../_shared/newsletter-contact-provenance.ts";
 import { communicationAction } from "../_shared/communication-admin.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { studioAction, withPreheader } from "../_shared/newsletter-studio.ts";
@@ -29,16 +30,12 @@ function check<T extends { error: unknown }>(result: T): T {
   }
   return result;
 }
-async function all(table: string, columns: string) {
+async function all(table: string, columns: string, order = "id", secondary?: string) {
   const rows: Record<string, unknown>[] = [];
   for (let offset = 0; offset <= 10000; offset += 1000) {
-    const { data } = check(
-      await db
-        .from(table)
-        .select(columns)
-        .order("id")
-        .range(offset, offset + 999),
-    );
+    let query = db.from(table).select(columns).order(order);
+    if (secondary) query = query.order(secondary);
+    const { data } = check(await query.range(offset, offset + 999));
     rows.push(...((data || []) as unknown as Record<string, unknown>[]));
     if (rows.length > 10000) {
       throw new Error(
@@ -136,16 +133,18 @@ Deno.serve(async (req) => {
         });
       }
       case "contacts": {
-        const contacts = await all(
-          "newsletter_contacts",
-          "id,email,first_name,last_name,kind,categories,source,excluded",
-        );
-        const unsub = await all("email_unsubscribes", "id,email");
+        const [contacts, unsub, meta, leads, imports] = await Promise.all([
+          all("newsletter_contacts", "id,email,first_name,last_name,kind,categories,source,excluded,created_at"),
+          all("email_unsubscribes", "id,email"),
+          all("meta_leads", "id,email,form_id,form_name,lead_created_time_meta,created_at"),
+          all("leads", "id,email,formulaire,source,created_at"),
+          all("newsletter_contact_answers", "contact_id,source,answers", "contact_id", "source"),
+        ]);
         const blocked = new Set(
           unsub.map((x) => String(x.email).toLowerCase()),
         );
         return json({
-          contacts: contacts.map((c) => ({
+          contacts: enrichContactOrigins(contacts, meta, leads, imports).map((c) => ({
             ...c,
             unsubscribed: blocked.has(String(c.email)),
           })),
