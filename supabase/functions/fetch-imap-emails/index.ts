@@ -1,3 +1,4 @@
+import { decodeMimeTransfer } from "../_shared/mime-transfer.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -127,9 +128,9 @@ class SimpleImapClient {
       
       console.log(`[IMAP] Fetching batch ${batchStart}:${currentEnd}...`);
       
-      // OPTIMIZATION: Limit body size to 20KB with BODY.PEEK[TEXT]<0.20000>
+      // Read the complete body: portal contact details can follow a large HTML header.
       const response = await this.sendCommand(
-        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] BODY.PEEK[TEXT]<0.20000>)`
+        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)] BODY.PEEK[TEXT])`
       );
       
       // Parse the response to extract individual emails
@@ -286,8 +287,8 @@ class SimpleImapClient {
       const size = parseInt(textMatch[1]);
       const startIdx = data.indexOf(textMatch[0]) + textMatch[0].length;
       const textStart = data.indexOf('\n', startIdx) + 1;
-      // OPTIMIZATION: Limit body to 15KB max for parsing
-      const bodyContent = data.substring(textStart, textStart + Math.min(size, 15000));
+      // Decode the top-level transfer encoding before inspecting HTML or MIME parts.
+      const bodyContent = decodeMimeTransfer(data.substring(textStart, textStart + size), data.slice(0, data.indexOf(textMatch[0])));
       
       // Check if body starts with MIME boundary
       const boundaryStartMatch = bodyContent.match(/^--([A-Za-z0-9_.=-]+)\r?\n/);
@@ -501,6 +502,7 @@ function stripHtml(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<(?:td|th|tr)\b[^>]*>/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')

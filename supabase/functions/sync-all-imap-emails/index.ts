@@ -1,3 +1,6 @@
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
+import { processPortalVisitRequests } from "../_shared/portal-visit-processor.ts";
+import { decodeMimeTransfer } from "../_shared/mime-transfer.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -114,7 +117,7 @@ class SimpleImapClient {
       console.log(`[IMAP] Fetching ${batchStart}:${currentEnd}...`);
       
       const response = await this.sendCommand(
-        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] BODY.PEEK[TEXT])`
+        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)] BODY.PEEK[TEXT])`
       );
       
       const batchEmails = this.parseAllFetchResponses(response, imapUser);
@@ -230,7 +233,7 @@ class SimpleImapClient {
       const size = parseInt(textMatch[1]);
       const startIdx = data.indexOf(textMatch[0]) + textMatch[0].length;
       const textStart = data.indexOf('\n', startIdx) + 1;
-      const bodyContent = data.substring(textStart, textStart + Math.min(size, 50000));
+      const bodyContent = decodeMimeTransfer(data.substring(textStart, textStart + size), data.slice(0, data.indexOf(textMatch[0])));
       
       // Parse the body content
       const parsedBody = parseBodyContent(bodyContent);
@@ -549,6 +552,7 @@ function stripHtml(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<(?:td|th|tr)\b[^>]*>/gi, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')
@@ -625,11 +629,18 @@ async function syncUserEmails(
           });
 
         if (insertError) {
-          console.error(`Error inserting batch ${i / batchSize + 1} for user ${config.user_id}:`, insertError);
+          throw insertError;
         }
       }
     }
 
+    if (config.imap_user.toLowerCase() === 'info@immo-rama.ch') {
+      for (const email of emailsToInsert.filter(e => e.from_email === 'mail@immobilier.ch' && e.body_html)) {
+        const {error} = await supabaseAdmin.from('received_emails').update({body_text:email.body_text,body_html:email.body_html})
+          .eq('user_id',config.user_id).eq('message_id',email.message_id).is('body_html',null);
+        if(error) throw error;
+      }
+    }
     // OPTIM Cloud: only update last_sync_at when new emails were actually fetched
     if (fetchedEmails.length > 0) {
       await supabaseAdmin
@@ -653,6 +664,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const denied = await denyIfNotInternal(req, corsHeaders, 'sync-all-imap-emails');
+  if (denied) return denied;
+  const body = await req.json().catch(() => ({}));
   try {
     console.log('Starting automatic IMAP sync for all users...');
     
@@ -661,10 +675,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: configs, error: configError } = await supabaseAdmin
+    let configQuery = supabaseAdmin
       .from('imap_configurations')
       .select('*')
       .eq('is_active', true);
+    if (body.mailbox) configQuery = configQuery.eq('imap_user', 'info@immo-rama.ch');
+    const { data: configs, error: configError } = await configQuery;
 
     if (configError) {
       throw new Error(`Failed to fetch configurations: ${configError.message}`);
@@ -688,6 +704,17 @@ serve(async (req) => {
     for (const config of configs) {
       console.log(`Syncing emails for user ${config.user_id}...`);
       const result = await syncUserEmails(supabaseAdmin, config);
+      if (config.imap_user.toLowerCase() === 'info@immo-rama.ch') {
+        try {
+          if (!result.success) throw new Error(result.error || 'Échec relève IMAP');
+          await processPortalVisitRequests(supabaseAdmin);
+          await supabaseAdmin.from('portal_visit_automation').update({last_checked_at:new Date().toISOString(),last_error:null}).eq('mailbox','info@immo-rama.ch');
+        } catch (error) {
+          const message=error instanceof Error ? error.message : String((error as {message?:string})?.message || error);
+          await supabaseAdmin.from('portal_visit_automation').update({last_error:message}).eq('mailbox','info@immo-rama.ch');
+          result.success=false; result.error=message;
+        }
+      }
       results.push({
         user_id: config.user_id,
         ...result
