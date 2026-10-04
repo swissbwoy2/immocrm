@@ -49,7 +49,7 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
             className="flex min-w-0 flex-1 items-center gap-2 text-left transition-opacity hover:opacity-80"
             aria-label="Ouvrir le menu principal"
           >
-            <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto object-contain" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-6 w-auto object-contain" />
           </button>
           <SilentErrorBoundary>
             <NotificationBell />

@@ -740,7 +740,7 @@ export function AppSidebar() {
           <img
             src={logoLogisorama}
             alt="Logo Logisorama"
-            className="h-10 w-auto object-contain flex-shrink-0"
+            className="h-7 w-auto object-contain flex-shrink-0"
           />
           {!collapsed && <div className="min-w-0 flex-1" />}
           {!collapsed && (

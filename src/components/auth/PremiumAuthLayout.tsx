@@ -221,7 +221,7 @@ export function PremiumAuthLayout({
             <motion.img
               src={logoLogisorama}
               alt="Logisorama"
-              className="h-20 md:h-24 w-auto drop-shadow-xl dark:brightness-0 dark:invert"
+              className="h-12 md:h-14 w-auto drop-shadow-xl dark:brightness-0 dark:invert"
               whileHover={{ scale: 1.05, rotate: [0, -1.5, 1.5, 0] }}
               transition={{ type: 'spring', stiffness: 300, damping: 18 }}
             />
