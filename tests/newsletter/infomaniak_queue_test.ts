@@ -186,6 +186,13 @@ Deno.test("Infomaniak SQL : secrets réservés, verrou, exclusions tardives et a
         [a.id],
       ])
     );
+
+    await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261004102500_newsletter_prepare_ahead.sql', import.meta.url)));
+    await db.exec("update newsletters set status='cancelled' where status='queued'; insert into newsletters(name,subject,html,status,scheduled_at,provider,created_by) values ('Future','Future','<p>Hello</p>','queued',now()+interval '1 hour','infomaniak','11111111-1111-4111-8111-111111111111');");
+    const future = await one("select * from newsletter_infomaniak_claim()");
+    assertEquals(future.name,'Future');
+    assertEquals(future.dispatch_state,'preparing');
+    assertEquals(future.provider_campaign_id,null);
     await db.exec("set role authenticated");
     await assertRejects(() =>
       db.query("select newsletter_infomaniak_credentials()")

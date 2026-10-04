@@ -6,6 +6,7 @@ import {
 import {
   groupRecipients,
   Infomaniak,
+  InfomaniakError,
   infomaniakHtml,
   immediateScheduleStart,
   sameAudience,
@@ -143,4 +144,18 @@ Deno.test("Ciblage Infomaniak : groupe unique, aucune audience globale, lien fou
     ),
     '<p>Bonjour</p><a href="https://logisorama.ch/nouveau-mandat">CTA</a>',
   );
+});
+
+Deno.test("Only a definite subscriber email rejection can be skipped", async () => {
+  for (const [status, code, attribute, endpoint, expected] of [
+    [422,"validation_rule_email","email","/subscribers",true],
+    [422,"validation_rule_unique","email","/subscribers",false],
+    [422,"validation_rule_email","email","/campaigns",false],
+    [429,"validation_rule_email","email","/subscribers",false],
+    [401,"validation_rule_email","email","/subscribers",false],
+  ] as const) {
+    const api = new Infomaniak(config, (() => Promise.resolve(new Response(JSON.stringify({result:"error",error:{code:"validation_failed",errors:[{code,context:{attribute}}]}}),{status}))) as typeof fetch,0);
+    const error = await assertRejects(()=>api.call(endpoint,"POST",{}));
+    assertEquals(error instanceof InfomaniakError && error.invalidEmail,expected);
+  }
 });
