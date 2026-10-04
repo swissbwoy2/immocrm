@@ -15,7 +15,7 @@ Deno.test("Infomaniak SQL : secrets réservés, verrou, exclusions tardives et a
       create function public.has_role(uuid,text) returns boolean language sql as $$select false$$;
       create function cron.schedule(text,text,text) returns bigint language sql as $$select 1::bigint$$;
       create table public.email_unsubscribe_tokens(id uuid primary key default gen_random_uuid(),email text not null unique,token text not null unique);
-      create table public.email_unsubscribes(id uuid primary key default gen_random_uuid(),email text not null,campaign_key text,source text);
+      create table public.email_unsubscribes(id uuid primary key default gen_random_uuid(),email text not null,campaign_key text,source text constraint email_unsubscribes_source_check check(source in ('link','manual','bounce','complaint')));
       insert into auth.users values ('11111111-1111-4111-8111-111111111111');`,
     );
     await db.exec(
@@ -46,6 +46,9 @@ Deno.test("Infomaniak SQL : secrets réservés, verrou, exclusions tardives et a
         ),
       ),
     );
+    await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261004104500_newsletter_provider_optouts.sql', import.meta.url)));
+    await db.query("select newsletter_record_optouts(array['provider-optout@example.ch'])");
+    assertEquals((await db.query("select source from email_unsubscribes where email='provider-optout@example.ch'")).rows,[{source:'infomaniak_newsletter_sync'}]);
     const one = async (sql: string, args: unknown[] = []) =>
       (await db.query<Record<string, unknown>>(sql, args)).rows[0];
     const a = await one(
