@@ -8283,6 +8283,36 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_meta_forms: {
+        Row: {
+          category_override: string | null
+          first_seen_at: string
+          form_id: string
+          form_name: string
+          last_seen_at: string
+          page_id: string | null
+          question_names: Json
+        }
+        Insert: {
+          category_override?: string | null
+          first_seen_at?: string
+          form_id: string
+          form_name?: string
+          last_seen_at?: string
+          page_id?: string | null
+          question_names?: Json
+        }
+        Update: {
+          category_override?: string | null
+          first_seen_at?: string
+          form_id?: string
+          form_name?: string
+          last_seen_at?: string
+          page_id?: string | null
+          question_names?: Json
+        }
+        Relationships: []
+      }
       newsletter_test_requests: {
         Row: {
           created_at: string
@@ -14881,6 +14911,7 @@ export type Database = {
         }
       }
       newsletter_classify: { Args: { p: Json }; Returns: Json }
+      newsletter_classify_meta: { Args: { p: Json }; Returns: Json }
       newsletter_enqueue: {
         Args: {
           p_id: string
