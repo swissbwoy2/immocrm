@@ -615,8 +615,8 @@ export function AppSidebar() {
       const id = window.requestIdleCallback(warm, { timeout: 5000 });
       return () => { cancelled = true; window.cancelIdleCallback(id); };
     }
-    const id = window.setTimeout(warm, 2000);
-    return () => { cancelled = true; window.clearTimeout(id); };
+    const id = setTimeout(warm, 2000);
+    return () => { cancelled = true; clearTimeout(id); };
   }, [userRole]);
 
   const handleNavClick = () => {
