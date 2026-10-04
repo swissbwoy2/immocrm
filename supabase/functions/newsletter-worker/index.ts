@@ -125,14 +125,6 @@ Deno.serve(async (req) => {
       });
       return Response.json({ processed: 0 });
     }
-    // Prepare recipients ahead of time, but do not hand off to the provider early.
-    // This also keeps future campaigns cancellable during contact preparation.
-    const scheduled = Date.parse(c.scheduled_at);
-    if (!Number.isFinite(scheduled)) throw new Error("Date de programmation invalide");
-    if (scheduled > Date.now() + 180000) {
-      await update({ worker_error: null, dispatch_retry_at: new Date(scheduled - 180000).toISOString() });
-      return Response.json({ prepared: audience.length });
-    }
     let groupId = c.provider_group_id as number | null;
     if (!groupId) {
       const { data: group } = await provider.call<{ id: number }>(
