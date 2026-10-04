@@ -15,10 +15,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { TablePagination, type PageSize } from "@/components/offres-auto/TablePagination";
-import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
 import { fr } from "date-fns/locale";
 
 const GererOffreDialog = lazy(() => import("@/components/offres-auto/GererOffreDialog").then(m => ({ default: m.GererOffreDialog })));
+
+const SELECT = "id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut, est_deleguee, client_decision, client_confirme_visite_at)";
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
 
@@ -55,6 +56,7 @@ export default function OffresAuto() {
   const [loading, setLoading] = useState(false);
   const [statut, setStatut] = useState<string>("all");
   const [clientQ, setClientQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [dateFrom, setDateFrom] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -64,108 +66,104 @@ export default function OffresAuto() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<"all" | "manual">("all");
-  const [pageAll, setPageAll] = useState(1);
-  const [pageManual, setPageManual] = useState(1);
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(50);
+  const [totalAll, setTotalAll] = useState(0);
+  const [totalManual, setTotalManual] = useState(0);
+  const [stats, setStats] = useState({ today: 0, last7: 0, interesses: 0, refuses: 0, visites: 0, aCompleter: 0 });
 
-  // Deep link: ?offre=<id> (ou ?offreId=<id>) -> ouvre l'offre à traiter
+  useEffect(() => { const t = setTimeout(() => setDebouncedQ(clientQ.trim()), 300); return () => clearTimeout(t); }, [clientQ]);
+
+  // Deep link: ?offre=<id> (ou ?offreId=<id>) -> ouvre l'offre à traiter (chargée individuellement)
   useEffect(() => {
     const offreId = searchParams.get("offre") || searchParams.get("offreId");
-    if (!offreId || rows.length === 0) return;
-    const target = rows.find((r) => r.id === offreId);
-    if (!target) return;
-    setEditing(target);
-    const next = new URLSearchParams(searchParams);
-    next.delete("offre");
-    next.delete("offreId");
-    setSearchParams(next, { replace: true });
-  }, [rows, searchParams, setSearchParams]);
+    if (!offreId) return;
+    (async () => {
+      const { data } = await supabase.from("offres").select(SELECT).eq("id", offreId).maybeSingle();
+      if (data) { const [e] = await enrich([data as unknown as Row]); setEditing(e); }
+      const next = new URLSearchParams(searchParams);
+      next.delete("offre"); next.delete("offreId");
+      setSearchParams(next, { replace: true });
+    })();
+  }, [searchParams, setSearchParams]);
+
+  async function enrich(offres: Row[]): Promise<Row[]> {
+    const clientIds = Array.from(new Set(offres.map(o => o.client_id).filter(Boolean)));
+    if (clientIds.length === 0) return offres;
+    const { data: clientsData } = await supabase.from("clients").select("id, user_id").in("id", clientIds);
+    const userIds = Array.from(new Set((clientsData ?? []).map(c => c.user_id).filter(Boolean))) as string[];
+    const clientToUser = new Map<string, string>((clientsData ?? []).map(c => [c.id, c.user_id as string]));
+    let profileByUser = new Map<string, ClientInfo>();
+    if (userIds.length > 0) {
+      const { data: profilesData } = await supabase.from("profiles").select("id, prenom, nom, email").in("id", userIds);
+      profileByUser = new Map((profilesData ?? []).map((p: any) => [p.id as string, { prenom: p.prenom, nom: p.nom, email: p.email }]));
+    }
+    return offres.map(o => ({ ...o, _client: profileByUser.get(clientToUser.get(o.client_id) ?? "") ?? {} }));
+  }
+
+  // Résout la recherche client (nom/email) en liste de client_id côté serveur
+  async function resolveClientIds(q: string): Promise<string[] | null> {
+    if (!q) return null;
+    const safe = q.replace(/[%,()]/g, " ");
+    const { data: profs } = await supabase.from("profiles").select("id")
+      .or(`prenom.ilike.%${safe}%,nom.ilike.%${safe}%,email.ilike.%${safe}%`).limit(500);
+    const uids = (profs ?? []).map((p: any) => p.id);
+    if (uids.length === 0) return [];
+    const { data: cls } = await supabase.from("clients").select("id").in("user_id", uids).limit(1000);
+    return (cls ?? []).map((c: any) => c.id);
+  }
+
+  function applyFilters<T>(q: T, clientIds: string[] | null, withStatut = true): T {
+    let x: any = (q as any).eq("envoi_auto", true);
+    if (dateFrom) x = x.gte("created_at", new Date(dateFrom).toISOString());
+    if (dateTo) { const to = new Date(dateTo); to.setHours(23, 59, 59, 999); x = x.lte("created_at", to.toISOString()); }
+    if (withStatut && statut !== "all") x = x.eq("statut", statut);
+    if (clientIds) x = x.in("client_id", clientIds.length ? clientIds : ["00000000-0000-0000-0000-000000000000"]);
+    return x;
+  }
 
   async function load() {
     setLoading(true);
     try {
-      const { data, error } = await fetchAllPaginated<Row>(() => {
-        let q = supabase
-          .from("offres")
-          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut, est_deleguee, client_decision, client_confirme_visite_at)")
-          .eq("envoi_auto", true)
-          .order("created_at", { ascending: false });
-        if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
-        if (dateTo) {
-          const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
-          q = q.lte("created_at", to.toISOString());
-        }
-        return q;
-      });
+      const clientIds = await resolveClientIds(debouncedQ);
+      const from = (page - 1) * pageSize;
+      let q: any = applyFilters(supabase.from("offres").select(SELECT, { count: "exact" }), clientIds);
+      if (tab === "manual") q = q.eq("needs_agent_action", true);
+      const otherCount: any = applyFilters(supabase.from("offres").select("id", { count: "exact", head: true }), clientIds);
+      const [{ data, error, count }, other] = await Promise.all([
+        q.order("created_at", { ascending: false }).range(from, from + pageSize - 1),
+        tab === "manual" ? otherCount : otherCount.eq("needs_agent_action", true),
+      ]);
       if (error) { console.error("[OffresAuto] load offres", error); setRows([]); return; }
-
-      const offres = (data ?? []) as Row[];
-      const clientIds = Array.from(new Set(offres.map(o => o.client_id).filter(Boolean)));
-
-      if (clientIds.length === 0) { setRows(offres); return; }
-
-      const { data: clientsData } = await supabase
-        .from("clients")
-        .select("id, user_id")
-        .in("id", clientIds);
-
-      const userIds = Array.from(new Set((clientsData ?? []).map(c => c.user_id).filter(Boolean)));
-      const clientToUser = new Map<string, string>((clientsData ?? []).map(c => [c.id, c.user_id as string]));
-
-      let profileByUser = new Map<string, ClientInfo>();
-      if (userIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, prenom, nom, email")
-          .in("id", userIds);
-        profileByUser = new Map((profilesData ?? []).map((p: any) => [p.id as string, { prenom: p.prenom, nom: p.nom, email: p.email }]));
-      }
-
-      const enriched = offres.map(o => ({
-        ...o,
-        _client: profileByUser.get(clientToUser.get(o.client_id) ?? "") ?? {},
-      }));
-      setRows(enriched);
+      if (tab === "manual") { setTotalManual(count ?? 0); setTotalAll(other.count ?? 0); }
+      else { setTotalAll(count ?? 0); setTotalManual(other.count ?? 0); }
+      setRows(await enrich((data ?? []) as Row[]));
     } finally {
       setLoading(false);
     }
   }
 
-
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [dateFrom, dateTo]);
-
-  const filtered = useMemo(() => {
-    return rows.filter(r => {
-      if (statut !== "all" && (r.statut ?? "") !== statut) return false;
-      if (clientQ) {
-        const q = clientQ.toLowerCase();
-        const name = `${r._client?.prenom ?? ""} ${r._client?.nom ?? ""} ${r._client?.email ?? ""}`.toLowerCase();
-        if (!name.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [rows, statut, clientQ]);
-
-  const manual = useMemo(() => filtered.filter(needsManualAction), [filtered]);
-
-  // Reset to page 1 when filters or page size change
-  useEffect(() => { setPageAll(1); setPageManual(1); }, [statut, clientQ, dateFrom, dateTo, pageSize]);
-
-  const pagedAll = useMemo(() => filtered.slice((pageAll - 1) * pageSize, pageAll * pageSize), [filtered, pageAll, pageSize]);
-  const pagedManual = useMemo(() => manual.slice((pageManual - 1) * pageSize, pageManual * pageSize), [manual, pageManual, pageSize]);
-
-  const stats = useMemo(() => {
+  async function loadStats() {
     const now = new Date();
     const startToday = new Date(now); startToday.setHours(0, 0, 0, 0);
     const start7 = new Date(now); start7.setDate(now.getDate() - 7);
-    const today = rows.filter(r => new Date(r.created_at) >= startToday);
-    const last7 = rows.filter(r => new Date(r.created_at) >= start7);
-    const interesses = rows.filter(r => r.statut === "interesse").length;
-    const refuses = rows.filter(r => r.statut === "refuse" || r.statut === "refusee").length;
-    const visites = rows.filter(r => (r.visites ?? []).some(v => v.date_visite)).length;
-    const aCompleter = rows.filter(r => r.needs_agent_action).length;
-    return { today: today.length, last7: last7.length, interesses, refuses, visites, aCompleter };
-  }, [rows]);
+    const base = () => applyFilters(supabase.from("offres").select("id", { count: "exact", head: true }) as any, null, false) as any;
+    const res = await Promise.all([
+      base().gte("created_at", startToday.toISOString()),
+      base().gte("created_at", start7.toISOString()),
+      base().eq("statut", "interesse"),
+      base().in("statut", ["refuse", "refusee"]),
+      applyFilters(supabase.from("offres").select("id, visites!inner(id)", { count: "exact", head: true }) as any, null, false).not("visites.date_visite", "is", null),
+      base().eq("needs_agent_action", true),
+    ]);
+    const [today, last7, interesses, refuses, visites, aCompleter] = res.map((r: any) => r.count ?? 0);
+    setStats({ today, last7, interesses, refuses, visites, aCompleter });
+  }
+
+  // Reset à la page 1 quand filtre/recherche/taille/onglet change
+  useEffect(() => { setPage(1); }, [statut, debouncedQ, dateFrom, dateTo, pageSize, tab]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [page, pageSize, statut, debouncedQ, dateFrom, dateTo, tab]);
+  useEffect(() => { loadStats(); /* eslint-disable-next-line */ }, [dateFrom, dateTo]);
 
 
   return (
@@ -175,7 +173,7 @@ export default function OffresAuto() {
           <h1 className="text-2xl font-bold">Offres automatiques</h1>
           <p className="text-sm text-muted-foreground">Suivi des offres créées par la routine Auto-Offres.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => { load(); loadStats(); }} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
       </div>
@@ -222,19 +220,19 @@ export default function OffresAuto() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "manual")}>
         <TabsList>
-          <TabsTrigger value="all">Toutes ({filtered.length})</TabsTrigger>
+          <TabsTrigger value="all">Toutes ({totalAll})</TabsTrigger>
           <TabsTrigger value="manual">
             <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />
-            À gérer manuellement ({manual.length})
+            À gérer manuellement ({totalManual})
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <OffresTable rows={pagedAll} onEdit={setEditing} />
-          <TablePagination total={filtered.length} page={pageAll} pageSize={pageSize} onPageChange={setPageAll} onPageSizeChange={setPageSize} />
+          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresTable rows={rows} onEdit={setEditing} /></div>
+          <TablePagination total={totalAll} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </TabsContent>
         <TabsContent value="manual">
-          <OffresTable rows={pagedManual} showMissing onEdit={setEditing} />
-          <TablePagination total={manual.length} page={pageManual} pageSize={pageSize} onPageChange={setPageManual} onPageSizeChange={setPageSize} />
+          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresTable rows={rows} showMissing onEdit={setEditing} /></div>
+          <TablePagination total={totalManual} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </TabsContent>
 
       </Tabs>
