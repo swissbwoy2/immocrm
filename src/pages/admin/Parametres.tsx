@@ -14,9 +14,12 @@ import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { AdminDefaultGoalsManager } from '@/components/stats/AdminDefaultGoalsManager';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 import { DashboardBannerManager } from '@/components/settings/DashboardBannerManager';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminParametres() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -200,6 +203,28 @@ export default function AdminParametres() {
         </div>
 
         <div className="grid gap-6 max-w-2xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Naviguer en tant que</CardTitle>
+              <CardDescription>Accéder à un autre espace sans changer de compte.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select onValueChange={(path) => navigate(path)}>
+                <SelectTrigger aria-label="Naviguer en tant que" className="min-h-11 w-full sm:max-w-xs">
+                  <SelectValue placeholder="Choisir un espace" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="/agent">Agent</SelectItem>
+                  <SelectItem value="/client">Client</SelectItem>
+                  <SelectItem value="/candidat">Candidat</SelectItem>
+                  <SelectItem value="/proprietaire">Propriétaire</SelectItem>
+                  <SelectItem value="/coursier">Coursier</SelectItem>
+                  <SelectItem value="/apporteur">Apporteur</SelectItem>
+                  <SelectItem value="/espace-annonceur">Annonceur</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
           {/* Forcer la mise à jour */}
           <Card className="border-orange-500/30 bg-orange-500/5">
             <CardHeader>
