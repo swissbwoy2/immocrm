@@ -515,6 +515,7 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
   handleNavClick: () => void;
   isRootPath: (path: string) => boolean;
 }) {
+  const { pathname } = useLocation();
   const label = section.label ?? 'Au quotidien';
   const storageKey = `logisorama.sidebar-section.${role}.${label}`;
   const [open, setOpen] = useState(() => {
@@ -525,13 +526,14 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
     setOpen(next);
     try { localStorage.setItem(storageKey, next ? 'open' : 'closed'); } catch { /* storage unavailable */ }
   };
-  const visible = collapsed || searching || open;
+  const containsActiveRoute = section.items.some(item => pathname === item.path || (!isRootPath(item.path) && pathname.startsWith(`${item.path}/`)));
+  const visible = collapsed || searching || open || containsActiveRoute;
 
   return (
     <SidebarGroup>
       {!collapsed && (
         <SidebarGroupLabel asChild className="h-auto px-1 pt-3 pb-1">
-          <Button variant="ghost" type="button" onClick={toggle} aria-expanded={searching || open}
+          <Button variant="ghost" type="button" onClick={toggle} aria-expanded={visible}
             className="flex h-9 w-full justify-between px-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground">
             <span className="truncate">{label}</span>
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${visible ? '' : '-rotate-90'}`} />
@@ -665,7 +667,7 @@ export function AppSidebar() {
       // Insère juste après le "Tableau de bord" (premier élément) du premier bloc
       items.splice(1, 0, portail);
     }
-    if ((userRole === 'admin' || userRole === 'agent') && !items.some((i) => i.path === '/admin/portail-bannieres')) {
+    if (userRole === 'agent' && !items.some((i) => i.path === '/admin/portail-bannieres')) {
       const idx = items.findIndex((i) => i.path === '/annonces');
       items.splice(idx >= 0 ? idx + 1 : items.length, 0, { name: 'Bannières du portail', icon: Globe, path: '/admin/portail-bannieres', notifKey: null });
     }
