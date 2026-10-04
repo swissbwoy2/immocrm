@@ -1,5 +1,5 @@
 import { RoleSwitcher } from '@/components/RoleSwitcher';
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy} from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy, ChevronDown, Search } from 'lucide-react';
 import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -11,7 +11,6 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
   SidebarHeader,
@@ -34,6 +33,7 @@ import { useWhatsAppUnreadCount } from '@/hooks/useWhatsAppUnreadCount';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { setClientParcoursType } from '@/lib/notificationLinks';
+import { Input } from '@/components/ui/input';
 
 
 interface MenuItem {
@@ -53,101 +53,112 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'admin':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
             { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
-            { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
             { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
-            { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
+            { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
           ],
         },
         {
-          label: 'Équipe',
-          items: [
-            { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
-            { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
-            { name: 'Referrals', icon: Link, path: '/admin/referrals', notifKey: null },
-            { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
-          ],
-        },
-        {
-          label: 'Clients & Mandats',
+          label: 'Clients et mandats',
           items: [
             { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
-
-
-
-            { name: 'Leads Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
-            { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
-            { name: 'Newsletter', icon: Mail, path: '/admin/newsletter', notifKey: null },
-            { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },
-            { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
+            { name: 'Demandes d’activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
             { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
-            { name: 'Suivi extraits', icon: ShieldCheck, path: '/admin/suivi-extraits', notifKey: null },
-            { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
-            { name: 'Déposer candidature', icon: Clipboard, path: '/admin/deposer-candidature', notifKey: null },
-            { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
+            { name: 'Extraits de poursuites', icon: ShieldCheck, path: '/admin/suivi-extraits', notifKey: null },
           ],
         },
         {
-          label: 'Immobilier',
+          label: 'Offres et visites',
+          items: [
+            { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
+            { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
+            { name: 'Offres à suivre', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
+            { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
+            { name: 'Matching automatique', icon: Bot, path: '/admin/auto-offres', notifKey: null },
+            { name: 'Suivi des offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
+          ],
+        },
+        {
+          label: 'Candidatures',
+          items: [
+            { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
+            { name: 'Déposer une candidature', icon: Clipboard, path: '/admin/deposer-candidature', notifKey: null },
+            { name: 'Postulations', icon: Mailbox, path: '/admin/postulations', notifKey: 'postulations' },
+            { name: 'Candidats location', icon: Inbox, path: '/admin/candidatures-relocation', notifKey: null },
+          ],
+        },
+        {
+          label: 'Biens et projets',
           items: [
             { name: 'Propriétaires', icon: Home, path: '/admin/proprietaires', notifKey: 'new_proprietaire_invited' },
             { name: 'Biens en vente', icon: Building2, path: '/admin/biens-vente', notifKey: null },
             { name: 'Intérêts acheteurs', icon: Heart, path: '/admin/interets-acheteurs', notifKey: 'new_interet_acheteur' },
-            { name: 'Projets développement', icon: HardHat, path: '/admin/projets-developpement', notifKey: 'new_projet_developpement' },
+            { name: 'Projets de développement', icon: HardHat, path: '/admin/projets-developpement', notifKey: 'new_projet_developpement' },
             { name: 'Rénovation', icon: HardHat, path: '/admin/renovation', notifKey: null },
-            { name: 'Annonces Publiques', icon: Globe, path: '/admin/annonces-publiques', notifKey: null },
-            { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
           ],
         },
         {
-          label: 'Communications',
+          label: 'Communication et marketing',
           items: [
-            { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
-            { name: 'Auto-Offres', icon: Bot, path: '/admin/auto-offres', notifKey: null },
-            { name: 'Offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
-            { name: '📮 Postulations', icon: Mailbox, path: '/admin/postulations', notifKey: 'postulations' },
-            { name: 'Candidats location', icon: Inbox, path: '/admin/candidatures-relocation', notifKey: null },
-            { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
-            { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
-            { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
-            { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
-            { name: 'Inbox WhatsApp', icon: MessageSquare, path: '/admin/whatsapp', notifKey: 'whatsapp_unread' },
-            { name: 'Logs WhatsApp', icon: History, path: '/admin/whatsapp-notifications', notifKey: null },
+            { name: 'Écrire un e-mail', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
+            { name: 'Historique des e-mails', icon: History, path: '/admin/historique-emails', notifKey: null },
+            { name: 'WhatsApp', icon: MessageSquare, path: '/admin/whatsapp', notifKey: 'whatsapp_unread' },
+            { name: 'Historique WhatsApp', icon: History, path: '/admin/whatsapp-notifications', notifKey: null },
+            { name: 'Prospects Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
+            { name: 'Prospects Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
+            { name: 'Newsletter', icon: Mail, path: '/admin/newsletter', notifKey: null },
+            { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },
+            { name: 'Statistiques marketing', icon: TrendingUp, path: '/admin/analytics', notifKey: null },
+          ],
+        },
+        {
+          label: 'Équipe et partenaires',
+          items: [
+            { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
+            { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
+            { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
+            { name: 'Recommandations', icon: Link, path: '/admin/referrals', notifKey: null },
+            { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
+            { name: 'Statistiques des agents', icon: TrendingUp, path: '/admin/statistiques-agents', notifKey: null },
           ],
         },
         {
           label: 'Finances',
           items: [
+            { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
             { name: 'Factures AbaNinja', icon: Receipt, path: '/admin/factures-abaninja', notifKey: null },
-            { name: 'Salaires', icon: Wallet, path: '/admin/salaires', notifKey: null },
             { name: 'Registre commissions', icon: Receipt, path: '/admin/registre-commissions', notifKey: null },
+            { name: 'Salaires', icon: Wallet, path: '/admin/salaires', notifKey: null },
             { name: 'Salaires par agent', icon: Wallet, path: '/admin/salaires-agents', notifKey: null },
-            { name: 'Statistiques Agents', icon: TrendingUp, path: '/admin/statistiques-agents', notifKey: null },
-            { name: 'Analytics Marketing', icon: TrendingUp, path: '/admin/analytics', notifKey: null },
           ],
         },
         {
-          label: 'Outils',
+          label: 'Documents et contacts',
           items: [
             { name: 'Documents', icon: FileText, path: '/admin/documents', notifKey: null },
-            
-            
-            
             { name: 'Modèles de demande', icon: FileText, path: '/admin/modeles-demande-location', notifKey: null },
             { name: 'Contacts', icon: Contact, path: '/admin/contacts', notifKey: null },
-            { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
-            { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
-            
           ],
         },
         {
-          label: 'Système',
+          label: 'Portail immobilier',
           items: [
+            { name: 'Annonces publiques', icon: Globe, path: '/admin/annonces-publiques', notifKey: null },
+            { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
+            { name: 'Portail d’annonces', icon: Globe, path: '/annonces', notifKey: null },
+            { name: 'Espace annonceur', icon: Megaphone, path: '/espace-annonceur', notifKey: null },
+            { name: 'Bannières du portail', icon: Globe, path: '/admin/portail-bannieres', notifKey: null },
+          ],
+        },
+        {
+          label: 'Aide et paramètres',
+          items: [
+            { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
             { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
           ],
         },
@@ -156,7 +167,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'agent':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
@@ -176,7 +187,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Matching & Visites',
+          label: 'Offres et visites',
           items: [
             { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
             { name: 'Carte', icon: MapPin, path: '/agent/carte', notifKey: null },
@@ -185,7 +196,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Transactions',
+          label: 'Offres et transactions',
           items: [
             { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
             { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
@@ -197,7 +208,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Communications',
+          label: 'Communication et marketing',
           items: [
             { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
@@ -206,7 +217,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Outils',
+          label: 'Documents et contacts',
           items: [
             { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
             
@@ -217,13 +228,13 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Aide & Formation',
+          label: 'Aide et formation',
           items: [
             { name: 'Formation', icon: GraduationCap, path: '/agent/formation', notifKey: null },
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
           ],
@@ -234,7 +245,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       if (parcoursType === 'achat') {
         return [
           {
-            label: null,
+            label: 'Au quotidien',
             items: [
               { name: 'Tableau de bord', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -260,7 +271,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             ],
           },
           {
-            label: 'Système',
+            label: 'Aide et paramètres',
             items: [
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
@@ -271,7 +282,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       if (parcoursType === 'renovation') {
         return [
           {
-            label: null,
+            label: 'Au quotidien',
             items: [
               { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -287,7 +298,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             ],
           },
           {
-            label: 'Système',
+            label: 'Aide et paramètres',
             items: [
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
@@ -297,7 +308,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       if (parcoursType === 'vente') {
         return [
           {
-            label: null,
+            label: 'Au quotidien',
             items: [
               { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -312,7 +323,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             ],
           },
           {
-            label: 'Système',
+            label: 'Aide et paramètres',
             items: [
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
@@ -322,7 +333,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       // Default: location / relocation
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -351,7 +362,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
           ],
@@ -362,7 +373,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'apporteur':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/apporteur', notifKey: null },
             { name: 'Notifications', icon: Bell, path: '/apporteur/notifications', notifKey: 'total' },
@@ -377,7 +388,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Mon compte',
+          label: 'Mon compte et paramètres',
           items: [
             { name: 'Mon contrat', icon: FileText, path: '/apporteur/mon-contrat', notifKey: null },
             { name: 'Mon profil', icon: User, path: '/apporteur/profil', notifKey: null },
@@ -389,7 +400,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'proprietaire':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/proprietaire', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/proprietaire/messagerie', notifKey: 'new_message' },
@@ -408,7 +419,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Gestion',
+          label: 'Gestion et documents',
           items: [
             { name: 'Comptabilité', icon: DollarSign, path: '/proprietaire/comptabilite', notifKey: null },
             { name: 'Baux', icon: FileText, path: '/proprietaire/baux', notifKey: null },
@@ -419,7 +430,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/proprietaire/parametres', notifKey: null },
           ],
@@ -429,13 +440,13 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'coursier':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/coursier', notifKey: null },
           ],
         },
         {
-          label: 'Missions',
+          label: 'Offres et visites',
           items: [
             { name: 'Missions disponibles', icon: CalendarCheck, path: '/coursier/missions', notifKey: null },
             { name: 'Carte', icon: Home, path: '/coursier/carte', notifKey: null },
@@ -444,7 +455,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/coursier/parametres', notifKey: null },
           ],
@@ -454,7 +465,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'closeur':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/closeur', notifKey: null },
             { name: 'Leads', icon: Target, path: '/closeur', notifKey: null },
@@ -465,7 +476,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'candidat':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/candidat', notifKey: null },
             { name: 'Mes candidatures', icon: FileText, path: '/candidat/candidatures', notifKey: null },
@@ -490,11 +501,92 @@ const roleLabels: Record<string, string> = {
   candidat: 'Candidat',
 };
 
+const normalizeMenuText = (value: string) =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr').trim();
+
+function NavigationSection({ section, role, collapsed, searching, getNotificationCount, hasDrafts, handleNavClick, isRootPath }: {
+  section: MenuSection;
+  role: string;
+  collapsed: boolean;
+  searching: boolean;
+  getNotificationCount: (key: string | null) => number;
+  hasDrafts: boolean;
+  handleNavClick: () => void;
+  isRootPath: (path: string) => boolean;
+}) {
+  const { pathname } = useLocation();
+  const label = section.label ?? 'Au quotidien';
+  const storageKey = `logisorama.sidebar-section.${role}.${label}`;
+  const [open, setOpen] = useState(() => {
+    try { return localStorage.getItem(storageKey) !== 'closed'; } catch { return true; }
+  });
+  useEffect(() => {
+    if (section.items.some(item => pathname === item.path || (!isRootPath(item.path) && pathname.startsWith(`${item.path}/`)))) {
+      setOpen(true);
+    }
+  }, [pathname, storageKey]);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try { localStorage.setItem(storageKey, next ? 'open' : 'closed'); } catch { /* storage unavailable */ }
+  };
+  const visible = collapsed || searching || open;
+
+  return (
+    <SidebarGroup>
+      {!collapsed && (
+        <SidebarGroupLabel asChild className="h-auto px-1 pt-3 pb-1">
+          <Button variant="ghost" type="button" onClick={toggle} aria-expanded={visible}
+            className="flex h-9 w-full justify-between px-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground">
+            <span className="truncate">{label}</span>
+            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${visible ? '' : '-rotate-90'}`} />
+          </Button>
+        </SidebarGroupLabel>
+      )}
+      {visible && <SidebarGroupContent>
+        <SidebarMenu>
+          {section.items.map((item) => {
+            const notifCount = getNotificationCount(item.notifKey);
+            const showDraftIndicator = hasDrafts && item.path === '/agent/envoyer-offre';
+
+            return (
+              <SidebarMenuItem key={item.path}>
+                {collapsed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <NavLink to={item.path} end={isRootPath(item.path)}
+                        className="flex items-center justify-center w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors duration-150 relative"
+                        activeClassName="bg-sidebar-primary/15 text-sidebar-primary" onClick={handleNavClick}>
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        {notifCount > 0 && <NotificationBadge count={notifCount} className="absolute -top-1 -right-1" />}
+                        {showDraftIndicator && <FileEdit className="w-3 h-3 absolute -top-1 -right-1 text-orange-500" />}
+                      </NavLink>
+                    </TooltipTrigger>
+                    <TooltipContent side="right"><p>{item.name}{notifCount > 0 && ` (${notifCount})`}{showDraftIndicator && ' 📝'}</p></TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <NavLink to={item.path} end={isRootPath(item.path)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden"
+                    activeClassName="bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active" onClick={handleNavClick}>
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />
+                    <item.icon className="w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105" />
+                    <span className="truncate flex-1 text-sm">{item.name}</span>
+                    {showDraftIndicator && <span className="text-orange-500 text-xs animate-pulse" title="Brouillons sauvegardés"><FileEdit className="w-3 h-3" /></span>}
+                    {notifCount > 0 && <NotificationBadge count={notifCount} />}
+                  </NavLink>
+                )}
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>}
+    </SidebarGroup>
+  );
+}
+
 export function AppSidebar() {
   const { state, setOpenMobile, isMobile } = useSidebar();
-  const collapsed = state === 'collapsed';
-  const location = useLocation();
-  const navigate = useNavigate();
+  const collapsed = state === 'collapsed' && !isMobile;
   const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
@@ -503,6 +595,7 @@ export function AppSidebar() {
   );
   const postulationsCount = usePostulationsCount(userRole);
   const [hasDrafts, setHasDrafts] = useState(false);
+  const [search, setSearch] = useState('');
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -566,6 +659,7 @@ export function AppSidebar() {
   const sections = useMemo(() => {
     const base = getMenuForRole(userRole || '', profile?.parcours_type);
     if (!base.length) return base;
+    if (userRole === 'admin') return base;
     const portail: MenuItem = { name: "Portail d'annonces", icon: Globe, path: '/annonces', notifKey: null };
     const espaceAnnonceur: MenuItem = { name: 'Espace annonceur', icon: Megaphone, path: '/espace-annonceur', notifKey: null };
     const [first, ...rest] = base;
@@ -574,7 +668,7 @@ export function AppSidebar() {
       // Insère juste après le "Tableau de bord" (premier élément) du premier bloc
       items.splice(1, 0, portail);
     }
-    if ((userRole === 'admin' || userRole === 'agent') && !items.some((i) => i.path === '/admin/portail-bannieres')) {
+    if (userRole === 'agent' && !items.some((i) => i.path === '/admin/portail-bannieres')) {
       const idx = items.findIndex((i) => i.path === '/annonces');
       items.splice(idx >= 0 ? idx + 1 : items.length, 0, { name: 'Bannières du portail', icon: Globe, path: '/admin/portail-bannieres', notifKey: null });
     }
@@ -584,6 +678,15 @@ export function AppSidebar() {
     }
     return [{ ...first, items }, ...rest];
   }, [userRole, profile?.parcours_type]);
+
+  const filteredSections = useMemo(() => {
+    const term = normalizeMenuText(search);
+    if (!term) return sections;
+    return sections.map(section => ({
+      ...section,
+      items: section.items.filter(item => normalizeMenuText(item.name).includes(term)),
+    })).filter(section => section.items.length > 0);
+  }, [sections, search]);
 
 
   if (!user || !userRole) return null;
@@ -648,73 +751,19 @@ export function AppSidebar() {
       )}
 
       <SidebarContent>
-        {sections.map((section, si) => (
-          <SidebarGroup key={si}>
-            {!collapsed && section.label && (
-              <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 font-semibold px-3 pt-3 pb-1 select-none">
-                {section.label}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {section.items.map((item) => {
-                  const notifCount = getNotificationCount(item.notifKey);
-                  const showDraftIndicator = hasDrafts && item.path === '/agent/envoyer-offre';
-
-                  return (
-                    <SidebarMenuItem key={item.path}>
-                      {collapsed ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <NavLink
-                              to={item.path}
-                              end={isRootPath(item.path)}
-                              className="flex items-center justify-center w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors duration-150 relative"
-                              activeClassName="bg-sidebar-primary/15 text-sidebar-primary"
-                              onClick={handleNavClick}
-                            >
-                              <item.icon className="w-5 h-5 flex-shrink-0" />
-                              {notifCount > 0 && (
-                                <NotificationBadge count={notifCount} className="absolute -top-1 -right-1" />
-                              )}
-                              {showDraftIndicator && (
-                                <FileEdit className="w-3 h-3 absolute -top-1 -right-1 text-orange-500" />
-                              )}
-                            </NavLink>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            <p>
-                              {item.name}
-                              {notifCount > 0 && ` (${notifCount})`}
-                              {showDraftIndicator && ' 📝'}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <NavLink
-                          to={item.path}
-                          end={isRootPath(item.path)}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden"
-                          activeClassName="bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active"
-                          onClick={handleNavClick}
-                        >
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />
-                          <item.icon className="w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105" />
-                          <span className="truncate flex-1 text-sm">{item.name}</span>
-                          {showDraftIndicator && (
-                            <span className="text-orange-500 text-xs animate-pulse" title="Brouillons sauvegardés">
-                              <FileEdit className="w-3 h-3" />
-                            </span>
-                          )}
-                          {notifCount > 0 && <NotificationBadge count={notifCount} />}
-                        </NavLink>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+        {!collapsed && <div className="sticky top-0 z-10 bg-sidebar px-3 pt-3 pb-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60" />
+            <Input value={search} onChange={event => setSearch(event.target.value)}
+              aria-label="Rechercher une rubrique" placeholder="Rechercher une rubrique…"
+              className="h-10 bg-sidebar-accent/40 pl-9 text-sidebar-foreground placeholder:text-sidebar-foreground/55" />
+          </div>
+        </div>}
+        {filteredSections.map((section) => (
+          <NavigationSection key={`${userRole}.${section.label}`} section={section} role={userRole}
+            collapsed={collapsed} searching={!!normalizeMenuText(search)}
+            getNotificationCount={getNotificationCount} hasDrafts={hasDrafts}
+            handleNavClick={handleNavClick} isRootPath={isRootPath} />
         ))}
       </SidebarContent>
 
