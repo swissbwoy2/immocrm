@@ -49,7 +49,22 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
             className="flex min-w-0 flex-1 items-center gap-2 text-left transition-opacity hover:opacity-80"
             aria-label="Ouvrir le menu principal"
           >
-            <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto object-contain" />
+            <span
+              role="img"
+              aria-label="Logisorama"
+              className="h-7 w-24"
+              style={{
+                maskImage: `url(${logoLogisorama})`,
+                WebkitMaskImage: `url(${logoLogisorama})`,
+                maskSize: 'contain',
+                WebkitMaskSize: 'contain',
+                maskRepeat: 'no-repeat',
+                WebkitMaskRepeat: 'no-repeat',
+                maskPosition: 'left center',
+                WebkitMaskPosition: 'left center',
+                backgroundColor: 'hsl(var(--imr-green))',
+              }}
+            />
           </button>
           <SilentErrorBoundary>
             <NotificationBell />

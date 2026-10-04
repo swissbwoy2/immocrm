@@ -44,6 +44,9 @@ All colors MUST be HSL.
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
+    /* Vert de marque Logisorama (même teinte que les boutons principaux verts) */
+    --imr-green: 158 55% 38%;
+
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
 
