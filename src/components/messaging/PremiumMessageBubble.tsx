@@ -1,4 +1,5 @@
 import React from 'react';
+import { LinkifiedText } from './LinkifiedText';
 import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
 import { formatSwissTime } from '@/lib/dateUtils';
@@ -106,7 +107,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
               )}
               style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             >
-              {content}
+              <LinkifiedText text={content} />
             </p>
           )}
 

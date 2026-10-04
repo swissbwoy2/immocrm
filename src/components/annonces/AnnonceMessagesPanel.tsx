@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LinkifiedText } from '@/components/messaging/LinkifiedText';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -365,7 +366,7 @@ export function AnnonceMessagesPanel({
                             : 'bg-muted text-foreground rounded-bl-sm',
                         )}
                       >
-                        {m.contenu && <p className="whitespace-pre-wrap break-words">{m.contenu}</p>}
+                        {m.contenu && <p className="whitespace-pre-wrap break-words"><LinkifiedText text={m.contenu} /></p>}
                         {m.piece_jointe_url && (
                           <button
                             onClick={() => openAttachment(m.piece_jointe_url as string)}
