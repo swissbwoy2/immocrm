@@ -13,7 +13,7 @@ export function PublicFooter() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto invert" />
+              <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto bg-background" />
               <span className="font-bold text-lg">Annonces</span>
             </div>
             <p className="text-sidebar-foreground/70 text-sm mb-4">

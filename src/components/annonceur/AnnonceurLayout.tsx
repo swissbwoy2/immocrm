@@ -144,7 +144,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border">
           <Link to="/espace-annonceur" className="flex items-center gap-2">
-            <img src={logoLogisorama} alt="Logisorama" className="h-8 invert" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-8 bg-background" />
             <span className="font-semibold">Espace Annonceur</span>
           </Link>
         </div>

@@ -40,7 +40,7 @@ export function VendeurFloatingNav() {
             >
               <img 
                 src={logo} 
-                alt="Logo Immo-Rama" 
+                alt="Logo Logisorama" 
                 className="h-8 w-auto"
               />
             </Link>

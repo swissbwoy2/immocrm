@@ -35,7 +35,7 @@ export function PremiumFormShell({ children, currentStep, totalSteps, stepLabels
       {/* Sticky header — logo + compteur uniquement (progression gérée par PremiumProgressBlock) */}
       <div className="sticky top-0 z-40 border-b border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_15%_8%/0.9)] backdrop-blur-xl">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
+          <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto bg-background" />
           {currentStep !== undefined && totalSteps !== undefined && (
             <span className="text-xs text-[hsl(40_20%_55%)] font-medium tabular-nums">
               {currentStep + 1}/{totalSteps}
