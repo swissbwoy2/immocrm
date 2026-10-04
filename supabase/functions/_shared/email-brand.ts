@@ -1,7 +1,7 @@
 /** Shared identity for transactional emails and the newsletter reference. */
 export const EMAIL_BRAND = {
   site: "https://logisorama.ch",
-  logo: "https://logisorama.ch/__l5e/assets-v1/620cc5b1-18df-42ab-86d6-2ea17731daef/logisorama-email-logo.png",
+  logo: "https://logisorama.ch/email/logo-logisorama.png",
   green: "#205a43",
   dark: "#193d2c",
   cream: "#f3f4ed",
