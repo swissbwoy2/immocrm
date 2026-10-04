@@ -14649,6 +14649,19 @@ export type Database = {
       }
     }
     Functions: {
+      _get_or_create_annonce_conv: {
+        Args: { p_annonce_id: string; p_user_id: string }
+        Returns: string
+      }
+      _post_msg: {
+        Args: {
+          p_content: string
+          p_conv: string
+          p_sender: string
+          p_type: string
+        }
+        Returns: undefined
+      }
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_candidat_searches: { Args: never; Returns: undefined }
@@ -15485,6 +15498,10 @@ export type Database = {
       staff_update_candidature_location: {
         Args: { _action: string; _date?: string; _id: string; _motif?: string }
         Returns: undefined
+      }
+      staff_valider_preselection: {
+        Args: { p_candidature_id: string; p_motif?: string; p_retenu: boolean }
+        Returns: string
       }
       start_candidat_trial: { Args: never; Returns: string }
       track_email_click: {
