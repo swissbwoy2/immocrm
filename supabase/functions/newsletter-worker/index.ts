@@ -92,6 +92,14 @@ Deno.serve(async (req) => {
       });
       return Response.json({ preparing: true });
     }
+    // Prepare recipients ahead of time, but do not hand off to the provider early.
+    // This also keeps future campaigns cancellable during contact preparation.
+    const scheduled = Date.parse(c.scheduled_at);
+    if (!Number.isFinite(scheduled)) throw new Error("Date de programmation invalide");
+    if (scheduled > Date.now() + 180000) {
+      await update({ worker_error: null, dispatch_retry_at: new Date(scheduled - 180000).toISOString() });
+      return Response.json({ prepared: audience.length });
+    }
     const blocked = audience.filter((r) =>
       byEmail.get(r.email)?.status !== "active"
     ).map((r) => r.email);
