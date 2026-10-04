@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock } from 'lucide-react';
+import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock, type LucideIcon } from 'lucide-react';
 import logo from '@/assets/logisorama-logo.png';
 
 interface PublicSiteMenuProps {
