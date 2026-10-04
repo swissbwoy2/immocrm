@@ -67,6 +67,17 @@ export default function AdminCalendrier() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  // Client choices do not depend on the displayed month; do not block the calendar on this large list.
+  useEffect(() => {
+    let active = true;
+    supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)').limit(15000)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) console.error('Clients error:', error);
+        else setClients((data as any) || []);
+      });
+    return () => { active = false; };
+  }, []);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [showEventForm, setShowEventForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -109,7 +120,7 @@ export default function AdminCalendrier() {
       const rangeEndDate = rangeEndIso.slice(0, 10);
 
       // Requêtes filtrées CÔTÉ DB sur la fenêtre de dates affichée
-      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
+      const [eventsRes, visitesRes, agentsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
         fetchAllPaginated(() =>
           supabase.from('calendar_events').select('*')
             .is('visite_id', null)
@@ -124,7 +135,6 @@ export default function AdminCalendrier() {
             .order('date_visite', { ascending: true })
         ),
         supabase.from('agents').select('id, user_id, profiles!agents_user_id_fkey(prenom, nom)'),
-        supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)').limit(15000),
         fetchAllPaginated(() =>
           supabase.from('candidatures')
             .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
@@ -145,7 +155,6 @@ export default function AdminCalendrier() {
         events: eventsRes.data?.length || 0,
         visites: visitesRes.data?.length || 0,
         agents: agentsRes.data?.length || 0,
-        clients: clientsRes.data?.length || 0,
         candidatures: candidaturesRes.data?.length || 0,
         lastVisite: visitesRes.data?.length ? visitesRes.data[visitesRes.data.length - 1]?.date_visite : 'none',
       });
@@ -161,10 +170,6 @@ export default function AdminCalendrier() {
       if (agentsRes.error) {
         console.error('Agents error:', agentsRes.error);
         toast.error('Erreur chargement agents: ' + agentsRes.error.message);
-      }
-      if (clientsRes.error) {
-        console.error('Clients error:', clientsRes.error);
-        toast.error('Erreur chargement clients: ' + clientsRes.error.message);
       }
       if (candidaturesRes.error) {
         console.error('Candidatures error:', candidaturesRes.error);
@@ -244,7 +249,6 @@ export default function AdminCalendrier() {
       setEvents([...(eventsRes.data || []), ...candidatureEvents, ...phoneApptEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
-      setClients((clientsRes.data as any) || []);
       setPhoneAppts((phoneApptsRes.data as any) || []);
       
       if (!eventsRes.error && !visitesRes.error) {
@@ -547,17 +551,9 @@ export default function AdminCalendrier() {
     return client?.profiles ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6" role="status" aria-label="Chargement du calendrier">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-32 rounded bg-muted/40" />
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-auto h-full">
+      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
       {/* Header */}
       <PremiumPageHeader
         title="Calendrier"
