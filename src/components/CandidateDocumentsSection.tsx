@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
 import { RequestDocumentsDialog } from './RequestDocumentsDialog';
 import { getStoragePath } from '@/lib/documentUtils';
+import { getIdentityKind } from '@/lib/identityDocument';
 import { SensitiveDocConsentCheckbox } from '@/components/legal/SensitiveDocConsentCheckbox';
 interface Document {
   id: string;
@@ -43,7 +44,7 @@ interface CandidateDocumentsSectionProps {
 const REQUIRED_DOCUMENTS = [
   { type: 'fiche_salaire', label: '💰 Fiches de salaire (3 dernières)', count: 3 },
   { type: 'extrait_poursuites', label: '📋 Extrait des poursuites (< 3 mois)', count: 1 },
-  { type: 'piece_identite', types: ['piece_identite', 'permis_sejour', 'permis_conduire'], label: '🪪 Pièce d\'identité / Permis', count: 1 },
+  { type: 'piece_identite', types: ['piece_identite', 'permis_sejour'], label: '🪪 Pièce d\'identité / Permis', count: 1 },
   { type: 'attestation_domicile', label: '🏠 Attestation de domicile', count: 1 },
   { type: 'contrat_travail', types: ['contrat_travail', 'attestation_employeur'], label: '📝 Contrat de travail / Attestation employeur', count: 1 },
   { type: 'rc_menage', label: '🛡️ RC Ménage', count: 1 },
@@ -73,6 +74,14 @@ export function CandidateDocumentsSection({
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [typePermis, setTypePermis] = useState<string | null>(null);
+  useEffect(() => {
+    if (!candidatureId) return;
+    (supabase as any).from('candidatures_location').select('type_permis').eq('id', candidatureId).maybeSingle()
+      .then(({ data }: any) => setTypePermis(data?.type_permis ?? null));
+  }, [candidatureId]);
+  const idKind = getIdentityKind(typePermis);
+  const idLabel = idKind === 'permis_sejour' ? '🪪 Permis de séjour (recto + verso)' : "🪪 Pièce d'identité (recto + verso)";
   const [selectedCandidate, setSelectedCandidate] = useState<ClientCandidate | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>('autre');
@@ -113,7 +122,7 @@ export function CandidateDocumentsSection({
   const handleUpload = async () => {
     if (!selectedFile) return;
 
-    const sensitiveTypes = ['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'contrat_travail'];
+    const sensitiveTypes = ['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'permis_sejour', 'contrat_travail'];
     if (sensitiveTypes.includes(documentType) && !uploadConsent) {
       toast.error('Merci de cocher la case de consentement avant l\'upload');
       return;
@@ -277,8 +286,9 @@ export function CandidateDocumentsSection({
     }
   };
 
-  const openUploadForCandidate = (candidate: ClientCandidate | null) => {
+  const openUploadForCandidate = (candidate: ClientCandidate | null, presetType?: string) => {
     setSelectedCandidate(candidate);
+    if (presetType) setDocumentType(presetType);
     setUploadDialogOpen(true);
   };
 
@@ -378,7 +388,13 @@ export function CandidateDocumentsSection({
                     return (
                       <li key={req.type} className="flex items-center gap-2 text-sm">
                         {ok ? <CheckCircle className="w-4 h-4 shrink-0 text-primary" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-muted-foreground" />}
-                        <span className="min-w-0 flex-1">{req.label}</span>
+                        <span className="min-w-0 flex-1">{req.type === 'piece_identite' ? idLabel : req.label}</span>
+                        {!ok && !readOnly && (
+                          <Button size="sm" variant="ghost" className="h-8 px-2 text-xs"
+                            onClick={() => openUploadForCandidate(null, req.type === 'piece_identite' ? idKind : req.type)}>
+                            Ajouter
+                          </Button>
+                        )}
                         <span className={ok ? 'text-primary text-xs' : 'text-muted-foreground text-xs'}>
                           {ok ? 'Fourni' : req.count > 1 ? `${n}/${req.count}` : 'Manquant'}
                         </span>
@@ -528,7 +544,9 @@ export function CandidateDocumentsSection({
                 <SelectContent>
                   <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
                   <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                  {candidatureId
+                    ? <SelectItem value={idKind}>{idLabel}</SelectItem>
+                    : <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>}
                   <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
                   <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
                   <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
@@ -546,7 +564,7 @@ export function CandidateDocumentsSection({
               />
               <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG (max 1GB)</p>
             </div>
-            {['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'contrat_travail'].includes(documentType) && (
+            {['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'permis_sejour', 'contrat_travail'].includes(documentType) && (
               <SensitiveDocConsentCheckbox
                 checked={uploadConsent}
                 onCheckedChange={setUploadConsent}
@@ -561,7 +579,7 @@ export function CandidateDocumentsSection({
               disabled={
                 !selectedFile ||
                 isUploading ||
-                (['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'contrat_travail'].includes(documentType) && !uploadConsent)
+                (['fiche_salaire', 'extrait_poursuites', 'piece_identite', 'permis_sejour', 'contrat_travail'].includes(documentType) && !uploadConsent)
               }
             >
               {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}

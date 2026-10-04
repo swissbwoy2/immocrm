@@ -4,6 +4,7 @@ import { MandatFormData, DocumentData } from './types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LandingDocumentDropzone, UploadedPreview } from '@/components/forms-premium/LandingDocumentDropzone';
+import { getIdentityKind } from '@/lib/identityDocument';
 
 interface Props {
   data: MandatFormData;
@@ -15,10 +16,6 @@ interface Props {
  * - Permis B / C / F / N → permis de séjour (recto + verso)
  * - Suisse / autre        → carte d'identité (recto + verso)
  */
-function getIdentityKind(typePermis: string | undefined): 'permis_sejour' | 'piece_identite' {
-  if (!typePermis) return 'piece_identite';
-  return ['B', 'C', 'F', 'N'].includes(typePermis) ? 'permis_sejour' : 'piece_identite';
-}
 
 const ID_LABELS = {
   piece_identite: { title: "Document d'identité", short: 'identité' },
