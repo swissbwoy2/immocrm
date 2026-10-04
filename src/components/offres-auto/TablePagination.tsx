@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export type PageSize = 10 | 50 | 100;
+export type PageSize = 25 | 50 | 100;
 
 interface Props {
   total: number;
@@ -26,14 +26,14 @@ export function TablePagination({ total, page, pageSize, onPageChange, onPageSiz
         <Select value={String(pageSize)} onValueChange={v => onPageSizeChange(Number(v) as PageSize)}>
           <SelectTrigger className="h-8 w-[80px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="10">10</SelectItem>
+            <SelectItem value="25">25</SelectItem>
             <SelectItem value="50">50</SelectItem>
             <SelectItem value="100">100</SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div className="text-sm text-muted-foreground">
-        {from}–{to} sur {total} {label}
+        {from}–{to} · {total} {label} au total
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={() => onPageChange(current - 1)} disabled={current <= 1}>
