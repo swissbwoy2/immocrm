@@ -1,18 +1,17 @@
+import { RoleNavigation } from '@/components/navigation/RoleNavigation';
+import { getMenuForRole } from '@/lib/sidebarNavigation';
 import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  LayoutDashboard, Building2, Plus, MessageCircle, User,
-  Settings, LogOut, Menu, X, ChevronRight, Bell, Loader2, AlertCircle,
+  MessageCircle, User, LogOut, Menu, Loader2, AlertCircle,
   ArrowLeft, Globe
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { SpaceSwitcher } from '@/components/RoleSwitcher';
 import logoLogisorama from '@/assets/logisorama-logo.png';
 
@@ -22,7 +21,6 @@ interface AnnonceurLayoutProps {
 
 export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
   const { user, session, loading: authLoading, signOut } = useAuth();
-  const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -122,14 +120,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
     );
   }
 
-  const navItems = [
-    { href: '/espace-annonceur', icon: LayoutDashboard, label: 'Tableau de bord' },
-    { href: '/espace-annonceur/mes-annonces', icon: Building2, label: 'Mes annonces' },
-    { href: '/espace-annonceur/nouvelle-annonce', icon: Plus, label: 'Nouvelle annonce' },
-    { href: '/espace-annonceur/messages', icon: MessageCircle, label: 'Messages', badge: unreadCount },
-    { href: '/espace-annonceur/profil', icon: User, label: 'Mon profil' },
-    { href: '/espace-annonceur/parametres', icon: Settings, label: 'Paramètres' },
-  ];
+  const sections = getMenuForRole('annonceur');
 
   const handleLogout = async () => {
     await signOut();
@@ -150,31 +141,9 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.href;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive 
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground' 
-                    : 'hover:bg-sidebar-accent text-sidebar-foreground'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="flex-1">{item.label}</span>
-                {item.badge && item.badge > 0 && (
-                  <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                    {item.badge}
-                  </Badge>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <RoleNavigation sections={sections} getCount={key => key === 'annonceur_unread' ? unreadCount : 0} label="Navigation annonceur" />
+        </div>
 
         {/* User */}
         <div className="p-4 border-t border-sidebar-border space-y-2">
@@ -248,7 +217,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
           <div className="flex items-center gap-2">
             <SpaceSwitcher variant="ghost" className="h-8 px-2 text-xs" />
             <Link to="/espace-annonceur/messages">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative" aria-label="Messagerie">
                 <MessageCircle className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
@@ -260,11 +229,13 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
 
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label="Ouvrir le menu annonceur">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] p-0">
+              <SheetContent side="right" className="flex w-[min(320px,100vw)] flex-col gap-0 bg-sidebar p-0 text-sidebar-foreground">
+                <SheetTitle className="sr-only">Menu de l’espace annonceur</SheetTitle>
+                <SheetDescription className="sr-only">Accédez à vos annonces, messages et paramètres.</SheetDescription>
                 <div className="p-4 border-b">
                   <div className="flex items-center gap-3">
                     {annonceur?.logo_url ? (
@@ -285,34 +256,11 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
                   </div>
                 </div>
 
-                <nav className="p-4 space-y-1">
-                  {navItems.map((item) => {
-                    const isActive = location.pathname === item.href;
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                          isActive 
-                            ? 'bg-primary text-primary-foreground' 
-                            : 'hover:bg-muted'
-                        }`}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && item.badge > 0 && (
-                          <Badge variant="destructive" className="h-5 px-1.5 text-xs">
-                            {item.badge}
-                          </Badge>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </nav>
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <RoleNavigation sections={sections} getCount={key => key === 'annonceur_unread' ? unreadCount : 0} onNavigate={() => setIsMobileMenuOpen(false)} label="Navigation annonceur" />
+                </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t space-y-2">
+                <div className="shrink-0 p-4 border-t space-y-2">
                   <Button variant="outline" className="w-full justify-start" asChild>
                     <Link to="/annonces" onClick={() => setIsMobileMenuOpen(false)}>
                       <ArrowLeft className="h-4 w-4 mr-2" />
