@@ -373,12 +373,9 @@ export default function Visites() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary/30 absolute inset-0" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-        </div>
+      <div className="p-4 md:p-6" role="status" aria-label="Chargement des visites">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 rounded bg-muted/40" />
       </div>
     );
   }

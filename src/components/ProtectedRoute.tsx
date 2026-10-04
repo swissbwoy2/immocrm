@@ -19,8 +19,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   // Ne jamais rediriger tant que l'amorçage ou une récupération silencieuse est en cours.
   if (loading || recovering) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex justify-center py-8 bg-background" role="status" aria-label="Vérification de la session">
+        <div className="animate-spin rounded-full h-5 w-5 border-2 border-muted border-t-primary" />
       </div>
     );
   }

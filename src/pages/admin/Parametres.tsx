@@ -184,8 +184,9 @@ export default function AdminParametres() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement des paramètres">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
       </div>
     );
   }

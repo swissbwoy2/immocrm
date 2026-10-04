@@ -167,12 +167,9 @@ export default function StatistiquesAgents() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="relative animate-spin rounded-full h-12 w-12 border-b-2 border-primary">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div></div>
+      <div className="p-4 md:p-6" role="status" aria-label="Chargement des statistiques">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 rounded bg-muted/40" />
       </div>
     );
   }

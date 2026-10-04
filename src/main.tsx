@@ -47,43 +47,33 @@ if (isPreviewHost || isInIframe) {
   // Jamais de rechargement pendant un appel audio/vidéo en cours.
   const isInCall = () => (window as any).__logisorama_in_call === true;
 
-  // Un seul rechargement quand le nouveau SW prend le contrôle.
+  // Ne recharge qu'après une demande explicite de mise à jour.
   let reloadedOnControllerChange = false;
+  let updateRequested = false;
   navigator.serviceWorker?.addEventListener('controllerchange', () => {
-    if (reloadedOnControllerChange) return;
+    if (reloadedOnControllerChange || !updateRequested) return;
     if (isInCall()) {
-      console.log('[PWA] Reload ignoré : appel en cours.');
+      console.log('[PWA] Mise à jour reportée : appel en cours.');
       return;
     }
     reloadedOnControllerChange = true;
     window.location.reload();
   });
 
-  const isUserBusy = () => {
-    if (isInCall()) return true;
-    const el = document.activeElement as HTMLElement | null;
-    if (!el) return false;
-    return (
-      el.tagName === 'INPUT' ||
-      el.tagName === 'TEXTAREA' ||
-      el.tagName === 'SELECT' ||
-      el.isContentEditable === true
-    );
-  };
-
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
       console.log('[PWA] New version available.');
-      if (!isUserBusy()) {
-        toast('Mise à jour en cours…', { duration: 1200 });
-        setTimeout(() => void updateSW(true), 800);
-        return;
-      }
-      if (isInCall()) return;
       toast('Nouvelle version disponible', {
         duration: Infinity,
-        action: { label: 'Actualiser', onClick: () => void updateSW(true) },
+        action: { label: 'Mettre à jour', onClick: () => {
+          if (isInCall()) {
+            toast.info('Terminez votre appel avant la mise à jour.');
+            return;
+          }
+          updateRequested = true;
+          void updateSW(true);
+        } },
       });
     },
     onOfflineReady() {
@@ -110,8 +100,8 @@ if (isPreviewHost || isInIframe) {
 }
 
 
-// Global safety net: stale lazy chunks after a redeploy → force one clean reload.
-const CHUNK_RELOAD_KEY = '__chunk_reload_at';
+// Global safety net: stale lazy chunks after a redeploy → at most one retry per tab.
+const CHUNK_RELOAD_KEY = '__chunk_reload_attempted';
 const isChunkLoadError = (msg: string) =>
   /Importing a module script failed/i.test(msg) ||
   /Failed to fetch dynamically imported module/i.test(msg) ||
@@ -122,10 +112,9 @@ const handleStaleChunk = (msg: string) => {
   if (!isChunkLoadError(msg)) return;
   if ((window as any).__logisorama_in_call === true) return; // jamais pendant un appel
   try {
-    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || '0');
-    if (Date.now() - last < 60_000) return; // 1 reload max par 60s
-    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
-  } catch {}
+    if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) return;
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+  } catch { return; }
   console.warn('[App] Stale lazy chunk detected, reloading…', { url: window.location.href, msg });
   window.location.reload();
 };

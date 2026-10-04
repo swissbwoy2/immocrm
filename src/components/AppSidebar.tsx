@@ -721,12 +721,7 @@ export function AppSidebar() {
             alt="Logo Logisorama"
             className="h-10 w-auto object-contain flex-shrink-0"
           />
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold text-sidebar-foreground truncate">Logisorama</h1>
-              <p className="text-xs text-sidebar-foreground/60 truncate">by Immo-rama.ch</p>
-            </div>
-          )}
+          {!collapsed && <div className="min-w-0 flex-1" />}
           {!collapsed && (
             <SilentErrorBoundary label="NotificationBell">
               <NotificationBell />
