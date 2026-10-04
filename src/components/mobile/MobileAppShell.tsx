@@ -50,10 +50,6 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
             aria-label="Ouvrir le menu principal"
           >
             <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto object-contain" />
-            <span className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-base font-semibold">Logisorama</span>
-              <span className="truncate text-[10px] text-muted-foreground">by Immo-rama.ch</span>
-            </span>
           </button>
           <SilentErrorBoundary>
             <NotificationBell />
