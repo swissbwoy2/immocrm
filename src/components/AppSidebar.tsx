@@ -587,8 +587,6 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
 export function AppSidebar() {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === 'collapsed' && !isMobile;
-  const location = useLocation();
-  const navigate = useNavigate();
   const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
