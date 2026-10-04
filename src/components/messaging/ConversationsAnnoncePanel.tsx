@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { LinkifiedText } from './LinkifiedText';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send } from 'lucide-react';
 import { toast } from 'sonner';
@@ -82,7 +83,7 @@ export function ConversationsAnnoncePanel({ userId, mode, initialId }: { userId:
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
               {msgs.map((m) => (
                 <div key={m.id} className={cn('max-w-[80%] rounded-2xl px-3 py-2 text-sm', m.sender_id === userId ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted text-foreground')}>
-                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  <p className="whitespace-pre-wrap"><LinkifiedText text={m.content ?? ""} /></p>
                 </div>
               ))}
               <div ref={endRef} />

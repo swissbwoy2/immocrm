@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { LinkifiedText } from '@/components/messaging/LinkifiedText';
 import { fr } from "date-fns/locale";
 import { Check, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ export function WhatsAppBubble({ content, createdAt, outgoing, read, delivered }
             : "rounded-2xl rounded-bl-md bg-[hsl(var(--whatsapp-bubble-in))] text-foreground",
         )}
       >
-        <p className="whitespace-pre-wrap leading-relaxed pr-12">{content}</p>
+        <p className="whitespace-pre-wrap leading-relaxed pr-12"><LinkifiedText text={content} /></p>
         <div
           className={cn(
             "absolute bottom-1 right-2 flex items-center gap-0.5 text-[10px] leading-none",

@@ -41,7 +41,7 @@ const menus: Record<string, MenuSection[]> = {
       { name: "Candidatures", icon: FileCheck, path: "/admin/candidatures", notifKey: "candidature_admin" },
       { name: "Déposer une candidature", icon: Clipboard, path: "/admin/deposer-candidature", notifKey: null },
       { name: "Postulations", icon: Mailbox, path: "/admin/postulations", notifKey: "postulations" },
-      { name: "Candidatures relocation", icon: Inbox, path: "/admin/candidatures-relocation", notifKey: null },
+      { name: "Candidats location", icon: Inbox, path: "/admin/candidatures-relocation", notifKey: null },
     ] },
     { label: "Biens et projets", items: [
       { name: "Propriétaires", icon: Home, path: "/admin/proprietaires", notifKey: "new_proprietaire_invited" },
@@ -120,7 +120,7 @@ const menus: Record<string, MenuSection[]> = {
       { name: "Candidatures", icon: FileCheck, path: "/agent/candidatures", notifKey: null },
       { name: "Déposer une candidature", icon: Clipboard, path: "/agent/deposer-candidature", notifKey: null },
       { name: "Postulations", icon: Mailbox, path: "/agent/postulations", notifKey: "postulations" },
-      { name: "Candidatures relocation", icon: Inbox, path: "/admin/candidatures-relocation", notifKey: null },
+      { name: "Candidats location", icon: Inbox, path: "/admin/candidatures-relocation", notifKey: null },
     ] },
     { label: "Communications", items: [
       { name: "Boîte de réception", icon: Inbox, path: "/agent/boite-reception", notifKey: null },
