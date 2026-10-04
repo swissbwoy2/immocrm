@@ -1,3 +1,4 @@
+import PortalVisits from "./PortalVisits";
 import { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -166,7 +167,8 @@ export default function NewsletterSequences() {
         </CardContent>
       </Card>
       {error && <p role="alert" className="text-destructive">{error}</p>}
-      {welcomes.map((w) => (
+      <PortalVisits />
+      {welcomes.filter((w) => !w.campaign_id.startsWith("portal:")).map((w) => (
         <Card key={w.campaign_id}>
           <CardContent className="pt-5 text-sm space-y-2">
             <p className="font-semibold">
@@ -252,7 +254,7 @@ export default function NewsletterSequences() {
                     {CONTACT_CATEGORIES[r.category] || "À classer"}
                     {r.welcome_campaign_id && (
                       <div className="text-xs text-muted-foreground">
-                        Invitation Druey 18 + 6 emails
+                        Invitation visite + 6 emails
                       </div>
                     )}
                   </td>

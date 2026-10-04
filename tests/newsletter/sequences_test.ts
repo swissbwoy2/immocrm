@@ -356,6 +356,97 @@ Deno.test("Séquences : nouvelles entrées, six étapes, doublons, conversion et
       )).state,
       "review",
     );
+    // Inbox inquiries use the same delivery proof, cadence and conversion guards.
+    await db.exec(
+      `create table received_emails(id uuid primary key default gen_random_uuid(),user_id uuid,message_id text,from_email text,to_email text,subject text,body_text text,body_html text,received_at timestamptz default now(),created_at timestamptz default now());
+ create table imap_configurations(user_id uuid,imap_user text,is_active boolean);
+ insert into imap_configurations values('${uid}','info@immo-rama.ch',true);
+ create table annonces_publiques(id uuid primary key,reference text,titre text,adresse text,code_postal text,ville text,slug text,type_transaction text,statut text,date_expiration timestamptz);
+ insert into annonces_publiques(id,titre,slug,type_transaction,statut) values('1338e6b7-2014-47d0-818a-35122b2a753b','Druey','druey','location','publie');
+ create table newsletter_contact_answers(contact_id uuid,source text,answers jsonb,primary key(contact_id,source));`,
+    );
+    await db.exec(
+      await Deno.readTextFile(
+        new URL(
+          "../../supabase/migrations/20261004190000_portal_visit_autoreply.sql",
+          import.meta.url,
+        ),
+      ),
+    );
+    await db.exec(
+      `update portal_visit_automation set enabled=true; update newsletter_sequence_welcomes set enabled=true,html='<a href="https://logisorama.ch/annonces/druey">Visite</a>'; update newsletter_sequences set enabled=true;`,
+    );
+    const portal = async (email: string, reason = "") => {
+      const message = await one(
+        `insert into received_emails(user_id,from_email,to_email,subject) values('${uid}','interested@homegate.ch','info@immo-rama.ch','Nouvelle demande') returning id`,
+      );
+      const args = [
+        message.id,
+        "homegate.ch",
+        email,
+        "Test",
+        "Prospect",
+        "1338e6b7-2014-47d0-818a-35122b2a753b",
+        reason,
+        "Votre visite",
+        '<a href="https://logisorama.ch/annonces/druey">Visite</a>',
+      ];
+      const result = await one(
+        "select portal_visit_process($1,$2,$3,$4,$5,$6,$7,$8,$9) result",
+        args,
+      );
+      return { args, result: result.result };
+    };
+    const inbox = await portal("inbox@example.ch");
+    assertEquals(inbox.result.status, "queued");
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_sequence_messages m join newsletter_sequence_enrollments e on e.id=m.enrollment_id join newsletter_contacts c on c.id=e.contact_id where c.email='inbox@example.ch'",
+      )).n,
+      7,
+    );
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_sequence_messages m join newsletter_sequence_enrollments e on e.id=m.enrollment_id join newsletter_contacts c on c.id=e.contact_id where c.email='inbox@example.ch' and m.newsletter_id is not null",
+      )).n,
+      1,
+    );
+    assertEquals((await portal("inbox@example.ch")).result.status, "skipped");
+    assertEquals(
+      (await one(
+        "select portal_visit_process($1,$2,$3,$4,$5,$6,$7,$8,$9) result",
+        inbox.args,
+      )).result.id,
+      inbox.result.id,
+    );
+    assertEquals(
+      (await portal("ambiguous@example.ch", "Bien ambigu")).result.status,
+      "review",
+    );
+    assertEquals(
+      (await one(
+        "select count(*)::int n from newsletter_contacts where email='ambiguous@example.ch'",
+      )).n,
+      0,
+    );
+    // Existing Meta enrollment receives the visit answer but never a second six-message sequence.
+    await portal("fresh@example.ch");
+    const conversion = await portal("excluded-inbox@example.ch");
+    await db.exec(
+      `update newsletter_contacts set excluded=true where email='excluded-inbox@example.ch'`,
+    );
+    await db.query("select newsletter_sequence_tick()");
+    assertEquals(
+      (await one(
+        "select state from newsletter_sequence_enrollments e join newsletter_contacts c on c.id=e.contact_id where c.email='excluded-inbox@example.ch'",
+      )).state,
+      "stopped",
+    );
+    await db.exec(`update portal_visit_automation set enabled=false`);
+    assertEquals(
+      (await portal("disabled@example.ch")).result.status,
+      "disabled",
+    );
     await db.exec("set role authenticated");
     await assertRejects(() => db.query("select newsletter_sequence_tick()"));
     await db.exec(
