@@ -53,101 +53,112 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'admin':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
             { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
-            { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
             { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
-            { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
+            { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
           ],
         },
         {
-          label: 'Équipe',
-          items: [
-            { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
-            { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
-            { name: 'Referrals', icon: Link, path: '/admin/referrals', notifKey: null },
-            { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
-          ],
-        },
-        {
-          label: 'Clients & Mandats',
+          label: 'Clients et mandats',
           items: [
             { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
-
-
-
-            { name: 'Leads Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
-            { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
-            { name: 'Newsletter', icon: Mail, path: '/admin/newsletter', notifKey: null },
-            { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },
-            { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
+            { name: 'Demandes d’activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
             { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
-            { name: 'Suivi extraits', icon: ShieldCheck, path: '/admin/suivi-extraits', notifKey: null },
-            { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
-            { name: 'Déposer candidature', icon: Clipboard, path: '/admin/deposer-candidature', notifKey: null },
-            { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
+            { name: 'Extraits de poursuites', icon: ShieldCheck, path: '/admin/suivi-extraits', notifKey: null },
           ],
         },
         {
-          label: 'Immobilier',
+          label: 'Offres et visites',
+          items: [
+            { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
+            { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
+            { name: 'Offres à suivre', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
+            { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
+            { name: 'Matching automatique', icon: Bot, path: '/admin/auto-offres', notifKey: null },
+            { name: 'Suivi des offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
+          ],
+        },
+        {
+          label: 'Candidatures',
+          items: [
+            { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
+            { name: 'Déposer une candidature', icon: Clipboard, path: '/admin/deposer-candidature', notifKey: null },
+            { name: 'Postulations', icon: Mailbox, path: '/admin/postulations', notifKey: 'postulations' },
+            { name: 'Candidats location', icon: Inbox, path: '/admin/candidatures-relocation', notifKey: null },
+          ],
+        },
+        {
+          label: 'Biens et projets',
           items: [
             { name: 'Propriétaires', icon: Home, path: '/admin/proprietaires', notifKey: 'new_proprietaire_invited' },
             { name: 'Biens en vente', icon: Building2, path: '/admin/biens-vente', notifKey: null },
             { name: 'Intérêts acheteurs', icon: Heart, path: '/admin/interets-acheteurs', notifKey: 'new_interet_acheteur' },
-            { name: 'Projets développement', icon: HardHat, path: '/admin/projets-developpement', notifKey: 'new_projet_developpement' },
+            { name: 'Projets de développement', icon: HardHat, path: '/admin/projets-developpement', notifKey: 'new_projet_developpement' },
             { name: 'Rénovation', icon: HardHat, path: '/admin/renovation', notifKey: null },
-            { name: 'Annonces Publiques', icon: Globe, path: '/admin/annonces-publiques', notifKey: null },
-            { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
           ],
         },
         {
-          label: 'Communications',
+          label: 'Communication et marketing',
           items: [
-            { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
-            { name: 'Auto-Offres', icon: Bot, path: '/admin/auto-offres', notifKey: null },
-            { name: 'Offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
-            { name: '📮 Postulations', icon: Mailbox, path: '/admin/postulations', notifKey: 'postulations' },
-            { name: 'Candidats location', icon: Inbox, path: '/admin/candidatures-relocation', notifKey: null },
-            { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
-            { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
-            { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
-            { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
             { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
-            { name: 'Inbox WhatsApp', icon: MessageSquare, path: '/admin/whatsapp', notifKey: 'whatsapp_unread' },
-            { name: 'Logs WhatsApp', icon: History, path: '/admin/whatsapp-notifications', notifKey: null },
+            { name: 'Écrire un e-mail', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
+            { name: 'Historique des e-mails', icon: History, path: '/admin/historique-emails', notifKey: null },
+            { name: 'WhatsApp', icon: MessageSquare, path: '/admin/whatsapp', notifKey: 'whatsapp_unread' },
+            { name: 'Historique WhatsApp', icon: History, path: '/admin/whatsapp-notifications', notifKey: null },
+            { name: 'Prospects Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
+            { name: 'Prospects Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
+            { name: 'Newsletter', icon: Mail, path: '/admin/newsletter', notifKey: null },
+            { name: 'Campagnes de suivi', icon: Send, path: '/admin/campagnes-suivi', notifKey: null },
+            { name: 'Statistiques marketing', icon: TrendingUp, path: '/admin/analytics', notifKey: null },
+          ],
+        },
+        {
+          label: 'Équipe et partenaires',
+          items: [
+            { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
+            { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
+            { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
+            { name: 'Recommandations', icon: Link, path: '/admin/referrals', notifKey: null },
+            { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
+            { name: 'Statistiques des agents', icon: TrendingUp, path: '/admin/statistiques-agents', notifKey: null },
           ],
         },
         {
           label: 'Finances',
           items: [
+            { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
             { name: 'Factures AbaNinja', icon: Receipt, path: '/admin/factures-abaninja', notifKey: null },
-            { name: 'Salaires', icon: Wallet, path: '/admin/salaires', notifKey: null },
             { name: 'Registre commissions', icon: Receipt, path: '/admin/registre-commissions', notifKey: null },
+            { name: 'Salaires', icon: Wallet, path: '/admin/salaires', notifKey: null },
             { name: 'Salaires par agent', icon: Wallet, path: '/admin/salaires-agents', notifKey: null },
-            { name: 'Statistiques Agents', icon: TrendingUp, path: '/admin/statistiques-agents', notifKey: null },
-            { name: 'Analytics Marketing', icon: TrendingUp, path: '/admin/analytics', notifKey: null },
           ],
         },
         {
-          label: 'Outils',
+          label: 'Documents et contacts',
           items: [
             { name: 'Documents', icon: FileText, path: '/admin/documents', notifKey: null },
-            
-            
-            
             { name: 'Modèles de demande', icon: FileText, path: '/admin/modeles-demande-location', notifKey: null },
             { name: 'Contacts', icon: Contact, path: '/admin/contacts', notifKey: null },
-            { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
-            { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
-            
           ],
         },
         {
-          label: 'Système',
+          label: 'Portail immobilier',
           items: [
+            { name: 'Annonces publiques', icon: Globe, path: '/admin/annonces-publiques', notifKey: null },
+            { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
+            { name: 'Portail d’annonces', icon: Globe, path: '/annonces', notifKey: null },
+            { name: 'Espace annonceur', icon: Megaphone, path: '/espace-annonceur', notifKey: null },
+            { name: 'Bannières du portail', icon: Globe, path: '/admin/portail-bannieres', notifKey: null },
+          ],
+        },
+        {
+          label: 'Aide et paramètres',
+          items: [
+            { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
             { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
           ],
         },
@@ -156,7 +167,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'agent':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
@@ -176,7 +187,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Matching & Visites',
+          label: 'Offres et visites',
           items: [
             { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
             { name: 'Carte', icon: MapPin, path: '/agent/carte', notifKey: null },
@@ -185,7 +196,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Transactions',
+          label: 'Offres et transactions',
           items: [
             { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
             { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
@@ -197,7 +208,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Communications',
+          label: 'Communication et marketing',
           items: [
             { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
             { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
@@ -206,7 +217,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Outils',
+          label: 'Documents et contacts',
           items: [
             { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
             
@@ -217,13 +228,13 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Aide & Formation',
+          label: 'Aide et formation',
           items: [
             { name: 'Formation', icon: GraduationCap, path: '/agent/formation', notifKey: null },
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
           ],
@@ -234,7 +245,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       if (parcoursType === 'achat') {
         return [
           {
-            label: null,
+            label: 'Au quotidien',
             items: [
               { name: 'Tableau de bord', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -260,7 +271,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             ],
           },
           {
-            label: 'Système',
+            label: 'Aide et paramètres',
             items: [
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
@@ -271,7 +282,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       if (parcoursType === 'renovation') {
         return [
           {
-            label: null,
+            label: 'Au quotidien',
             items: [
               { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -287,7 +298,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             ],
           },
           {
-            label: 'Système',
+            label: 'Aide et paramètres',
             items: [
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
@@ -297,7 +308,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       if (parcoursType === 'vente') {
         return [
           {
-            label: null,
+            label: 'Au quotidien',
             items: [
               { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -312,7 +323,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             ],
           },
           {
-            label: 'Système',
+            label: 'Aide et paramètres',
             items: [
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
@@ -322,7 +333,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       // Default: location / relocation
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -351,7 +362,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
           ],
@@ -362,7 +373,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'apporteur':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/apporteur', notifKey: null },
             { name: 'Notifications', icon: Bell, path: '/apporteur/notifications', notifKey: 'total' },
@@ -377,7 +388,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Mon compte',
+          label: 'Mon compte et paramètres',
           items: [
             { name: 'Mon contrat', icon: FileText, path: '/apporteur/mon-contrat', notifKey: null },
             { name: 'Mon profil', icon: User, path: '/apporteur/profil', notifKey: null },
@@ -389,7 +400,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'proprietaire':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/proprietaire', notifKey: null },
             { name: 'Messagerie', icon: MessageSquare, path: '/proprietaire/messagerie', notifKey: 'new_message' },
@@ -408,7 +419,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Gestion',
+          label: 'Gestion et documents',
           items: [
             { name: 'Comptabilité', icon: DollarSign, path: '/proprietaire/comptabilite', notifKey: null },
             { name: 'Baux', icon: FileText, path: '/proprietaire/baux', notifKey: null },
@@ -419,7 +430,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/proprietaire/parametres', notifKey: null },
           ],
@@ -429,13 +440,13 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'coursier':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/coursier', notifKey: null },
           ],
         },
         {
-          label: 'Missions',
+          label: 'Offres et visites',
           items: [
             { name: 'Missions disponibles', icon: CalendarCheck, path: '/coursier/missions', notifKey: null },
             { name: 'Carte', icon: Home, path: '/coursier/carte', notifKey: null },
@@ -444,7 +455,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           ],
         },
         {
-          label: 'Système',
+          label: 'Aide et paramètres',
           items: [
             { name: 'Paramètres', icon: Settings, path: '/coursier/parametres', notifKey: null },
           ],
@@ -454,7 +465,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'closeur':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/closeur', notifKey: null },
             { name: 'Leads', icon: Target, path: '/closeur', notifKey: null },
@@ -465,7 +476,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
     case 'candidat':
       return [
         {
-          label: null,
+          label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/candidat', notifKey: null },
             { name: 'Mes candidatures', icon: FileText, path: '/candidat/candidatures', notifKey: null },
