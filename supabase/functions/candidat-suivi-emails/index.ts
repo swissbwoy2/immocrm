@@ -126,6 +126,12 @@ Deno.serve(async (req) => {
       const newest = Math.max(...resas.map((r) => +new Date(r.created_at)))
       if (nowMs - newest <= 40 * H && !has('activation_bienvenue', null)) dues.push({ etape: 'activation_bienvenue', creneau_id: null, channel: 'mkt' })
 
+      const {data: managed, error: managedError} = await admin.rpc('newsletter_sequence_managed_emails', {p_emails:[email.toLowerCase()]})
+      if (managedError) throw managedError
+      if (managed?.length) {
+        // Keep visit reminders, but let the newsletter sequence own marketing follow-ups.
+        for (let i=dues.length-1;i>=0;i--) if(dues[i].channel==='mkt') dues.splice(i,1)
+      }
       let due = dues[0]
       if (!due) { stats.skipped++; continue }
 

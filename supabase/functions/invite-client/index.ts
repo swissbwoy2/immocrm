@@ -1,3 +1,5 @@
+import { canActivateMandate } from "../_shared/mandate-activation.ts";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { sendTemplateEmail } from "../_shared/transactional-email-templates/send-email.ts";
@@ -237,7 +239,8 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, journeyType, createPurchaseProject, agentId, purchaseProfile }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat: suppliedMandate, invitationLegere, typeRecherche, journeyType, createPurchaseProject, agentId, purchaseProfile }: InviteClientRequest = await req.json();
+    let demandeMandat = suppliedMandate;
     const wantsPurchaseJourney = isBuyerType(typeRecherche) || isBuyerType(journeyType) || createPurchaseProject === true || !!purchaseProfile;
     const normalizedTypeRecherche = wantsPurchaseJourney ? 'Acheter' : normalizeTypeRecherche(typeRecherche || demandeMandat?.type_recherche || 'Louer');
     const redirectTo = `${getAppBaseUrl(req)}/first-login`;
@@ -260,7 +263,18 @@ serve(async (req) => {
     // --- AuthZ: allow if caller is admin, OR if invocation is tied to a
     // pre-existing demandes_mandat row matching this email (public mandate flow).
     // Otherwise reject — prevents anonymous email spam / account-creation abuse.
-    let isAuthorized = false;
+    const internalCaller = await verifyInternalCaller(req);
+    const isInternal = internalCaller.ok && ['service','secret'].includes(internalCaller.kind);
+    let storedMandate: any = null;
+    if (demandeMandat?.id) {
+      const {data, error} = await supabaseAdmin.from('demandes_mandat').select('*').eq('id',demandeMandat.id).maybeSingle();
+      if (error) throw error;
+      if (data && (data.email || '').trim().toLowerCase() === email.trim().toLowerCase()) {
+        storedMandate = data;
+        demandeMandat = { ...demandeMandat, ...data };
+      }
+    }
+    let isAuthorized = isInternal;
     let callerId: string | null = null;
     let callerIsStaff = false;
     const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
@@ -284,16 +298,8 @@ serve(async (req) => {
         }
       }
     }
-    if (!isAuthorized && demandeMandat?.id && email) {
-      const { data: dm } = await supabaseAdmin
-        .from('demandes_mandat')
-        .select('id,email')
-        .eq('id', demandeMandat.id)
-        .maybeSingle();
-      if (dm && (dm.email || '').toLowerCase() === email.trim().toLowerCase()) {
-        isAuthorized = true;
-      }
-    }
+    if (!isAuthorized && storedMandate) isAuthorized = true;
+    const activateService = canActivateMandate(storedMandate, callerIsStaff, !!invitationLegere);
     if (!isAuthorized) {
       return new Response(
         JSON.stringify({ error: 'Non autorisé' }),
@@ -338,7 +344,10 @@ serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const tempPassword = generateTempPassword();
 
-    if (existingUser && selfFlow && existingUser.id === callerId) {
+    if (existingUser && !callerIsStaff && !isInternal && !(selfFlow && existingUser.id === callerId && (existingUser.email || '').toLowerCase() === normalizedEmail)) {
+      return new Response(JSON.stringify({error:'Connectez-vous à votre compte existant pour finaliser ce mandat.'}), {status:403,headers:{...corsHeaders,'Content-Type':'application/json'}});
+    }
+    if (existingUser && ((selfFlow && existingUser.id === callerId) || (isInternal && storedMandate))) {
       // Utilisateur déjà connecté (ex. candidat → client) : on complète son compte existant,
       // sans changer son mot de passe ni créer quoi que ce soit.
       userId = existingUser.id;
@@ -413,7 +422,7 @@ serve(async (req) => {
     // Check if profile exists, if not create it
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
-      .select('id')
+      .select('id, actif')
       .eq('id', userId)
       .maybeSingle();
 
@@ -427,7 +436,7 @@ serve(async (req) => {
           prenom: prenom || email.split('@')[0],
           nom: nom || '',
           telephone: telephone || null,
-          actif: false // Account not activated yet
+          actif: activateService // Signed contract plus payment or explicit staff activation
         });
 
       if (profileError) {
@@ -441,7 +450,7 @@ serve(async (req) => {
           prenom: prenom || undefined,
           nom: nom || undefined,
           telephone: telephone || undefined,
-          actif: true // Activate on invite
+          actif: existingProfile.actif === true || activateService // An existing account is not evidence of payment
         })
         .eq('id', userId);
 
@@ -668,6 +677,11 @@ serve(async (req) => {
     }
 
     // Create candidates from demandeMandat
+    if (activateService && storedMandate) {
+      const {error: activationError} = await supabaseAdmin.from('demandes_mandat').update({statut:'active',user_id:userId,processed_at:new Date().toISOString()}).eq('id',storedMandate.id);
+      if (activationError) throw activationError;
+    }
+
     if (demandeMandat?.candidats && demandeMandat.candidats.length > 0 && clientRecordId) {
       console.log('Creating candidates:', demandeMandat.candidats.length);
       

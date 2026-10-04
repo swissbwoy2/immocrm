@@ -51,7 +51,7 @@ export default function CandidatDashboard() {
       if (error) throw error;
       await refreshRoles();
       switchRole('client');
-      toast.success('Vos recherches sont activées');
+      toast.success('Votre espace de recherche est prêt. La signature du mandat et l’activation du service restent nécessaires.');
       navigate('/client');
     } catch (e: any) {
       toast.error(e?.message || "Impossible d'activer vos recherches");
