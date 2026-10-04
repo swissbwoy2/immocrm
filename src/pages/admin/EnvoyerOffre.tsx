@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Link, Paperclip, RotateCcw, Search } from "lucide-react";
-import logoImmoRama from "@/assets/logo-immo-rama-new.png";
+import logoLogisorama from "@/assets/logisorama-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
@@ -662,7 +662,7 @@ const AdminEnvoyerOffre = () => {
               <h3 className="font-semibold mb-4">Aperçu de l'email</h3>
               <div className="border rounded-lg p-6 bg-white space-y-4">
                 <div className="flex justify-center mb-6">
-                  <img src={logoImmoRama} alt="Immo-Rama Logo" className="h-20 object-contain" />
+                  <img src={logoLogisorama} alt="Logo Logisorama" className="h-20 object-contain" />
                 </div>
 
                 <h2 className="text-xl font-bold text-center">

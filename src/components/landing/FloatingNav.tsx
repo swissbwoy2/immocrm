@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Rocket } from 'lucide-react';
-import logo from '@/assets/logo-immo-rama-new.png';
+import logo from '@/assets/logisorama-logo.png';
 
 export function FloatingNav() {
   const [isVisible, setIsVisible] = useState(false);

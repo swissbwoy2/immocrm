@@ -1,7 +1,7 @@
 /** Shared identity for transactional emails and the newsletter reference. */
 export const EMAIL_BRAND = {
   site: "https://logisorama.ch",
-  logo: "https://logisorama.ch/newsletter/logo-immo-rama.png",
+  logo: "https://logisorama.ch/__l5e/assets-v1/620cc5b1-18df-42ab-86d6-2ea17731daef/logisorama-email-logo.png",
   green: "#205a43",
   dark: "#193d2c",
   cream: "#f3f4ed",
@@ -144,7 +144,7 @@ export function renderCorporateEmail(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${EMAIL_BRAND.background}"><tr><td align="center" class="email-outer" style="padding:24px 12px;">
 <!--[if mso]><table role="presentation" width="640"><tr><td><![endif]-->
 <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:640px;border-top:4px solid ${EMAIL_BRAND.green};">
-<tr><td class="email-pad" style="padding:24px 36px;border-bottom:1px solid ${EMAIL_BRAND.border};"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td><div style="font-size:27px;line-height:30px;font-weight:bold;letter-spacing:-1px;color:${EMAIL_BRAND.dark};">Logisorama</div><img src="${EMAIL_BRAND.logo}" width="104" height="16" alt="Immo-rama" style="display:block;border:0;margin-top:3px;"></td><td align="right" class="email-brandline" style="font-size:10px;line-height:17px;letter-spacing:1.2px;color:#677a6c;">${
+<tr><td class="email-pad" style="padding:24px 36px;border-bottom:1px solid ${EMAIL_BRAND.border};"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td><div style="font-size:27px;line-height:30px;font-weight:bold;letter-spacing:-1px;color:${EMAIL_BRAND.dark};">Logisorama</div><img src="${EMAIL_BRAND.logo}" width="144" height="40" alt="Logisorama" style="display:block;border:0;margin-top:3px;"></td><td align="right" class="email-brandline" style="font-size:10px;line-height:17px;letter-spacing:1.2px;color:#677a6c;">${
     escapeEmailHtml(category)
   }</td></tr></table></td></tr>
 <tr><td class="email-pad" style="padding:32px 36px 30px;font-size:16px;line-height:26px;color:${EMAIL_BRAND.muted};overflow-wrap:anywhere;">

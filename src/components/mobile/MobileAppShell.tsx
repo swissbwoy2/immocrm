@@ -6,7 +6,7 @@ import { useMobileImmersive } from '@/contexts/MobileImmersiveContext';
 import { MobileBottomNav } from './MobileBottomNav';
 import { NotificationBell } from '@/components/NotificationBell';
 import { SilentErrorBoundary } from '@/components/SilentErrorBoundary';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 /**
  * App-shell mobile : header fixe, zone scrollable unique, bottom nav fixe.
@@ -49,7 +49,7 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
             className="flex min-w-0 flex-1 items-center gap-2 text-left transition-opacity hover:opacity-80"
             aria-label="Ouvrir le menu principal"
           >
-            <img src={logoImmoRama} alt="Logisorama" className="h-8 w-auto object-contain" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto object-contain" />
             <span className="flex min-w-0 flex-col leading-tight">
               <span className="truncate text-base font-semibold">Logisorama</span>
               <span className="truncate text-[10px] text-muted-foreground">by Immo-rama.ch</span>

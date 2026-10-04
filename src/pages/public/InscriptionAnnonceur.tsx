@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 
 type AnnonceurType = 'particulier' | 'agence' | 'promoteur';

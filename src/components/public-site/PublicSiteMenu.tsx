@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { X, Home, HelpCircle, Briefcase, DollarSign, FileSearch, Calculator, MessageCircle, Users, Rocket, LogIn, Handshake, Mail, FileText, Shield, Lock } from 'lucide-react';
-import logo from '@/assets/logo-immo-rama-new.png';
+import logo from '@/assets/logisorama-logo.png';
 
 interface PublicSiteMenuProps {
   open: boolean;
@@ -94,7 +94,7 @@ export function PublicSiteMenu({ open, onClose }: PublicSiteMenuProps) {
         <div className="container mx-auto px-6 py-6">
           {/* Top bar */}
           <div className="flex items-center justify-between mb-8">
-            <img src={logo} alt="Immo-Rama" className="h-10 w-auto" />
+            <img src={logo} alt="Logisorama" className="h-10 w-auto" />
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-muted/50 transition-colors" aria-label="Fermer">
               <X className="h-6 w-6 text-foreground" />
             </button>

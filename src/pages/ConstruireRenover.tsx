@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import heroBg from '@/assets/hero-bg.jpg';
 import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
 import { ScrollExpansionHero } from '@/components/ui/scroll-expansion-hero';
@@ -101,7 +101,7 @@ export default function ConstruireRenover() {
       >
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Link to="/" aria-label="Retour à l'accueil" className="flex items-center gap-2">
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto" />
           </Link>
           <div className="flex items-center gap-1">
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">

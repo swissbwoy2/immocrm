@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import { SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Menu } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PageTransition } from '@/components/PageTransition';
@@ -94,8 +94,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
             aria-label="Ouvrir le menu principal"
           >
             <img 
-              src={logoImmoRama} 
-              alt="Logo Immo-Rama - Retour à l'accueil" 
+              src={logoLogisorama} 
+              alt="Logo Logisorama - Retour à l'accueil" 
               className="h-8 w-auto object-contain"
             />
             <div className="flex flex-col leading-tight">

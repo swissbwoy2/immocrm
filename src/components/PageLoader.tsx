@@ -1,4 +1,4 @@
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 export function PageLoader() {
   return (
@@ -13,7 +13,7 @@ export function PageLoader() {
       />
       {/* Grand logo Immo-rama, sans cercle ni découpe */}
       <img
-        src={logoImmoRama}
+        src={logoLogisorama}
         alt="Immo-rama.ch"
         fetchPriority="high"
         className="relative z-10 w-[60vw] max-w-[420px] h-auto object-contain animate-pulse"

@@ -22,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useMemo } from 'react';
@@ -614,8 +614,8 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 p-4">
           <img
-            src={logoImmoRama}
-            alt="Immo-Rama Logo"
+            src={logoLogisorama}
+            alt="Logo Logisorama"
             className="h-10 w-auto object-contain flex-shrink-0"
           />
           {!collapsed && (

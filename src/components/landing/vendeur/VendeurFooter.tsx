@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ExternalLink, Heart } from "lucide-react";
-import logoImmoRama from "@/assets/logo-immo-rama-new.png";
+import logoLogisorama from "@/assets/logisorama-logo.png";
 
 export function VendeurFooter() {
   const currentYear = new Date().getFullYear();
@@ -28,8 +28,8 @@ export function VendeurFooter() {
           <div className="md:col-span-2">
             <Link to="/" className="inline-block mb-2 group relative">
               <img
-                src={logoImmoRama}
-                alt="Immo-Rama"
+                src={logoLogisorama}
+                alt="Logisorama"
                 className="h-12 w-auto group-hover:scale-105 transition-transform"
               />
             </Link>

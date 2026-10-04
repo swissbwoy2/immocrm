@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch, Building2, Hammer, KeyRound } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import heroChasseurAsset from '@/assets/hero-chasseur-split.png.asset.json';
 import heroChasseurMobileAsset from '@/assets/hero-chasseur-mobile-916.png.asset.json';
 const heroBg = heroChasseurAsset.url;
@@ -73,8 +73,8 @@ export function HeroSection() {
               className="mb-3 md:mb-5"
             >
               <img
-                src={logoImmoRama}
-                alt="Immo-Rama"
+                src={logoLogisorama}
+                alt="Logisorama"
                 className="h-16 md:h-32 w-auto drop-shadow-2xl"
                 style={{ filter: 'drop-shadow(0 0 24px hsl(var(--primary)))' }}
               />

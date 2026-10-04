@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Building2, Mail, Phone, MapPin, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -13,7 +13,7 @@ export function PublicFooter() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto invert" />
+              <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto invert" />
               <span className="font-bold text-lg">Annonces</span>
             </div>
             <p className="text-sidebar-foreground/70 text-sm mb-4">

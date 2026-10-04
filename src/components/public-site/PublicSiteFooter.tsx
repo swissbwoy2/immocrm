@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ExternalLink, Heart } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 export function PublicSiteFooter() {
   const currentYear = new Date().getFullYear();
@@ -19,7 +19,7 @@ export function PublicSiteFooter() {
           {/* Brand */}
           <div className="md:col-span-2">
             <Link to="/" className="inline-block mb-2 group">
-              <img src={logoImmoRama} alt="Immo-Rama" className="h-12 w-auto group-hover:scale-105 transition-transform" />
+              <img src={logoLogisorama} alt="Logisorama" className="h-12 w-auto group-hover:scale-105 transition-transform" />
             </Link>
             <p className="text-primary font-semibold text-sm mb-4">L'immobilier accessible</p>
             <p className="text-muted-foreground text-sm max-w-md mb-4 leading-relaxed">

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ShieldCheck, Crown, AlertCircle } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import heroBg from '@/assets/hero-bg.jpg';
 
 // ─────────────────────────────────────────────
@@ -219,8 +219,8 @@ export function PremiumAuthLayout({
           <div className="flex flex-col items-center gap-3 mb-6">
             {/* Logo */}
             <motion.img
-              src={logoImmoRama}
-              alt="Immo-Rama"
+              src={logoLogisorama}
+              alt="Logisorama"
               className="h-20 md:h-24 w-auto drop-shadow-xl dark:brightness-0 dark:invert"
               whileHover={{ scale: 1.05, rotate: [0, -1.5, 1.5, 0] }}
               transition={{ type: 'spring', stiffness: 300, damping: 18 }}

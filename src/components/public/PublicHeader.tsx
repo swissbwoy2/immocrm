@@ -8,7 +8,7 @@ import { SpaceSwitcher } from '@/components/RoleSwitcher';
 import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
 import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
 import { useAnnonceUnreadCount } from '@/hooks/useAnnonceUnreadCount';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 export function PublicHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,7 +30,7 @@ export function PublicHeader() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/annonces" className="flex items-center gap-2">
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto" />
             <span className="font-bold text-lg hidden sm:inline">Annonces</span>
           </Link>
 

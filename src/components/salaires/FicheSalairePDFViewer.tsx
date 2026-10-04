@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { formatCHF, MOIS_LABELS } from '@/lib/swissPayroll';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import { useFileDownload } from '@/hooks/useFileDownload';
 import { toast } from 'sonner';
 
@@ -40,7 +40,7 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
 
   // Logo — top right
   try {
-    const logoResponse = await fetch(logoImmoRama);
+    const logoResponse = await fetch(logoLogisorama);
     const logoBytes = new Uint8Array(await logoResponse.arrayBuffer());
     const logoImage = await pdfDoc.embedPng(logoBytes);
     const logoScale = 50 / logoImage.height;

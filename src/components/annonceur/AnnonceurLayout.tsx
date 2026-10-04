@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { SpaceSwitcher } from '@/components/RoleSwitcher';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 
 interface AnnonceurLayoutProps {
   children: React.ReactNode;
@@ -88,7 +88,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-center">
-          <img src={logoImmoRama} alt="Loading..." className="h-12 mx-auto mb-4" />
+          <img src={logoLogisorama} alt="Loading..." className="h-12 mx-auto mb-4" />
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -144,7 +144,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border">
           <Link to="/espace-annonceur" className="flex items-center gap-2">
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-8 invert" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-8 invert" />
             <span className="font-semibold">Espace Annonceur</span>
           </Link>
         </div>
@@ -235,7 +235,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
         <div className="flex items-center justify-between h-full px-4">
           <div className="flex items-center gap-2 min-w-0">
             <Link to="/espace-annonceur" className="flex items-center gap-2">
-              <img src={logoImmoRama} alt="Immo-Rama" className="h-8" />
+              <img src={logoLogisorama} alt="Logisorama" className="h-8" />
             </Link>
             <Button variant="outline" size="sm" asChild className="h-8 px-2">
               <Link to="/annonces">
