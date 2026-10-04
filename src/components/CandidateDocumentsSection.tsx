@@ -43,11 +43,18 @@ interface CandidateDocumentsSectionProps {
 const REQUIRED_DOCUMENTS = [
   { type: 'fiche_salaire', label: '💰 Fiches de salaire (3 dernières)', count: 3 },
   { type: 'extrait_poursuites', label: '📋 Extrait des poursuites (< 3 mois)', count: 1 },
-  { type: 'piece_identite', label: '🪪 Pièce d\'identité / Permis', count: 1 },
+  { type: 'piece_identite', types: ['piece_identite', 'permis_sejour', 'permis_conduire'], label: '🪪 Pièce d\'identité / Permis', count: 1 },
   { type: 'attestation_domicile', label: '🏠 Attestation de domicile', count: 1 },
-  { type: 'contrat_travail', label: '📝 Contrat de travail / Attestation employeur', count: 1 },
+  { type: 'contrat_travail', types: ['contrat_travail', 'attestation_employeur'], label: '📝 Contrat de travail / Attestation employeur', count: 1 },
   { type: 'rc_menage', label: '🛡️ RC Ménage', count: 1 },
 ];
+
+// Types acceptés pour une ligne : variantes du libellé uniquement pour les candidatures location
+// (le dossier client garde strictement son type unique historique).
+const acceptedTypes = (req: { type: string; types?: string[] }, withVariants: boolean) =>
+  withVariants && req.types ? req.types : [req.type];
+const countFor = (counts: Record<string, number>, req: { type: string; types?: string[] }, withVariants: boolean) =>
+  acceptedTypes(req, withVariants).reduce((n, t) => n + (counts[t] || 0), 0);
 
 export function CandidateDocumentsSection({
   clientId,
@@ -306,7 +313,7 @@ export function CandidateDocumentsSection({
     const counts = countDocumentsByType(docs);
     let complete = 0;
     REQUIRED_DOCUMENTS.forEach(req => {
-      if ((counts[req.type] || 0) >= req.count) complete++;
+      if (countFor(counts, req, !!candidatureId) >= req.count) complete++;
     });
     return { complete, total: REQUIRED_DOCUMENTS.length };
   };
@@ -366,7 +373,7 @@ export function CandidateDocumentsSection({
               return (
                 <ul className="mb-3 space-y-1">
                   {REQUIRED_DOCUMENTS.map(req => {
-                    const n = counts[req.type] || 0;
+                    const n = countFor(counts, req, true);
                     const ok = n >= req.count;
                     return (
                       <li key={req.type} className="flex items-center gap-2 text-sm">

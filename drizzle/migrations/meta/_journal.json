@@ -148,6 +148,13 @@
       "when": 1791142585968,
       "tag": "0020_candidature_pieces_justificatives",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791142724348,
+      "tag": "0021_candidature_pieces_variantes",
+      "breakpoints": true
     }
   ]
 }
