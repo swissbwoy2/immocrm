@@ -105,15 +105,9 @@ export default function VisitesDeleguees() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-          <div className="relative absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-r-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-        </div>
+      <div className="p-4 md:p-6" role="status" aria-label="Chargement des visites déléguées">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 rounded bg-muted/40" />
       </div>
     );
   }

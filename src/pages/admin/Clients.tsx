@@ -819,14 +819,9 @@ const Clients = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-          </div>
-          <p className="text-muted-foreground animate-pulse">Chargement des clients...</p>
-        </div>
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement des clients">
+        <div className="h-7 w-48 rounded bg-muted/60" />
+        <div className="mt-6 h-24 rounded bg-muted/40" />
       </div>
     );
   }
