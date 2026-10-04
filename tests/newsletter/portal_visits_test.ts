@@ -119,3 +119,29 @@ Deno.test("MIME : HTML base64, quoted-printable, charset et contenu sans transfe
     "déjà décodé",
   );
 });
+Deno.test("SMG privilégie sa partie texte structurée au rendu HTML et accepte les langues du portail", () => {
+  assertEquals(
+    parsePortalInquiry({
+      ...mail,
+      body_html:
+        "<h1>Nouvelle demande de Julie</h1><p>Présentation HTML sans bloc structuré</p>",
+    }).inquiry?.email,
+    "julie@example.com",
+  );
+  for (
+    const [body, first] of [
+      [
+        "Objekt von Interesse:\nRue de l’Ale 20\n1003 Lausanne\nFolgende Person ist interessiert:\nVorname: Joseph\nName: Exemple\nE-Mail: joseph@example.com\nDeine Nachricht\nBonjour",
+        "Joseph",
+      ],
+      [
+        "Oggetto d’interesse:\nAvenue Druey 18\n1018 Lausanne\nLa seguente persona è interessata:\nNome: Alessia\nCognome: Exemple\nE-mail: alessia@example.com\nIl tuo messaggio\nBonjour",
+        "Alessia",
+      ],
+    ]
+  ) {
+    const p = parsePortalInquiry({ ...mail, body_text: body }).inquiry!;
+    assertEquals(p.firstName, first);
+    assertEquals(p.lastName, "Exemple");
+  }
+});
