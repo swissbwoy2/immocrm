@@ -15116,12 +15116,14 @@ export type Database = {
         Args: { _proprietaire_id: string }
         Returns: boolean
       }
+      is_annonce_conv: { Args: { _conv: string }; Returns: boolean }
       is_annonce_conversation_participant: {
         Args: { _conv: string }
         Returns: boolean
       }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
       is_candidat: { Args: { _uid: string }; Returns: boolean }
+      is_candidat_annonce_conv: { Args: { _conv: string }; Returns: boolean }
       is_candidat_solvable: {
         Args: {
           _budget: number
