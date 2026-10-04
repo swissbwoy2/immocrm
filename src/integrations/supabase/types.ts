@@ -8313,6 +8313,130 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_sequence_enrollments: {
+        Row: {
+          category: string | null
+          contact_id: string
+          enrolled_at: string
+          form_id: string | null
+          id: string
+          meta_lead_id: string
+          reason: string | null
+          state: string
+          stopped_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          contact_id: string
+          enrolled_at?: string
+          form_id?: string | null
+          id?: string
+          meta_lead_id: string
+          reason?: string | null
+          state?: string
+          stopped_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          contact_id?: string
+          enrolled_at?: string
+          form_id?: string | null
+          id?: string
+          meta_lead_id?: string
+          reason?: string | null
+          state?: string
+          stopped_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_sequence_enrollments_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "newsletter_sequences"
+            referencedColumns: ["category"]
+          },
+          {
+            foreignKeyName: "newsletter_sequence_enrollments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: true
+            referencedRelation: "newsletter_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_sequence_enrollments_meta_lead_id_fkey"
+            columns: ["meta_lead_id"]
+            isOneToOne: false
+            referencedRelation: "meta_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_sequence_messages: {
+        Row: {
+          due_at: string
+          enrollment_id: string
+          newsletter_id: string | null
+          step: number
+        }
+        Insert: {
+          due_at: string
+          enrollment_id: string
+          newsletter_id?: string | null
+          step: number
+        }
+        Update: {
+          due_at?: string
+          enrollment_id?: string
+          newsletter_id?: string | null
+          step?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_sequence_messages_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "newsletter_sequence_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_sequence_messages_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletter_sequences: {
+        Row: {
+          category: string
+          created_by: string | null
+          enabled: boolean
+          starts_at: string
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_by?: string | null
+          enabled?: boolean
+          starts_at?: string
+          steps?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_by?: string | null
+          enabled?: boolean
+          starts_at?: string
+          steps?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_test_requests: {
         Row: {
           created_at: string
@@ -14912,6 +15036,10 @@ export type Database = {
       }
       newsletter_classify: { Args: { p: Json }; Returns: Json }
       newsletter_classify_meta: { Args: { p: Json }; Returns: Json }
+      newsletter_conversion_reason: {
+        Args: { p_email: string }
+        Returns: string
+      }
       newsletter_enqueue: {
         Args: {
           p_id: string
@@ -14980,8 +15108,47 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      newsletter_infomaniak_claim_without_sequences: {
+        Args: never
+        Returns: {
+          created_at: string
+          created_by: string
+          dispatch_lease: string | null
+          dispatch_retry_at: string
+          dispatch_state: string
+          dispatch_token: string | null
+          html: string
+          id: string
+          name: string
+          preheader: string
+          provider: string
+          provider_campaign_id: number | null
+          provider_domain_id: number | null
+          provider_group_id: number | null
+          revision: number
+          scheduled_at: string | null
+          sender: string | null
+          status: string
+          subject: string
+          tracking_enabled: boolean
+          tracking_error: string | null
+          tracking_synced_at: string | null
+          updated_at: string
+          worker_error: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "newsletters"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       newsletter_infomaniak_credentials: { Args: never; Returns: Json }
       newsletter_infomaniak_recipients: {
+        Args: { p_id: string; p_token: string }
+        Returns: Json
+      }
+      newsletter_infomaniak_recipients_without_sequences: {
         Args: { p_id: string; p_token: string }
         Returns: Json
       }
@@ -14999,6 +15166,22 @@ export type Database = {
         Args: { p_emails: string[] }
         Returns: undefined
       }
+      newsletter_sequence_configure: {
+        Args: { p_category: string; p_enabled: boolean; p_steps: Json }
+        Returns: undefined
+      }
+      newsletter_sequence_managed_emails: {
+        Args: { p_emails: string[] }
+        Returns: {
+          email: string
+        }[]
+      }
+      newsletter_sequence_stop: { Args: { p_id: string }; Returns: undefined }
+      newsletter_sequence_stop_reason: {
+        Args: { p_contact: string }
+        Returns: string
+      }
+      newsletter_sequence_tick: { Args: never; Returns: number }
       newsletter_sync_leads: { Args: never; Returns: Json }
       newsletter_sync_visits: { Args: never; Returns: Json }
       newsletter_verify_dispatch: {
