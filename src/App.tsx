@@ -114,7 +114,6 @@ const AdminRemplirDemandeIA = lazyWithRetry(() => import("./pages/admin/RemplirD
 const ModelesDemandeLocation = lazyWithRetry(() => import("./features/postulation-auto/pages/ModelesDemandeLocation"));
 const RemplirDemandeLocation = lazyWithRetry(() => import("./features/postulation-auto/pages/RemplirDemandeLocation"));
 const AdminLeads = lazyWithRetry(() => import("./pages/admin/Leads"));
-const AdminAutoOffres = lazyWithRetry(() => import("./pages/admin/AutoOffres"));
 const AdminOffresAuto = lazyWithRetry(() => import("./pages/admin/OffresAuto"));
 const AdminPostulations = lazyWithRetry(() => import("./pages/admin/Postulations"));
 const AgentPostulations = lazyWithRetry(() => import("./pages/agent/Postulations"));
@@ -144,7 +143,6 @@ const AgentSuiviExtraits = lazyWithRetry(() => import("./pages/agent/SuiviExtrai
 const AgentClientDetail = lazyWithRetry(() => import("./pages/agent/ClientDetail"));
 const AgentEnvoyerOffre = lazyWithRetry(() => import("./pages/agent/EnvoyerOffre"));
 const AgentOffresEnvoyees = lazyWithRetry(() => import("./pages/agent/OffresEnvoyees"));
-const AgentOffresAuto = lazyWithRetry(() => import("./pages/agent/OffresAuto"));
 const Wishlist = lazyWithRetry(() => import("./pages/shared/Wishlist"));
 const AgentMessagerie = lazyWithRetry(() => import("./pages/agent/Messagerie"));
 const AgentVisites = lazyWithRetry(() => import("./pages/agent/Visites"));
@@ -436,7 +434,7 @@ const App = () => (
               <Route path="/admin/postulation-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RemplirDemandeLocation /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
-              <Route path="/admin/auto-offres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAutoOffres /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/auto-offres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><Navigate to="/admin/offres-auto" replace /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/offres-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminOffresAuto /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/postulations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminPostulations /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/postulations" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentPostulations /></AppLayout></ProtectedRoute>} />
@@ -462,7 +460,7 @@ const App = () => (
               <Route path="/agent/clients/:id/mandat-prefill" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><StaffMandatPrefill /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
-              <Route path="/agent/offres-auto" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentOffresAuto /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/offres-auto" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><Navigate to="/agent" replace /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/wishlist" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><Wishlist /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/visites/:id/compte-rendu" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCompteRenduVisite /></AppLayout></ProtectedRoute>} />

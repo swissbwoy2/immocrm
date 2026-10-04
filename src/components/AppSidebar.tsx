@@ -1,5 +1,5 @@
 import { RoleSwitcher } from '@/components/RoleSwitcher';
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bot, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy, ChevronDown, Search } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin, Bookmark, ShieldCheck, GraduationCap, Banknote, Video, Camera, Mailbox, CheckCircle2, LifeBuoy, ChevronDown, Search } from 'lucide-react';
 import { usePostulationsCount } from '@/hooks/usePostulationsCount';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -79,7 +79,6 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
             { name: 'Offres à suivre', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
             { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
-            { name: 'Matching automatique', icon: Bot, path: '/admin/auto-offres', notifKey: null },
             { name: 'Suivi des offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
           ],
         },
@@ -202,7 +201,6 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
             { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
             { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: 'client_interesse' },
-            { name: 'Offres automatiques', icon: Bot, path: '/agent/offres-auto', notifKey: null },
             { name: '📮 Postulations', icon: Mailbox, path: '/agent/postulations', notifKey: 'postulations' },
             { name: 'Candidats location', icon: Inbox, path: '/admin/candidatures-relocation', notifKey: null },
             { name: 'À suivre (Wishlist)', icon: Bookmark, path: '/agent/wishlist', notifKey: null },
