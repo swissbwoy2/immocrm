@@ -1,3 +1,4 @@
+import { metaGraph, metaField } from "../_shared/meta-graph.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -9,29 +10,15 @@ const corsHeaders = {
 // ── Graph API helpers (duplicated from webhook — edge functions can't share code) ──
 
 async function fetchGraphAPI(path: string, token: string): Promise<any> {
-  const separator = path.includes("?") ? "&" : "?";
-  const url = `https://graph.facebook.com/v21.0/${path}${separator}access_token=${token}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`Graph API error for ${path}: ${res.status} — ${text}`);
-    return null;
-  }
-  return res.json();
+  try { return await metaGraph(path, token); } catch (e) { console.error(e instanceof Error ? e.message : "Erreur Meta"); return null; }
 }
 
 async function fetchGraphAPIWithRetry(path: string, token: string): Promise<any> {
-  let result = await fetchGraphAPI(path, token);
-  if (!result) {
-    console.log(`Retrying Graph API call: ${path}`);
-    result = await fetchGraphAPI(path, token);
-  }
-  return result;
+  return metaGraph(path, token);
 }
 
 function extractFieldValue(fieldData: any[], name: string): string | undefined {
-  const field = fieldData?.find((f: any) => f.name?.toLowerCase() === name.toLowerCase());
-  return field?.values?.[0] || undefined;
+  return metaField(fieldData, name);
 }
 
 // ── Main handler ──
@@ -163,16 +150,14 @@ Deno.serve(async (req) => {
 
   try {
     // ── Fetch all forms ──
-    const formsData = await fetchGraphAPIWithRetry(
-      `${pageId}/leadgen_forms?fields=id,name,status&limit=100`,
-      META_PAGE_ACCESS_TOKEN
-    );
-
-    if (!formsData?.data) {
-      throw new Error("Impossible de récupérer les formulaires depuis Meta Graph API");
+    const forms: any[] = [];
+    let formsUrl: string | null = `${pageId}/leadgen_forms?fields=id,name,status&limit=100`;
+    while (formsUrl) {
+      const data = await fetchGraphAPIWithRetry(formsUrl, META_PAGE_ACCESS_TOKEN);
+      if (!Array.isArray(data?.data)) throw new Error("Liste de formulaires Meta invalide");
+      forms.push(...data.data);
+      formsUrl = data.paging?.next || null;
     }
-
-    const forms = formsData.data;
     counters.forms_count = forms.length;
     console.log(`Found ${forms.length} forms for page ${pageId}`);
 
@@ -199,16 +184,8 @@ Deno.serve(async (req) => {
       let leadsUrl: string | null = `${formId}/leads?fields=field_data,created_time,ad_id,campaign_id,form_id,is_organic&limit=500`;
 
       while (leadsUrl) {
-        let leadsData: any;
-        if (leadsUrl.startsWith("http")) {
-          // Full URL from paging.next — call directly
-          const res = await fetch(leadsUrl);
-          leadsData = res.ok ? await res.json() : null;
-        } else {
-          leadsData = await fetchGraphAPIWithRetry(leadsUrl, META_PAGE_ACCESS_TOKEN);
-        }
-
-        if (!leadsData?.data) break;
+        const leadsData = await fetchGraphAPIWithRetry(leadsUrl, META_PAGE_ACCESS_TOKEN);
+        if (!Array.isArray(leadsData?.data)) throw new Error("Liste de leads Meta incomplète");
 
         for (const lead of leadsData.data) {
           const leadgenId = lead.id;

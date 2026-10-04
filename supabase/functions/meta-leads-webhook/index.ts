@@ -1,3 +1,4 @@
+import { metaGraph, metaField } from "../_shared/meta-graph.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,35 +8,18 @@ const corsHeaders = {
 };
 
 async function fetchGraphAPI(path: string, token: string): Promise<any> {
-  const url = `https://graph.facebook.com/v21.0/${path}`;
-  const res = await fetch(`${url}&access_token=${token}`);
-  if (!res.ok) {
-    console.error(`Graph API error for ${path}: ${res.status}`);
-    return null;
-  }
-  return res.json();
+  try { return await metaGraph(path, token); } catch (e) { console.error(e instanceof Error ? e.message : "Erreur Meta"); return null; }
 }
 
 async function fetchGraphAPIWithRetry(
   path: string,
   token: string
 ): Promise<any> {
-  let result = await fetchGraphAPI(path, token);
-  if (!result) {
-    console.log(`Retrying Graph API call: ${path}`);
-    result = await fetchGraphAPI(path, token);
-  }
-  return result;
+  return metaGraph(path, token);
 }
 
-function extractFieldValue(
-  fieldData: any[],
-  name: string
-): string | undefined {
-  const field = fieldData?.find(
-    (f: any) => f.name?.toLowerCase() === name.toLowerCase()
-  );
-  return field?.values?.[0] || undefined;
+function extractFieldValue(fieldData: any[], name: string): string | undefined {
+  return metaField(fieldData, name);
 }
 
 async function verifySignature(
@@ -84,7 +68,7 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    if (mode === "subscribe" && token === META_VERIFY_TOKEN) {
+    if (META_VERIFY_TOKEN && mode === "subscribe" && token === META_VERIFY_TOKEN) {
       console.log("Webhook verified successfully");
       return new Response(challenge, { status: 200, headers: corsHeaders });
     }
@@ -120,6 +104,7 @@ Deno.serve(async (req) => {
     }
 
     const entries = payload?.entry || [];
+    let failures = 0;
 
     for (const entry of entries) {
       const pageId = entry.id;
@@ -346,6 +331,7 @@ Deno.serve(async (req) => {
 
           console.log(`Lead ${leadgenId} processed successfully`);
         } catch (err: any) {
+          failures++;
           console.error(`Error processing lead ${leadgenId}:`, (err instanceof Error ? err.message : String(err)));
           await supabase.from("meta_lead_logs").insert({
             leadgen_id: leadgenId?.toString(),
@@ -361,8 +347,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ status: "ok" }), {
-      status: 200,
+    return new Response(JSON.stringify({ status: failures ? "retry" : "ok" }), {
+      status: failures ? 503 : 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
