@@ -8,7 +8,21 @@ interface PublicSiteMenuProps {
   onClose: () => void;
 }
 
-const menuGroups = [
+interface MenuGroupItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  anchor?: boolean;
+  external?: boolean;
+  highlight?: boolean;
+}
+
+interface MenuGroup {
+  title: string;
+  items: MenuGroupItem[];
+}
+
+const menuGroups: MenuGroup[] = [
   {
     title: 'Accès rapide',
     items: [
