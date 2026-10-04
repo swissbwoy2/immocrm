@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay } from 'date-fns';
 import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
@@ -7,12 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
-import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
-import { ClientEventDetailDialog } from '@/components/calendar/ClientEventDetailDialog';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+
+const EventManagerCalendar = lazy(() => import('@/components/calendar/EventManagerCalendar').then(m => ({ default: m.EventManagerCalendar })));
+const ClientEventDetailDialog = lazy(() => import('@/components/calendar/ClientEventDetailDialog').then(m => ({ default: m.ClientEventDetailDialog })));
 
 export default function ClientCalendrier() {
   const navigate = useNavigate();
@@ -311,7 +312,8 @@ export default function ClientCalendrier() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
+          <Suspense fallback={<div className="h-72 rounded bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={events}
             visites={visites}
@@ -320,10 +322,11 @@ export default function ClientCalendrier() {
             onEventClick={(item, type) => handleOpenDetail(item, type)}
             availableTypes={['visite', 'visite_proposee', 'signature', 'etat_lieux', 'rdv_telephonique', 'rendez_vous']}
           />
+          </Suspense>
         </div>
 
         {/* Day events */}
-        <div className="min-w-0 h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="min-w-0 h-[600px]">
           <PremiumClientDayEvents
             date={selectedDate}
             events={selectedDayEvents}
@@ -337,13 +340,13 @@ export default function ClientCalendrier() {
         </div>
       </div>
 
-      <ClientEventDetailDialog
+      {detailOpen && <Suspense fallback={null}><ClientEventDetailDialog
         open={detailOpen}
         onOpenChange={setDetailOpen}
         visite={detailVisite}
         event={detailEvent}
         onVoirOffre={() => navigate('/client/offres-recues')}
-      />
+      /></Suspense>}
 
       {/* Empty state when no visites */}
       {visites.length === 0 && (
