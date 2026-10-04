@@ -53,7 +53,7 @@ if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.addEventListener('controllerchange', () => {
     if (reloadedOnControllerChange || !updateRequested) return;
     if (isInCall()) {
-      console.log('[PWA] Reload ignoré : appel en cours.');
+      console.log('[PWA] Mise à jour reportée : appel en cours.');
       return;
     }
     reloadedOnControllerChange = true;
@@ -66,7 +66,14 @@ if (isPreviewHost || isInIframe) {
       console.log('[PWA] New version available.');
       toast('Nouvelle version disponible', {
         duration: Infinity,
-        action: { label: 'Mettre à jour', onClick: () => { updateRequested = true; void updateSW(true); } },
+        action: { label: 'Mettre à jour', onClick: () => {
+          if (isInCall()) {
+            toast.info('Terminez votre appel avant la mise à jour.');
+            return;
+          }
+          updateRequested = true;
+          void updateSW(true);
+        } },
       });
     },
     onOfflineReady() {
