@@ -210,6 +210,20 @@ Deno.test("Classement PostgreSQL : intentions, ambiguïtés, synchronisation, ex
     assertEquals((await db.query("select count(*)::int n from newsletter_contacts where email='visitor@example.ch'")).rows,[{n:1}]);
     await db.query("select newsletter_import_contacts($1::jsonb,'prospect',array['visit'],'csv')",[JSON.stringify([{email:'manualvisit@example.ch'}])]);
     assertEquals((await db.query("select has_function_privilege('anon','newsletter_sync_visits()','execute') allowed")).rows,[{allowed:false}]);
+
+    await db.exec("alter table meta_leads add column form_id text; alter table meta_leads add column page_id text;");
+    await db.exec(await Deno.readTextFile(new URL('../../supabase/migrations/20261004103000_newsletter_meta_forms.sql', import.meta.url)));
+    const metaClassify = async (p: unknown) => (await db.query<{c: unknown}>("select newsletter_classify_meta($1) c",[JSON.stringify(p)])).rows[0].c;
+    assertEquals(await metaClassify({form_name:'NEW 2026 RELOC',raw_answers:{type_recherche:'location'}}),{categories:['relocation'],outside:false});
+    assertEquals(await metaClassify({form_name:'Formulaire nouveau',raw_answers:{'Vous souhaitez…':'Louer un appartement'}}),{categories:['renter'],outside:false});
+    assertEquals(await metaClassify({form_name:'Formulaire nouveau'}),{categories:[],outside:false});
+    assertEquals(await metaClassify({form_name:'ACHAT BEST',raw_answers:{'Quel type de bien recherches-tu ?':'Terrain'}}),{categories:[],outside:true});
+    await db.exec(`insert into meta_leads(email,form_id,form_name,raw_answers) values('newmeta@example.ch','100','Formulaire nouveau','{"Vous souhaitez…":"Louer un appartement"}');`);
+    assertEquals((await db.query("select categories from newsletter_contacts where email='newmeta@example.ch'")).rows,[{categories:['renter']}]);
+    assertEquals((await db.query("select form_id from newsletter_meta_forms")).rows,[{form_id:'100'}]);
+    await db.exec("update newsletter_contacts set categories=array['buyer'],classification_manual=true,excluded=true where email='newmeta@example.ch'; select newsletter_sync_leads();");
+    assertEquals((await db.query("select categories,excluded from newsletter_contacts where email='newmeta@example.ch'")).rows,[{categories:['buyer'],excluded:true}]);
+    assertEquals((await db.query("select has_table_privilege('anon','newsletter_meta_forms','select') allowed")).rows,[{allowed:false}]);
   } finally {
     await db.close();
   }

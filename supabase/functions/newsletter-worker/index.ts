@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 import {
   check,
+  InfomaniakError,
   groupRecipients,
   infomaniak,
   immediateScheduleStart,
@@ -70,14 +71,24 @@ Deno.serve(async (req) => {
     // Only create absent subscribers. Never update/re-activate an existing opt-out.
     const missing = audience.filter((r) => !byEmail.has(r.email));
     if (missing.length) {
-      for (const r of missing.slice(0, 15)) {
-        await provider.call("/subscribers", "POST", { email: r.email });
+      for (const r of missing.slice(0, 50)) {
+        try {
+          await provider.call("/subscribers", "POST", { email: r.email });
+        } catch (e) {
+          // Only a definitive email-format rejection is recipient-specific.
+          // Auth, quota, transient and unknown validation failures still stop the batch.
+          if (!(e instanceof InfomaniakError) || !e.invalidEmail) throw e;
+          check(await db.rpc("newsletter_infomaniak_skip", {
+            ...lease, p_emails: [r.email],
+            p_reason: "Adresse email invalide selon Infomaniak : correction nécessaire avant un nouvel envoi.",
+          }));
+        }
       }
       await update({
         worker_error: `Préparation des contacts Infomaniak : ${
-          Math.max(0, missing.length - 15)
+          Math.max(0, missing.length - 50)
         } restants.`,
-        dispatch_retry_at: new Date(Date.now() + 60000).toISOString(),
+        dispatch_retry_at: new Date(Date.now() + 1000).toISOString(),
       });
       return Response.json({ preparing: true });
     }
@@ -105,6 +116,14 @@ Deno.serve(async (req) => {
         worker_error: "Aucun destinataire éligible : aucun envoi.",
       });
       return Response.json({ processed: 0 });
+    }
+    // Prepare recipients ahead of time, but do not hand off to the provider early.
+    // This also keeps future campaigns cancellable during contact preparation.
+    const scheduled = Date.parse(c.scheduled_at);
+    if (!Number.isFinite(scheduled)) throw new Error("Date de programmation invalide");
+    if (scheduled > Date.now() + 180000) {
+      await update({ worker_error: null, dispatch_retry_at: new Date(scheduled - 180000).toISOString() });
+      return Response.json({ prepared: audience.length });
     }
     let groupId = c.provider_group_id as number | null;
     if (!groupId) {
@@ -214,7 +233,7 @@ Deno.serve(async (req) => {
     const result = await provider.call<boolean>(
       `/campaigns/${campaignId}/schedule`,
       "PUT",
-      { started_at: immediateScheduleStart() },
+      { started_at: Math.max(Math.ceil(scheduled / 1000), immediateScheduleStart()) },
     );
     if (result.data !== true) {
       throw new Error("Infomaniak n’a pas confirmé la prise en charge");

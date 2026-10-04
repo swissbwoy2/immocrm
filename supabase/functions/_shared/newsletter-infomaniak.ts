@@ -31,6 +31,9 @@ export async function infomaniak(db: SupabaseClient) {
   }
   return new Infomaniak(data);
 }
+export class InfomaniakError extends Error {
+  constructor(message: string, readonly status: number, readonly endpoint: string, readonly invalidEmail: boolean) { super(message); this.name = "InfomaniakError"; }
+}
 export class Infomaniak {
   private lastRequest = 0;
   constructor(
@@ -90,10 +93,16 @@ export class Infomaniak {
         }
       }
       const fields = [...fieldNames].slice(0, 30).join(",");
-      throw new Error(
+      throw new InfomaniakError(
         `Infomaniak (${response.status}, ${code}) sur ${endpoint}${
           fields ? ` — champs rejetés: ${fields}` : ""
         }. Vérifiez le domaine, les crédits et les droits de la clé.`,
+        response.status, endpoint,
+        response.status === 422 && endpoint === "POST /subscribers" &&
+          result.error?.code === "validation_failed" &&
+          Array.isArray(result.error?.errors) && result.error.errors.length > 0 &&
+          result.error.errors.every((e: {code?: string; context?: {attribute?: string}}) =>
+            e.code === "validation_rule_email" && e.context?.attribute === "email"),
       );
     }
     return result;
