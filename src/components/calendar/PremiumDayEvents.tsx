@@ -1,4 +1,5 @@
 import { format, differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
+import { useMemo } from 'react';
 import { fr } from 'date-fns/locale';
 import { 
   Calendar, Clock, User, Users, CheckCircle, XCircle, Trash2, Sparkles,
@@ -44,6 +45,20 @@ export function PremiumDayEvents({
   onVisiteGroupClick,
   onPhoneApptClick,
 }: PremiumDayEventsProps) {
+  const allItems = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    visites.forEach(visite => {
+      const key = `${visite.adresse}-${visite.date_visite}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(visite);
+    });
+    const items: { type: 'event' | 'visite-group'; data: any; eventType: string }[] = [
+      ...events.map(event => ({ type: 'event' as const, data: event, eventType: event.event_type })),
+      ...Array.from(groups.values()).map(group => ({ type: 'visite-group' as const, data: group, eventType: 'visite' })),
+    ];
+    return items.sort((a, b) => new Date(a.type === 'event' ? a.data.event_date : a.data[0].date_visite).getTime()
+      - new Date(b.type === 'event' ? b.data.event_date : b.data[0].date_visite).getTime());
+  }, [events, visites]);
   if (!date) {
     return (
       <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/30 border border-border/50 overflow-hidden">
@@ -112,39 +127,6 @@ export function PremiumDayEvents({
     const days = differenceInDays(eventDate, now);
     return { text: `Dans ${days}j`, color: 'text-primary' };
   };
-
-  // Group visites by address + time
-  const groupVisitesByAddressAndTime = (visitesArray: any[]) => {
-    const groups = new Map<string, any[]>();
-    visitesArray.forEach(visite => {
-      const key = `${visite.adresse}-${visite.date_visite}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(visite);
-    });
-    return Array.from(groups.values());
-  };
-
-  // Combine events and visites for the selected day
-  const allItems: { type: 'event' | 'visite-group'; data: any; eventType: string }[] = [];
-
-  events.forEach((event) => {
-    allItems.push({ type: 'event', data: event, eventType: event.event_type });
-  });
-
-  // Add grouped visites
-  const groupedVisites = groupVisitesByAddressAndTime(visites);
-  groupedVisites.forEach((group) => {
-    allItems.push({ type: 'visite-group', data: group, eventType: 'visite' });
-  });
-
-  // Sort by time
-  allItems.sort((a, b) => {
-    const dateA = new Date(a.type === 'event' ? a.data.event_date : a.data[0].date_visite);
-    const dateB = new Date(b.type === 'event' ? b.data.event_date : b.data[0].date_visite);
-    return dateA.getTime() - dateB.getTime();
-  });
 
   return (
     <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/50 overflow-hidden flex flex-col shadow-xl">
