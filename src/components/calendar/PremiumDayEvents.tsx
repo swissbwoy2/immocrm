@@ -52,7 +52,7 @@ export function PremiumDayEvents({
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 rounded-full bg-primary/20 animate-float"
+              className="absolute w-1 h-1 rounded-full bg-primary/20 motion-safe:animate-float"
               style={{
                 left: `${20 + i * 15}%`,
                 top: `${30 + (i % 3) * 20}%`,
@@ -67,9 +67,8 @@ export function PremiumDayEvents({
           <div className="text-center">
             <div className="relative inline-block mb-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-primary/60 animate-pulse" />
+                <Calendar className="w-8 h-8 text-primary/60" />
               </div>
-              <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl animate-pulse" />
             </div>
             <p className="text-muted-foreground font-medium">
               Sélectionnez un jour pour voir les événements
@@ -157,7 +156,7 @@ export function PremiumDayEvents({
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/15 animate-float"
+            className="absolute w-1 h-1 rounded-full bg-primary/15 motion-safe:animate-float"
             style={{
               left: `${10 + i * 15}%`,
               top: `${20 + (i % 4) * 20}%`,

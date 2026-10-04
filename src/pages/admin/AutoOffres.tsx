@@ -117,7 +117,7 @@ export default function AutoOffres() {
       <Card>
         <CardHeader><CardTitle>Derniers runs</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto"><Table>
+          <Table>
             <TableHeader><TableRow>
               <TableHead>Date</TableHead><TableHead>Mode</TableHead>
               <TableHead>Clients servis</TableHead><TableHead>Trouvés</TableHead>

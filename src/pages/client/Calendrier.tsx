@@ -292,9 +292,8 @@ export default function ClientCalendrier() {
   const pendingVisites = visites.filter(v => v.statut === 'proposee');
 
   return (
-    <>
-    {loading && <p className="px-4 pt-3 text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
+      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
       {/* Header modernisé */}
       <PremiumPageHeader
         title="Mon calendrier"
@@ -342,13 +341,12 @@ export default function ClientCalendrier() {
       /></Suspense>}
 
       {/* Empty state when no visites */}
-      {visites.length === 0 && (
+      {!loading && visites.length === 0 && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-8 text-center">
           <div className="absolute inset-0 bg-grid-pattern opacity-5" />
           <div className="relative">
             <div className="inline-block relative mb-4">
-              <CalendarIcon className="w-16 h-16 text-muted-foreground/50 animate-float" />
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+              <CalendarIcon className="w-16 h-16 text-muted-foreground/50" />
             </div>
             <h3 className="text-lg font-semibold mb-2">Aucune visite planifiée</h3>
             <p className="text-muted-foreground mb-4">

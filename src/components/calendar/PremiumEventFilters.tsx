@@ -59,10 +59,9 @@ export function PremiumEventFilters({
     .filter(v => v !== 'all').length;
 
   return (
-    <div className="relative overflow-hidden bg-card/80 backdrop-blur-xl rounded-2xl border border-border/50 p-4 space-y-4 shadow-xl">
+    <div className="relative overflow-hidden bg-card rounded-2xl border border-border/50 p-4 space-y-4 shadow-xl">
       {/* Background effects */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       
       <div className="relative z-10">
         {/* Header */}
