@@ -41,7 +41,6 @@ const routes: Record<string, () => Promise<unknown>> = {
   '/admin/postulation-auto': () => import('../features/postulation-auto/pages/RemplirDemandeLocation'),
   '/admin/leads': () => import('../pages/admin/Leads'),
   '/admin/contacts': () => import('../pages/admin/Contacts'),
-  '/admin/auto-offres': () => import('../pages/admin/AutoOffres'),
   '/admin/offres-auto': () => import('../pages/admin/OffresAuto'),
   '/admin/postulations': () => import('../pages/admin/Postulations'),
   '/agent/postulations': () => import('../pages/agent/Postulations'),

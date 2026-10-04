@@ -114,7 +114,6 @@ const AdminRemplirDemandeIA = lazyWithRetry(() => import("./pages/admin/RemplirD
 const ModelesDemandeLocation = lazyWithRetry(() => import("./features/postulation-auto/pages/ModelesDemandeLocation"));
 const RemplirDemandeLocation = lazyWithRetry(() => import("./features/postulation-auto/pages/RemplirDemandeLocation"));
 const AdminLeads = lazyWithRetry(() => import("./pages/admin/Leads"));
-const AdminAutoOffres = lazyWithRetry(() => import("./pages/admin/AutoOffres"));
 const AdminOffresAuto = lazyWithRetry(() => import("./pages/admin/OffresAuto"));
 const AdminPostulations = lazyWithRetry(() => import("./pages/admin/Postulations"));
 const AgentPostulations = lazyWithRetry(() => import("./pages/agent/Postulations"));
@@ -436,7 +435,7 @@ const App = () => (
               <Route path="/admin/postulation-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RemplirDemandeLocation /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
-              <Route path="/admin/auto-offres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAutoOffres /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/auto-offres" element={<Navigate to="/admin/offres-auto" replace />} />
               <Route path="/admin/offres-auto" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminOffresAuto /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/postulations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminPostulations /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/postulations" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentPostulations /></AppLayout></ProtectedRoute>} />
