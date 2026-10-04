@@ -97,8 +97,9 @@ export default function ClientDashboardDispatcher() {
 
   if (!resolved) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement du tableau de bord">
+        <div className="h-7 w-48 rounded bg-muted/60" />
+        <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
       </div>
     );
   }
@@ -444,11 +445,9 @@ function ClientDashboardLocation() {
   if (loading) {
     return (
       <PremiumPageShellV2>
-        <div className="flex items-center justify-center py-32">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-            <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30" />
-          </div>
+        <div className="p-4 md:p-8" role="status" aria-label="Chargement du tableau de bord">
+          <div className="h-7 w-48 rounded bg-muted/60" />
+          <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
         </div>
       </PremiumPageShellV2>
     );

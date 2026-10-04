@@ -255,16 +255,9 @@ export default function MonContrat() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-            </div>
-          </div>
-          <p className="text-muted-foreground animate-pulse">Chargement du contrat...</p>
-        </div>
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement du contrat">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
       </div>
     );
   }

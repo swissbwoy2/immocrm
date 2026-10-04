@@ -136,11 +136,9 @@ export default function ClientParametres() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-r-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-        </div>
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement des paramètres">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
       </div>
     );
   }

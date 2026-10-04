@@ -546,11 +546,9 @@ export default function AdminCalendrier() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-r-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-        </div>
+      <div className="p-4 md:p-6" role="status" aria-label="Chargement du calendrier">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-32 rounded bg-muted/40" />
       </div>
     );
   }
