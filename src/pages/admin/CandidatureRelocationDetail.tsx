@@ -57,7 +57,7 @@ export default function CandidatureRelocationDetail() {
     if (error) toast.error(error.message);
     setSel(data); setLoading(false);
     if (data?.user_id) {
-      const { data: dc } = await supabase.from('documents').select('id, nom, type_document, url, date_upload').eq('user_id', data.user_id).order('date_upload', { ascending: false });
+      const { data: dc } = await supabase.from('documents').select('id, nom, type_document, url, date_upload, candidature_id').eq('user_id', data.user_id).order('date_upload', { ascending: false });
       setDocs(dc ?? []);
     }
   };
@@ -154,8 +154,8 @@ export default function CandidatureRelocationDetail() {
         <Card><CardContent className="p-4"><p className="mb-1 font-semibold">Suivi</p><RelocationTimeline r={sel} /></CardContent></Card>
 
         <Card><CardContent className="space-y-2 p-4">
-          <p className="font-semibold">Pièces téléversées</p>
-          {docs.length === 0 ? <p className="text-muted-foreground">Aucune pièce.</p> : docs.map((d) => (
+          <p className="font-semibold">Autres pièces du candidat</p>
+          {docs.filter((d) => d.candidature_id !== sel.id).length === 0 ? <p className="text-muted-foreground">Aucune autre pièce.</p> : docs.filter((d) => d.candidature_id !== sel.id).map((d) => (
             <button key={d.id} className="block min-h-[36px] text-left text-primary underline" onClick={() => openDoc(d.url)}>{d.type_document || d.nom} — {d.nom}</button>
           ))}
           {['documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises'].includes(s) && sel.user_id && (
