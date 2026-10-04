@@ -123,5 +123,21 @@ export default defineConfig(({ mode }) => {
       },
       dedupe: ["react", "react-dom", "react/jsx-runtime"],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (/\/node_modules\/(?:react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) return 'vendor-react';
+            if (/\/node_modules\/@tanstack\/(?:react-query|query-core)\//.test(id)) return 'vendor-query';
+            if (/\/node_modules\/framer-motion\//.test(id)) return 'vendor-motion';
+            if (/\/node_modules\/(?:recharts|d3-[^/]+|victory-vendor)\//.test(id)) return 'vendor-charts';
+            if (/\/node_modules\/date-fns\//.test(id)) return 'vendor-dates';
+            if (/\/node_modules\/lucide-react\//.test(id)) return 'vendor-icons';
+            if (/\/node_modules\/@supabase\//.test(id)) return 'vendor-cloud';
+          },
+        },
+      },
+    },
   };
 });
