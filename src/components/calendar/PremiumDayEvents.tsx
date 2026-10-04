@@ -1,4 +1,5 @@
 import { format, differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
+import { useMemo } from 'react';
 import { fr } from 'date-fns/locale';
 import { 
   Calendar, Clock, User, Users, CheckCircle, XCircle, Trash2, Sparkles,
@@ -44,6 +45,20 @@ export function PremiumDayEvents({
   onVisiteGroupClick,
   onPhoneApptClick,
 }: PremiumDayEventsProps) {
+  const allItems = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    visites.forEach(visite => {
+      const key = `${visite.adresse}-${visite.date_visite}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(visite);
+    });
+    const items: { type: 'event' | 'visite-group'; data: any; eventType: string }[] = [
+      ...events.map(event => ({ type: 'event' as const, data: event, eventType: event.event_type })),
+      ...Array.from(groups.values()).map(group => ({ type: 'visite-group' as const, data: group, eventType: 'visite' })),
+    ];
+    return items.sort((a, b) => new Date(a.type === 'event' ? a.data.event_date : a.data[0].date_visite).getTime()
+      - new Date(b.type === 'event' ? b.data.event_date : b.data[0].date_visite).getTime());
+  }, [events, visites]);
   if (!date) {
     return (
       <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/30 border border-border/50 overflow-hidden">
@@ -52,7 +67,7 @@ export function PremiumDayEvents({
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 rounded-full bg-primary/20 animate-float"
+              className="absolute w-1 h-1 rounded-full bg-primary/20 motion-safe:animate-float"
               style={{
                 left: `${20 + i * 15}%`,
                 top: `${30 + (i % 3) * 20}%`,
@@ -67,9 +82,8 @@ export function PremiumDayEvents({
           <div className="text-center">
             <div className="relative inline-block mb-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-primary/60 animate-pulse" />
+                <Calendar className="w-8 h-8 text-primary/60" />
               </div>
-              <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl animate-pulse" />
             </div>
             <p className="text-muted-foreground font-medium">
               Sélectionnez un jour pour voir les événements
@@ -114,39 +128,6 @@ export function PremiumDayEvents({
     return { text: `Dans ${days}j`, color: 'text-primary' };
   };
 
-  // Group visites by address + time
-  const groupVisitesByAddressAndTime = (visitesArray: any[]) => {
-    const groups = new Map<string, any[]>();
-    visitesArray.forEach(visite => {
-      const key = `${visite.adresse}-${visite.date_visite}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(visite);
-    });
-    return Array.from(groups.values());
-  };
-
-  // Combine events and visites for the selected day
-  const allItems: { type: 'event' | 'visite-group'; data: any; eventType: string }[] = [];
-
-  events.forEach((event) => {
-    allItems.push({ type: 'event', data: event, eventType: event.event_type });
-  });
-
-  // Add grouped visites
-  const groupedVisites = groupVisitesByAddressAndTime(visites);
-  groupedVisites.forEach((group) => {
-    allItems.push({ type: 'visite-group', data: group, eventType: 'visite' });
-  });
-
-  // Sort by time
-  allItems.sort((a, b) => {
-    const dateA = new Date(a.type === 'event' ? a.data.event_date : a.data[0].date_visite);
-    const dateB = new Date(b.type === 'event' ? b.data.event_date : b.data[0].date_visite);
-    return dateA.getTime() - dateB.getTime();
-  });
-
   return (
     <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/50 overflow-hidden flex flex-col shadow-xl">
       {/* Animated gradient border */}
@@ -157,7 +138,7 @@ export function PremiumDayEvents({
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/15 animate-float"
+            className="absolute w-1 h-1 rounded-full bg-primary/15 motion-safe:animate-float"
             style={{
               left: `${10 + i * 15}%`,
               top: `${20 + (i % 4) * 20}%`,

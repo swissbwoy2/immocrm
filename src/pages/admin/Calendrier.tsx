@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { isSameDay, format, isToday, isThisWeek, isThisMonth, isFuture, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download, Pencil } from 'lucide-react';
@@ -13,11 +13,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
-import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
-import { EventForm, EventFormData } from '@/components/calendar/EventForm';
+import type { EventFormData } from '@/components/calendar/EventForm';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
-import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
+import type { PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -29,12 +28,16 @@ import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
 import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
-import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
-import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
 import { getInteretState, isVisiteConfirmedByClient, offreStatutOf } from '@/lib/offreInteret';
 import { CreneauxAVenirStrip } from '@/components/calendar/CreneauxAVenirStrip';
+
+const EventManagerCalendar = lazy(() => import('@/components/calendar/EventManagerCalendar').then(m => ({ default: m.EventManagerCalendar })));
+const EventForm = lazy(() => import('@/components/calendar/EventForm').then(m => ({ default: m.EventForm })));
+const PhoneAppointmentDetailDialog = lazy(() => import('@/components/calendar/PhoneAppointmentDetailDialog').then(m => ({ default: m.PhoneAppointmentDetailDialog })));
+const AddClientsToVisiteDialog = lazy(() => import('@/components/calendar/AddClientsToVisiteDialog').then(m => ({ default: m.AddClientsToVisiteDialog })));
+const EditVisiteDialog = lazy(() => import('@/components/calendar/EditVisiteDialog').then(m => ({ default: m.EditVisiteDialog })));
 
 interface Agent {
   id: string;
@@ -64,6 +67,17 @@ export default function AdminCalendrier() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  // Client choices do not depend on the displayed month; do not block the calendar on this large list.
+  useEffect(() => {
+    let active = true;
+    supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)').limit(15000)
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) console.error('Clients error:', error);
+        else setClients((data as any) || []);
+      });
+    return () => { active = false; };
+  }, []);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [showEventForm, setShowEventForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -106,7 +120,7 @@ export default function AdminCalendrier() {
       const rangeEndDate = rangeEndIso.slice(0, 10);
 
       // Requêtes filtrées CÔTÉ DB sur la fenêtre de dates affichée
-      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
+      const [eventsRes, visitesRes, agentsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
         fetchAllPaginated(() =>
           supabase.from('calendar_events').select('*')
             .is('visite_id', null)
@@ -121,7 +135,6 @@ export default function AdminCalendrier() {
             .order('date_visite', { ascending: true })
         ),
         supabase.from('agents').select('id, user_id, profiles!agents_user_id_fkey(prenom, nom)'),
-        supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)').limit(15000),
         fetchAllPaginated(() =>
           supabase.from('candidatures')
             .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
@@ -142,7 +155,6 @@ export default function AdminCalendrier() {
         events: eventsRes.data?.length || 0,
         visites: visitesRes.data?.length || 0,
         agents: agentsRes.data?.length || 0,
-        clients: clientsRes.data?.length || 0,
         candidatures: candidaturesRes.data?.length || 0,
         lastVisite: visitesRes.data?.length ? visitesRes.data[visitesRes.data.length - 1]?.date_visite : 'none',
       });
@@ -158,10 +170,6 @@ export default function AdminCalendrier() {
       if (agentsRes.error) {
         console.error('Agents error:', agentsRes.error);
         toast.error('Erreur chargement agents: ' + agentsRes.error.message);
-      }
-      if (clientsRes.error) {
-        console.error('Clients error:', clientsRes.error);
-        toast.error('Erreur chargement clients: ' + clientsRes.error.message);
       }
       if (candidaturesRes.error) {
         console.error('Candidatures error:', candidaturesRes.error);
@@ -241,7 +249,6 @@ export default function AdminCalendrier() {
       setEvents([...(eventsRes.data || []), ...candidatureEvents, ...phoneApptEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
-      setClients((clientsRes.data as any) || []);
       setPhoneAppts((phoneApptsRes.data as any) || []);
       
       if (!eventsRes.error && !visitesRes.error) {
@@ -544,17 +551,9 @@ export default function AdminCalendrier() {
     return client?.profiles ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6" role="status" aria-label="Chargement du calendrier">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-32 rounded bg-muted/40" />
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-auto h-full">
+      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
       {/* Header */}
       <PremiumPageHeader
         title="Calendrier"
@@ -690,7 +689,8 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
+          <Suspense fallback={<div className="h-72 rounded bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={filteredEvents}
             visites={filteredVisites}
@@ -703,10 +703,11 @@ export default function AdminCalendrier() {
               }
             }}
           />
+          </Suspense>
         </div>
 
         {/* Day events */}
-        <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px]">
           <PremiumDayEvents
             date={selectedDate}
             events={selectedDayEvents}
@@ -723,16 +724,16 @@ export default function AdminCalendrier() {
       </div>
 
       {/* Phone appointment detail dialog */}
-      <PhoneAppointmentDetailDialog
+      {selectedPhoneApptId && <Suspense fallback={null}><PhoneAppointmentDetailDialog
         appt={phoneAppts.find((a) => a.id === selectedPhoneApptId) || null}
         open={!!selectedPhoneApptId}
         onClose={() => setSelectedPhoneApptId(null)}
         onCancelled={() => loadData(true)}
         assignableAgents={agents}
-      />
+      /></Suspense>}
 
       {/* Event form modal */}
-      <EventForm
+      {showEventForm && <Suspense fallback={null}><EventForm
         open={showEventForm}
         onClose={() => setShowEventForm(false)}
         onSubmit={handleCreateEvent}
@@ -740,7 +741,7 @@ export default function AdminCalendrier() {
         clients={clients}
         initialDate={selectedDate || undefined}
         isLoading={isCreating}
-      />
+      /></Suspense>}
 
       {/* Visite detail dialog */}
       <Dialog open={visiteDetailDialogOpen} onOpenChange={setVisiteDetailDialogOpen}>
@@ -1049,8 +1050,8 @@ export default function AdminCalendrier() {
         </DialogContent>
       </Dialog>
 
-      {selectedVisiteGroup && selectedVisiteGroup[0] && (
-        <AddClientsToVisiteDialog
+      {addClientsDialogOpen && selectedVisiteGroup && selectedVisiteGroup[0] && (
+        <Suspense fallback={null}><AddClientsToVisiteDialog
           open={addClientsDialogOpen}
           onOpenChange={setAddClientsDialogOpen}
           sourceOffre={selectedVisiteGroup[0].offres || { adresse: selectedVisiteGroup[0].adresse, agent_id: selectedVisiteGroup[0].agent_id }}
@@ -1061,10 +1062,10 @@ export default function AdminCalendrier() {
           availableClients={clients as any}
           sourceMedias={selectedVisiteGroup[0].medias}
           onSuccess={() => loadData(true)}
-        />
+        /></Suspense>
       )}
 
-      <EditVisiteDialog
+      {editVisiteOpen && <Suspense fallback={null}><EditVisiteDialog
         open={editVisiteOpen}
         onOpenChange={setEditVisiteOpen}
         visite={selectedVisiteGroup?.[0] || null}
@@ -1074,7 +1075,7 @@ export default function AdminCalendrier() {
           setSelectedVisiteGroup(null);
           loadData(true);
         }}
-      />
+      /></Suspense>}
     </div>
   );
 }

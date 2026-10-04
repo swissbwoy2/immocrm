@@ -34,6 +34,7 @@ import { checkDraftsExist } from '@/hooks/useDraftManager';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { setClientParcoursType } from '@/lib/notificationLinks';
 import { Input } from '@/components/ui/input';
+import { prefetchSidebarRoute } from '@/lib/routePrefetch';
 
 
 interface MenuItem {
@@ -555,6 +556,7 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <NavLink to={item.path} end={isRootPath(item.path)}
+                        onMouseEnter={() => prefetchSidebarRoute(item.path)} onFocus={() => prefetchSidebarRoute(item.path)}
                         className="flex items-center justify-center w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors duration-150 relative"
                         activeClassName="bg-sidebar-primary/15 text-sidebar-primary" onClick={handleNavClick}>
                         <item.icon className="w-5 h-5 flex-shrink-0" />
@@ -566,6 +568,7 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
                   </Tooltip>
                 ) : (
                   <NavLink to={item.path} end={isRootPath(item.path)}
+                    onMouseEnter={() => prefetchSidebarRoute(item.path)} onFocus={() => prefetchSidebarRoute(item.path)}
                     className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden"
                     activeClassName="bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active" onClick={handleNavClick}>
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />
@@ -596,6 +599,25 @@ export function AppSidebar() {
   const postulationsCount = usePostulationsCount(userRole);
   const [hasDrafts, setHasDrafts] = useState(false);
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (!userRole) return;
+    const common: Record<string, string[]> = {
+      admin: ['/admin', '/admin/messagerie', '/admin/calendrier'],
+      agent: ['/agent', '/agent/messagerie', '/agent/calendrier'],
+      client: ['/client', '/client/offres-recues', '/client/calendrier'],
+      candidat: ['/candidat', '/candidat/candidatures'],
+    };
+    const paths = common[userRole] ?? [`/${userRole}`];
+    let cancelled = false;
+    const warm = () => { if (!cancelled) paths.forEach(prefetchSidebarRoute); };
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(warm, { timeout: 5000 });
+      return () => { cancelled = true; window.cancelIdleCallback(id); };
+    }
+    const id = setTimeout(warm, 2000);
+    return () => { cancelled = true; clearTimeout(id); };
+  }, [userRole]);
 
   const handleNavClick = () => {
     if (isMobile) {

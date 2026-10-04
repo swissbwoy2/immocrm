@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay } from 'date-fns';
 import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
@@ -7,12 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
-import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
-import { ClientEventDetailDialog } from '@/components/calendar/ClientEventDetailDialog';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+
+const EventManagerCalendar = lazy(() => import('@/components/calendar/EventManagerCalendar').then(m => ({ default: m.EventManagerCalendar })));
+const ClientEventDetailDialog = lazy(() => import('@/components/calendar/ClientEventDetailDialog').then(m => ({ default: m.ClientEventDetailDialog })));
 
 export default function ClientCalendrier() {
   const navigate = useNavigate();
@@ -287,20 +288,12 @@ export default function ClientCalendrier() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6" role="status" aria-label="Chargement du calendrier">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-32 rounded bg-muted/40" />
-      </div>
-    );
-  }
-
   const upcomingVisites = visites.filter(v => (v.statut === 'planifiee' || v.statut === 'proposee') && new Date(v.date_visite) >= new Date());
   const pendingVisites = visites.filter(v => v.statut === 'proposee');
 
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
+      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
       {/* Header modernisé */}
       <PremiumPageHeader
         title="Mon calendrier"
@@ -311,7 +304,8 @@ export default function ClientCalendrier() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
+          <Suspense fallback={<div className="h-72 rounded bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={events}
             visites={visites}
@@ -320,10 +314,11 @@ export default function ClientCalendrier() {
             onEventClick={(item, type) => handleOpenDetail(item, type)}
             availableTypes={['visite', 'visite_proposee', 'signature', 'etat_lieux', 'rdv_telephonique', 'rendez_vous']}
           />
+          </Suspense>
         </div>
 
         {/* Day events */}
-        <div className="min-w-0 h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="min-w-0 h-[600px]">
           <PremiumClientDayEvents
             date={selectedDate}
             events={selectedDayEvents}
@@ -337,22 +332,21 @@ export default function ClientCalendrier() {
         </div>
       </div>
 
-      <ClientEventDetailDialog
+      {detailOpen && <Suspense fallback={null}><ClientEventDetailDialog
         open={detailOpen}
         onOpenChange={setDetailOpen}
         visite={detailVisite}
         event={detailEvent}
         onVoirOffre={() => navigate('/client/offres-recues')}
-      />
+      /></Suspense>}
 
       {/* Empty state when no visites */}
-      {visites.length === 0 && (
+      {!loading && visites.length === 0 && (
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-8 text-center">
           <div className="absolute inset-0 bg-grid-pattern opacity-5" />
           <div className="relative">
             <div className="inline-block relative mb-4">
-              <CalendarIcon className="w-16 h-16 text-muted-foreground/50 animate-float" />
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+              <CalendarIcon className="w-16 h-16 text-muted-foreground/50" />
             </div>
             <h3 className="text-lg font-semibold mb-2">Aucune visite planifiée</h3>
             <p className="text-muted-foreground mb-4">

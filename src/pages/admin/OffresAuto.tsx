@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,11 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-react";
 import { format } from "date-fns";
-import { GererOffreDialog } from "@/components/offres-auto/GererOffreDialog";
 import { TablePagination, type PageSize } from "@/components/offres-auto/TablePagination";
 import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
 import { fr } from "date-fns/locale";
+
+const GererOffreDialog = lazy(() => import("@/components/offres-auto/GererOffreDialog").then(m => ({ default: m.GererOffreDialog })));
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
 
@@ -238,12 +239,12 @@ export default function OffresAuto() {
 
       </Tabs>
 
-      <GererOffreDialog
+      {editing && <Suspense fallback={null}><GererOffreDialog
         offre={editing as any}
-        open={!!editing}
+        open
         onOpenChange={v => { if (!v) setEditing(null); }}
         onSaved={load}
-      />
+      /></Suspense>}
     </div>
   );
 }
