@@ -34,6 +34,10 @@ interface CandidateDocumentsSectionProps {
   refreshKey?: number;
   agentUserId?: string;
   agentId?: string;
+  /** Pièces rattachées à une candidature location (au lieu du dossier client). */
+  candidatureId?: string;
+  /** Consultation/téléchargement uniquement (pas d'ajout ni de suppression). */
+  readOnly?: boolean;
 }
 
 const REQUIRED_DOCUMENTS = [
@@ -54,7 +58,11 @@ export function CandidateDocumentsSection({
   refreshKey,
   agentUserId,
   agentId,
+  candidatureId,
+  readOnly = false,
 }: CandidateDocumentsSectionProps) {
+  const scopeCol = candidatureId ? 'candidature_id' : 'client_id';
+  const scopeId = candidatureId || clientId;
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -79,7 +87,7 @@ export function CandidateDocumentsSection({
       const { data, error } = await supabase
         .from('documents')
         .select('*')
-        .eq('client_id', clientId)
+        .eq(scopeCol, scopeId)
         .order('date_upload', { ascending: false });
 
       if (error) throw error;
@@ -93,7 +101,7 @@ export function CandidateDocumentsSection({
 
   useEffect(() => {
     loadDocuments();
-  }, [clientId, refreshKey]);
+  }, [clientId, candidatureId, refreshKey]);
 
   const handleUpload = async () => {
     if (!selectedFile) return;
@@ -125,8 +133,9 @@ export function CandidateDocumentsSection({
         .from('documents')
         .insert({
           user_id: clientUserId,
-          client_id: clientId,
+          client_id: candidatureId ? null : clientId,
           candidate_id: selectedCandidate?.id || null,
+          ...(candidatureId ? { candidature_id: candidatureId } : {}),
           nom: selectedFile.name,
           type: selectedFile.type,
           type_document: documentType,
@@ -146,12 +155,12 @@ export function CandidateDocumentsSection({
       const { data: updatedDocs } = await supabase
         .from('documents')
         .select('*')
-        .eq('client_id', clientId);
+        .eq(scopeCol, scopeId);
       
       setDocuments(updatedDocs || []);
       
       // Check if dossier is now 100% complete and notify agent
-      if (agentUserId && updatedDocs) {
+      if (!candidatureId && agentUserId && updatedDocs) {
         const clientDocs = updatedDocs.filter(d => !d.candidate_id);
         const docTypes = clientDocs.map(d => d.type_document).filter(Boolean);
         const requiredTypes = REQUIRED_DOCUMENTS.map(r => r.type);
@@ -343,15 +352,35 @@ export function CandidateDocumentsSection({
                     <span className="sm:hidden">Dem.</span>
                   </Button>
                 )}
-                <Button size="sm" variant="outline" className="shrink-0" onClick={() => openUploadForCandidate(null)}>
+                {!readOnly && <Button size="sm" variant="outline" className="shrink-0" onClick={() => openUploadForCandidate(null)}>
                   <Upload className="w-4 h-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Ajouter</span>
                   <span className="sm:hidden">Ajt.</span>
-                </Button>
+                </Button>}
               </div>
             </div>
           </CardHeader>
           <CardContent>
+            {candidatureId && (() => {
+              const counts = countDocumentsByType(clientDocuments);
+              return (
+                <ul className="mb-3 space-y-1">
+                  {REQUIRED_DOCUMENTS.map(req => {
+                    const n = counts[req.type] || 0;
+                    const ok = n >= req.count;
+                    return (
+                      <li key={req.type} className="flex items-center gap-2 text-sm">
+                        {ok ? <CheckCircle className="w-4 h-4 shrink-0 text-primary" /> : <AlertTriangle className="w-4 h-4 shrink-0 text-muted-foreground" />}
+                        <span className="min-w-0 flex-1">{req.label}</span>
+                        <span className={ok ? 'text-primary text-xs' : 'text-muted-foreground text-xs'}>
+                          {ok ? 'Fourni' : req.count > 1 ? `${n}/${req.count}` : 'Manquant'}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })()}
             {clientDocuments.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">Aucun document</p>
             ) : (
@@ -371,14 +400,14 @@ export function CandidateDocumentsSection({
                         <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)}>
                           <Download className="w-4 h-4" />
                         </Button>
-                        <Button 
+                        {!readOnly && <Button 
                           variant="ghost" 
                           size="sm" 
                           className="text-red-600"
                           onClick={() => { setDocumentToDelete(doc); setDeleteDialogOpen(true); }}
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </Button>}
                       </div>
                     </div>
                   );
