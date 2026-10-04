@@ -16,6 +16,8 @@ export default function AutoOffres() {
   const [runs, setRuns] = useState<any[]>([]);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
+  const [candidatePage, setCandidatePage] = useState(1);
+  const candidatePageSize = 50;
 
   async function loadConfig() {
     const { data } = await supabase.from("app_config").select("key,value")
@@ -33,6 +35,8 @@ export default function AutoOffres() {
   }
 
   async function loadCandidates(runId: string) {
+    setCandidates([]);
+    setCandidatePage(1);
     const { data } = await supabase.from("auto_offer_candidates")
       .select("*, clients(prenom, nom)").eq("run_id", runId)
       .order("score", { ascending: false }).limit(500);
@@ -70,7 +74,7 @@ export default function AutoOffres() {
   const willSendReal = enabled && !dryRun;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Auto-Offres</h1>
@@ -113,7 +117,7 @@ export default function AutoOffres() {
       <Card>
         <CardHeader><CardTitle>Derniers runs</CardTitle></CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto"><Table>
             <TableHeader><TableRow>
               <TableHead>Date</TableHead><TableHead>Mode</TableHead>
               <TableHead>Clients servis</TableHead><TableHead>Trouvés</TableHead>
@@ -150,7 +154,7 @@ export default function AutoOffres() {
               <TableHead>Score</TableHead><TableHead>Envoi</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {candidates.map(c => (
+              {candidates.slice((candidatePage - 1) * candidatePageSize, candidatePage * candidatePageSize).map(c => (
                 <TableRow key={c.id}>
                   <TableCell className="text-xs">{c.clients?.prenom} {c.clients?.nom}</TableCell>
                   <TableCell className="text-xs">
@@ -169,7 +173,12 @@ export default function AutoOffres() {
               ))}
               {candidates.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Aucun candidat</TableCell></TableRow>}
             </TableBody>
-          </Table>
+          </Table></div>
+          {candidates.length > candidatePageSize && <div className="flex items-center justify-end gap-3 pt-3">
+            <Button variant="outline" size="sm" disabled={candidatePage === 1} onClick={() => setCandidatePage(page => page - 1)}>Précédent</Button>
+            <span className="text-sm text-muted-foreground">{candidatePage} / {Math.ceil(candidates.length / candidatePageSize)}</span>
+            <Button variant="outline" size="sm" disabled={candidatePage * candidatePageSize >= candidates.length} onClick={() => setCandidatePage(page => page + 1)}>Suivant</Button>
+          </div>}
         </CardContent>
       </Card>
     </div>
