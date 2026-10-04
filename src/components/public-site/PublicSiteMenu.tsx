@@ -10,9 +10,16 @@ interface PublicSiteMenuProps {
 
 const menuGroups = [
   {
-    title: 'Navigation',
+    title: 'Accès rapide',
     items: [
       { to: '/', label: 'Accueil', icon: Home },
+      { to: '/login', label: 'Mon espace', icon: LogIn },
+      { to: '/nouveau-mandat', label: 'Activer ma recherche', icon: Rocket, highlight: true },
+    ],
+  },
+  {
+    title: 'Découvrir',
+    items: [
       { to: '#comment-ca-marche', label: 'Comment ça marche', icon: HelpCircle, anchor: true },
       { to: '#services', label: 'Services', icon: Briefcase, anchor: true },
       { to: '#tarifs', label: 'Tarifs', icon: DollarSign, anchor: true },
@@ -33,10 +40,8 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Actions',
+    title: 'Contact',
     items: [
-      { to: '/nouveau-mandat', label: 'Activer ma recherche', icon: Rocket, highlight: true },
-      { to: '/login', label: 'Mon espace', icon: LogIn },
       { to: '#programme-partenaire', label: 'Devenir partenaire', icon: Handshake, anchor: true },
       { to: 'mailto:info@immo-rama.ch', label: 'Contact', icon: Mail, external: true },
     ],
