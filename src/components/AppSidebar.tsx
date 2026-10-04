@@ -79,7 +79,6 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
             { name: 'Offres à suivre', icon: Bookmark, path: '/admin/wishlist', notifKey: null },
             { name: 'Visites', icon: CalendarCheck, path: '/admin/visites', notifKey: null },
-            { name: 'Matching automatique', icon: Bot, path: '/admin/auto-offres', notifKey: null },
             { name: 'Suivi des offres automatiques', icon: Mail, path: '/admin/offres-auto', notifKey: null },
           ],
         },
