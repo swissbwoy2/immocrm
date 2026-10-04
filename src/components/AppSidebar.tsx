@@ -515,11 +515,17 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
   handleNavClick: () => void;
   isRootPath: (path: string) => boolean;
 }) {
+  const { pathname } = useLocation();
   const label = section.label ?? 'Au quotidien';
   const storageKey = `logisorama.sidebar-section.${role}.${label}`;
   const [open, setOpen] = useState(() => {
     try { return localStorage.getItem(storageKey) !== 'closed'; } catch { return true; }
   });
+  useEffect(() => {
+    if (section.items.some(item => pathname === item.path || (!isRootPath(item.path) && pathname.startsWith(`${item.path}/`)))) {
+      setOpen(true);
+    }
+  }, [pathname, storageKey]);
   const toggle = () => {
     const next = !open;
     setOpen(next);
