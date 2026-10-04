@@ -288,19 +288,12 @@ export default function ClientCalendrier() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6" role="status" aria-label="Chargement du calendrier">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-32 rounded bg-muted/40" />
-      </div>
-    );
-  }
-
   const upcomingVisites = visites.filter(v => (v.statut === 'planifiee' || v.statut === 'proposee') && new Date(v.date_visite) >= new Date());
   const pendingVisites = visites.filter(v => v.statut === 'proposee');
 
   return (
+    <>
+    {loading && <p className="px-4 pt-3 text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
       {/* Header modernisé */}
       <PremiumPageHeader
