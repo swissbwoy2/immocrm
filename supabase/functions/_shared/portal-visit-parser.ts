@@ -54,7 +54,11 @@ const normalized = (s: string) =>
   ).trim();
 function value(block: string, label: string): string {
   return block.match(
-    new RegExp("^(?:" + label + ")\\s*:?\\s*\\n?([^\\n]+)$", "im"),
+    new RegExp(
+      "^(?:" + label +
+        ")(?:[ \t]*:[ \t]*(?:\\n[ \t]*)?|[ \t]*\\n[ \t]*)([^\\n]+)$",
+      "im",
+    ),
   )?.[1]?.trim() || "";
 }
 export function parsePortalInquiry(
@@ -64,7 +68,12 @@ export function parsePortalInquiry(
   if (!PORTAL_SENDERS.includes(sender)) {
     return { reason: "Expéditeur hors périmètre" };
   }
-  const text = plainPortalText(mail.body_html || mail.body_text || "");
+  const plain = plainPortalText(mail.body_text || "");
+  const text =
+    /Infos client|La personne suivante|The following person|Folgende Person|La seguente persona/i
+        .test(plain)
+      ? plain
+      : plainPortalText(mail.body_html || plain);
   let contact: string, property: string;
   if (sender === "mail@immobilier.ch") {
     if (!/demande de contact/i.test(mail.subject || "")) {
@@ -81,14 +90,14 @@ export function parsePortalInquiry(
     property = p?.[1] || "";
   } else {
     const start = text.search(
-      /(?:La personne suivante est intéressée|The following person is interested|Folgende Person interessiert sich)\s*:/i,
+      /(?:La personne suivante est intéressée|The following person is interested|Folgende Person (?:interessiert sich|ist interessiert)|La seguente persona è interessata)\s*:/i,
     );
     if (start < 0) return { reason: "Bloc contact SMG introuvable" };
     contact = text.slice(start).split(
-      /\n(?:Ton message|Votre message|Your message|Deine Nachricht|Nachricht)\s*:?\s*(?:\n|$)/i,
+      /\n(?:Ton message|Votre message|Your message|Deine Nachricht|Nachricht|Il tuo messaggio)\s*:?\s*(?:\n|$)/i,
     )[0];
     property = text.slice(0, start).split(
-      /(?:Objet d['’]intérêt|Property of interest|Interessiertes Objekt|Objekt)\s*:/i,
+      /(?:Objet d['’]intérêt|Property of interest|Interessiertes Objekt|Objekt von Interesse|Objekt|Oggetto d['’]interesse)\s*:/i,
     )[1] || "";
   }
   const emailValue = value(
@@ -117,8 +126,8 @@ export function parsePortalInquiry(
         ? "homegate.ch"
         : "smg",
       email,
-      firstName: value(contact, "Prénom|First name|Vorname"),
-      lastName: value(contact, "Nom|Name|Nachname"),
+      firstName: value(contact, "Prénom|First name|Vorname|Nome"),
+      lastName: value(contact, "Nom|Name|Nachname|Cognome"),
       propertyText: property,
       references,
     },
