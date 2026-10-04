@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Key, Home, MapPin, CheckCircle, ArrowRight, Sparkles, Calendar } from 'lucide-react';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import heroBg from '@/assets/hero-bg.jpg';
 
 export function PremiumHero() {
@@ -27,7 +27,7 @@ export function PremiumHero() {
 
           {/* Logo */}
           <div className="animate-fade-in mb-2 md:mb-4" style={{ animationDelay: '50ms' }}>
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-14 md:h-24 w-auto drop-shadow-2xl" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-14 md:h-24 w-auto drop-shadow-2xl" />
           </div>
 
           {/* Slogan */}

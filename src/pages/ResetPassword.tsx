@@ -6,7 +6,7 @@ import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/aut
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroBg from '@/assets/hero-bg.jpg';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
 
 export default function ResetPassword() {
@@ -98,8 +98,8 @@ export default function ResetPassword() {
           transition={{ duration: 0.5 }}
         >
           <img
-            src={logoImmoRama}
-            alt="Immo-Rama"
+            src={logoLogisorama}
+            alt="Logisorama"
             className="h-20 w-auto drop-shadow-xl brightness-0 invert"
           />
           <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />

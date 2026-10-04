@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogIn, Home, Building, ArrowLeft } from 'lucide-react';
-import logo from '@/assets/logo-immo-rama-new.png';
+import logo from '@/assets/logisorama-logo.png';
 import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
 
 export function VendeurFloatingNav() {
@@ -40,7 +40,7 @@ export function VendeurFloatingNav() {
             >
               <img 
                 src={logo} 
-                alt="Logo Immo-Rama" 
+                alt="Logo Logisorama" 
                 className="h-8 w-auto"
               />
             </Link>

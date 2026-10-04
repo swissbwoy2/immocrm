@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import logoImmoRama from "@/assets/logo-immo-rama-new.png";
+import logoLogisorama from "@/assets/logisorama-logo.png";
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -43,7 +43,7 @@ export function PageTransition({ children }: PageTransitionProps) {
               <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
               <div className="relative h-16 w-16 rounded-full bg-card shadow-lg flex items-center justify-center animate-pulse">
                 <img
-                  src={logoImmoRama}
+                  src={logoLogisorama}
                   alt="Chargement Logisorama"
                   className="h-11 w-11 object-contain"
                 />

@@ -1,4 +1,4 @@
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import logoLogisorama from '@/assets/logisorama-logo.png';
 import { Radar, BarChart3, FileCheck, LayoutDashboard, Crown, Brain, Globe, Shield, Zap } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
@@ -42,8 +42,8 @@ export function TechSection() {
                   className="absolute inset-0 rounded-full"
                 />
                 <img
-                  src={logoImmoRama}
-                  alt="Immo-Rama"
+                  src={logoLogisorama}
+                  alt="Logisorama"
                   className="w-14 h-14 object-contain"
                   style={{ filter: 'brightness(0) invert(1)' }}
                 />

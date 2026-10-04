@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Rocket, CheckCircle, ShieldCheck, Users, Crown, Home, Key, Lock, FileSearch } from "lucide-react";
-import logoImmoRama from "@/assets/logo-immo-rama-new.png";
+import logoLogisorama from "@/assets/logisorama-logo.png";
 import heroBg from "@/assets/hero-bg.jpg";
 import { useSearchType } from "@/contexts/SearchTypeContext";
 
@@ -70,7 +70,7 @@ export function HeroSection() {
 
           {/* Logo */}
           <div className="animate-fade-in mb-2 md:mb-4" style={{ animationDelay: "50ms" }}>
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-16 md:h-32 w-auto drop-shadow-2xl" />
+            <img src={logoLogisorama} alt="Logisorama" className="h-16 md:h-32 w-auto drop-shadow-2xl" />
           </div>
 
           {/* Slogan */}

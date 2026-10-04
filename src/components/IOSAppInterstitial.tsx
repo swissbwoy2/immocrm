@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logoImmoRama from "@/assets/logo-immo-rama-new.png";
+import logoLogisorama from "@/assets/logisorama-logo.png";
 
 const DISMISS_KEY = "ios_app_interstitial_dismissed";
 const APP_STORE_URL = "https://apps.apple.com/app/id6756940233";
@@ -70,7 +70,7 @@ export function IOSAppInterstitial() {
     >
       <div className="max-w-sm w-full flex flex-col items-center gap-6 text-white">
         <img
-          src={logoImmoRama}
+          src={logoLogisorama}
           alt="Logisorama"
           className="h-24 w-24 rounded-3xl bg-white p-3 shadow-2xl object-contain"
         />

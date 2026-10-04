@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Rocket, Menu, LogIn, Calendar } from 'lucide-react';
-import logo from '@/assets/logo-immo-rama-new.png';
+import logo from '@/assets/logisorama-logo.png';
 import { PublicSiteMenu } from './PublicSiteMenu';
 import { motion, useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 
@@ -51,7 +51,7 @@ export function PublicSiteHeader() {
                 <Link to="/" className="flex items-center" aria-label="Accueil Immo-Rama">
                   <motion.img
                     src={logo}
-                    alt="Immo-Rama"
+                    alt="Logisorama"
                     className="w-auto"
                     animate={prefersReducedMotion ? {} : { height: scrolled ? '28px' : '32px' }}
                     transition={{ duration: 0.3 }}
