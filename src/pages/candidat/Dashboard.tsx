@@ -109,7 +109,7 @@ export default function CandidatDashboard() {
           <QuickTileXL icon={Search} variant="wide" title="Mes critères de recherche" subtitle={criteresComplete ? 'Modifier mes critères' : 'À compléter'} onClick={() => setCriteresOpen(true)} />
           <QuickTileXL icon={ShieldCheck} variant="wide" title="Mon garant" subtitle="Renseigner / modifier mon garant" onClick={() => setGarantOpen(true)} />
           <QuickTileXL icon={MessageSquare} variant="wide" title="Messages" subtitle="Mes échanges sur les annonces" onClick={() => navigate('/candidat/messages')} />
-          {retenues > 0 && <QuickTileXL icon={FolderOpen} variant="wide" title="Pièces à fournir" subtitle={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/demande')} />}
+          {retenues > 0 && <QuickTileXL icon={FolderOpen} variant="wide" title="Pièces à fournir" subtitle={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />}
         </div>
       </PremiumPageShellV2>
       <Dialog open={criteresOpen} onOpenChange={setCriteresOpen}>

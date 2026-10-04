@@ -17,6 +17,8 @@ import { useCandidatCandidatures, statutLabel, RETENU_BAILLEUR } from '@/hooks/u
 
 type Filter = 'toutes' | 'en_cours' | 'retenues' | 'terminees';
 const CLOSED = ['refuse', 'refusee', 'desiste'];
+// Documents uniquement après pré-sélection (documents_demandes) et étapes suivantes.
+const DOCS_OK = ['documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises'];
 
 export default function CandidatCandidatures() {
   const { data = [], isLoading } = useCandidatCandidatures();
@@ -25,6 +27,7 @@ export default function CandidatCandidatures() {
   const [selected, setSelected] = useState('');
   const [busy, setBusy] = useState(false);
   const [askVisit, setAskVisit] = useState<UnifiedCandidature | null>(null);
+  const [askStep, setAskStep] = useState<'visite' | 'deposer'>('visite');
   const navigate = useNavigate();
   const now = Date.now();
   const eligibles = data.filter((c) => c.source === 'location' && !c.annulee && ['en_attente', 'visite_effectuee'].includes(c.statut) && c.date_visite && new Date(c.date_visite).getTime() < now);
@@ -57,7 +60,7 @@ export default function CandidatCandidatures() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <VisiteConfirmGate list={data} force={askVisit} onClose={() => setAskVisit(null)} />
+      <VisiteConfirmGate list={data} force={askVisit} forceStep={askStep} onClose={() => setAskVisit(null)} />
       <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
         <h1 className="text-2xl font-bold text-foreground">Mes candidatures</h1>
         <Card>
@@ -115,9 +118,12 @@ export default function CandidatCandidatures() {
                     <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
                   )}
                   {c.source === 'location' && (c.raw?.date_depot || ['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises', 'refusee', 'desiste'].includes(c.statut)) && <RelocationTimeline r={{ ...c.raw, statut: c.statut }} />}
-                  {c.source === 'location' && <CandidatDocumentsSection candidatureId={c.id} />}
+                  {c.source === 'location' && DOCS_OK.includes(c.statut) && <CandidatDocumentsSection candidatureId={c.id} />}
+                  {c.source === 'location' && !c.annulee && c.raw?.visite_confirmee === true && !DOCS_OK.includes(c.statut) && c.statut !== 'candidature_deposee' && !CLOSED.includes(c.statut) && (
+                    <Button size="sm" className="min-h-[44px] w-full" onClick={() => { setAskStep('deposer'); setAskVisit(c); }}>Souhaitez-vous déposer votre dossier ?</Button>
+                  )}
                   {c.source === 'location' && !c.annulee && c.raw?.visite_confirmee !== true && ['en_attente', 'visite_planifiee'].includes(c.statut) && c.date_visite && new Date(c.date_visite).getTime() < now && (
-                    <Button size="sm" variant="outline" className="min-h-[44px] w-full" onClick={() => setAskVisit(c)}>Avez-vous visité cet objet ? Répondre</Button>
+                    <Button size="sm" variant="outline" className="min-h-[44px] w-full" onClick={() => { setAskStep('visite'); setAskVisit(c); }}>Avez-vous visité cet objet ? Répondre</Button>
                   )}
                   {c.source === 'location' && c.raw?.annonce_id && (
                     <Button size="sm" variant="outline" className="min-h-[44px] w-full" onClick={() => contacter(c.raw.annonce_id)}><MessageCircle className="mr-1 h-4 w-4" />Contacter</Button>
