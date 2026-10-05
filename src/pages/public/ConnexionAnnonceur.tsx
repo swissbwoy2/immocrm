@@ -9,6 +9,7 @@ import { Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { withAuthStorageRemoval } from '@/lib/authStorageGuard';
 import { useConnectedIdentity } from '@/hooks/useConnectedIdentity';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export default function ConnexionAnnonceur() {
   const navigate = useNavigate();
@@ -166,6 +167,8 @@ export default function ConnexionAnnonceur() {
         </motion.div>
 
         {/* Register link */}
+        <GoogleSignInButton />
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -18,6 +18,7 @@ import { RouteSeo } from "./components/RouteSeo";
 
 // Eager load critical pages
 import Login from "./pages/Login";
+const AuthCallback = lazyWithRetry(() => import("./pages/AuthCallback"));
 import NotFound from "./pages/NotFound";
 const HomePage = lazyWithRetry(() => import("./pages/public-site/HomePage"));
 const DemoPage = lazyWithRetry(() => import("./pages/Demo"));
@@ -315,6 +316,7 @@ const App = () => (
               <Route path="/" element={<HomePage />} />
               
               <Route path="/login" element={<Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/demo" element={<DemoPage />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
               <Route path="/mandat-v3" element={<Navigate to="/nouveau-mandat" replace />} />
