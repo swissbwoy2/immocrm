@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
       .limit(500);
     const userIds = (allClients ?? []).map((c: any) => c.user_id).filter(Boolean);
     const { data: stopped } = userIds.length
-      ? await supabase.from("user_credits").select("user_id").in("user_id", userIds).in("mandat_statut", ["expire", "suspendu"])
+      ? await supabase.from("user_credits").select("user_id").in("user_id", userIds).in("mandat_statut", ["aucun", "expire", "suspendu"])
       : { data: [] as any[] };
     const stoppedSet = new Set((stopped ?? []).map((r: any) => r.user_id));
     const clients = (allClients ?? []).filter((c: any) => !stoppedSet.has(c.user_id));
