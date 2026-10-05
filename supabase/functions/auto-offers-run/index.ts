@@ -254,11 +254,11 @@ Deno.serve(async (req) => {
 
   try {
     // Charger clients éligibles
-    // Coupure crédits : uniquement dossiers 'actif' dont le compteur n'est pas à l'arrêt (expire/suspendu)
+    // Coupure crédits : exclusion via user_credits.mandat_statut (aucun/expire/suspendu) uniquement
     const { data: allClients } = await supabase
       .from("clients")
       .select("id, user_id, region_recherche, pieces, budget_max, revenus_mensuels, type_bien, souhaits_particuliers, statut")
-      .eq("statut", "actif")
+      .not("statut", "in", "(reloge,mandat_annule)")
       .limit(500);
     const userIds = (allClients ?? []).map((c: any) => c.user_id).filter(Boolean);
     const { data: stopped } = userIds.length
