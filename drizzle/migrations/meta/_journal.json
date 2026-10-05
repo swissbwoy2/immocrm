@@ -183,6 +183,13 @@
       "when": 1791193339455,
       "tag": "0025_google_create_candidat_account",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791196539937,
+      "tag": "0026_sync_candidat_criteres_to_clients",
+      "breakpoints": true
     }
   ]
 }
