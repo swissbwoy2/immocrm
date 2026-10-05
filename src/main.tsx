@@ -10,6 +10,8 @@ import "./index.css";
 // Protège la session persistante contre les suppressions déclenchées par des
 // erreurs temporaires (500, 429, timeout) — doit être installé très tôt.
 installAuthStorageGuard();
+// App native : reprise de la session Google au retour du navigateur système.
+void import("./lib/googleAuth").then((m) => m.installNativeAuthListener());
 
 // Déverrouille l'audio au premier geste utilisateur : indispensable pour que la
 // sonnerie d'appel entrant puisse démarrer plus tard (autoplay policy).

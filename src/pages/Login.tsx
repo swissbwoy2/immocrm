@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/auth/PremiumAuthLayout';
 import { Mail, Lock, Eye, EyeOff, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -157,6 +158,9 @@ export default function Login() {
           <Rocket className="h-4 w-4" />
           Se connecter
         </AuthSubmitButton>
+
+        <GoogleSignInButton next={nextPath} />
+
 
         {/* Secondary links */}
         <motion.div

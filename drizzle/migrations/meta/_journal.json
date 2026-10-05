@@ -176,6 +176,13 @@
       "when": 1791189879565,
       "tag": "0024_unify_candidat_activation_trial",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791193339455,
+      "tag": "0025_google_create_candidat_account",
+      "breakpoints": true
     }
   ]
 }
