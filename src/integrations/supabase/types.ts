@@ -15060,6 +15060,7 @@ export type Database = {
           type_bien: string
         }[]
       }
+      google_create_candidat_account: { Args: never; Returns: undefined }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
         Returns: boolean
