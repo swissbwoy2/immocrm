@@ -162,6 +162,13 @@
       "when": 1791143016294,
       "tag": "0022_candidature_pieces_identite_sans_permis_conduire",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791187281675,
+      "tag": "0023_credits_business_rules_fix",
+      "breakpoints": true
     }
   ]
 }

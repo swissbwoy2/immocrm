@@ -43,18 +43,17 @@ export default function CandidatDashboard() {
   const retenues = data.filter((c) => c.statut === RETENU_BAILLEUR).length;
   const candidaturesAvecOffre = data.filter((c) => c.source === 'candidature');
 
+  // Point d'entrée unique de l'essai : start_candidat_trial() (mêmes contrôles et messages que CandidatActivationGate).
   const activate = async () => {
     if (activating) return;
     setActivating(true);
     try {
-      const { error } = await supabase.rpc('activate_candidat_searches' as any);
+      const { error } = await (supabase.rpc as any)('start_candidat_trial');
       if (error) throw error;
-      await refreshRoles();
-      switchRole('client');
-      toast.success('Votre espace de recherche est prêt. La signature du mandat et l’activation du service restent nécessaires.');
-      navigate('/client');
+      toast.success('Votre essai gratuit de 3 jours a démarré.');
+      window.location.reload();
     } catch (e: any) {
-      toast.error(e?.message || "Impossible d'activer vos recherches");
+      toast.error(e?.message || "Impossible de démarrer l'essai");
     } finally {
       setActivating(false);
     }
@@ -76,7 +75,7 @@ export default function CandidatDashboard() {
           ) : (
             <Button onClick={activate} disabled={activating} className="min-h-[44px]">
               {activating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-              Activer mes recherches
+              Essayer gratuitement (3 jours)
             </Button>
           )}
         />
