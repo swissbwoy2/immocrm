@@ -254,13 +254,20 @@ Deno.serve(async (req) => {
 
   try {
     // Charger clients éligibles
-    const { data: clients } = await supabase
+    // Coupure crédits : uniquement dossiers 'actif' dont le compteur n'est pas à l'arrêt (expire/suspendu)
+    const { data: allClients } = await supabase
       .from("clients")
       .select("id, user_id, region_recherche, pieces, budget_max, revenus_mensuels, type_bien, souhaits_particuliers, statut")
-      .not("statut", "in", "(reloge,mandat_annule)")
+      .eq("statut", "actif")
       .limit(500);
+    const userIds = (allClients ?? []).map((c: any) => c.user_id).filter(Boolean);
+    const { data: stopped } = userIds.length
+      ? await supabase.from("user_credits").select("user_id").in("user_id", userIds).in("mandat_statut", ["expire", "suspendu"])
+      : { data: [] as any[] };
+    const stoppedSet = new Set((stopped ?? []).map((r: any) => r.user_id));
+    const clients = (allClients ?? []).filter((c: any) => !stoppedSet.has(c.user_id));
 
-    if (!clients?.length) throw new Error("Aucun client éligible");
+    if (!clients.length) throw new Error("Aucun client éligible");
 
     // Précharger agents primaires
     const { data: ca } = await supabase
