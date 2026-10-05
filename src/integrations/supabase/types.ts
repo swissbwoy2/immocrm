@@ -14826,6 +14826,12 @@ export type Database = {
         Args: { _id: string }
         Returns: undefined
       }
+      candidat_merge_souhaits: {
+        Args: { existing: string; line: string }
+        Returns: string
+      }
+      candidat_pieces_line: { Args: { p: string }; Returns: string }
+      candidat_pieces_num: { Args: { p: string }; Returns: number }
       candidat_signer_document: {
         Args: { p_document_id: string; p_lieu?: string; p_signature: string }
         Returns: string
