@@ -33,6 +33,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@livekit/components-react": "^2.9.24",
     "@livekit/components-styles": "^1.2.0",
+    "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@lovable.dev/mcp-js": "^0.26.1",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",
