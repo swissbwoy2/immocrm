@@ -75,7 +75,7 @@ export default function CandidatDashboard() {
           ) : (
             <Button onClick={activate} disabled={activating} className="min-h-[44px]">
               {activating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-              Activer mes recherches
+              Essayer gratuitement (3 jours)
             </Button>
           )}
         />

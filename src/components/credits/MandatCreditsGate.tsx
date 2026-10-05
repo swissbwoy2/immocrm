@@ -44,8 +44,22 @@ export function MandatCreditsGate() {
     </div>
   );
 
+  const aucun = credits.mandat_statut === 'aucun';
+  const expire = credits.mandat_statut === 'expire';
+
   return (
     <>
+      {aucun && (
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
+          <p>Lancez votre essai gratuit de 3 jours pour que nos agents recherchent pour vous.</p>
+        </div>
+      )}
+      {expire && (
+        <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
+          <p>Votre essai est terminé : les recherches automatiques sont arrêtées. Activez vos recherches en créant votre compte client.</p>
+          <Button asChild className="min-h-[44px]"><a href="/nouveau-mandat">Activer mes recherches</a></Button>
+        </div>
+      )}
       {low && !dismissed && (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
           <p>Vous avez bientôt plus de crédit sur votre mandat ({credits.coins_mandat} jours restants).</p>
