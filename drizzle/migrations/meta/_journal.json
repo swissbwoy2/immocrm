@@ -169,6 +169,13 @@
       "when": 1791187281675,
       "tag": "0023_credits_business_rules_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791189879565,
+      "tag": "0024_unify_candidat_activation_trial",
+      "breakpoints": true
     }
   ]
 }
