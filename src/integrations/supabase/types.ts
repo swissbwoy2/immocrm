@@ -1083,6 +1083,48 @@ export type Database = {
           },
         ]
       }
+      annonce_slot_notification_runs: {
+        Row: {
+          created_at: string
+          creneau_id: string
+          id: string
+          newsletter_id: string | null
+          notification_count: number
+          push_requests: Json
+        }
+        Insert: {
+          created_at?: string
+          creneau_id: string
+          id?: string
+          newsletter_id?: string | null
+          notification_count: number
+          push_requests?: Json
+        }
+        Update: {
+          created_at?: string
+          creneau_id?: string
+          id?: string
+          newsletter_id?: string | null
+          notification_count?: number
+          push_requests?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annonce_slot_notification_runs_creneau_id_fkey"
+            columns: ["creneau_id"]
+            isOneToOne: false
+            referencedRelation: "annonce_creneaux"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annonce_slot_notification_runs_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       annonces_publiques: {
         Row: {
           acces_pmr: boolean | null
@@ -15413,6 +15455,10 @@ export type Database = {
       newsletter_verify_dispatch: {
         Args: { p_token: string }
         Returns: boolean
+      }
+      notify_annonce_slot_available: {
+        Args: { p_creneau: string }
+        Returns: number
       }
       notify_offre_action_required: {
         Args: {
