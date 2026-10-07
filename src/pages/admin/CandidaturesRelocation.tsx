@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { statutLabel } from '@/hooks/useCandidatCandidatures';
 import { CAND_SELECT, bienLabel } from './CandidatureRelocationDetail';
+import { GenerateurLienPostulation } from '@/components/admin/GenerateurLienPostulation';
 
 const STATUTS = ['en_attente', 'visite_effectuee', 'candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises', 'refuse', 'refusee', 'desiste'];
 const fmtD = (d?: string | null) => d ? new Date(d).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—';
@@ -41,6 +42,7 @@ export default function CandidaturesRelocation() {
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-8">
         <h1 className="text-2xl font-bold text-foreground">Candidats location <span className="text-base font-normal text-muted-foreground">({list.length})</span></h1>
+        <GenerateurLienPostulation />
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
