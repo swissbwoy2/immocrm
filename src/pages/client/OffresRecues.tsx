@@ -1112,6 +1112,27 @@ const OffresRecues = () => {
     setDetailsDialogOpen(true);
   };
 
+  // Un clic sur une option de visite vaut confirmation de l'interet : le pipeline agent en depend.
+  const confirmerInteretSiBesoin = async (offre: any) => {
+    if (offre?.statut === 'envoyee' || offre?.statut === 'vue') {
+      try {
+        await updateStatut(offre.id, 'interesse');
+      } catch {
+        // L'organisation de la visite continue meme si la mise a jour echoue.
+      }
+    }
+  };
+
+  const handleVisiteParClient = async (offre: any) => {
+    await confirmerInteretSiBesoin(offre);
+    handlePlanVisit(offre);
+  };
+
+  const handleVisiteParAgent = async (offre: any) => {
+    await confirmerInteretSiBesoin(offre);
+    handleDeleguerVisite(offre);
+  };
+
   const handlePlanVisit = async (offre: any) => {
     setSelectedOffre(offre);
     setSelectedDate("");
@@ -1480,9 +1501,9 @@ const OffresRecues = () => {
                     {/* Action Buttons */}
                     <div className="flex gap-2 flex-wrap pt-5 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
                       <Button 
-                        variant="default" 
+                        variant="outline" 
                         size="sm" 
-                        className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group/btn"
+                        className="group/btn transition-all duration-300"
                         onClick={() => handleViewDetails(offre)}
                       >
                         <Info className="mr-2 h-4 w-4 group-hover/btn:rotate-12 transition-transform" />
@@ -1496,23 +1517,34 @@ const OffresRecues = () => {
                       
                       {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
                         <>
-                          <Button 
-                            size="sm" 
-                            className="group/btn"
-                            onClick={() => handlePlanVisit(offre)}
-                          >
-                            <Calendar className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-                            Je m'occupe de la visite
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="group/btn hover:border-primary/50"
-                            onClick={() => handleDeleguerVisite(offre)}
-                          >
-                            <User className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-                            Déléguer à l'agent
-                          </Button>
+                          <div className="w-full mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+                            <h5 className="flex items-center gap-2 text-sm font-bold">
+                              <Calendar className="h-4 w-4 text-primary" />
+                              Organiser la visite
+                            </h5>
+                            <p className="mt-1 mb-3 text-sm text-muted-foreground">
+                              Choisissez qui se rend sur place : vous, ou votre agent à votre place.
+                            </p>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <Button
+                                size="sm"
+                                className="min-h-[44px] w-full sm:flex-1"
+                                onClick={() => handleVisiteParClient(offre)}
+                              >
+                                <Calendar className="mr-2 h-4 w-4" />
+                                Je visite moi-même
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="min-h-[44px] w-full border-primary/40 hover:border-primary/60 sm:flex-1"
+                                onClick={() => handleVisiteParAgent(offre)}
+                              >
+                                <User className="mr-2 h-4 w-4" />
+                                Je délègue à mon agent
+                              </Button>
+                            </div>
+                          </div>
                           {false && (
                             <>
                               <Button 
@@ -1597,7 +1629,9 @@ const OffresRecues = () => {
           documentsStats={documentsStats}
           visites={visites}
           onProgressWorkflow={handleProgressWorkflow}
-          onPlanVisit={handlePlanVisit}
+          onPlanVisit={handleVisiteParClient}
+          onDeleguerVisite={handleVisiteParAgent}
+          onRespondInteret={(o: any, statut: 'interesse' | 'refusee') => updateStatut(o.id, statut)}
           onPostulerDirect={handlePostulerDirect}
           formatStatutOffre={formatStatutOffre}
         />
@@ -1610,7 +1644,7 @@ const OffresRecues = () => {
                 <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
                   <Calendar className="h-5 w-5 text-blue-500" />
                 </div>
-                Je m'occupe de la visite
+                Je visite moi-même
               </DialogTitle>
               <DialogDescription>
                 Choisissez une date et heure pour visiter le bien
@@ -2193,14 +2227,14 @@ const OffresRecues = () => {
                 }}
               >
                 <User className="mr-2 h-4 w-4" />
-                Déléguer à l'agent
+                Je délègue à mon agent
               </Button>
               <Button onClick={() => {
                 setVisitRequiredAlertOpen(false);
                 if (selectedOffre) handlePlanVisit(selectedOffre);
               }}>
                 <Calendar className="mr-2 h-4 w-4" />
-                Je m'occupe de la visite
+                Je visite moi-même
               </Button>
             </DialogFooter>
           </DialogContent>
