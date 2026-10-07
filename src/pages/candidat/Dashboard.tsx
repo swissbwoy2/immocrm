@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Clipboard, Search, Loader2, CheckCircle2, Calendar, FolderOpen, FileCheck, MessageSquare, ShieldCheck } from 'lucide-react';
+import { FileText, Clipboard, Search, Loader2, CheckCircle2, Calendar, FolderOpen, FileCheck, MessageSquare, ShieldCheck, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,11 +13,30 @@ import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecu
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
 import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
 import { StoriesBar } from '@/components/stories/StoriesBar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CandidatCriteresForm } from '@/components/candidat/CandidatCriteresForm';
 import { CRITERES_DISCLAIMER } from '@/components/candidat/CandidatCriteresGate';
 import { useCandidatCriteres } from '@/hooks/useCandidatCriteres';
 import { CandidatGarantForm, GARANT_CRITERE } from '@/components/candidat/CandidatGarantForm';
+import { CandidatSolvabiliteForm } from '@/components/candidat/CandidatSolvabiliteForm';
+import { isCandidatSolvable, isSolvabiliteRenseignee } from '@/lib/candidatSolvabilite';
+
+const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
+
+function formatTrialEnd(ms: number) {
+  try {
+    return new Date(ms).toLocaleString('fr-CH', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Zurich',
+    });
+  } catch {
+    return '';
+  }
+}
 
 export default function CandidatDashboard() {
   const navigate = useNavigate();
@@ -29,6 +48,8 @@ export default function CandidatDashboard() {
   const { complete: criteresComplete, isLoading: criteresLoading } = useCandidatCriteres();
   const [criteresOpen, setCriteresOpen] = useState(false);
   const [garantOpen, setGarantOpen] = useState(() => new URLSearchParams(window.location.search).get('garant') === '1');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [solvOpen, setSolvOpen] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -44,19 +65,36 @@ export default function CandidatDashboard() {
   const candidaturesAvecOffre = data.filter((c) => c.source === 'candidature');
 
   // Point d'entrée unique de l'essai : start_candidat_trial() (mêmes contrôles et messages que CandidatActivationGate).
-  const activate = async () => {
+  const runTrialRpc = async () => {
     if (activating) return;
     setActivating(true);
     try {
       const { error } = await (supabase.rpc as any)('start_candidat_trial');
       if (error) throw error;
-      toast.success('Votre essai gratuit de 3 jours a démarré.');
+      toast.success(`Votre essai gratuit de 3 jours a démarré. Il se termine le ${formatTrialEnd(Date.now() + TRIAL_MS)}.`);
       window.location.reload();
     } catch (e: any) {
       toast.error(e?.message || "Impossible de démarrer l'essai");
     } finally {
       setActivating(false);
     }
+  };
+
+  // Avant de lancer le compte à rebours : si les informations de solvabilité manquent,
+  // on ouvre le formulaire au lieu de renvoyer une erreur brute (même parcours que CandidatActivationGate).
+  const startTrial = async () => {
+    setConfirmOpen(false);
+    if (!user?.id) return;
+    try {
+      const { data: cc } = await (supabase.from as any)('candidat_criteres')
+        .select('type_permis, revenus_mensuels, poursuites, budget_max, garant_solvable')
+        .eq('user_id', user.id).maybeSingle();
+      if (!isSolvabiliteRenseignee(cc)) { setSolvOpen(true); return; }
+      if (!isCandidatSolvable(cc) && cc.garant_solvable !== true) { setSolvOpen(true); return; }
+    } catch {
+      // Lecture impossible : on laisse la fonction serveur trancher.
+    }
+    await runTrialRpc();
   };
 
   return (
@@ -73,7 +111,7 @@ export default function CandidatDashboard() {
               <CheckCircle2 className="mr-2 h-4 w-4" /> Aller à mon espace client
             </Button>
           ) : (
-            <Button onClick={activate} disabled={activating} className="min-h-[44px]">
+            <Button onClick={() => setConfirmOpen(true)} disabled={activating} className="min-h-[44px]">
               {activating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
               Essayer gratuitement (3 jours)
             </Button>
@@ -111,6 +149,48 @@ export default function CandidatDashboard() {
           {retenues > 0 && <QuickTileXL icon={FolderOpen} variant="wide" title="Pièces à fournir" subtitle={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />}
         </div>
       </PremiumPageShellV2>
+      <Dialog open={confirmOpen} onOpenChange={(o) => !activating && setConfirmOpen(o)}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" /> Démarrer votre essai gratuit
+            </DialogTitle>
+            <DialogDescription>
+              Pendant 3 jours, nos agents recherchent pour vous et vous envoient les offres qui correspondent à vos critères.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p>
+              Le compte à rebours démarre <b>maintenant</b> et se termine le{' '}
+              <b>{formatTrialEnd(Date.now() + TRIAL_MS)}</b>.
+            </p>
+            <p className="text-muted-foreground">
+              Vous ne disposez que d'un seul essai : une fois lancé, il ne peut pas être mis en pause ni redémarré.
+              À la fin des 3 jours, les recherches automatiques s'arrêtent, et vous pourrez les reprendre en activant votre compte client.
+            </p>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" className="min-h-[44px]" onClick={() => setConfirmOpen(false)} disabled={activating}>
+              Pas maintenant
+            </Button>
+            <Button className="min-h-[44px]" onClick={startTrial} disabled={activating}>
+              {activating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
+              Démarrer mes 3 jours
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={solvOpen} onOpenChange={(o) => !activating && setSolvOpen(o)}>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Votre solvabilité</DialogTitle>
+            <DialogDescription>
+              Pour démarrer votre essai gratuit de 3 jours, renseignez ces 3 informations : elles nous permettent de vérifier votre solvabilité auprès des bailleurs.
+            </DialogDescription>
+          </DialogHeader>
+          {solvOpen && <CandidatSolvabiliteForm submitLabel="Démarrer mon essai gratuit" onSaved={() => { setSolvOpen(false); runTrialRpc(); }} />}
+        </DialogContent>
+      </Dialog>
       <Dialog open={criteresOpen} onOpenChange={setCriteresOpen}>
         <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
