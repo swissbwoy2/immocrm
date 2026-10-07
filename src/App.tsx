@@ -58,6 +58,7 @@ const AnnonceurPublic = lazyWithRetry(() => import("./pages/public/AnnonceurPubl
 const MesMessagesAnnonces = lazyWithRetry(() => import("./pages/public/MesMessagesAnnonces"));
 const MesAlertesAnnonces = lazyWithRetry(() => import("./pages/public/MesAlertesAnnonces"));
 const AnnonceDetail = lazyWithRetry(() => import("./pages/public/AnnonceDetail"));
+const PostulerLien = lazyWithRetry(() => import("./pages/public/PostulerLien"));
 const OffreAnnonceDetail = lazyWithRetry(() => import("./pages/public/OffreAnnonceDetail"));
 
 const InscriptionAnnonceur = lazyWithRetry(() => import("./pages/public/InscriptionAnnonceur"));
@@ -372,6 +373,8 @@ const App = () => (
              <Route path="/annonces/offre/:id" element={<OffreAnnonceDetail />} />
 
              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
+
+             <Route path="/postuler/:token" element={<PostulerLien />} />
 
                <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
                <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
