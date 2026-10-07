@@ -19,7 +19,9 @@ import {
   Info, 
   FileCheck,
   Sparkles,
-  MapPin
+  MapPin,
+  CalendarCheck,
+  User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
@@ -27,6 +29,37 @@ import { ChanceIndicator } from "@/components/ChanceIndicator";
 import { CandidatureWorkflowInteractive } from "@/components/CandidatureWorkflowInteractive";
 import { calculateChances } from "@/utils/chanceCalculator";
 import { AddressLink } from "@/components/AddressLink";
+import { OffreInteretPrompt } from "@/components/client/OffreInteretPrompt";
+
+function formatDateVisite(d: string) {
+  try {
+    return new Date(d).toLocaleString("fr-CH", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Europe/Zurich",
+    });
+  } catch {
+    return d;
+  }
+}
+
+function libelleStatutVisite(statut?: string) {
+  switch (statut) {
+    case "planifiee": return "Visite planifiee";
+    case "effectuee": return "Visite effectuee";
+    case "annulee": return "Visite annulee";
+    default: return statut || "Visite";
+  }
+}
+
+function quiSOccupeDeLaVisite(v: any) {
+  if (v?.coursier_id) return "Un coursier s'en occupe";
+  if (v?.est_deleguee) return "Votre agent s'en occupe";
+  return "Vous vous en occupez";
+}
 
 interface PremiumOffreDetailsDialogProps {
   open: boolean;
@@ -38,6 +71,8 @@ interface PremiumOffreDetailsDialogProps {
   visites: any[];
   onProgressWorkflow: (nextStatut: string, candidatureId: string) => Promise<void>;
   onPlanVisit: (offre: any) => void;
+  onDeleguerVisite?: (offre: any) => void;
+  onRespondInteret?: (offre: any, statut: 'interesse' | 'refusee') => Promise<void> | void;
   onPostulerDirect: (offre: any) => void;
   formatStatutOffre: (statut: string) => { label: string; variant: any };
 }
@@ -52,6 +87,8 @@ export function PremiumOffreDetailsDialog({
   visites,
   onProgressWorkflow,
   onPlanVisit,
+  onDeleguerVisite,
+  onRespondInteret,
   onPostulerDirect,
   formatStatutOffre
 }: PremiumOffreDetailsDialogProps) {
@@ -63,6 +100,23 @@ export function PremiumOffreDetailsDialog({
   const statutInfo = formatStatutOffre(offre.statut);
 
   const showChances = ['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee'].includes(offre.statut);
+
+  // Visites liees a cette offre : la prochaine a venir d'abord, puis les passees, les plus recentes en tete.
+  const maintenant = Date.now();
+  const offreVisites = (visites || [])
+    .filter((v: any) => v.offre_id === offre.id)
+    .sort((a: any, b: any) => {
+      const ta = a.date_visite ? new Date(a.date_visite).getTime() : 0;
+      const tb = b.date_visite ? new Date(b.date_visite).getTime() : 0;
+      const aVenirA = ta >= maintenant;
+      const aVenirB = tb >= maintenant;
+      if (aVenirA !== aVenirB) return aVenirA ? -1 : 1;
+      return aVenirA ? ta - tb : tb - ta;
+    });
+  const visiteFuture = offreVisites.find(
+    (v: any) => v.date_visite && new Date(v.date_visite).getTime() >= maintenant && v.statut !== 'annulee'
+  );
+  const peutOrganiserVisite = ['envoyee', 'vue', 'interesse'].includes(offre.statut) && !visiteFuture;
 
   const characteristics = [
     offre.pieces && { icon: Home, label: 'Pièces', value: offre.pieces },
@@ -125,6 +179,63 @@ export function PremiumOffreDetailsDialog({
               </div>
             </div>
           </div>
+
+          {/* Interet client : meme bloc que sur la carte de la page */}
+          {onRespondInteret && ['envoyee', 'vue', 'interesse', 'refusee', 'visite_planifiee'].includes(offre.statut) && (
+            <OffreInteretPrompt
+              offre={offre}
+              visites={visites}
+              onRespond={(statut) => onRespondInteret(offre, statut)}
+            />
+          )}
+
+          {/* Votre visite */}
+          {offreVisites.length > 0 && (
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent border border-blue-500/20">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-500/15">
+                  <CalendarCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                Votre visite
+              </h4>
+              <div className="space-y-3">
+                {offreVisites.map((v: any) => {
+                  const medias = [
+                    ...(Array.isArray(v.medias) ? v.medias : []),
+                    ...(Array.isArray(v.medias_coursier) ? v.medias_coursier : []),
+                  ];
+                  return (
+                    <div key={v.id} className="rounded-xl bg-background/60 border border-border/30 p-3.5 space-y-1.5">
+                      {v.date_visite && <p className="font-medium">{formatDateVisite(v.date_visite)}</p>}
+                      {v.adresse && <p className="text-sm text-muted-foreground">{v.adresse}</p>}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <Badge variant="outline" className="text-xs">{libelleStatutVisite(v.statut)}</Badge>
+                        <Badge variant="outline" className="text-xs">{quiSOccupeDeLaVisite(v)}</Badge>
+                        {medias.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            {medias.length} document{medias.length > 1 ? 's' : ''} ou video{medias.length > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+                      {v.client_decision && (
+                        <p className="text-sm pt-1">
+                          Votre decision apres la visite : <span className="font-medium">{v.client_decision}</span>
+                        </p>
+                      )}
+                      {(v.feedback_agent || v.feedback_coursier) && (
+                        <p className="text-sm text-muted-foreground whitespace-pre-line pt-1">
+                          {v.feedback_agent || v.feedback_coursier}
+                        </p>
+                      )}
+                      {v.recommandation_agent && (
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">{v.recommandation_agent}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Workflow Section */}
           {showWorkflow && (
@@ -276,17 +387,32 @@ export function PremiumOffreDetailsDialog({
           >
             Fermer
           </Button>
-          {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
-            <Button 
-              onClick={() => {
-                onOpenChange(false);
-                onPlanVisit(offre);
-              }}
-              className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Planifier une visite
-            </Button>
+          {peutOrganiserVisite && (
+            <>
+              <Button 
+                onClick={() => {
+                  onOpenChange(false);
+                  onPlanVisit(offre);
+                }}
+                className="min-h-[44px] shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Je visite moi-même
+              </Button>
+              {onDeleguerVisite && (
+                <Button 
+                  variant="outline"
+                  className="min-h-[44px] border-primary/40 hover:border-primary/60"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onDeleguerVisite(offre);
+                  }}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Je délègue à mon agent
+                </Button>
+              )}
+            </>
           )}
           {offre.statut === 'visite_effectuee' && (
             <Button 
