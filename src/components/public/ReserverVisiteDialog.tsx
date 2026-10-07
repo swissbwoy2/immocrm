@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { CalendarCheck, CheckCircle2, Loader2 } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, Loader2, BellRing, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePublicFavoris } from '@/hooks/usePublicFavoris';
 
 export function useAnnonceCreneaux(annonceId?: string) {
   return useQuery({
@@ -52,6 +54,16 @@ interface Props {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const ROLE_PRIORITY = ['admin', 'automation_operator', 'agent', 'agent_ia', 'closeur', 'coursier', 'apporteur', 'proprietaire', 'annonceur', 'client', 'candidat'];
+
+/** Espace d'atterrissage d'une personne connectee, selon son role prioritaire. */
+function espaceDuRole(roles: string[]): string {
+  const role = ROLE_PRIORITY.find((r) => roles.includes(r)) || roles[0];
+  if (!role) return '/candidat';
+  if (role === 'annonceur') return '/espace-annonceur';
+  return `/${role}`;
+}
+
 export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const { data: creneaux = [], isLoading } = useAnnonceCreneaux(annonce.id);
   const qc = useQueryClient();
@@ -63,9 +75,34 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  const { user, userRoles } = useAuth();
+  const { favoris, toggleFavorite } = usePublicFavoris();
+  const connecte = !!user;
+  const espace = useMemo(() => espaceDuRole((userRoles ?? []) as string[]), [userRoles]);
+  const [profilCharge, setProfilCharge] = useState(false);
+
+  // Personne connectee : on reprend ses coordonnees du profil, sans rien lui redemander.
+  useEffect(() => {
+    if (!open || !user?.id) { setProfilCharge(false); return; }
+    let vivant = true;
+    (async () => {
+      const { data: profil } = await supabase
+        .from('profiles').select('prenom, nom, email, telephone').eq('id', user.id).maybeSingle();
+      if (!vivant) return;
+      setForm((f) => ({
+        prenom: f.prenom || (profil?.prenom ?? ''),
+        nom: f.nom || (profil?.nom ?? ''),
+        email: f.email || (profil?.email ?? user.email ?? ''),
+        telephone: f.telephone || (profil?.telephone ?? ''),
+      }));
+      setProfilCharge(true);
+    })();
+    return () => { vivant = false; };
+  }, [open, user?.id, user?.email]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.prenom.trim() || !form.nom.trim() || !form.telephone.trim()) return toast.error('Veuillez remplir tous les champs');
+    if (!form.prenom.trim() || !form.nom.trim() || form.telephone.trim().length < 6) return toast.error('Veuillez remplir tous les champs');
     if (!EMAIL_RE.test(form.email.trim())) return toast.error('Adresse e-mail invalide');
     if (!accountOnly && !creneauId) return toast.error('Choisissez un créneau');
     setSubmitting(true);
@@ -113,6 +150,30 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
   const showTropTard = !done && !accountOnly && !isLoading && (creneaux.length === 0 || allFull || slotFull);
 
+  // Connecte : on ne demande que ce qui manque vraiment au profil.
+  const champsManquants = !connecte ? ['prenom', 'nom', 'email', 'telephone'] : [
+    !form.prenom.trim() ? 'prenom' : null,
+    !form.nom.trim() ? 'nom' : null,
+    !EMAIL_RE.test(form.email.trim()) ? 'email' : null,
+    form.telephone.trim().length < 6 ? 'telephone' : null,
+  ].filter(Boolean) as string[];
+  const demandeInfos = !connecte || (profilCharge && champsManquants.length > 0);
+
+  const allerAMonEspace = () => { close(false); navigate(espace); };
+
+  const [alerting, setAlerting] = useState(false);
+  const etreAverti = async () => {
+    if (alerting) return;
+    setAlerting(true);
+    try {
+      if (!favoris.includes(annonce.id)) await toggleFavorite(annonce.id);
+      else toast.info('Cette annonce est deja dans vos favoris');
+    } finally {
+      setAlerting(false);
+      allerAMonEspace();
+    }
+  };
+
   if (showTropTard) {
     return (
       <Dialog open={open} onOpenChange={close}>
@@ -120,12 +181,21 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <DialogHeader>
             <DialogTitle>Trop tard !</DialogTitle>
             <DialogDescription>
-              Tu viens de louper le dernier créneau disponible ! Connecte-toi pour recevoir les prochaines dates disponibles avant tout le monde !
+              {connecte
+                ? 'Tu viens de louper le dernier créneau disponible ! Enregistre cette annonce pour être prévenu dès qu’une nouvelle date s’ouvre.'
+                : 'Tu viens de louper le dernier créneau disponible ! Connecte-toi pour recevoir les prochaines dates disponibles avant tout le monde !'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
-            <Button onClick={() => setAccountOnly(true)}>Créer mon compte / Se connecter</Button>
+            {connecte ? (
+              <Button disabled={alerting} onClick={etreAverti}>
+                {alerting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellRing className="mr-2 h-4 w-4" />}
+                Être averti si un créneau se libère
+              </Button>
+            ) : (
+              <Button onClick={() => setAccountOnly(true)}>Créer mon compte / Se connecter</Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -144,8 +214,14 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-primary" />
             <p className="text-lg font-semibold text-foreground">{accountOnly ? 'Votre demande est enregistrée' : 'Votre visite est réservée'}</p>
-            <p className="text-sm text-muted-foreground">{accountOnly ? 'Si votre compte vient d’être créé, vos identifiants vous ont été envoyés par e-mail. Sinon, connectez-vous avec votre compte existant.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
-            {accountOnly ? <Button className="mt-2" onClick={() => { close(false); navigate('/login'); }}>Se connecter</Button> : <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>}
+            <p className="text-sm text-muted-foreground">{connecte ? 'Vous la retrouverez dans votre espace ; la confirmation vous a aussi été envoyée par e-mail.' : accountOnly ? 'Si votre compte vient d’être créé, vos identifiants vous ont été envoyés par e-mail. Sinon, connectez-vous avec votre compte existant.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
+            {connecte ? (
+              <Button className="mt-2" onClick={allerAMonEspace}><UserRound className="mr-2 h-4 w-4" />Aller à mon espace</Button>
+            ) : accountOnly ? (
+              <Button className="mt-2" onClick={() => { close(false); navigate('/login'); }}>Se connecter</Button>
+            ) : (
+              <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>
+            )}
           </div>
         ) : isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -176,17 +252,30 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
                 ))}
               </div>
             </div>}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1"><Label htmlFor="rv-prenom">Prénom *</Label><Input id="rv-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} /></div>
-              <div className="space-y-1"><Label htmlFor="rv-nom">Nom *</Label><Input id="rv-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} /></div>
-            </div>
-            <div className="space-y-1"><Label htmlFor="rv-email">E-mail *</Label><Input id="rv-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div className="space-y-1"><Label htmlFor="rv-tel">Téléphone *</Label><Input id="rv-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>
-            <p className="text-xs text-muted-foreground">{accountOnly ? 'Si vous avez déjà un compte, connectez-vous avec vos identifiants habituels.' : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}</p>
+            {demandeInfos && (
+              <>
+                {connecte && (
+                  <p className="text-sm text-muted-foreground">Il manque {champsManquants.length > 1 ? 'quelques informations' : 'une information'} à votre profil pour réserver.</p>
+                )}
+                {(!connecte || champsManquants.includes('prenom') || champsManquants.includes('nom')) && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {(!connecte || champsManquants.includes('prenom')) && <div className="space-y-1"><Label htmlFor="rv-prenom">Prénom *</Label><Input id="rv-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} /></div>}
+                    {(!connecte || champsManquants.includes('nom')) && <div className="space-y-1"><Label htmlFor="rv-nom">Nom *</Label><Input id="rv-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} /></div>}
+                  </div>
+                )}
+                {(!connecte || champsManquants.includes('email')) && <div className="space-y-1"><Label htmlFor="rv-email">E-mail *</Label><Input id="rv-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>}
+                {(!connecte || champsManquants.includes('telephone')) && <div className="space-y-1"><Label htmlFor="rv-tel">Téléphone *</Label><Input id="rv-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>}
+              </>
+            )}
+            {connecte ? (
+              <p className="text-xs text-muted-foreground">Vous réservez avec votre compte{form.email ? ` (${form.email})` : ''}.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">{accountOnly ? 'Si vous avez déjà un compte, connectez-vous avec vos identifiants habituels.' : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}</p>
+            )}
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => close(false)}>Annuler</Button>
               <Button type="submit" disabled={submitting}>
-                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}{accountOnly ? 'Créer mon compte / Se connecter' : 'Réserver'}
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}{accountOnly && !connecte ? 'Créer mon compte / Se connecter' : 'Réserver'}
               </Button>
             </div>
           </form>
