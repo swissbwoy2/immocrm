@@ -64,7 +64,22 @@ Deno.serve(async (req) => {
       error: emailErr ? "Adresse e-mail invalide" : "Veuillez remplir correctement tous les champs",
     }, 400);
   }
-  const { annonce_id, creneau_id, prenom, nom, email, telephone } = parsed.data;
+  const { annonce_id, creneau_id, prenom, nom, telephone } = parsed.data;
+
+  // Session de la personne (supabase.functions.invoke envoie le JWT de session s'il existe,
+  // sinon la clé anon, qui ne correspond à aucun utilisateur).
+  let authUser: { id: string; email: string } | null = null;
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (token) {
+    try {
+      const { data: authData } = await admin.auth.getUser(token);
+      if (authData?.user?.id && authData.user.email) {
+        authUser = { id: authData.user.id, email: authData.user.email.toLowerCase() };
+      }
+    } catch { authUser = null; }
+  }
+  // Connecté : on réserve toujours pour le compte de la session, jamais pour l'e-mail saisi.
+  const email = authUser?.email ?? parsed.data.email;
 
   try {
     // 1. Créneau valide si une visite est réservée ; sans créneau, compte uniquement.
@@ -104,9 +119,22 @@ Deno.serve(async (req) => {
     }
 
     // 2. Compte
-    let userId = await findUserByEmail(admin, email);
-    // Sans réservation, ne jamais ajouter un rôle à un compte existant sur la seule base d'un e-mail fourni.
-    if (userId && !creneau_id) return json({ ok: true });
+    let userId: string | null;
+    if (authUser) {
+      // Déjà connecté : le compte existe, rien à créer sans réservation.
+      if (!creneau_id) return json({ ok: true });
+      userId = authUser.id;
+    } else {
+      userId = await findUserByEmail(admin, email);
+      // Compte existant sans session : jamais de réservation, de rôle ni de profil sur la seule base
+      // d'un e-mail fourni — la personne doit se connecter.
+      if (userId) {
+        return json({
+          code: "account_exists",
+          error: "Un compte existe déjà avec cet e-mail. Connectez-vous pour continuer.",
+        }, 409);
+      }
+    }
     let tempPassword: string | null = null;
     if (!userId) {
       tempPassword = generatePassword();
