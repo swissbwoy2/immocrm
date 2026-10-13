@@ -123,7 +123,7 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
         choice,
       });
       toast({
-        title: choice === 'souhaite_postuler' ? 'Candidature transmise' : 'Choix enregistré',
+        title: choice === 'souhaite_postuler' ? 'Demande enregistrée et transmise à l\'équipe' : 'Choix enregistré',
         description: choice === 'souhaite_postuler'
           ? 'Votre demande de candidature a été transmise à votre agent.'
           : 'Votre choix a été enregistré.',

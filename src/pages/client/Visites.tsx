@@ -355,7 +355,7 @@ export default function Visites() {
         choice: 'souhaite_postuler',
       });
       toast({
-        title: 'Candidature transmise',
+        title: 'Demande enregistrée et transmise à l\'équipe',
         description: 'Votre demande de candidature a été transmise à votre agent.',
       });
       await loadVisites();
