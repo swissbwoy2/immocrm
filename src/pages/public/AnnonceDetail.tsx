@@ -25,6 +25,7 @@ import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
 import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
+import { AnnonceBudgetCalculator } from '@/components/public/AnnonceBudgetCalculator';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -316,7 +317,8 @@ export default function AnnonceDetail() {
       <section className="py-6">
         <div className="container mx-auto px-4">
           <PortailBannieres className="mb-4" />
-          <div className="relative">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="relative lg:col-span-2">
             {/* Main Photo */}
             <div 
               className="relative aspect-[16/9] max-h-[500px] rounded-xl overflow-hidden cursor-pointer group"
@@ -410,6 +412,20 @@ export default function AnnonceDetail() {
                 ))}
               </div>
             )}
+          </div>
+          {/* Calculateur de budget (desktop) — colonne de droite, à côté des photos */}
+          <div className="hidden lg:block lg:col-span-1">
+            <AnnonceBudgetCalculator
+              annonceId={annonce.id}
+              titre={annonce.titre}
+              typeTransaction={annonce.type_transaction}
+              prix={annonce.prix}
+              chargesMensuelles={annonce.charges_mensuelles}
+              chargesComprises={annonce.charges_comprises}
+              localite={annonce.ville}
+              nbPieces={annonce.nombre_pieces}
+            />
+          </div>
           </div>
         </div>
       </section>
@@ -773,6 +789,20 @@ export default function AnnonceDetail() {
                   </div>
                 </div>
               )}
+
+              {/* Calculateur de budget (mobile) — juste après les conditions de location */}
+              <div className="lg:hidden">
+                <AnnonceBudgetCalculator
+                  annonceId={annonce.id}
+                  titre={annonce.titre}
+                  typeTransaction={annonce.type_transaction}
+                  prix={annonce.prix}
+                  chargesMensuelles={annonce.charges_mensuelles}
+                  chargesComprises={annonce.charges_comprises}
+                  localite={annonce.ville}
+                  nbPieces={annonce.nombre_pieces}
+                />
+              </div>
 
               {/* Report */}
               <div className="flex items-center gap-2 pt-4 border-t">
