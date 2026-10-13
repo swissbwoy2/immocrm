@@ -7,6 +7,7 @@ import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilt
 import { StatsCard } from './StatsCard';
 import { PremiumPerformanceChart } from './PremiumPerformanceChart';
 import { cn } from '@/lib/utils';
+import { isVisiteReelle } from '@/lib/visitDecision';
 
 interface ClientStatsSectionProps {
   offres: any[];
@@ -41,11 +42,14 @@ export function ClientStatsSection({
     const offresRecues = currentOffres.length;
     const offresVues = currentOffres.filter(o => o.statut !== 'envoyee').length;
     
+    // Statut de l'offre liée : une date d'annonce n'est une visite que si le client a dit oui.
+    const statutOffre = new globalThis.Map<string, string>(offres.map((o: any) => [o.id, o.statut] as [string, string]));
+    const reelle = (v: any) => isVisiteReelle(v, v.offre_id ? statutOffre.get(v.offre_id) : null);
     const visitesEffectuees = currentVisites.filter(v => 
-      v.statut === 'effectuee' || new Date(v.date_visite) < new Date()
+      v.statut === 'effectuee' || (new Date(v.date_visite) < new Date() && reelle(v))
     ).length;
     const visitesAVenir = currentVisites.filter(v => 
-      v.statut === 'planifiee' && new Date(v.date_visite) >= new Date()
+      ['planifiee', 'confirmee'].includes(v.statut) && new Date(v.date_visite) >= new Date() && reelle(v)
     ).length;
 
     const candidaturesDeposees = currentCandidatures.length;
@@ -66,7 +70,7 @@ export function ClientStatsSection({
       candidaturesEnCours,
       candidaturesAcceptees,
     };
-  }, [currentOffres, currentVisites, currentCandidatures]);
+  }, [currentOffres, currentVisites, currentCandidatures, offres]);
 
   // Chart data
   const offresChartData = useMemo(() => {
