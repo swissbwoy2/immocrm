@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Calculator, CheckCircle, AlertTriangle, ArrowRight, Info, ShieldCheck, Landmark, Home, PiggyBank } from 'lucide-react';
 import { NumberTicker } from '@/components/public-site/magic/NumberTicker';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,24 @@ function formatCHF(amount: number): string {
 }
 
 
-export function BudgetCalcSection() {
-  const { isAchat } = useSearchType();
+interface BudgetCalcSectionProps {
+  /** Force le mode (fiche d'annonce) au lieu du choix location/achat du site. */
+  forceType?: 'location' | 'achat';
+  /** Version colonne (fiche d'annonce) : sans titre de section, une seule colonne. */
+  compact?: boolean;
+  /** Destination des boutons d'action (par défaut l'ancre #quickform de la page d'accueil). */
+  ctaHref?: string;
+  /** Libellé unique des boutons d'action (par défaut, libellés de la page d'accueil). */
+  ctaLabel?: string;
+}
+
+export function BudgetCalcSection({ forceType, compact = false, ctaHref, ctaLabel }: BudgetCalcSectionProps = {}) {
+  const searchType = useSearchType();
+  const isAchat = forceType ? forceType === 'achat' : searchType.isAchat;
+  const CtaLink = ({ children, ...rest }: { children?: ReactNode; [key: string]: unknown }) =>
+    ctaHref && ctaHref.startsWith('/')
+      ? <Link to={ctaHref} {...rest}>{children}</Link>
+      : <a href={ctaHref || '#quickform'} {...rest}>{children}</a>;
   const [revenus, setRevenus] = useState('');
   const [budget, setBudget] = useState('');
   const [permit, setPermit] = useState('');
@@ -84,9 +101,19 @@ export function BudgetCalcSection() {
   const result = isAchat ? resultAchat : resultLocation;
 
   return (
-    <section id="calculateur" className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-muted/10 via-background to-muted/10">
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-4xl mx-auto">
+    <section id={compact ? undefined : 'calculateur'} className={compact ? 'relative' : 'py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-muted/10 via-background to-muted/10'}>
+      <div className={compact ? 'relative z-10' : 'container mx-auto px-4 relative z-10'}>
+        <div className={compact ? '' : 'max-w-4xl mx-auto'}>
+          {compact ? (
+            <div className="mb-4">
+              <div className="inline-flex items-center gap-2 mb-2 bg-primary/10 rounded-full px-4 py-1.5 border border-primary/30">
+                {isAchat ? <Landmark className="h-4 w-4 text-primary" /> : <Calculator className="h-4 w-4 text-primary" />}
+                <span className="text-primary text-sm font-semibold">Calculateur gratuit</span>
+              </div>
+              <h2 className="text-xl font-bold text-foreground font-serif">{content.title}</h2>
+              <p className="text-muted-foreground text-sm">{content.subtitle}</p>
+            </div>
+          ) : (<>
           <ScrollReveal variant="fade-up" className="text-center mb-10 md:mb-14">
             <div className="inline-flex items-center gap-2 mb-4">
               <div className="bg-primary/10 rounded-full px-5 py-2.5 border border-primary/30">
@@ -101,12 +128,13 @@ export function BudgetCalcSection() {
           </ScrollReveal>
 
           <GoldDivider className="mb-10" />
+          </>)}
 
           <ScrollReveal variant="fade-up" delay={0.1}>
           <div className="relative">
-            <div className="rounded-2xl md:rounded-3xl border border-primary/30 p-5 md:p-8 bg-card/80 overflow-hidden">
+            <div className={cn('rounded-2xl border border-primary/30 bg-card/80 overflow-hidden', compact ? 'p-5' : 'md:rounded-3xl p-5 md:p-8')}>
             <BorderBeam duration={14} />
-              <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+              <div className={compact ? 'grid gap-6' : 'grid md:grid-cols-2 gap-6 md:gap-8'}>
                 <div className="space-y-5">
                   {isAchat ? (
                     <>
@@ -159,7 +187,7 @@ export function BudgetCalcSection() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-center">
+                <div className={cn('flex items-center justify-center', compact && !showResult && 'hidden')}>
                   {!showResult ? (
                     <div className="text-center py-8 md:py-0">
                       <div className="relative w-24 h-24 mx-auto mb-4">
@@ -205,7 +233,7 @@ export function BudgetCalcSection() {
                               <p className="text-sm text-muted-foreground mt-1">{isAchat ? "Avec nos experts, trouve le bien idéal dans ton budget." : "Avec nos experts, tu as toutes les chances de trouver rapidement."}</p>
                             </div>
                           </div>
-                          <Button asChild className="w-full group"><a href="#quickform"><CheckCircle className="mr-2 h-4 w-4" />{isAchat ? "Trouver mon bien" : "Recevoir ma shortlist gratuite"}<ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" /></a></Button>
+                          <Button asChild className={cn("w-full group", compact && "h-auto whitespace-normal py-3")}><CtaLink><CheckCircle className="mr-2 h-4 w-4 shrink-0" />{ctaLabel || (isAchat ? "Trouver mon bien" : "Recevoir ma shortlist gratuite")}<ArrowRight className="ml-2 h-4 w-4 shrink-0 group-hover:translate-x-1 transition-transform" /></CtaLink></Button>
                         </div>
                       ) : (
                         <div className="space-y-4">
@@ -216,7 +244,7 @@ export function BudgetCalcSection() {
                               </div>
                             ))}
                           </div>
-                          <Button asChild variant="outline" className="w-full group"><a href="#quickform">Parler à un expert<ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" /></a></Button>
+                          <Button asChild variant={ctaLabel ? 'default' : 'outline'} className={cn("w-full group", compact && "h-auto whitespace-normal py-3")}><CtaLink>{ctaLabel || 'Parler à un expert'}<ArrowRight className="ml-2 h-4 w-4 shrink-0 group-hover:translate-x-1 transition-transform" /></CtaLink></Button>
                         </div>
                       )}
                     </div>
@@ -227,7 +255,7 @@ export function BudgetCalcSection() {
           </div>
           </ScrollReveal>
 
-          <div className="mt-8 max-w-2xl mx-auto">
+          <div className={compact ? 'mt-4' : 'mt-8 max-w-2xl mx-auto'}>
             <div className="relative overflow-hidden rounded-xl p-4 bg-muted/30 backdrop-blur-sm border border-primary/30">
               <div className="flex items-start gap-3"><Info className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" /><p className="text-xs text-muted-foreground">{content.disclaimer}</p></div>
             </div>
