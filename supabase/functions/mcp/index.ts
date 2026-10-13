@@ -121,7 +121,7 @@ async function auditLog(supabase, entry) {
 var list_pending_postulations_default = defineTool({
   name: "list_pending_postulations",
   title: "Postulations \xE0 faire",
-  description: "Liste les postulations en attente de d\xE9p\xF4t (offres au statut \xAB souhaite_postuler \xBB), avec le client concern\xE9.",
+  description: "Liste les postulations en attente de d\xE9p\xF4t (offres au statut \xAB souhaite_postuler \xBB), avec le client concern\xE9. Les demandes dont la pr\xE9paration est en file, pr\xEAte ou bloqu\xE9e apparaissent en premier, avec job_id, statut, priorit\xE9, r\xE9sum\xE9 et \xE9l\xE9ments manquants.",
   inputSchema: {
     limit: z.number().int().describe("Nombre maximum de postulations \xE0 retourner (d\xE9faut 25, max 100).").optional()
   },
@@ -131,7 +131,22 @@ var list_pending_postulations_default = defineTool({
     const max = Math.min(Math.max(limit ?? 25, 1), 100);
     const { data: offres, error } = await supabase.from("offres").select("id, created_at, adresse, prix, pieces, surface, etage, type_bien, lien_annonce, statut, client_id").eq("statut", "souhaite_postuler").order("created_at", { ascending: false }).limit(max);
     if (error) throw new Error(error.message);
-    const rows = offres ?? [];
+    const jobPriority = { ready: 0, blocked: 1, queued: 2, processing: 3, failed: 4, completed: 5 };
+    const { data: jobs } = await supabase.from("postulation_jobs").select("id, offre_id, status, priority, created_at, ai_result").in("status", ["queued", "ready", "blocked"]).order("created_at", { ascending: true }).limit(max);
+    const jobByOffre = /* @__PURE__ */ new Map();
+    for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j);
+    const known = new Set((offres ?? []).map((o) => o.id));
+    const missingIds = [...jobByOffre.keys()].filter((id) => !known.has(id));
+    let extra = [];
+    if (missingIds.length) {
+      const { data } = await supabase.from("offres").select("id, created_at, adresse, prix, pieces, surface, etage, type_bien, lien_annonce, statut, client_id").in("id", missingIds);
+      extra = data ?? [];
+    }
+    const rows = [...extra ?? [], ...offres ?? []].sort((a, b) => {
+      const ja = jobByOffre.get(a.id), jb = jobByOffre.get(b.id);
+      const pa = ja ? jobPriority[ja.status] ?? 9 : 9, pb = jb ? jobPriority[jb.status] ?? 9 : 9;
+      return pa - pb;
+    }).slice(0, max);
     const clientIds = [...new Set(rows.map((o) => o.client_id).filter(Boolean))];
     const clientById = /* @__PURE__ */ new Map();
     if (clientIds.length) {
@@ -149,8 +164,17 @@ var list_pending_postulations_default = defineTool({
       postulations: rows.map((o) => {
         const userId = clientById.get(o.client_id)?.user_id ?? null;
         const profile = userId ? profileById.get(userId) : void 0;
+        const job = jobByOffre.get(o.id);
         return {
           postulation_id: o.id,
+          job: job ? {
+            job_id: job.id,
+            status: job.status,
+            priority: job.priority ?? job.ai_result?.priority ?? null,
+            requested_at: toZurichISO(job.created_at),
+            summary: job.ai_result?.concise_staff_summary ?? null,
+            missing_items: job.ai_result?.missing_items ?? []
+          } : null,
           created_at: toZurichISO(o.created_at),
           adresse: o.adresse,
           prix: o.prix,
@@ -202,7 +226,19 @@ var get_postulation_context_default = defineTool2({
       "id, type, prenom, nom, email, telephone, date_naissance, nationalite, type_permis, situation_familiale, profession, employeur, type_contrat, revenus_mensuels, charges_mensuelles"
     ).eq("client_id", offre.client_id);
     const { data: documents } = await supabase.from("documents").select("id, nom, type_document, type, taille, statut, date_upload, candidate_id").or(`client_id.eq.${offre.client_id}${client?.user_id ? `,user_id.eq.${client.user_id}` : ""}`).order("date_upload", { ascending: false }).limit(300);
+    const { data: job } = await supabase.from("postulation_jobs").select("id, status, priority, attempt_count, created_at, processed_at, last_error, ai_result, candidature_id").eq("offre_id", offre.id).eq("client_id", offre.client_id).maybeSingle();
     return textResult({
+      job: job ? {
+        job_id: job.id,
+        status: job.status,
+        priority: job.priority,
+        attempt_count: job.attempt_count,
+        requested_at: toZurichISO(job.created_at),
+        processed_at: toZurichISO(job.processed_at),
+        last_error: job.last_error,
+        candidature_id: job.candidature_id,
+        analysis: job.ai_result
+      } : null,
       postulation: {
         postulation_id: offre.id,
         created_at: toZurichISO(offre.created_at),

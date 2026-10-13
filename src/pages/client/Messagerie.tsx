@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
 import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
+import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJob";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -729,19 +730,13 @@ const Messagerie = () => {
           return;
 
         case 'demander_aide':
-          // Create candidature with dossier_complet: false
-          await supabase.from('candidatures').insert({
-            offre_id: offreId,
-            client_id: clientData.id,
-            message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
-            statut: 'candidature_deposee',
-            dossier_complet: false
-          });
-
-          await supabase
-            .from('offres')
-            .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
-            .eq('id', offreId);
+          {
+            const pr = await requestPostulation(offreId);
+            if (pr.already_requested) {
+              toast({ title: POSTULATION_CONFIRMATION, description: "Votre demande était déjà enregistrée." });
+              break;
+            }
+          }
 
           try {
             await notifyPostulationRequest({
@@ -762,7 +757,7 @@ const Messagerie = () => {
             offre_id: offreId
           });
 
-          toast({ title: "Demande envoyée", description: "Votre agent va vous contacter" });
+          toast({ title: POSTULATION_CONFIRMATION, description: "Votre agent va vous contacter" });
           break;
 
         case 'visite_effectuee':
@@ -1237,9 +1232,10 @@ const Messagerie = () => {
   };
 
   // Confirm candidature
+  const [submittingCandidature, setSubmittingCandidature] = useState(false);
   const confirmCandidature = async () => {
-    if (!selectedOffre || !accepteConditions || !user || !clientId) return;
-
+    if (!selectedOffre || !accepteConditions || !user || !clientId || submittingCandidature) return;
+    setSubmittingCandidature(true);
     try {
       const { data: clientData } = await supabase
         .from('clients')
@@ -1249,18 +1245,13 @@ const Messagerie = () => {
 
       if (!clientData) return;
 
-      const { data: candidature } = await supabase.from('candidatures').insert({
-        offre_id: selectedOffre.id,
-        client_id: clientData.id,
-        message_client: messageClient || null,
-        statut: 'candidature_deposee',
-        dossier_complet: true
-      }).select().single();
-
-      await supabase
-        .from('offres')
-        .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
-        .eq('id', selectedOffre.id);
+      const pr = await requestPostulation(selectedOffre.id);
+      const candidature = { id: pr.candidature_id };
+      if (pr.already_requested) {
+        setCandidatureDialogOpen(false);
+        toast({ title: POSTULATION_CONFIRMATION, description: "Votre demande était déjà enregistrée." });
+        return;
+      }
 
       try {
         await notifyPostulationRequest({
@@ -1312,11 +1303,13 @@ const Messagerie = () => {
       }
 
       setCandidatureDialogOpen(false);
-      toast({ title: "Candidature envoyée", description: "Votre dossier est en cours d'examen" });
+      toast({ title: POSTULATION_CONFIRMATION, description: "Votre dossier est en cours d'examen" });
       loadMessages(selectedConv!);
     } catch (error) {
       console.error('Error submitting candidature:', error);
-      toast({ title: "Erreur", description: "Impossible d'envoyer la candidature", variant: "destructive" });
+      toast({ title: "Erreur", description: (error as any)?.message || "Impossible d'envoyer la candidature", variant: "destructive" });
+    } finally {
+      setSubmittingCandidature(false);
     }
   };
 
@@ -2062,7 +2055,7 @@ const Messagerie = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmCandidature} disabled={!accepteConditions}>
+            <Button onClick={confirmCandidature} disabled={!accepteConditions || submittingCandidature}>
               <FileText className="h-4 w-4 mr-2" /> Soumettre
             </Button>
           </DialogFooter>

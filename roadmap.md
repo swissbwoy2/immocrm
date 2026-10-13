@@ -1,1 +1,2 @@
 - [x] Remplacer les stories de la landing publique par un carrousel de biens internes excellents ; rendu et types vérifiés.
+- [x] Pipeline de postulation immédiat (file postulation_jobs, request_postulation, process-postulation-job, reprise chaque minute, MCP, onglet Postulations, tests, doc). Analyse IA en attente du secret OPENAI_API_KEY (optionnel).

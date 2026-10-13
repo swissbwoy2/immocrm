@@ -37,7 +37,26 @@ type Row = {
   agent_id?: string | null;
   demande_at?: string | null;
   _client?: ClientInfo;
+  _job?: JobInfo;
 };
+
+type JobInfo = {
+  id: string;
+  status: string;
+  priority: string | null;
+  created_at: string;
+  ai_result: { missing_items?: string[]; concise_staff_summary?: string } | null;
+};
+
+const JOB_STATUS: Record<string, { label: string; className: string }> = {
+  queued: { label: 'En file', className: 'bg-muted text-muted-foreground border-border' },
+  processing: { label: 'Analyse…', className: 'bg-sky-100 text-sky-800 border-sky-300' },
+  ready: { label: 'Prêt', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  blocked: { label: 'Bloqué', className: 'bg-amber-100 text-amber-800 border-amber-300' },
+  failed: { label: 'Erreur', className: 'bg-red-100 text-red-800 border-red-300' },
+  completed: { label: 'Terminé', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+};
+const PRIORITY_LABEL: Record<string, string> = { low: 'Basse', normal: 'Normale', high: 'Haute', urgent: 'Urgente' };
 
 type SortKey = 'recent' | 'oldest' | 'client_az';
 type PeriodKey = 'all' | '7d' | '30d';
@@ -109,8 +128,19 @@ export function PostulationsPage({ scope, title }: Props) {
         profileByUser = new Map((profiles ?? []).map((p: any) => [p.id as string, { prenom: p.prenom, nom: p.nom, email: p.email }]));
       }
 
+      const jobByOffre = new Map<string, JobInfo>();
+      const offreIds = offres.map((o) => o.id);
+      for (let i = 0; i < offreIds.length; i += 200) {
+        const { data: jobs } = await supabase
+          .from('postulation_jobs')
+          .select('id, offre_id, status, priority, created_at, ai_result')
+          .in('offre_id', offreIds.slice(i, i + 200));
+        for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j as unknown as JobInfo);
+      }
+
       setRows(offres.map((o) => ({
         ...o,
+        _job: jobByOffre.get(o.id),
         demande_at: o.postulation_demandee_at ?? o.created_at ?? null,
         _client: profileByUser.get(clientToUser.get(o.client_id) ?? '') ?? {},
       })));
@@ -292,6 +322,7 @@ export function PostulationsPage({ scope, title }: Props) {
                 <TableHead>Prix (CHF/mois CC)</TableHead>
                 <TableHead>Pcs</TableHead>
                 <TableHead>Annonce</TableHead>
+                <TableHead>Préparation</TableHead>
                 <TableHead className="text-right">{tab === 'a_faire' ? 'Action' : 'Statut'}</TableHead>
               </TableRow>
             </TableHeader>
@@ -314,6 +345,31 @@ export function PostulationsPage({ scope, title }: Props) {
                          className="text-blue-600 hover:underline inline-flex items-center gap-1 text-xs">
                         <ExternalLink className="h-3.5 w-3.5" /> Voir l'annonce
                       </a>
+                    ) : '—'}
+                  </TableCell>
+                  <TableCell className="text-xs min-w-[180px]">
+                    {r._job ? (
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant="outline" className={JOB_STATUS[r._job.status]?.className}>
+                            {JOB_STATUS[r._job.status]?.label ?? r._job.status}
+                          </Badge>
+                          {r._job.priority && (
+                            <Badge variant="outline">Priorité {PRIORITY_LABEL[r._job.priority] ?? r._job.priority}</Badge>
+                          )}
+                        </div>
+                        <div className="text-muted-foreground">
+                          Demande : {format(new Date(r._job.created_at), 'dd MMM HH:mm', { locale: fr })}
+                        </div>
+                        {(r._job.ai_result?.missing_items?.length ?? 0) > 0 && (
+                          <ul className="list-disc pl-4 text-amber-700">
+                            {r._job.ai_result!.missing_items!.slice(0, 6).map((m) => <li key={m}>{m}</li>)}
+                          </ul>
+                        )}
+                        {r._job.ai_result?.concise_staff_summary && (
+                          <p className="text-muted-foreground">{r._job.ai_result.concise_staff_summary}</p>
+                        )}
+                      </div>
                     ) : '—'}
                   </TableCell>
                   <TableCell className="text-right">

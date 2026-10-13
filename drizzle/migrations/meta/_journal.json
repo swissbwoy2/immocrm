@@ -190,6 +190,13 @@
       "when": 1791196539937,
       "tag": "0026_sync_candidat_criteres_to_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791904870016,
+      "tag": "0027_postulation_jobs",
+      "breakpoints": true
     }
   ]
 }

@@ -56,7 +56,27 @@ export default defineTool({
       .order("date_upload", { ascending: false })
       .limit(300);
 
+    const { data: job } = await supabase
+      .from("postulation_jobs")
+      .select("id, status, priority, attempt_count, created_at, processed_at, last_error, ai_result, candidature_id")
+      .eq("offre_id", offre.id)
+      .eq("client_id", offre.client_id)
+      .maybeSingle();
+
     return textResult({
+      job: job
+        ? {
+            job_id: job.id,
+            status: job.status,
+            priority: job.priority,
+            attempt_count: job.attempt_count,
+            requested_at: toZurichISO(job.created_at),
+            processed_at: toZurichISO(job.processed_at),
+            last_error: job.last_error,
+            candidature_id: job.candidature_id,
+            analysis: job.ai_result,
+          }
+        : null,
       postulation: {
         postulation_id: offre.id,
         created_at: toZurichISO(offre.created_at),

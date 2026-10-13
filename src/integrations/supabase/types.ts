@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -9360,6 +9360,135 @@ export type Database = {
           },
         ]
       }
+      postulation_jobs: {
+        Row: {
+          ai_result: Json | null
+          attempt_count: number
+          candidature_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          offre_id: string
+          openai_response_id: string | null
+          priority: string | null
+          processed_at: string | null
+          requested_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_result?: Json | null
+          attempt_count?: number
+          candidature_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          offre_id: string
+          openai_response_id?: string | null
+          priority?: string | null
+          processed_at?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_result?: Json | null
+          attempt_count?: number
+          candidature_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          offre_id?: string
+          openai_response_id?: string | null
+          priority?: string | null
+          processed_at?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postulation_jobs_candidature_id_fkey"
+            columns: ["candidature_id"]
+            isOneToOne: false
+            referencedRelation: "candidatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postulation_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postulation_jobs_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      postulation_liens: {
+        Row: {
+          actif: boolean
+          annonce_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          note: string | null
+          token: string
+          utilisations: number
+        }
+        Insert: {
+          actif?: boolean
+          annonce_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token: string
+          utilisations?: number
+        }
+        Update: {
+          actif?: boolean
+          annonce_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token?: string
+          utilisations?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postulation_liens_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           actif: boolean | null
@@ -14895,6 +15024,35 @@ export type Database = {
         Args: { check_email: string }
         Returns: boolean
       }
+      claim_postulation_jobs: {
+        Args: { p_job_id?: string; p_limit?: number }
+        Returns: {
+          ai_result: Json | null
+          attempt_count: number
+          candidature_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          offre_id: string
+          openai_response_id: string | null
+          priority: string | null
+          processed_at: string | null
+          requested_by: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "postulation_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       communication_apply_receipt: {
         Args: { p_event_id: string }
         Returns: undefined
@@ -15519,6 +15677,16 @@ export type Database = {
         }
         Returns: Json
       }
+      postulation_lien_consommer: {
+        Args: {
+          p_nom?: string
+          p_prenom?: string
+          p_telephone?: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      postulation_lien_info: { Args: { p_token: string }; Returns: Json }
       purge_old_data: { Args: never; Returns: Json }
       push_offre: {
         Args: {
@@ -15605,6 +15773,7 @@ export type Database = {
         Args: { _project_id: string }
         Returns: boolean
       }
+      request_postulation: { Args: { p_offre_id: string }; Returns: Json }
       resilier_mandat: { Args: never; Returns: undefined }
       search_annonces_radius: {
         Args: {
