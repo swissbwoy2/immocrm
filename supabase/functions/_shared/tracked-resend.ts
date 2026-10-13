@@ -32,7 +32,7 @@ export class Resend extends BaseResend {
   }
 }
 export function trackedResendFetch(source: string): typeof fetch {
-  return async (input, init) => {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     if (
       String(input) !== "https://api.resend.com/emails" ||
       typeof init?.body !== "string"
