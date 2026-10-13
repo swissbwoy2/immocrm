@@ -1303,11 +1303,13 @@ const Messagerie = () => {
       }
 
       setCandidatureDialogOpen(false);
-      toast({ title: "Candidature envoyée", description: "Votre dossier est en cours d'examen" });
+      toast({ title: POSTULATION_CONFIRMATION, description: "Votre dossier est en cours d'examen" });
       loadMessages(selectedConv!);
     } catch (error) {
       console.error('Error submitting candidature:', error);
-      toast({ title: "Erreur", description: "Impossible d'envoyer la candidature", variant: "destructive" });
+      toast({ title: "Erreur", description: (error as any)?.message || "Impossible d'envoyer la candidature", variant: "destructive" });
+    } finally {
+      setSubmittingCandidature(false);
     }
   };
 
