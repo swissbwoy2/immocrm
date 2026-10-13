@@ -19,7 +19,7 @@
       {
         "name": "list_pending_postulations",
         "title": "Postulations à faire",
-        "description": "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné.",
+        "description": "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné. Les demandes dont la préparation est en file, prête ou bloquée apparaissent en premier, avec job_id, statut, priorité, résumé et éléments manquants.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
