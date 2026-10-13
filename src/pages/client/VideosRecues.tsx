@@ -200,7 +200,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
       });
       toast.success(
         choice === 'souhaite_postuler'
-          ? 'Merci, votre agent a été notifié de votre intérêt.'
+          ? 'Demande enregistrée et transmise à l’équipe.'
           : 'Merci, votre choix a été enregistré.'
       );
       onDecisionSaved();
