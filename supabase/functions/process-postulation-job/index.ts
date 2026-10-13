@@ -89,7 +89,14 @@ async function processJob(db: any, job: any) {
     const model = Deno.env.get("OPENAI_POSTULATION_MODEL") || DEFAULT_MODEL;
     // Faits minimaux, sans nom, e-mail, téléphone ni contenu de document.
     const facts = { offre: det.offerFacts, dossier: det.profileFacts, documents_presents: det.presentTypes, manquants_calcules: det.missing, indicateurs: det.indicators };
-    const r = await callOpenAI(apiKey, model, facts);
+    let r: any;
+    try {
+      r = await callOpenAI(apiKey, model, facts);
+    } catch (e) {
+      // Erreur transitoire : on retente tant qu'il reste des essais, sinon analyse déterministe seule.
+      if (e instanceof TransientError && job.attempt_count < job.max_attempts) throw e;
+      r = { error: (e as Error)?.message || "openai_error" };
+    }
     if ("result" in r) { ai = r.result; responseId = r.responseId; } else { aiError = r.error; responseId = (r as any).responseId ?? null; }
   }
 
