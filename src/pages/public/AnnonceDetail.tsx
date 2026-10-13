@@ -25,7 +25,8 @@ import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
 import { ReserverVisiteDialog, useAnnonceCreneaux } from '@/components/public/ReserverVisiteDialog';
 import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
-import { AnnonceBudgetCalculator } from '@/components/public/AnnonceBudgetCalculator';
+import { BudgetCalcSection } from '@/components/public-site/sections/BudgetCalcSection';
+import { SearchTypeProvider } from '@/contexts/SearchTypeContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -415,16 +416,14 @@ export default function AnnonceDetail() {
           </div>
           {/* Calculateur de budget (desktop) — colonne de droite, à côté des photos */}
           <div className="hidden lg:block lg:col-span-1">
-            <AnnonceBudgetCalculator
-              annonceId={annonce.id}
-              titre={annonce.titre}
-              typeTransaction={annonce.type_transaction}
-              prix={annonce.prix}
-              chargesMensuelles={annonce.charges_mensuelles}
-              chargesComprises={annonce.charges_comprises}
-              localite={annonce.ville}
-              nbPieces={annonce.nombre_pieces}
-            />
+            <SearchTypeProvider>
+              <BudgetCalcSection
+                compact
+                forceType={annonce.type_transaction === 'location' ? 'location' : 'achat'}
+                ctaHref="/nouveau-mandat"
+                ctaLabel="Faites-vous accompagner dans votre recherche"
+              />
+            </SearchTypeProvider>
           </div>
           </div>
         </div>
@@ -792,16 +791,14 @@ export default function AnnonceDetail() {
 
               {/* Calculateur de budget (mobile) — juste après les conditions de location */}
               <div className="lg:hidden">
-                <AnnonceBudgetCalculator
-                  annonceId={annonce.id}
-                  titre={annonce.titre}
-                  typeTransaction={annonce.type_transaction}
-                  prix={annonce.prix}
-                  chargesMensuelles={annonce.charges_mensuelles}
-                  chargesComprises={annonce.charges_comprises}
-                  localite={annonce.ville}
-                  nbPieces={annonce.nombre_pieces}
-                />
+                <SearchTypeProvider>
+              <BudgetCalcSection
+                compact
+                forceType={annonce.type_transaction === 'location' ? 'location' : 'achat'}
+                ctaHref="/nouveau-mandat"
+                ctaLabel="Faites-vous accompagner dans votre recherche"
+              />
+            </SearchTypeProvider>
               </div>
 
               {/* Report */}
