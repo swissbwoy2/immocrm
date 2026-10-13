@@ -15713,6 +15713,7 @@ export type Database = {
         }
         Returns: string
       }
+      relances_regie_quotidiennes: { Args: never; Returns: number }
       renouveler_mandat_coins: { Args: never; Returns: undefined }
       renovation_agent_can_access_immeuble: {
         Args: { _immeuble_id: string }
@@ -15908,6 +15909,7 @@ export type Database = {
       }
       track_email_open: { Args: { _log_id: string }; Returns: undefined }
       update_user_presence: { Args: never; Returns: undefined }
+      visite_est_reelle: { Args: { p_visite_id: string }; Returns: boolean }
     }
     Enums: {
       agent_share_status: "pending" | "accepted" | "declined" | "revoked"
