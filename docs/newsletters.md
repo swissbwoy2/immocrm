@@ -87,7 +87,17 @@ Pour un compte existant, `invite-client` reprend la signature sauvegardée en ba
 
 Tests : `npx deno test --config tests/newsletter/deno.json --allow-read --allow-env tests/newsletter/sequences_test.ts tests/newsletter/activation_test.ts tests/newsletter/infomaniak_queue_test.ts`. Les scénarios restent locaux et n’envoient aucun email. La génération des 42 modèles se reproduit avec `npx deno run --allow-read --allow-write scripts/newsletter/seed-sequences.ts`.
 
-### Invitation Druey 18 avant la séquence de recherche
+### Série candidats — octobre 2026
+
+La section **Candidats · Activer la recherche** de la bibliothèque contient six modèles : visites déléguées, agent régional, candidature sans réponse, accompagnement complet, recherche urgente et commission au succès. Chaque message utilise une illustration différente et le CTA « Activer ma recherche maintenant » vers `/nouveau-mandat`, avec une balise UTM par étape. Les images illustrent le service et ne sont pas des annonces de biens disponibles.
+
+Le groupe `renter` réutilise ces six contenus pour les prochains messages à créer. Le rythme reste J0/J+1/J+3/J+7/J+10/J+14, avec l’éventuel email de visite préalable et son délai de 24 h. La série se termine au sixième message ; elle ne boucle pas. La conversion (mandat signé **et** service activé), les exclusions, les désinscriptions et les parcours existants sont préservés. Les campagnes déjà matérialisées, notamment les résultats fournisseur incertains, ne sont ni remplacées ni renvoyées.
+
+Source commune : `src/features/newsletter/candidate-sequence.ts`. `npx tsx scripts/newsletter/build-candidate-sequence.ts` produit les HTML, le JSON et la migration de contenu. Publier les six JPEG sous `/newsletter/candidats-2026-10/` et vérifier leurs URL avant d’appliquer `20261013120000_candidate_conversion_templates.sql`. Cette migration ne modifie pas l’activation des groupes. Le modèle commercial présente 15 à 45 jours comme un objectif et décrit l’acompte de CHF 300 et les conditions du mandat actif, sans promettre un remboursement automatique.
+
+Contrôles : tests `candidate_templates_test.ts`, `sequences_test.ts` et `activation_test.ts`, puis vérification du rendu mobile et bureau. Aucun envoi de test n’est nécessaire pour ces contrôles locaux.
+
+### Invitation Druey 18 avant la séquence de recherche (configuration)
 
 La campagne Meta `120248622162110217` dispose d’un email préalable dans `newsletter_sequence_welcomes` (modèle « Invitation à visiter — Druey 18 »). Le rapprochement utilise le campaign_id, jamais le nom ni le seul formulaire `1923477708631215`, qui pourrait être réutilisé. Les nouveaux leads éligibles ont une étape -1 immédiate puis les six étapes normales. L’étape 0 attend au moins 24 heures après l’acceptation fournisseur de l’invitation ; les relances normales gardent leurs décalages 1/3/7/10/14 jours. Aucun réenrôlement historique ni reprise d’un parcours déjà arrêté. Les exclusions, conversions et contrôles de dernière minute restent communs à toutes les étapes.
 

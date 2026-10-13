@@ -48,7 +48,7 @@ import {
   sourceLabel,
   STATUS_LABELS,
 } from "@/features/newsletter/model";
-import { NEWSLETTER_TEMPLATES } from "@/features/newsletter/templates";
+import { NEWSLETTER_TEMPLATE_SECTIONS } from "@/features/newsletter/templates";
 
 import NewsletterTracking from "@/features/newsletter/Tracking";
 import NewsletterSequences from "@/features/newsletter/Sequences";
@@ -1134,45 +1134,51 @@ export default function Newsletter() {
                       {!locked && step !== 3 && (
                         <>
                           <div className="grid gap-3">
-                            {NEWSLETTER_TEMPLATES.map((template) => (
-                              <button
-                                key={template.id}
-                                aria-label={`Utiliser le modèle ${template.name}`}
-                                className="overflow-hidden rounded-xl border bg-[#f3f1e9] text-left hover:border-[#205a43]"
-                                onClick={() => {
-                                  if (
-                                    (draft.html || draft.subject ||
-                                      draft.name || draft.preheader) &&
-                                    !window.confirm(
-                                      "Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?",
-                                    )
-                                  ) return;
-                                  changeDraft({
-                                    html: template.html,
-                                    subject: template.subject,
-                                    name: template.name,
-                                    preheader: template.preheader,
-                                  });
-                                }}
-                              >
-                                <img
-                                  src={template.image}
-                                  alt=""
-                                  className="aspect-[3/1] w-full object-cover"
-                                  loading="lazy"
-                                />
-                                <span className="block p-4">
-                                  <span className="text-xs uppercase tracking-widest text-[#205a43]">
-                                    {template.audience}
-                                  </span>
-                                  <strong className="mt-1 block text-lg">
-                                    {template.name}
-                                  </strong>
-                                  <span className="mt-1 block text-sm text-muted-foreground">
-                                    {template.description}
-                                  </span>
-                                </span>
-                              </button>
+                            {NEWSLETTER_TEMPLATE_SECTIONS.map((section) => (
+                              <section key={section.id} className="space-y-3" aria-label={section.name}>
+                                <h3 className="font-semibold text-[#205a43]">{section.name}</h3>
+                                <p className="text-sm text-muted-foreground">{section.description}</p>
+                                {section.templates.map((template) => (
+                                  <button
+                                    key={template.id}
+                                    aria-label={`Utiliser le modèle ${template.name}`}
+                                    className="w-full overflow-hidden rounded-xl border bg-[#f3f1e9] text-left hover:border-[#205a43]"
+                                    onClick={() => {
+                                      if (
+                                        (draft.html || draft.subject ||
+                                          draft.name || draft.preheader) &&
+                                        !window.confirm(
+                                          "Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?",
+                                        )
+                                      ) return;
+                                      changeDraft({
+                                        html: template.html,
+                                        subject: template.subject,
+                                        name: template.name,
+                                        preheader: template.preheader,
+                                      });
+                                    }}
+                                  >
+                                    <img
+                                      src={template.image}
+                                      alt=""
+                                      className="aspect-[3/1] w-full object-cover"
+                                      loading="lazy"
+                                    />
+                                    <span className="block p-4">
+                                      <span className="text-xs uppercase tracking-widest text-[#205a43]">
+                                        {template.audience}
+                                      </span>
+                                      <strong className="mt-1 block text-lg">
+                                        {template.name}
+                                      </strong>
+                                      <span className="mt-1 block text-sm text-muted-foreground">
+                                        {template.description}
+                                      </span>
+                                    </span>
+                                  </button>
+                                ))}
+                              </section>
                             ))}
                             <Button
                               variant="outline"
