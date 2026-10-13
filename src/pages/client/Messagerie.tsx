@@ -1232,9 +1232,10 @@ const Messagerie = () => {
   };
 
   // Confirm candidature
+  const [submittingCandidature, setSubmittingCandidature] = useState(false);
   const confirmCandidature = async () => {
-    if (!selectedOffre || !accepteConditions || !user || !clientId) return;
-
+    if (!selectedOffre || !accepteConditions || !user || !clientId || submittingCandidature) return;
+    setSubmittingCandidature(true);
     try {
       const { data: clientData } = await supabase
         .from('clients')
@@ -2052,7 +2053,7 @@ const Messagerie = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmCandidature} disabled={!accepteConditions}>
+            <Button onClick={confirmCandidature} disabled={!accepteConditions || submittingCandidature}>
               <FileText className="h-4 w-4 mr-2" /> Soumettre
             </Button>
           </DialogFooter>
