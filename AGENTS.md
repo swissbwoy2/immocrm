@@ -10,3 +10,4 @@
 - Sidebar sections derive from the real active role and resolved client journey; persist their expanded state per role and section, without changing route permissions. Why: navigation preferences must not impersonate roles or grant data access.
 - PWA updates require an explicit user action before reloading; stale route chunks get at most one shared reload attempt per tab. Why: preserve in-progress work without trapping users in refresh loops.
 - Sidebar route code prefetch uses the exact protected-route import map and only warms modules on intent or idle; vendor chunks group shared dependencies. Why: speed repeat navigation without mounting unauthorized pages or increasing initial data requests.
+- Client postulation requests go only through RPC request_postulation, which queues postulation_jobs processed by process-postulation-job (immediate invoke + 1-min sweep); the pipeline never submits to a régie. Why: idempotent clicks and a single supervised staff queue.
