@@ -97,7 +97,9 @@ export default function StatistiquesAgents() {
           let visitsQuery = supabase
             .from('visites')
             .select('*', { count: 'exact', head: true })
-            .eq('agent_id', agent.id);
+            .eq('agent_id', agent.id)
+            .lte('date_visite', new Date().toISOString())
+            .or('statut.eq.effectuee,statut.eq.confirmee,est_deleguee.eq.true');
 
           if (dateFilter) {
             visitsQuery = visitsQuery.gte('date_visite', dateFilter.toISOString());
