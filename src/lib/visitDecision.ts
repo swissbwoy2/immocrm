@@ -32,3 +32,28 @@ export function canDecideOnOffre(offre: any, relatedVisites: any[] = []): boolea
 }
 
 export { visiteIndicatesDone };
+
+/**
+ * Visite RÉELLE (pour les compteurs uniquement — ne change pas la décision du client).
+ * Les routines enregistrent la date de visite affichée par chaque annonce comme une
+ * visite « planifiée », même si le client n'a jamais dit oui : ce n'est qu'un créneau.
+ * Est réelle une visite non annulée qui est déléguée, confirmée, effectuée, créée par
+ * un humain ou le client, suivie d'une décision, ou liée à une offre que le client a
+ * acceptée de visiter.
+ */
+const SOURCES_HUMAINES = new Set(['deleguee', 'planifiee_client', 'portail', 'manuel', 'manuelle', 'proposee_agent']);
+const OFFRE_INTERESSEE = new Set([
+  'interesse', 'visite_planifiee', 'visite_confirmee', 'visite_effectuee',
+  'souhaite_postuler', 'candidature_deposee', 'acceptee',
+]);
+
+export function isVisiteReelle(v: any, offreStatut?: string | null): boolean {
+  if (!v || v.statut === 'annulee') return false;
+  if (v.est_deleguee) return true;
+  if (v.coursier_id) return true;
+  if (v.statut === 'confirmee' || v.statut === 'effectuee') return true;
+  if (v.source && SOURCES_HUMAINES.has(v.source)) return true;
+  if (v.client_decision) return true;
+  if (offreStatut && OFFRE_INTERESSEE.has(offreStatut)) return true;
+  return false;
+}
