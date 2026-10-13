@@ -135,7 +135,7 @@ export function PostulationsPage({ scope, title }: Props) {
           .from('postulation_jobs')
           .select('id, offre_id, status, priority, created_at, ai_result')
           .in('offre_id', offreIds.slice(i, i + 200));
-        for (const j of jobs ?? []) jobByOffre.set((j as any).offre_id, j as unknown as JobInfo);
+        for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j as unknown as JobInfo);
       }
 
       setRows(offres.map((o) => ({

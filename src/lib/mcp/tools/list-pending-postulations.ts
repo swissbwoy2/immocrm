@@ -30,7 +30,7 @@ export default defineTool({
       .in("status", ["queued", "ready", "blocked"])
       .order("created_at", { ascending: true })
       .limit(max);
-    const jobByOffre = new Map<string, any>();
+    const jobByOffre = new Map<string, NonNullable<typeof jobs>[number]>();
     for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j);
     const known = new Set((offres ?? []).map((o) => o.id));
     const missingIds = [...jobByOffre.keys()].filter((id) => !known.has(id));
