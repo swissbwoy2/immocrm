@@ -35,6 +35,7 @@ import { OffreInteretPrompt } from "@/components/client/OffreInteretPrompt";
 import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
 import { submitVisitVideoDecision } from "@/components/client/VisitVideoDecisionCard";
 import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
+import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJob";
 import { Loader2 } from "lucide-react";
 import { consumeVisitCoin } from "@/hooks/useUserCredits";
 
@@ -849,18 +850,14 @@ const OffresRecues = () => {
         return;
       }
 
-      // Créer une demande de postulation (pas une candidature déposée)
-      // Le statut de l'offre reste inchangé jusqu'à ce que l'agent envoie le dossier
-      await supabase.from('candidatures').insert({
-        offre_id: offre.id,
-        client_id: clientData.id,
-        statut: 'demande_postulation',
-        message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
-        dossier_complet: false
-      });
-
-      // L'offre passe en 'souhaite_postuler' pour apparaître dans l'onglet Postulations (admin/agent)
-      await supabase.from('offres').update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() }).eq('id', offre.id);
+      // Demande atomique et idempotente (candidature + offre + file de traitement).
+      const pr = await requestPostulation(offre.id);
+      if (pr.already_requested) {
+        await loadOffres();
+        refreshData();
+        toast({ title: '✅ ' + POSTULATION_CONFIRMATION, description: 'Votre demande était déjà enregistrée.' });
+        return;
+      }
 
       if (clientData.agent_id) {
         let { data: conv } = await supabase
@@ -920,7 +917,7 @@ const OffresRecues = () => {
       refreshData();
 
       toast({
-        title: '✅ Demande envoyée',
+        title: '✅ ' + POSTULATION_CONFIRMATION,
         description: 'Votre agent a été notifié et s\'occupera de la postulation pour vous.'
       });
 
@@ -1028,18 +1025,14 @@ const OffresRecues = () => {
 
       if (!clientData) throw new Error('Client not found');
 
-      await supabase.from('candidatures').insert({
-        offre_id: selectedOffre.id,
-        client_id: clientData.id,
-        message_client: messageClient,
-        dossier_complet: true,
-        statut: 'candidature_deposee'
-      });
-
-      await supabase
-        .from('offres')
-        .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
-        .eq('id', selectedOffre.id);
+      const pr = await requestPostulation(selectedOffre.id);
+      if (pr.already_requested) {
+        setCandidatureDialogOpen(false);
+        await loadOffres();
+        refreshData();
+        toast({ title: '✅ ' + POSTULATION_CONFIRMATION, description: 'Votre demande était déjà enregistrée ; vos documents ont été ajoutés.' });
+        return;
+      }
 
       try {
         await notifyPostulationRequest({
@@ -1091,7 +1084,7 @@ const OffresRecues = () => {
       refreshData();
 
       toast({
-        title: '🎉 Candidature déposée avec succès !',
+        title: '🎉 ' + POSTULATION_CONFIRMATION,
         description: 'Votre dossier complet a été envoyé à votre agent. Vous serez contacté prochainement.'
       });
 

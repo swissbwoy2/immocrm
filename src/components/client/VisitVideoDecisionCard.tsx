@@ -10,6 +10,7 @@ import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { formatSwissDateTime } from '@/lib/dateUtils';
 import { getOrCreateClientConversation } from '@/lib/clientConversation';
 import { notifyPostulationRequest, getClientDisplayName } from '@/lib/postulationRequest';
+import { requestPostulation } from '@/lib/postulationJob';
 
 interface Props {
   visite: any;
@@ -81,18 +82,15 @@ export async function submitVisitVideoDecision(params: {
     if (vErr) throw vErr;
   }
 
-  if (offreId) {
-    const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';
-    let q = supabase.from('offres').update(
-      choice === 'souhaite_postuler'
-        ? { statut: nextStatut, postulation_demandee_at: new Date().toISOString() }
-        : { statut: nextStatut }
-    ).eq('id', offreId);
+  if (offreId && choice === 'souhaite_postuler') {
+    // Demande atomique et idempotente ; un second clic ne renvoie ni message ni notification.
+    const pr = await requestPostulation(offreId);
+    if (pr.already_requested) return;
+  } else if (offreId) {
     // Ne jamais rétrograder une demande de postulation déjà enregistrée.
-    if (choice === 'refuse') {
-      q = q.not('statut', 'in', '(souhaite_postuler,candidature_deposee,acceptee)');
-    }
-    const { error: oErr } = await q;
+    const { error: oErr } = await supabase.from('offres').update({ statut: 'refusee' })
+      .eq('id', offreId)
+      .not('statut', 'in', '(souhaite_postuler,candidature_deposee,acceptee)');
     if (oErr) throw oErr;
   }
 
