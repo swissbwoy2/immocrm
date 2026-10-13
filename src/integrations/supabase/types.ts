@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -9360,6 +9360,50 @@ export type Database = {
           },
         ]
       }
+      postulation_liens: {
+        Row: {
+          actif: boolean
+          annonce_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          note: string | null
+          token: string
+          utilisations: number
+        }
+        Insert: {
+          actif?: boolean
+          annonce_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token: string
+          utilisations?: number
+        }
+        Update: {
+          actif?: boolean
+          annonce_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token?: string
+          utilisations?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postulation_liens_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           actif: boolean | null
@@ -15519,6 +15563,16 @@ export type Database = {
         }
         Returns: Json
       }
+      postulation_lien_consommer: {
+        Args: {
+          p_nom?: string
+          p_prenom?: string
+          p_telephone?: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      postulation_lien_info: { Args: { p_token: string }; Returns: Json }
       purge_old_data: { Args: never; Returns: Json }
       push_offre: {
         Args: {
