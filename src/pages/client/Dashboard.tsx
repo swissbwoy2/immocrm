@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { isVisiteReelle } from '@/lib/visitDecision';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User, FolderOpen, Map } from 'lucide-react';
 import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffresKPI';
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
@@ -525,14 +526,16 @@ function ClientDashboardLocation() {
 
   // Calculate stats
   const now = new Date();
+  const statutOffre = new globalThis.Map<string, string>(offres.map((o: any) => [o.id, o.statut] as [string, string]));
+  const reelle = (v: any) => isVisiteReelle(v, v.offre_id ? statutOffre.get(v.offre_id) : null);
   const stats = {
     offresRecues: offres.length,
     offresNonVues: offres.filter(o => o.statut === 'envoyee').length,
     visitesAVenir: visites.filter(v => 
-      v.statut === 'planifiee' && new Date(v.date_visite) >= now
+      ['planifiee', 'confirmee'].includes(v.statut) && new Date(v.date_visite) >= now && reelle(v)
     ).length,
     visitesEffectuees: visites.filter(v => 
-      v.statut === 'effectuee' || (v.statut === 'planifiee' && new Date(v.date_visite) < now)
+      v.statut === 'effectuee' || (['planifiee', 'confirmee'].includes(v.statut) && new Date(v.date_visite) < now && reelle(v))
     ).length,
     candidaturesDeposees: offres.filter(o => o.statut === 'candidature_deposee').length,
     candidaturesEnAttente: offres.filter(o => ['candidature_deposee', 'visite_effectuee'].includes(o.statut)).length,
