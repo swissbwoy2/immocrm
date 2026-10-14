@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { newsletterApi as api } from "@/features/newsletter/api";
 import { CONTACT_CATEGORIES, type Category } from "./model";
+import RcQuoteRequests from "./RcQuoteRequests";
 type FormRow = {
   id: string;
   name: string;
@@ -99,6 +100,7 @@ export default function NewsletterForms({
   }
   return (
     <div className="space-y-5">
+      {!editing && <RcQuoteRequests />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold">Formulaires d’abonnement</h2>

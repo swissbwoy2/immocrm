@@ -3,6 +3,7 @@ import premium from "./reference.html?raw";
 import candidature from "./templates/candidature.html?raw";
 import cancellation from "./templates/visite-annulee.html?raw";
 import { CANDIDATE_NEWSLETTER_TEMPLATES } from "./candidate-sequence";
+import { RC_NEWSLETTER_TEMPLATE } from "./rc-campaign";
 
 export const NEWSLETTER_TEMPLATES = [
   {
@@ -56,6 +57,12 @@ export const NEWSLETTER_TEMPLATES = [
 ] as const;
 
 export const NEWSLETTER_TEMPLATE_SECTIONS = [
+  {
+    id: "client-services",
+    name: "Clients & candidats · Votre dossier",
+    description: "Univers bleu de l’espace client. Offres et services pour compléter le dossier.",
+    templates: [RC_NEWSLETTER_TEMPLATE],
+  },
   {
     id: "candidates",
     name: "Candidats · Activer la recherche",

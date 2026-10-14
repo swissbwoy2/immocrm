@@ -49,6 +49,7 @@ import {
   STATUS_LABELS,
 } from "@/features/newsletter/model";
 import { NEWSLETTER_TEMPLATE_SECTIONS } from "@/features/newsletter/templates";
+import { rcDb } from "@/features/newsletter/rc-api";
 
 import NewsletterTracking from "@/features/newsletter/Tracking";
 import NewsletterSequences from "@/features/newsletter/Sequences";
@@ -373,6 +374,17 @@ export default function Newsletter() {
   }
   const selectionPanel = (
     <div className="space-y-4">
+      {draft.html.includes("utm_campaign=rc-dossier-beton") && <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-slate-700">
+        <p className="mb-3">Campagne RC : sélectionnez les comptes candidats et les clients actifs. Les désinscriptions et exclusions sont conservées.</p>
+        <Button variant="outline" disabled={busy || locked} onClick={() => void run(async () => {
+          const result = await rcDb.rpc("newsletter_rc_audience");
+          if (result.error) throw new Error("Le ciblage RC n’a pas pu être chargé.");
+          const ids = (result.data || []) as { contact_id: string }[];
+          setSelected(new Set(ids.map(row => row.contact_id)));
+          setQuery(""); setKind("all"); setCategory("all"); setContactSource("all"); setContactForm("all");
+          toast.success(`${ids.length} contacts éligibles sélectionnés pour la campagne RC`);
+        })}>Sélectionner les clients actifs et candidats</Button>
+      </div>}
       <div className="grid gap-3 md:grid-cols-3">
         <Input
           aria-label="Rechercher des contacts"
