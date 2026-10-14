@@ -380,6 +380,8 @@ export default function Newsletter() {
           const result = await rcDb.rpc("newsletter_rc_audience");
           if (result.error) throw new Error("Le ciblage RC n’a pas pu être chargé.");
           const ids = (result.data || []) as { contact_id: string }[];
+          const refreshed = await api<{ contacts: Contact[] }>({ action: "contacts" });
+          setContacts(refreshed.contacts);
           setSelected(new Set(ids.map(row => row.contact_id)));
           setQuery(""); setKind("all"); setCategory("all"); setContactSource("all"); setContactForm("all");
           toast.success(`${ids.length} contacts éligibles sélectionnés pour la campagne RC`);
