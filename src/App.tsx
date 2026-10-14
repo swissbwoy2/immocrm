@@ -49,6 +49,7 @@ const BotLoginCode = lazyWithRetry(() => import("./pages/BotLoginCode"));
 const Appel = lazyWithRetry(() => import("./pages/Appel"));
 const OAuthConsent = lazyWithRetry(() => import("./pages/OAuthConsent"));
 const Unsubscribe = lazyWithRetry(() => import("./pages/Unsubscribe"));
+const OffreRC = lazyWithRetry(() => import("./pages/OffreRC"));
 
 
 // Public portal pages
@@ -344,6 +345,7 @@ const App = () => (
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
+              <Route path="/offre-rc" element={<OffreRC />} />
               <Route path="/bot-login-code" element={<BotLoginCode />} />
               {/* Route universelle d'appel (tous rôles) — évite toute 404 depuis une notification */}
               <Route path="/appel" element={<Appel />} />
