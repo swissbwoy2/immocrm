@@ -21,7 +21,7 @@ export default function OffreRC() {
   const [reload, setReload] = useState(0);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [requestKey] = useState(() => crypto.randomUUID());
-  const allowed = userRoles.some(r => ["client", "candidat", "admin"].includes(r));
+  const allowed = !user || userRoles.some(r => ["client", "candidat", "admin"].includes(r));
 
   useEffect(() => {
     let cancelled = false;
@@ -56,10 +56,10 @@ export default function OffreRC() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy || !consent || !user || !allowed) return;
+    if (busy || !consent || !allowed) return;
     setBusy(true); setError("");
     try {
-      const { data, error: failure } = await rcDb.rpc("request_rc_quote", {
+      const { data, error: failure } = await rcDb.rpc(user ? "request_rc_quote" : "request_rc_quote_guest", {
         p_request_key: requestKey, p_first_name: fields.first_name, p_last_name: fields.last_name,
         p_current_address: fields.current_address, p_email: fields.email, p_phone: fields.phone,
         p_insured_people: Number(fields.insured_people), p_birth_date: fields.birth_date,
@@ -92,22 +92,17 @@ export default function OffreRC() {
         <h1 className="text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl">Ajoute ta RC pour<br /><span className="text-blue-600">un dossier béton.</span></h1>
         <p className="mb-6 mt-5 max-w-lg text-lg leading-relaxed text-slate-600">Prépare la suite avec confiance. Demande ton offre RC gratuite et sans engagement : notre équipe s’occupe de ta demande, tu gardes le choix.</p>
         <img src={RC_CAMPAIGN.image} width="1280" height="853" alt="Un dossier bleu protégé par un bouclier, aux côtés d’une candidate sereine." className="w-full rounded-3xl border border-blue-100" />
-        <div className="mt-6 grid gap-3 text-sm text-slate-600">{["Une demande d’offre gratuite, sans engagement.", "Tes informations restent liées à ton compte existant.", "Une équipe pour t’accompagner dans la suite."].map(text => <p key={text} className="flex gap-3"><CheckCircle2 className="shrink-0 text-blue-600" size={19} />{text}</p>)}</div>
+        <div className="mt-6 grid gap-3 text-sm text-slate-600">{["Une demande d’offre gratuite, sans engagement.", "Une demande accessible avec ou sans compte Logisorama.", "Une équipe pour t’accompagner dans la suite."].map(text => <p key={text} className="flex gap-3"><CheckCircle2 className="shrink-0 text-blue-600" size={19} />{text}</p>)}</div>
         <p className="mt-6 text-xs leading-5 text-slate-500">La demande d’offre est gratuite. L’assurance est payante en cas de souscription. Si tu as déjà une RC, vérifie ton attestation avant de demander une nouvelle offre.</p>
       </section>
       <section id="demande" className="scroll-mt-6 self-start rounded-3xl border border-blue-100 bg-white p-6 shadow-sm md:p-8" aria-label="Demande d’offre RC">
-        {loading || prefilling ? <p role="status">Chargement de ton espace…</p> : !user ? <>
-          <ShieldCheck size={36} className="mb-5 text-blue-500" /><h2 className="text-2xl font-bold">Ton offre commence ici.</h2>
-          <p className="my-5 leading-7 text-slate-600">Connecte-toi à ton compte Logisorama pour retrouver tes informations et compléter ta demande d’offre RC.</p>
-          <Link className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-blue-600 px-5 py-4 font-semibold text-white" to="/login?next=%2Foffre-rc">Me connecter et recevoir une offre <ArrowRight size={18} /></Link>
-          <p className="mt-4 text-sm text-slate-500">Utilise ton compte client ou candidat habituel.</p>
-        </> : loadError ? <div role="alert"><h2 className="text-xl font-bold">Ton formulaire est momentanément indisponible.</h2><p className="my-4 text-slate-600">Nous n’avons pas pu vérifier tes demandes existantes.</p><button className="rounded-xl bg-blue-600 px-5 py-3 text-white" onClick={() => setReload(n => n + 1)}>Réessayer</button></div> : requestId ? <div role="status">
+        {loading || prefilling ? <p role="status">Chargement de ton espace…</p> : loadError ? <div role="alert"><h2 className="text-xl font-bold">Ton formulaire est momentanément indisponible.</h2><p className="my-4 text-slate-600">Nous n’avons pas pu vérifier tes demandes existantes.</p><button className="rounded-xl bg-blue-600 px-5 py-3 text-white" onClick={() => setReload(n => n + 1)}>Réessayer</button></div> : requestId ? <div role="status">
           <CheckCircle2 size={44} className="mb-5 text-blue-600" /><h2 className="text-2xl font-bold">Ta demande est bien enregistrée.</h2>
           <p className="my-5 leading-7 text-slate-600">Notre équipe va la traiter et te recontacter aux coordonnées indiquées. Tu n’as rien à payer pour cette demande et tu restes libre de choisir.</p>
-          <p className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">Une demande est déjà en cours pour ton compte : inutile de la renvoyer.</p>
+          <p className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">Ta demande a été prise en compte : inutile de la renvoyer.</p>
           <a href="mailto:support@logisorama.ch" className="mt-5 inline-block text-sm font-semibold text-blue-700 underline">Une information à corriger ? Contacte-nous.</a>
         </div> : !allowed ? <p role="alert">Cette offre est réservée aux comptes clients et candidats. Connecte-toi avec ton compte concerné.</p> : <>
-          <h2 className="text-2xl font-bold">Recevoir mon offre RC</h2><p className="mb-7 mt-2 text-sm text-slate-500">Complète ces informations pour que notre équipe traite ta demande. Tous les champs sont requis.</p>
+          <h2 className="text-2xl font-bold">Recevoir mon offre RC</h2>{!user && <p className="mt-3 text-sm text-slate-600">Aucun compte nécessaire. Tu as déjà un compte ? <Link to="/login?next=%2Foffre-rc" className="font-semibold text-blue-700 underline">Connecte-toi pour préremplir tes informations.</Link></p>}<p className="mb-7 mt-2 text-sm text-slate-500">Complète ces informations pour que notre équipe traite ta demande. Tous les champs sont requis.</p>
           <form onSubmit={submit}>
             <fieldset disabled={busy} className="space-y-5">
               <div className="grid gap-5 sm:grid-cols-2">{input("first_name", "Prénom", "text", "given-name")}{input("last_name", "Nom", "text", "family-name")}</div>
