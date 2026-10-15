@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { AchatProgressionBar } from '@/components/achat/AchatProgressionBar';
+import { AchatSuiviCompteurs } from '@/components/achat/AchatSuiviCompteurs';
 import { AchatStepsTimeline } from '@/components/achat/AchatStepsTimeline';
 import { AchatFinancingCard } from '@/components/achat/AchatFinancingCard';
 import { AchatPropertiesList } from '@/components/achat/AchatPropertiesList';
@@ -171,6 +172,14 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
               stepsDone={stepsDone}
             />
           </div>
+
+          {/* Crédits illimités : suivi de l'activité du mandat d'achat */}
+          <AchatSuiviCompteurs
+            className="mb-6"
+            clientId={project.client_id}
+            projectId={project.id}
+            dateDebut={project.date_debut_progression || project.date_signature_mandat || project.created_at}
+          />
 
           {/* Derniers biens proposés */}
           <div className="mb-6">
