@@ -1,4 +1,5 @@
 import { ArrowLeft, Mail, Phone, Building2, Briefcase, User, DollarSign, Home, CheckCircle2, Edit, Trash2, MailPlus, Send, MessageSquare, Sparkles, Clock, TrendingUp, Loader2, Receipt, Users, FileText, Key, Shield, Target, Wallet, Banknote, MapPin, Calendar } from 'lucide-react';
+import { AchatSuiviCompteurs } from '@/components/achat/AchatSuiviCompteurs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CardContent } from '@/components/ui/card';
@@ -131,6 +132,15 @@ export function PurchaseClientDetailPremium({
               </p>
             </div>
           </div>
+        )}
+
+        {/* Crédits illimités (acheteur) : suivi de l'activité du mandat */}
+        {project && (
+          <AchatSuiviCompteurs
+            clientId={client?.id ?? project.client_id}
+            projectId={project.id}
+            dateDebut={project.date_debut_progression || project.date_signature_mandat || project.created_at}
+          />
         )}
 
         {/* ─── Hero card ─── */}
