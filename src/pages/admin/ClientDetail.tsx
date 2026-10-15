@@ -385,8 +385,8 @@ export default function ClientDetail() {
       if (candidaturesError) throw candidaturesError;
       setCandidatures(candidaturesData || []);
 
-      // Load reloueur data if applicable
-      if (clientData.journey_type === 'property_reletting') {
+      // Load reloueur data if applicable (reloueur pur OU parcours mixte chercheur + reloueur)
+      if (clientData.journey_type === 'property_reletting' || clientData.journey_type === 'mixed') {
         const { data: reqData } = await supabase
           .from('relouer_requests')
           .select('*')
@@ -1323,6 +1323,18 @@ export default function ClientDetail() {
       <div className="p-4 md:p-8 space-y-6">
         {isPurchaseEligible && !purchaseHook.project && (
           <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
+        )}
+        {/* Parcours mixte : le dossier de relocation s'affiche en plus du suivi chercheur */}
+        {!isReletter && !isPurchaseEligible && client.journey_type === 'mixed' && relouerRequest && (
+          <div className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-4">
+            <p className="text-sm font-semibold text-foreground">Dossier de relocation (parcours mixte)</p>
+            <ReletterStatusBanner request={relouerRequest} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <ReletterFinancialCard request={relouerRequest} />
+              <ReletterPropertyFeaturesCard request={relouerRequest} />
+            </div>
+            <ReletterDossiersTransmisCard candidates={relouerCandidates} />
+          </div>
         )}
         {/* Status banner — reloueur or chercheur */}
         {isReletter ? (

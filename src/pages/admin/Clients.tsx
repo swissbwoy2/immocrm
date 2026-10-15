@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { CandidatProspectsList, fetchCandidatProspects, type CandidatProspect } from "@/components/admin/CandidatProspectsList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +65,7 @@ type PurchaseProjectLite = {
   statut: string | null;
 };
 
-type JourneyTab = 'all' | 'chercheurs' | 'acheteurs' | 'reloueurs' | 'mixtes';
+type JourneyTab = 'all' | 'chercheurs' | 'acheteurs' | 'reloueurs' | 'mixtes' | 'prospects';
 
 interface ClientCandidate {
   id: string;
@@ -142,7 +143,7 @@ const Clients = () => {
   // Onglet journey (Tous / Chercheurs / Reloueurs / Mixtes)
   const initialTab = ((): JourneyTab => {
     const fromUrl = searchParams.get('tab');
-    const allowed: JourneyTab[] = ['all','chercheurs','acheteurs','reloueurs','mixtes'];
+    const allowed: JourneyTab[] = ['all','chercheurs','acheteurs','reloueurs','mixtes','prospects'];
     if (fromUrl && (allowed as string[]).includes(fromUrl)) return fromUrl as JourneyTab;
     const stored = typeof window !== 'undefined' ? localStorage.getItem('adminClientsJourneyTab') : null;
     if (stored && (allowed as string[]).includes(stored)) return stored as JourneyTab;
@@ -170,6 +171,20 @@ const Clients = () => {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Prospects (comptes candidat sans dossier client) — chargement séparé, en lecture seule,
+  // pour ne jamais ralentir ni bloquer la liste des clients.
+  const [prospects, setProspects] = useState<CandidatProspect[]>([]);
+  const [prospectsLoading, setProspectsLoading] = useState(true);
+  const [prospectsError, setProspectsError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchCandidatProspects()
+      .then((rows) => { if (alive) { setProspects(rows); setProspectsError(null); } })
+      .catch((e) => { if (alive) setProspectsError(e?.message || 'erreur'); })
+      .finally(() => { if (alive) setProspectsLoading(false); });
+    return () => { alive = false; };
   }, []);
 
 
@@ -440,6 +455,8 @@ const Clients = () => {
   const isSearcher = (c: Client) => !isBuyer(c) && (!c.journey_type || c.journey_type === 'housing_search');
 
   const filteredClients = clients.filter(client => {
+    // Onglet Prospects : liste séparée (comptes candidat sans dossier) — aucun client ici.
+    if (journeyTab === 'prospects') return false;
     // 1) Filtre par onglet journey — PRIORITE ABSOLUE acheteurs (jamais reloueurs)
     if (journeyTab === 'acheteurs') {
       if (isReletter(client)) return false;
@@ -925,6 +942,7 @@ const Clients = () => {
             { key: 'acheteurs', label: 'Acheteurs', count: totals.acheteurs },
             { key: 'reloueurs', label: 'Clients reloueurs', count: totals.reloueurs },
             { key: 'mixtes', label: 'Mixtes', count: totals.mixtes },
+            { key: 'prospects', label: 'Prospects (candidats)', count: prospects.length },
           ];
           return (
             <div className="mb-6 flex flex-wrap gap-2">
@@ -960,7 +978,11 @@ const Clients = () => {
           />
         )}
 
-        {viewMode === 'list' && (<>
+        {viewMode === 'list' && journeyTab === 'prospects' && (
+          <CandidatProspectsList rows={prospects} loading={prospectsLoading} error={prospectsError} />
+        )}
+
+        {viewMode === 'list' && journeyTab !== 'prospects' && (<>
 
         {/* Premium Filter Section */}
 
