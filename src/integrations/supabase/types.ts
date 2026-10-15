@@ -7827,6 +7827,7 @@ export type Database = {
           conversation_id: string
           created_at: string | null
           id: string
+          masque_messagerie: boolean
           offre_id: string | null
           payload: Json | null
           read: boolean | null
@@ -7843,6 +7844,7 @@ export type Database = {
           conversation_id: string
           created_at?: string | null
           id?: string
+          masque_messagerie?: boolean
           offre_id?: string | null
           payload?: Json | null
           read?: boolean | null
@@ -7859,6 +7861,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string | null
           id?: string
+          masque_messagerie?: boolean
           offre_id?: string | null
           payload?: Json | null
           read?: boolean | null
