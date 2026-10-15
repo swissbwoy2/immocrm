@@ -224,7 +224,7 @@ export function PremiumDayEvents({
                         <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             {/* Badge de type de visite selon le statut */}
-                            {firstVisite.est_deleguee || firstVisite.source === 'deleguee' ? (
+                            {group.some((g: any) => g.est_deleguee || g.source === 'deleguee') ? (
                               <Badge variant="outline" className="text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 animate-pulse">
                                 🔥 DÉLÉGUÉE
                               </Badge>
