@@ -78,7 +78,7 @@ export function PublicHeader() {
                 </Link>
               </>
             ) : (
-              <Link to="/connexion-annonceur">
+              <Link to="/login">
                 <Button size="sm">
                   <User className="h-4 w-4 mr-2" />
                   Connexion
@@ -134,7 +134,7 @@ export function PublicHeader() {
                       </Button>
                     </Link>
                   )}
-                  <Link to={isAuthenticated ? '/espace-annonceur' : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
+                  <Link to={isAuthenticated ? '/espace-annonceur' : '/login'} onClick={() => setIsOpen(false)}>
                     <Button className="w-full justify-start">
                       {isAuthenticated ? <Megaphone className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                       {isAuthenticated ? 'Mon espace' : 'Connexion'}

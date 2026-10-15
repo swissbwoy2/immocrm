@@ -5,8 +5,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
-import { CalendarCheck, CheckCircle2, Loader2, BellRing, UserRound } from 'lucide-react';
+import { CalendarCheck, CheckCircle2, Loader2, BellRing, UserRound, LogIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
@@ -81,6 +84,37 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const espace = useMemo(() => espaceDuRole((userRoles ?? []) as string[]), [userRoles]);
   const [profilCharge, setProfilCharge] = useState(false);
 
+  // Non connecte : onglet « J'ai deja un compte » (connexion dans la modale) / « Creer mon compte ».
+  const [onglet, setOnglet] = useState<'connexion' | 'nouveau'>('nouveau');
+  const [identifiants, setIdentifiants] = useState({ email: '', password: '' });
+  const [connexionEnCours, setConnexionEnCours] = useState(false);
+  const [messageConnexion, setMessageConnexion] = useState<string | null>(null);
+
+  // Une fois connecte depuis la modale : on quitte le mode « compte seulement »
+  // pour retomber sur le parcours connecte (reservation ou « Etre averti »).
+  useEffect(() => {
+    if (connecte && accountOnly && !done) setAccountOnly(false);
+  }, [connecte, accountOnly, done]);
+
+  const seConnecter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = identifiants.email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email) || !identifiants.password) return toast.error('Saisissez votre e-mail et votre mot de passe');
+    setConnexionEnCours(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: identifiants.password });
+      if (error) {
+        toast.error(error.message?.includes('Invalid login credentials') ? 'E-mail ou mot de passe incorrect' : (error.message || 'Connexion impossible'));
+        return;
+      }
+      setIdentifiants({ email, password: '' });
+      setMessageConnexion(null);
+      toast.success('Vous êtes connecté');
+    } finally {
+      setConnexionEnCours(false);
+    }
+  };
+
   // Personne connectee : on reprend ses coordonnees du profil, sans rien lui redemander.
   useEffect(() => {
     if (!open || !user?.id) { setProfilCharge(false); return; }
@@ -123,6 +157,18 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
         close(false);
         return;
       }
+      if (payload?.code === 'account_exists' && connecte) {
+        // Session refusee par le serveur (expiree) : on demande une reconnexion.
+        toast.error('Votre session a expiré, reconnectez-vous pour réserver');
+        return;
+      }
+      if (payload?.code === 'account_exists') {
+        // Compte existant : jamais de re-saisie ni d'inscription silencieuse, on passe a la connexion.
+        setIdentifiants({ email: form.email.trim().toLowerCase(), password: '' });
+        setMessageConnexion('Un compte existe déjà avec cet e-mail. Connectez-vous pour continuer.');
+        setOnglet('connexion');
+        return;
+      }
       if (payload?.code === 'slot_full') {
         setSlotFull(true);
         setCreneauId(null);
@@ -144,7 +190,10 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); setSlotFull(false); setAccountOnly(false); }, 200);
+    if (!o) setTimeout(() => {
+      setDone(false); setCreneauId(null); setSlotFull(false); setAccountOnly(false);
+      setOnglet('nouveau'); setMessageConnexion(null); setIdentifiants((i) => ({ ...i, password: '' }));
+    }, 200);
   };
 
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
@@ -174,6 +223,79 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
     }
   };
 
+  const formulaireReservation = (
+    <form onSubmit={submit} className="space-y-4">
+      {!accountOnly && <div className="space-y-2">
+        <Label>Choisissez un créneau *</Label>
+        <div className="grid gap-2">
+          {creneaux.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              disabled={c.full}
+              onClick={() => !c.full && setCreneauId(c.id)}
+              className={cn(
+                'flex min-h-[44px] items-center justify-between gap-2 rounded-lg border px-4 py-2 text-left text-sm transition-colors',
+                c.full ? 'cursor-not-allowed border-border opacity-50' :
+                creneauId === c.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted',
+              )}
+            >
+              <span className="capitalize">{formatCreneau(c.date_heure)}</span>
+              {c.full && (
+                <span className="text-xs font-medium text-destructive">Complet</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>}
+      {demandeInfos && (
+        <>
+          {connecte && (
+            <p className="text-sm text-muted-foreground">Il manque {champsManquants.length > 1 ? 'quelques informations' : 'une information'} à votre profil pour réserver.</p>
+          )}
+          {(!connecte || champsManquants.includes('prenom') || champsManquants.includes('nom')) && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {(!connecte || champsManquants.includes('prenom')) && <div className="space-y-1"><Label htmlFor="rv-prenom">Prénom *</Label><Input id="rv-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} /></div>}
+              {(!connecte || champsManquants.includes('nom')) && <div className="space-y-1"><Label htmlFor="rv-nom">Nom *</Label><Input id="rv-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} /></div>}
+            </div>
+          )}
+          {(!connecte || champsManquants.includes('email')) && <div className="space-y-1"><Label htmlFor="rv-email">E-mail *</Label><Input id="rv-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>}
+          {(!connecte || champsManquants.includes('telephone')) && <div className="space-y-1"><Label htmlFor="rv-tel">Téléphone *</Label><Input id="rv-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>}
+        </>
+      )}
+      {connecte ? (
+        <p className="text-xs text-muted-foreground">Vous réservez avec votre compte{form.email ? ` (${form.email})` : ''}.</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail. Déjà un compte ?{' '}
+          <button type="button" className="text-primary hover:underline" onClick={() => setOnglet('connexion')}>Connectez-vous</button></p>
+      )}
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={() => close(false)}>Annuler</Button>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}{accountOnly && !connecte ? 'Créer mon compte' : 'Réserver'}
+        </Button>
+      </div>
+    </form>
+  );
+
+  const formulaireConnexion = (
+    <form onSubmit={seConnecter} className="space-y-4">
+      {messageConnexion && (
+        <p className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">{messageConnexion}</p>
+      )}
+      <div className="space-y-1"><Label htmlFor="rv-login-email">E-mail *</Label><Input id="rv-login-email" type="email" autoComplete="email" maxLength={255} value={identifiants.email} onChange={(e) => setIdentifiants({ ...identifiants, email: e.target.value })} /></div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between"><Label htmlFor="rv-login-password">Mot de passe *</Label><ForgotPasswordLink defaultEmail={identifiants.email.trim()} /></div>
+        <Input id="rv-login-password" type="password" autoComplete="current-password" value={identifiants.password} onChange={(e) => setIdentifiants({ ...identifiants, password: e.target.value })} />
+      </div>
+      <Button type="submit" className="w-full" disabled={connexionEnCours}>
+        {connexionEnCours ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}Se connecter
+      </Button>
+      <GoogleSignInButton next={`${window.location.pathname}${window.location.search}`} />
+      <p className="text-xs text-muted-foreground">Une fois connecté, {accountOnly ? 'vous pourrez être averti des prochaines dates.' : 'vous choisissez votre créneau sans rien ressaisir.'}</p>
+    </form>
+  );
+
   if (showTropTard) {
     return (
       <Dialog open={open} onOpenChange={close}>
@@ -194,7 +316,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
                 Être averti si un créneau se libère
               </Button>
             ) : (
-              <Button onClick={() => setAccountOnly(true)}>Créer mon compte / Se connecter</Button>
+              <Button onClick={() => { setAccountOnly(true); setOnglet('connexion'); }}>Créer mon compte / Se connecter</Button>
             )}
           </div>
         </DialogContent>
@@ -214,11 +336,11 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="h-12 w-12 text-primary" />
             <p className="text-lg font-semibold text-foreground">{accountOnly ? 'Votre demande est enregistrée' : 'Votre visite est réservée'}</p>
-            <p className="text-sm text-muted-foreground">{connecte ? 'Vous la retrouverez dans votre espace ; la confirmation vous a aussi été envoyée par e-mail.' : accountOnly ? 'Si votre compte vient d’être créé, vos identifiants vous ont été envoyés par e-mail. Sinon, connectez-vous avec votre compte existant.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
+            <p className="text-sm text-muted-foreground">{connecte ? 'Vous la retrouverez dans votre espace ; la confirmation vous a aussi été envoyée par e-mail.' : accountOnly ? 'Vos identifiants vous ont été envoyés par e-mail.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
             {connecte ? (
               <Button className="mt-2" onClick={allerAMonEspace}><UserRound className="mr-2 h-4 w-4" />Aller à mon espace</Button>
             ) : accountOnly ? (
-              <Button className="mt-2" onClick={() => { close(false); navigate('/login'); }}>Se connecter</Button>
+              <Button className="mt-2" onClick={() => { setDone(false); setIdentifiants({ email: form.email.trim().toLowerCase(), password: '' }); setOnglet('connexion'); }}>Se connecter</Button>
             ) : (
               <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>
             )}
@@ -228,57 +350,16 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
         ) : creneaux.length === 0 && !accountOnly ? (
           <p className="py-6 text-sm text-muted-foreground">Aucun créneau de visite disponible pour le moment.</p>
         ) : (
-          <form onSubmit={submit} className="space-y-4">
-            {!accountOnly && <div className="space-y-2">
-              <Label>Choisissez un créneau *</Label>
-              <div className="grid gap-2">
-                {creneaux.map((c) => (
-                  <button
-                    type="button"
-                    key={c.id}
-                    disabled={c.full}
-                    onClick={() => !c.full && setCreneauId(c.id)}
-                    className={cn(
-                      'flex min-h-[44px] items-center justify-between gap-2 rounded-lg border px-4 py-2 text-left text-sm transition-colors',
-                      c.full ? 'cursor-not-allowed border-border opacity-50' :
-                      creneauId === c.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted',
-                    )}
-                  >
-                    <span className="capitalize">{formatCreneau(c.date_heure)}</span>
-                    {c.full && (
-                      <span className="text-xs font-medium text-destructive">Complet</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>}
-            {demandeInfos && (
-              <>
-                {connecte && (
-                  <p className="text-sm text-muted-foreground">Il manque {champsManquants.length > 1 ? 'quelques informations' : 'une information'} à votre profil pour réserver.</p>
-                )}
-                {(!connecte || champsManquants.includes('prenom') || champsManquants.includes('nom')) && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {(!connecte || champsManquants.includes('prenom')) && <div className="space-y-1"><Label htmlFor="rv-prenom">Prénom *</Label><Input id="rv-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} /></div>}
-                    {(!connecte || champsManquants.includes('nom')) && <div className="space-y-1"><Label htmlFor="rv-nom">Nom *</Label><Input id="rv-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} /></div>}
-                  </div>
-                )}
-                {(!connecte || champsManquants.includes('email')) && <div className="space-y-1"><Label htmlFor="rv-email">E-mail *</Label><Input id="rv-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>}
-                {(!connecte || champsManquants.includes('telephone')) && <div className="space-y-1"><Label htmlFor="rv-tel">Téléphone *</Label><Input id="rv-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>}
-              </>
-            )}
-            {connecte ? (
-              <p className="text-xs text-muted-foreground">Vous réservez avec votre compte{form.email ? ` (${form.email})` : ''}.</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">{accountOnly ? 'Si vous avez déjà un compte, connectez-vous avec vos identifiants habituels.' : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}</p>
-            )}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => close(false)}>Annuler</Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}{accountOnly && !connecte ? 'Créer mon compte / Se connecter' : 'Réserver'}
-              </Button>
-            </div>
-          </form>
+          connecte ? formulaireReservation : (
+            <Tabs value={onglet} onValueChange={(v) => setOnglet(v as 'connexion' | 'nouveau')} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="connexion">J'ai déjà un compte</TabsTrigger>
+                <TabsTrigger value="nouveau">Créer mon compte</TabsTrigger>
+              </TabsList>
+              <TabsContent value="connexion" className="mt-0">{formulaireConnexion}</TabsContent>
+              <TabsContent value="nouveau" className="mt-0">{formulaireReservation}</TabsContent>
+            </Tabs>
+          )
         )}
       </DialogContent>
     </Dialog>
