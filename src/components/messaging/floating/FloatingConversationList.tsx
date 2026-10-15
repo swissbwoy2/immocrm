@@ -116,11 +116,13 @@ export function FloatingConversationList({ onSelect }: Props) {
         supabase
           .from('messages')
           .select('conversation_id, content, created_at')
+          .eq('masque_messagerie', false)
           .in('conversation_id', convIds)
           .order('created_at', { ascending: false }),
         supabase
           .from('messages')
           .select('conversation_id')
+          .eq('masque_messagerie', false)
           .in('conversation_id', convIds)
           .eq('read', false)
           .neq('sender_id', user.id),

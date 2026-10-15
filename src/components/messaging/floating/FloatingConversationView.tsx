@@ -99,6 +99,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
+        .eq('masque_messagerie', false)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
       if (!cancelled) {
@@ -131,6 +132,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
         (payload: any) => {
+          if (payload.new?.masque_messagerie) return;
           setMessages(prev => [...prev, payload.new as MessageRow]);
           // auto-mark as read if from other
           if (user && payload.new.sender_id !== user.id) {
