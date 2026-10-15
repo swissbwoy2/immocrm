@@ -184,6 +184,7 @@ const Messagerie = () => {
       const { data } = await supabase
         .from('messages')
         .select('conversation_id')
+        .eq('masque_messagerie', false)
         .eq('read', false)
         .neq('sender_type', 'agent')
         .in('conversation_id', convIds);
@@ -351,6 +352,7 @@ const Messagerie = () => {
           filter: `conversation_id=eq.${selectedConv}`
         },
         (payload) => {
+          if ((payload.new as any)?.masque_messagerie) return;
           if (payload.eventType === 'INSERT') {
             setMessages((prev) => [...prev, payload.new]);
             // Update lastMessagesMap for realtime updates
@@ -457,6 +459,7 @@ const Messagerie = () => {
           const { data: lastMsg } = await supabase
             .from('messages')
             .select('content, attachment_name')
+            .eq('masque_messagerie', false)
             .eq('conversation_id', convId)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -472,6 +475,7 @@ const Messagerie = () => {
         const { data: allMsgs } = await supabase
           .from('messages')
           .select('conversation_id, sender_type, sender_id, attachment_type, created_at')
+          .eq('masque_messagerie', false)
           .in('conversation_id', convIds)
           .order('created_at', { ascending: false });
         const metaMap = new Map<string, ConvLastMeta>();
@@ -555,6 +559,7 @@ const Messagerie = () => {
       const { data, error } = await supabase
         .from('messages')
         .select('*, offres(*)')
+        .eq('masque_messagerie', false)
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true });
 
