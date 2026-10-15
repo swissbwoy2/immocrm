@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu, LifeBuoy } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu, LifeBuoy, Bell, FileText } from 'lucide-react';
+import { useClientParcours } from '@/hooks/useClientParcours';
 import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
@@ -9,7 +10,27 @@ export interface BottomNavItem {
   path: string;
 }
 
-export function getBottomNavItems(role: string | null): BottomNavItem[] {
+export function getBottomNavItems(role: string | null, parcours?: string | null): BottomNavItem[] {
+  // Client : la barre du bas suit le parcours (même règle que le menu latéral).
+  if (role === 'client') {
+    if (parcours === 'achat') {
+      return [
+        { name: 'Accueil', icon: LayoutDashboard, path: '/client' },
+        { name: 'Biens', icon: Home, path: '/client/biens-proposes' },
+        { name: 'Messages', icon: MessageSquare, path: '/client/messagerie' },
+        { name: 'Agenda', icon: Calendar, path: '/client/calendrier' },
+        { name: 'Support', icon: LifeBuoy, path: '/support' },
+      ];
+    }
+    if (parcours === 'relouer' || parcours === 'renovation' || parcours === 'vente') {
+      return [
+        { name: 'Accueil', icon: LayoutDashboard, path: '/client' },
+        { name: 'Messages', icon: MessageSquare, path: '/client/messagerie' },
+        { name: 'Alertes', icon: Bell, path: '/client/notifications' },
+        { name: 'Support', icon: LifeBuoy, path: '/support' },
+      ];
+    }
+  }
   switch (role) {
     case 'admin':
       return [
@@ -38,7 +59,7 @@ export function getBottomNavItems(role: string | null): BottomNavItem[] {
     case 'candidat':
       return [
         { name: 'Accueil', icon: LayoutDashboard, path: '/candidat' },
-        { name: 'Offres', icon: Home, path: '/candidat/candidatures' },
+        { name: 'Candidatures', icon: FileText, path: '/candidat/candidatures' },
         { name: 'Messages', icon: MessageSquare, path: '/candidat/messages' },
         { name: 'Agenda', icon: Calendar, path: '/candidat/agenda' },
         { name: 'Support', icon: LifeBuoy, path: '/candidat/support' },
@@ -49,7 +70,8 @@ export function getBottomNavItems(role: string | null): BottomNavItem[] {
 }
 
 export function MobileBottomNav({ role }: { role: string | null }) {
-  const items = getBottomNavItems(role);
+  const parcours = useClientParcours(role === 'client');
+  const items = getBottomNavItems(role, parcours);
   const { setOpenMobile } = useSidebar();
   const { pathname } = useLocation();
   const navigate = useNavigate();
