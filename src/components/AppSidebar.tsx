@@ -31,7 +31,7 @@ import { SilentErrorBoundary } from './SilentErrorBoundary';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useWhatsAppUnreadCount } from '@/hooks/useWhatsAppUnreadCount';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
-import { isPurchaseBuyer } from '@/lib/journey';
+import { resolveClientParcours } from '@/lib/journey';
 import { setClientParcoursType } from '@/lib/notificationLinks';
 import { Input } from '@/components/ui/input';
 import { prefetchSidebarRoute } from '@/lib/routePrefetch';
@@ -279,6 +279,27 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
         ];
       }
 
+      // Reloueur (locataire sortant) : uniquement son dossier de relocation — jamais les écrans chercheur.
+      if (parcoursType === 'relouer') {
+        return [
+          {
+            label: 'Au quotidien',
+            items: [
+              { name: 'Tableau de bord', icon: LayoutDashboard, path: '/client', notifKey: null },
+              { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
+              { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
+              { name: 'Aide & support', icon: LifeBuoy, path: '/support', notifKey: null },
+            ],
+          },
+          {
+            label: 'Aide et paramètres',
+            items: [
+              { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
+            ],
+          },
+        ];
+      }
+
       if (parcoursType === 'renovation') {
         return [
           {
@@ -359,6 +380,10 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
             { name: 'Mon contrat', icon: FileText, path: '/client/mon-contrat', notifKey: null },
             { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
             { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
+            // Parcours mixte (chercheur + reloueur) : accès à son dossier de relocation.
+            ...(parcoursType === 'mixte'
+              ? [{ name: 'Mon logement à relouer', icon: Home, path: '/dashboard/relouer', notifKey: null }]
+              : []),
           ],
         },
         {
@@ -474,13 +499,27 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       ];
 
     case 'candidat':
+      // Même structure que le client location (Au quotidien / Ma recherche / Aide).
       return [
         {
           label: 'Au quotidien',
           items: [
             { name: 'Tableau de bord', icon: LayoutDashboard, path: '/candidat', notifKey: null },
+            { name: 'Messages', icon: MessageSquare, path: '/candidat/messages', notifKey: null },
+            { name: 'Agenda', icon: Calendar, path: '/candidat/agenda', notifKey: null },
+          ],
+        },
+        {
+          label: 'Ma recherche',
+          items: [
             { name: 'Mes candidatures', icon: FileText, path: '/candidat/candidatures', notifKey: null },
             { name: 'Ma demande de location', icon: Clipboard, path: '/candidat/demande', notifKey: null },
+          ],
+        },
+        {
+          label: 'Aide',
+          items: [
+            { name: 'Aide & support', icon: LifeBuoy, path: '/candidat/support', notifKey: null },
           ],
         },
       ];
@@ -671,7 +710,8 @@ export function AppSidebar() {
       purchaseProject = byClient;
     }
 
-    const resolvedParcours = isPurchaseBuyer(client, purchaseProject) ? 'achat' : data.parcours_type;
+    // Règle unique de parcours (identique au dashboard et à la barre du bas).
+    const resolvedParcours = resolveClientParcours(client, purchaseProject, data.parcours_type);
     setClientParcoursType(resolvedParcours || null);
     setProfile({ ...data, parcours_type: resolvedParcours });
 
