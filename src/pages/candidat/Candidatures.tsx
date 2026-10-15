@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumPageHeader } from '@/components/premium';
+import { FileStack } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,8 +64,13 @@ export default function CandidatCandidatures() {
   return (
     <div className="flex-1 overflow-y-auto">
       <VisiteConfirmGate list={data} force={askVisit} forceStep={askStep} onClose={() => setAskVisit(null)} />
-      <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
-        <h1 className="text-2xl font-bold text-foreground">Mes candidatures</h1>
+      <PremiumPageShellV2>
+        <PremiumPageHeader
+          title="Mes candidatures"
+          subtitle="Suivez l'état de vos candidatures en temps réel"
+          icon={FileStack}
+          badge="Espace candidat"
+        />
         <Card>
           <CardContent className="space-y-3 p-4">
             <p className="font-semibold text-foreground">Déposer une candidature</p>
@@ -136,7 +144,7 @@ export default function CandidatCandidatures() {
             ))}
           </div>
         )}
-      </div>
+      </PremiumPageShellV2>
     </div>
   );
 }

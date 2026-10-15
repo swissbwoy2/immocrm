@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2, Clipboard } from 'lucide-react';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumPageHeader } from '@/components/premium';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -141,8 +143,13 @@ export default function CandidatDemande() {
   if (!candId) {
     return (
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-8">
-          <h1 className="text-2xl font-bold text-foreground">Demande de location</h1>
+        <PremiumPageShellV2 className="mx-auto max-w-3xl">
+          <PremiumPageHeader
+          title="Demande de location"
+          subtitle="Votre dossier pour le logement visité"
+          icon={Clipboard}
+          badge="Espace candidat"
+        />
           <Card><CardContent className="space-y-3 p-4">
             {eligibles.length === 0 ? (
               <p className="text-sm text-muted-foreground">Réservez et effectuez d'abord une visite pour pouvoir déposer une demande de location.</p>
@@ -156,7 +163,7 @@ export default function CandidatDemande() {
               </>
             )}
           </CardContent></Card>
-        </div>
+        </PremiumPageShellV2>
       </div>
     );
   }
@@ -208,8 +215,13 @@ export default function CandidatDemande() {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-3xl space-y-4 p-4 pb-28 md:p-8">
-        <h1 className="text-2xl font-bold text-foreground">Demande de location</h1>
+      <PremiumPageShellV2 className="mx-auto max-w-3xl pb-28">
+        <PremiumPageHeader
+          title="Demande de location"
+          subtitle="Votre dossier pour le logement visité"
+          icon={Clipboard}
+          badge="Espace candidat"
+        />
 
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">{a.titre || 'Objet'}</CardTitle></CardHeader>
@@ -256,7 +268,7 @@ export default function CandidatDemande() {
         <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 p-4 backdrop-blur md:mx-0 md:rounded-lg md:border">
           <Button className="min-h-[48px] w-full" disabled={!!deja} onClick={() => validate() && setConfirmOpen(true)}>Envoyer le formulaire de candidature</Button>
         </div>
-      </div>
+      </PremiumPageShellV2>
 
       <Dialog open={confirmOpen} onOpenChange={(o) => !sending && setConfirmOpen(o)}>
         <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
