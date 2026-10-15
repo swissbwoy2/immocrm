@@ -67,9 +67,11 @@ export function useNormalizedEvents(
     visiteGroups.forEach((group, key) => {
       const v = group[0];
       const isAuto = !!v.offres?.envoi_auto;
+      // Une visite déléguée reste « déléguée » (même issue d'une offre auto, même si un autre client du groupe ne l'est pas).
+      const isDeleguee = group.some((g: any) => g.est_deleguee || g.source === 'deleguee');
       let visiteType = 'visite';
-      if (isAuto) visiteType = 'visite_auto';
-      else if (v.est_deleguee || v.source === 'deleguee') visiteType = 'visite_deleguee';
+      if (isDeleguee) visiteType = 'visite_deleguee';
+      else if (isAuto) visiteType = 'visite_auto';
       else if (v.statut === 'proposee') visiteType = 'visite_proposee';
 
       const statutLabel = v.statut === 'proposee' ? ' · proposée' : v.statut === 'confirmee' ? ' · confirmée' : '';
@@ -77,7 +79,7 @@ export function useNormalizedEvents(
       result.push({
         id: `visite-${key}`,
         type: visiteType,
-        typeLabel: (visiteTypeLabels[visiteType] || 'Visite') + (isAuto ? statutLabel : ''),
+        typeLabel: (visiteTypeLabels[visiteType] || 'Visite') + (isAuto && !isDeleguee ? statutLabel : ''),
         title: (isAuto ? '🤖 ' : '') + (v.adresse || 'Visite'),
         description: group.length > 1 ? `${group.length} client(s)` : undefined,
         date: new Date(v.date_visite),
