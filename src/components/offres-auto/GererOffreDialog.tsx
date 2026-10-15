@@ -38,8 +38,11 @@ export function GererOffreDialog({
   onOpenChange,
   onSaved,
   visitAgentIdOverride,
+  groupe,
 }: {
   offre: OffreRow | null;
+  /** Toutes les offres de la même annonce (un client par offre). Les infos du bien et la visite sont appliquées à tous. */
+  groupe?: OffreRow[] | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
@@ -56,6 +59,10 @@ export function GererOffreDialog({
   const [visitTime, setVisitTime] = useState<string>("");
   const [visitEndTime, setVisitEndTime] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
+  const [statutsGroupe, setStatutsGroupe] = useState<Record<string, string>>({});
+
+  const autres = (groupe ?? []).filter(o => o && o.id !== offre?.id);
+  const STATUTS_FERMES = ["refusee", "refuse", "candidature_deposee", "acceptee", "signature_effectuee", "bail_conclu"];
 
   const existingVisit = offre?.visites?.[0];
 
@@ -66,6 +73,7 @@ export function GererOffreDialog({
     setPieces(offre.pieces != null ? String(offre.pieces) : "");
     setStatut(offre.statut ?? "envoyee");
     setCommentaires(offre.commentaires ?? "");
+    setStatutsGroupe(Object.fromEntries((groupe ?? []).map(o => [o.id, o.statut ?? "envoyee"])));
     if (existingVisit?.date_visite) {
       const d = new Date(existingVisit.date_visite);
       setVisitDate(format(d, "yyyy-MM-dd"));
@@ -116,41 +124,61 @@ export function GererOffreDialog({
         .eq("id", offre.id);
       if (eOff) throw eOff;
 
+      // 1b) Même annonce chez les autres clients : on applique les infos du bien (pas les commentaires, propres à chaque client)
+      if (autres.length > 0) {
+        const { error: eSib } = await supabase
+          .from("offres")
+          .update({ prix: parsedPrix, adresse: adresse.trim(), pieces: parsedPieces })
+          .in("id", autres.map(o => o.id));
+        if (eSib) throw eSib;
+        for (const o of autres) {
+          const nv = statutsGroupe[o.id];
+          if (nv && nv !== (o.statut ?? "envoyee")) {
+            const { error: eSt } = await supabase.from("offres").update({ statut: nv }).eq("id", o.id);
+            if (eSt) throw eSt;
+          }
+        }
+      }
+
       // 2) Visit upsert if a date+time provided
       if (visitDate && visitTime) {
         const dateISO = new Date(`${visitDate}T${visitTime}:00`).toISOString();
         const endISO = visitEndTime ? new Date(`${visitDate}T${visitEndTime}:00`).toISOString() : null;
-
-        if (existingVisit?.id) {
-          const { error: eV } = await supabase
-            .from("visites")
-            .update({
+        // La visite vaut pour tous les clients de l'annonce qui ne l'ont pas refusée
+        const cibles = [offre, ...autres.filter(o => !STATUTS_FERMES.includes(statutsGroupe[o.id] ?? o.statut ?? ""))];
+        for (const o of cibles) {
+          const ev = o.visites?.[0];
+          if (ev?.id) {
+            const { error: eV } = await supabase
+              .from("visites")
+              .update({
+                date_visite: dateISO,
+                date_visite_fin: endISO,
+                adresse: adresse.trim(),
+              })
+              .eq("id", ev.id);
+            if (eV) throw eV;
+          } else {
+            const { error: eV } = await supabase.from("visites").insert({
+              offre_id: o.id,
+              client_id: o.client_id,
+              agent_id: visitAgentIdOverride ?? o.agent_id ?? null,
               date_visite: dateISO,
               date_visite_fin: endISO,
               adresse: adresse.trim(),
-            })
-            .eq("id", existingVisit.id);
-          if (eV) throw eV;
-        } else {
-          const { error: eV } = await supabase.from("visites").insert({
-            offre_id: offre.id,
-            client_id: offre.client_id,
-            agent_id: visitAgentIdOverride ?? offre.agent_id ?? null,
-            date_visite: dateISO,
-            date_visite_fin: endISO,
-            adresse: adresse.trim(),
-            statut: "proposee",
-            source: "manuel",
-            medias_coursier: [],
-          } as any);
-          if (eV) throw eV;
+              statut: "proposee",
+              source: "manuel",
+              medias_coursier: [],
+            } as any);
+            if (eV) throw eV;
+          }
         }
       }
 
       // 3) Touch offre updated_at to force recompute of needs_agent_action even if visit trigger didn't
-      await supabase.from("offres").update({ updated_at: new Date().toISOString() } as any).eq("id", offre.id);
+      await supabase.from("offres").update({ updated_at: new Date().toISOString() } as any).in("id", [offre.id, ...autres.map(o => o.id)]);
 
-      toast.success("Offre mise à jour");
+      toast.success(autres.length > 0 ? `Annonce mise à jour pour ${autres.length + 1} clients` : "Offre mise à jour");
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
@@ -263,6 +291,35 @@ export function GererOffreDialog({
               </div>
             )}
           </div>
+
+          {autres.length > 0 && (
+            <div className="rounded-lg border p-3 space-y-2 text-sm">
+              <div className="font-medium">Même annonce chez {autres.length} autre{autres.length > 1 ? "s" : ""} client{autres.length > 1 ? "s" : ""}</div>
+              <div className="text-xs text-muted-foreground">
+                Adresse, prix, pièces et visite enregistrés ici s'appliquent à tous (sauf aux clients qui ont refusé ou déjà postulé). Le statut se règle client par client.
+              </div>
+              <div className="space-y-1">
+                {autres.map(o => (
+                  <div key={o.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate">{`${o._client?.prenom ?? ""} ${o._client?.nom ?? ""}`.trim() || o._client?.email || "Client"}</span>
+                    <Select value={statutsGroupe[o.id] ?? o.statut ?? "envoyee"} onValueChange={v => setStatutsGroupe(prev => ({ ...prev, [o.id]: v }))}>
+                      <SelectTrigger className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="envoyee">Envoyée</SelectItem>
+                        <SelectItem value="interesse">Intéressé</SelectItem>
+                        <SelectItem value="souhaite_postuler">Souhaite postuler</SelectItem>
+                        <SelectItem value="refusee">Refusée</SelectItem>
+                        <SelectItem value="candidature">Candidature</SelectItem>
+                        {!["envoyee","interesse","souhaite_postuler","refusee","candidature"].includes(statutsGroupe[o.id] ?? o.statut ?? "envoyee") && (
+                          <SelectItem value={statutsGroupe[o.id] ?? o.statut ?? "envoyee"}>{statutsGroupe[o.id] ?? o.statut}</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Édition offre */}
           <div className="grid grid-cols-2 gap-3">
