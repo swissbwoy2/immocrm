@@ -58,6 +58,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
       const { count } = await supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
+        .eq('masque_messagerie', false)
         .in('conversation_id', convIds)
         .eq('read', false)
         .neq('sender_id', user.id);
@@ -88,6 +89,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: any) => {
           const m = payload.new;
+          if (m?.masque_messagerie) return;
           if (!m) return;
           if (m.sender_id === user.id) return; // own message
           // bump unread + show pulse
