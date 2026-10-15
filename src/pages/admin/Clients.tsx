@@ -173,6 +173,28 @@ const Clients = () => {
     loadData();
   }, []);
 
+  // Compteur de crédits par utilisateur — affichage seul (badge à côté du statut), aucun statut modifié.
+  const [creditsByUser, setCreditsByUser] = useState<Map<string, { mandat_statut: string; coins_mandat: number }>>(new Map());
+  useEffect(() => {
+    const ids = Array.from(new Set(clients.map((c) => c.user_id).filter(Boolean)));
+    if (ids.length === 0) return;
+    let alive = true;
+    (async () => {
+      try {
+        const map = new Map<string, { mandat_statut: string; coins_mandat: number }>();
+        for (let i = 0; i < ids.length; i += 100) {
+          const { data } = await (supabase as any)
+            .from('user_credits')
+            .select('user_id, mandat_statut, coins_mandat')
+            .in('user_id', ids.slice(i, i + 100));
+          (data || []).forEach((r: any) => map.set(r.user_id, { mandat_statut: r.mandat_statut, coins_mandat: r.coins_mandat }));
+        }
+        if (alive) setCreditsByUser(map);
+      } catch { /* badge simplement absent en cas d'erreur */ }
+    })();
+    return () => { alive = false; };
+  }, [clients]);
+
   // Prospects (comptes candidat sans dossier client) — chargement séparé, en lecture seule,
   // pour ne jamais ralentir ni bloquer la liste des clients.
   const [prospects, setProspects] = useState<CandidatProspect[]>([]);
@@ -1663,6 +1685,38 @@ const Clients = () => {
                             ⏸️ Suspendu
                           </Badge>
                         )}
+                        {/* Compteur de crédits (affichage seul — le statut du dossier n'est jamais modifié) */}
+                        {(() => {
+                          if (isAcheteur) {
+                            return (
+                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary text-[10px]">
+                                ∞ Crédits illimités
+                              </Badge>
+                            );
+                          }
+                          const cr = creditsByUser.get(client.user_id);
+                          if (!cr) return null;
+                          const label: Record<string, string> = {
+                            actif: `Compteur actif · ${cr.coins_mandat} j`,
+                            essai: 'Essai en cours',
+                            expire: 'Essai terminé · pas d\'offres',
+                            aucun: 'Essai non démarré · pas d\'offres',
+                            suspendu: 'Compteur suspendu · pas d\'offres',
+                            resilie: 'Mandat résilié · pas d\'offres',
+                          };
+                          const stopped = ['expire', 'aucun', 'suspendu', 'resilie'].includes(cr.mandat_statut);
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'text-[10px]',
+                                stopped ? 'border-destructive/30 bg-destructive/10 text-destructive' : 'border-green-500/30 bg-green-500/10 text-green-600',
+                              )}
+                            >
+                              {label[cr.mandat_statut] ?? cr.mandat_statut}
+                            </Badge>
+                          );
+                        })()}
                         {/* Badge dossier mensuel */}
                         {isActivated && !isFrozen && (
                           docConfirmations.has(client.id) ? (
