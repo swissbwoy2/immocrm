@@ -35,7 +35,7 @@ type Row = {
   agent_id?: string | null;
   needs_agent_action?: boolean | null;
   missing_info?: string | null;
-  visites?: { id: string; date_visite: string | null; statut: string | null }[];
+  visites?: { id: string; date_visite: string | null; statut: string | null; est_deleguee?: boolean | null; client_decision?: string | null; client_confirme_visite_at?: string | null }[];
   _client?: ClientInfo;
 };
 
@@ -50,6 +50,43 @@ function extractVisitInfo(commentaires: string | null): string {
   return visit ?? lines[0] ?? "—";
 }
 
+type Groupe = { cle: string; derniere: string; besoinAction: boolean; offres: Row[] };
+
+/** Même clé que la fonction SQL offre_groupe_cle (page admin) : lien sans paramètres, sinon adresse normalisée. */
+function groupeCle(r: Row): string {
+  const lien = (r.lien_annonce ?? "").trim().toLowerCase().replace(/[?#].*$/, "");
+  if (lien) return lien;
+  return "adr:" + (r.adresse ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function grouper(rows: Row[]): Groupe[] {
+  const map = new Map<string, Groupe>();
+  for (const r of rows) {
+    const cle = groupeCle(r);
+    const g = map.get(cle);
+    if (g) {
+      g.offres.push(r);
+      if (r.created_at > g.derniere) g.derniere = r.created_at;
+      if (r.needs_agent_action) g.besoinAction = true;
+    } else {
+      map.set(cle, { cle, derniere: r.created_at, besoinAction: !!r.needs_agent_action, offres: [r] });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.derniere.localeCompare(a.derniere));
+}
+
+function visiteLabel(r: Row): string {
+  const vs = Array.isArray(r.visites) ? r.visites : [];
+  const withDate = vs.filter((v) => v && v.date_visite);
+  if (withDate.length === 0) return r.needs_agent_action ? "À fixer — action requise (ex. appel)" : "Pas encore de visite";
+  withDate.sort((a, b) => new Date(b.date_visite as string).getTime() - new Date(a.date_visite as string).getTime());
+  const v = withDate[0];
+  const dateStr = new Date(v.date_visite as string).toLocaleString("fr-CH", { timeZone: "Europe/Zurich", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  const mode = v.est_deleguee === true ? " — déléguée (agent/coursier)" : (v.client_confirme_visite_at ? " — le client visite (confirmé)" : " — en attente décision client");
+  const dec = v.client_decision === "souhaite_postuler" ? " — postuler" : ((v.client_decision === "refuse" || v.client_decision === "refusee") ? " — refusée" : "");
+  return "Visite " + dateStr + mode + dec;
+}
+
 export default function AgentOffresAuto() {
   const { user } = useAuth();
   const [agentId, setAgentId] = useState<string | null>(null);
@@ -60,6 +97,7 @@ export default function AgentOffresAuto() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [editingGroupe, setEditingGroupe] = useState<Row[] | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<"all" | "manual">("all");
   const [pageAll, setPageAll] = useState(1);
@@ -73,6 +111,8 @@ export default function AgentOffresAuto() {
     const target = rows.find((r) => r.id === offreId);
     if (!target) return;
     setEditing(target);
+    const cle = groupeCle(target);
+    setEditingGroupe(rows.filter((r) => groupeCle(r) === cle));
     const next = new URLSearchParams(searchParams);
     next.delete("offre");
     next.delete("offreId");
@@ -105,7 +145,7 @@ export default function AgentOffresAuto() {
       const { data, error } = await fetchAllPaginated<Row>(() => {
         let q = supabase
           .from("offres")
-          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut)")
+          .select("id, created_at, adresse, prix, pieces, statut, commentaires, lien_annonce, client_id, agent_id, needs_agent_action, missing_info, visites(id, date_visite, date_visite_fin, statut, est_deleguee, client_decision, client_confirme_visite_at)")
           .eq("envoi_auto", true)
           .in("client_id", clientIds)
           .order("created_at", { ascending: false });
@@ -163,8 +203,12 @@ export default function AgentOffresAuto() {
 
   useEffect(() => { setPageAll(1); setPageManual(1); }, [statut, clientQ, dateFrom, dateTo, pageSize]);
 
-  const pagedAll = useMemo(() => filtered.slice((pageAll - 1) * pageSize, pageAll * pageSize), [filtered, pageAll, pageSize]);
-  const pagedManual = useMemo(() => manual.slice((pageManual - 1) * pageSize, pageManual * pageSize), [manual, pageManual, pageSize]);
+  // Une ligne par annonce (plusieurs clients regroupés), comme la page admin.
+  const groupesAll = useMemo(() => grouper(filtered), [filtered]);
+  const groupesManual = useMemo(() => grouper(filtered).filter((g) => g.besoinAction), [filtered]);
+  const pagedAll = useMemo(() => groupesAll.slice((pageAll - 1) * pageSize, pageAll * pageSize), [groupesAll, pageAll, pageSize]);
+  const pagedManual = useMemo(() => groupesManual.slice((pageManual - 1) * pageSize, pageManual * pageSize), [groupesManual, pageManual, pageSize]);
+  const openGroupe = (groupe: Row[], offre: Row) => { setEditingGroupe(groupe); setEditing(offre); };
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -232,26 +276,27 @@ export default function AgentOffresAuto() {
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "manual")}>
         <TabsList>
-          <TabsTrigger value="all">Toutes ({filtered.length})</TabsTrigger>
+          <TabsTrigger value="all">Annonces ({groupesAll.length}) · {filtered.length} offres</TabsTrigger>
           <TabsTrigger value="manual">
             <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />
-            À gérer manuellement ({manual.length})
+            À gérer manuellement ({groupesManual.length})
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <OffresTable rows={pagedAll} onEdit={setEditing} />
-          <TablePagination total={filtered.length} page={pageAll} pageSize={pageSize} onPageChange={setPageAll} onPageSizeChange={setPageSize} />
+          <OffresGroupesTable groupes={pagedAll} onEdit={openGroupe} />
+          <TablePagination total={groupesAll.length} page={pageAll} pageSize={pageSize} onPageChange={setPageAll} onPageSizeChange={setPageSize} />
         </TabsContent>
         <TabsContent value="manual">
-          <OffresTable rows={pagedManual} showMissing onEdit={setEditing} />
-          <TablePagination total={manual.length} page={pageManual} pageSize={pageSize} onPageChange={setPageManual} onPageSizeChange={setPageSize} />
+          <OffresGroupesTable groupes={pagedManual} showMissing onEdit={openGroupe} />
+          <TablePagination total={groupesManual.length} page={pageManual} pageSize={pageSize} onPageChange={setPageManual} onPageSizeChange={setPageSize} />
         </TabsContent>
       </Tabs>
 
       <GererOffreDialog
         offre={editing as any}
+        groupe={(editingGroupe ?? (editing ? [editing] : [])) as any}
         open={!!editing}
-        onOpenChange={v => { if (!v) setEditing(null); }}
+        onOpenChange={v => { if (!v) { setEditing(null); setEditingGroupe(null); } }}
         onSaved={load}
         visitAgentIdOverride={agentId}
       />
@@ -339,6 +384,78 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
               </TableCell>
             </TableRow>
           ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+
+function OffresGroupesTable({ groupes, showMissing, onEdit }: { groupes: Groupe[]; showMissing?: boolean; onEdit?: (groupe: Row[], offre: Row) => void }) {
+  if (groupes.length === 0) {
+    return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
+  }
+  return (
+    <div className="border rounded-lg overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Dernier envoi</TableHead>
+            <TableHead>Annonce</TableHead>
+            <TableHead>Prix</TableHead>
+            <TableHead>Pcs</TableHead>
+            <TableHead>Clients concernés</TableHead>
+            {showMissing && <TableHead>Ce qui manque</TableHead>}
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {groupes.map(g => {
+            const ref = g.offres[0];
+            if (!ref) return null;
+            const missing = g.offres.find(o => o.needs_agent_action && o.missing_info)?.missing_info;
+            return (
+              <TableRow key={g.cle} className={g.besoinAction ? "bg-amber-50" : ""}>
+                <TableCell className="whitespace-nowrap text-xs align-top">
+                  {format(new Date(g.derniere), "dd MMM HH:mm", { locale: fr })}
+                </TableCell>
+                <TableCell className="text-sm align-top max-w-[260px]">
+                  <div className="font-medium">{ref.adresse ?? "—"}</div>
+                  {ref.lien_annonce && (
+                    <a href={ref.lien_annonce} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" /> Annonce
+                    </a>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm whitespace-nowrap align-top">{ref.prix ? `${ref.prix} CHF` : "—"}</TableCell>
+                <TableCell className="text-sm align-top">{ref.pieces ?? "—"}</TableCell>
+                <TableCell className="text-sm align-top">
+                  <div className="text-xs text-muted-foreground mb-1">{g.offres.length} client{g.offres.length > 1 ? "s" : ""}</div>
+                  <div className="space-y-1">
+                    {g.offres.map(o => (
+                      <div key={o.id} className="flex items-center gap-2 flex-wrap">
+                        <button type="button" className="font-medium hover:underline text-left" onClick={() => onEdit?.(g.offres, o)}>
+                          {(o._client?.prenom ?? "") + " " + (o._client?.nom ?? "")}
+                        </button>
+                        {statutBadge(o.statut)}
+                        <span className="text-xs text-muted-foreground">{visiteLabel(o)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </TableCell>
+                {showMissing && (
+                  <TableCell className="text-xs text-amber-700 max-w-[220px] align-top">{missing ?? "—"}</TableCell>
+                )}
+                <TableCell className="align-top">
+                  {onEdit && (
+                    <Button size="sm" variant="outline" className="h-7" onClick={() => onEdit(g.offres, ref)} title="Gérer l'annonce pour tous les clients">
+                      <Pencil className="h-3.5 w-3.5 mr-1" /> Gérer
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
