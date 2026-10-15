@@ -23,6 +23,8 @@ const SELECT = "id, created_at, adresse, prix, pieces, statut, commentaires, lie
 
 type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
 
+type Groupe = { cle: string; derniere: string; besoinAction: boolean; offres: Row[] };
+
 type Row = {
   id: string;
   created_at: string;
@@ -64,6 +66,8 @@ export default function OffresAuto() {
   });
   const [dateTo, setDateTo] = useState<string>("");
   const [editing, setEditing] = useState<Row | null>(null);
+  const [editingGroupe, setEditingGroupe] = useState<Row[] | null>(null);
+  const [groupes, setGroupes] = useState<Groupe[]>([]);
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<"all" | "manual">("all");
   const [page, setPage] = useState(1);
@@ -80,7 +84,16 @@ export default function OffresAuto() {
     if (!offreId) return;
     (async () => {
       const { data } = await supabase.from("offres").select(SELECT).eq("id", offreId).maybeSingle();
-      if (data) { const [e] = await enrich([data as unknown as Row]); setEditing(e); }
+      if (data) {
+        const [e] = await enrich([data as unknown as Row]);
+        // Toute l'annonce : les autres clients qui ont reçu le même bien
+        let sib: any = supabase.from("offres").select(SELECT).eq("envoi_auto", true);
+        sib = e.lien_annonce ? sib.eq("lien_annonce", e.lien_annonce) : sib.eq("adresse", e.adresse ?? "");
+        const { data: sibs } = await sib.limit(100);
+        const groupe = await enrich(((sibs ?? []) as unknown as Row[]));
+        setEditingGroupe(groupe.length ? groupe : [e]);
+        setEditing(e);
+      }
       const next = new URLSearchParams(searchParams);
       next.delete("offre"); next.delete("offreId");
       setSearchParams(next, { replace: true });
@@ -127,17 +140,36 @@ export default function OffresAuto() {
     try {
       const clientIds = await resolveClientIds(debouncedQ);
       const from = (page - 1) * pageSize;
-      let q: any = applyFilters(supabase.from("offres").select(SELECT, { count: "exact" }), clientIds);
-      if (tab === "manual") q = q.eq("needs_agent_action", true);
-      const otherCount: any = applyFilters(supabase.from("offres").select("id", { count: "exact", head: true }), clientIds);
-      const [{ data, error, count }, other] = await Promise.all([
-        q.order("created_at", { ascending: false }).range(from, from + pageSize - 1),
-        tab === "manual" ? otherCount : otherCount.eq("needs_agent_action", true),
+      const to = dateTo ? (() => { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); return d.toISOString(); })() : null;
+      const args = {
+        p_date_from: dateFrom ? new Date(dateFrom).toISOString() : null,
+        p_date_to: to,
+        p_statut: statut !== "all" ? statut : null,
+        p_client_ids: clientIds ? (clientIds.length ? clientIds : ["00000000-0000-0000-0000-000000000000"]) : null,
+        p_offset: from,
+        p_limit: pageSize,
+      };
+      // Une ligne = une annonce, avec tous les clients qui l'ont reçue
+      const [main, other] = await Promise.all([
+        (supabase as any).rpc("offres_auto_groupes", { ...args, p_manual: tab === "manual" }),
+        (supabase as any).rpc("offres_auto_groupes", { ...args, p_manual: tab !== "manual", p_offset: 0, p_limit: 1 }),
       ]);
-      if (error) { console.error("[OffresAuto] load offres", error); setRows([]); return; }
-      if (tab === "manual") { setTotalManual(count ?? 0); setTotalAll(other.count ?? 0); }
-      else { setTotalAll(count ?? 0); setTotalManual(other.count ?? 0); }
-      setRows(await enrich((data ?? []) as Row[]));
+      if (main.error) { console.error("[OffresAuto] load groupes", main.error); setGroupes([]); setRows([]); return; }
+      const data = (main.data ?? []) as any[];
+      const total = Number(data[0]?.total ?? 0);
+      const otherTotal = Number((other.data ?? [])[0]?.total ?? 0);
+      if (tab === "manual") { setTotalManual(total); setTotalAll(otherTotal); }
+      else { setTotalAll(total); setTotalManual(otherTotal); }
+      const allOffres = data.flatMap((g: any) => (g.offres ?? []) as Row[]);
+      const enriched = await enrich(allOffres);
+      const byId = new Map(enriched.map(o => [o.id, o]));
+      setRows(enriched);
+      setGroupes(data.map((g: any) => ({
+        cle: g.groupe_cle,
+        derniere: g.derniere_creation,
+        besoinAction: !!g.besoin_action,
+        offres: ((g.offres ?? []) as Row[]).map(o => byId.get(o.id) ?? o),
+      })));
     } finally {
       setLoading(false);
     }
@@ -227,11 +259,11 @@ export default function OffresAuto() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="all">
-          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresTable rows={rows} onEdit={setEditing} /></div>
+          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresGroupesTable groupes={groupes} onEdit={(g, o) => { setEditingGroupe(g); setEditing(o); }} /></div>
           <TablePagination total={totalAll} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </TabsContent>
         <TabsContent value="manual">
-          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresTable rows={rows} showMissing onEdit={setEditing} /></div>
+          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresGroupesTable groupes={groupes} showMissing onEdit={(g, o) => { setEditingGroupe(g); setEditing(o); }} /></div>
           <TablePagination total={totalManual} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         </TabsContent>
 
@@ -239,8 +271,9 @@ export default function OffresAuto() {
 
       {editing && <Suspense fallback={null}><GererOffreDialog
         offre={editing as any}
+        groupe={(editingGroupe ?? [editing]) as any}
         open
-        onOpenChange={v => { if (!v) setEditing(null); }}
+        onOpenChange={v => { if (!v) { setEditing(null); setEditingGroupe(null); } }}
         onSaved={load}
       /></Suspense>}
     </div>
@@ -328,6 +361,78 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
               </TableCell>
             </TableRow>
           ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+
+function OffresGroupesTable({ groupes, showMissing, onEdit }: { groupes: Groupe[]; showMissing?: boolean; onEdit?: (groupe: Row[], offre: Row) => void }) {
+  if (groupes.length === 0) {
+    return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
+  }
+  return (
+    <div className="border rounded-lg overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Dernier envoi</TableHead>
+            <TableHead>Annonce</TableHead>
+            <TableHead>Prix</TableHead>
+            <TableHead>Pcs</TableHead>
+            <TableHead>Clients concernés</TableHead>
+            {showMissing && <TableHead>Ce qui manque</TableHead>}
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {groupes.map(g => {
+            const ref = g.offres[0];
+            if (!ref) return null;
+            const missing = g.offres.find(o => o.needs_agent_action && o.missing_info)?.missing_info;
+            return (
+              <TableRow key={g.cle} className={g.besoinAction ? "bg-amber-50" : ""}>
+                <TableCell className="whitespace-nowrap text-xs align-top">
+                  {format(new Date(g.derniere), "dd MMM HH:mm", { locale: fr })}
+                </TableCell>
+                <TableCell className="text-sm align-top max-w-[260px]">
+                  <div className="font-medium">{ref.adresse ?? "—"}</div>
+                  {ref.lien_annonce && (
+                    <a href={ref.lien_annonce} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" /> Annonce
+                    </a>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm whitespace-nowrap align-top">{ref.prix ? `${ref.prix} CHF` : "—"}</TableCell>
+                <TableCell className="text-sm align-top">{ref.pieces ?? "—"}</TableCell>
+                <TableCell className="text-sm align-top">
+                  <div className="text-xs text-muted-foreground mb-1">{g.offres.length} client{g.offres.length > 1 ? "s" : ""}</div>
+                  <div className="space-y-1">
+                    {g.offres.map(o => (
+                      <div key={o.id} className="flex items-center gap-2 flex-wrap">
+                        <button type="button" className="font-medium hover:underline text-left" onClick={() => onEdit?.(g.offres, o)}>
+                          {(o._client?.prenom ?? "") + " " + (o._client?.nom ?? "")}
+                        </button>
+                        {statutBadge(o.statut)}
+                        <span className="text-xs text-muted-foreground">{visiteLabel(o as any)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </TableCell>
+                {showMissing && (
+                  <TableCell className="text-xs text-amber-700 max-w-[220px] align-top">{missing ?? "—"}</TableCell>
+                )}
+                <TableCell className="align-top">
+                  {onEdit && (
+                    <Button size="sm" variant="outline" className="h-7" onClick={() => onEdit(g.offres, ref)} title="Gérer l'annonce pour tous les clients">
+                      <Pencil className="h-3.5 w-3.5 mr-1" /> Gérer
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

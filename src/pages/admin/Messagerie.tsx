@@ -113,6 +113,7 @@ const Messagerie = () => {
       const { data } = await supabase
         .from('messages')
         .select('conversation_id')
+        .eq('masque_messagerie', false)
         .eq('read', false)
         .neq('sender_type', 'admin');
 
@@ -210,6 +211,7 @@ const Messagerie = () => {
           },
           (payload) => {
             const newMessage = payload.new as any;
+            if (newMessage?.masque_messagerie) return;
             // Charger le profil de l'expéditeur
             supabase
               .from('profiles')
@@ -276,6 +278,7 @@ const Messagerie = () => {
           ? await supabase
               .from('messages')
               .select('conversation_id, content, attachment_name, attachment_type, sender_type, sender_id, created_at')
+              .eq('masque_messagerie', false)
               .in('conversation_id', conversationIds)
               .order('created_at', { ascending: false })
           : { data: [] as any[] };
@@ -358,6 +361,7 @@ const Messagerie = () => {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
+        .eq('masque_messagerie', false)
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true });
 
