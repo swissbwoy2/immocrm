@@ -42,6 +42,7 @@ import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormD
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
+import { AchatSuiviCompteurs } from '@/components/achat/AchatSuiviCompteurs';
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
@@ -734,6 +735,12 @@ export default function ClientDetail() {
             <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
             <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
           </div>
+          {/* Crédits illimités (acheteur) : suivi de l'activité du mandat */}
+          <AchatSuiviCompteurs
+            clientId={client.id}
+            projectId={purchaseHook.project.id}
+            dateDebut={(purchaseHook.project as any).date_debut_progression || (purchaseHook.project as any).date_signature_mandat || purchaseHook.project.created_at}
+          />
           {/* Carte zones de recherche */}
           <SwissRomandeMapGoogle client={client} />
           <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="agent" />
