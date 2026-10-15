@@ -28,3 +28,27 @@ export function isPurchaseBuyer(
 export function normalizeTypeRecherche(value?: string | null): 'Acheter' | 'Louer' {
   return isBuyerType(value) ? 'Acheter' : 'Louer';
 }
+/**
+ * Parcours d'un compte client — RÈGLE UNIQUE utilisée par le dashboard, le menu latéral,
+ * la barre du bas (mobile) et l'admin. Ordre de priorité :
+ *   1. acheteur (type achat, journey achat ou projet d'achat existant)
+ *   2. reloueur pur (journey 'property_reletting')
+ *   3. parcours spécifiques du profil (rénovation, vente, relocation)
+ *   4. mixte (chercheur + reloueur)
+ *   5. location (chercheur de logement — modèle de base)
+ */
+export type ClientParcours = 'location' | 'achat' | 'relouer' | 'mixte' | 'renovation' | 'vente' | 'relocation';
+
+export function resolveClientParcours(
+  client?: { type_recherche?: string | null; journey_type?: string | null; id?: string | null; user_id?: string | null } | null,
+  purchaseProject?: { id?: string | null; client_id?: string | null; user_id?: string | null } | null,
+  profileParcours?: string | null,
+): ClientParcours {
+  if (isPurchaseBuyer(client, purchaseProject)) return 'achat';
+  const journey = normalizeJourneyValue(client?.journey_type);
+  if (journey === 'property_reletting') return 'relouer';
+  const pt = normalizeJourneyValue(profileParcours);
+  if (pt === 'renovation' || pt === 'vente' || pt === 'relocation') return pt;
+  if (journey === 'mixed') return 'mixte';
+  return 'location';
+}
