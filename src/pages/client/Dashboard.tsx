@@ -60,7 +60,7 @@ import RelocationClientDashboard from './dashboards/RelocationClientDashboard';
 import DashboardRelouer from './DashboardRelouer';
 import DashboardAchat from './DashboardAchat';
 import DashboardAchatEnAttente from './DashboardAchatEnAttente';
-import { isPurchaseBuyer } from '@/lib/journey';
+import { resolveClientParcours } from '@/lib/journey';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 export default function ClientDashboardDispatcher() {
@@ -105,26 +105,25 @@ export default function ClientDashboardDispatcher() {
     );
   }
 
-  // Reloueur pur — dashboard dédié, jamais de badges chercheur
-  if (journeyType === 'property_reletting') return <DashboardRelouer />;
+  // Règle unique de parcours (identique au menu latéral et à la barre du bas).
+  const parcours = resolveClientParcours(
+    { journey_type: journeyType, type_recherche: typeRecherche },
+    hasPurchaseProject ? { id: 'projet' } : null,
+    profile?.parcours_type ?? null,
+  );
 
-  // 🆕 Parcours achat — distinction "en attente d'activation" vs "actif"
-  if (hasPurchaseProject) {
-    if (purchaseStatus === 'en_attente_activation') {
-      return <DashboardAchatEnAttente profile={profile} />;
+  if (parcours === 'achat') {
+    // Distinction "en attente d'activation" vs "actif" ; acheteur sans projet = en attente.
+    if (hasPurchaseProject && purchaseStatus !== 'en_attente_activation') {
+      return <DashboardAchat profile={profile} />;
     }
-    return <DashboardAchat profile={profile} />;
-  }
-
-  // 🆕 Acheteur sans projet créé : ne jamais retomber sur le dashboard location
-  if (isPurchaseBuyer({ journey_type: journeyType, type_recherche: typeRecherche }, null)) {
     return <DashboardAchatEnAttente profile={profile} />;
   }
-
-  const pt = profile?.parcours_type;
-  if (pt === 'renovation') return <RenovationClientDashboard profile={profile} />;
-  if (pt === 'vente') return <VenteClientDashboard profile={profile} />;
-  if (pt === 'relocation') return <RelocationClientDashboard profile={profile} />;
+  // Reloueur pur — dashboard dédié, jamais de badges chercheur
+  if (parcours === 'relouer') return <DashboardRelouer />;
+  if (parcours === 'renovation') return <RenovationClientDashboard profile={profile} />;
+  if (parcours === 'vente') return <VenteClientDashboard profile={profile} />;
+  if (parcours === 'relocation') return <RelocationClientDashboard profile={profile} />;
   return <ClientDashboardLocation />;
 }
 
