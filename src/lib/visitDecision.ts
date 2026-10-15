@@ -3,14 +3,13 @@
  * sur une offre reçue ?
  *
  * Vrai si l'UNE de ces conditions est remplie :
- *  1. offre.statut === 'interesse'
- *  2. offre.statut ∈ ('visite_effectuee', 'candidature_deposee', 'souhaite_postuler')
+ *  1. offre.statut ∈ ('visite_effectuee', 'candidature_deposee', 'souhaite_postuler')
  *  3. une visite liée a statut 'effectuee', une vidéo, ou un compte-rendu
- *  4. une visite liée a une date de visite déjà passée
+ *  4. une visite réellement prévue (confirmée / planifiée par le client ou l'agent) dont la date est passée
  */
 
+// 15.10.2026 : « intéressé » ne suffit plus — on ne postule qu'après une visite réellement faite.
 const DECIDABLE_STATUTS = new Set([
-  'interesse',
   'visite_effectuee',
   'candidature_deposee',
   'souhaite_postuler',
@@ -22,7 +21,15 @@ function visiteIndicatesDone(v: any): boolean {
   if (v.video_url) return true;
   if (v.compte_rendu && (typeof v.compte_rendu !== 'object' || Object.keys(v.compte_rendu).length > 0)) return true;
   if (v.compte_rendu_at) return true;
-  if (v.date_visite && new Date(v.date_visite).getTime() < Date.now()) return true;
+  if (v.statut === 'annulee' || v.statut === 'refusee') return false;
+  // Une date passée ne suffit plus : il faut une visite que le client a réellement prévue
+  // (confirmée, planifiée par lui ou par l'agent). Les créneaux d'annonce des routines ne comptent pas,
+  // et une visite déléguée n'est faite qu'avec son compte-rendu.
+  if (v.date_visite && new Date(v.date_visite).getTime() < Date.now()) {
+    if (v.est_deleguee) return false;
+    if (v.statut === 'confirmee' || v.client_confirme_visite_at) return true;
+    if (v.statut !== 'proposee' && v.source && ['planifiee_client', 'portail', 'manuel', 'manuelle', 'proposee_agent'].includes(v.source)) return true;
+  }
   return false;
 }
 
