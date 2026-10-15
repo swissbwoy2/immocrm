@@ -48,6 +48,13 @@ import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
 import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
+import {
+  ReletterStatusBanner,
+  ReletterFinancialCard,
+  ReletterPropertyFeaturesCard,
+  ReletterCriteriaCard,
+  ReletterDossiersTransmisCard,
+} from '@/components/admin/ReletterDetailSections';
 
 interface Client {
   id: string;
@@ -123,6 +130,9 @@ export default function ClientDetail() {
   const { toast } = useToast();
   
   const [client, setClient] = useState<Client | null>(null);
+  // Dossier de relocation (reloueur pur ou parcours mixte) — lecture seule, accès limité par la RLS
+  const [relouerRequest, setRelouerRequest] = useState<any>(null);
+  const [relouerCandidates, setRelouerCandidates] = useState<any[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [offres, setOffres] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -135,6 +145,43 @@ export default function ClientDetail() {
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
   const purchaseHook = usePurchaseProject({ clientId: client?.id });
+
+  useEffect(() => {
+    const uid = client?.user_id;
+    const journey = (client as any)?.journey_type;
+    if (!uid || (journey !== 'property_reletting' && journey !== 'mixed')) {
+      setRelouerRequest(null);
+      setRelouerCandidates([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const { data: req } = await supabase
+          .from('relouer_requests')
+          .select('*')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!alive) return;
+        setRelouerRequest(req || null);
+        if (req?.id) {
+          const { data: cands } = await supabase
+            .from('relouer_candidates')
+            .select('*')
+            .eq('request_id', req.id)
+            .order('created_at', { ascending: false });
+          if (alive) setRelouerCandidates(cands || []);
+        } else {
+          setRelouerCandidates([]);
+        }
+      } catch {
+        if (alive) { setRelouerRequest(null); setRelouerCandidates([]); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [client?.user_id, (client as any)?.journey_type]);
   const isAcheteur = isPurchaseBuyer(client, purchaseHook.project);
   const isPurchaseEligible = isAcheteur;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -734,6 +781,21 @@ export default function ClientDetail() {
       <div className="p-4 md:p-8 space-y-6">
         {isPurchaseEligible && !purchaseHook.project && (
           <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
+        )}
+        {/* Dossier de relocation — même lecture que la fiche admin */}
+        {!isPurchaseEligible && relouerRequest && (
+          <div className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              {(client as any).journey_type === 'mixed' ? 'Dossier de relocation (parcours mixte)' : 'Dossier de relocation'}
+            </p>
+            <ReletterStatusBanner request={relouerRequest} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <ReletterFinancialCard request={relouerRequest} />
+              <ReletterPropertyFeaturesCard request={relouerRequest} />
+              <ReletterCriteriaCard request={relouerRequest} />
+              <ReletterDossiersTransmisCard candidates={relouerCandidates} />
+            </div>
+          </div>
         )}
         {/* Header - Responsive */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">

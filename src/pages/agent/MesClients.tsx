@@ -20,6 +20,7 @@ import { CreateClientAccountDialog } from "@/components/clients/CreateClientAcco
 import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from "@/lib/candidatCriteresMerge";
+import { isPurchaseBuyer } from "@/lib/journey";
 
 const MesClients = () => {
   const navigate = useNavigate();
@@ -256,7 +257,7 @@ const MesClients = () => {
         );
         
         // Check solvability (skip for purchase buyers — uses banking logic, not rental)
-        const isAcheteurClient = client.type_recherche === 'Acheter' || (client as any).journey_type === 'purchase_search';
+        const isAcheteurClient = isPurchaseBuyer(client as any, null); // règle commune (src/lib/journey.ts)
         const budgetDemande = Number(client.budget_max) || 0;
         const hasNoPoursuites = !client.poursuites;
         
