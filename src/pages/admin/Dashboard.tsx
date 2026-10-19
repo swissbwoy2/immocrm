@@ -17,6 +17,7 @@ import { PremiumKPICard } from '@/components/premium';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
 import { PremiumPageShellV2, PremiumPageHeaderV2 } from '@/components/dashboard/v2';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { isClientActif } from '@/lib/activeClients';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -247,12 +248,8 @@ export default function AdminDashboard() {
     );
   }
 
-  const activatedStatuses = ['actif', 'reloge', 'stoppe', 'suspendu'];
-  // « Clients actifs » = dossier au statut actif ET crédits de mandat > 0.
-  // Si la table des crédits n'a pas pu être lue, on retombe sur le seul statut actif.
-  const clientsActifs = usersAvecCredits
-    ? clients.filter(c => c.statut === 'actif' && c.user_id && usersAvecCredits.has(c.user_id)).length
-    : clients.filter(c => c.statut === 'actif').length;
+  const actifs = clients.filter(c => isClientActif(c, usersAvecCredits));
+  const clientsActifs = actifs.length;
   const totalAgents = agents.length;
   const agentsActifs = agents.filter(a => a.actif).length;
   const totalOffresEnvoyees = offres.length;
@@ -266,14 +263,14 @@ export default function AdminDashboard() {
   
   // Clients critiques = 30 jours ou moins restants avant expiration (60-89 jours écoulés)
   const clientsCritiques = clients.filter(c => {
-    if (!activatedStatuses.includes(c.statut)) return false;
+    if (c.statut !== 'actif') return false;
     const days = calculateDaysElapsed(c.dateInscription);
     return days >= 60 && days < 90;
   });
   
   // Clients expirés = mandat dépassé (90+ jours)
   const clientsExpires = clients.filter(c => {
-    if (!activatedStatuses.includes(c.statut)) return false;
+    if (c.statut !== 'actif') return false;
     return calculateDaysElapsed(c.dateInscription) >= 90;
   });
   
@@ -289,10 +286,7 @@ export default function AdminDashboard() {
   const clientsSansAgent = clients.filter(c => !c.agentId).length;
 
   // Calcul de la projection financière de l'agence
-  const clientsActifsPourProjection = clients.filter(c => {
-    const dateAjout = c.dateInscription;
-    return c.statut !== 'reloge' && calculateDaysElapsed(dateAjout) <= 90;
-  });
+  const clientsActifsPourProjection = actifs;
 
   const agencyProjections = clientsActifsPourProjection.map(client => {
     // Chercher le split dans client_agents, sinon utiliser celui du client, sinon 45% par défaut
@@ -494,7 +488,7 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody>
                     {agents.map(agent => {
-                      const agentClients = clients.filter(c => c.agentId === agent.id);
+                      const agentClients = actifs.filter(c => c.agentId === agent.id);
                       // Critique = 60-89 jours écoulés (30 jours ou moins restants)
                       const critiquesClients = agentClients.filter(c => {
                         const days = calculateDaysElapsed(c.dateInscription);
@@ -557,7 +551,7 @@ export default function AdminDashboard() {
               {/* Vue cartes pour mobile/tablette */}
               <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {agents.map(agent => {
-                  const agentClients = clients.filter(c => c.agentId === agent.id);
+                  const agentClients = actifs.filter(c => c.agentId === agent.id);
                   // Critique = 60-89 jours écoulés (30 jours ou moins restants)
                   const critiquesClients = agentClients.filter(c => {
                     const days = calculateDaysElapsed(c.dateInscription);
