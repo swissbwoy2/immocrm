@@ -14,6 +14,7 @@ import {
 import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { cn } from "@/lib/utils";
 import { formatSwissShortDate } from "@/lib/dateUtils";
+import { isClientActif, useUsersAvecCreditsMandat } from "@/lib/activeClients";
 
 type ClientAgent = {
   client_id: string;
@@ -79,6 +80,7 @@ export function ClientsByAgentView({
   clientAgents,
 }: ClientsByAgentViewProps) {
   const navigate = useNavigate();
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
 
   const [selectedAgent, setSelectedAgent] = useState<"all" | string>("all");
   const [responsibilityFilter, setResponsibilityFilter] =
@@ -268,9 +270,15 @@ export function ClientsByAgentView({
   }, [assignments, agentsById, clientById]);
 
   // ---------- KPI ----------
+  // Définition unique : statut 'actif' ET crédits de mandat > 0 (cf. src/lib/activeClients.ts)
   const uniqueClientCount = useMemo(
-    () => new Set(clients.map((c) => c.id)).size,
-    [clients],
+    () =>
+      new Set(
+        clients
+          .filter((c) => isClientActif(c as any, usersAvecCreditsMandat))
+          .map((c) => c.id),
+      ).size,
+    [clients, usersAvecCreditsMandat],
   );
 
   const activeAgentsCount = useMemo(
@@ -461,7 +469,7 @@ export function ClientsByAgentView({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Clients actifs = clients uniques. Assignations principales et co-assignations = relations agent-client.
+        Clients actifs = statut actif avec crédits de mandat. Assignations principales et co-assignations = relations agent-client.
       </p>
 
       {/* Filtres */}
