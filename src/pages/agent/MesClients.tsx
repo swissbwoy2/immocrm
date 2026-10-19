@@ -20,9 +20,11 @@ import { CreateClientAccountDialog } from "@/components/clients/CreateClientAcco
 import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from "@/lib/candidatCriteresMerge";
+import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { isPurchaseBuyer } from "@/lib/journey";
 
 const MesClients = () => {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -318,6 +320,7 @@ const MesClients = () => {
           typeBien: client.type_bien,
           typeRecherche: client.type_recherche || 'Louer',
           apportPersonnel: client.apport_personnel,
+          user_id: client.user_id,
           statut: client.statut, // Ajout du statut pour filtrer les relogés
           garant: garant ? { 
             nom: garant.nom, 
@@ -486,7 +489,7 @@ const MesClients = () => {
         <div className="p-4 md:p-8">
           <PremiumPageHeader
             title="Mes Clients"
-            subtitle={`${clientsActifsOnly.length} clients actifs`}
+            subtitle={`${allClients.filter(c => isClientActif(c as any, usersAvecCreditsMandat)).length} clients actifs`}
             icon={Users}
             badge="Portfolio"
             action={

@@ -21,6 +21,7 @@ import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { PremiumCard } from "@/components/premium/PremiumCard";
 import { cn } from "@/lib/utils";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { AgentFinancialProjection, type ProjectionItem } from '@/components/admin/AgentFinancialProjection';
 
 interface Agent {
@@ -55,6 +56,7 @@ interface Client {
 }
 
 const AgentDetail = () => {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const { agentId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -91,12 +93,7 @@ const AgentDetail = () => {
   const projectionItems: ProjectionItem[] = useMemo(() => {
     const now = Date.now();
     return clients
-      .filter(c => {
-        if (c.statut === 'reloge') return false;
-        if (!c.date_ajout) return true;
-        const days = (now - new Date(c.date_ajout).getTime()) / (1000 * 60 * 60 * 24);
-        return days <= 90;
-      })
+      .filter(c => isClientActif(c, usersAvecCreditsMandat))
       .map(c => {
         const splitAgent = c.agent_commission_split ?? c.commission_split ?? 45;
         const base = c.budget_max || 0;
