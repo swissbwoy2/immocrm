@@ -18,9 +18,11 @@ import { PremiumCandidaturesTraitementSection } from '@/components/premium/Premi
 import { PremiumProjectionFinanciereSection } from '@/components/premium/PremiumProjectionFinanciereSection';
 import { countUniqueOffres } from '@/utils/visitesCalculator';
 import { ClientReactionsWidget } from '@/components/premium/ClientReactionsWidget';
+import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
 
 export default function AgentDashboard() {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userRole } = useAuth();
@@ -224,26 +226,21 @@ export default function AgentDashboard() {
   const clientsNonReloge = clients.filter(c => c.statut !== 'reloge');
   
   // Les clients actifs (non relogés + dans les 90 jours)
-  const clientsActifs = clientsNonReloge.filter(c => {
-    const dateAjout = c.date_ajout || c.created_at;
-    return calculateDaysElapsed(dateAjout) <= 90;
-  }).length;
+  const clientsActifs = clients.filter(c => isClientActif(c, usersAvecCreditsMandat)).length;
   
   // Clients par type (exclure les relogés)
   const clientsLocation = clientsNonReloge.filter(c => c.type_recherche !== 'Acheter').length;
   const clientsAchat = clientsNonReloge.filter(c => c.type_recherche === 'Acheter').length;
   
   const deadlinesCritiques = clientsNonReloge.filter(c => {
+    if (c.statut !== 'actif') return false;
     const dateAjout = c.date_ajout || c.created_at;
     return calculateDaysElapsed(dateAjout) >= 90;
   }).length;
 
   // Filtrer uniquement les clients actifs des 3 derniers mois pour la projection financière
   // IMPORTANT: Exclure les clients relogés pour ne pas fausser les projections
-  const clientsActifs3Mois = clientsNonReloge.filter(c => {
-    const dateAjout = c.date_ajout || c.created_at;
-    return calculateDaysElapsed(dateAjout) <= 90;
-  });
+  const clientsActifs3Mois = clients.filter(c => isClientActif(c, usersAvecCreditsMandat));
 
   const projectionFinanciere = clientsActifs3Mois.map(client => {
     const commissionBrute = client.budget_max || 0;

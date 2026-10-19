@@ -32,9 +32,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { Calendar } from "@/components/ui/calendar";
 
 const Transactions = () => {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -358,10 +360,7 @@ const Transactions = () => {
   const totalRistournes = acomptesRistournes.reduce((sum, a) => sum + (a.montant || 0), 0);
 
   // Calcul de la projection financière de l'agence (clients actifs non relogés)
-  const clientsActifsPourProjection = clients.filter(c => {
-    const dateAjout = c.date_ajout || c.created_at;
-    return c.statut !== 'reloge' && calculateDaysElapsed(dateAjout) <= 90;
-  });
+  const clientsActifsPourProjection = clients.filter(c => isClientActif(c, usersAvecCreditsMandat));
 
   const agencyProjections = clientsActifsPourProjection.map(client => {
     const clientAgent = clientAgents.find(ca => ca.client_id === client.id && ca.is_primary);

@@ -9,6 +9,7 @@ import { useAgentGoals } from '@/hooks/useAgentGoals';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUniqueOffres, getUniqueVisites } from '@/utils/visitesCalculator';
 import { PremiumMultiSeriesChart } from './PremiumMultiSeriesChart';
+import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { PremiumCommissionsChart } from './PremiumCommissionsChart';
 
 interface AgentStatsSectionProps {
@@ -43,6 +44,7 @@ export function AgentStatsSection({
   clients,
   agentId,
 }: AgentStatsSectionProps) {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange());
   
   // Fetch personalized goals
@@ -133,9 +135,9 @@ export function AgentStatsSection({
       tauxConversion,
       candidaturesAcceptees,
       candidaturesEnCours,
-      clientsActifs: clients.length,
+      clientsActifs: clients.filter((c: any) => isClientActif(c, usersAvecCreditsMandat)).length,
     };
-  }, [currentOffresRaw, currentOffresUniques, previousOffresRaw, currentTransactions, previousTransactions, currentPaidTransactions, previousPaidTransactions, currentCandidatures, clients]);
+  }, [currentOffresRaw, currentOffresUniques, previousOffresRaw, currentTransactions, previousTransactions, currentPaidTransactions, previousPaidTransactions, currentCandidatures, clients, usersAvecCreditsMandat]);
 
   // Chart data - offres over time (use raw for timeline)
   const offresChartData = useMemo(() => {
