@@ -91,7 +91,6 @@ const AgentDetail = () => {
 
   // Projection financière (modèle location, ≤90j, hors reloge)
   const projectionItems: ProjectionItem[] = useMemo(() => {
-    const now = Date.now();
     return clients
       .filter(c => isClientActif(c, usersAvecCreditsMandat))
       .map(c => {
@@ -111,7 +110,7 @@ const AgentDetail = () => {
         };
       })
       .filter(i => i.base > 0);
-  }, [clients]);
+  }, [clients, usersAvecCreditsMandat]);
 
   useEffect(() => {
     if (agentId) {
