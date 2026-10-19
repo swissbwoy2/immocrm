@@ -41,6 +41,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [mandatesStats, setMandatesStats] = useState<any[]>([]);
   const [candidaturesStats, setCandidaturesStats] = useState<any[]>([]);
+  // user_id des dossiers ayant des crédits de mandat > 0 (null = requête indisponible)
+  const [usersAvecCredits, setUsersAvecCredits] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -228,7 +230,11 @@ export default function AdminDashboard() {
   }
 
   const activatedStatuses = ['actif', 'reloge', 'stoppe', 'suspendu'];
-  const clientsActifs = clients.filter(c => activatedStatuses.includes(c.statut) && calculateDaysElapsed(c.dateInscription) <= 90).length;
+  // « Clients actifs » = dossier au statut actif ET crédits de mandat > 0.
+  // Si la table des crédits n'a pas pu être lue, on retombe sur le seul statut actif.
+  const clientsActifs = usersAvecCredits
+    ? clients.filter(c => c.statut === 'actif' && c.user_id && usersAvecCredits.has(c.user_id)).length
+    : clients.filter(c => c.statut === 'actif').length;
   const totalAgents = agents.length;
   const agentsActifs = agents.filter(a => a.actif).length;
   const totalOffresEnvoyees = offres.length;
