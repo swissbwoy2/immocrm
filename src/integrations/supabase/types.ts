@@ -2133,6 +2133,501 @@ export type Database = {
           },
         ]
       }
+      backup_20261019_c_ids: {
+        Row: {
+          client_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019_clients: {
+        Row: {
+          abaninja_client_uuid: string | null
+          abaninja_invoice_id: string | null
+          abaninja_invoice_ref: string | null
+          adresse: string | null
+          agent_id: string | null
+          anciennete_mois: number | null
+          animaux: boolean | null
+          anonymise_at: string | null
+          anonymise_motif: string | null
+          apport_personnel: number | null
+          autres_credits: boolean | null
+          budget_max: number | null
+          cancellation_reason: string | null
+          cancellation_requested_at: string | null
+          charges_extraordinaires: boolean | null
+          charges_mensuelles: number | null
+          commission_split: number | null
+          contact_gerance: string | null
+          created_at: string | null
+          curatelle: boolean | null
+          date_ajout: string | null
+          date_changement_statut: string | null
+          date_engagement: string | null
+          date_naissance: string | null
+          decouverte_agence: string | null
+          demande_mandat_id: string | null
+          depuis_le: string | null
+          derniere_relance_at: string | null
+          employeur: string | null
+          etat_avancement: string | null
+          etat_civil: string | null
+          extrait_poursuites_ai_confidence: number | null
+          extrait_poursuites_date_emission: string | null
+          extrait_poursuites_document_id: string | null
+          extrait_poursuites_extraction_method: string | null
+          extrait_poursuites_last_reminder_at: string | null
+          garanties: string | null
+          gerance_actuelle: string | null
+          id: string | null
+          instrument_musique: boolean | null
+          journey_type: string | null
+          loyer_actuel: number | null
+          mandat_date_signature: string | null
+          mandat_pdf_url: string | null
+          mandat_renewal_count: number | null
+          mandat_signature_data: string | null
+          mandate_official_end_date: string | null
+          mandate_pause_days: number | null
+          mandate_paused_at: string | null
+          montant_charges_extra: number | null
+          motif_changement: string | null
+          nationalite: string | null
+          nombre_occupants: number | null
+          note_agent: string | null
+          numero_plaques: string | null
+          payslip_last_reminder_at: string | null
+          pieces: number | null
+          pieces_actuel: number | null
+          poursuites: boolean | null
+          priorite: string | null
+          profession: string | null
+          refund_eligible: boolean | null
+          refund_processed_at: string | null
+          refund_requested_at: string | null
+          refund_status: string | null
+          region_recherche: string | null
+          relance_count: number | null
+          residence: string | null
+          revenus_mensuels: number | null
+          secteur_activite: string | null
+          situation_familiale: string | null
+          situation_financiere: string | null
+          souhaits_particuliers: string | null
+          source_revenus: string | null
+          statut: string | null
+          type_bien: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          type_recherche: string | null
+          updated_at: string | null
+          user_id: string | null
+          utilisation_logement: string | null
+          vehicules: boolean | null
+        }
+        Insert: {
+          abaninja_client_uuid?: string | null
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_ajout?: string | null
+          date_changement_statut?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          demande_mandat_id?: string | null
+          depuis_le?: string | null
+          derniere_relance_at?: string | null
+          employeur?: string | null
+          etat_avancement?: string | null
+          etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
+          garanties?: string | null
+          gerance_actuelle?: string | null
+          id?: string | null
+          instrument_musique?: boolean | null
+          journey_type?: string | null
+          loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_renewal_count?: number | null
+          mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number | null
+          mandate_paused_at?: string | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
+          pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          priorite?: string | null
+          profession?: string | null
+          refund_eligible?: boolean | null
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string | null
+          region_recherche?: string | null
+          relance_count?: number | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          souhaits_particuliers?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Update: {
+          abaninja_client_uuid?: string | null
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_ajout?: string | null
+          date_changement_statut?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          demande_mandat_id?: string | null
+          depuis_le?: string | null
+          derniere_relance_at?: string | null
+          employeur?: string | null
+          etat_avancement?: string | null
+          etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
+          garanties?: string | null
+          gerance_actuelle?: string | null
+          id?: string | null
+          instrument_musique?: boolean | null
+          journey_type?: string | null
+          loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_renewal_count?: number | null
+          mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number | null
+          mandate_paused_at?: string | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
+          pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          priorite?: string | null
+          profession?: string | null
+          refund_eligible?: boolean | null
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string | null
+          region_recherche?: string | null
+          relance_count?: number | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          souhaits_particuliers?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Relationships: []
+      }
+      backup_20261019_documents: {
+        Row: {
+          candidate_id: string | null
+          candidature_id: string | null
+          client_id: string | null
+          commentaire_admin: string | null
+          created_at: string | null
+          date_upload: string | null
+          id: string | null
+          nom: string | null
+          offre_id: string | null
+          purchase_category: string | null
+          purchase_project_id: string | null
+          statut: string | null
+          taille: number | null
+          type: string | null
+          type_document: string | null
+          url: string | null
+          user_id: string | null
+          validated_at: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          candidature_id?: string | null
+          client_id?: string | null
+          commentaire_admin?: string | null
+          created_at?: string | null
+          date_upload?: string | null
+          id?: string | null
+          nom?: string | null
+          offre_id?: string | null
+          purchase_category?: string | null
+          purchase_project_id?: string | null
+          statut?: string | null
+          taille?: number | null
+          type?: string | null
+          type_document?: string | null
+          url?: string | null
+          user_id?: string | null
+          validated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          candidature_id?: string | null
+          client_id?: string | null
+          commentaire_admin?: string | null
+          created_at?: string | null
+          date_upload?: string | null
+          id?: string | null
+          nom?: string | null
+          offre_id?: string | null
+          purchase_category?: string | null
+          purchase_project_id?: string | null
+          statut?: string | null
+          taille?: number | null
+          type?: string | null
+          type_document?: string | null
+          url?: string | null
+          user_id?: string | null
+          validated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019_offres: {
+        Row: {
+          action_notified_at: string | null
+          adresse: string | null
+          agent_id: string | null
+          annee_construction: number | null
+          classe_energetique: string | null
+          client_id: string | null
+          code_immeuble: string | null
+          commentaires: string | null
+          concierge_nom: string | null
+          concierge_tel: string | null
+          contact_annonceur: string | null
+          contact_gerance: string | null
+          contact_visite: string | null
+          created_at: string | null
+          date_envoi: string | null
+          description: string | null
+          description_marketing: string | null
+          disponibilite: string | null
+          envoi_auto: boolean | null
+          equipements: string[] | null
+          etage: string | null
+          geocoded_at: string | null
+          id: string | null
+          images_extracted_at: string | null
+          interesse_notified_at: string | null
+          latitude: number | null
+          lien_annonce: string | null
+          locataire_nom: string | null
+          locataire_tel: string | null
+          longitude: number | null
+          medias_galerie: Json | null
+          missing_info: string | null
+          needs_agent_action: boolean | null
+          orientation: string | null
+          pieces: number | null
+          postulation_demandee_at: string | null
+          prix: number | null
+          statut: string | null
+          surface: number | null
+          titre: string | null
+          type_bien: string | null
+          type_chauffage: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_notified_at?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          description_marketing?: string | null
+          disponibilite?: string | null
+          envoi_auto?: boolean | null
+          equipements?: string[] | null
+          etage?: string | null
+          geocoded_at?: string | null
+          id?: string | null
+          images_extracted_at?: string | null
+          interesse_notified_at?: string | null
+          latitude?: number | null
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          longitude?: number | null
+          medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean | null
+          orientation?: string | null
+          pieces?: number | null
+          postulation_demandee_at?: string | null
+          prix?: number | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          type_chauffage?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_notified_at?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          description_marketing?: string | null
+          disponibilite?: string | null
+          envoi_auto?: boolean | null
+          equipements?: string[] | null
+          etage?: string | null
+          geocoded_at?: string | null
+          id?: string | null
+          images_extracted_at?: string | null
+          interesse_notified_at?: string | null
+          latitude?: number | null
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          longitude?: number | null
+          medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean | null
+          orientation?: string | null
+          pieces?: number | null
+          postulation_demandee_at?: string | null
+          prix?: number | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          type_chauffage?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019_user_roles: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       baux: {
         Row: {
           ancien_locataire_charges: number | null
