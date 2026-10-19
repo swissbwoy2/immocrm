@@ -41,6 +41,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [mandatesStats, setMandatesStats] = useState<any[]>([]);
   const [candidaturesStats, setCandidaturesStats] = useState<any[]>([]);
+  // user_id des dossiers ayant des crédits de mandat > 0 (null = requête indisponible)
+  const [usersAvecCredits, setUsersAvecCredits] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -92,7 +94,7 @@ export default function AdminDashboard() {
       setAgents(transformedAgents);
 
       // === PARALLEL: Load clients, client_agents, transactions, offres simultaneously ===
-      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresResult, reactionsResult, registreResult] = await Promise.all([
+      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresResult, reactionsResult, registreResult, creditsResult] = await Promise.all([
         // Clients with reduced columns
         supabase
           .from('clients')
@@ -125,6 +127,11 @@ export default function AdminDashboard() {
         supabase
           .from('registre_commissions')
           .select('id, date_conclusion, commission_agence, commission_agent, honoraire_total, agent_id, agent_prenom, agent_nom')
+          .limit(15000),
+        // Crédits de mandat: alimente uniquement le KPI « Clients actifs »
+        supabase
+          .from('user_credits')
+          .select('user_id, coins_mandat')
           .limit(15000),
       ]);
 
@@ -167,6 +174,19 @@ export default function AdminDashboard() {
 
       setClients(transformedClients);
       setClientAgents(clientAgentsResult.data || []);
+
+      // Ensemble des user_id ayant des crédits de mandat > 0 (jamais bloquant pour le reste du tableau de bord)
+      if (creditsResult.error) {
+        setUsersAvecCredits(null);
+      } else {
+        setUsersAvecCredits(
+          new Set(
+            (creditsResult.data || [])
+              .filter((r: any) => Number(r.coins_mandat ?? 0) > 0 && r.user_id)
+              .map((r: any) => r.user_id as string)
+          )
+        );
+      }
 
       // Use all transactions data (the non-head query returns actual rows)
       const transactionsData = transactionsCountResult.data || [];
@@ -228,7 +248,11 @@ export default function AdminDashboard() {
   }
 
   const activatedStatuses = ['actif', 'reloge', 'stoppe', 'suspendu'];
-  const clientsActifs = clients.filter(c => activatedStatuses.includes(c.statut) && calculateDaysElapsed(c.dateInscription) <= 90).length;
+  // « Clients actifs » = dossier au statut actif ET crédits de mandat > 0.
+  // Si la table des crédits n'a pas pu être lue, on retombe sur le seul statut actif.
+  const clientsActifs = usersAvecCredits
+    ? clients.filter(c => c.statut === 'actif' && c.user_id && usersAvecCredits.has(c.user_id)).length
+    : clients.filter(c => c.statut === 'actif').length;
   const totalAgents = agents.length;
   const agentsActifs = agents.filter(a => a.actif).length;
   const totalOffresEnvoyees = offres.length;

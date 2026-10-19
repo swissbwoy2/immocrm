@@ -10598,6 +10598,63 @@ export type Database = {
         }
         Relationships: []
       }
+      rc_quote_requests: {
+        Row: {
+          birth_date: string
+          consent_at: string
+          consent_version: string
+          created_at: string
+          current_address: string
+          email: string
+          first_name: string
+          id: string
+          insured_people: number
+          last_name: string
+          nationality: string
+          phone: string
+          request_key: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          birth_date: string
+          consent_at?: string
+          consent_version?: string
+          created_at?: string
+          current_address: string
+          email: string
+          first_name: string
+          id?: string
+          insured_people: number
+          last_name: string
+          nationality: string
+          phone: string
+          request_key: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          birth_date?: string
+          consent_at?: string
+          consent_version?: string
+          created_at?: string
+          current_address?: string
+          email?: string
+          first_name?: string
+          id?: string
+          insured_people?: number
+          last_name?: string
+          nationality?: string
+          phone?: string
+          request_key?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       received_emails: {
         Row: {
           ai_analyzed: boolean | null
@@ -13034,6 +13091,120 @@ export type Database = {
           },
         ]
       }
+      reprise_postuler_sans_visite_20261015: {
+        Row: {
+          ancien_statut: string | null
+          client_id: string | null
+          offre_id: string | null
+          repris_le: string | null
+        }
+        Insert: {
+          ancien_statut?: string | null
+          client_id?: string | null
+          offre_id?: string | null
+          repris_le?: string | null
+        }
+        Update: {
+          ancien_statut?: string | null
+          client_id?: string | null
+          offre_id?: string | null
+          repris_le?: string | null
+        }
+        Relationships: []
+      }
+      routine_lecons: {
+        Row: {
+          categorie: string
+          confirmations: number
+          contradictions: number
+          created_at: string
+          dernier_usage: string | null
+          gain_estime: string | null
+          id: string
+          lecon: string
+          preuve: string | null
+          routine: string
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          categorie: string
+          confirmations?: number
+          contradictions?: number
+          created_at?: string
+          dernier_usage?: string | null
+          gain_estime?: string | null
+          id?: string
+          lecon: string
+          preuve?: string | null
+          routine?: string
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          categorie?: string
+          confirmations?: number
+          contradictions?: number
+          created_at?: string
+          dernier_usage?: string | null
+          gain_estime?: string | null
+          id?: string
+          lecon?: string
+          preuve?: string | null
+          routine?: string
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      routine_runs: {
+        Row: {
+          annonces_lues: number | null
+          annonces_retenues: number | null
+          contacts: number | null
+          duree_s: number | null
+          ended_at: string | null
+          erreurs: Json
+          etapes: Json
+          id: string
+          lecons_appliquees: string[]
+          notes: string | null
+          offres_creees: number | null
+          routine: string
+          started_at: string
+        }
+        Insert: {
+          annonces_lues?: number | null
+          annonces_retenues?: number | null
+          contacts?: number | null
+          duree_s?: number | null
+          ended_at?: string | null
+          erreurs?: Json
+          etapes?: Json
+          id?: string
+          lecons_appliquees?: string[]
+          notes?: string | null
+          offres_creees?: number | null
+          routine: string
+          started_at?: string
+        }
+        Update: {
+          annonces_lues?: number | null
+          annonces_retenues?: number | null
+          contacts?: number | null
+          duree_s?: number | null
+          ended_at?: string | null
+          erreurs?: Json
+          etapes?: Json
+          id?: string
+          lecons_appliquees?: string[]
+          notes?: string | null
+          offres_creees?: number | null
+          routine?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
       search_missions: {
         Row: {
           ai_agent_id: string
@@ -14969,6 +15140,10 @@ export type Database = {
       activate_candidat_searches: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
+      admin_set_rc_quote_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
       annonceur_has_published_annonce: {
         Args: { _annonceur_id: string }
         Returns: boolean
@@ -15111,6 +15286,10 @@ export type Database = {
           p_window_seconds: number
         }
         Returns: boolean
+      }
+      copy_candidat_garant_to_client: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       create_approval_request: {
         Args: {
@@ -15426,6 +15605,10 @@ export type Database = {
         Returns: string
       }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      message_est_automatique: {
+        Args: { p_content: string; p_payload: Json; p_sender_type: string }
+        Returns: boolean
+      }
       newsletter_cancel: { Args: { p_id: string }; Returns: undefined }
       newsletter_claim: {
         Args: never
@@ -15591,6 +15774,12 @@ export type Database = {
         Returns: undefined
       }
       newsletter_normalize: { Args: { v: string }; Returns: string }
+      newsletter_rc_audience: {
+        Args: never
+        Returns: {
+          contact_id: string
+        }[]
+      }
       newsletter_record_optouts: {
         Args: { p_emails: string[] }
         Returns: undefined
@@ -15629,6 +15818,29 @@ export type Database = {
           _type: string
         }
         Returns: undefined
+      }
+      offre_groupe_cle: {
+        Args: { p_adresse: string; p_lien: string }
+        Returns: string
+      }
+      offres_auto_groupes: {
+        Args: {
+          p_client_ids?: string[]
+          p_date_from?: string
+          p_date_to?: string
+          p_limit?: number
+          p_manual?: boolean
+          p_offset?: number
+          p_statut?: string
+        }
+        Returns: {
+          besoin_action: boolean
+          derniere_creation: string
+          groupe_cle: string
+          nb_clients: number
+          offres: Json
+          total: number
+        }[]
       }
       ouvrir_conversation_annonce: {
         Args: { p_annonce_id: string }
@@ -15778,6 +15990,36 @@ export type Database = {
         Returns: boolean
       }
       request_postulation: { Args: { p_offre_id: string }; Returns: Json }
+      request_rc_quote: {
+        Args: {
+          p_birth_date: string
+          p_consent: boolean
+          p_current_address: string
+          p_email: string
+          p_first_name: string
+          p_insured_people: number
+          p_last_name: string
+          p_nationality: string
+          p_phone: string
+          p_request_key: string
+        }
+        Returns: string
+      }
+      request_rc_quote_guest: {
+        Args: {
+          p_birth_date: string
+          p_consent: boolean
+          p_current_address: string
+          p_email: string
+          p_first_name: string
+          p_insured_people: number
+          p_last_name: string
+          p_nationality: string
+          p_phone: string
+          p_request_key: string
+        }
+        Returns: string
+      }
       resilier_mandat: { Args: never; Returns: undefined }
       search_annonces_radius: {
         Args: {
@@ -15913,6 +16155,10 @@ export type Database = {
       track_email_open: { Args: { _log_id: string }; Returns: undefined }
       update_user_presence: { Args: never; Returns: undefined }
       visite_est_reelle: { Args: { p_visite_id: string }; Returns: boolean }
+      visite_permet_postuler: {
+        Args: { p_visite_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       agent_share_status: "pending" | "accepted" | "declined" | "revoked"
