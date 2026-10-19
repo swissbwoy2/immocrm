@@ -4,6 +4,10 @@ import { decodeMimeTransfer } from "../_shared/mime-transfer.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Limites mémoire : nombre de messages relus par passage et taille max lue par message (pièces jointes ignorées au-delà).
+const MAX_EMAILS_PER_SYNC = 40;
+const MAX_BODY_BYTES = 150000;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -107,17 +111,18 @@ class SimpleImapClient {
     if (start < 1) start = 1;
     if (end < start) return emails;
 
-    const batchSize = 25;
+    // Petits lots + corps tronqué : évite le dépassement de mémoire du serveur (erreur 546 WORKER_RESOURCE_LIMIT)
+    const batchSize = 10;
     let currentStart = end;
     
-    while (currentStart >= start && emails.length < 100) {
+    while (currentStart >= start && emails.length < MAX_EMAILS_PER_SYNC) {
       const currentEnd = currentStart;
       const batchStart = Math.max(start, currentStart - batchSize + 1);
       
       console.log(`[IMAP] Fetching ${batchStart}:${currentEnd}...`);
       
       const response = await this.sendCommand(
-        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)] BODY.PEEK[TEXT])`
+        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)] BODY.PEEK[TEXT]<0.${MAX_BODY_BYTES}>)`
       );
       
       const batchEmails = this.parseAllFetchResponses(response, imapUser);
@@ -126,7 +131,7 @@ class SimpleImapClient {
       emails.push(...batchEmails);
       currentStart = batchStart - 1;
       
-      if (emails.length >= 100) break;
+      if (emails.length >= MAX_EMAILS_PER_SYNC) break;
     }
 
     console.log(`[IMAP] Total: ${emails.length} emails`);
@@ -228,7 +233,7 @@ class SimpleImapClient {
     }
 
     // Extract BODY[TEXT] section
-    const textMatch = data.match(/BODY\[TEXT\]\s*\{(\d+)\}/i);
+    const textMatch = data.match(/BODY\[TEXT\](?:<\d+>)?\s*\{(\d+)\}/i);
     if (textMatch) {
       const size = parseInt(textMatch[1]);
       const startIdx = data.indexOf(textMatch[0]) + textMatch[0].length;
@@ -594,8 +599,8 @@ async function syncUserEmails(
     }
     
     const messageCount = await client.selectInbox();
-    // Fetch last 100 emails instead of 50
-    const startMsg = Math.max(1, messageCount - 99);
+    // Derniers messages seulement (relève toutes les 5 min : largement suffisant, et bien plus léger)
+    const startMsg = Math.max(1, messageCount - (MAX_EMAILS_PER_SYNC - 1));
     const fetchedEmails = await client.fetchEmails(startMsg, messageCount, config.imap_user);
     
     await client.logout();
