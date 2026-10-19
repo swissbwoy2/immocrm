@@ -44,6 +44,7 @@ export function AgentStatsSection({
   clients,
   agentId,
 }: AgentStatsSectionProps) {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange());
   
   // Fetch personalized goals
