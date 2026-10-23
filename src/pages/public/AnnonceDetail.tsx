@@ -341,10 +341,14 @@ export default function AnnonceDetail() {
             {annonce.type_transaction === 'location' ? 'Location' : 'Vente'}
           </Link>
           <span aria-hidden>›</span>
-          <Link to={`/annonces/recherche?canton=${annonce.canton}`} className="hover:text-foreground hover:underline shrink-0">
-            {annonce.canton}
-          </Link>
-          <span aria-hidden>›</span>
+          {annonce.canton && (
+            <>
+              <Link to={`/annonces/recherche?canton=${annonce.canton}`} className="hover:text-foreground hover:underline shrink-0">
+                {annonce.canton}
+              </Link>
+              <span aria-hidden>›</span>
+            </>
+          )}
           <span className="text-foreground truncate">{annonce.titre}</span>
         </nav>
 
@@ -528,7 +532,7 @@ export default function AnnonceDetail() {
 
           {/* Calculateur de budget (desktop) — colonne de droite, à côté des photos */}
           <div className="hidden lg:block lg:col-span-1">
-            <div className={`rounded-[14px] border border-border overflow-hidden ${SHADOW}`}>
+            <div>
               <SearchTypeProvider>
                 <BudgetCalcSection
                   compact
@@ -803,7 +807,7 @@ export default function AnnonceDetail() {
 
             {/* Calculateur de budget (mobile) — juste après les conditions de location */}
             <div className="lg:hidden py-8 border-b border-border">
-              <div className={`rounded-[14px] border border-border overflow-hidden ${SHADOW}`}>
+              <div>
                 <SearchTypeProvider>
                   <BudgetCalcSection
                     compact
