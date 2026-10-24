@@ -9,7 +9,7 @@ import { useStoryDialogOpen } from './showcase/storyDialogState';
 
 const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
 
-function PublicSiteInner({ children }: { children: ReactNode }) {
+function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyCta?: ReactNode }) {
   useWhatsAppTracking();
   const storyDialogOpen = useStoryDialogOpen();
 
@@ -67,8 +67,8 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
 
       <PublicSiteFooter />
 
-      {/* Sticky Mobile CTA */}
-      <StickyMobileCTA />
+      {/* Sticky Mobile CTA (une page peut fournir sa propre barre, ex. l'accueil) */}
+      {stickyCta === undefined ? <StickyMobileCTA /> : stickyCta}
 
       {/* WhatsApp / Google Reviews Widget — desktop only to avoid overlapping mobile sticky CTA */}
       <div
@@ -89,10 +89,10 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
   );
 }
 
-export function PublicSiteLayout({ children }: { children: ReactNode }) {
+export function PublicSiteLayout({ children, stickyCta }: { children: ReactNode; stickyCta?: ReactNode }) {
   return (
     <SearchTypeProvider>
-      <PublicSiteInner>{children}</PublicSiteInner>
+      <PublicSiteInner stickyCta={stickyCta}>{children}</PublicSiteInner>
     </SearchTypeProvider>
   );
 }
