@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { toast } from 'sonner';
 import {
-  Search, List, Map as MapIcon, X, SlidersHorizontal, Building2, BellPlus, RotateCcw,
+  Search, List, Map as MapIcon, X, SlidersHorizontal, BellPlus, RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -632,15 +632,31 @@ export default function RechercheAnnonces() {
     </div>
   );
 
+  const isSearching = isLoading || offresLoading;
+  const scopeLabel = transactionType === 'location' ? 'À louer' : transactionType === 'vente' ? 'À vendre' : 'Tous les biens';
+  const gridCls = cn(
+    'grid gap-x-5 gap-y-8',
+    viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2',
+  );
+  // Éléments flottants posés sur la carte plein écran : l'ombre est voulue.
+  const floatBtnCls = 'pointer-events-auto shadow-lg cursor-pointer'; // taste-skill-ignore
+  const floatChipCls = 'pointer-events-auto shadow-lg tabular-nums'; // taste-skill-ignore
+  const segBtn = (active: boolean) =>
+    cn(
+      'inline-flex h-7 w-8 items-center justify-center rounded-md transition-colors duration-150 cursor-pointer',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      active ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground',
+    );
+
   return (
-    <div className="theme-luxury min-h-screen bg-background">
+    <div className="theme-luxury min-h-[100dvh] bg-background">
       <PublicHeader />
       <div className="container mx-auto px-4 pt-20 empty:hidden">
         <PortailBannieres className="mb-3 md:mb-4" />
       </div>
 
       {/* Barre de recherche */}
-      <div className="sticky top-16 z-40 bg-background border-b border-border shadow-sm">
+      <div className="sticky top-16 z-40 bg-background border-b border-border">{/* taste-skill-ignore: filet de la barre collante (écran d'app) */}
         <div className="container mx-auto px-4 py-3 space-y-3">
           <div className="flex flex-col md:flex-row md:items-start gap-3">
             <Tabs
@@ -670,7 +686,7 @@ export default function RechercheAnnonces() {
                     <SlidersHorizontal className="h-4 w-4 mr-2" />
                     Filtres
                     {activeFiltersCount > 0 && (
-                      <Badge className="ml-2 h-5 min-w-5 px-1 flex items-center justify-center text-xs">
+                      <Badge className="ml-2 h-5 min-w-5 px-1 flex items-center justify-center text-xs tabular-nums">
                         {activeFiltersCount}
                       </Badge>
                     )}
@@ -681,7 +697,7 @@ export default function RechercheAnnonces() {
                     <SheetTitle>Filtres</SheetTitle>
                   </SheetHeader>
                   <ScrollArea className="flex-1 px-6">{filtersPanel}</ScrollArea>
-                  <div className="flex gap-2 p-4 border-t bg-background">
+                  <div className="flex gap-2 p-4 border-t bg-background">{/* taste-skill-ignore: pied du panneau de filtres */}
                     <Button variant="outline" onClick={resetDraft} className="flex-1 cursor-pointer">
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Réinitialiser
@@ -751,76 +767,85 @@ export default function RechercheAnnonces() {
       </div>
 
       {/* Résultats */}
-      <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-160px)]">
-        <div className={cn('flex-1 overflow-hidden flex flex-col', viewMode === 'list' ? 'lg:w-full' : 'lg:w-[55%] xl:w-[50%]')}>
-          {/* Barre de résultats */}
-          <div className="px-4 lg:px-6 py-3 border-b bg-background/95 backdrop-blur-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-lg font-semibold truncate">
-                  {isLoading || offresLoading ? 'Recherche…' : `${resultats.length} bien${resultats.length !== 1 ? 's' : ''}`}
-                </h1>
-                <p className="text-sm text-muted-foreground truncate">
-                  {transactionType === 'location' ? 'À louer' : transactionType === 'vente' ? 'À vendre' : 'Tous les biens'}
-                  {lieux.length ? ` • ${lieux.join(', ')}` : ''}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setAlerteDialogOpen(true)}>
-                  <BellPlus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Créer une alerte e-mail</span>
-                </Button>
-
-                <Select
-                  value={sortBy}
-                  onValueChange={(v) => patchParams((p) => (v === 'date' ? p.delete('tri') : p.set('tri', v)))}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Trier par" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date">Plus récentes</SelectItem>
-                    <SelectItem value="prix_asc">Prix croissant</SelectItem>
-                    <SelectItem value="prix_desc">Prix décroissant</SelectItem>
-                    <SelectItem value="pieces_asc">Pièces croissant</SelectItem>
-                    <SelectItem value="pieces_desc">Pièces décroissant</SelectItem>
-                    <SelectItem value="surface">Surface</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <div className="flex border rounded-lg overflow-hidden">
-                  <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="icon"
-                    className="rounded-none cursor-pointer" aria-label="Vue liste" onClick={() => setViewMode('list')}>
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button variant={viewMode === 'map' ? 'default' : 'ghost'} size="icon"
-                    className="rounded-none cursor-pointer" aria-label="Vue carte" onClick={() => setViewMode('map')}>
-                    <MapIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+      <div className="container mx-auto px-4">
+        {/* En-tête des résultats : un seul titre, les réglages à droite */}
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-6 pb-5">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold leading-tight tracking-tight tabular-nums truncate">
+              {isSearching ? 'Recherche…' : `${resultats.length} bien${resultats.length !== 1 ? 's' : ''}`}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground truncate">
+              {scopeLabel}
+              {lieux.length ? ` à ${lieux.join(', ')}` : ''}
+            </p>
           </div>
 
-          <div className="flex-1 lg:overflow-y-auto px-4 lg:px-6 py-4">
-            {isLoading || offresLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" className="h-9 cursor-pointer" onClick={() => setAlerteDialogOpen(true)}>
+              <BellPlus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Créer une alerte e-mail</span>
+            </Button>
+
+            <Select
+              value={sortBy}
+              onValueChange={(v) => patchParams((p) => (v === 'date' ? p.delete('tri') : p.set('tri', v)))}
+            >
+              <SelectTrigger className="h-9 w-[160px]">
+                <SelectValue placeholder="Trier par" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Plus récentes</SelectItem>
+                <SelectItem value="prix_asc">Prix croissant</SelectItem>
+                <SelectItem value="prix_desc">Prix décroissant</SelectItem>
+                <SelectItem value="pieces_asc">Pièces croissant</SelectItem>
+                <SelectItem value="pieces_desc">Pièces décroissant</SelectItem>
+                <SelectItem value="surface">Surface</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="inline-flex h-9 items-center gap-0.5 rounded-lg bg-muted p-1" role="group" aria-label="Affichage">
+              <button type="button" className={segBtn(viewMode === 'list')} aria-label="Vue liste"
+                aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}>
+                <List className="h-4 w-4" />
+              </button>
+              <button type="button" className={segBtn(viewMode === 'map')} aria-label="Vue carte"
+                aria-pressed={viewMode === 'map'} onClick={() => setViewMode('map')}>
+                <MapIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            'pb-16',
+            viewMode === 'map' && 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] lg:items-start lg:gap-6',
+          )}
+        >
+          {/* Liste */}
+          <div className="min-w-0">
+            {isSearching ? (
+              <div className={gridCls}>
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-muted animate-pulse rounded-xl h-56" />
+                  <div key={i} className="space-y-3" aria-hidden="true">
+                    <div className="aspect-[4/3] rounded-[14px] bg-muted" />
+                    <div className="h-4 w-4/5 rounded bg-muted" />
+                    <div className="h-3.5 w-1/2 rounded bg-muted" />
+                    <div className="h-4 w-1/3 rounded bg-muted" />
+                  </div>
                 ))}
               </div>
             ) : resultats.length > 0 ? (
               <>
-                <div className={cn('grid gap-4', viewMode === 'list' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2')}>
+                <div className={gridCls}>
                   {resultatsVisibles.map((annonce, index) => (
                     <div
                       key={annonce.id}
                       onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
                       onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
                       className={cn(
-                        'transition-all duration-200 animate-fade-in',
-                        viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl shadow-lg',
+                        'rounded-[14px] transition-shadow duration-150 animate-fade-in motion-reduce:animate-none',
+                        viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary ring-offset-4 ring-offset-background',
                       )}
                       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
                     >
@@ -829,8 +854,8 @@ export default function RechercheAnnonces() {
                   ))}
                 </div>
                 {resultatsVisibles.length < resultats.length && (
-                  <div ref={sentinelRef} className="py-8 flex flex-col items-center gap-3">
-                    <p className="text-sm text-muted-foreground">
+                  <div ref={sentinelRef} className="pt-12 flex flex-col items-center gap-3">
+                    <p className="text-sm text-muted-foreground tabular-nums">
                       {resultatsVisibles.length} / {resultats.length} annonces
                     </p>
                     <Button variant="outline" className="cursor-pointer" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
@@ -839,10 +864,8 @@ export default function RechercheAnnonces() {
                   </div>
                 )}
               </>
-
             ) : (
-              <div className="text-center py-16">
-                <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+              <div className="rounded-[14px] border border-dashed border-border px-6 py-16 text-center">
                 <h2 className="text-xl font-semibold mb-2">Aucune annonce trouvée</h2>
                 <p className="text-muted-foreground mb-6">
                   Essayez d'ajouter des localités voisines ou d'assouplir vos filtres.
@@ -853,47 +876,47 @@ export default function RechercheAnnonces() {
               </div>
             )}
           </div>
+
+          {/* Desktop : carte à droite, qui reste visible pendant le défilement */}
+          {viewMode === 'map' && (
+            <div className="hidden lg:block sticky top-[145px] h-[calc(100dvh-161px)] overflow-hidden rounded-[14px] bg-muted">
+              <PublicAnnoncesMap
+                annonces={resultats}
+                onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
+                hoveredAnnonceId={hoveredAnnonceId}
+                onMarkerHover={setHoveredAnnonceId}
+                searchCenter={searchCoords}
+              />
+            </div>
+          )}
         </div>
-
-        {viewMode === 'map' && (
-          <>
-            {/* Desktop : carte à droite */}
-            <div className="hidden lg:block lg:w-[45%] xl:w-[50%] h-full border-l bg-muted/30">
-              <PublicAnnoncesMap
-                annonces={resultats}
-                onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
-                hoveredAnnonceId={hoveredAnnonceId}
-                onMarkerHover={setHoveredAnnonceId}
-                searchCenter={searchCoords}
-              />
-            </div>
-            {/* Mobile / tablette : carte plein écran */}
-            <div className="lg:hidden fixed inset-0 z-50 bg-background">
-              <PublicAnnoncesMap
-                annonces={resultats}
-                onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
-                hoveredAnnonceId={hoveredAnnonceId}
-                onMarkerHover={setHoveredAnnonceId}
-                searchCenter={searchCoords}
-              />
-              <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 pointer-events-none">
-                <Button
-                  size="sm"
-                  className="pointer-events-auto shadow-lg cursor-pointer"
-                  onClick={() => setViewMode('list')}
-                >
-                  <List className="h-4 w-4 mr-2" />
-                  Retour à la liste
-                </Button>
-                <Badge variant="secondary" className="pointer-events-auto shadow-lg">
-                  {resultats.length} bien{resultats.length !== 1 ? 's' : ''}
-                </Badge>
-              </div>
-            </div>
-          </>
-        )}
-
       </div>
+
+      {/* Mobile / tablette : carte plein écran */}
+      {viewMode === 'map' && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-background">
+          <PublicAnnoncesMap
+            annonces={resultats}
+            onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
+            hoveredAnnonceId={hoveredAnnonceId}
+            onMarkerHover={setHoveredAnnonceId}
+            searchCenter={searchCoords}
+          />
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2 pointer-events-none">
+            <Button
+              size="sm"
+              className={floatBtnCls}
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Button>
+            <Badge variant="secondary" className={floatChipCls}>
+              {resultats.length} bien{resultats.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+        </div>
+      )}
 
       <PublicFooter />
 
