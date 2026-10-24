@@ -84,7 +84,7 @@ export function HomeHero() {
                         Trouver mon bien
                         <ArrowRight className="h-5 w-5" aria-hidden="true" />
                       </Cta>
-                      <Cta to="#analyse-dossier" variant="secondary" className="sm:flex-1">
+                      <Cta to="/analyse-dossier?type=achat" variant="secondary" className="sm:flex-1">
                         <FileSearch className="h-5 w-5" aria-hidden="true" />
                         Tester ma solvabilité
                       </Cta>
@@ -100,7 +100,7 @@ export function HomeHero() {
                       commission seulement en cas de succès.
                     </p>
                     <div className="mt-5">
-                      <Cta to="#analyse-dossier" className="w-full sm:w-auto">
+                      <Cta to="/analyse-dossier?type=location" className="w-full sm:w-auto">
                         Analyser gratuitement mon dossier
                         <ArrowRight className="h-5 w-5" aria-hidden="true" />
                       </Cta>
