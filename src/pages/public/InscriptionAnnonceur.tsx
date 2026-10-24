@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { FUNNEL_FONT } from '@/components/funnel-ui/FunnelKit';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -257,7 +258,7 @@ export default function InscriptionAnnonceur() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+    <div className="funnel-skin min-h-screen bg-white" style={{ fontFamily: FUNNEL_FONT }}>
       <PublicHeader />
 
       <div className="pt-24 pb-16">
@@ -282,7 +283,7 @@ export default function InscriptionAnnonceur() {
             </div>
 
 
-            <Card className="p-6 md:p-8">
+            <Card className="border-0 p-0 shadow-none md:p-2">
               <form onSubmit={handleSubmit}>
                 <AnimatePresence mode="wait">
                   {/* Step 1: Choose Type */}
@@ -315,10 +316,10 @@ export default function InscriptionAnnonceur() {
                               key={option.value}
                               type="button"
                               onClick={() => updateField('type_annonceur', option.value)}
-                              className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
+                              className={`w-full p-4 rounded-[14px] border text-left transition-all flex items-center gap-4 ${
                                 formData.type_annonceur === option.value
-                                  ? 'border-primary bg-primary/5'
-                                  : 'border-border hover:border-primary/50'
+                                  ? 'border-[#222222] bg-[#f7f7f7] shadow-[inset_0_0_0_1px_#222222]'
+                                  : 'border-[#dddddd] hover:border-[#222222]'
                               }`}
                             >
                               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${

@@ -185,7 +185,7 @@ export default function FirstLogin() {
         badge="Nouveau lien"
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="flex items-start gap-3 rounded-[14px] bg-[#fff4ef] p-4 text-[15px] text-[#7a2a0c]">
             <MailWarning className="h-5 w-5 shrink-0 mt-0.5" />
             <p>
               Les liens d'invitation expirent après quelques heures et ne peuvent être utilisés

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2, AlertTriangle, RefreshCw, Ban, DollarSign, Pause } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FUNNEL_FONT } from '@/components/funnel-ui/FunnelKit';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { CancellationReasonForm, type CancellationReason } from '@/components/mandat/CancellationReasonForm';
@@ -89,8 +90,8 @@ export default function MandatRenouvellement() {
         : 'Confirmez-vous l\'annulation de votre mandat de recherche immobilière ?';
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted/30">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="funnel-skin min-h-screen flex items-center justify-center p-4 bg-white" style={{ fontFamily: FUNNEL_FONT }}>
+      <Card className="w-full max-w-md border-0 shadow-none">
         <CardHeader className="text-center pb-4">
           <div className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center bg-muted ${accentColor}`}>
             {status === 'processing' ? (
