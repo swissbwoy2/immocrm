@@ -3,19 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Send, Loader2 } from 'lucide-react';
+import { Send } from 'lucide-react';
+import { Field, Note, PrimaryButton, SecondaryButton, SheetDialog, TextArea } from '@/components/funnel-ui/FunnelKit';
 
 interface ContactAnnonceDialogProps {
   open: boolean;
@@ -87,100 +77,44 @@ export function ContactAnnonceDialog({ open, onOpenChange, annonce }: ContactAnn
     sendMessageMutation.mutate();
   };
 
+  const set = (k: keyof typeof formData) => (v: string) => setFormData((prev) => ({ ...prev, [k]: v }));
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Contacter l'annonceur</DialogTitle>
-          <DialogDescription>
-            Envoyez un message concernant : {annonce?.titre}
-          </DialogDescription>
-        </DialogHeader>
-
-        {!user && (
-          <div className="mt-2 rounded-lg border border-border bg-muted/50 p-3 text-sm">
-            <p className="text-muted-foreground">
-              Votre message sera transmis par e-mail. Pour discuter en direct avec l'annonceur
-              (messagerie instantanée, pièces jointes),{' '}
-              <button
-                type="button"
-                className="text-primary underline underline-offset-2"
-                onClick={() => navigate('/login')}
-              >
-                connectez-vous ou créez un compte
-              </button>
-              .
-            </p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nom">Nom *</Label>
-              <Input
-                id="nom"
-                value={formData.nom}
-                onChange={(e) => setFormData(prev => ({ ...prev, nom: e.target.value }))}
-                placeholder="Votre nom"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="telephone">Téléphone</Label>
-              <Input
-                id="telephone"
-                type="tel"
-                value={formData.telephone}
-                onChange={(e) => setFormData(prev => ({ ...prev, telephone: e.target.value }))}
-                placeholder="+41 XX XXX XX XX"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              placeholder="votre@email.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">Message *</Label>
-            <Textarea
-              id="message"
-              value={formData.message}
-              onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-              rows={6}
-              required
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={sendMessageMutation.isPending}>
-              {sendMessageMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Envoi...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Envoyer
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <SheetDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<Send className="h-5 w-5" strokeWidth={1.8} />}
+      title="Contacter l'annonceur"
+      description={<>Votre message concernant : {annonce?.titre}</>}
+      footer={
+        <>
+          <SecondaryButton onClick={() => onOpenChange(false)}>Annuler</SecondaryButton>
+          <PrimaryButton loading={sendMessageMutation.isPending} onClick={() => handleSubmit({ preventDefault() {} } as React.FormEvent)}>
+            Envoyer
+          </PrimaryButton>
+        </>
+      }
+    >
+      {!user && (
+        <div className="mb-4">
+          <Note>
+            Votre message sera transmis par e-mail. Pour discuter en direct avec l'annonceur (messagerie instantanée, pièces jointes),{' '}
+            <button type="button" className="cursor-pointer font-medium text-[#222222] underline underline-offset-2" onClick={() => navigate('/login')}>
+              connectez-vous ou créez un compte
+            </button>
+            .
+          </Note>
+        </div>
+      )}
+      <form onSubmit={handleSubmit} noValidate className="grid gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Field id="ca-nom" label="Nom" value={formData.nom} onChange={set('nom')} autoComplete="name" />
+          <Field id="ca-tel" label="Téléphone (facultatif)" type="tel" inputMode="tel" value={formData.telephone} onChange={set('telephone')} autoComplete="tel" placeholder="+41 …" />
+        </div>
+        <Field id="ca-email" label="E-mail" type="email" inputMode="email" value={formData.email} onChange={set('email')} autoComplete="email" />
+        <TextArea id="ca-message" label="Message" value={formData.message} onChange={set('message')} rows={6} />
+        <button type="submit" className="sr-only">Envoyer</button>
+      </form>
+    </SheetDialog>
   );
 }
