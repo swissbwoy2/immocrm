@@ -645,7 +645,7 @@ export default function RechercheAnnonces() {
     cn(
       'inline-flex h-7 w-8 items-center justify-center rounded-md transition-colors duration-150 cursor-pointer',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-      active ? 'bg-background text-foreground' : 'text-muted-foreground hover:text-foreground',
+      active ? 'bg-background text-foreground ring-1 ring-border' : 'text-muted-foreground hover:text-foreground',
     );
 
   return (
@@ -803,7 +803,7 @@ export default function RechercheAnnonces() {
               </SelectContent>
             </Select>
 
-            <div className="inline-flex h-9 items-center gap-0.5 rounded-lg bg-muted p-1" role="group" aria-label="Affichage">
+            <div className="inline-flex h-9 items-center gap-0.5 rounded-lg bg-secondary p-1" role="group" aria-label="Affichage">
               <button type="button" className={segBtn(viewMode === 'list')} aria-label="Vue liste"
                 aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}>
                 <List className="h-4 w-4" />
