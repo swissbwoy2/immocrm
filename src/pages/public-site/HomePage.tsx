@@ -49,13 +49,13 @@ export default function HomePage() {
   return (
     <PublicSiteLayout stickyCta={<HomeMobileBar />}>
       <div className="home-tokens bg-white">
-        {/* 1. Choix du parcours, accroche, photo, propriétaires */}
-        <HomeHero />
-
-        {/* Bannière publicitaire configurable par l'admin (masquée si aucune bannière active) */}
-        <div className="mx-auto w-full max-w-[1120px] px-4 pt-5 md:px-6 empty:hidden">
+        {/* Bannière publicitaire configurable par l'admin, tout en haut (masquée si aucune bannière active) */}
+        <div className="mx-auto w-full max-w-[1120px] px-4 pt-4 md:px-6 md:pt-6 empty:hidden">
           <DashboardAdBanner />
         </div>
+
+        {/* 1. Choix du parcours, accroche, « Notre sélection », propriétaires */}
+        <HomeHero />
 
         {/* 2. Calculateur (ancre #analyse-dossier) */}
         <HomeCalculator />
