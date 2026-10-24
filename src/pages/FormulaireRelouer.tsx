@@ -3,26 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Upload, X, Loader2, KeyRound, Home, Wallet, Camera, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { BedDouble, Building2, Clock, Home, Loader2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { logSignupAttempt, humanizeAuthError } from '@/lib/signupTracking';
 import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
-
-import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
-import { LandingFormCard } from '@/components/forms-premium/LandingFormCard';
-import { LandingStepIndicator } from '@/components/forms-premium/LandingStepIndicator';
-import { LandingProgressBlock } from '@/components/forms-premium/LandingProgressBlock';
-import { RelouerForfaitBanner } from '@/components/forms-premium/RelouerForfaitBanner';
-import { LandingButton } from '@/components/forms-premium/LandingButton';
-import { LandingInput } from '@/components/forms-premium/LandingInput';
-import { LandingSelect } from '@/components/forms-premium/LandingSelect';
-import { LandingTextarea } from '@/components/forms-premium/LandingTextarea';
-import { LandingCheckbox } from '@/components/forms-premium/LandingCheckbox';
-import { LandingRadioGroup } from '@/components/forms-premium/LandingRadioGroup';
+import {
+  CheckRow, Choice, ChoiceList, DoneScreen, Field, FunnelBottomBar, FunnelHeader, FunnelMain, FunnelPage, Note,
+  PrimaryButton, Question, StepTransition, TextArea, Tile, TrustLine, useFunnelSteps,
+} from '@/components/funnel-ui/FunnelKit';
 
 // ───────────────────────── Schema ─────────────────────────
 const schema = z.object({
@@ -66,16 +57,9 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 interface PhotoData { url: string; path: string }
 
-const STEPS = [
-  { id: 1, title: 'Logement', icon: '🏠' },
-  { id: 2, title: 'Bail actuel', icon: '📄' },
-  { id: 3, title: 'Photos', icon: '📷' },
-  { id: 4, title: 'Coordonnées', icon: '👤' },
-];
 
 export default function FormulaireRelouer() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<PhotoData[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -85,7 +69,6 @@ export default function FormulaireRelouer() {
     window.scrollTo(0, 0);
     document.title = 'Formulaire locataire sortant — Relouer mon appartement | Logisorama';
   }, []);
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [step]);
 
   const {
     register, handleSubmit, watch, setValue, formState: { errors }, trigger,
@@ -150,17 +133,6 @@ export default function FormulaireRelouer() {
 
   const removePhoto = (i: number) => setPhotos((prev) => prev.filter((_, idx) => idx !== i));
 
-  const next = async () => {
-    const fields: (keyof FormData)[][] = [
-      ['type_bien', 'adresse', 'ville', 'nombre_pieces'],
-      ['loyer_net', 'date_reprise', 'resiliation_donnee', 'regie_accepte', 'urgence'],
-      [],
-      ['prenom', 'nom', 'email', 'telephone', 'password'],
-    ];
-    const valid = await trigger(fields[step - 1]);
-    if (valid) setStep((s) => Math.min(s + 1, 4));
-  };
-
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     const SOURCE = 'relouer-mon-appartement';
@@ -180,7 +152,11 @@ export default function FormulaireRelouer() {
       if (data.parking) equipements.push('Parking');
 
       // 1) Toujours créer le lead pour ne jamais perdre le contact
-      const { data: leadRow, error: leadError } = await (supabase.from('leads') as any).insert({
+      // id généré côté client, sans .select() : un visiteur anonyme n'a pas le droit de relire la table leads,
+      // et une insertion avec relecture serait refusée en entier (le lead serait perdu).
+      const leadId = crypto.randomUUID();
+      const { error: leadError } = await (supabase.from('leads') as any).insert({
+        id: leadId,
         prenom: data.prenom,
         nom: data.nom,
         email: data.email,
@@ -211,11 +187,11 @@ export default function FormulaireRelouer() {
           description: data.description,
           photos: photos.map((p) => p.url),
         }),
-      }).select('id').single();
+      });
       if (leadError) console.warn('Lead insert warning:', leadError);
 
       const relouerProperty = {
-        lead_id: leadRow?.id || null,
+        lead_id: leadError ? null : leadId,
         type_bien: data.type_bien,
         adresse: data.adresse,
         npa: data.npa,
@@ -298,375 +274,285 @@ export default function FormulaireRelouer() {
     }
   };
 
+  /* ---------- Parcours : une question par page ---------- */
+  type StepKey = 'type' | 'adresse' | 'pieces' | 'details' | 'loyer' | 'dates' | 'resiliation' | 'regie' | 'motif' | 'urgence' | 'photos' | 'coord';
+  const STEP_KEYS: StepKey[] = ['type', 'adresse', 'pieces', 'details', 'loyer', 'dates', 'resiliation', 'regie', 'motif', 'urgence', 'photos', 'coord'];
+  const STEP_FIELDS: Record<StepKey, (keyof FormData)[]> = {
+    type: ['type_bien'], adresse: ['adresse', 'ville'], pieces: ['nombre_pieces'], details: [], loyer: ['loyer_net'],
+    dates: ['date_reprise'], resiliation: ['resiliation_donnee'], regie: ['regie_accepte'], motif: [], urgence: ['urgence'],
+    photos: [], coord: ['prenom', 'nom', 'email', 'telephone', 'password'],
+  };
+  const v = watch();
+  const answered: Record<StepKey, boolean> = {
+    type: !!v.type_bien,
+    adresse: (v.adresse || '').length >= 2 && (v.ville || '').length >= 2,
+    pieces: !!v.nombre_pieces,
+    details: true,
+    loyer: !!v.loyer_net,
+    dates: !!v.date_reprise,
+    resiliation: !!v.resiliation_donnee,
+    regie: !!v.regie_accepte,
+    motif: true,
+    urgence: !!v.urgence,
+    photos: !uploading,
+    coord: true,
+  };
+  const missing = STEP_KEYS.findIndex((k) => !answered[k]);
+  const { step, dir, go, pick } = useFunnelSteps(STEP_KEYS.length, missing === -1 ? STEP_KEYS.length - 1 : missing);
+  const current = STEP_KEYS[step];
+  const isLast = step === STEP_KEYS.length - 1;
+
+  const choose = (field: keyof FormData, value: string) =>
+    pick(() => setValue(field, value as any, { shouldValidate: true }), step + 1);
+
+  const onNext = async () => {
+    const ok = await trigger(STEP_FIELDS[current]);
+    if (!ok) return;
+    if (isLast) handleSubmit(onSubmit)();
+    else go(step + 1);
+  };
+
   // ───── Écran de succès ─────
   if (done) {
     return (
-      <LandingFormShell>
-        <div className="container mx-auto px-4 max-w-2xl py-16">
-          <LandingFormCard>
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-5">
-                <KeyRound className="h-7 w-7 text-primary" />
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
-                Demande envoyée !
-              </h1>
-              <p className="text-muted-foreground leading-relaxed mb-8">
-                Votre demande a bien été transmise à Logisorama.ch. Notre équipe va analyser
-                votre logement et vous recontacter rapidement pour vous aider à trouver un
-                repreneur solvable.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  onClick={() => navigate('/')}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md hover:scale-[1.02] transition-all"
-                >
-                  Retour à l’accueil
-                </button>
-                <button
-                  onClick={() => navigate('/rendez-vous')}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                >
-                  Prendre rendez-vous
-                </button>
-              </div>
-            </div>
-          </LandingFormCard>
-        </div>
-      </LandingFormShell>
+      <DoneScreen
+        title="Demande envoyée"
+        cta={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <PrimaryButton onClick={() => navigate('/')}>Retour à l’accueil</PrimaryButton>
+            <button type="button" onClick={() => navigate('/rendez-vous')}
+              className="inline-flex h-12 cursor-pointer items-center justify-center rounded-lg px-4 text-[16px] font-semibold text-[#222222] underline underline-offset-4 transition-colors duration-200 hover:bg-[#f7f7f7]">
+              Prendre rendez-vous
+            </button>
+          </div>
+        }
+      >
+        <p>
+          Votre demande a bien été transmise à Logisorama.ch. Notre équipe va analyser votre logement et vous recontacter
+          rapidement pour vous aider à trouver un repreneur solvable.
+        </p>
+      </DoneScreen>
     );
   }
 
+  const ico = 'h-6 w-6';
+  const questions: Record<StepKey, { q: string; s?: string }> = {
+    type: { q: 'Quel type de logement quittez-vous ?', s: 'Votre logement actuel.' },
+    adresse: { q: 'Quelle est son adresse ?', s: 'Rue et numéro, puis NPA et ville.' },
+    pieces: { q: 'Combien de pièces ?' },
+    details: { q: 'Surface, étage et équipements', s: 'Facultatif, mais les candidats adorent les détails.' },
+    loyer: { q: 'Quel est votre loyer actuel ?', s: 'Le loyer net et les charges, par mois.' },
+    dates: { q: 'Pour quand cherchez-vous un repreneur ?' },
+    resiliation: { q: 'Avez-vous déjà donné votre résiliation ?' },
+    regie: { q: 'La régie accepte-t-elle une reprise de bail ?' },
+    motif: { q: 'Quel est le motif de votre départ ?', s: 'Facultatif.' },
+    urgence: { q: 'Quel est votre niveau d’urgence ?' },
+    photos: { q: 'Présentez votre logement', s: 'Jusqu’à 8 photos et une description. Des photos lumineuses attirent plus vite des candidats sérieux.' },
+    coord: { q: 'Vos coordonnées', s: 'Dernière étape.' },
+  };
+
+  const err = (k: keyof FormData) => (errors[k]?.message as string | undefined) ?? null;
+
   return (
-    <LandingFormShell>
-      <RelouerForfaitBanner />
-      <LandingProgressBlock currentStep={step - 1} totalSteps={STEPS.length} stepTitle={STEPS[step - 1]?.title ?? ''} />
-      <LandingStepIndicator steps={STEPS} currentStep={step - 1} />
-
-      <div className="container mx-auto px-4 max-w-3xl pb-12 pt-2">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Formulaire locataire sortant — Relouer mon appartement
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
-            Complétez les informations de votre logement afin que notre équipe puisse vous aider
-            à trouver rapidement un repreneur solvable et éviter une double charge de loyer.
-          </p>
-        </div>
-
-        <LandingFormCard>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <AnimatePresence mode="wait">
-
-              {/* ─── Step 1 ─── */}
-              {step === 1 && (
-                <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Home className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-bold text-foreground">Votre logement actuel</h2>
-                  </div>
-
-                  <LandingSelect
-                    label="Type de logement"
-                    required
-                    value={watch('type_bien') || ''}
-                    onValueChange={(v) => setValue('type_bien', v, { shouldValidate: true })}
-                    options={[
-                      { value: 'Studio', label: 'Studio' },
-                      { value: 'Appartement', label: 'Appartement' },
-                      { value: 'Duplex', label: 'Duplex' },
-                      { value: 'Maison', label: 'Maison' },
-                      { value: 'Chambre / colocation', label: 'Chambre / colocation' },
-                    ]}
-                    placeholder="Choisir..."
-                    error={errors.type_bien?.message}
-                  />
-
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1.5">
-                      Adresse du logement <span className="text-destructive">*</span>
-                    </p>
-                    <GoogleAddressAutocomplete
-                      value={watch('adresse') || ''}
-                      onChange={handleAddressChange}
-                      onInputChange={(v) => setValue('adresse', v)}
-                      placeholder="Rue et numéro"
-                      restrictToSwitzerland
-                    />
-                    {errors.adresse && <p className="text-xs text-destructive mt-1">{errors.adresse.message}</p>}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <LandingInput label="NPA" {...register('npa')} value={watch('npa') || ''} placeholder="1207" />
-                    <LandingInput label="Ville" required {...register('ville')} value={watch('ville') || ''} placeholder="Genève" error={errors.ville?.message} />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="relative">
-                      <label className="absolute left-4 top-1 text-[11px] font-medium text-primary z-10 pointer-events-none">
-                        Pièces<span className="text-destructive ml-0.5">*</span>
-                      </label>
-                      <select
-                        {...register('nombre_pieces')}
-                        defaultValue=""
-                        className="w-full appearance-none rounded-xl border border-border bg-background text-foreground pt-6 pb-2 px-4 text-sm outline-none focus:border-primary focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)] transition-all"
-                      >
-                        <option value="" disabled>Choisir…</option>
-                        {['1','1.5','2','2.5','3','3.5','4','4.5','5','5.5','6','6.5+'].map(v => (
-                          <option key={v} value={v}>{v}</option>
-                        ))}
-                      </select>
-                      {errors.nombre_pieces?.message && (
-                        <p className="text-[11px] text-destructive mt-1 pl-1">{errors.nombre_pieces.message}</p>
-                      )}
-                    </div>
-                    <LandingInput label="Surface (m²)" {...register('surface')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="80" />
-                    <LandingInput label="Étage" {...register('etage')} type="text" inputMode="numeric" pattern="[0-9]*" placeholder="3" />
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-3">Équipements</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {([
-                        ['ascenseur', 'Ascenseur'],
-                        ['balcon', 'Balcon'],
-                        ['terrasse', 'Terrasse'],
-                        ['cave', 'Cave'],
-                        ['parking', 'Parking'],
-                      ] as [keyof FormData, string][]).map(([key, label]) => (
-                        <LandingCheckbox
-                          key={key}
-                          id={String(key)}
-                          checked={Boolean(watch(key))}
-                          onCheckedChange={(c) => setValue(key, c as any)}
-                          label={label}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ─── Step 2 ─── */}
-              {step === 2 && (
-                <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wallet className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-bold text-foreground">Conditions de votre bail actuel</h2>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <LandingInput label="Loyer net (CHF)" required {...register('loyer_net')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="1800" error={errors.loyer_net?.message} />
-                    <LandingInput label="Charges (CHF)" {...register('charges')} type="text" inputMode="decimal" pattern="[0-9]*" placeholder="200" />
-                  </div>
-
-                  {loyerBrut && (
-                    <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3 text-sm">
-                      <span className="text-muted-foreground">Loyer brut estimé : </span>
-                      <span className="font-bold text-primary">{loyerBrut}</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <LandingInput label="Date de reprise souhaitée" required type="date" {...register('date_reprise')} value={watch('date_reprise') || ''} error={errors.date_reprise?.message} />
-                    <LandingInput label="Date de fin officielle du bail" optional type="date" {...register('date_fin_bail')} value={watch('date_fin_bail') || ''} />
-                  </div>
-
-                  <LandingRadioGroup
-                    label="Avez-vous déjà donné votre résiliation ?"
-                    required
-                    columns={3}
-                    value={watch('resiliation_donnee') || ''}
-                    onChange={(v) => setValue('resiliation_donnee', v, { shouldValidate: true })}
-                    options={[
-                      { value: 'oui', label: 'Oui' },
-                      { value: 'en_cours', label: 'En cours' },
-                      { value: 'non', label: 'Non' },
-                    ]}
-                  />
-                  {errors.resiliation_donnee && <p className="text-xs text-destructive">{errors.resiliation_donnee.message}</p>}
-
-                  <LandingRadioGroup
-                    label="La régie accepte-t-elle une reprise de bail ?"
-                    required
-                    columns={3}
-                    value={watch('regie_accepte') || ''}
-                    onChange={(v) => setValue('regie_accepte', v, { shouldValidate: true })}
-                    options={[
-                      { value: 'oui', label: 'Oui' },
-                      { value: 'non', label: 'Non' },
-                      { value: 'inconnu', label: 'Je ne sais pas' },
-                    ]}
-                  />
-                  {errors.regie_accepte && <p className="text-xs text-destructive">{errors.regie_accepte.message}</p>}
-
-                  <LandingSelect
-                    label="Motif du départ"
-                    value={watch('motif_depart') || ''}
-                    onValueChange={(v) => setValue('motif_depart', v)}
-                    options={[
-                      { value: 'Déménagement', label: 'Déménagement' },
-                      { value: 'Achat immobilier', label: 'Achat immobilier' },
-                      { value: 'Mutation professionnelle', label: 'Mutation professionnelle' },
-                      { value: 'Séparation', label: 'Séparation' },
-                      { value: 'Raisons familiales', label: 'Raisons familiales' },
-                      { value: 'Autre', label: 'Autre' },
-                    ]}
-                    placeholder="Choisir..."
-                  />
-
-                  <LandingRadioGroup
-                    label="Quel est votre niveau d’urgence ?"
-                    required
-                    columns={1}
-                    value={watch('urgence') || ''}
-                    onChange={(v) => setValue('urgence', v, { shouldValidate: true })}
-                    options={[
-                      { value: 'tres_urgent', label: 'Très urgent', description: 'Je risque de payer deux loyers' },
-                      { value: 'urgent', label: 'Urgent', description: 'Reprise souhaitée sous 30 jours' },
-                      { value: 'flexible', label: 'Flexible', description: 'Pas de contrainte de date stricte' },
-                    ]}
-                  />
-                  {errors.urgence && <p className="text-xs text-destructive">{errors.urgence.message}</p>}
-
-                  <LandingTextarea
-                    label="Description libre"
-                    optional
-                    {...register('description')}
-                    value={watch('description') || ''}
-                    placeholder="Atouts du logement, transports, commerces, écoles, vue, équipements, conditions particulières, informations utiles pour les candidats…"
-                    rows={4}
-                  />
-                </motion.div>
-              )}
-
-              {/* ─── Step 3 ─── */}
-              {step === 3 && (
-                <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Camera className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-bold text-foreground">Ajoutez les photos de votre logement</h2>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Vous pouvez ajouter jusqu’à 8 photos. Des photos lumineuses permettent
-                    d’attirer plus rapidement des candidats sérieux.
-                  </p>
-
-                  <div className="relative border-2 border-dashed rounded-2xl p-8 text-center border-border bg-muted/30 hover:border-primary/50 transition-colors">
-                    {uploading ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">Upload en cours…</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Upload className="h-5 w-5 text-primary" />
-                        </div>
-                        <p className="font-medium mb-1 text-foreground">Glissez ou sélectionnez vos photos</p>
-                        <p className="text-xs text-muted-foreground mb-4">JPG, PNG, WebP — 10 Mo max par image · 8 photos max</p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          onChange={(e) => handleFiles(e.target.files)}
-                          disabled={photos.length >= 8}
-                          aria-label="Sélectionner des photos"
-                        />
-                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-background text-foreground text-sm pointer-events-none">
-                          Parcourir les fichiers
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  {photos.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {photos.map((p, i) => (
-                        <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
-                          <img src={p.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => removePhoto(i)}
-                            aria-label={`Supprimer photo ${i + 1}`}
-                            className="absolute top-1 right-1 p-1 rounded-full bg-background/90 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              {/* ─── Step 4 ─── */}
-              {step === 4 && (
-                <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }} className="space-y-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-5 w-5 text-primary" />
-                    <h2 className="text-lg font-bold text-foreground">Vos coordonnées</h2>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <LandingInput label="Prénom" required {...register('prenom')} value={watch('prenom') || ''} error={errors.prenom?.message} />
-                    <LandingInput label="Nom" required {...register('nom')} value={watch('nom') || ''} error={errors.nom?.message} />
-                  </div>
-
-                  <LandingInput label="Téléphone" required type="tel" {...register('telephone')} value={watch('telephone') || ''} placeholder="+41 79 123 45 67" error={errors.telephone?.message} />
-                  <LandingInput label="Email" required type="email" {...register('email')} value={watch('email') || ''} placeholder="vous@exemple.ch" error={errors.email?.message} />
-
-                  <LandingCheckbox
-                    id="creer_compte"
-                    checked={Boolean(watch('creer_compte'))}
-                    onCheckedChange={(c) => setValue('creer_compte', c as boolean)}
-                    label="Créer un compte pour suivre ma demande"
-                    description="Optionnel — vous pourrez suivre l’avancement de la reprise dans l’espace client."
-                  />
-
-                  {watch('creer_compte') && (
-                    <>
-                      <LandingInput
-                        label="Mot de passe"
-                        required
-                        type="password"
-                        {...register('password')}
-                        value={watch('password') || ''}
-                        placeholder="8 caractères minimum"
-                        error={errors.password?.message}
-                        hint="Minimum 8 caractères"
-                      />
-                      <div className="text-center">
-                        <ForgotPasswordLink defaultEmail={watch('email')} />
-                      </div>
-                    </>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="flex justify-between items-center mt-8 pt-6 border-t border-border gap-4">
-              <LandingButton
-                variant="back"
-                onClick={() => setStep((s) => Math.max(1, s - 1))}
-                disabled={step === 1}
-              >
-                Précédent
-              </LandingButton>
-              {step < 4 ? (
-                <LandingButton variant="next" onClick={next}>
-                  Suivant
-                </LandingButton>
-              ) : (
-                <LandingButton variant="submit" loading={submitting} disabled={submitting} onClick={handleSubmit(onSubmit)}>
-                  Envoyer ma demande de reprise de bail
-                </LandingButton>
-              )}
+    <FunnelPage>
+      <FunnelHeader step={step} total={STEP_KEYS.length} />
+      <FunnelMain>
+        {step === 0 && (
+          <section className="mb-6">
+            <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-[#222222] md:text-[40px]">Relouer mon appartement</h1>
+            <p className="mt-2 text-[16px] leading-relaxed text-[#3f3f3f]">
+              Décrivez votre logement : notre équipe trouve rapidement un repreneur solvable et vous évite une double charge de loyer.
+            </p>
+            <div className="mt-5 rounded-[14px] bg-[#f7f7f7] p-5">
+              <p className="text-[14px] font-semibold text-[#6a6a6a]">Forfait locataire sortant</p>
+              <p className="mt-1 text-[22px] font-semibold tracking-[-0.2px] text-[#222222]">399.– CHF par appartement</p>
+              <p className="mt-2 text-[15px] leading-relaxed text-[#3f3f3f]">
+                Facturé à l’activation de la recherche de locataire. Paiement par facture QR ou Twint via{' '}
+                <a href="tel:+41764839199" className="cursor-pointer font-medium text-[#222222] underline">076 483 91 99</a>.
+              </p>
             </div>
-          </form>
-        </LandingFormCard>
-      </div>
-    </LandingFormShell>
+          </section>
+        )}
+
+        <StepTransition stepKey={current} dir={dir}>
+          <Question {...questions[current]} />
+
+          {current === 'type' && (
+            <ChoiceList>
+              {['Studio', 'Appartement', 'Duplex', 'Maison', 'Chambre / colocation'].map((o, i) => (
+                <Choice key={o} index={i} selected={v.type_bien === o} onClick={() => choose('type_bien', o)}
+                  icon={o === 'Maison' ? <Home className={ico} strokeWidth={1.6} /> : o === 'Chambre / colocation' ? <BedDouble className={ico} strokeWidth={1.6} /> : <Building2 className={ico} strokeWidth={1.6} />}
+                  label={o} />
+              ))}
+            </ChoiceList>
+          )}
+
+          {current === 'adresse' && (
+            <div className="mt-5 grid gap-3">
+              <div>
+                <GoogleAddressAutocomplete
+                  value={v.adresse || ''}
+                  onChange={handleAddressChange}
+                  onInputChange={(val) => setValue('adresse', val)}
+                  placeholder="Rue et numéro"
+                  restrictToSwitzerland
+                  className="h-14 rounded-lg border-[#b0b0b0] text-[16px] text-[#222222] focus-visible:ring-[#222222]"
+                />
+                {err('adresse') && <p className="mt-1.5 text-[13px] text-[#c13515]">{err('adresse')}</p>}
+              </div>
+              <div className="grid grid-cols-[2fr_3fr] gap-3">
+                <Field id="rl-npa" label="NPA" value={v.npa || ''} onChange={(val) => setValue('npa', val)} inputMode="numeric" placeholder="1207" />
+                <Field id="rl-ville" label="Ville" value={v.ville || ''} onChange={(val) => setValue('ville', val, { shouldValidate: !!errors.ville })} placeholder="Genève" error={err('ville')} />
+              </div>
+            </div>
+          )}
+
+          {current === 'pieces' && (
+            <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5+'].map((o) => (
+                <Tile key={o} selected={v.nombre_pieces === o} onClick={() => choose('nombre_pieces', o)}>{o}</Tile>
+              ))}
+            </div>
+          )}
+
+          {current === 'details' && (
+            <div className="mt-5 grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field id="rl-surface" label="Surface" value={v.surface || ''} onChange={(val) => setValue('surface', val)} inputMode="decimal" suffix="m²" placeholder="80" />
+                <Field id="rl-etage" label="Étage" value={v.etage || ''} onChange={(val) => setValue('etage', val)} inputMode="numeric" placeholder="3" />
+              </div>
+              <p className="mt-2 text-[14px] font-semibold text-[#222222]">Équipements</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {([
+                  ['ascenseur', 'Ascenseur'], ['balcon', 'Balcon'], ['terrasse', 'Terrasse'], ['cave', 'Cave'], ['parking', 'Parking'],
+                ] as [keyof FormData, string][]).map(([key, label]) => (
+                  <Tile key={key} selected={Boolean(v[key])} onClick={() => setValue(key, !v[key] as any)}>{label}</Tile>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {current === 'loyer' && (
+            <div className="mt-5 grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field id="rl-loyer" label="Loyer net" value={v.loyer_net || ''} onChange={(val) => setValue('loyer_net', val, { shouldValidate: !!errors.loyer_net })} inputMode="decimal" suffix="CHF" autoFocus placeholder="1800" error={err('loyer_net')} />
+                <Field id="rl-charges" label="Charges" value={v.charges || ''} onChange={(val) => setValue('charges', val)} inputMode="decimal" suffix="CHF" placeholder="200" />
+              </div>
+              {loyerBrut && <Note>Loyer brut estimé : <strong className="font-semibold text-[#222222]">{loyerBrut}</strong></Note>}
+            </div>
+          )}
+
+          {current === 'dates' && (
+            <div className="mt-5 grid gap-3">
+              <Field id="rl-reprise" label="Date de reprise souhaitée" type="date" value={v.date_reprise || ''} onChange={(val) => setValue('date_reprise', val, { shouldValidate: !!errors.date_reprise })} error={err('date_reprise')} />
+              <Field id="rl-finbail" label="Date de fin officielle du bail (facultatif)" type="date" value={v.date_fin_bail || ''} onChange={(val) => setValue('date_fin_bail', val)} />
+            </div>
+          )}
+
+          {current === 'resiliation' && (
+            <ChoiceList>
+              {[['oui', 'Oui'], ['en_cours', 'En cours'], ['non', 'Non']].map(([val, label], i) => (
+                <Choice key={val} index={i} selected={v.resiliation_donnee === val} onClick={() => choose('resiliation_donnee', val)} label={label} />
+              ))}
+            </ChoiceList>
+          )}
+
+          {current === 'regie' && (
+            <ChoiceList>
+              {[['oui', 'Oui'], ['non', 'Non'], ['inconnu', 'Je ne sais pas']].map(([val, label], i) => (
+                <Choice key={val} index={i} selected={v.regie_accepte === val} onClick={() => choose('regie_accepte', val)} label={label} />
+              ))}
+            </ChoiceList>
+          )}
+
+          {current === 'motif' && (
+            <ChoiceList>
+              {['Déménagement', 'Achat immobilier', 'Mutation professionnelle', 'Séparation', 'Raisons familiales', 'Autre'].map((o, i) => (
+                <Choice key={o} index={i} selected={v.motif_depart === o} onClick={() => choose('motif_depart', o)} label={o} />
+              ))}
+            </ChoiceList>
+          )}
+
+          {current === 'urgence' && (
+            <ChoiceList>
+              {[
+                ['tres_urgent', 'Très urgent', 'Je risque de payer deux loyers'],
+                ['urgent', 'Urgent', 'Reprise souhaitée sous 30 jours'],
+                ['flexible', 'Flexible', 'Pas de contrainte de date stricte'],
+              ].map(([val, label, hint], i) => (
+                <Choice key={val} index={i} selected={v.urgence === val} onClick={() => choose('urgence', val)}
+                  icon={<Clock className={ico} strokeWidth={1.6} />} label={label} hint={hint} />
+              ))}
+            </ChoiceList>
+          )}
+
+          {current === 'photos' && (
+            <div className="mt-5 grid gap-4">
+              <div className="relative rounded-[14px] bg-[#f7f7f7] p-8 text-center transition-colors duration-200 hover:bg-[#f2f2f2]">
+                {uploading ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#222222]" />
+                    <p className="text-[15px] text-[#3f3f3f]">Envoi des photos…</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="mx-auto h-7 w-7 text-[#222222]" strokeWidth={1.6} />
+                    <p className="mt-3 text-[16px] font-semibold text-[#222222]">Ajouter des photos</p>
+                    <p className="mt-1 text-[14px] text-[#6a6a6a]">JPG, PNG ou WebP · 10 Mo max · 8 photos max</p>
+                    <input type="file" accept="image/*" multiple className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      onChange={(e) => handleFiles(e.target.files)} disabled={photos.length >= 8} aria-label="Sélectionner des photos" />
+                  </>
+                )}
+              </div>
+              {photos.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {photos.map((p, i) => (
+                    <div key={p.path} className="relative aspect-square overflow-hidden rounded-[14px]">
+                      <img src={p.url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => removePhoto(i)} aria-label={`Supprimer la photo ${i + 1}`}
+                        className="absolute right-1.5 top-1.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-[#222222]">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <TextArea id="rl-desc" label="Description (facultatif)" value={v.description || ''} onChange={(val) => setValue('description', val)} rows={4}
+                placeholder="Atouts du logement, transports, commerces, écoles, vue, conditions particulières…" />
+            </div>
+          )}
+
+          {current === 'coord' && (
+            <form className="mt-5" noValidate onSubmit={(e) => { e.preventDefault(); onNext(); }}>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field id="rl-prenom" label="Prénom" value={v.prenom || ''} onChange={(val) => setValue('prenom', val, { shouldValidate: !!errors.prenom })} autoComplete="given-name" autoFocus error={err('prenom')} />
+                  <Field id="rl-nom" label="Nom" value={v.nom || ''} onChange={(val) => setValue('nom', val, { shouldValidate: !!errors.nom })} autoComplete="family-name" error={err('nom')} />
+                </div>
+                <Field id="rl-tel" label="Téléphone" type="tel" inputMode="tel" value={v.telephone || ''} onChange={(val) => setValue('telephone', val, { shouldValidate: !!errors.telephone })} autoComplete="tel" placeholder="+41 79 123 45 67" error={err('telephone')} />
+                <Field id="rl-email" label="E-mail" type="email" inputMode="email" value={v.email || ''} onChange={(val) => setValue('email', val, { shouldValidate: !!errors.email })} autoComplete="email" placeholder="vous@exemple.ch" error={err('email')} />
+                <CheckRow id="rl-compte" checked={Boolean(v.creer_compte)} onChange={(c) => setValue('creer_compte', c)}>
+                  Créer un compte pour suivre ma demande
+                  <span className="mt-0.5 block text-[14px] text-[#6a6a6a]">Facultatif : vous suivrez l’avancement de la reprise dans l’espace client.</span>
+                </CheckRow>
+                {v.creer_compte && (
+                  <>
+                    <Field id="rl-pass" label="Mot de passe (8 caractères minimum)" type="password" value={v.password || ''} onChange={(val) => setValue('password', val, { shouldValidate: !!errors.password })} autoComplete="new-password" error={err('password')} />
+                    <div className="text-center"><ForgotPasswordLink defaultEmail={v.email} /></div>
+                  </>
+                )}
+              </div>
+              <button type="submit" className="sr-only">Envoyer</button>
+            </form>
+          )}
+        </StepTransition>
+
+        <TrustLine />
+      </FunnelMain>
+
+      <FunnelBottomBar step={step} total={STEP_KEYS.length} onBack={() => go(step - 1)} onNext={onNext}
+        nextDisabled={!isLast && !answered[current]} loading={submitting}
+        nextLabel={isLast ? 'Envoyer ma demande' : 'Suivant'} />
+    </FunnelPage>
   );
 }

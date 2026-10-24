@@ -248,6 +248,58 @@ All colors MUST be HSL.
   .theme-luxury [data-split-title] {
     color: #ffffff !important;
   }
+
+  /* FORMULAIRES PUBLICS — skin marketplace (réf. tunnel /courtier), scopé via .funnel-skin.
+     Se pose par-dessus .theme-luxury : mêmes composants, jetons de couleur Logisorama sobres. */
+  .theme-luxury.funnel-skin,
+  .funnel-skin {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+    --primary: 160 59% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 97%;
+    --secondary-foreground: 0 0% 13%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 160 59% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 12 80% 42%;
+    --border: 0 0% 87%;
+    --input: 0 0% 69%;
+    --ring: 0 0% 13%;
+    --radius: 0.875rem;
+    --shadow-glow: none;
+    --shadow-card-hover: none;
+    --imr-green: 160 59% 30%;
+    --imr-green-light: 160 59% 30%;
+    --imr-green-pale: 0 0% 97%;
+    --imr-ink: 0 0% 13%;
+    --imr-ink-soft: 0 0% 25%;
+    font-family: Inter, -apple-system, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+  }
+  .theme-luxury.funnel-skin h1,
+  .theme-luxury.funnel-skin h2,
+  .theme-luxury.funnel-skin h3,
+  .theme-luxury.funnel-skin h4 { color: #222222; letter-spacing: -0.01em; }
+  .funnel-skin input,
+  .funnel-skin select,
+  .funnel-skin textarea { font-size: 16px; }
+  .funnel-skin .luxury-icon-badge {
+    background: #f7f7f7 !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+  .funnel-skin .luxury-icon-badge > span { color: #222222 !important; }
+  .funnel-skin .luxury-shimmer-btn,
+  .funnel-skin .luxury-cta-glow {
+    background-image: none !important;
+    background-color: #1F7A5C !important;
+    box-shadow: none !important;
+  }
 }
 
 @layer base {

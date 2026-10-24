@@ -1,29 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  MapPin,
-  ExternalLink,
-  CheckCircle2,
-  Loader2,
-  Sun,
-  Sunset,
-  Clock,
-  Lock,
-  ShieldCheck,
-  KeyRound,
-  Home,
-  Hammer,
-  Banknote,
-  Building2,
-  PhoneCall,
+  Banknote, Briefcase, Building2, CalendarDays, Hammer, Home, KeyRound, MapPin, PhoneCall, ShieldAlert, ShieldCheck, Sun, Sunset, Wallet,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useUTMParams } from '@/hooks/useUTMParams';
+import {
+  AnswerChips, Choice, ChoiceList, DoneScreen, Field, FunnelBottomBar, FunnelHeader, FunnelIntro, FunnelMain, FunnelPage,
+  Note, PrimaryButton, Question, StepTransition, TextArea, Tile, TrustLine, useFunnelSteps,
+} from '@/components/funnel-ui/FunnelKit';
+import officePhoto from '@/assets/b2b-team.jpg';
 import {
   generateSlotsForDay,
   getAvailableDays,
@@ -42,13 +29,6 @@ import {
   type PoursuitesStatut,
   type QualificationResult,
 } from '@/utils/leadQualification';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const STATUT_SUISSE_OPTIONS: StatutSuisse[] = [
   'Suisse',
@@ -115,7 +95,11 @@ export default function RendezVousBureau() {
   const [activeDayPart, setActiveDayPart] = useState<DayPart>('matin');
   const [selected, setSelected] = useState<Slot | null>(null);
   const [taken, setTaken] = useState<Set<string>>(new Set());
-  const [projet, setProjet] = useState<ProjectType | ''>('');
+  const [search] = useSearchParams();
+  const initialType = search.get('type');
+  const [projet, setProjet] = useState<ProjectType | ''>(
+    initialType === 'location' || initialType === 'achat' || initialType === 'renovation' || initialType === 'vente' ? initialType : '',
+  );
   const [appointmentType, setAppointmentType] = useState<'bureau' | 'telephonique'>('bureau');
 
   const [prenom, setPrenom] = useState('');
@@ -234,8 +218,8 @@ export default function RendezVousBureau() {
     isQualificationValid &&
     (isNonQualifie || !!selected);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!isFormValid || !projet) return;
     if (!isNonQualifie && !selected) return;
     setSubmitting(true);
@@ -422,566 +406,280 @@ export default function RendezVousBureau() {
     }
   };
 
+  /* ---------- Parcours : une question par page ---------- */
+  type StepKey = 'projet' | 'statut' | 'situation' | 'poursuites' | 'pieces' | 'localite' | 'budget' | 'mode' | 'creneau' | 'coord';
+  const steps: StepKey[] = useMemo(() => {
+    const s: StepKey[] = ['projet'];
+    if (isLocation) s.push('statut', 'situation', 'poursuites', 'pieces', 'localite', 'budget');
+    // Dossier non qualifié : pas de créneau, validation manuelle par l'équipe (règle inchangée).
+    if (!isNonQualifie) s.push('mode', 'creneau');
+    s.push('coord');
+    return s;
+  }, [isLocation, isNonQualifie]);
+  const answered: Record<StepKey, boolean> = {
+    projet: !!projet,
+    statut: !!statutSuisse,
+    situation: !!situationPro,
+    poursuites: !!poursuites,
+    pieces: !!nbPieces,
+    localite: localiteRecherche.trim().length >= 2,
+    budget: parseFloat(budgetMax) > 0 && parseFloat(revenuNet) > 0,
+    mode: true,
+    creneau: !!selected,
+    coord: isCoordValid,
+  };
+  const missing = steps.findIndex((k) => !answered[k]);
+  const { step, dir, go, pick } = useFunnelSteps(steps.length, missing === -1 ? steps.length - 1 : missing);
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
+  const [tried, setTried] = useState(false);
+
   if (done) {
     const isManual = doneStatus === 'manual';
     return (
-      <main className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8] flex items-center justify-center p-6">
-        <div className="max-w-lg w-full rounded-2xl border border-[#b8893d]/40 bg-[#1c1814] p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-          <CheckCircle2 className="mx-auto h-14 w-14 text-[#d4a857]" />
-          <h1 className="mt-4 font-serif text-2xl text-[#f4ecd8]">
-            {isManual ? 'Demande reçue' : 'Demande de RDV enregistrée'}
-          </h1>
-          {isManual ? (
-            <p className="mt-3 text-[#c9bfac]">
-              Merci {prenom || ''}, notre équipe va analyser votre dossier et vous{' '}
-              <strong className="text-[#d4a857]">recontacter sous 24h</strong> pour vous aider à
-              structurer votre recherche (garant, ajustement du budget ou des localités…).
+      <DoneScreen title={isManual ? 'Demande reçue' : 'Demande de rendez-vous enregistrée'}>
+        {isManual ? (
+          <>
+            <p>
+              Merci {prenom}, notre équipe analyse votre dossier et vous <strong className="font-semibold text-[#222222]">recontacte sous 24 h</strong> pour
+              vous aider à structurer votre recherche (garant, ajustement du budget ou des localités…).
             </p>
-          ) : (
-            selected && (
-              <p className="mt-3 text-[#c9bfac]">
-                Créneau demandé : {formatDayLabel(selected.start)} à{' '}
-                <strong className="text-[#d4a857]">{selected.label}</strong> (30 min).
+            <Note>Aucun créneau n'a été pré-réservé pour l'instant. Vous recevrez un appel ou un e-mail pour organiser un échange adapté à votre situation.</Note>
+          </>
+        ) : (
+          <>
+            {selected && (
+              <p>
+                Créneau demandé : <strong className="font-semibold text-[#222222]">{formatDayLabel(selected.start)} à {selected.label}</strong> (30 min).
               </p>
-            )
-          )}
-          <div className="mt-5 rounded-xl border border-[#b8893d]/25 bg-[#0e0c0a]/60 p-4 text-sm space-y-2 text-left">
-            {isManual ? (
-              <p className="text-[#c9bfac]">
-                Vous recevrez un appel ou un email pour organiser un échange adapté à votre
-                situation. Aucun créneau n'a été pré-réservé pour l'instant.
-              </p>
-            ) : (
-              <>
-                <p className="text-[#c9bfac]">
-                  Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un{' '}
-                  <strong className="text-[#d4a857]">email de confirmation avec l'invitation calendrier (.ics)</strong>{' '}
-                  dès la validation.
-                </p>
-                {appointmentType === 'bureau' ? (
-                  <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
-                    <MapPin className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                    <span className="text-[#c9bfac]">Lieu prévu : {OFFICE_ADDRESS}</span>
-                  </div>
-                ) : (
-                  <div className="flex items-start gap-2 pt-2 border-t border-[#b8893d]/15">
-                    <PhoneCall className="h-4 w-4 mt-0.5 text-[#d4a857] shrink-0" />
-                    <span className="text-[#c9bfac]">Nous vous appellerons au numéro indiqué.</span>
-                  </div>
-                )}
-              </>
             )}
-          </div>
-          <p className="mt-4 text-xs text-[#8a7f6e]">
-            {isManual ? 'Dossier transmis à notre équipe.' : 'En attente de validation par notre équipe.'}
-          </p>
-        </div>
-      </main>
+            <p>
+              Notre équipe valide votre créneau dans les meilleurs délais. Vous recevrez un e-mail de confirmation avec
+              l'invitation calendrier (.ics) dès la validation.
+            </p>
+            <Note>
+              {appointmentType === 'bureau' ? (
+                <span className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 flex-none" /> Lieu prévu : {OFFICE_ADDRESS}{' '}
+                  <a href={OFFICE_MAPS_URL} target="_blank" rel="noreferrer" className="cursor-pointer font-medium text-[#222222] underline">Itinéraire</a>
+                </span>
+              ) : (
+                <span className="flex items-start gap-2"><PhoneCall className="mt-0.5 h-4 w-4 flex-none" /> Nous vous appellerons au numéro indiqué.</span>
+              )}
+            </Note>
+          </>
+        )}
+        <p className="text-[14px] text-[#6a6a6a]">{isManual ? 'Dossier transmis à notre équipe.' : 'En attente de validation par notre équipe.'}</p>
+      </DoneScreen>
     );
   }
 
+  const ico = 'h-6 w-6';
+  const next = (k: StepKey) => steps.indexOf(k) + 1;
+  const pieceLabel = (o: string) => (o === 'Studio' || o === '4.5+' ? o : `${o} pièces`);
+
+  const questions: Record<StepKey, { q: string; s?: string }> = {
+    projet: { q: 'Quel est votre projet ?', s: "Pour qu'on prépare votre rendez-vous avec le bon expert." },
+    statut: { q: 'Quel est votre statut en Suisse ?', s: 'Préqualification express, question 1 sur 6.' },
+    situation: { q: 'Quelle est votre situation professionnelle ?', s: 'Question 2 sur 6.' },
+    poursuites: { q: 'Avez-vous des poursuites ou des dettes ?', s: 'Question 3 sur 6.' },
+    pieces: { q: 'Quel type de logement cherchez-vous ?', s: 'Question 4 sur 6.' },
+    localite: { q: 'Dans quelle localité ou région ?', s: 'Question 5 sur 6.' },
+    budget: { q: 'Votre budget et votre revenu', s: 'Question 6 sur 6. Le revenu net du ménage, par mois.' },
+    mode: { q: 'Comment souhaitez-vous échanger ?', s: 'En personne dans nos bureaux ou par téléphone, au choix.' },
+    creneau: { q: 'Choisissez votre créneau', s: 'Réservation en temps réel. Les créneaux pris sont barrés.' },
+    coord: { q: 'Vos coordonnées', s: selected
+      ? `${appointmentType === 'bureau' ? 'Rendez-vous au bureau' : 'Rendez-vous téléphonique'} le ${formatDayLabel(selected.start)} à ${selected.label}, 30 min.`
+      : projet ? `Analyse personnalisée de votre dossier : ${PROJECT_LABELS[projet]}.` : undefined },
+  };
+
+  const onNext = () => {
+    if (isLast) {
+      setTried(true);
+      if (isFormValid) handleSubmit();
+      return;
+    }
+    if (answered[current]) go(step + 1);
+  };
+
+  const coordErrors = {
+    prenom: prenom.trim().length < 2 ? 'Indiquez votre prénom.' : null,
+    nom: nom.trim().length < 2 ? 'Indiquez votre nom.' : null,
+    email: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? 'Adresse e-mail invalide.' : null,
+    telephone: telephone.trim().length < 8 ? 'Numéro de téléphone invalide.' : null,
+  };
+
+  const lastLabel = isNonQualifie
+    ? 'Envoyer ma demande'
+    : appointmentType === 'bureau' ? 'Confirmer mon RDV' : 'Confirmer mon appel';
 
   return (
-    <div className="min-h-screen bg-[#0e0c0a] text-[#f4ecd8]">
-      {/* HERO */}
-      <section className="relative overflow-hidden border-b border-[#b8893d]/20 bg-gradient-to-br from-[#0e0c0a] via-[#1c1814] to-[#0e0c0a]">
-        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_10%,rgba(212,168,87,0.18),transparent_50%),radial-gradient(circle_at_80%_60%,rgba(184,137,61,0.12),transparent_55%)]" />
-        <div className="relative mx-auto max-w-3xl px-5 pt-12 pb-8 text-center">
-          <span className="inline-block rounded-full border border-[#b8893d]/50 bg-[#b8893d]/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-[#e0c089]">
-            🎯 RDV GRATUIT · BUREAU CRISSIER · SANS ENGAGEMENT
-          </span>
-          <h1 className="mt-5 font-serif text-3xl leading-tight md:text-4xl">
-            Discutons de votre projet —{' '}
-            <em className="not-italic text-[#d4a857]">au bureau, autour d'un café</em>
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-[#c9bfac] md:text-base">
-            30 minutes en tête-à-tête avec un conseiller Logisorama. Location, achat,
-            rénovation ou vente — on vous oriente clairement, sans blabla.
-          </p>
+    <FunnelPage>
+      <FunnelHeader step={step} total={steps.length} />
+      <FunnelMain>
+        {step === 0 && (
+          <FunnelIntro photo={officePhoto} alt="L'équipe Logisorama au bureau de Crissier"
+            title="Un rendez-vous gratuit avec un conseiller"
+            text="30 minutes au bureau de Crissier ou par téléphone. Location, achat, rénovation ou vente : on vous oriente clairement, sans engagement." />
+        )}
 
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {['✓ 100% gratuit', '✓ Sans engagement', '✓ Validation par notre équipe'].map((t) => (
-              <span
-                key={t}
-                className="rounded-full border border-[#b8893d]/40 bg-[#b8893d]/10 px-3 py-1.5 text-xs font-bold text-[#d4a857]"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
+        <StepTransition stepKey={current} dir={dir}>
+          <Question {...questions[current]} />
 
-          <p className="mt-6 inline-flex items-center gap-2 text-xs text-[#8a7f6e]">
-            <MapPin className="h-3.5 w-3.5 text-[#d4a857]" />
-            {OFFICE_ADDRESS}
-          </p>
-        </div>
-      </section>
+          {current === 'projet' && (
+            <ChoiceList>
+              {PROJECT_OPTIONS.map((p, i) => (
+                <Choice key={p.key} index={i} selected={projet === p.key}
+                  onClick={() => pick(() => { setProjet(p.key); setSelected(null); }, 1)}
+                  icon={<p.icon className={ico} strokeWidth={1.6} />} label={p.label} hint={p.sub.charAt(0).toUpperCase() + p.sub.slice(1)} />
+              ))}
+            </ChoiceList>
+          )}
 
-      <section className="mx-auto max-w-2xl px-5 py-10 space-y-5">
-        {/* 1. Type de projet */}
-        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-            1. Votre projet
-          </Label>
-          <p className="mb-4 text-xs text-[#8a7f6e]">
-            Pour qu'on prépare votre RDV avec le bon expert.
-          </p>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {PROJECT_OPTIONS.map((p) => {
-              const Icon = p.icon;
-              const active = projet === p.key;
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => setProjet(p.key)}
-                  className={cn(
-                    'rounded-xl border px-3 py-4 text-center transition',
-                    active
-                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
-                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      'mx-auto h-6 w-6 mb-2',
-                      active ? 'text-[#d4a857]' : 'text-[#b8893d]',
-                    )}
-                  />
-                  <div className="text-sm font-semibold">{p.label}</div>
-                  <div className="text-[11px] opacity-80">{p.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 1bis. Préqualification express (uniquement location) */}
-        {isLocation && (
-          <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-5">
-            <div>
-              <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-                Préqualification express
-              </Label>
-              <p className="text-xs text-[#8a7f6e]">
-                6 questions rapides pour qu'on prépare votre rendez-vous avec les bonnes infos.
-              </p>
+          {current === 'statut' && (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {STATUT_SUISSE_OPTIONS.map((o, i) => (
+                <Choice key={o} index={i} selected={statutSuisse === o} onClick={() => pick(() => setStatutSuisse(o), next('statut'))} label={o} />
+              ))}
             </div>
+          )}
 
-            {/* Partie 1 — Situation */}
-            <div className="space-y-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
-                Partie 1 — Votre situation
-              </p>
-
-              <div>
-                <Label className="mb-1.5 block text-xs text-[#c9bfac]">1. Statut en Suisse *</Label>
-                <Select value={statutSuisse} onValueChange={(v) => setStatutSuisse(v as StatutSuisse)}>
-                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
-                  <SelectContent>
-                    {STATUT_SUISSE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="mb-1.5 block text-xs text-[#c9bfac]">2. Situation professionnelle *</Label>
-                <Select value={situationPro} onValueChange={(v) => setSituationPro(v as SituationPro)}>
-                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
-                  <SelectContent>
-                    {SITUATION_PRO_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="mb-1.5 block text-xs text-[#c9bfac]">3. Poursuites / dettes *</Label>
-                <Select value={poursuites} onValueChange={(v) => setPoursuites(v as PoursuitesStatut)}>
-                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
-                  <SelectContent>
-                    {POURSUITES_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+          {current === 'situation' && (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {SITUATION_PRO_OPTIONS.map((o, i) => (
+                <Choice key={o} index={i} selected={situationPro === o} onClick={() => pick(() => setSituationPro(o), next('situation'))}
+                  icon={<Briefcase className={ico} strokeWidth={1.6} />} label={o} />
+              ))}
             </div>
+          )}
 
-            {/* Partie 2 — Recherche */}
-            <div className="space-y-3 pt-3 border-t border-[#b8893d]/15">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
-                Partie 2 — Votre recherche
-              </p>
+          {current === 'poursuites' && (
+            <ChoiceList>
+              {POURSUITES_OPTIONS.map((o, i) => (
+                <Choice key={o} index={i} selected={poursuites === o} onClick={() => pick(() => setPoursuites(o), next('poursuites'))}
+                  icon={o === 'Aucune' ? <ShieldCheck className={ico} strokeWidth={1.6} /> : <ShieldAlert className={ico} strokeWidth={1.6} />} label={o} />
+              ))}
+            </ChoiceList>
+          )}
 
-              <div>
-                <Label className="mb-1.5 block text-xs text-[#c9bfac]">4. Type de logement *</Label>
-                <Select value={nbPieces} onValueChange={setNbPieces}>
-                  <SelectTrigger className="dark-input-rdv h-11"><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
-                  <SelectContent>
-                    {NB_PIECES_OPTIONS.map((o) => (
-                      <SelectItem key={o} value={o}>{o === 'Studio' || o === '4.5+' ? o : `${o} pièces`}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {current === 'pieces' && (
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {NB_PIECES_OPTIONS.map((o) => (
+                <Tile key={o} selected={nbPieces === o} onClick={() => pick(() => setNbPieces(o), next('pieces'))}>{pieceLabel(o)}</Tile>
+              ))}
+            </div>
+          )}
 
-              <div>
-                <Label className="mb-1.5 block text-xs text-[#c9bfac]">5. Localité ou région *</Label>
-                <Input
-                  value={localiteRecherche}
-                  onChange={(e) => setLocaliteRecherche(e.target.value)}
-                  placeholder="Lausanne, Renens, Morges, Nyon, Genève…"
-                  className="dark-input-rdv"
-                />
-              </div>
+          {current === 'localite' && (
+            <form className="mt-5" noValidate onSubmit={(e) => { e.preventDefault(); onNext(); }}>
+              <Field id="rdv-localite" label="Localité ou région" value={localiteRecherche} onChange={setLocaliteRecherche} autoFocus
+                placeholder="Lausanne, Renens, Morges, Nyon, Genève…" />
+              <button type="submit" className="sr-only">Suivant</button>
+            </form>
+          )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="mb-1.5 block text-xs text-[#c9bfac]">6a. Budget max charges comprises (CHF) *</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                    placeholder="2000"
-                    className="dark-input-rdv"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block text-xs text-[#c9bfac]">6b. Revenu net mensuel ménage (CHF) *</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={revenuNet}
-                    onChange={(e) => setRevenuNet(e.target.value)}
-                    placeholder="6000"
-                    className="dark-input-rdv"
-                  />
-                </div>
-              </div>
-
+          {current === 'budget' && (
+            <form className="mt-5 grid gap-3" noValidate onSubmit={(e) => { e.preventDefault(); onNext(); }}>
+              <Field id="rdv-budget" label="Budget max, charges comprises" value={budgetMax} onChange={setBudgetMax} type="number" inputMode="numeric" min="0" suffix="CHF" autoFocus placeholder="2000" />
+              <Field id="rdv-revenu" label="Revenu net mensuel du ménage" value={revenuNet} onChange={setRevenuNet} type="number" inputMode="numeric" min="0" suffix="CHF" placeholder="6000" />
               {liveRatio !== null && (
-                <div
-                  className={cn(
-                    'rounded-lg border px-3 py-2 text-xs flex items-center justify-between',
-                    liveRatio >= 3 && 'border-primary/40 bg-primary/10 text-primary',
-                    liveRatio >= 2.5 && liveRatio < 3 && 'border-amber-500/40 bg-amber-500/10 text-amber-200',
-                    liveRatio < 2.5 && 'border-rose-500/40 bg-rose-500/10 text-rose-200',
-                  )}
-                >
-                  <span>Ratio revenu / loyer</span>
-                  <strong>{liveRatio}x {liveRatio >= 3 ? '✓' : liveRatio >= 2.5 ? '~' : '⚠'}</strong>
+                <Note tone={liveRatio >= 3 ? 'ok' : liveRatio >= 2.5 ? 'neutral' : 'warn'}>
+                  <span className="flex items-center justify-between gap-3">
+                    <span>Ratio revenu / loyer</span>
+                    <strong className="font-semibold">{liveRatio}×</strong>
+                  </span>
+                  <span className="mt-1 block text-[14px] opacity-80">Les régies demandent en général un revenu égal à 3 fois le loyer.</span>
+                </Note>
+              )}
+              {qualification && isNonQualifie && (
+                <Note tone="warn">
+                  <strong className="font-semibold">Dossier à analyser par notre équipe.</strong> Vos informations seront transmises à un conseiller,
+                  qui vous recontacte sous 24 h pour vous proposer une stratégie adaptée (garant, ajustement du budget…). Aucun créneau ne sera pré-réservé.
+                </Note>
+              )}
+              <button type="submit" className="sr-only">Suivant</button>
+            </form>
+          )}
+
+          {current === 'mode' && (
+            <ChoiceList>
+              <Choice index={0} selected={appointmentType === 'bureau'} onClick={() => pick(() => setAppointmentType('bureau'), next('mode'))}
+                icon={<Building2 className={ico} strokeWidth={1.6} />} label="Au bureau" hint={`${OFFICE_ADDRESS} · café offert`} />
+              <Choice index={1} selected={appointmentType === 'telephonique'} onClick={() => pick(() => setAppointmentType('telephonique'), next('mode'))}
+                icon={<PhoneCall className={ico} strokeWidth={1.6} />} label="Par téléphone" hint="On vous appelle à l'heure choisie" />
+            </ChoiceList>
+          )}
+
+          {current === 'creneau' && (
+            <div className="mt-5">
+              <p className="mb-2 text-[14px] font-semibold text-[#222222]">Jour</p>
+              <div className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-2">
+                {availableDays.map((d) => {
+                  const active = d.toDateString() === date.toDateString();
+                  return (
+                    <Tile key={d.toISOString()} selected={active} className="min-w-[84px] flex-none snap-start"
+                      onClick={() => { setDate(d); setSelected(null); }}>
+                      <span className="block capitalize">{d.toLocaleDateString('fr-CH', { weekday: 'short' })}</span>
+                      <span className="block text-[13px] font-medium text-[#6a6a6a]">{d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'short' })}</span>
+                    </Tile>
+                  );
+                })}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                {DAY_PARTS.map((dp) => (
+                  <Tile key={dp.key} selected={activeDayPart === dp.key} onClick={() => setActiveDayPart(dp.key)}>
+                    <span className="inline-flex items-center gap-2"><dp.icon className="h-4 w-4" />{dp.label}</span>
+                    <span className="block text-[13px] font-medium text-[#6a6a6a]">{dp.range}</span>
+                  </Tile>
+                ))}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {filtered.map((slot) => {
+                  const isTaken = taken.has(slot.start.toISOString());
+                  return (
+                    <Tile key={slot.key} disabled={isTaken} strike={isTaken}
+                      selected={selected?.start.getTime() === slot.start.getTime()}
+                      onClick={() => pick(() => setSelected(slot), next('creneau'))}>
+                      {slot.label}
+                    </Tile>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {current === 'coord' && (
+            <form className="mt-5" noValidate onSubmit={(e) => { e.preventDefault(); onNext(); }}>
+              <AnswerChips items={[
+                { label: projet ? PROJECT_OPTIONS.find((p) => p.key === projet)?.label ?? '' : '', onClick: () => go(0), icon: projet === 'achat' ? Home : projet === 'vente' ? Banknote : projet === 'renovation' ? Hammer : KeyRound },
+                ...(isLocation && budgetMax ? [{ label: `${budgetMax} CHF / mois`, onClick: () => go(steps.indexOf('budget')), icon: Wallet }] : []),
+                ...(selected ? [{ label: `${selected.start.toLocaleDateString('fr-CH', { weekday: 'short', day: 'numeric', month: 'short' })} · ${selected.label}`, onClick: () => go(steps.indexOf('creneau')), icon: CalendarDays }] : []),
+              ]} />
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field id="rdv-prenom" label="Prénom" value={prenom} onChange={setPrenom} autoComplete="given-name" autoFocus error={tried ? coordErrors.prenom : null} />
+                  <Field id="rdv-nom" label="Nom" value={nom} onChange={setNom} autoComplete="family-name" error={tried ? coordErrors.nom : null} />
                 </div>
-              )}
-            </div>
-
-            {qualification && isNonQualifie && (
-              <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-3 text-xs text-rose-100">
-                <p className="font-semibold">Dossier à analyser par notre équipe</p>
-                <p className="mt-1 text-rose-200/90">
-                  Vos informations seront transmises à un conseiller. Nous vous recontactons sous
-                  24h pour vous proposer une stratégie adaptée (garant, ajustement du budget…).
-                  Aucun créneau ne sera pré-réservé.
-                </p>
+                <Field id="rdv-email" label="E-mail" value={email} onChange={setEmail} type="email" inputMode="email" autoComplete="email" error={tried ? coordErrors.email : null} />
+                <Field id="rdv-tel" label="Téléphone" value={telephone} onChange={setTelephone} type="tel" inputMode="tel" autoComplete="tel" placeholder="+41 …" error={tried ? coordErrors.telephone : null} />
+                <TextArea id="rdv-msg" label="Message (facultatif)" value={message} onChange={setMessage} rows={3} placeholder="Précisez votre projet, votre budget, vos besoins…" />
               </div>
-            )}
-          </div>
-        )}
-
-        {/* 2. Type de RDV (masqué si dossier non qualifié) */}
-        {!isNonQualifie && (
-        <>
-        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-            2. Comment souhaitez-vous échanger ?
-          </Label>
-          <p className="mb-4 text-xs text-[#8a7f6e]">
-            En personne dans nos bureaux ou par téléphone, au choix.
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            {([
-              { key: 'bureau', label: 'Au bureau', sub: 'Crissier · café offert', Icon: Building2 },
-              { key: 'telephonique', label: 'Téléphonique', sub: 'On vous appelle', Icon: PhoneCall },
-            ] as const).map((opt) => {
-              const Icon = opt.Icon;
-              const active = appointmentType === opt.key;
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => setAppointmentType(opt.key)}
-                  className={cn(
-                    'rounded-xl border px-3 py-4 text-center transition',
-                    active
-                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
-                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
-                  )}
-                >
-                  <Icon className={cn('mx-auto h-6 w-6 mb-2', active ? 'text-[#d4a857]' : 'text-[#b8893d]')} />
-                  <div className="text-sm font-semibold">{opt.label}</div>
-                  <div className="text-[11px] opacity-80">{opt.sub}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 3. Jour + créneau */}
-        <div className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-          <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-            3. Choisissez votre créneau
-          </Label>
-          <p className="mb-4 text-xs text-[#8a7f6e]">
-            Réservation ferme en temps réel. Les créneaux pris sont barrés.
-          </p>
-
-          {/* Jours */}
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#c9bfac]">
-            Jour
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-            {availableDays.map((d) => {
-              const active = d.toDateString() === date.toDateString();
-              return (
-                <button
-                  key={d.toISOString()}
-                  type="button"
-                  onClick={() => {
-                    setDate(d);
-                    setSelected(null);
-                  }}
-                  className={cn(
-                    'shrink-0 rounded-lg px-3 py-2 text-sm border transition min-w-[88px]',
-                    active
-                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
-                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
-                  )}
-                >
-                  <div className="font-semibold capitalize">
-                    {d.toLocaleDateString('fr-CH', { weekday: 'short' })}
-                  </div>
-                  <div className="text-xs opacity-80">
-                    {d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'short' })}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Matin / Après-midi */}
-          <div className="mt-4 flex gap-2">
-            {DAY_PARTS.map((dp) => {
-              const Icon = dp.icon;
-              const active = activeDayPart === dp.key;
-              return (
-                <button
-                  key={dp.key}
-                  type="button"
-                  onClick={() => setActiveDayPart(dp.key)}
-                  className={cn(
-                    'flex-1 rounded-lg px-3 py-2 text-sm border transition flex items-center gap-2 justify-center',
-                    active
-                      ? 'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]'
-                      : 'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="font-medium">{dp.label}</span>
-                  <span className="text-[11px] opacity-70 hidden sm:inline">{dp.range}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Slots */}
-          <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
-            {filtered.map((slot) => {
-              const isTaken = taken.has(slot.start.toISOString());
-              const isSelected = selected?.start.getTime() === slot.start.getTime();
-              return (
-                <button
-                  key={slot.key}
-                  type="button"
-                  disabled={isTaken}
-                  onClick={() => setSelected(slot)}
-                  className={cn(
-                    'rounded-lg px-2 py-2 text-sm border transition',
-                    isTaken &&
-                      'bg-[#0e0c0a]/40 text-[#6b6253] line-through cursor-not-allowed opacity-60 border-[#b8893d]/15',
-                    !isTaken &&
-                      !isSelected &&
-                      'border-[#b8893d]/25 bg-[#0e0c0a]/60 text-[#c9bfac] hover:border-[#d4a857]/60',
-                    isSelected &&
-                      'border-[#d4a857] bg-[#d4a857]/15 text-[#f4ecd8] scale-[1.02] shadow-[0_0_0_1px_rgba(212,168,87,0.5)]',
-                  )}
-                >
-                  {slot.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        </>
-        )}
-
-        {/* 4. Coordonnées + CTA */}
-        {projet && (isNonQualifie || selected) && (
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-[#b8893d]/25 bg-[#1c1814] p-5 md:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)] space-y-4"
-          >
-            <div>
-              <Label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#d4a857]">
-                4. Vos coordonnées
-              </Label>
-              <p className="text-xs text-[#8a7f6e]">
-                {selected ? (
-                  <>
-                    {appointmentType === 'bureau' ? 'RDV au bureau' : 'RDV téléphonique'} le{' '}
-                    <strong className="text-[#f4ecd8]">{formatDayLabel(selected.start)}</strong>{' '}
-                    à <strong className="text-[#f4ecd8]">{selected.label}</strong> · 30 min ·{' '}
-                    {PROJECT_LABELS[projet]}
-                  </>
-                ) : (
-                  <>Analyse personnalisée de votre dossier — {PROJECT_LABELS[projet]}</>
-                )}
+              <p className="mt-4 text-[13px] leading-[1.4] text-[#6a6a6a]">
+                Gratuit et sans engagement. Vos données restent chez Logisorama.{' '}
+                <a href="/politique-confidentialite" className="cursor-pointer font-medium text-[#222222] underline">Politique de confidentialité</a>
               </p>
-            </div>
+              <button type="submit" className="sr-only">Envoyer</button>
+            </form>
+          )}
+        </StepTransition>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label htmlFor="prenom" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
-                  Prénom *
-                </Label>
-                <Input
-                  id="prenom"
-                  value={prenom}
-                  onChange={(e) => setPrenom(e.target.value)}
-                  className="dark-input-rdv"
-                  autoComplete="given-name"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="nom" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
-                  Nom *
-                </Label>
-                <Input
-                  id="nom"
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  className="dark-input-rdv"
-                  autoComplete="family-name"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
-                  Email *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="dark-input-rdv"
-                  autoComplete="email"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="tel" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
-                  Téléphone *
-                </Label>
-                <Input
-                  id="tel"
-                  type="tel"
-                  value={telephone}
-                  onChange={(e) => setTelephone(e.target.value)}
-                  className="dark-input-rdv"
-                  placeholder="+41 ..."
-                  autoComplete="tel"
-                  required
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="msg" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#c9bfac]">
-                  Message (facultatif)
-                </Label>
-                <Textarea
-                  id="msg"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="dark-input-rdv min-h-24"
-                  placeholder="Précisez votre projet, votre budget, vos besoins..."
-                  rows={3}
-                />
-              </div>
-            </div>
+        <TrustLine>
+          <span>Bureau Logisorama · {OFFICE_ADDRESS}</span>
+        </TrustLine>
+      </FunnelMain>
 
-            <Button
-              type="submit"
-              disabled={!isFormValid || submitting}
-              className="w-full bg-gradient-to-r from-[#d4a857] to-[#b8893d] text-[#1c1814] font-bold text-base py-6 rounded-xl shadow-[0_10px_28px_rgba(184,137,61,0.45)] hover:opacity-95 disabled:opacity-60"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />{' '}
-                  {isNonQualifie ? 'Envoi…' : 'Réservation...'}
-                </>
-              ) : isNonQualifie ? (
-                '📩 Envoyer ma demande pour analyse manuelle'
-              ) : appointmentType === 'bureau' ? (
-                '🏢 Confirmer mon RDV gratuit au bureau'
-              ) : (
-                '📞 Confirmer mon RDV téléphonique gratuit'
-              )}
-            </Button>
-
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[#8a7f6e]">
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" /> Confirmation immédiate
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Lock className="h-3.5 w-3.5" /> Données sécurisées
-              </span>
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5" /> Sans engagement
-              </span>
-            </div>
-          </form>
-        )}
-
-        {!projet && (
-          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
-            👆 Sélectionnez d'abord votre type de projet
-          </div>
-        )}
-        {projet && isLocation && !isQualificationValid && (
-          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
-            👆 Complétez la préqualification pour continuer
-          </div>
-        )}
-        {projet && (!isLocation || isQualificationValid) && !isNonQualifie && !selected && (
-          <div className="rounded-2xl border border-dashed border-[#b8893d]/30 bg-[#1c1814]/60 p-5 text-center text-sm text-[#8a7f6e]">
-            👆 Choisissez un créneau pour continuer
-          </div>
-        )}
-      </section>
-
-      <style>{`
-        .dark-input-rdv {
-          background: #0e0c0a !important;
-          border: 1px solid rgba(184,137,61,0.25) !important;
-          color: #f4ecd8 !important;
-        }
-        .dark-input-rdv::placeholder { color: #6b6253 !important; }
-        .dark-input-rdv:focus-visible {
-          border-color: #d4a857 !important;
-          box-shadow: 0 0 0 2px rgba(212,168,87,0.25) !important;
-          outline: none !important;
-        }
-      `}</style>
-    </div>
+      <FunnelBottomBar step={step} total={steps.length} onBack={() => go(step - 1)} onNext={onNext}
+        nextDisabled={!isLast && !answered[current]} loading={submitting}
+        nextLabel={isLast ? lastLabel : 'Suivant'} />
+    </FunnelPage>
   );
 }

@@ -80,7 +80,7 @@ export function HeroSection() {
                       <Link to="/nouveau-mandat">Trouver mon bien<ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></Link>
                     </Button>
                     <Button asChild variant="outline" size="lg" className="min-h-14 flex-1 rounded-full border-border text-base text-foreground hover:bg-secondary">
-                      <a href="#analyse-dossier"><FileSearch className="mr-2 h-5 w-5" aria-hidden="true" />Tester ma solvabilité</a>
+                      <Link to="/analyse-dossier?type=achat"><FileSearch className="mr-2 h-5 w-5" aria-hidden="true" />Tester ma solvabilité</Link>
                     </Button>
                   </div>
                 </>
@@ -89,7 +89,7 @@ export function HeroSection() {
                   <p className="text-xl font-semibold leading-snug text-foreground sm:text-2xl">Confiez-nous votre recherche jusqu’à la remise des clés.</p>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">Recherche ciblée, dossier optimisé, visites déléguées et accompagnement jusqu’au bail. Acompte de 300 CHF, commission seulement en cas de succès.</p>
                   <Button asChild size="lg" className="mt-6 min-h-14 w-full rounded-full bg-primary text-base text-primary-foreground hover:bg-primary/90 sm:w-auto sm:px-8">
-                    <a href="#analyse-dossier">Analyser gratuitement mon dossier<ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
+                    <Link to="/analyse-dossier?type=location">Analyser gratuitement mon dossier<ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></Link>
                   </Button>
                 </>
               )}
