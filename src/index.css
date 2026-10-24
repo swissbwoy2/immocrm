@@ -1720,4 +1720,5 @@ body.imr-immersive iframe[src*="whatsapp"] {
   --home-field: #b0b0b0;
   --home-notice-bg: #fffbeb;
   --home-notice-ink: #92400e;
+  --home-error: #c13515;
 }
