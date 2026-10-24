@@ -56,6 +56,9 @@ export default function HomePage() {
 
 
 
+      {/* Bloc hero de choix de parcours (location / achat) */}
+      <HeroSection />
+
       {/* Bannière publicitaire configurable par l'admin (masquée si aucune bannière active) */}
       <div className="container mx-auto px-4 pt-4">
         <DashboardAdBanner />
@@ -63,10 +66,6 @@ export default function HomePage() {
 
       {/* Eager sections */}
       <DossierAnalyseSection />
-
-
-      {/* Bloc hero de choix de parcours (location / achat) */}
-      <HeroSection />
 
       {/* Calculateurs gratuits (location + achat) juste en dessous du choix de parcours */}
       <Suspense fallback={null}>
