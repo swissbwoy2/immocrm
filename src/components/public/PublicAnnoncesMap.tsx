@@ -307,20 +307,22 @@ export function PublicAnnoncesMap({
     );
   }
 
-  // No geocoded annonces - still show the map with search area
-  if (annoncesWithCoords.length === 0 && !searchCenter) {
-    return (
-      <div className="h-full w-full bg-muted flex items-center justify-center">
-        <div className="text-center text-muted-foreground p-4">
-          <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p className="font-medium">Aucune annonce géolocalisée</p>
-          <p className="text-sm mt-1">Les annonces n'ont pas de coordonnées GPS</p>
-        </div>
-      </div>
-    );
-  }
+  // La div de la carte est toujours montée : sinon, si les annonces arrivent après le
+  // chargement de Google Maps, la carte n'est jamais initialisée (carte grise vide).
+  const showNoCoords = annoncesWithCoords.length === 0 && !searchCenter;
 
   return (
-    <div ref={mapRef} className="h-full w-full" />
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full" />
+      {showNoCoords && (
+        <div className="absolute inset-0 bg-muted flex items-center justify-center">
+          <div className="text-center text-muted-foreground p-4">
+            <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p className="font-medium">Aucune annonce géolocalisée</p>
+            <p className="text-sm mt-1">Les annonces n'ont pas de coordonnées GPS</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

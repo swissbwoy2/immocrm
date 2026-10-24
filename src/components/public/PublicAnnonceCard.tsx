@@ -119,6 +119,7 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
           className={cn(
             'relative overflow-hidden bg-muted',
             compact ? 'w-32 h-full shrink-0 rounded-[10px]' : 'aspect-[4/3] rounded-[14px]',
+            externalOnly && 'border border-border',
           )}
         >
           {externalOnly ? (
