@@ -35,7 +35,7 @@ export function PublicHeader() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden xl:flex items-center gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -48,7 +48,7 @@ export function PublicHeader() {
           </nav>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden xl:flex items-center gap-3">
             <Link to="/annonces/recherche">
               <Button variant="ghost" size="sm">
                 <Search className="h-4 w-4 mr-2" />
@@ -91,7 +91,7 @@ export function PublicHeader() {
 
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
+            <SheetTrigger asChild className="xl:hidden">
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
               </Button>
