@@ -13,7 +13,8 @@ export function ScrollToTop({ threshold = 300, className }: ScrollToTopProps) {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsVisible(window.scrollY > threshold);
+      // Masqué sur le tunnel publicitaire : sa barre d'action fixe occupe le bas de l'écran.
+      setIsVisible(window.scrollY > threshold && !window.location.pathname.startsWith('/courtier'));
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
