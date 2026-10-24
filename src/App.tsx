@@ -34,6 +34,9 @@ const ChasseurAppartement = lazyWithRetry(() => import("./pages/ChasseurAppartem
 const FunnelCourtier = lazyWithRetry(() => import("./pages/funnel/FunnelCourtier"));
 const FunnelMandat = lazyWithRetry(() => import("./pages/funnel/FunnelMandat"));
 const FunnelAnalyse = lazyWithRetry(() => import("./pages/funnel/FunnelAnalyse"));
+const SeoHubPage = lazyWithRetry(() => import("./pages/public-site/seo/SeoHubPage"));
+const SeoZonePage = lazyWithRetry(() => import("./pages/public-site/seo/SeoZonePage"));
+const AgencePage = lazyWithRetry(() => import("./pages/public-site/seo/AgencePage"));
 const RendezVousBureau = lazyWithRetry(() => import("./pages/RendezVousBureau"));
 const RelouerMonAppartement = lazyWithRetry(() => import("./pages/RelouerMonAppartement"));
 const FormulaireRelouer = lazyWithRetry(() => import("./pages/FormulaireRelouer"));
@@ -348,6 +351,10 @@ const App = () => (
               <Route path="/courtier" element={<FunnelCourtier />} />
               <Route path="/courtier/mandat" element={<FunnelMandat />} />
               <Route path="/analyse-dossier" element={<FunnelAnalyse />} />
+              {/* Pages de référencement local (zones, hub, agence) */}
+              <Route path="/recherche-appartement" element={<SeoHubPage />} />
+              <Route path="/recherche-appartement/:slug" element={<SeoZonePage />} />
+              <Route path="/agence-immobiliere-crissier" element={<AgencePage />} />
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
