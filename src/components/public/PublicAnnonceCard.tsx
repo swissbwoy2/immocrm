@@ -134,7 +134,7 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
                 if (img.src.endsWith('/placeholder.svg')) return;
                 img.src = '/placeholder.svg';
               }}
-              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              className="w-full h-full object-cover"
             />
           )}
 
