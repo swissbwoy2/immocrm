@@ -82,7 +82,7 @@ export function HomeApp() {
                 <ArrowRight className="h-5 w-5" aria-hidden="true" />
               </Cta>
               <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[14px] text-foreground/80">
-                <li className="flex items-center gap-1.5"><Check className={cn('h-4 w-4', ACCENT_TEXT)} aria-hidden="true" />Sans engagement</li>
+                <li className="flex items-center gap-1.5"><Check className={cn('h-4 w-4', ACCENT_TEXT)} aria-hidden="true" />Résiliable en tout temps</li>
                 <li className="flex items-center gap-1.5"><Check className={cn('h-4 w-4', ACCENT_TEXT)} aria-hidden="true" />Activation immédiate</li>
               </ul>
             </Reveal>

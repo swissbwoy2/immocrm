@@ -2,10 +2,10 @@ import { useSearchType } from '@/contexts/SearchTypeContext';
 import { CONTAINER, FaqRow, H2, Reveal } from './homeUi';
 
 const faqsLocation = [
-  { q: 'Que se passe-t-il si vous ne trouvez rien en 90 jours ?', a: 'Vous êtes remboursé intégralement. Notre garantie est claire : si nous ne trouvons pas de logement correspondant à vos critères dans les 90 jours, votre acompte de 300 CHF vous est restitué.' },
-  { q: 'Combien coûte le service ?', a: "Un acompte de 300 CHF à l’inscription (déduit de la commission finale), puis une commission d’un mois de loyer uniquement en cas de succès. Aucun frais caché." },
+  { q: 'Que se passe-t-il si vous ne trouvez rien en 90 jours ?', a: 'Si nous mettons fin au mandat, ou au terme d’une période de 90 jours sans conclusion de bail, votre acompte de 300 CHF vous est remboursé sous 30 jours. En cas de résiliation anticipée de votre part, il reste acquis en rémunération des démarches déjà engagées.' },
+  { q: 'Combien coûte le service ?', a: 'Un montant d’activation de 300 CHF à l’ouverture du dossier, imputé sur la commission. La commission est d’un mois de loyer brut (charges comprises, min. CHF 500, + TVA si due) et n’est due qu’à la conclusion d’un bail valable obtenu grâce à nous. Aucun frais caché.' },
   { q: 'Comment fonctionne la recherche ?', a: 'Votre agent dédié contacte les régies, scrute les annonces en ligne et active son réseau professionnel chaque jour. Vous recevez uniquement les biens correspondant à vos critères, avec un suivi en temps réel.' },
-  { q: 'Puis-je annuler à tout moment ?', a: "Le mandat est de 90 jours. Vous pouvez interrompre la recherche à tout moment. Si aucun bien n’a été trouvé à l’issue des 90 jours, vous êtes remboursé." },
+  { q: 'Puis-je annuler à tout moment ?', a: 'Oui. Le mandat est conclu pour 90 jours et reconduit tacitement par périodes de 90 jours ; la dénonciation ordinaire se notifie entre le 75e et le 90e jour (par écrit ou dans l’application Logisorama.ch). Chaque partie peut aussi résilier avec effet immédiat en tout temps (art. 404 CO) ; dans ce cas, l’acompte de 300 CHF reste acquis.' },
   { q: 'Est-ce que le service fonctionne dans toute la Suisse ?', a: 'Nous couvrons toute la Suisse romande : Genève, Vaud, Fribourg, Neuchâtel, Valais et Jura. Notre réseau de régies et de contacts est particulièrement dense à Genève et Lausanne.' },
 ];
 

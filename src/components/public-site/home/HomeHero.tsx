@@ -1,10 +1,9 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Building2, CheckCircle2, FileSearch, Hammer, Home, Key, KeyRound, Lock, ShieldCheck } from 'lucide-react';
-import heroCouple from '@/assets/hero-couple-keys.jpg';
-import heroMaison from '@/assets/hero-bg.jpg';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { cn } from '@/lib/utils';
 import { ACCENT_TEXT, CONTAINER, Cta, SURFACE } from './homeUi';
+import { SelectionCarousel } from './HomeSelection';
 
 const ownerServices = [
   { href: 'https://logisorama.ch/relouer-mon-appartement', icon: KeyRound, label: 'Mettre en location' },
@@ -19,7 +18,7 @@ const reassurance = [
 ];
 
 /**
- * Haut de page : choix Louer / Acheter, accroche et action du parcours choisi, photo,
+ * Haut de page : choix Louer / Acheter, accroche et action du parcours choisi, « Notre sélection »,
  * puis le bandeau propriétaires. Tient sur un écran d’ordinateur.
  */
 export function HomeHero() {
@@ -121,33 +120,8 @@ export function HomeHero() {
             </ul>
           </div>
 
-          {/* Photo */}
-          <div className="relative h-56 overflow-hidden rounded-[14px] bg-muted sm:h-72 lg:h-[min(540px,calc(100svh-300px))] lg:min-h-[420px]">
-            <AnimatePresence initial={false}>
-              <motion.img
-                key={isAchat ? 'achat' : 'location'}
-                src={isAchat ? heroMaison : heroCouple}
-                alt={isAchat ? 'Maison contemporaine en Suisse romande' : 'Un couple reçoit les clés de son nouveau logement'}
-                width={1600}
-                height={1200}
-                loading="eager"
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover"
-                initial={reduce ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={reduce ? undefined : { opacity: 0 }}
-                transition={{ duration: 0.4 }}
-              />
-            </AnimatePresence>
-            <div className="absolute bottom-3 left-3 right-3 rounded-[14px] bg-white px-4 py-3 sm:right-auto sm:max-w-[360px]">
-              <p className="text-[16px] font-semibold leading-snug text-foreground">
-                Plus de 500 familles accompagnées en Suisse romande.
-              </p>
-              <p className="mt-0.5 text-[14px] text-foreground/75">
-                {isAchat ? 'Mandat de 6 mois, transparence totale' : 'Mandat de 90 jours, transparence totale'}
-              </p>
-            </div>
-          </div>
+          {/* Notre sélection (à la place de la photo), identique pour Louer et Acheter */}
+          <SelectionCarousel />
         </div>
 
         {/* Propriétaires */}

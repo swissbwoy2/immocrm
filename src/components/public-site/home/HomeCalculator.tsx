@@ -1,8 +1,12 @@
-import { useId, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowRight, Calculator, CheckCircle2, Info, Landmark, ShieldCheck } from 'lucide-react';
+import { useId, useMemo, useState, type FormEvent, type HTMLAttributes } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useUTMParams } from '@/hooks/useUTMParams';
+import { REGIONS, isEmail, isPhone, normalizePhone, prefillMandat, saveFunnel, trackPixel } from '@/pages/funnel/funnelShared';
+import { AlertTriangle, ArrowLeft, ArrowRight, Calculator, CheckCircle2, Info, Landmark, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { cn } from '@/lib/utils';
-import { ACCENT_BG, ACCENT_TEXT, CONTAINER, Cta, H2, Reveal, SURFACE } from './homeUi';
+import { ACCENT_BG, ACCENT_TEXT, CONTAINER, H2, Reveal, SURFACE } from './homeUi';
 
 /*
  * Calculateur de la page d’accueil (ancre #analyse-dossier, cible du menu « Test solvabilité »
@@ -26,6 +30,7 @@ const formatCHF = (amount: number) =>
   new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(amount);
 
 const FIELD = 'relative rounded-lg border border-[var(--home-field)] bg-white transition-[border-color,box-shadow] duration-150 focus-within:border-foreground focus-within:shadow-[inset_0_0_0_1px_hsl(var(--foreground))]'; // taste-skill-ignore : champ de formulaire
+const FIELD_ERROR = 'border-[var(--home-error)] shadow-[inset_0_0_0_1px_var(--home-error)]'; // taste-skill-ignore : état d’erreur du champ
 const LABEL = 'pointer-events-none absolute left-3 top-2 text-[12px] font-medium text-foreground/70';
 const CONTROL = 'h-14 w-full rounded-lg bg-transparent px-3 pb-2 pt-6 text-[16px] text-foreground outline-none';
 
@@ -41,6 +46,23 @@ function NumberField({ label, value, onChange, placeholder, hint }: {
           onChange={(e) => onChange(e.target.value)} className={cn(CONTROL, 'tabular-nums placeholder:text-foreground/65')} />
       </div>
       {hint && <p className="mt-1.5 text-[13px] text-foreground/70">{hint}</p>}
+    </div>
+  );
+}
+
+function TextField({ label, value, onChange, type = 'text', autoComplete, inputMode, error }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; autoComplete?: string;
+  inputMode?: HTMLAttributes<HTMLInputElement>['inputMode']; error?: string | null;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <div className={cn(FIELD, error && FIELD_ERROR)}>
+        <label htmlFor={id} className={LABEL}>{label}</label>
+        <input id={id} type={type} value={value} autoComplete={autoComplete} inputMode={inputMode} aria-invalid={!!error}
+          onChange={(e) => onChange(e.target.value)} className={CONTROL} />
+      </div>
+      {error && <p className="mt-1.5 text-[13px] text-[var(--home-error)]">{error}</p>}
     </div>
   );
 }
@@ -70,7 +92,19 @@ export function HomeCalculator() {
   const [apport, setApport] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [showResult, setShowResult] = useState(false);
-  const reset = () => setShowResult(false);
+  // Étape 2 : coordonnées, enregistrées dans les leads
+  const [leadOpen, setLeadOpen] = useState(false);
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [email, setEmail] = useState('');
+  const [region, setRegion] = useState('');
+  const [tried, setTried] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const utm = useUTMParams();
+  const reset = () => { setShowResult(false); setLeadOpen(false); };
 
   const resultLocation = useMemo(() => {
     const revenusNum = parseFloat(revenus) || 0;
@@ -118,6 +152,105 @@ export function HomeCalculator() {
     ? "Ce calcul est indicatif, basé sur les critères bancaires suisses (charges max 33%, fonds propres min 20%). Chaque banque a ses propres critères."
     : "Ce calcul est indicatif et basé sur la règle du tiers (loyer = 1/3 des revenus). Chaque situation est unique, nos experts peuvent t’aider à optimiser ton dossier.";
 
+  const leadErrors = {
+    prenom: prenom.trim().length < 2 ? 'Indique ton prénom.' : null,
+    nom: nom.trim().length < 2 ? 'Indique ton nom.' : null,
+    telephone: !isPhone(telephone) ? 'Numéro de téléphone invalide.' : null,
+    email: !isEmail(email) ? 'Adresse e-mail invalide.' : null,
+    region: !region ? 'Choisis une région.' : null,
+  };
+  const leadValid = Object.values(leadErrors).every((e) => !e);
+  const ctaLabel = result?.isSolvable ? (isAchat ? 'Trouver mon bien' : 'Recevoir ma shortlist gratuite') : 'Parler à un expert';
+  const intent = result?.isSolvable ? (isAchat ? 'trouver_mon_bien' : 'shortlist') : 'parler_expert';
+  const err = (k: keyof typeof leadErrors) => (tried ? leadErrors[k] : null);
+
+  const submitLead = async (e: FormEvent) => {
+    e.preventDefault();
+    setTried(true);
+    if (!leadValid || sending || !result) return;
+    setSending(true);
+    setSendError(null);
+    const phone = normalizePhone(telephone);
+    const cleanEmail = email.trim().toLowerCase();
+    const typeRecherche = isAchat ? 'achat' : 'location';
+    const revenusNum = parseFloat(isAchat ? revenusAchat : revenus) || null;
+    const budgetMax = isAchat ? (resultAchat ? Math.round(resultAchat.prixMax) || null : null) : (resultLocation?.budgetPossible ?? null);
+    const budgetSouhaite = parseFloat(budget) || 0;
+    const permitLabel = permitTypes.find((p) => p.value === permit)?.label ?? null;
+    const typeBienLabel = propertyTypes.find((p) => p.value === propertyType)?.label ?? null;
+    const resume = isAchat && resultAchat
+      ? `Prix d’achat maximum estimé ${formatCHF(resultAchat.prixMax)}, capacité d’emprunt ${formatCHF(resultAchat.empruntMax)}, apport ${apport ? formatCHF(parseFloat(apport) || 0) : 'non indiqué'}`
+      : `Budget maximum recommandé ${formatCHF(resultLocation?.budgetPossible ?? 0)}/mois${budgetSouhaite ? `, budget souhaité ${formatCHF(budgetSouhaite)}/mois` : ''}`;
+    const notes = `Calculateur de la page d’accueil, bouton « ${ctaLabel} ». ${resume}. ${
+      result.isSolvable ? 'Profil solide.' : `Points d’attention : ${result.problems.join(' ; ')}.`
+    }`;
+    try {
+      const { error } = await supabase.from('leads').insert({
+        email: cleanEmail,
+        prenom: prenom.trim(),
+        nom: nom.trim(),
+        telephone: phone,
+        phone_e164: phone.startsWith('+') ? phone : null,
+        localite: region,
+        localite_recherche: region,
+        budget: budgetSouhaite ? String(budgetSouhaite) : budgetMax ? String(budgetMax) : null,
+        budget_max_chf: budgetMax,
+        type_recherche: typeRecherche,
+        source: 'accueil_calculateur',
+        formulaire: intent,
+        revenu_net_mensuel_chf: revenusNum,
+        ratio_revenu_loyer: !isAchat && revenusNum && budgetSouhaite ? Math.round((revenusNum / budgetSouhaite) * 100) / 100 : null,
+        permis_nationalite: isAchat ? null : permitLabel,
+        poursuites: isAchat ? false : !confirmNoPoursuites,
+        apport_personnel: isAchat && apport ? apport : null,
+        type_bien: isAchat ? typeBienLabel : null,
+        notes,
+        utm_source: utm.utm_source,
+        utm_medium: utm.utm_medium,
+        utm_campaign: utm.utm_campaign,
+        utm_content: utm.utm_content,
+        utm_term: utm.utm_term,
+      } as any);
+      if (error) throw error;
+
+      supabase.functions.invoke('notify-new-lead', {
+        body: {
+          email: cleanEmail, prenom: prenom.trim(), nom: nom.trim(), telephone: phone,
+          localite: region, budget: budgetMax ? String(budgetMax) : null, type_recherche: typeRecherche,
+          utm_source: utm.utm_source, utm_medium: utm.utm_medium, utm_campaign: utm.utm_campaign,
+        },
+      }).catch((e2) => console.error('notify-new-lead', e2));
+
+      const eventId = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now());
+      trackPixel('Lead', { content_name: 'accueil_calculateur', content_category: typeRecherche }, eventId);
+
+      const answers = {
+        projet: (isAchat ? 'acheter' : 'louer') as 'acheter' | 'louer',
+        region,
+        budget: budgetMax ? String(budgetMax) : '',
+        budgetLabel: budgetMax ? (isAchat ? `Jusqu’à ${formatCHF(budgetMax)}` : `Jusqu’à ${formatCHF(budgetMax)}/mois`) : '',
+        budgetMax,
+        prenom: prenom.trim(), nom: nom.trim(), email: cleanEmail, telephone: phone,
+      };
+      saveFunnel(answers);
+      // Origine du contact pour le formulaire de mandat (sans écraser un brouillon existant)
+      try {
+        const raw = localStorage.getItem('mandat_form_data');
+        const draft = raw ? JSON.parse(raw) : {};
+        if (!draft.decouverte_agence) {
+          draft.decouverte_agence = 'Internet';
+          localStorage.setItem('mandat_form_data', JSON.stringify(draft));
+        }
+      } catch { /* navigation privée */ }
+      prefillMandat(answers);
+      navigate('/courtier/mandat');
+    } catch (e3) {
+      console.error('lead accueil', e3);
+      setSendError('Petit souci technique, réessaie dans un instant.');
+      setSending(false);
+    }
+  };
+
   return (
     <section id="analyse-dossier" className="scroll-mt-28 bg-white pt-14 md:pt-20" aria-labelledby="home-calc-title">
       <div className={CONTAINER}>
@@ -125,6 +258,7 @@ export function HomeCalculator() {
           <Reveal>
             <h2 id="home-calc-title" className={H2}>{title}</h2>
             <p className="mt-2 text-[16px] text-foreground/80">{subtitle}</p>
+            <p className="mt-1 text-[14px] text-foreground/70">Étape 1 sur 2 : ton calcul, puis tes coordonnées pour recevoir ta solution.</p>
 
             <form
               className="mt-6 grid gap-3 sm:grid-cols-2"
@@ -237,10 +371,80 @@ export function HomeCalculator() {
                     </ul>
                   )}
 
-                  <Cta to="/courtier" variant={result.isSolvable ? 'primary' : 'secondary'} className="mt-5 w-full">
-                    {result.isSolvable ? (isAchat ? 'Trouver mon bien' : 'Recevoir ma shortlist gratuite') : 'Parler à un expert'}
-                    <ArrowRight className="h-5 w-5" aria-hidden="true" />
-                  </Cta>
+                  {!leadOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => { setLeadOpen(true); setTried(false); setSendError(null); }}
+                      className={cn(
+                        'mt-5 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-6 text-[16px] font-medium transition-colors duration-150',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2',
+                        result.isSolvable ? cn(ACCENT_BG, 'text-white') : 'bg-white text-foreground ring-1 ring-inset ring-foreground/80 hover:bg-white/70',
+                      )}
+                    >
+                      {ctaLabel}
+                      <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <form onSubmit={submitLead} noValidate className="mt-5 rounded-lg bg-white p-4" aria-label={ctaLabel}>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[16px] font-semibold text-foreground">Où t’envoyer ta solution ?</p>
+                        <span className="flex-none text-[13px] text-foreground/70">Étape 2 sur 2</span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-1" aria-hidden="true">
+                        <span className="h-1 rounded-full bg-[var(--home-accent)]" />
+                        <span className="h-1 rounded-full bg-[var(--home-accent)]" />
+                      </div>
+                      <p className="mt-2 text-[14px] text-foreground/80">Aucun appel commercial. Ton courtier te répond par e-mail.</p>
+
+                      <div className="mt-4 grid gap-3">
+                        <TextField label="Prénom" value={prenom} onChange={setPrenom} autoComplete="given-name" error={err('prenom')} />
+                        <TextField label="Nom" value={nom} onChange={setNom} autoComplete="family-name" error={err('nom')} />
+                        <TextField label="Téléphone" type="tel" inputMode="tel" value={telephone} onChange={setTelephone} autoComplete="tel" error={err('telephone')} />
+                        <TextField label="E-mail" type="email" inputMode="email" value={email} onChange={setEmail} autoComplete="email" error={err('email')} />
+                        <div>
+                          <SelectField label="Région recherchée" placeholder="Choisis une région" value={region} onChange={setRegion} options={REGIONS} />
+                          {err('region') && <p className="mt-1.5 text-[13px] text-[var(--home-error)]">{err('region')}</p>}
+                        </div>
+                      </div>
+
+                      {sendError && <p role="alert" className="mt-3 text-[14px] text-[var(--home-error)]">{sendError}</p>}
+
+                      <button
+                        type="submit"
+                        disabled={sending}
+                        aria-busy={sending}
+                        className={cn(
+                          'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg px-6 text-[16px] font-medium text-white transition-colors duration-150',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2',
+                          sending ? 'cursor-wait bg-[var(--home-accent-disabled)]' : cn(ACCENT_BG, 'cursor-pointer'),
+                        )}
+                      >
+                        {sending ? (
+                          <>
+                            <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                            Envoi en cours…
+                          </>
+                        ) : (
+                          <>
+                            {ctaLabel}
+                            <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                          </>
+                        )}
+                      </button>
+                      <p className="mt-3 flex items-start gap-2 text-[13px] leading-[1.45] text-foreground/70">
+                        <Lock className="mt-0.5 h-3.5 w-3.5 flex-none" aria-hidden="true" />
+                        Tes informations restent confidentielles et servent uniquement à ta recherche.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setLeadOpen(false)}
+                        className="mt-2 inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-[14px] font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                      >
+                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                        Revenir au résultat
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
             </div>
