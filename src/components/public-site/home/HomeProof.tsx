@@ -103,7 +103,7 @@ export function HomeProof() {
             <ul className="mt-3 flex flex-wrap items-center gap-x-8 gap-y-4">
               {otherPartners.map((p) => (
                 <li key={p.name}>
-                  <img src={p.logo} alt={p.name} title={p.name} loading="lazy" className="h-7 w-auto object-contain opacity-80 grayscale" />
+                  <img src={p.logo} alt={p.name} title={p.name} loading="lazy" className="h-6 w-auto max-w-[120px] object-contain opacity-80 grayscale" />
                 </li>
               ))}
             </ul>

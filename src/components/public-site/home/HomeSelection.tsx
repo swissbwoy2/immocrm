@@ -66,7 +66,7 @@ export function HomeSelection() {
             </div>
             <div
               ref={scrollerRef}
-              className="-mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 md:-mx-6 md:px-6 [scrollbar-width:none]"
+              className="-mx-4 flex scroll-pl-4 snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 md:mx-0 md:scroll-pl-0 md:px-0 [scrollbar-width:none]"
             >
               {annonces.map((a: any) => (
                 <div key={a.id} className="w-[78vw] max-w-[300px] flex-none snap-start">
