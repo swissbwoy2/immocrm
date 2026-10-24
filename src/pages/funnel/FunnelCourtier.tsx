@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Home, KeyRound, MapPin, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +23,12 @@ const TOTAL = 4;
 export default function FunnelCourtier() {
   const navigate = useNavigate();
   const utm = useUTMParams();
-  const [projet, setProjet] = useState<Projet | null>(null);
+  // ?projet=acheter|louer (lien de pub) : projet présélectionné, la pub peut ouvrir directement la question suivante (&etape=2).
+  const [search] = useSearchParams();
+  const projetParam = search.get('projet') ?? search.get('type');
+  const [projet, setProjet] = useState<Projet | null>(
+    projetParam === 'acheter' || projetParam === 'achat' ? 'acheter' : projetParam === 'louer' || projetParam === 'location' ? 'louer' : null,
+  );
   const [region, setRegion] = useState('');
   const [budget, setBudget] = useState('');
   const [prenom, setPrenom] = useState('');
