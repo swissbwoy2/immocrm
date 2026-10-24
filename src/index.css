@@ -1707,3 +1707,17 @@ body.imr-immersive iframe[src*="whatsapp"] {
   pointer-events: none !important;
 }
 
+
+/* Page d'accueil (style du tunnel /courtier) : jetons de couleur, un seul accent vert foncé. */
+.home-tokens {
+  --home-accent: #1F7A5C;
+  --home-accent-hover: #1A6B50;
+  --home-accent-active: #155A43;
+  --home-accent-disabled: #9cc4b6;
+  --home-surface: #f7f7f7;
+  --home-surface-strong: #f2f2f2;
+  --home-rule: #ebebeb;
+  --home-field: #b0b0b0;
+  --home-notice-bg: #fffbeb;
+  --home-notice-ink: #92400e;
+}
