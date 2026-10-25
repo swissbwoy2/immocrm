@@ -1,10 +1,8 @@
 import { CalendarDays, CalendarPlus, ExternalLink, Home } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { DASH_CARD, DashBadge, DashEmptyState, DashPage, DashPageHeader, DashSection } from '@/components/client/dashboard/DashPrimitives';
 import { useCandidatCandidatures, statutLabel, type UnifiedCandidature } from '@/hooks/useCandidatCandidatures';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -110,59 +108,60 @@ function VisiteCard({ c, past, nextSlot, onReserve }: { c: UnifiedCandidature; p
   const url = annonceUrl(a);
   const prix = fmtPrix(a);
   return (
-    <Card className={annulee ? 'opacity-80' : past ? 'opacity-70' : undefined}>
-      <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:p-4">
-        <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-24 sm:w-32">
-          {photo ? (
-            <img src={photo} alt={a?.titre || c.adresse} loading="lazy" className="h-full w-full object-cover" />
-          ) : a ? (
-            <ExternalListingPlaceholder />
+    <div className={`${DASH_CARD} flex flex-col overflow-hidden ${annulee ? 'opacity-80' : past ? 'opacity-70' : ''}`}>
+      <div className="h-40 w-full shrink-0 overflow-hidden bg-muted">
+        {photo ? (
+          <img src={photo} alt={a?.titre || c.adresse} loading="lazy" className="h-full w-full object-cover" />
+        ) : a ? (
+          <ExternalListingPlaceholder />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground"><Home className="h-8 w-8" /></div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 space-y-1.5 p-4">
+        <div className="flex flex-wrap gap-2">
+          {annulee ? (
+            <DashBadge tone="danger">Annulé — nouvelle date à venir</DashBadge>
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground"><Home className="h-8 w-8" /></div>
+            <DashBadge tone="muted">{statutLabel(c.statut)}</DashBadge>
           )}
         </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="line-clamp-2 font-medium text-foreground">{a?.titre || c.adresse}</p>
-            {annulee ? (
-              <Badge variant="destructive" className="shrink-0">Annulé — nouvelle date à venir</Badge>
-            ) : (
-              <Badge variant="secondary" className="shrink-0">{statutLabel(c.statut)}</Badge>
-            )}
-          </div>
-          {a?.titre && <p className="truncate text-xs text-muted-foreground">{c.adresse}</p>}
-          {c.date_visite ? (
-            <p className={annulee ? 'text-sm font-medium text-muted-foreground line-through' : 'text-sm font-medium text-primary'}>
-              Visite le {fmtVisite(c.date_visite)}
+        <p className="line-clamp-2 text-base font-semibold text-foreground">{a?.titre || c.adresse}</p>
+        {a?.titre && <p className="truncate text-xs text-muted-foreground">{c.adresse}</p>}
+        {c.date_visite ? (
+          <p className={annulee ? 'text-sm font-medium text-muted-foreground line-through' : 'text-sm font-medium text-primary'}>
+            Visite le {fmtVisite(c.date_visite)}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">Candidature du {c.date ? new Date(c.date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—'}</p>
+        )}
+        {annulee && c.annulation_message && (
+          <p className="rounded-xl bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
+        )}
+        {annulee && nextSlot && (
+          <div className="flex flex-col gap-2 rounded-xl bg-primary/10 p-3">
+            <p className="flex items-start gap-2 text-sm font-medium text-primary">
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Nouvelle date disponible : {fmtVisite(nextSlot)}</span>
             </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">Candidature du {c.date ? new Date(c.date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—'}</p>
-          )}
-          {annulee && c.annulation_message && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
-          )}
-          {annulee && nextSlot && (
-            <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 sm:flex-row sm:items-center">
-              <p className="flex-1 text-sm font-medium text-primary">📅 Nouvelle date disponible : {fmtVisite(nextSlot)}</p>
-              <Button size="sm" className="min-h-[36px]" onClick={onReserve}>Réserver ce créneau</Button>
-            </div>
-          )}
-          {prix && <p className="text-sm font-semibold text-foreground">{prix}</p>}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {url && (
-              <Button asChild size="sm" variant="outline" className="min-h-[36px]">
-                <a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Voir l'annonce</a>
-              </Button>
-            )}
-            {c.date_visite && !past && !annulee && (
-              <Button size="sm" className="min-h-[36px]" onClick={() => addToCalendar(c)}>
-                <CalendarPlus className="mr-1 h-4 w-4" />Ajouter à mon agenda
-              </Button>
-            )}
+            <Button size="sm" className="min-h-[36px] rounded-full" onClick={onReserve}>Réserver ce créneau</Button>
           </div>
+        )}
+        {prix && <p className="text-sm font-semibold text-foreground">{prix}</p>}
+        <div className="flex flex-wrap gap-2 pt-1">
+          {url && (
+            <Button asChild size="sm" variant="outline" className="min-h-[36px] rounded-full">
+              <a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Voir l'annonce</a>
+            </Button>
+          )}
+          {c.date_visite && !past && !annulee && (
+            <Button size="sm" className="min-h-[36px] rounded-full" onClick={() => addToCalendar(c)}>
+              <CalendarPlus className="mr-1 h-4 w-4" />Ajouter à mon agenda
+            </Button>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -190,47 +189,50 @@ export default function CandidatAgenda() {
   });
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <>
       <VisiteConfirmGate list={data} />
       {reserve && <ReserverVisiteDialog open onOpenChange={(o) => !o && setReserve(null)} annonce={reserve} />}
-      <PremiumPageShellV2>
-        <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-        <p className="text-sm text-muted-foreground">Vos visites et candidatures</p>
+      <DashPage>
+        <DashPageHeader title="Agenda" subtitle="Vos visites et candidatures" />
         {isLoading ? <p className="text-sm text-muted-foreground">Chargement…</p> : data.length === 0 ? (
-          <Card><CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground"><CalendarDays className="h-5 w-5" />Aucun événement pour le moment.</CardContent></Card>
+          <DashEmptyState icon={CalendarDays} title="Aucun événement pour le moment." />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {upcoming.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">À venir</h2>
-                {upcoming.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
-              </section>
+              <DashSection title="À venir">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {upcoming.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
+                </div>
+              </DashSection>
             )}
             {past.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Passées</h2>
-                {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past />)}
-              </section>
+              <DashSection title="Passées">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past />)}
+                </div>
+              </DashSection>
             )}
             {cancelled.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-destructive">Annulées</h2>
-                {cancelled.map((c) => {
-                  const aid = c.raw?.annonce_id as string | undefined;
-                  return <VisiteCard key={`${c.source}-${c.id}`} c={c} nextSlot={aid ? (slots as Record<string, string>)[aid] : undefined}
-                    onReserve={() => aid && setReserve({ id: aid, titre: annonceOf(c)?.titre || c.adresse })} />;
-                })}
-              </section>
+              <DashSection title="Annulées">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {cancelled.map((c) => {
+                    const aid = c.raw?.annonce_id as string | undefined;
+                    return <VisiteCard key={`${c.source}-${c.id}`} c={c} nextSlot={aid ? (slots as Record<string, string>)[aid] : undefined}
+                      onReserve={() => aid && setReserve({ id: aid, titre: annonceOf(c)?.titre || c.adresse })} />;
+                  })}
+                </div>
+              </DashSection>
             )}
             {others.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Autres candidatures</h2>
-                {others.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
-              </section>
+              <DashSection title="Autres candidatures">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {others.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
+                </div>
+              </DashSection>
             )}
           </div>
         )}
-      </PremiumPageShellV2>
-    </div>
+      </DashPage>
+    </>
   );
 }
