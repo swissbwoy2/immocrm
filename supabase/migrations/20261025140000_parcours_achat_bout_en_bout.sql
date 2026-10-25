@@ -49,6 +49,7 @@ CREATE OR REPLACE FUNCTION public.achat_cocher_etape(p_project_id uuid, p_step_k
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $$
+DECLARE v_prec text := coalesce(current_setting('achat.sync', true), '');
 BEGIN
   PERFORM set_config('achat.sync', '1', true);
   UPDATE public.purchase_project_steps
@@ -58,7 +59,7 @@ BEGIN
      AND step_key = p_step_key
      AND statut IS DISTINCT FROM 'fait'
      AND NOT (p_statut = 'en_cours' AND statut = 'en_cours');
-  PERFORM set_config('achat.sync', '', true);
+  PERFORM set_config('achat.sync', v_prec, true);
 END;
 $$;
 
@@ -81,7 +82,11 @@ BEGIN
     p_title    => p_titre,
     p_message  => coalesce(p_message, ''),
     p_link     => p_lien,
-    p_metadata => coalesce(p_meta, '{}'::jsonb) || jsonb_build_object('project_id', p_project_id, 'client_id', v_client)
+    -- Clés de métadonnées volontairement distinctes de client_id / offre_id : create_notification
+    -- regroupe les notifications d'un même type sur ces clés pendant 10 minutes, ce qui ferait
+    -- disparaître les étapes successives (banque, offre, notaire…) saisies dans la même séance.
+    -- Sans ces clés, le regroupement ne se fait que sur un titre identique (vrai doublon).
+    p_metadata => coalesce(p_meta, '{}'::jsonb) || jsonb_build_object('projet_achat_id', p_project_id, 'client_achat_id', v_client)
   );
 END;
 $$;
@@ -304,6 +309,8 @@ DECLARE o record; v_project uuid; v_property uuid; v_nego uuid;
 BEGIN
   SELECT * INTO o FROM public.offres WHERE id = p_offre_id;
   IF o.id IS NULL THEN RETURN NULL; END IF;
+  -- Seulement pour un bien à vendre (un client peut aussi louer : une location n'ouvre jamais de négociation d'achat).
+  IF coalesce(o.prix, 0) < 50000 THEN RETURN NULL; END IF;
   SELECT id INTO v_project FROM public.purchase_projects WHERE client_id = o.client_id ORDER BY created_at LIMIT 1;
   IF v_project IS NULL THEN RETURN NULL; END IF;
 
@@ -380,7 +387,7 @@ GRANT EXECUTE ON FUNCTION public.achat_enregistrer_souhait_offre(uuid, numeric, 
 CREATE OR REPLACE FUNCTION public.purchase_negotiations_suivi()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $$
-DECLARE v_titre text; v_msg text; v_montant text; v_lien text;
+DECLARE v_titre text; v_msg text; v_montant text; v_lien text; v_prec text;
 BEGIN
   IF TG_OP = 'UPDATE' AND NEW.statut IS NOT DISTINCT FROM OLD.statut
      AND NEW.contre_offre IS NOT DISTINCT FROM OLD.contre_offre THEN
@@ -400,9 +407,10 @@ BEGIN
       UPDATE public.purchase_negotiations SET date_acceptation = current_date WHERE id = NEW.id;
     END IF;
     IF NEW.offre_id IS NOT NULL THEN
+      v_prec := coalesce(current_setting('achat.sync', true), '');
       PERFORM set_config('achat.sync', '1', true);
       UPDATE public.offres SET statut = 'acceptee', updated_at = now() WHERE id = NEW.offre_id AND statut IS DISTINCT FROM 'acceptee';
-      PERFORM set_config('achat.sync', '', true);
+      PERFORM set_config('achat.sync', v_prec, true);
     END IF;
   END IF;
   IF NEW.statut = 'envoyee' AND NEW.date_offre IS NULL THEN
@@ -427,11 +435,27 @@ BEGIN
     ELSE NULL END;
   IF v_titre IS NOT NULL THEN
     PERFORM public.achat_notifier_client(NEW.project_id, v_titre, v_msg, v_lien,
-      jsonb_build_object('offre_id', NEW.offre_id, 'negociation_id', NEW.id));
+      jsonb_build_object('offre_achat_id', NEW.offre_id, 'negociation_id', NEW.id));
   END IF;
   RETURN NEW;
 END;
 $$;
+-- Négociation saisie à la main : le lien vers le bien proposé est repris du bien choisi.
+CREATE OR REPLACE FUNCTION public.purchase_negotiations_lien_offre()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+BEGIN
+  IF NEW.offre_id IS NULL AND NEW.property_id IS NOT NULL THEN
+    SELECT offre_id INTO NEW.offre_id FROM public.purchase_selected_properties WHERE id = NEW.property_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_purchase_negotiations_lien_offre ON public.purchase_negotiations;
+CREATE TRIGGER trg_purchase_negotiations_lien_offre
+  BEFORE INSERT OR UPDATE OF property_id ON public.purchase_negotiations
+  FOR EACH ROW EXECUTE FUNCTION public.purchase_negotiations_lien_offre();
+
 DROP TRIGGER IF EXISTS trg_purchase_negotiations_suivi ON public.purchase_negotiations;
 CREATE TRIGGER trg_purchase_negotiations_suivi
   AFTER INSERT OR UPDATE ON public.purchase_negotiations
@@ -512,7 +536,7 @@ CREATE TRIGGER trg_purchase_steps_fin_projet
 CREATE OR REPLACE FUNCTION public.vcr_achat_bien_visite()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $$
-DECLARE v_offre uuid;
+DECLARE v_offre uuid; v_prec text;
 BEGIN
   IF NEW.envoye_au_client_at IS NULL THEN RETURN NEW; END IF;
   IF TG_OP = 'UPDATE' AND OLD.envoye_au_client_at IS NOT NULL THEN RETURN NEW; END IF;
@@ -520,10 +544,12 @@ BEGIN
   v_offre := coalesce(NEW.offre_id, (SELECT offre_id FROM public.visites WHERE id = NEW.visite_id));
   -- Client à projets multiples : seule une visite de bien à vendre fait avancer le dossier d'achat.
   IF v_offre IS NULL OR coalesce((SELECT prix FROM public.offres WHERE id = v_offre), 0) < 50000 THEN RETURN NEW; END IF;
-  IF v_offre IS NOT NULL THEN
-    UPDATE public.offres SET statut = 'visite_effectuee', updated_at = now()
-     WHERE id = v_offre AND statut IN ('envoyee', 'vue', 'interesse', 'visite_planifiee', 'visite_confirmee');
-  END IF;
+  -- Le client est déjà prévenu du compte-rendu : pas de seconde notification « Visite effectuée ».
+  v_prec := coalesce(current_setting('achat.sync', true), '');
+  PERFORM set_config('achat.sync', '1', true);
+  UPDATE public.offres SET statut = 'visite_effectuee', updated_at = now()
+   WHERE id = v_offre AND statut IN ('envoyee', 'vue', 'interesse', 'visite_planifiee', 'visite_confirmee');
+  PERFORM set_config('achat.sync', v_prec, true);
   PERFORM public.achat_cocher_etape(pp.id, 'visite_courtier') FROM public.purchase_projects pp WHERE pp.client_id = NEW.client_id;
   PERFORM public.achat_cocher_etape(pp.id, 'rapport_visite') FROM public.purchase_projects pp WHERE pp.client_id = NEW.client_id;
   RETURN NEW;
@@ -597,10 +623,47 @@ BEGIN
     p_type     => 'offre_status_change',
     p_title    => v_label,
     p_message  => COALESCE(NEW.adresse, ''),
-    p_link     => CASE WHEN v_achat THEN '/client/biens-proposes?offreId=' || NEW.id ELSE '/client/offres-recues' END,
+    p_link     => CASE WHEN v_achat THEN '/client/biens-proposes?offreId=' || NEW.id
+                       WHEN public.client_est_acheteur(NEW.client_id) THEN '/client/offres-recues?location=1&offreId=' || NEW.id
+                       ELSE '/client/offres-recues' END,
     p_metadata => jsonb_build_object('offre_id', NEW.id, 'statut', NEW.statut)
   );
 
   RETURN NEW;
 END;
 $function$;
+
+-- ============================================================================
+-- 12) Rapport de visite saisi dans le dossier d'achat → client prévenu, étape cochée
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.purchase_visit_reports_suivi()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $$
+BEGIN
+  PERFORM public.achat_cocher_etape(NEW.project_id, 'visite_courtier');
+  PERFORM public.achat_cocher_etape(NEW.project_id, 'rapport_visite');
+  PERFORM public.achat_notifier_client(NEW.project_id, 'Rapport de visite disponible',
+    'Votre conseiller a rédigé son analyse du bien visité. Retrouvez-la dans votre tableau de bord.', '/client',
+    jsonb_build_object('rapport_id', NEW.id));
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_purchase_visit_reports_suivi ON public.purchase_visit_reports;
+CREATE TRIGGER trg_purchase_visit_reports_suivi
+  AFTER INSERT ON public.purchase_visit_reports
+  FOR EACH ROW EXECUTE FUNCTION public.purchase_visit_reports_suivi();
+
+-- ============================================================================
+-- 13) Droits d'exécution : les fonctions internes ne sont appelables que par les déclencheurs
+-- ============================================================================
+REVOKE ALL ON FUNCTION public.achat_cocher_etape(uuid, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.achat_notifier_client(uuid, text, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.achat_ouvrir_negociation(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.client_est_acheteur(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.client_est_acheteur(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.est_conseiller_projet_achat(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.est_conseiller_projet_achat(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.est_personnel() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.est_personnel() TO authenticated;
+-- create_notification (existante) : laissée inchangée — le formulaire public /nouveau-mandat l'appelle
+-- sans être connecté pour prévenir l'admin. À sécuriser séparément (fonction dédiée au formulaire public).

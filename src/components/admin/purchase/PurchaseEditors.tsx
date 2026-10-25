@@ -336,7 +336,7 @@ export function NegotiationEditorDialog({ initial, onSave, trigger, properties =
 }
 
 // ---------- Notary Editor ----------
-/** ISO (UTC) → valeur d'un champ datetime-local, en heure de Suisse. */
+/** ISO (UTC) → valeur d'un champ datetime-local, dans l'heure locale de l'appareil (Suisse pour l'équipe). */
 function versSaisieLocale(iso?: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);

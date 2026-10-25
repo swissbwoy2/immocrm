@@ -40,6 +40,8 @@ import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulatio
 import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJob";
 import { Loader2 } from "lucide-react";
 import { consumeVisitCoin } from "@/hooks/useUserCredits";
+import { useClientParcours } from "@/hooks/useClientParcours";
+import { estPrixDAchat } from "@/lib/achatOffreActions";
 
 // Skeleton card for loading state
 const OffreSkeletonCard = ({ index }: { index: number }) => (
@@ -377,6 +379,7 @@ const OffresRecues = () => {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
   const navigate = useNavigate();
+  const isAchat = useClientParcours() === 'achat';
   const [searchParams, setSearchParams] = useSearchParams();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -416,7 +419,7 @@ const OffresRecues = () => {
     loadExistingDocuments();
     loadCandidatures();
     markTypeAsRead('new_offer');
-  }, [user?.id]);
+  }, [user?.id, isAchat]);
 
   // Auto-open offer details from query param (?offre= ou ?offreId= depuis les notifications)
   useEffect(() => {
@@ -426,8 +429,8 @@ const OffresRecues = () => {
       if (offre) {
         setSelectedOffre(offre);
         setDetailsDialogOpen(true);
-        // Clean the query param after opening
-        setSearchParams({}, { replace: true });
+        // Clean the query param after opening (on garde « location=1 » : client qui loue aussi)
+        setSearchParams(searchParams.get('location') === '1' ? { location: '1' } : {}, { replace: true });
       }
     }
   }, [offres, loading, searchParams]);
@@ -494,7 +497,8 @@ const OffresRecues = () => {
 
       if (error) throw error;
 
-      setOffres(offresData || []);
+      // Client qui achète aussi : ses biens à vendre sont dans « Biens proposés », ici seulement la location.
+      setOffres(isAchat ? (offresData || []).filter((o: any) => !estPrixDAchat(o.prix)) : (offresData || []));
     } catch (error) {
       console.error('Error loading offres:', error);
       toast({

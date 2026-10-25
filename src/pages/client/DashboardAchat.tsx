@@ -10,7 +10,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { parseZones, formatZones } from '@/lib/buyerProfile';
 import { isVisiteReelle } from '@/lib/visitDecision';
-import { ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, chargerVisitesAchat, formatPrixAchat } from '@/lib/achatOffreActions';
+import { ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, chargerVisitesAchat, estPrixDAchat, formatPrixAchat } from '@/lib/achatOffreActions';
 
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
@@ -83,7 +83,8 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
       supabase.from('offres').select('*').eq('client_id', project.client_id).order('date_envoi', { ascending: false }),
       chargerVisitesAchat(project.client_id, '*, offres(*)').then((data) => ({ data })),
     ]);
-    setOffres(o || []);
+    // Seulement les biens à vendre (un client peut aussi louer : ses locations ont leur propre espace).
+    setOffres((o || []).filter((x: any) => estPrixDAchat(x.prix)));
     setVisites(v || []);
     if (user?.id) {
       const { data: docs } = await supabase.from('documents').select('id, type_document').eq('user_id', user.id);
