@@ -34,6 +34,8 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 function sanitizeText(text: string | null | undefined): string {
   if (!text) return '-';
   return String(text)
+    .replace(/[\u2018\u2019\u02BC]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
     .replace(/\u202f/g, ' ')
     .replace(/\u00a0/g, ' ')
     .replace(/'/g, "'")
@@ -44,9 +46,89 @@ function sanitizeText(text: string | null | undefined): string {
     .replace(/…/g, '...')
     .replace(/[\u2000-\u200B]/g, ' ')
     .replace(/[^\x00-\x7F]/g, (char) => {
-      const supported = 'àâäçéèêëîïôùûüÿœæÀÂÄÇÉÈÊËÎÏÔÙÛÜŸŒÆ°€£¥©®™±×÷';
+      const supported = 'àâäçéèêëîïôùûüÿœæÀÂÄÇÉÈÊËÎÏÔÙÛÜŸŒÆ°€£¥©®™±×÷«»';
       return supported.includes(char) ? char : '';
     });
+}
+
+// ── Mandat ACHAT tel qu'affiché et accepté à la signature (formulaire /nouveau-mandat, depuis le 21.08.2026) ──
+const ACHAT_SIGNED_TEXT = `MANDAT DE RECHERCHE IMMOBILIERE - ACHAT (VAUD)
+Conditions affichées au Mandant et acceptées lors de la signature électronique.
+
+1. Conditions financières Immo-Rama.ch
+Commission de courtage : 1 % du prix de vente, due au succès, minimum CHF 500, plus la TVA si elle est due.
+Montant d'activation : CHF 2'500, imputé sur la commission.
+Solde à la conclusion de l'acte : 1 % du prix de vente moins le montant d'activation de CHF 2'500.
+Durée du mandat : 6 mois, reconduction tacite par périodes de 6 mois.
+
+2. Mission confiée à Immo-Rama.ch
+Analyse du projet d'achat ; analyse de la capacité financière ; collecte et vérification des documents ; transmission aux partenaires financiers ; recherche de biens correspondant aux critères ; sélection et analyse des biens ; organisation et coordination des visites ; contre-visite avec le client ; analyse détaillée du bien sélectionné ; négociation avec les vendeurs ; coordination bancaire et hypothécaire ; coordination avec le notaire ; suivi jusqu'à la remise des clés.
+
+3. Autorisations et consentements
+Le Mandant autorise Immo-Rama à transmettre les seules données nécessaires à une démarche déterminée (financement, offre, acte) aux partenaires concernés : banques et courtiers en financement, notaires, agences, propriétaires et vendeurs.
+Tout contrôle de solvabilité ou contact avec l'employeur n'a lieu qu'après information préalable et accord spécifique du Mandant, dans le respect de la LPD (finalité, proportionnalité, sécurité et transparence).
+Le Mandant autorise Immo-Rama à le représenter dans les démarches de recherche, prise de contact, coordination et négociation liées à son projet d'achat. La prospection commerciale repose sur un consentement séparé, facultatif et révocable.
+
+4. Limites de responsabilité
+Immo-Rama agit avec diligence et fidélité, sans obligation de résultat.
+Immo-Rama ne garantit ni la disponibilité d'un bien, ni l'obtention d'un financement hypothécaire, ni l'acceptation d'une offre par un vendeur.
+Les décisions juridiques, techniques, fiscales et financières appartiennent au Mandant, assisté au besoin de professionnels qualifiés.
+Aucune exclusion ne couvre le dol, la faute grave, la violation d'une obligation essentielle imputable à Immo-Rama, ni les responsabilités légalement impératives.
+La décision finale d'achat et de signature de l'acte authentique reste sous la responsabilité du Mandant.
+
+5. Déclaration acceptée par le Mandant
+Je déclare avoir lu et accepté l'intégralité du présent mandat de recherche immobilière (achat) : la commission de 1 % du prix de vente (min. CHF 500, + TVA si due), le montant d'activation de CHF 2'500 imputé sur la commission, le périmètre de mission, les autorisations de transmission de données et les limites de responsabilité. Je comprends que le mandat est conclu pour une période initiale de 6 mois reconductible tacitement par périodes de 6 mois, et que chaque partie peut y mettre fin en tout temps conformément à l'art. 404 CO, aux conséquences financières prévues.`;
+
+// Titres des dispositions cochées une à une (clés enregistrées dans demandes_mandat.legal_consents)
+const CONSENT_TITLES: Record<string, string> = {
+  legal_objet: 'Objet et portée du mandat',
+  legal_commission: 'Naissance et montant de la commission',
+  legal_acompte: "Montant d'activation",
+  legal_duree: 'Durée et reconduction tacite',
+  legal_remboursement: 'Résiliation et remboursement',
+  legal_revocation: 'Révocation en tout temps (art. 404 CO)',
+  legal_litiges: 'Contrats ultérieurs',
+  legal_confidentialite: 'Confidentialité',
+  legal_verifications: 'Informations et vérifications',
+  legal_transmission_dossier: 'Transmission du dossier',
+  legal_garants_cocandidats: 'Garants et co-candidats',
+  legal_attribution_gerance: 'Attribution par la gérance',
+  legal_obligation_moyens: "Responsabilité et position d'Immo-Rama",
+  legal_protection_donnees: 'Protection des données',
+  legal_droit_applicable: 'Droit applicable et for',
+  legal_acceptation_generale: 'Acceptation finale',
+  legal_exclusivite: 'Exclusivité',
+  legal_cgu: "Conditions générales d'utilisation",
+  legal_resiliation: 'Résiliation',
+  legal_obligations_client: 'Obligations du client',
+  legal_obligations_agence: "Obligations de l'agence",
+  achat_legal_objet: 'Objet et portée du mandat (achat)',
+  achat_legal_commission: 'Naissance et montant de la commission',
+  achat_legal_activation: "Montant d'activation",
+  achat_legal_duree: 'Durée et reconduction tacite',
+  achat_legal_remboursement: 'Résiliation et remboursement',
+  achat_legal_revocation: 'Révocation en tout temps (art. 404 CO)',
+  achat_legal_information: 'Information et biens déjà connus',
+  achat_legal_confidentialite: 'Confidentialité',
+  achat_legal_verifications: 'Informations et vérifications',
+  achat_legal_transmission: 'Transmission des données',
+  achat_legal_coacquereurs: 'Co-acquéreurs et tiers',
+  achat_legal_responsabilite: "Responsabilité et position d'Immo-Rama",
+  achat_legal_protection_donnees: 'Protection des données',
+  achat_legal_droit_applicable: 'Droit applicable et for',
+  achat_legal_acceptation_generale: 'Acceptation finale',
+};
+
+function formatDateTimeCH(iso: string | null | undefined): string {
+  if (!iso) return '-';
+  try {
+    const s = new Intl.DateTimeFormat('fr-CH', {
+      timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(new Date(iso));
+    return sanitizeText(s.replace(',', ''));
+  } catch {
+    return sanitizeText(String(iso));
+  }
 }
 
 function formatDate(dateString: string | null | undefined): string {
@@ -174,6 +256,17 @@ const handler = async (req: Request): Promise<Response> => {
           .eq('id', clientData.demande_mandat_id)
           .single();
         demandeData = demande;
+      }
+      // Client non relié à sa demande : on retrouve la demande signée par l'e-mail du compte
+      if (!demandeData && profileData?.email) {
+        const { data: byEmail } = await supabaseAdmin
+          .from('demandes_mandat')
+          .select('*')
+          .eq('email', profileData.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        demandeData = byEmail;
       }
     } else if (demande_id) {
       // Fetch demande directly
@@ -477,8 +570,82 @@ const handler = async (req: Request): Promise<Response> => {
     drawSectionTitle('6. DISPOSITIONS DU MANDAT');
     
     const maxTextWidth = pageWidth - 2 * margin - 20;
-    
-    if (isPurchase) {
+
+    // ── Version du mandat réellement lue et signée par le client ──
+    const signedAtIso: string | null =
+      clientData.mandat_date_signature || demandeData?.cgv_acceptees_at || demandeData?.created_at || null;
+    const lc: Record<string, any> =
+      demandeData?.legal_consents && typeof demandeData.legal_consents === 'object' ? demandeData.legal_consents : {};
+    const since1908 = !!signedAtIso && new Date(signedAtIso).getTime() >= new Date('2026-08-19T00:00:00+02:00').getTime();
+    let signedTitle = '';
+    let signedBody: string | null = null;
+    if (typeof lc._contrat_texte === 'string' && lc._contrat_texte.trim()) {
+      // Mandats signés depuis le 25.10.2026 : copie exacte du texte affiché, enregistrée à la signature
+      signedTitle = String(lc._contrat_titre || 'Mandat de recherche');
+      signedBody = lc._contrat_texte;
+    } else if (since1908 && !isPurchase) {
+      // Location depuis le 19.08.2026 : contrat actif au moment de la signature (version avocat du 19.08)
+      const { data: atSign } = await supabaseAdmin
+        .from('mandate_contract_texts')
+        .select('title, version, content, created_at')
+        .lte('created_at', signedAtIso)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      let row: any = atSign;
+      if (!row?.content) {
+        const { data: v1908 } = await supabaseAdmin
+          .from('mandate_contract_texts')
+          .select('title, version, content, created_at')
+          .eq('version', '2026-08-19')
+          .maybeSingle();
+        row = v1908;
+      }
+      if (row?.content) {
+        signedTitle = `${row.title || 'Contrat de mandat de recherche immobilière'} - version du ${row.version}`;
+        signedBody = row.content;
+      }
+    } else if (since1908 && isPurchase) {
+      signedTitle = "Mandat de recherche immobilière - Achat";
+      signedBody = ACHAT_SIGNED_TEXT;
+    }
+
+    const isHeadingLine = (t: string) =>
+      /^Article\s+\d+/i.test(t) || (/^\d+(\.\d+)*\.?\s/.test(t) && t.length < 90) ||
+      (t.length < 70 && t === t.toUpperCase() && /[A-Z]/.test(t));
+
+    if (signedBody) {
+      addText(sanitizeText(signedTitle).slice(0, 95), margin, yPosition, 11, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= 20;
+      for (const raw of signedBody.split('\n')) {
+        const t = raw.trim();
+        checkNewPage();
+        if (!t) { yPosition -= 4; continue; }
+        if (isHeadingLine(t)) {
+          yPosition -= 4;
+          addWrappedText(t, margin, maxTextWidth, 10, helveticaBold);
+        } else {
+          addWrappedText(t, margin, maxTextWidth, 9);
+        }
+      }
+      yPosition -= 12;
+
+      // Dispositions approuvées une à une, avec leur horodatage
+      const approved = Object.entries(lc)
+        .filter(([k, v]) => !k.startsWith('_') && typeof v === 'string')
+        .sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+      if (approved.length > 0) {
+        checkNewPage();
+        addText('DISPOSITIONS APPROUVEES PAR LE MANDANT', margin, yPosition, 11, helveticaBold, rgb(0.1, 0.2, 0.4));
+        yPosition -= 18;
+        approved.forEach(([key, at], i) => {
+          checkNewPage();
+          const title = CONSENT_TITLES[key] || key.replace(/^achat_/, '').replace(/^legal_/, '').replace(/_/g, ' ');
+          addWrappedText(`${i + 1}. ${title} - approuvé le ${formatDateTimeCH(String(at))}`, margin, maxTextWidth, 9);
+        });
+        yPosition -= 10;
+      }
+    } else if (isPurchase) {
       // ACHAT - 5 articles officiels
       addText('MANDAT DE RECHERCHE DE BIEN FONCIER', margin, yPosition, 11, helveticaBold);
       yPosition -= 20;
@@ -740,7 +907,7 @@ const handler = async (req: Request): Promise<Response> => {
     drawSectionTitle('7. SIGNATURE ET VALIDATION');
     
     const signatureDate = clientData.mandat_date_signature || demandeData?.cgv_acceptees_at;
-    addText(`Fait à Crissier, le ${formatDate(signatureDate || new Date().toISOString())}`, margin, yPosition, 10);
+    addText(`Signé électroniquement le ${formatDateTimeCH(signatureDate || new Date().toISOString())}`, margin, yPosition, 10);
     yPosition -= 25;
     
     // Embed signature
