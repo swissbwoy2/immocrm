@@ -12,6 +12,15 @@ export const TURN_DEADLINE_MS = 100_000;
 const MAX_ATTEMPTS = 2;
 const TRANSCRIPT_SIZE = 30;
 
+/** Sujets qui exigent la règle « sujet sensible » (prudence + recommandation d'un responsable). */
+const SENSITIVE_TOPIC = /\b(paiement|pay[ée]e?s?|payer|vers[ée]|virement|factur|rembours|acompte|honorai|argent|dette|poursuite|commandement de payer|litige|plainte|tribunal|justice|avocat|proc[ée]dure|r[ée]clamation|comptab|financ|chiffre d'affaires|salaire d|banque|encaiss|contentieux|recouvrement)/i;
+
+export function sensitiveNote(text: string): string {
+  return SENSITIVE_TOPIC.test(text)
+    ? "\n\nAttention : le dernier message du client touche un sujet sensible. Applique strictement la règle de confidentialité : rien sur l'entreprise ni sur des tiers ; pour ce qui le concerne, uniquement ce que montre son dossier, et recommande toujours d'en parler avec un responsable."
+    : '';
+}
+
 export const CAPPED_MESSAGE =
   "Je ne peux pas te répondre en détail pour le moment. J'ai transmis ton message à ton agent, qui te répondra ici.";
 export const TECHNICAL_MESSAGE =
@@ -247,7 +256,7 @@ export async function runTurn(opts: {
         content:
           `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
           `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
-          (note || '\n\nRéponds maintenant au dernier message du client.').trimStart(),
+          ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart(),
       }];
 
       let finalText = '';
