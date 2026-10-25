@@ -173,6 +173,8 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.sync-all-imap-emails]
     verify_jwt = false
+  [functions.steeve-turn]
+    verify_jwt = false
   [functions.sync-google-calendar]
     verify_jwt = true
   [functions.track-email-click]

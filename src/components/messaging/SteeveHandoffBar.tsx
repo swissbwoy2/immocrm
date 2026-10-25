@@ -26,7 +26,7 @@ interface HandlingState {
  */
 export function SteeveHandoffBar({ conversationId, className }: Props) {
   const { user, userRole } = useAuth();
-  const { enabled } = useSteeveSettings();
+  const { enabled } = useSteeveSettings(conversationId);
   const { toast } = useToast();
   const [state, setState] = useState<HandlingState | null>(null);
   const [humanLabel, setHumanLabel] = useState<string | null>(null);

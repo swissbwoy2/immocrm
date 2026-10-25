@@ -53,6 +53,9 @@ import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJ
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClientDossier } from "@/hooks/useClientDossier";
+import { postDossierDocumentMessage, type FiledDocument } from "@/lib/clientDossier";
+import { newClientMessageId } from "@/lib/steeve";
 import { consumeVisitCoin } from "@/hooks/useUserCredits";
 
 const removeAccents = (str: string) => {
@@ -62,6 +65,8 @@ const removeAccents = (str: string) => {
 const Messagerie = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  // Trombone : pièces du dossier classées dès l'envoi (location ou achat).
+  const dossier = useClientDossier();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -474,6 +479,22 @@ const Messagerie = () => {
     } finally {
       setIsLoadingMessages(false);
     }
+  };
+
+  const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
+    if (!user || !selectedConv) return false;
+    const { error } = await postDossierDocumentMessage({
+      conversationId: selectedConv,
+      senderId: user.id,
+      senderType: 'client',
+      doc,
+      clientMsgId: newClientMessageId(),
+    });
+    if (error) {
+      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué (message unique côté sélecteur).
+      return false;
+    }
+    return true;
   };
 
   const handleSendMessage = async (textOverride?: string) => {
@@ -1928,6 +1949,8 @@ const Messagerie = () => {
               conversationId={selectedConv}
               value={pendingAttachment}
               onAttachmentReady={setPendingAttachment}
+              dossier={dossier}
+              onDocumentFiled={handleDocumentFiled}
             />
           }
         />

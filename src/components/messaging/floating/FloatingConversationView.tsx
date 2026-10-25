@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
 import { useMessageDraft } from '@/hooks/useMessageDraft';
+import { useClientDossier } from '@/hooks/useClientDossier';
+import { postDossierDocumentMessage, type FiledDocument } from '@/lib/clientDossier';
 import { ChatAvatar } from '@/components/messaging/ChatAvatar';
 import { PremiumMessageBubble } from '@/components/messaging/PremiumMessageBubble';
 import { PremiumChatInput } from '@/components/messaging/PremiumChatInput';
@@ -58,6 +60,8 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
   const { user, userRole } = useAuth();
   // Identifiant stable : l'objet user est recréé à chaque rafraîchissement de session (retour sur l'onglet, jeton).
   const userId = user?.id ?? null;
+  // Client : le trombone propose les pièces du dossier, classées dès l'envoi.
+  const dossier = useClientDossier();
   const { close, refreshUnread } = useFloatingMessenger();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -319,6 +323,23 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
     setPendingAttachment(null);
   };
 
+  const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
+    if (!userId) return false;
+    const { data: inserted, error } = await postDossierDocumentMessage({
+      conversationId,
+      senderId: userId,
+      senderType,
+      doc,
+      clientMsgId: newClientMessageId(),
+    });
+    if (error) {
+      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué (message unique côté sélecteur).
+      return false;
+    }
+    if (inserted) setMessages((prev) => mergeMessages(prev, [inserted as MessageRow]));
+    return true;
+  };
+
   const handleOpenFullscreen = () => {
     close();
     const route =
@@ -402,6 +423,8 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
             conversationId={conversationId}
             value={pendingAttachment}
             onAttachmentReady={setPendingAttachment}
+            dossier={dossier}
+            onDocumentFiled={handleDocumentFiled}
           />
         }
       />
