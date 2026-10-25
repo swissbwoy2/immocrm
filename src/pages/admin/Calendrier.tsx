@@ -17,7 +17,7 @@ import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
 import type { EventFormData } from '@/components/calendar/EventForm';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
 import type { PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DASH_CARD, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
@@ -552,27 +552,26 @@ export default function AdminCalendrier() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-auto h-full">
-      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
+    <DashPage className="space-y-4 md:space-y-6">
       {/* Header */}
-      <PremiumPageHeader
+      <DashPageHeader
         title="Calendrier"
         subtitle="Gérez les rendez-vous, rappels et visites"
-        icon={CalendarIcon}
         action={
-          <Button onClick={() => setShowEventForm(true)} size="sm" className="gap-2">
+          <Button onClick={() => setShowEventForm(true)} size="sm" className="gap-2 rounded-full">
             <Plus className="h-4 w-4" />
             Nouvel événement
           </Button>
         }
       />
+      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
 
       {/* Mobile: Filters collapsible */}
       <details className="lg:hidden">
-        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-xl backdrop-blur-sm border border-border/50">
+        <summary className={`${DASH_CARD} cursor-pointer p-3 text-sm font-medium text-foreground`}>
           Filtres avancés
         </summary>
-        <div className="mt-3 animate-fade-in">
+        <div className="mt-3">
           <PremiumEventFilters
             agents={agents}
             clients={clients}
@@ -589,31 +588,26 @@ export default function AdminCalendrier() {
       </details>
 
       {/* Confirmed-only toggle */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button
-          size="sm"
-          variant={confirmedOnly ? 'default' : 'outline'}
-          onClick={() => setConfirmedOnly(true)}
-        >
-          Confirmées par le client
-        </Button>
-        <Button
-          size="sm"
-          variant={confirmedOnly ? 'outline' : 'default'}
-          onClick={() => setConfirmedOnly(false)}
-        >
-          Toutes
-        </Button>
-      </div>
+      <DashFilterPills
+        label="Visites affichées"
+        options={[
+          { key: 'confirmees', label: 'Confirmées par le client' },
+          { key: 'toutes', label: 'Toutes' },
+        ]}
+        value={confirmedOnly ? 'confirmees' : 'toutes'}
+        onChange={(key) => setConfirmedOnly(key === 'confirmees')}
+      />
 
       <CreneauxAVenirStrip />
 
 
       {/* Batch Calendar Export */}
       {filteredVisites.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap p-3 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm">
-          <Download className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium mr-1">Exporter au calendrier :</span>
+        <div className={`${DASH_CARD} flex flex-wrap items-center gap-2 p-3 md:p-4`}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+            <Download className="h-4 w-4" />
+          </span>
+          <span className="text-sm font-semibold text-foreground mr-1">Exporter au calendrier :</span>
           {[
             { label: "Aujourd'hui", filter: (v: any) => isToday(new Date(v.date_visite)) },
             { label: 'Cette semaine', filter: (v: any) => isThisWeek(new Date(v.date_visite), { weekStartsOn: 1 }) },
@@ -661,7 +655,7 @@ export default function AdminCalendrier() {
                   downloadMultiEventICSFile(icsEvents, `visites_${label.replace(/[^a-zA-Z]/g, '_').toLowerCase()}.ics`);
                   toast.success(`${groups.length} visite(s) exportée(s)${filtered.length > groups.length ? ` (${filtered.length - groups.length} doublon(s) regroupé(s))` : ''}`);
                 }}
-                className="gap-1.5"
+                className="gap-1.5 rounded-full"
               >
                 {label} ({filtered.length})
               </Button>
@@ -673,7 +667,7 @@ export default function AdminCalendrier() {
       {/* Main content - responsive grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
         {/* Filters sidebar - desktop only */}
-        <div className="hidden lg:block lg:col-span-1 min-w-0 animate-fade-in" style={{ animationDelay: '0ms' }}>
+        <div className="hidden lg:block lg:col-span-1 min-w-0">
           <PremiumEventFilters
             agents={agents}
             clients={clients}
@@ -690,7 +684,7 @@ export default function AdminCalendrier() {
 
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden">
-          <Suspense fallback={<div className="h-72 rounded bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
+          <Suspense fallback={<div className="h-72 rounded-2xl bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={filteredEvents}
             visites={filteredVisites}
@@ -745,63 +739,60 @@ export default function AdminCalendrier() {
 
       {/* Visite detail dialog */}
       <Dialog open={visiteDetailDialogOpen} onOpenChange={setVisiteDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto animate-fade-in">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Détails de la visite</DialogTitle>
           </DialogHeader>
 
           {selectedVisiteGroup?.[0]?.id && (
-            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
-              <VisitLiveButton
-                visiteId={selectedVisiteGroup[0].id}
-                dateVisite={selectedVisiteGroup[0].date_visite}
-                size="default"
-                className="w-full"
-              />
-            </div>
+            <VisitLiveButton
+              visiteId={selectedVisiteGroup[0].id}
+              dateVisite={selectedVisiteGroup[0].date_visite}
+              size="default"
+              className="w-full rounded-full"
+            />
           )}
-          
-          
+
           {selectedVisiteGroup && selectedVisiteGroup.length > 0 && (
-            <div className="space-y-6">
-              {/* AUTO badge */}
-              {selectedVisiteGroup[0].offres?.envoi_auto && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-violet-600/10 border border-violet-600/30">
-                  <Badge className="bg-violet-600 hover:bg-violet-600 text-white">🤖 Offre automatique</Badge>
-                  <span className="text-sm text-violet-900 dark:text-violet-200">
-                    Visite programmée par la recherche automatique
-                  </span>
-                </div>
-              )}
-
-              {/* Intérêt client */}
-              <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">Intérêt du client :</span>{selectedVisiteGroup[0].est_deleguee ? <Badge className="bg-blue-600 text-white ml-1">Visite déléguée</Badge> : isVisiteConfirmedByClient(selectedVisiteGroup[0].offres?.statut) ? <Badge className="bg-emerald-600 text-white ml-1">Client s'en occupe</Badge> : <Badge variant="outline" className="ml-1">Décision en attente</Badge>}
-                <ClientInteretBadge statutOffre={selectedVisiteGroup[0].offres?.statut} />
-                {getInteretState(selectedVisiteGroup[0].offres?.statut).key === 'attente' && (
-                  <span className="text-xs text-amber-700">
-                    À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
-                  </span>
-                )}
-              </div>
-
-              {/* Header with address */}
-              <div className="p-4 bg-muted rounded-lg">
+            <div className="space-y-5">
+              {/* Adresse et date */}
+              <div className="rounded-2xl border border-border/70 bg-card p-4">
                 <AddressLink
                   address={selectedVisiteGroup[0].adresse}
-                  className="font-semibold text-lg"
+                  className="text-base font-semibold leading-snug"
                   iconClassName="h-5 w-5 text-primary"
                 />
-                <p className="text-sm text-muted-foreground mt-2">
-                  {format(new Date(selectedVisiteGroup[0].date_visite), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <CalendarIcon className="h-4 w-4 shrink-0" />
+                  <span className="first-letter:uppercase">{format(new Date(selectedVisiteGroup[0].date_visite), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}</span>
                 </p>
+              </div>
+
+              {/* Statut : offre automatique et intérêt du client */}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-foreground">Intérêt du client</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedVisiteGroup[0].est_deleguee ? <Badge className="rounded-full border-transparent bg-primary/10 text-primary hover:bg-primary/10">Visite déléguée</Badge> : isVisiteConfirmedByClient(selectedVisiteGroup[0].offres?.statut) ? <Badge className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Client s'en occupe</Badge> : <Badge variant="outline" className="rounded-full">Décision en attente</Badge>}
+                  <ClientInteretBadge statutOffre={selectedVisiteGroup[0].offres?.statut} />
+                  {selectedVisiteGroup[0].offres?.envoi_auto && (
+                    <Badge variant="outline" className="rounded-full border-border/70 text-muted-foreground" title="Visite programmée par la recherche automatique">Offre automatique</Badge>
+                  )}
+                </div>
+                {getInteretState(selectedVisiteGroup[0].offres?.statut).key === 'attente' && (
+                  <p className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                    À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
+                  </p>
+                )}
+                {selectedVisiteGroup[0].offres?.envoi_auto && (
+                  <p className="text-xs text-muted-foreground">Visite programmée par la recherche automatique</p>
+                )}
               </div>
 
               {/* Link preview if available */}
               {selectedVisiteGroup[0].offres?.lien_annonce && (
                 <div>
-                  <Label className="text-sm font-medium">Lien de l'annonce</Label>
-                  <div className="mt-2">
+                  <p className="text-sm font-semibold text-foreground">Lien de l'annonce</p>
+                  <div className="mt-2 min-w-0 overflow-hidden">
                     <LinkPreviewCard url={selectedVisiteGroup[0].offres.lien_annonce} showInline />
                   </div>
                 </div>
@@ -810,30 +801,30 @@ export default function AdminCalendrier() {
               {/* Property characteristics */}
               {selectedVisiteGroup[0].offres && (
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">Caractéristiques du bien</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Caractéristiques du bien</p>
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                     {selectedVisiteGroup[0].offres.prix && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Prix</p>
-                        <p className="font-bold text-primary">{selectedVisiteGroup[0].offres.prix.toLocaleString()} CHF</p>
+                        <p className="font-semibold text-foreground">{selectedVisiteGroup[0].offres.prix.toLocaleString()} CHF</p>
                       </div>
                     )}
                     {selectedVisiteGroup[0].offres.pieces && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Pièces</p>
-                        <p className="font-bold">{selectedVisiteGroup[0].offres.pieces}</p>
+                        <p className="font-semibold text-foreground">{selectedVisiteGroup[0].offres.pieces}</p>
                       </div>
                     )}
                     {selectedVisiteGroup[0].offres.surface && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Surface</p>
-                        <p className="font-bold">{selectedVisiteGroup[0].offres.surface} m²</p>
+                        <p className="font-semibold text-foreground">{selectedVisiteGroup[0].offres.surface} m²</p>
                       </div>
                     )}
                     {selectedVisiteGroup[0].offres.etage && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Étage</p>
-                        <p className="font-bold">{selectedVisiteGroup[0].offres.etage}</p>
+                        <p className="font-semibold text-foreground">{selectedVisiteGroup[0].offres.etage}</p>
                       </div>
                     )}
                   </div>
@@ -848,8 +839,8 @@ export default function AdminCalendrier() {
               {/* Description */}
               {selectedVisiteGroup[0].offres?.description && (
                 <div>
-                  <Label className="text-sm font-medium mb-2 block">Description</Label>
-                  <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Description</p>
+                  <div className="rounded-xl bg-muted/50 p-4">
                     <p className="text-sm whitespace-pre-wrap">{selectedVisiteGroup[0].offres.description}</p>
                   </div>
                 </div>
@@ -858,11 +849,11 @@ export default function AdminCalendrier() {
               {/* Contacts */}
               {(selectedVisiteGroup[0].offres?.concierge_nom || selectedVisiteGroup[0].offres?.locataire_nom) && (
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">Contacts</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Contacts</p>
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {selectedVisiteGroup[0].offres.concierge_nom && (
-                      <div className="p-3 border rounded-lg">
-                        <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                      <div className="rounded-xl border border-border/70 p-3">
+                        <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
                           <Building2 className="h-4 w-4" />
                           Concierge
                         </div>
@@ -879,8 +870,8 @@ export default function AdminCalendrier() {
                       </div>
                     )}
                     {selectedVisiteGroup[0].offres.locataire_nom && (
-                      <div className="p-3 border rounded-lg">
-                        <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                      <div className="rounded-xl border border-border/70 p-3">
+                        <div className="mb-1 flex items-center gap-2 text-sm font-semibold">
                           <Home className="h-4 w-4" />
                           Locataire actuel
                         </div>
@@ -906,20 +897,21 @@ export default function AdminCalendrier() {
                 return (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <Label className="text-sm font-medium">
+                      <p className="text-sm font-semibold text-foreground">
                         Clients concernés ({uniqueClients.length})
-                      </Label>
-                      <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
-                        ➕ Ajouter des clients
+                      </p>
+                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => setAddClientsDialogOpen(true)}>
+                        Ajouter des clients
                       </Button>
                     </div>
                     <ul className="space-y-2">
                       {uniqueClients.map((visite: any) => (
-                        <li key={visite.client_id} className="flex items-center justify-between p-2 border rounded-lg">
-                          <span className="text-sm">{getClientName(visite.client_id) || 'Client inconnu'}</span>
+                        <li key={visite.client_id} className="flex items-center justify-between gap-2 rounded-xl border border-border/70 p-2.5 pl-3">
+                          <span className="min-w-0 truncate text-sm font-medium">{getClientName(visite.client_id) || 'Client inconnu'}</span>
                           <Button 
                             size="sm" 
                             variant="outline"
+                            className="rounded-full"
                             onClick={() => {
                               setVisiteDetailDialogOpen(false);
                               navigate(`/admin/clients/${visite.client_id}`);
@@ -936,8 +928,8 @@ export default function AdminCalendrier() {
 
               {/* Agent */}
               {selectedVisiteGroup[0].agent_id && (
-                <div className="pt-4 border-t">
-                  <Label className="text-sm font-medium mb-1 block">Agent responsable</Label>
+                <div className="border-t border-border/70 pt-4">
+                  <p className="mb-1 text-sm font-semibold text-foreground">Agent responsable</p>
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{getAgentName(selectedVisiteGroup[0].agent_id)}</span>
@@ -948,7 +940,7 @@ export default function AdminCalendrier() {
               {/* Visit notes */}
               {selectedVisiteGroup[0].notes && (
                 <div>
-                  <Label className="text-sm font-medium mb-2 block">Notes</Label>
+                  <p className="mb-2 text-sm font-semibold text-foreground">Notes</p>
                   <p className="text-sm text-muted-foreground">{selectedVisiteGroup[0].notes}</p>
                 </div>
               )}
@@ -968,7 +960,7 @@ export default function AdminCalendrier() {
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
             {selectedVisiteGroup && (
-              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+              <Button variant="outline" className="rounded-full" onClick={() => setEditVisiteOpen(true)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Modifier la visite
               </Button>
@@ -978,12 +970,13 @@ export default function AdminCalendrier() {
                 visite={selectedVisiteGroup[0]}
                 visitesGroup={selectedVisiteGroup}
                 variant="outline"
+                className="rounded-full"
               />
             )}
             {selectedVisiteGroup && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
+                  <Button variant="destructive" className="rounded-full">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Supprimer la visite
                   </Button>
@@ -1032,18 +1025,20 @@ export default function AdminCalendrier() {
                 }}
                 variant="outline"
                 size="sm"
+                className="rounded-full"
               />
             )}
             {selectedVisiteGroup?.[0].offres?.lien_annonce && (
               <Button 
                 variant="outline" 
+                className="rounded-full"
                 onClick={() => window.open(selectedVisiteGroup[0].offres.lien_annonce, '_blank')}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Ouvrir l'annonce
               </Button>
             )}
-            <Button variant="default" onClick={() => handleDelegateToCoursier(selectedVisiteGroup || [])} className='bg-blue-600 hover:bg-blue-700 text-white'>Deleguer au coursier</Button><Button variant='default' onClick={() => setVisiteDetailDialogOpen(false)}>
+            <Button variant="default" onClick={() => handleDelegateToCoursier(selectedVisiteGroup || [])} className='rounded-full'>Deleguer au coursier</Button><Button variant='outline' className='rounded-full' onClick={() => setVisiteDetailDialogOpen(false)}>
               Fermer
             </Button>
           </DialogFooter>
@@ -1076,6 +1071,6 @@ export default function AdminCalendrier() {
           loadData(true);
         }}
       /></Suspense>}
-    </div>
+    </DashPage>
   );
 }

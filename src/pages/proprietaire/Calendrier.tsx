@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Calendar, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PremiumPageHeader } from '@/components/premium';
+import { DASH_CARD, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumProprietaireDayEvents } from '@/components/calendar/PremiumProprietaireDayEvents';
 import { AddCalendarEventDialog } from '@/components/proprietaire/AddCalendarEventDialog';
@@ -315,11 +315,10 @@ export default function Calendrier() {
 
   if (isLoading) {
     return (
-      <div className="p-4 md:p-8 space-y-6">
-        <PremiumPageHeader
+      <DashPage className="space-y-6">
+        <DashPageHeader
           title="Calendrier"
           subtitle="Échéances et rendez-vous"
-          icon={Calendar}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -329,17 +328,16 @@ export default function Calendrier() {
             <Skeleton className="h-[500px] rounded-2xl" />
           </div>
         </div>
-      </div>
+      </DashPage>
     );
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <PremiumPageHeader
+    <DashPage className="space-y-6">
+      <DashPageHeader
         title="Calendrier"
         subtitle="Échéances et rendez-vous"
-        icon={Calendar}
-        action={<Button onClick={() => setShowAddEventDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouvel événement</Button>}
+        action={<Button className="rounded-full" onClick={() => setShowAddEventDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouvel événement</Button>}
       />
       <AddCalendarEventDialog 
         open={showAddEventDialog} 
@@ -350,7 +348,7 @@ export default function Calendrier() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
           <EventManagerCalendar
             events={allEvents}
             visites={[]}
@@ -361,13 +359,13 @@ export default function Calendrier() {
         </div>
 
         {/* Side panel - Day events */}
-        <div className="bg-card/80 backdrop-blur-xl rounded-2xl border border-border/50 shadow-xl overflow-hidden min-h-[500px]">
+        <div className={`${DASH_CARD} min-w-0 overflow-hidden min-h-[500px]`}>
           <PremiumProprietaireDayEvents
             date={selectedDate}
             events={dayEvents}
           />
         </div>
       </div>
-    </div>
+    </DashPage>
   );
 }

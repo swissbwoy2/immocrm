@@ -123,25 +123,25 @@ export function FloatingMessenger() {
               exit="exit"
               className={
                 isMobile
-                  ? 'fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-2xl bg-background border border-border shadow-2xl flex flex-col overflow-hidden'
-                  : 'fixed z-50 right-[180px] min-[1800px]:right-[200px] bottom-6 w-[380px] h-[min(560px,calc(100dvh-48px))] rounded-2xl bg-background border border-border shadow-2xl flex flex-col overflow-hidden'
+                  ? 'fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
+                  : 'fixed z-50 right-[180px] min-[1800px]:right-[200px] bottom-6 w-[380px] h-[min(560px,calc(100dvh-48px))] rounded-2xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
               }
               style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
             >
               {!activeConversationId ? (
                 <>
                   {/* Header — list view */}
-                  <div className="flex items-center justify-between p-3 border-b border-border/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center">
-                        <MessageSquare className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="leading-tight">
-                        <p className="text-sm font-semibold">Messages</p>
-                        <p className="text-[10px] text-muted-foreground">Conversations Logisorama</p>
+                  <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <MessageSquare className="h-[18px] w-[18px]" />
+                      </span>
+                      <div className="min-w-0 leading-tight">
+                        <p className="text-base font-semibold text-foreground">Messages</p>
+                        <p className="text-xs text-muted-foreground">Conversations Logisorama</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={close} aria-label="Fermer">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-muted" onClick={close} aria-label="Fermer">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>

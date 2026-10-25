@@ -1,16 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  UserPlus, Clock, Mail, Phone, CheckCircle, XCircle, Search,
-  RefreshCw, AlertTriangle, Eye, FileText, CreditCard, Calendar,
-  User, Briefcase, Home, Building2, Receipt, Loader2, Send, Trash2
-} from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CheckCircle, FileText, Loader2, RefreshCw, Search, Users, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,41 +15,33 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { DashPage, DashPageHeader, DashFilterPills, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
+import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { DemandeActivationCard, CompteInactifCard } from '@/components/admin/activation/DemandeActivationCard';
+import { DemandeDetailsDialogBody } from '@/components/admin/activation/DemandeDetailsDialogBody';
+import {
+  attente, attenteProfil, etapeDemande, nomComplet, rangUrgence, texteRecherche,
+  type DemandeMandat, type Etape, type Profile,
+} from '@/components/admin/activation/activationModel';
 
-interface DemandeMandat {
-  id: string;
-  email: string;
-  prenom: string;
-  nom: string;
-  telephone: string;
-  adresse: string;
-  statut: string;
-  created_at: string;
-  type_recherche: string;
-  montant_acompte: number;
-  revenus_mensuels: number;
-  budget_max: number;
-  region_recherche: string;
-  date_paiement: string | null;
-  abaninja_invoice_id: string | null;
-  abaninja_invoice_ref: string | null;
-  [key: string]: any;
-}
+type SortKey = 'urgence' | 'recent' | 'oldest' | 'client_az';
+type TypeKey = 'all' | 'location' | 'achat';
 
-interface Profile {
-  id: string;
-  prenom: string;
-  nom: string;
-  email: string;
-  telephone?: string;
-  actif: boolean;
-  created_at: string;
-}
+const ETAPES: { key: Etape; label: string }[] = [
+  { key: 'a_traiter', label: 'À traiter' },
+  { key: 'paiement', label: 'Paiement attendu' },
+  { key: 'comptes', label: 'Comptes inactifs' },
+  { key: 'activees', label: 'Activées' },
+  { key: 'autres', label: 'Autres statuts' },
+];
 
+/**
+ * Demandes d'activation — une file de travail par étape :
+ * À traiter (facturer une nouvelle demande, activer une demande payée) → Paiement attendu (facture envoyée)
+ * → Comptes inactifs → Activées. Chaque carte porte UNE prochaine action et son bouton principal.
+ */
 export default function DemandesActivation() {
   const [demandes, setDemandes] = useState<DemandeMandat[]>([]);
   const [inactiveProfiles, setInactiveProfiles] = useState<Profile[]>([]);
@@ -68,6 +54,11 @@ export default function DemandesActivation() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [demandeToDelete, setDemandeToDelete] = useState<DemandeMandat | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [tab, setTab] = useState<Etape | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('urgence');
+  const [typeFilter, setTypeFilter] = useState<TypeKey>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(25);
 
   useEffect(() => {
     loadData();
@@ -372,356 +363,229 @@ export default function DemandesActivation() {
     }
   };
 
-  const getStatusBadge = (statut: string) => {
-    switch (statut) {
-      case 'en_attente':
-        return <Badge variant="destructive">En attente</Badge>;
-      case 'facture_envoyee':
-        return <Badge variant="outline" className="border-blue-500 text-blue-600">Facture envoyée</Badge>;
-      case 'paye':
-        return <Badge variant="default" className="bg-green-600">Payé - À activer</Badge>;
-      case 'active':
-        return <Badge variant="secondary">Activé</Badge>;
-      default:
-        return <Badge variant="outline">{statut}</Badge>;
-    }
-  };
+  // Recherche et type s'appliquent à toutes les étapes : les compteurs suivent.
+  const q = searchTerm.trim().toLowerCase();
+  const demandesVisibles = useMemo(() => demandes.filter((d) => {
+    if (typeFilter === 'achat' && d.type_recherche !== 'Acheter') return false;
+    if (typeFilter === 'location' && d.type_recherche === 'Acheter') return false;
+    return !q || texteRecherche(d).includes(q);
+  }), [demandes, q, typeFilter]);
 
-  const newDemandes = demandes.filter(d => d.statut === 'en_attente');
-  const invoicedDemandes = demandes.filter(d => d.statut === 'facture_envoyee');
-  const paidDemandes = demandes.filter(d => d.statut === 'paye');
-  const activeDemandes = demandes.filter(d => d.statut === 'active');
-
-  const filteredProfiles = inactiveProfiles.filter(profile => 
+  const filteredProfiles = inactiveProfiles.filter(profile =>
     `${profile.prenom} ${profile.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     profile.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const parEtape = useMemo(() => {
+    const m: Record<Etape, DemandeMandat[]> = { a_traiter: [], paiement: [], comptes: [], activees: [], autres: [] };
+    for (const d of demandesVisibles) m[etapeDemande(d)].push(d);
+    return m;
+  }, [demandesVisibles]);
+
+  const counts: Record<Etape, number> = {
+    a_traiter: parEtape.a_traiter.length,
+    paiement: parEtape.paiement.length,
+    comptes: filteredProfiles.length,
+    activees: parEtape.activees.length,
+    autres: parEtape.autres.length,
+  };
+
+  // Onglet par défaut = ce qui attend une action de l'admin (choisi une fois les données chargées).
+  const ongletParDefaut: Etape =
+    counts.a_traiter > 0 ? 'a_traiter'
+      : inactiveProfiles.length > 0 ? 'comptes'
+        : counts.paiement > 0 ? 'paiement'
+          : 'a_traiter';
+  const ongletActif: Etape = tab ?? ongletParDefaut;
+
+  // Résumé (sans filtres) pour l'en-tête.
+  const aTraiterTotal = demandes.filter((d) => etapeDemande(d) === 'a_traiter');
+  const enRetard = aTraiterTotal.filter((d) => attente(d).enRetard).length
+    + inactiveProfiles.filter((p) => attenteProfil(p).enRetard).length;
+  const aPayer = demandes.filter((d) => d.statut === 'facture_envoyee').length;
+  const totalActions = aTraiterTotal.length + inactiveProfiles.length;
+
+  const sorted = useMemo(() => {
+    if (ongletActif === 'comptes') return [];
+    const arr = [...parEtape[ongletActif]];
+    const t = (d: DemandeMandat) => new Date(d.created_at).getTime();
+    if (sortKey === 'client_az') arr.sort((a, b) => nomComplet(a).localeCompare(nomComplet(b), 'fr'));
+    else if (sortKey === 'urgence') arr.sort((a, b) => rangUrgence(a) - rangUrgence(b) || t(a) - t(b));
+    else arr.sort((a, b) => (sortKey === 'recent' ? t(b) - t(a) : t(a) - t(b)));
+    return arr;
+  }, [parEtape, ongletActif, sortKey]);
+
+  const profilsTries = useMemo(() => {
+    const arr = [...filteredProfiles];
+    const t = (p: Profile) => new Date(p.created_at).getTime();
+    if (sortKey === 'client_az') arr.sort((a, b) => nomComplet(a).localeCompare(nomComplet(b), 'fr'));
+    else if (sortKey === 'recent') arr.sort((a, b) => t(b) - t(a));
+    else arr.sort((a, b) => t(a) - t(b));
+    return arr;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inactiveProfiles, searchTerm, sortKey]);
+
+  useEffect(() => { setPage(1); }, [searchTerm, typeFilter, pageSize, ongletActif, sortKey]);
+  const liste = ongletActif === 'comptes' ? profilsTries : sorted;
+  const pagedDemandes = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [sorted, page, pageSize]);
+  const pagedProfils = useMemo(() => profilsTries.slice((page - 1) * pageSize, page * pageSize), [profilsTries, page, pageSize]);
+
+  const filtresActifs = !!q || typeFilter !== 'all';
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  const etapesVisibles = ETAPES.filter((e) => e.key !== 'autres' || counts.autres > 0 || ongletActif === 'autres');
+
   return (
-    <div className="flex-1 overflow-auto relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="p-4 md:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <UserPlus className="h-7 w-7" />
-              Demandes d'activation
-            </h1>
-            <p className="text-muted-foreground">Gérez les demandes de mandat et comptes</p>
-          </div>
-          <Button onClick={loadData} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Actualiser
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Demandes d'activation"
+        subtitle={
+          totalActions === 0
+            ? `Tout est à jour : aucune demande à traiter${aPayer > 0 ? ` · ${aPayer} facture${aPayer > 1 ? 's' : ''} en attente de paiement` : ''}.`
+            : `${totalActions} à traiter${enRetard > 0 ? ` · ${enRetard} depuis plus de 48 h` : ''}${aPayer > 0 ? ` · ${aPayer} facture${aPayer > 1 ? 's' : ''} en attente de paiement` : ''}`
+        }
+        action={
+          <Button onClick={loadData} variant="outline" size="sm" className="h-10 rounded-full" aria-label="Actualiser">
+            <RefreshCw className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Actualiser</span>
           </Button>
+        }
+      />
+
+      {/* Barre d'outils : recherche pleine largeur sur mobile, tri et type côte à côte */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Nom, e-mail, téléphone, région, n° de facture…"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Rechercher une demande ou un compte"
+            className="h-11 rounded-full pl-10 pr-10"
+          />
+          {searchTerm && (
+            <button type="button" onClick={() => setSearchTerm('')} aria-label="Effacer la recherche"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '0ms' }}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-950 group-hover:scale-110 transition-transform">
-                <AlertTriangle className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{newDemandes.length}</p>
-                <p className="text-xs text-muted-foreground">Nouvelles</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '50ms' }}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950 group-hover:scale-110 transition-transform">
-                <Receipt className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{invoicedDemandes.length}</p>
-                <p className="text-xs text-muted-foreground">Facturées</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '100ms' }}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-green-100 dark:bg-green-950 group-hover:scale-110 transition-transform">
-                <CreditCard className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{paidDemandes.length}</p>
-                <p className="text-xs text-muted-foreground">Payées</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '150ms' }}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-950 group-hover:scale-110 transition-transform">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{activeDemandes.length}</p>
-                <p className="text-xs text-muted-foreground">Activées</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '200ms' }}>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-950 group-hover:scale-110 transition-transform">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{inactiveProfiles.length}</p>
-                <p className="text-xs text-muted-foreground">Inactifs</p>
-              </div>
-            </div>
-          </Card>
+        <div className="grid grid-cols-2 gap-2 md:flex md:w-auto">
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[190px]" aria-label="Trier"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="urgence">Urgent d’abord</SelectItem>
+              <SelectItem value="recent">Plus récentes</SelectItem>
+              <SelectItem value="oldest">Plus anciennes</SelectItem>
+              <SelectItem value="client_az">Par client (A–Z)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as TypeKey)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[170px]" aria-label="Type de recherche"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Location et achat</SelectItem>
+              <SelectItem value="location">Location</SelectItem>
+              <SelectItem value="achat">Achat</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-
-        <Tabs defaultValue={inactiveProfiles.length > 0 && newDemandes.length + paidDemandes.length === 0 ? 'comptes' : 'demandes'} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="demandes">
-              Demandes de mandat {newDemandes.length + invoicedDemandes.length + paidDemandes.length > 0 && (
-                <Badge variant="destructive" className="ml-2">{newDemandes.length + invoicedDemandes.length + paidDemandes.length}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="comptes">
-              Comptes inactifs {inactiveProfiles.length > 0 && (
-                <Badge variant="destructive" className="ml-2">{inactiveProfiles.length}</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="demandes">
-            <Card className="card-interactive p-4 animate-fade-in" style={{ animationDelay: '250ms' }}>
-              <ScrollArea className="h-[500px]">
-                {demandes.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Aucune demande de mandat</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {demandes.map((demande) => (
-                      <div
-                        key={demande.id}
-                        className={`p-4 rounded-lg border ${
-                          demande.statut === 'en_attente' ? 'bg-orange-50/50 border-orange-200 dark:bg-orange-950/20' :
-                          demande.statut === 'facture_envoyee' ? 'bg-blue-50/50 border-blue-200 dark:bg-blue-950/20' :
-                          demande.statut === 'paye' ? 'bg-green-50/50 border-green-200 dark:bg-green-950/20' :
-                          'bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold">{demande.prenom} {demande.nom}</p>
-                              {getStatusBadge(demande.statut)}
-                              {/* Type de recherche avec badge coloré */}
-                              {demande.type_recherche === 'Acheter' ? (
-                                <Badge className="bg-blue-600 hover:bg-blue-700">
-                                  <Building2 className="h-3 w-3 mr-1" />
-                                  Achat
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">
-                                  <Home className="h-3 w-3 mr-1" />
-                                  Location
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-2">
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />{demande.email}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />{demande.telephone}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <CreditCard className="h-3 w-3" />
-                                {demande.type_recherche === 'Acheter' ? '2\'500' : demande.montant_acompte} CHF
-                              </span>
-                              {demande.type_recherche === 'Acheter' && demande.apport_personnel > 0 && (
-                                <span className="flex items-center gap-1 text-blue-600">
-                                  💰 Apport: {demande.apport_personnel?.toLocaleString()} CHF
-                                </span>
-                              )}
-                            </div>
-                            {demande.abaninja_invoice_ref && (
-                              <p className="text-xs text-blue-600 mt-1">
-                                <Receipt className="h-3 w-3 inline mr-1" />
-                                Facture AbaNinja: {demande.abaninja_invoice_ref}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Soumis le {format(new Date(demande.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
-                              {demande.date_paiement && (
-                                <> • Payé le {format(new Date(demande.date_paiement), 'dd MMM yyyy', { locale: fr })}</>
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button size="sm" variant="outline" onClick={() => setSelectedDemande(demande)}>
-                                  <Eye className="h-4 w-4 mr-1" />Voir
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                                <DialogHeader>
-                                  <DialogTitle>{demande.prenom} {demande.nom}</DialogTitle>
-                                </DialogHeader>
-                                <div className="grid grid-cols-2 gap-4 py-4 text-sm">
-                                  <div><strong>Email:</strong> {demande.email}</div>
-                                  <div><strong>Téléphone:</strong> {demande.telephone}</div>
-                                  <div><strong>Adresse:</strong> {demande.adresse}</div>
-                                  <div><strong>Nationalité:</strong> {demande.nationalite}</div>
-                                  <div><strong>Permis:</strong> {demande.type_permis}</div>
-                                  <div><strong>État civil:</strong> {demande.etat_civil}</div>
-                                  <div className="col-span-2 border-t pt-2 mt-2">
-                                    <strong>Situation financière</strong>
-                                  </div>
-                                  <div><strong>Profession:</strong> {demande.profession}</div>
-                                  <div><strong>Employeur:</strong> {demande.employeur}</div>
-                                  <div><strong>Revenus:</strong> {demande.revenus_mensuels?.toLocaleString()} CHF/mois</div>
-                                  <div><strong>Budget max:</strong> {demande.budget_max?.toLocaleString()} CHF</div>
-                                  <div className="col-span-2 border-t pt-2 mt-2">
-                                    <strong>Recherche</strong>
-                                  </div>
-                                  <div><strong>Type:</strong> {demande.type_recherche}</div>
-                                  <div><strong>Type de bien:</strong> {demande.type_bien}</div>
-                                  <div><strong>Pièces:</strong> {demande.pieces_recherche}</div>
-                                  <div><strong>Région:</strong> {demande.region_recherche}</div>
-                                  {demande.souhaits_particuliers && (
-                                    <div className="col-span-2">
-                                      <strong>Souhaits:</strong> {demande.souhaits_particuliers}
-                                    </div>
-                                  )}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                            
-                            {demande.statut === 'en_attente' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleCreateAbaNinjaInvoice(demande)}
-                                disabled={creatingInvoice === demande.id}
-                              >
-                                {creatingInvoice === demande.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <><Receipt className="h-4 w-4 mr-1" />Facturer</>
-                                )}
-                              </Button>
-                            )}
-                            {demande.statut === 'facture_envoyee' && demande.abaninja_invoice_id && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleResendInvoice(demande)}
-                                disabled={resendingInvoice === demande.id}
-                              >
-                                {resendingInvoice === demande.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <><Send className="h-4 w-4 mr-1" />Renvoyer</>
-                                )}
-                              </Button>
-                            )}
-                            {(demande.statut === 'en_attente' || demande.statut === 'facture_envoyee') && (
-                              <Button size="sm" onClick={() => handleMarkAsPaid(demande)}>
-                                <CreditCard className="h-4 w-4 mr-1" />Payé
-                              </Button>
-                            )}
-                            {demande.statut === 'paye' && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleActivateMandat(demande)}
-                                disabled={activating === demande.id}
-                              >
-                                {activating === demande.id ? (
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <><CheckCircle className="h-4 w-4 mr-1" />Activer</>
-                                )}
-                              </Button>
-                            )}
-                            
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => { setDemandeToDelete(demande); setDeleteDialogOpen(true); }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />Supprimer
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="comptes">
-            <Card className="p-4">
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <ScrollArea className="h-[400px]">
-                {filteredProfiles.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CheckCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Tous les comptes sont activés</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredProfiles.map((profile) => (
-                      <div key={profile.id} className="p-3 rounded-lg border bg-muted/30">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1">
-                            <p className="font-medium">{profile.prenom} {profile.nom}</p>
-                            <p className="text-xs text-muted-foreground">{profile.email}</p>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleActivateProfile(profile.id)}
-                            disabled={activating === profile.id}
-                          >
-                            {activating === profile.id ? (
-                              <RefreshCw className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <><CheckCircle className="h-3 w-3 mr-1" />Activer</>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
+
+      <DashFilterPills
+        label="Étapes des demandes d'activation"
+        value={ongletActif}
+        onChange={(v) => setTab(v as Etape)}
+        options={etapesVisibles.map((e) => ({ key: e.key, label: e.label, count: counts[e.key] }))}
+      />
+
+      {liste.length === 0 ? (
+        <DashEmptyState
+          icon={ongletActif === 'comptes' ? CheckCircle : FileText}
+          title={
+            filtresActifs ? 'Aucun résultat pour ces filtres'
+              : ongletActif === 'a_traiter' ? 'Rien à traiter pour le moment'
+              : ongletActif === 'paiement' ? 'Aucune facture en attente de paiement'
+              : ongletActif === 'comptes' ? 'Tous les comptes sont activés'
+              : ongletActif === 'activees' ? 'Aucune demande activée'
+              : 'Aucune demande de mandat'
+          }
+          description={
+            ongletActif === 'a_traiter' && !filtresActifs
+              ? 'Les nouvelles demandes de mandat et les demandes payées à activer arrivent ici.'
+              : undefined
+          }
+        />
+      ) : ongletActif === 'comptes' ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {pagedProfils.map((profile) => (
+            <CompteInactifCard
+              key={profile.id}
+              p={profile}
+              activating={activating === profile.id}
+              onActiver={handleActivateProfile}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pagedDemandes.map((demande) => (
+            <DemandeActivationCard
+              key={demande.id}
+              d={demande}
+              creatingInvoice={creatingInvoice === demande.id}
+              resendingInvoice={resendingInvoice === demande.id}
+              activating={activating === demande.id}
+              onVoir={setSelectedDemande}
+              onFacturer={handleCreateAbaNinjaInvoice}
+              onRenvoyer={handleResendInvoice}
+              onPayer={handleMarkAsPaid}
+              onActiver={handleActivateMandat}
+              onSupprimer={(d) => { setDemandeToDelete(d); setDeleteDialogOpen(true); }}
+            />
+          ))}
+        </div>
+      )}
+
+      {liste.length > pageSize && (
+        <TablePagination
+          total={liste.length}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          label={ongletActif === 'comptes' ? 'comptes' : 'demandes'}
+        />
+      )}
+
+      {ongletActif === 'activees' && (
+        <p className="text-center text-sm text-muted-foreground">
+          Les comptes activés se gèrent ensuite depuis{' '}
+          <Link to="/admin/clients" className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline">
+            <Users className="h-3.5 w-3.5" />la liste des clients
+          </Link>.
+        </p>
+      )}
+
+      {/* Fiche de la demande */}
+      <Dialog open={!!selectedDemande} onOpenChange={(o) => { if (!o) setSelectedDemande(null); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
+          {selectedDemande && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedDemande.prenom} {selectedDemande.nom}</DialogTitle>
+              </DialogHeader>
+              <DemandeDetailsDialogBody demande={selectedDemande} />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -734,11 +598,11 @@ export default function DemandesActivation() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogCancel disabled={deleting} className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleDeleteDemande}
               disabled={deleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Supprimer
@@ -746,6 +610,6 @@ export default function DemandesActivation() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashPage>
   );
 }

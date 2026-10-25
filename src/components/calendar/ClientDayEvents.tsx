@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Calendar, Clock, MapPin, Home, Maximize, User, Phone, KeyRound, 
-  Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus
+  Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Lightbulb, Hourglass, MessageSquareText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors } from './types';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 
 interface ClientDayEventsProps {
   date: Date | null;
@@ -27,8 +28,11 @@ export function ClientDayEvents({
 }: ClientDayEventsProps) {
   if (!date) {
     return (
-      <div className="bg-card rounded-lg border p-4 h-full flex items-center justify-center">
-        <p className="text-muted-foreground text-center">
+      <div className={cn(DASH_CARD, 'p-6 h-full flex flex-col items-center justify-center')}>
+        <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <Calendar className="h-7 w-7 text-primary" />
+        </span>
+        <p className="text-sm text-muted-foreground text-center">
           Sélectionnez un jour pour voir les événements
         </p>
       </div>
@@ -57,16 +61,16 @@ export function ClientDayEvents({
     if (!recommandation) return null;
     
     const config = {
-      recommande: { icon: ThumbsUp, label: 'Recommandé', variant: 'default' as const, className: 'bg-green-100 text-green-700' },
-      neutre: { icon: Minus, label: 'Neutre', variant: 'secondary' as const, className: '' },
-      deconseille: { icon: ThumbsDown, label: 'Déconseillé', variant: 'destructive' as const, className: '' }
+      recommande: { icon: ThumbsUp, label: 'Recommandé', variant: 'default' as const, className: 'border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400' },
+      neutre: { icon: Minus, label: 'Neutre', variant: 'secondary' as const, className: 'border-transparent bg-muted text-muted-foreground' },
+      deconseille: { icon: ThumbsDown, label: 'Déconseillé', variant: 'destructive' as const, className: 'border-transparent bg-destructive/10 text-destructive hover:bg-destructive/10' }
     }[recommandation];
 
     if (!config) return null;
 
     const Icon = config.icon;
     return (
-      <Badge variant={config.variant} className={cn("gap-1 text-xs", config.className)}>
+      <Badge variant={config.variant} className={cn("gap-1 rounded-full text-xs font-semibold", config.className)}>
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
@@ -74,24 +78,31 @@ export function ClientDayEvents({
   };
 
   return (
-    <div className="bg-card rounded-lg border h-full flex flex-col">
-      <div className="p-4 border-b">
-        <h3 className="font-semibold flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          {format(date, 'EEEE d MMMM yyyy', { locale: fr })}
+    <div className={cn(DASH_CARD, 'h-full overflow-hidden flex flex-col')}>
+      <div className="p-4 md:p-5 border-b border-border/70">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Calendar className="h-5 w-5" />
+          </span>
+          <span className="capitalize">{format(date, 'EEEE d MMMM yyyy', { locale: fr })}</span>
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-1 ml-[52px]">
           {allItems.length} événement{allItems.length > 1 ? 's' : ''}
         </p>
       </div>
 
       <ScrollArea className="flex-1 p-4">
         {allItems.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            Aucun événement ce jour
-          </p>
+          <div className="text-center py-12">
+            <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Calendar className="w-6 h-6 text-muted-foreground" />
+            </span>
+            <p className="text-sm text-muted-foreground">
+              Aucun événement ce jour
+            </p>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {allItems.map((item, idx) => {
               const isEvent = item.type === 'event';
               const data = item.data;
@@ -110,25 +121,25 @@ export function ClientDayEvents({
                 return (
                   <div
                     key={`visite-${data.id}-${idx}`}
-                    className="p-4 rounded-lg border bg-card space-y-4"
+                    className="p-4 rounded-xl border border-border/70 bg-card space-y-4"
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-lg">{data.adresse}</h4>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          <Badge variant="default" className="text-xs">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-semibold text-foreground">{data.adresse}</h4>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <Badge variant="outline" className="rounded-full text-xs font-semibold border-transparent bg-primary/10 text-primary">
                             {data.statut === 'planifiee' ? 'Visite planifiée' : 'Visite effectuée'}
                           </Badge>
                           {data.est_deleguee && (
-                            <Badge variant="outline" className="text-xs">Déléguée</Badge>
+                            <Badge variant="outline" className="rounded-full text-xs font-semibold border-transparent bg-muted text-muted-foreground">Déléguée</Badge>
                           )}
                           {data.recommandation_agent && getRecommandationBadge(data.recommandation_agent)}
                         </div>
                       </div>
                       {data.offres && (
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-primary">
+                        <div className="text-right shrink-0">
+                          <p className="text-[15px] font-semibold text-foreground">
                             {data.offres.prix?.toLocaleString('fr-CH')} CHF
                           </p>
                           <p className="text-xs text-muted-foreground">par mois</p>
@@ -137,14 +148,16 @@ export function ClientDayEvents({
                     </div>
 
                     {/* Date & Time */}
-                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="p-3 rounded-xl bg-muted/60">
                       <div className="flex items-center gap-3">
-                        <Calendar className="w-6 h-6 text-primary" />
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Calendar className="w-[18px] h-[18px]" />
+                        </span>
                         <div>
-                          <p className="font-medium">
+                          <p className="font-semibold text-sm text-foreground">
                             {format(eventDate, "EEEE d MMMM yyyy", { locale: fr })}
                           </p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {format(eventDate, 'HH:mm')}
                           </p>
@@ -159,14 +172,14 @@ export function ClientDayEvents({
                           <Home className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Pièces</p>
-                            <p className="font-medium">{data.offres.pieces}</p>
+                            <p className="font-semibold text-foreground">{data.offres.pieces}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Maximize className="w-4 h-4 text-muted-foreground" />
                           <div>
                             <p className="text-xs text-muted-foreground">Surface</p>
-                            <p className="font-medium">{data.offres.surface} m²</p>
+                            <p className="font-semibold text-foreground">{data.offres.surface} m²</p>
                           </div>
                         </div>
                         {data.offres.etage && (
@@ -174,7 +187,7 @@ export function ClientDayEvents({
                             <MapPin className="w-4 h-4 text-muted-foreground" />
                             <div>
                               <p className="text-xs text-muted-foreground">Étage</p>
-                              <p className="font-medium">{data.offres.etage}</p>
+                              <p className="font-semibold text-foreground">{data.offres.etage}</p>
                             </div>
                           </div>
                         )}
@@ -184,17 +197,17 @@ export function ClientDayEvents({
                     {/* Practical info */}
                     {data.offres && (data.offres.code_immeuble || data.offres.concierge_nom) && (
                       <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">📋 Informations pratiques</p>
+                        <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1"><KeyRound className="w-3 h-3" />Informations pratiques</p>
                         <div className="grid grid-cols-1 gap-2">
                           {data.offres.code_immeuble && (
-                            <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl border border-border/70 text-sm">
                               <KeyRound className="w-4 h-4 text-primary" />
                               <span className="text-muted-foreground">Code:</span>
-                              <span className="font-mono font-bold">{data.offres.code_immeuble}</span>
+                              <span className="font-mono font-semibold">{data.offres.code_immeuble}</span>
                             </div>
                           )}
                           {data.offres.concierge_nom && (
-                            <div className="flex items-center gap-2 p-2 bg-muted rounded text-sm">
+                            <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl border border-border/70 text-sm">
                               <User className="w-4 h-4 text-primary" />
                               <span>{data.offres.concierge_nom}</span>
                               {data.offres.concierge_tel && (
@@ -210,25 +223,26 @@ export function ClientDayEvents({
 
                     {/* Agent feedback */}
                     {data.feedback_agent && (
-                      <div className="p-3 bg-muted rounded-lg">
-                        <p className="text-xs font-medium mb-1">📝 Feedback de l'agent:</p>
+                      <div className="p-3 rounded-xl bg-muted/60">
+                        <p className="text-xs font-semibold mb-1 flex items-center gap-1"><MessageSquareText className="w-3 h-3" />Feedback de l'agent:</p>
                         <p className="text-sm">{data.feedback_agent}</p>
                       </div>
                     )}
 
                     {/* Notes */}
                     {data.notes && (
-                      <div className="p-2 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded text-sm">
-                        💡 {data.notes}
+                      <div className="p-3 rounded-xl bg-amber-500/10 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                        <Lightbulb className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>{data.notes}</span>
                       </div>
                     )}
 
                     {/* Actions */}
-                    <div className="space-y-2 pt-2 border-t">
+                    <div className="space-y-3 pt-3 border-t border-border/70">
                       {data.statut === 'planifiee' && data.offres?.statut !== 'visite_effectuee' && isVisiteDatePassed && (
                         <Button 
                           onClick={() => onMarquerEffectuee(data)}
-                          className="w-full"
+                          className="w-full rounded-full"
                           size="sm"
                         >
                           <Check className="mr-2 h-4 w-4" />
@@ -236,20 +250,22 @@ export function ClientDayEvents({
                         </Button>
                       )}
                       {data.statut === 'planifiee' && !isVisiteDatePassed && (
-                        <div className="p-2 bg-amber-50 dark:bg-amber-950 rounded text-xs text-amber-700 dark:text-amber-300 text-center">
-                          ⏳ Actions disponibles après la visite
+                        <div className="p-2 bg-amber-500/10 rounded-xl text-xs text-amber-700 dark:text-amber-400 text-center flex items-center justify-center gap-1">
+                          <Hourglass className="w-3 h-3" />
+                          Actions disponibles après la visite
                         </div>
                       )}
 
                       {showPostVisitActions && (
-                        <div className="p-3 bg-muted rounded-lg space-y-2">
-                          <p className="text-xs font-medium text-center">
+                        <div className="p-3 rounded-xl border border-border/70 space-y-3">
+                          <p className="text-xs font-semibold text-center text-muted-foreground">
                             Suite à cette visite, souhaitez-vous donner suite ?
                           </p>
                           <div className="grid grid-cols-3 gap-2">
                             <Button 
                               variant="default"
                               size="sm"
+                              className="rounded-full"
                               onClick={() => onAccepterOffre(data)}
                             >
                               <Check className="mr-1 h-3 w-3" />
@@ -258,14 +274,16 @@ export function ClientDayEvents({
                             <Button 
                               variant="outline"
                               size="sm"
+                              className="rounded-full"
                               onClick={onVoirOffre}
                             >
                               <FileCheck className="mr-1 h-3 w-3" />
                               Candidature
                             </Button>
                             <Button 
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
+                              className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => onRefuserOffre(data)}
                             >
                               <X className="mr-1 h-3 w-3" />
@@ -280,7 +298,7 @@ export function ClientDayEvents({
                           variant="outline"
                           size="sm"
                           onClick={onVoirOffre}
-                          className="flex-1"
+                          className="flex-1 rounded-full"
                         >
                           Voir l'offre
                         </Button>
@@ -297,14 +315,14 @@ export function ClientDayEvents({
               return (
                 <div
                   key={`event-${data.id}-${idx}`}
-                  className={cn('p-3 rounded-lg border', eventTypeColors[item.eventType])}
+                  className={cn('p-4 rounded-xl border', eventTypeColors[item.eventType])}
                 >
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="rounded-full text-xs bg-background/70">
                       {eventTypeLabels[item.eventType] || 'Événement'}
                     </Badge>
                   </div>
-                  <h4 className="font-medium mt-1">{data.title}</h4>
+                  <h4 className="text-base font-semibold mt-2">{data.title}</h4>
                   {!data.all_day && (
                     <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                       <Clock className="h-3 w-3" />

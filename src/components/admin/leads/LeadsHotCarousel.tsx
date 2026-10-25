@@ -1,5 +1,3 @@
-import { motion } from "framer-motion";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Phone, CheckCircle, Loader2, Flame } from "lucide-react";
 import { format } from "date-fns";
@@ -7,6 +5,7 @@ import { fr } from "date-fns/locale";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { initials, fullName, type Lead, type PhoneAppointment } from "./types";
 import { cn } from "@/lib/utils";
+import { DASH_CARD } from "@/components/client/dashboard/DashPrimitives";
 
 interface HotItem {
   lead: Lead;
@@ -27,37 +26,34 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 px-1">
-        <Flame className="h-4 w-4 text-orange-500" />
-        <h3 className="text-sm font-semibold">À traiter en priorité</h3>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+          <Flame className="h-4 w-4" />
+        </span>
+        <h3 className="text-base font-semibold">À traiter en priorité</h3>
         <span className="text-xs text-muted-foreground">({hot.length})</span>
       </div>
       <ScrollArea className="w-full">
         <div className="flex gap-3 pb-3 snap-x snap-mandatory">
-          {hot.map((h, i) => (
-            <motion.div
-              key={h.lead.id + h.reason}
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.25, delay: i * 0.04 }}
-            >
-              <Card
+          {hot.map((h) => (
+            <div key={h.lead.id + h.reason}>
+              <div
                 className={cn(
-                  "min-w-[260px] sm:min-w-[300px] snap-start p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg transition-all",
-                  "bg-gradient-to-br border-orange-500/30",
-                  h.reason === "rdv_today"
-                    ? "from-amber-500/10 to-orange-500/5"
-                    : "from-rose-500/10 to-orange-500/5"
+                  DASH_CARD,
+                  "min-w-[260px] sm:min-w-[300px] snap-start p-3 flex items-center gap-3 cursor-pointer transition-colors hover:bg-muted/50"
                 )}
                 onClick={() => onSelect(h.lead)}
               >
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold flex items-center justify-center text-sm flex-shrink-0">
+                <div className={cn(
+                  "h-10 w-10 rounded-full font-semibold flex items-center justify-center text-sm flex-shrink-0",
+                  h.reason === "rdv_today" ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
+                )}>
                   {initials(h.lead)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{fullName(h.lead)}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {h.reason === "rdv_today" && h.appt ? (
-                      <>📍 RDV bureau · {format(new Date(h.appt.slot_start), "EEE HH'h'mm", { locale: fr })} · {h.appt.status === "confirme" ? "confirmé" : "à confirmer"}</>
+                      <>RDV bureau · {format(new Date(h.appt.slot_start), "EEE HH'h'mm", { locale: fr })} · {h.appt.status === "confirme" ? "confirmé" : "à confirmer"}</>
                     ) : (
                       <>Qualifié non contacté</>
                     )}
@@ -68,7 +64,7 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
                     size="sm"
                     onClick={(e) => { e.stopPropagation(); onConfirm(h.appt!.id); }}
                     disabled={confirmingId === h.appt.id}
-                    className="gap-1"
+                    className="gap-1 rounded-full"
                   >
                     {confirmingId === h.appt.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
                     Confirmer
@@ -78,6 +74,7 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
                   <Button
                     size="sm"
                     variant="outline"
+                    className="rounded-full"
                     asChild
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -87,8 +84,8 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
                     </a>
                   </Button>
                 )}
-              </Card>
-            </motion.div>
+              </div>
+            </div>
           ))}
         </div>
         <ScrollBar orientation="horizontal" />

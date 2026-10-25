@@ -111,7 +111,13 @@ const calculateCounts = (notifs: Notification[]): NotificationCounts => {
   };
 };
 
-export const useNotifications = () => {
+export interface UseNotificationsOptions {
+  /** Nombre maximum de notifications chargées (50 par défaut) ; `null` = sans limite. */
+  limit?: number | null;
+}
+
+export const useNotifications = (options: UseNotificationsOptions = {}) => {
+  const limit = options.limit === undefined ? 50 : options.limit;
   const { user } = useAuth();
   const { toast } = useToast();
   const toastRef = useRef(toast);
@@ -126,12 +132,13 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
+      if (limit !== null) query = query.limit(limit);
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -146,7 +153,7 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, limit]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!user) return;

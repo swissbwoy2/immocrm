@@ -118,14 +118,14 @@ export function LeadDetailSheet({
         className="w-full sm:max-w-[480px] overflow-y-auto p-0 max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92vh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-2xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom"
       >
         {/* Header */}
-        <div className="bg-gradient-to-br from-primary/15 to-primary/5 p-6 border-b">
+        <div className="p-6 border-b border-border/70">
           <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-bold flex items-center justify-center text-lg flex-shrink-0">
+            <div className="h-14 w-14 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-lg flex-shrink-0">
               {initials(lead)}
             </div>
             <div className="flex-1 min-w-0">
               <SheetHeader className="space-y-1 text-left">
-                <SheetTitle className="text-lg truncate">{fullName(lead)}</SheetTitle>
+                <SheetTitle className="text-lg font-semibold truncate">{fullName(lead)}</SheetTitle>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="outline" className={cn("text-[10px]", src.badgeClass)}>{src.label}</Badge>
                   {lead.type_recherche && <Badge variant="secondary" className="text-[10px]">{lead.type_recherche}</Badge>}
@@ -145,7 +145,7 @@ export function LeadDetailSheet({
           <section>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contact</h4>
             <div className="grid grid-cols-1 gap-2">
-              <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+              <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5 rounded-full">
                 <a href={`mailto:${lead.email}`}>
                   <Mail className="h-4 w-4 text-primary" />
                   <span className="truncate">{lead.email}</span>
@@ -153,13 +153,13 @@ export function LeadDetailSheet({
               </Button>
               {lead.telephone && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5 rounded-full">
                     <a href={`tel:${lead.telephone}`}>
                       <Phone className="h-4 w-4 text-primary" />
                       <span className="truncate">Appeler</span>
                     </a>
                   </Button>
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5 rounded-full">
                     <a
                       href={`https://wa.me/${lead.telephone.replace(/[^0-9]/g, "")}`}
                       target="_blank"
@@ -185,7 +185,7 @@ export function LeadDetailSheet({
             <section>
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Rendez-vous au bureau</h4>
               <div className={cn(
-                "rounded-lg p-3 border",
+                "rounded-xl p-3 border",
                 appt.status === "confirme"
                   ? "bg-emerald-500/10 border-emerald-500/30"
                   : "bg-amber-500/10 border-amber-500/30"
@@ -200,7 +200,7 @@ export function LeadDetailSheet({
                 {appt.status === "en_attente" && (
                   <Button
                     size="sm"
-                    className="w-full mt-3 gap-2"
+                    className="w-full mt-3 gap-2 rounded-full"
                     onClick={() => onConfirmAppt(appt.id)}
                     disabled={confirmingApptId === appt.id}
                   >
@@ -220,7 +220,7 @@ export function LeadDetailSheet({
               </h4>
               <div
                 className={cn(
-                  "rounded-md border p-3 text-xs space-y-2",
+                  "rounded-xl border p-3 text-xs space-y-2",
                   lead.statut_qualification === 'qualifie' && 'border-emerald-500/40 bg-emerald-500/5',
                   lead.statut_qualification === 'a_verifier' && 'border-amber-500/40 bg-amber-500/5',
                   lead.statut_qualification === 'a_reorienter' && 'border-sky-500/40 bg-sky-500/5',
@@ -288,7 +288,7 @@ export function LeadDetailSheet({
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
                 <FileText className="h-3 w-3" /> Réponses du formulaire
               </h4>
-              <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+              <div className="rounded-xl border border-border/70 bg-muted/40 p-3 text-xs space-y-2">
                 {/* Statut qualification */}
                 <div className="flex items-center gap-2 pb-2 border-b border-border/40">
                   {lead.is_qualified === true ? (
@@ -369,7 +369,7 @@ export function LeadDetailSheet({
           {/* Origine */}
           <section>
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Origine</h4>
-            <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+            <div className="rounded-xl border border-border/70 bg-muted/40 p-3 text-xs space-y-1">
               {[
                 ["Source", src.label],
                 ["Source brute", lead.source],
@@ -401,7 +401,7 @@ export function LeadDetailSheet({
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Actions</h4>
             {canInvite && (
               <Button
-                className="w-full justify-start gap-2"
+                className="w-full justify-start gap-2 rounded-full"
                 onClick={() => onInviteAsClient(lead)}
                 disabled={invitingLeadId === lead.id}
               >
@@ -410,12 +410,12 @@ export function LeadDetailSheet({
               </Button>
             )}
             {!lead.contacted && (
-              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => onSendRelance(lead)}>
+              <Button variant="outline" className="w-full justify-start gap-2 rounded-full" onClick={() => onSendRelance(lead)}>
                 <Send className="h-4 w-4 text-primary" />
                 Envoyer email de relance
               </Button>
             )}
-            <Button variant="outline" className="w-full justify-start gap-2" onClick={() => onToggleContacted(lead)}>
+            <Button variant="outline" className="w-full justify-start gap-2 rounded-full" onClick={() => onToggleContacted(lead)}>
               {lead.contacted ? <Circle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 text-emerald-500" />}
               {lead.contacted ? "Marquer non contacté" : "Marquer contacté"}
             </Button>
@@ -441,7 +441,7 @@ export function LeadDetailSheet({
           <section>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="w-full justify-start gap-2 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => {
                 if (confirm("Supprimer définitivement ce lead ?")) {
                   onDelete(lead);

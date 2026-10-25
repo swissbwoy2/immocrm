@@ -9,7 +9,10 @@ import { cn } from '@/lib/utils';
  * fond blanc, encre de la marque, un seul accent vert foncé (contraste AA avec le texte blanc),
  * surfaces grises #f7f7f7, coins de 14 px, boutons de 48 px.
  */
-export const ACCENT_BG = 'bg-[var(--home-accent)] hover:bg-[var(--home-accent-hover)] active:bg-[var(--home-accent-active)]';
+/** Bouton principal en verre liquide teinté (style Apple), vert accent du site. */
+export const ACCENT_BG = 'imr-lg-tint imr-lg-accent';
+/** Bouton secondaire en verre liquide clair. */
+export const GLASS_BTN = 'imr-lg-glass text-foreground';
 export const ACCENT_TEXT = 'text-[var(--home-accent)]';
 export const SURFACE = 'bg-[var(--home-surface)]';
 export const CONTAINER = 'mx-auto w-full max-w-[1120px] px-4 md:px-6';
@@ -31,10 +34,10 @@ type CtaProps = {
 /** Bouton-lien de 48 px : route interne, ancre (#...) ou lien externe. */
 export function Cta({ to, children, variant = 'primary', className, external }: CtaProps) {
   const cls = cn(
-    'inline-flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg px-6 text-[16px] font-medium transition-colors duration-150',
+    'inline-flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full px-6 text-[16px] font-medium active:scale-[0.96]',
     variant === 'primary'
       ? cn(ACCENT_BG, 'text-white')
-      : 'bg-white text-foreground ring-1 ring-inset ring-foreground/80 hover:bg-[var(--home-surface)]',
+      : GLASS_BTN,
     FOCUS,
     className,
   );

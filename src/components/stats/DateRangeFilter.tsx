@@ -82,18 +82,18 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
   const yearOptions = generateYearOptions();
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex min-w-0 items-center", className)}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 min-w-[200px] justify-between">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              <span className="text-sm">{value.label}</span>
-            </div>
-            <ChevronDown className="h-4 w-4 opacity-50" />
+          <Button variant="outline" size="sm" className="h-10 w-full min-w-0 justify-between gap-2 rounded-full px-4 sm:w-auto sm:min-w-[200px]">
+            <span className="flex min-w-0 items-center gap-2">
+              <CalendarDays className="h-4 w-4 shrink-0" />
+              <span className="truncate text-sm">{value.label}</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[200px]">
+        <DropdownMenuContent align="end" className="w-[220px] max-h-[70vh] overflow-y-auto">
           {presetRanges.map((preset) => (
             <DropdownMenuItem
               key={preset.label}
@@ -144,9 +144,9 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
         <PopoverTrigger asChild>
           <span />
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-4" align="start">
+        <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto rounded-2xl p-4" align="end">
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-sm font-medium mb-2">Date de début</p>
                 <Calendar
@@ -169,10 +169,10 @@ export function DateRangeFilter({ value, onChange, className }: DateRangeFilterP
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowCustomCalendar(false)}>
+              <Button variant="outline" size="sm" className="rounded-full" onClick={() => setShowCustomCalendar(false)}>
                 Annuler
               </Button>
-              <Button size="sm" onClick={handleCustomApply} disabled={!customFrom || !customTo}>
+              <Button size="sm" className="rounded-full" onClick={handleCustomApply} disabled={!customFrom || !customTo}>
                 Appliquer
               </Button>
             </div>

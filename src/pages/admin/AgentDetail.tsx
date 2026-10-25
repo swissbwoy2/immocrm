@@ -811,7 +811,7 @@ const AgentDetail = () => {
         </div>
 
         {/* Full Stats Section */}
-        <PremiumCard className="p-6 animate-fade-in">
+        <div>
           <AgentStatsSection
             offres={offres}
             transactions={transactions}
@@ -819,7 +819,7 @@ const AgentDetail = () => {
             clients={clients}
             agentId={agent.id}
           />
-        </PremiumCard>
+        </div>
 
         {/* Projection financière */}
         <AgentFinancialProjection items={projectionItems} />

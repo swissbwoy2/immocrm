@@ -57,18 +57,18 @@ export function BulkActionsBar({
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <div className="mx-auto max-w-3xl pointer-events-auto">
-            <div className="rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl shadow-2xl shadow-primary/10 p-2.5 sm:p-3">
+            <div className="rounded-2xl border border-border/70 bg-card shadow-[0_2px_6px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.12)] p-2.5 sm:p-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-primary text-primary-foreground border-0 px-2.5 py-1 text-xs whitespace-nowrap">
+                <Badge className="rounded-full bg-foreground text-background border-0 px-3 py-1 text-xs whitespace-nowrap">
                   {selectedCount} sélectionné{selectedCount > 1 ? "s" : ""}
                 </Badge>
 
                 <div className="hidden sm:flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={onSelectAll} disabled={loading} className="h-8 px-2 text-xs">
+                  <Button size="sm" variant="ghost" onClick={onSelectAll} disabled={loading} className="h-9 rounded-full px-3 text-xs">
                     <CheckSquare className="h-3.5 w-3.5 mr-1" />
                     Tout ({totalVisible})
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={onClear} disabled={loading || selectedCount === 0} className="h-8 px-2 text-xs">
+                  <Button size="sm" variant="ghost" onClick={onClear} disabled={loading || selectedCount === 0} className="h-9 rounded-full px-3 text-xs">
                     <Square className="h-3.5 w-3.5 mr-1" />
                     Aucun
                   </Button>
@@ -78,7 +78,7 @@ export function BulkActionsBar({
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={loading || selectedCount === 0} className="h-8 text-xs">
+                    <Button size="sm" variant="outline" disabled={loading || selectedCount === 0} className="h-10 rounded-full text-xs sm:h-9">
                       <Tag className="h-3.5 w-3.5 mr-1.5" />
                       Statut
                     </Button>
@@ -99,7 +99,7 @@ export function BulkActionsBar({
                   variant="destructive"
                   onClick={onDelete}
                   disabled={loading || selectedCount === 0}
-                  className="h-8 text-xs"
+                  className="h-10 rounded-full text-xs sm:h-9"
                 >
                   {loading ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -109,16 +109,16 @@ export function BulkActionsBar({
                   Anonymiser (RGPD)
                 </Button>
 
-                <Button size="sm" variant="ghost" onClick={onCancel} disabled={loading} className="h-8 w-8 p-0">
+                <Button size="sm" variant="ghost" onClick={onCancel} disabled={loading} className="h-10 w-10 rounded-full p-0 sm:h-9 sm:w-9">
                   <X className="h-4 w-4" />
                 </Button>
               </div>
 
               <div className="sm:hidden flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
-                <Button size="sm" variant="ghost" onClick={onSelectAll} disabled={loading} className="h-7 px-2 text-[11px] flex-1">
+                <Button size="sm" variant="ghost" onClick={onSelectAll} disabled={loading} className="h-10 rounded-full px-2 text-xs flex-1">
                   Tout ({totalVisible})
                 </Button>
-                <Button size="sm" variant="ghost" onClick={onClear} disabled={loading || selectedCount === 0} className="h-7 px-2 text-[11px] flex-1">
+                <Button size="sm" variant="ghost" onClick={onClear} disabled={loading || selectedCount === 0} className="h-10 rounded-full px-2 text-xs flex-1">
                   Aucun
                 </Button>
               </div>

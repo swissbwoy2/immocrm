@@ -88,7 +88,7 @@ function DetailBody({ item, onDeposer, reloc }: { item: ShowcaseItem; onDeposer:
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <DialogTitle className="text-lg leading-snug">{item.titre || 'Bien immobilier'}</DialogTitle>
+        <DialogTitle className="text-lg font-semibold leading-snug">{item.titre || 'Bien immobilier'}</DialogTitle>
       </DialogHeader>
 
       {images.length > 0 ? (
@@ -111,7 +111,7 @@ function DetailBody({ item, onDeposer, reloc }: { item: ShowcaseItem; onDeposer:
         </div>
       ) : (
         <StoryPhotoLink href={item.lien_annonce} className="block">
-          <div className="h-40 overflow-hidden rounded-xl border border-border">
+          <div className="h-40 overflow-hidden rounded-xl border border-border/70">
             <ExternalListingPlaceholder />
           </div>
         </StoryPhotoLink>
@@ -119,7 +119,7 @@ function DetailBody({ item, onDeposer, reloc }: { item: ShowcaseItem; onDeposer:
 
       <div className="flex flex-wrap gap-2">
         {item.est_mise_en_avant && (
-          <Badge className="border-0 bg-gradient-to-r from-primary to-accent text-primary-foreground font-bold shadow-md">
+          <Badge className="rounded-full border-0 bg-primary/10 text-primary font-semibold hover:bg-primary/10">
             Excellente offre
           </Badge>
         )}
@@ -153,20 +153,20 @@ function DetailBody({ item, onDeposer, reloc }: { item: ShowcaseItem; onDeposer:
       <div className="flex flex-col gap-2 sm:flex-row">
         {item.type_transaction !== 'vente' && (
           reloc && deja ? (
-            <Button className="flex-1" disabled>Candidature déposée</Button>
+            <Button className="flex-1 rounded-full" disabled>Candidature déposée</Button>
           ) : reloc && !visitePassee ? (
             <div className="flex-1 space-y-1">
-              <Button className="w-full" disabled>Déposer mon dossier</Button>
+              <Button className="w-full rounded-full" disabled>Déposer mon dossier</Button>
               <p className="text-center text-xs text-muted-foreground">Disponible après la visite</p>
             </div>
           ) : (
-            <Button className="flex-1" onClick={onDeposer}>
+            <Button className="flex-1 rounded-full" onClick={onDeposer}>
               Déposer mon dossier
             </Button>
           )
         )}
         {item.lien_annonce && (
-          <Button asChild variant="outline" className="flex-1">
+          <Button asChild variant="outline" className="flex-1 rounded-full">
             {item.lien_annonce.startsWith('/') ? (
               <Link to={item.lien_annonce}>
                 <ExternalLink className="mr-2 h-4 w-4" />

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, UserCheck, UserX, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserCheck, UserX, Download, Users } from 'lucide-react';
+import { DashBadge, DashEmptyState, DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import EmployeDialog from './EmployeDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -152,10 +152,10 @@ export default function EmployesList() {
   const getTypeBadge = (emp: Employe) => {
     if (!emp.user_id) return null;
     if (coursierUserIds.includes(emp.user_id)) {
-      return <Badge variant="outline" className="ml-2 text-xs">Coursier</Badge>;
+      return <DashBadge tone="neutral">Coursier</DashBadge>;
     }
     if (agentUserIds.includes(emp.user_id)) {
-      return <Badge className="ml-2 text-xs bg-primary/20 text-primary border-primary/30">Agent</Badge>;
+      return <DashBadge tone="primary">Agent</DashBadge>;
     }
     return null;
   };
@@ -170,118 +170,168 @@ export default function EmployesList() {
     setDialogOpen(true);
   };
 
+  const actifs = employes.filter((e) => e.statut === 'actif');
+  const masseMensuelle = actifs.reduce((s, e) => s + (e.salaire_mensuel || 0), 0);
+
+  const statutBadge = (emp: Employe) => emp.statut === 'actif' ? (
+    <DashBadge tone="success"><UserCheck className="mr-1 h-3 w-3" /> Actif</DashBadge>
+  ) : (
+    <DashBadge tone="muted"><UserX className="mr-1 h-3 w-3" /> Inactif</DashBadge>
+  );
+
+  const contratBadge = (emp: Employe) => (
+    <DashBadge tone={emp.is_independant ? 'neutral' : 'muted'}>
+      {emp.is_independant ? 'Indépendant' : emp.type_contrat === 'horaire' ? 'Horaire' : 'Fixe'}
+    </DashBadge>
+  );
+
+  const permisBadge = (emp: Employe) => emp.type_permis ? (
+    <DashBadge tone={['B', 'F', 'N', 'L'].includes(emp.type_permis) ? 'warning' : 'muted'}>{emp.type_permis}</DashBadge>
+  ) : (
+    <DashBadge tone="muted">CH</DashBadge>
+  );
+
+  const actions = (emp: Employe, compact = false) => (
+    <div className={cn('flex gap-2', compact ? 'justify-end' : '')}>
+      <Button
+        variant="outline"
+        className={cn('rounded-full', compact ? 'h-9 w-9 p-0' : 'h-11 flex-1')}
+        onClick={() => handleEdit(emp)}
+        aria-label="Modifier l'employé"
+      >
+        <Pencil className="h-4 w-4" />
+        {!compact && <span className="ml-2">Modifier</span>}
+      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn('shrink-0 rounded-full p-0 text-destructive hover:bg-destructive/10 hover:text-destructive', compact ? 'h-9 w-9' : 'h-11 w-11')}
+            aria-label="Supprimer l'employé"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet employé ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera aussi toutes ses fiches de salaire.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction className="rounded-full" onClick={() => deleteMutation.mutate(emp.id)}>
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Liste des employés</CardTitle>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => importMutation.mutate()} disabled={importMutation.isPending} className="gap-2">
+    <section className="space-y-4" aria-label="Liste des employés">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Liste des employés</h2>
+          {!isLoading && employes.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {actifs.length} actif{actifs.length > 1 ? 's' : ''} sur {employes.length} · masse salariale mensuelle {masseMensuelle.toLocaleString('fr-CH')} CHF
+            </p>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:flex">
+          <Button variant="outline" onClick={() => importMutation.mutate()} disabled={importMutation.isPending} className="h-11 gap-2 rounded-full md:h-10">
             <Download className="h-4 w-4" /> {importMutation.isPending ? 'Import...' : 'Importer agents & coursiers'}
           </Button>
-          <Button onClick={handleNew} className="gap-2">
+          <Button onClick={handleNew} className="h-11 gap-2 rounded-full md:h-10">
             <Plus className="h-4 w-4" /> Ajouter un employé
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <p className="text-muted-foreground py-8 text-center">Chargement...</p>
-        ) : employes.length === 0 ? (
-          <p className="text-muted-foreground py-8 text-center">Aucun employé enregistré</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Poste</TableHead>
-                <TableHead>Contrat</TableHead>
-                <TableHead>Permis</TableHead>
-                <TableHead className="text-right">Salaire</TableHead>
-                <TableHead>Taux</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {employes.map((emp) => (
-                <TableRow key={emp.id}>
-                  <TableCell className="font-medium">
-                    {emp.prenom} {emp.nom}
-                    {getTypeBadge(emp)}
-                    {emp.is_independant && (
-                      <Badge variant="secondary" className="ml-2 text-xs">Indépendant</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{emp.poste || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={emp.is_independant ? 'outline' : 'secondary'}>
-                      {emp.is_independant ? 'Indépendant' : emp.type_contrat === 'horaire' ? 'Horaire' : 'Fixe'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {emp.type_permis ? (
-                      <Badge variant={['B', 'F', 'N', 'L'].includes(emp.type_permis) ? 'destructive' : 'secondary'}>
-                        {emp.type_permis}
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">CH</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {emp.salaire_mensuel?.toLocaleString('fr-CH')} CHF
-                  </TableCell>
-                  <TableCell>{emp.taux_activite}%</TableCell>
-                  <TableCell>
-                    {emp.statut === 'actif' ? (
-                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 gap-1">
-                        <UserCheck className="h-3 w-3" /> Actif
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="gap-1">
-                        <UserX className="h-3 w-3" /> Inactif
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(emp)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer cet employé ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action supprimera aussi toutes ses fiches de salaire.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(emp.id)}>
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
+      </div>
+
+      {isLoading ? (
+        <p className="text-muted-foreground py-8 text-center">Chargement...</p>
+      ) : employes.length === 0 ? (
+        <DashEmptyState icon={Users} title="Aucun employé enregistré" description="Ajoutez un employé ou importez vos agents et coursiers." />
+      ) : (
+        <>
+          {/* Mobile : une carte par employé */}
+          <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+            {employes.map((emp) => (
+              <article key={emp.id} className={cn(DASH_CARD, 'space-y-3 p-4')}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-semibold text-foreground">{emp.prenom} {emp.nom}</p>
+                    <p className="truncate text-xs text-muted-foreground">{emp.poste || '-'}</p>
+                  </div>
+                  {statutBadge(emp)}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {getTypeBadge(emp)}
+                  {emp.is_independant && <DashBadge tone="muted">Indépendant</DashBadge>}
+                  {contratBadge(emp)}
+                  {permisBadge(emp)}
+                </div>
+                <div className="flex items-baseline justify-between rounded-xl bg-muted/40 px-3 py-2">
+                  <span className="text-xs text-muted-foreground">Salaire · taux {emp.taux_activite}%</span>
+                  <span className="font-mono text-sm font-semibold">{emp.salaire_mensuel?.toLocaleString('fr-CH')} CHF</span>
+                </div>
+                {actions(emp)}
+              </article>
+            ))}
+          </div>
+
+          {/* Tablette et PC : tableau */}
+          <div className={cn(DASH_CARD, 'hidden overflow-hidden md:block')}>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Poste</TableHead>
+                    <TableHead>Contrat</TableHead>
+                    <TableHead>Permis</TableHead>
+                    <TableHead className="text-right">Salaire</TableHead>
+                    <TableHead>Taux</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employes.map((emp) => (
+                    <TableRow key={emp.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {emp.prenom} {emp.nom}
+                          {getTypeBadge(emp)}
+                          {emp.is_independant && <DashBadge tone="muted">Indépendant</DashBadge>}
+                        </div>
+                      </TableCell>
+                      <TableCell>{emp.poste || '-'}</TableCell>
+                      <TableCell>{contratBadge(emp)}</TableCell>
+                      <TableCell>{permisBadge(emp)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-mono">
+                        {emp.salaire_mensuel?.toLocaleString('fr-CH')} CHF
+                      </TableCell>
+                      <TableCell>{emp.taux_activite}%</TableCell>
+                      <TableCell>{statutBadge(emp)}</TableCell>
+                      <TableCell className="text-right">{actions(emp, true)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
+      )}
 
       <EmployeDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         employe={editingEmploye}
       />
-    </Card>
+    </section>
   );
 }

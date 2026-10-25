@@ -170,7 +170,7 @@ export function FinancingEditorDialog({ financing, onSave, mode = 'staff' }: { f
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-          <Button className="bg-gradient-to-r from-primary to-primary/80" disabled={saving} onClick={async () => {
+          <Button className="rounded-full" disabled={saving} onClick={async () => {
             setSaving(true);
             try {
               const patch: Record<string, any> = {};

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { DASH_CARD, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -191,258 +191,246 @@ export default function AdminParametres() {
     );
   }
 
+  const SECTION = `${DASH_CARD} p-4 md:p-5`;
+  const ICON = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary';
+
   return (
-    <div className="flex-1 overflow-auto relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="p-4 md:p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Paramètres</h1>
-          <p className="text-muted-foreground">Gérez votre profil et les paramètres système</p>
-        </div>
+    <DashPage className="max-w-2xl">
+      <DashPageHeader title="Paramètres" subtitle="Gérez votre profil et les paramètres système" />
 
-        <div className="grid gap-6 max-w-2xl">
-          <Card>
-            <CardHeader>
-              <CardTitle>Naviguer en tant que</CardTitle>
-              <CardDescription>Accéder à un autre espace sans changer de compte.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Select onValueChange={(path) => navigate(path)}>
-                <SelectTrigger aria-label="Naviguer en tant que" className="min-h-11 w-full sm:max-w-xs">
-                  <SelectValue placeholder="Choisir un espace" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="/agent">Agent</SelectItem>
-                  <SelectItem value="/client">Client</SelectItem>
-                  <SelectItem value="/candidat">Candidat</SelectItem>
-                  <SelectItem value="/proprietaire">Propriétaire</SelectItem>
-                  <SelectItem value="/coursier">Coursier</SelectItem>
-                  <SelectItem value="/apporteur">Apporteur</SelectItem>
-                  <SelectItem value="/espace-annonceur">Annonceur</SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-          {/* Forcer la mise à jour */}
-          <Card className="border-orange-500/30 bg-orange-500/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-600">
-                <RefreshCw className="w-5 h-5" />
-                Mise à jour de l'application
-              </CardTitle>
-              <CardDescription>
-                Forcez le rechargement de l'application pour tous les utilisateurs connectés
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Cette action enverra un signal à tous les utilisateurs actuellement connectés pour qu'ils rechargent l'application. 
-                Utile après une mise à jour importante.
-              </p>
-              <Button 
-                variant="outline" 
-                className="border-orange-500/50 text-orange-600 hover:bg-orange-500/10"
-                onClick={handleForceUpdateAllUsers}
-                disabled={forcingUpdate}
+      <div className="grid gap-4">
+        <section className={SECTION} aria-labelledby="admin-param-nav">
+          <div className="flex items-center gap-3">
+            <span className={ICON}><User className="h-[18px] w-[18px]" /></span>
+            <div className="min-w-0">
+              <h2 id="admin-param-nav" className="text-base font-semibold text-foreground">Naviguer en tant que</h2>
+              <p className="text-sm text-muted-foreground">Accéder à un autre espace sans changer de compte.</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Select onValueChange={(path) => navigate(path)}>
+              <SelectTrigger aria-label="Naviguer en tant que" className="min-h-11 w-full rounded-xl sm:max-w-xs">
+                <SelectValue placeholder="Choisir un espace" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="/agent">Agent</SelectItem>
+                <SelectItem value="/client">Client</SelectItem>
+                <SelectItem value="/candidat">Candidat</SelectItem>
+                <SelectItem value="/proprietaire">Propriétaire</SelectItem>
+                <SelectItem value="/coursier">Coursier</SelectItem>
+                <SelectItem value="/apporteur">Apporteur</SelectItem>
+                <SelectItem value="/espace-annonceur">Annonceur</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
+
+        {/* Forcer la mise à jour */}
+        <section className={SECTION} aria-labelledby="admin-param-update">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+              <RefreshCw className="h-[18px] w-[18px]" />
+            </span>
+            <div className="min-w-0">
+              <h2 id="admin-param-update" className="text-base font-semibold text-foreground">Mise à jour de l'application</h2>
+              <p className="text-sm text-muted-foreground">Forcez le rechargement de l'application pour tous les utilisateurs connectés</p>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Cette action enverra un signal à tous les utilisateurs actuellement connectés pour qu'ils rechargent l'application. 
+            Utile après une mise à jour importante.
+          </p>
+          <Button 
+            variant="outline" 
+            className="mt-4 rounded-full border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
+            onClick={handleForceUpdateAllUsers}
+            disabled={forcingUpdate}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${forcingUpdate ? 'animate-spin' : ''}`} />
+            {forcingUpdate ? 'Envoi en cours...' : 'Forcer la mise à jour pour tous'}
+          </Button>
+        </section>
+
+        {/* Objectifs par défaut des agents */}
+        <AdminDefaultGoalsManager />
+
+        {/* Photo de profil */}
+        <section className={SECTION} aria-labelledby="admin-param-photo">
+          <div className="flex items-center gap-3">
+            <span className={ICON}><Camera className="h-[18px] w-[18px]" /></span>
+            <h2 id="admin-param-photo" className="text-base font-semibold text-foreground">Photo de profil</h2>
+          </div>
+          <div className="mt-4 flex items-center gap-4 sm:gap-6">
+            <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
+              <AvatarImage src={profile?.avatar_url} alt={`${profile?.prenom} ${profile?.nom}`} />
+              <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                {profile?.prenom?.[0]}{profile?.nom?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${forcingUpdate ? 'animate-spin' : ''}`} />
-                {forcingUpdate ? 'Envoi en cours...' : 'Forcer la mise à jour pour tous'}
+                <Camera className="mr-2 h-4 w-4" />
+                {uploading ? 'Téléchargement...' : 'Changer la photo'}
               </Button>
-            </CardContent>
-          </Card>
+              <p className="text-xs text-muted-foreground">
+                JPG, PNG ou WebP. Max 5 Mo.
+              </p>
+            </div>
+          </div>
+        </section>
 
-          {/* Objectifs par défaut des agents */}
-          <AdminDefaultGoalsManager />
-          
-          {/* Photo de profil */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5" />
-                Photo de profil
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile?.avatar_url} alt={`${profile?.prenom} ${profile?.nom}`} />
-                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {profile?.prenom?.[0]}{profile?.nom?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                  />
-                  <Button 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? 'Téléchargement...' : 'Changer la photo'}
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    JPG, PNG ou WebP. Max 5 Mo.
-                  </p>
-                </div>
+        {/* Informations personnelles */}
+        <section className={SECTION} aria-labelledby="admin-param-infos">
+          <div className="flex items-center gap-3">
+            <span className={ICON}><User className="h-[18px] w-[18px]" /></span>
+            <h2 id="admin-param-infos" className="text-base font-semibold text-foreground">Informations personnelles</h2>
+          </div>
+          <div className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Prénom</Label>
+                <Input
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  placeholder="Prénom"
+                  className="h-11 rounded-xl"
+                />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Informations personnelles */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Informations personnelles
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Prénom</Label>
-                  <Input
-                    value={prenom}
-                    onChange={(e) => setPrenom(e.target.value)}
-                    placeholder="Prénom"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Nom</Label>
-                  <Input
-                    value={nom}
-                    onChange={(e) => setNom(e.target.value)}
-                    placeholder="Nom"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label>Nom</Label>
+                <Input
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Nom"
+                  className="h-11 rounded-xl"
+                />
               </div>
-              <div>
-                <Label className="text-muted-foreground flex items-center gap-1">
-                  <Mail className="w-4 h-4" />
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  <Mail className="h-4 w-4" />
                   Email
                 </Label>
-                <div className="font-medium mt-1">{profile?.email}</div>
+                <div className="flex h-11 items-center rounded-xl border border-border/70 bg-muted/50 px-3 text-sm text-foreground">
+                  <span className="truncate">{profile?.email}</span>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <Phone className="w-4 h-4" />
+              <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                  <Phone className="h-4 w-4" />
                   Téléphone
                 </Label>
                 <Input
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                   placeholder="+41 XX XXX XX XX"
-                  className="max-w-xs"
+                  className="h-11 rounded-xl"
                 />
               </div>
-              <Button 
+            </div>
+            <div className="flex justify-end">
+              <Button
+                className="rounded-full"
                 onClick={handleSaveProfile}
                 disabled={saving || (telephone === profile?.telephone && prenom === profile?.prenom && nom === profile?.nom)}
               >
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </section>
 
-          {/* Configuration Email */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Configuration SMTP
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Configurez votre serveur SMTP pour envoyer des emails directement depuis l'application.
-              </p>
-              <Button variant="outline" onClick={() => setEmailConfigOpen(true)}>
-                Configurer l'email
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Configuration Email */}
+        <section className={SECTION} aria-labelledby="admin-param-smtp">
+          <div className="flex items-center gap-3">
+            <span className={ICON}><Settings className="h-[18px] w-[18px]" /></span>
+            <h2 id="admin-param-smtp" className="text-base font-semibold text-foreground">Configuration SMTP</h2>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Configurez votre serveur SMTP pour envoyer des emails directement depuis l'application.
+          </p>
+          <Button variant="outline" className="mt-4 rounded-full" onClick={() => setEmailConfigOpen(true)}>
+            Configurer l'email
+          </Button>
+        </section>
 
-          {/* Préférences de notification */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
-                Notifications
-              </CardTitle>
-              <CardDescription>
-                Gérez vos préférences de notification
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="notifications-email">Notifications par email</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recevoir une copie des notifications par email
-                  </p>
-                </div>
-                <Switch
-                  id="notifications-email"
-                  checked={notificationsEmail}
-                  onCheckedChange={async (checked) => {
-                    setNotificationsEmail(checked);
-                    try {
-                      const { error } = await supabase
-                        .from('profiles')
-                        .update({ notifications_email: checked })
-                        .eq('id', user?.id);
-                      
-                      if (error) throw error;
-                      toast.success(checked ? 'Notifications email activées' : 'Notifications email désactivées');
-                    } catch (error) {
-                      console.error('Error updating notification preference:', error);
-                      setNotificationsEmail(!checked);
-                      toast.error('Erreur lors de la mise à jour');
-                    }
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bannière dashboard client */}
-          <DashboardBannerManager />
-
-          {/* Google Agenda */}
-          <GoogleCalendarConnect />
-
-          {/* Changer le mot de passe */}
-          <ChangePasswordCard />
-
-          {/* Rôle administrateur */}
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Shield className="w-5 h-5" />
-                Privilèges administrateur
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        {/* Préférences de notification */}
+        <section className={SECTION} aria-labelledby="admin-param-notifs">
+          <div className="flex items-center gap-3">
+            <span className={ICON}><Bell className="h-[18px] w-[18px]" /></span>
+            <div className="min-w-0">
+              <h2 id="admin-param-notifs" className="text-base font-semibold text-foreground">Notifications</h2>
+              <p className="text-sm text-muted-foreground">Gérez vos préférences de notification</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
+            <div className="min-w-0 space-y-0.5">
+              <Label htmlFor="notifications-email">Notifications par email</Label>
               <p className="text-sm text-muted-foreground">
-                En tant qu'administrateur, vous avez accès à toutes les fonctionnalités de gestion 
-                des agents, clients, mandats et transactions.
+                Recevoir une copie des notifications par email
               </p>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <Switch
+              id="notifications-email"
+              checked={notificationsEmail}
+              onCheckedChange={async (checked) => {
+                setNotificationsEmail(checked);
+                try {
+                  const { error } = await supabase
+                    .from('profiles')
+                    .update({ notifications_email: checked })
+                    .eq('id', user?.id);
+                  
+                  if (error) throw error;
+                  toast.success(checked ? 'Notifications email activées' : 'Notifications email désactivées');
+                } catch (error) {
+                  console.error('Error updating notification preference:', error);
+                  setNotificationsEmail(!checked);
+                  toast.error('Erreur lors de la mise à jour');
+                }
+              }}
+            />
+          </div>
+        </section>
+
+        {/* Bannière dashboard client */}
+        <DashboardBannerManager />
+
+        {/* Google Agenda */}
+        <GoogleCalendarConnect />
+
+        {/* Changer le mot de passe */}
+        <ChangePasswordCard />
+
+        {/* Rôle administrateur */}
+        <section className={SECTION} aria-labelledby="admin-param-role">
+          <div className="flex items-center gap-3">
+            <span className={ICON}><Shield className="h-[18px] w-[18px]" /></span>
+            <h2 id="admin-param-role" className="text-base font-semibold text-foreground">Privilèges administrateur</h2>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            En tant qu'administrateur, vous avez accès à toutes les fonctionnalités de gestion 
+            des agents, clients, mandats et transactions.
+          </p>
+        </section>
       </div>
-      
+
       <EmailConfigurationDialog 
         open={emailConfigOpen} 
         onOpenChange={setEmailConfigOpen} 
       />
-    </div>
+    </DashPage>
   );
 }

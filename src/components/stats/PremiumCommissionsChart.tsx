@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { DateRange } from './DateRangeFilter';
-import { DollarSign, TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { nombreSuisse, axeSuisse } from './statsFormat';
 import { cn } from '@/lib/utils';
 
 interface DataPoint {
@@ -88,165 +89,111 @@ export function PremiumCommissionsChart({
   }, [chartData]);
 
   const TrendIcon = trend.direction === 'up' ? TrendingUp : trend.direction === 'down' ? TrendingDown : Minus;
-  const trendColor = trend.direction === 'up' ? 'text-emerald-500' : trend.direction === 'down' ? 'text-rose-500' : 'text-muted-foreground';
+  const trendColor = trend.direction === 'up' ? 'text-emerald-700 dark:text-emerald-400' : trend.direction === 'down' ? 'text-destructive' : 'text-muted-foreground';
 
   return (
-    <Card className="group relative overflow-hidden border-emerald-500/10 hover:border-emerald-500/30 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-emerald-500/5 via-transparent to-emerald-500/10">
-      {/* Glassmorphism background effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full animate-pulse"
-            style={{
-              width: `${3 + (i % 3)}px`,
-              height: `${3 + (i % 3)}px`,
-              left: `${10 + i * 12}%`,
-              top: `${15 + (i % 4) * 20}%`,
-              backgroundColor: 'hsl(142 76% 36% / 0.2)',
-              animationDelay: `${i * 0.2}s`,
-              animationDuration: `${2 + i * 0.3}s`
-            }}
-          />
-        ))}
+    <div className={`${DASH_CARD} flex h-full flex-col p-4 md:p-5`}>
+      {/* En-tête */}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-foreground">{title}</h3>
+            <p className="truncate text-xs text-muted-foreground">{dateRange.label}</p>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-2xl font-semibold leading-none tracking-tight tabular-nums text-foreground">
+            {nombreSuisse(total)}
+          </p>
+          <p className="mt-1 flex items-center justify-end gap-1.5 text-xs">
+            <span className={cn("font-medium", trendColor)}>
+              <span aria-hidden="true">{trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '–'}</span>
+              {trend.percentage > 0 && <span className="tabular-nums"> {trend.percentage} %</span>}
+            </span>
+            <span className="text-muted-foreground">{valueLabel}</span>
+          </p>
+        </div>
       </div>
 
-      {/* Glow effect */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 rounded-xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
+      {/* Graphique */}
+      <div className="mt-auto h-[220px] min-w-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -12, bottom: 0 }}>
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              vertical={false}
+              stroke="hsl(var(--border))" 
+            />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              minTickGap={8}
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+              tickFormatter={(value: number) => axeSuisse(value)}
+            />
+            <Tooltip
+              cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '5 5' }}
+              contentStyle={{
+                backgroundColor: 'hsl(var(--popover))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '12px',
+                fontSize: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              }}
+              formatter={(value: number) => [`${nombreSuisse(value)} ${valueLabel}`, title]}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+            />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={2}
+              fill={color}
+              fillOpacity={0.12}
+              dot={false}
+              activeDot={{ 
+                r: 5, 
+                fill: color, 
+                stroke: 'hsl(var(--background))',
+                strokeWidth: 2,
+              }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
 
-      <CardHeader className="relative pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative p-2 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors duration-300">
-              <Icon className="h-5 w-5 text-emerald-500 transition-transform duration-300 group-hover:scale-110" />
-              <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold transition-transform duration-300 group-hover:scale-[1.02] origin-left">
-                {title}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">{dateRange.label}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium", 
-              trend.direction === 'up' ? 'bg-emerald-500/10 text-emerald-500' : 
-              trend.direction === 'down' ? 'bg-rose-500/10 text-rose-500' : 
-              'bg-muted text-muted-foreground'
-            )}>
-              <TrendIcon className="h-3 w-3" />
-              {trend.percentage > 0 && <span>{trend.percentage}%</span>}
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {total.toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground">{valueLabel}</p>
-            </div>
-          </div>
+      {/* Synthèse */}
+      <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/70 pt-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs text-muted-foreground">Moyenne</p>
+          <p className="mt-0.5 truncate text-base font-semibold tabular-nums text-foreground">
+            {nombreSuisse(average)}
+          </p>
         </div>
-      </CardHeader>
-
-      <CardContent className="relative">
-        {/* Chart */}
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="commissionsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.4} />
-                  <stop offset="50%" stopColor={color} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0.02} />
-                </linearGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-              </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                vertical={false}
-                stroke="hsl(var(--muted-foreground) / 0.1)" 
-              />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-                tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}
-              />
-              <Tooltip
-                cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '5 5' }}
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  boxShadow: '0 10px 40px -10px hsl(142 76% 36% / 0.3)',
-                  backdropFilter: 'blur(8px)',
-                }}
-                formatter={(value: number) => [`${value.toLocaleString()} ${valueLabel}`, title]}
-                labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={color}
-                strokeWidth={2.5}
-                fill="url(#commissionsGradient)"
-                dot={false}
-                activeDot={{ 
-                  r: 6, 
-                  fill: color, 
-                  stroke: 'hsl(var(--background))',
-                  strokeWidth: 2,
-                  filter: 'url(#glow)'
-                }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="min-w-0">
+          <p className="truncate text-xs text-muted-foreground">Maximum</p>
+          <p className="mt-0.5 truncate text-base font-semibold tabular-nums text-foreground">
+            {nombreSuisse(maxValue)}
+          </p>
         </div>
-
-        {/* Stats footer */}
-        <div className="mt-4 pt-4 border-t border-border/50">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors duration-200">
-              <p className="text-xs text-muted-foreground mb-1">Moyenne</p>
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                {average.toLocaleString()}
-              </p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors duration-200">
-              <p className="text-xs text-muted-foreground mb-1">Maximum</p>
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                {maxValue.toLocaleString()}
-              </p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors duration-200">
-              <p className="text-xs text-muted-foreground mb-1">Tendance</p>
-              <div className={cn("flex items-center justify-center gap-1 text-sm font-medium", trendColor)}>
-                <TrendIcon className="h-4 w-4" />
-                <span>{trend.direction === 'up' ? 'Hausse' : trend.direction === 'down' ? 'Baisse' : 'Stable'}</span>
-              </div>
-            </div>
+        <div className="min-w-0">
+          <p className="truncate text-xs text-muted-foreground">Tendance</p>
+          <div className={cn("mt-0.5 flex items-center gap-1 text-sm font-medium", trendColor)}>
+            <TrendIcon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{trend.direction === 'up' ? 'Hausse' : trend.direction === 'down' ? 'Baisse' : 'Stable'}</span>
           </div>
         </div>
-      </CardContent>
-
-      {/* Shine effect */}
-      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
-    </Card>
+      </div>
+    </div>
   );
 }

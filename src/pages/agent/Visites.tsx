@@ -1535,7 +1535,7 @@ export default function AgentVisites() {
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><MessageSquare className="h-4 w-4" /></span>
               Feedback de la visite déléguée
             </DialogTitle>
             <DialogDescription>
@@ -1545,7 +1545,7 @@ export default function AgentVisites() {
 
           {selectedVisite && (
             <div className="space-y-4">
-              <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+              <div className="p-4 bg-muted/40 rounded-xl border border-border/70">
                 <h4 className="font-semibold">{selectedVisite.adresse}</h4>
                 {selectedVisite.offres && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -1656,12 +1656,9 @@ export default function AgentVisites() {
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-          {/* Premium Header */}
-          <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 p-6 border-b border-border/50">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-4 right-10 w-20 h-20 bg-primary/10 rounded-full blur-2xl animate-pulse" />
-            </div>
-            <DialogHeader className="relative">
+          {/* Header */}
+          <div className="p-6 border-b border-border/70">
+            <DialogHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className="text-xs">
                   {selectedVisite?.est_deleguee ? 'Visite déléguée' : 'Visite'}
@@ -1673,7 +1670,7 @@ export default function AgentVisites() {
                   </Badge>
                 )}
               </div>
-              <DialogTitle className="text-xl font-bold">
+              <DialogTitle className="text-lg font-semibold">
                 {selectedVisite?.adresse}
               </DialogTitle>
               {selectedVisite && (
@@ -1697,7 +1694,7 @@ export default function AgentVisites() {
               {/* Client */}
               {selectedVisite.client_profile && (
                 <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl border border-border/50">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
                     {selectedVisite.client_profile.prenom?.[0]}{selectedVisite.client_profile.nom?.[0]}
                   </div>
                   <div>
@@ -1720,16 +1717,16 @@ export default function AgentVisites() {
                     Détails du bien
                   </h4>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 text-center">
-                      <div className="text-xl font-bold text-blue-600">{selectedVisite.offres.pieces}</div>
+                    <div className="p-3 rounded-xl bg-muted/40 border border-border/70 text-center">
+                      <div className="text-lg font-semibold text-foreground">{selectedVisite.offres.pieces}</div>
                       <div className="text-xs text-muted-foreground">pièces</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 text-center">
-                      <div className="text-xl font-bold text-green-600">{selectedVisite.offres.surface}m²</div>
+                    <div className="p-3 rounded-xl bg-muted/40 border border-border/70 text-center">
+                      <div className="text-lg font-semibold text-foreground">{selectedVisite.offres.surface}m²</div>
                       <div className="text-xs text-muted-foreground">surface</div>
                     </div>
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center">
-                      <div className="text-xl font-bold text-primary">{selectedVisite.offres.prix?.toLocaleString('fr-CH')}</div>
+                    <div className="p-3 rounded-xl bg-muted/40 border border-border/70 text-center">
+                      <div className="text-lg font-semibold text-foreground">{selectedVisite.offres.prix?.toLocaleString('fr-CH')}</div>
                       <div className="text-xs text-muted-foreground">CHF/mois</div>
                     </div>
                   </div>
@@ -1845,7 +1842,7 @@ export default function AgentVisites() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600"><CheckCircle className="h-4 w-4" /></span>
               Confirmer la visite déléguée
             </DialogTitle>
             <DialogDescription>
@@ -1854,7 +1851,7 @@ export default function AgentVisites() {
           </DialogHeader>
           
           {selectedVisite && (
-            <div className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl border border-green-500/20">
+            <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
               <p className="font-semibold">{selectedVisite.adresse}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {format(new Date(selectedVisite.date_visite), "EEEE dd MMMM 'à' HH:mm", { locale: fr })}

@@ -92,7 +92,7 @@ export function AgentOffreDetailsDialog({
                 Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
               </p>
             </div>
-            <Badge className={`shrink-0 ${getStatutColor(offre.statut)}`}>
+            <Badge className={`shrink-0 rounded-full ${getStatutColor(offre.statut)}`}>
               {getStatutLabel(offre.statut)}
             </Badge>
           </div>
@@ -101,7 +101,7 @@ export function AgentOffreDetailsDialog({
         <ScrollArea className="max-h-[calc(85vh-120px)]">
           <div className="px-6 pb-6 space-y-5">
             {/* Prix */}
-            <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+            <div className="p-4 bg-muted/40 rounded-2xl border border-border/70">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">
                   CHF {Number(offre.prix).toLocaleString('fr-CH')}
@@ -117,15 +117,15 @@ export function AgentOffreDetailsDialog({
                 Caractéristiques
               </h4>
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <div className="p-3 bg-card border border-border/70 rounded-xl text-center">
                   <div className="text-lg font-semibold">{offre.pieces || '-'}</div>
                   <div className="text-xs text-muted-foreground">pièces</div>
                 </div>
-                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <div className="p-3 bg-card border border-border/70 rounded-xl text-center">
                   <div className="text-lg font-semibold">{offre.surface || '-'}</div>
                   <div className="text-xs text-muted-foreground">m²</div>
                 </div>
-                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <div className="p-3 bg-card border border-border/70 rounded-xl text-center">
                   <div className="text-lg font-semibold">{offre.etage || '-'}</div>
                   <div className="text-xs text-muted-foreground">étage</div>
                 </div>
@@ -188,7 +188,7 @@ export function AgentOffreDetailsDialog({
                     <InfoRow icon={KeyRound} label="Code immeuble" value={offre.code_immeuble} />
                     
                     {offre.concierge_nom && (
-                      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                      <div className="p-3 bg-muted/40 border border-border/70 rounded-xl space-y-1">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <User className="h-3 w-3" />
                           Concierge
@@ -207,7 +207,7 @@ export function AgentOffreDetailsDialog({
                     )}
 
                     {offre.locataire_nom && (
-                      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                      <div className="p-3 bg-muted/40 border border-border/70 rounded-xl space-y-1">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <User className="h-3 w-3" />
                           Locataire actuel
@@ -238,7 +238,7 @@ export function AgentOffreDetailsDialog({
                     <MessageSquare className="h-4 w-4" />
                     Vos commentaires
                   </h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap p-3 bg-muted/40 border border-border/70 rounded-xl">
                     {offre.commentaires}
                   </p>
                 </div>

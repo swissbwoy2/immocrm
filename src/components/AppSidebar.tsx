@@ -571,6 +571,7 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
     setOpen(next);
     try { localStorage.setItem(storageKey, next ? 'open' : 'closed'); } catch { /* storage unavailable */ }
   };
+  const menuClair = role === 'client' || role === 'admin' || role === 'agent';
   const visible = collapsed || searching || open;
 
   return (
@@ -609,14 +610,14 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
                 ) : (
                   <NavLink to={item.path} end={isRootPath(item.path)}
                     onMouseEnter={() => prefetchSidebarRoute(item.path)} onFocus={() => prefetchSidebarRoute(item.path)}
-                    className={role === 'client'
+                    className={menuClair
                       ? 'flex min-h-[44px] items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground group/item relative'
                       : 'flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden'}
-                    activeClassName={role === 'client'
+                    activeClassName={menuClair
                       ? 'bg-sidebar-primary/10 !text-sidebar-primary font-semibold'
                       : 'bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active'} onClick={handleNavClick}>
-                    {role !== 'client' && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />}
-                    <item.icon className={role === 'client' ? 'w-[18px] h-[18px] flex-shrink-0' : 'w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105'} />
+                    {!menuClair && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />}
+                    <item.icon className={menuClair ? 'w-[18px] h-[18px] flex-shrink-0' : 'w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105'} />
                     <span className="truncate flex-1 text-sm">{item.name}</span>
                     {showDraftIndicator && <span className="text-orange-500 text-xs animate-pulse" title="Brouillons sauvegardés"><FileEdit className="w-3 h-3" /></span>}
                     {notifCount > 0 && <NotificationBadge count={notifCount} />}
@@ -649,7 +650,10 @@ export function AppSidebar() {
     const root = document.documentElement;
     if (userRole === 'client') root.setAttribute('data-imr-role', 'client');
     else root.removeAttribute('data-imr-role');
-    return () => { root.removeAttribute('data-imr-role'); };
+    // Menu clair (même rendu que l'espace client) pour l'admin et les agents : seul le menu change.
+    if (userRole === 'admin' || userRole === 'agent') root.setAttribute('data-imr-sidebar', 'clair');
+    else root.removeAttribute('data-imr-sidebar');
+    return () => { root.removeAttribute('data-imr-role'); root.removeAttribute('data-imr-sidebar'); };
   }, [userRole]);
 
   useEffect(() => {

@@ -26,19 +26,22 @@ export function CreneauxAVenirStrip() {
   });
   if (!data.length) return null;
   return (
-    <div className="rounded-xl border border-border/50 bg-card/80 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-2 text-sm font-medium"><CalendarCheck className="h-4 w-4 text-primary" />Créneaux de visite (14 jours)</span>
-        <Link to="/admin/visites" className="text-xs text-primary hover:underline">Gérer les visites</Link>
+    <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] md:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-3 text-base font-semibold text-foreground">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><CalendarCheck className="h-[18px] w-[18px]" /></span>
+          Créneaux de visite (14 jours)
+        </span>
+        <Link to="/admin/visites" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">Gérer les visites</Link>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {data.map((c: any) => (
-          <div key={c.id} className="min-w-[180px] rounded-lg border border-border p-2 text-xs">
-            <p className="font-medium capitalize">{new Date(c.date_heure).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+          <div key={c.id} className="min-w-[180px] rounded-xl border border-border/70 bg-background p-3 text-xs">
+            <p className="font-semibold capitalize text-foreground">{new Date(c.date_heure).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
             <p className="truncate text-muted-foreground">{c.annonce?.titre || 'Annonce'}</p>
-            <div className="mt-1 flex items-center gap-1">
-              <span>{capaciteLabel(c.reservations, c.capacite_max)}</span>
-              {isCreneauFull(c.reservations, c.capacite_max) && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Complet</Badge>}
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="text-muted-foreground">{capaciteLabel(c.reservations, c.capacite_max)}</span>
+              {isCreneauFull(c.reservations, c.capacite_max) && <Badge variant="destructive" className="h-5 rounded-full px-2 text-[10px]">Complet</Badge>}
             </div>
           </div>
         ))}

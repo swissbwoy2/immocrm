@@ -335,11 +335,11 @@ export function PurchaseClientDetailPremium({
                     <span className="sm:hidden">Suppr.</span>
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+                <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
-                      <div className="p-2 rounded-xl bg-red-500/20">
-                        <Trash2 className="w-5 h-5 text-red-500" />
+                    <AlertDialogTitle className="flex items-center gap-3 text-lg font-semibold">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                        <Trash2 className="w-5 h-5" />
                       </div>
                       Confirmer la suppression
                     </AlertDialogTitle>
@@ -348,8 +348,8 @@ export function PurchaseClientDetailPremium({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDeleteConfirm} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
                       Supprimer définitivement
                     </AlertDialogAction>
                   </AlertDialogFooter>

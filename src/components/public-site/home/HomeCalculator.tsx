@@ -304,7 +304,7 @@ export function HomeCalculator() {
                 type="submit"
                 disabled={!canCalculate}
                 className={cn(
-                  'inline-flex h-12 items-center justify-center gap-2 rounded-lg px-6 text-[16px] font-medium text-white transition-colors duration-150 sm:col-span-2',
+                  'inline-flex h-12 items-center justify-center gap-2 rounded-full px-6 active:scale-[0.96] text-[16px] font-medium text-white transition-colors duration-150 sm:col-span-2',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2',
                   canCalculate ? cn(ACCENT_BG, 'cursor-pointer') : 'cursor-not-allowed bg-[var(--home-accent-disabled)]',
                 )}
@@ -376,9 +376,9 @@ export function HomeCalculator() {
                       type="button"
                       onClick={() => { setLeadOpen(true); setTried(false); setSendError(null); }}
                       className={cn(
-                        'mt-5 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-6 text-[16px] font-medium transition-colors duration-150',
+                        'mt-5 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-6 active:scale-[0.96] text-[16px] font-medium transition-colors duration-150',
                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2',
-                        result.isSolvable ? cn(ACCENT_BG, 'text-white') : 'bg-white text-foreground ring-1 ring-inset ring-foreground/80 hover:bg-white/70',
+                        result.isSolvable ? cn(ACCENT_BG, 'text-white') : 'imr-lg-glass text-foreground',
                       )}
                     >
                       {ctaLabel}
@@ -414,7 +414,7 @@ export function HomeCalculator() {
                         disabled={sending}
                         aria-busy={sending}
                         className={cn(
-                          'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg px-6 text-[16px] font-medium text-white transition-colors duration-150',
+                          'mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full px-6 active:scale-[0.96] text-[16px] font-medium text-white transition-colors duration-150',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2',
                           sending ? 'cursor-wait bg-[var(--home-accent-disabled)]' : cn(ACCENT_BG, 'cursor-pointer'),
                         )}

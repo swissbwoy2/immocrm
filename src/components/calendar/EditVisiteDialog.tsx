@@ -137,10 +137,12 @@ export function EditVisiteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Pencil className="h-4 w-4" />
+          <DialogTitle className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Pencil className="h-4 w-4" />
+            </span>
             Modifier la visite
           </DialogTitle>
         </DialogHeader>
@@ -212,10 +214,10 @@ export function EditVisiteDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)} disabled={saving}>
             Annuler
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button className="rounded-full" onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Enregistrer
           </Button>

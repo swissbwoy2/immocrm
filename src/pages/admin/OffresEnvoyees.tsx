@@ -1039,7 +1039,7 @@ export default function AdminOffresEnvoyees() {
               </div>
 
               {/* En-tête avec adresse */}
-              <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+              <div className="p-4 bg-muted/40 rounded-xl border border-border/70">
                 <h4 className="font-semibold text-lg">{selectedOffre.titre || selectedOffre.adresse}</h4>
                 <div className="flex items-center gap-2 mt-1 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
@@ -1119,7 +1119,7 @@ export default function AdminOffresEnvoyees() {
               {selectedOffre.commentaires && (
                 <div>
                   <Label className="text-muted-foreground mb-2 block">Commentaires de l'agent</Label>
-                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                     <p className="text-sm whitespace-pre-wrap">{selectedOffre.commentaires}</p>
                   </div>
                 </div>

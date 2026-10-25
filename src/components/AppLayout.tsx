@@ -54,7 +54,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   const isMobileViewport = useIsMobile();
   const { userRole } = useAuth();
   const isNative = Capacitor.isNativePlatform();
-   const shellRoles = ['admin', 'agent', 'client', 'candidat'];
+   const shellRoles = ['admin', 'agent', 'client', 'candidat', 'apporteur', 'proprietaire', 'coursier'];
   const useAppShell = (isMobileViewport || isNative) && shellRoles.includes(userRole || '');
 
   if (useAppShell) {

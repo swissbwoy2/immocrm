@@ -155,10 +155,10 @@ export function AdminDefaultGoalsManager() {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="rounded-2xl border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-3 text-base font-semibold">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Settings className="h-[18px] w-[18px]" /></span>
             Objectifs par défaut des agents
           </CardTitle>
         </CardHeader>
@@ -174,10 +174,10 @@ export function AdminDefaultGoalsManager() {
   }
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
+        <CardTitle className="flex items-center gap-3 text-base font-semibold">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Target className="h-[18px] w-[18px]" /></span>
           Objectifs par défaut des agents
         </CardTitle>
         <CardDescription>
@@ -187,9 +187,9 @@ export function AdminDefaultGoalsManager() {
       <CardContent className="space-y-4">
         {/* Add new goal */}
         {isAdding ? (
-          <Card className="border-primary/50 bg-primary/5">
+          <Card className="rounded-xl border-primary/30 bg-primary/5 shadow-none">
             <CardContent className="pt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Type d'objectif</Label>
                   <Select
@@ -260,11 +260,11 @@ export function AdminDefaultGoalsManager() {
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsAdding(false)}>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => setIsAdding(false)}>
                   <X className="h-4 w-4 mr-1" />
                   Annuler
                 </Button>
-                <Button size="sm" onClick={() => createGoalMutation.mutate(newGoal)} disabled={createGoalMutation.isPending}>
+                <Button size="sm" className="rounded-full" onClick={() => createGoalMutation.mutate(newGoal)} disabled={createGoalMutation.isPending}>
                   <Save className="h-4 w-4 mr-1" />
                   Créer
                 </Button>
@@ -272,7 +272,7 @@ export function AdminDefaultGoalsManager() {
             </CardContent>
           </Card>
         ) : (
-          <Button onClick={() => setIsAdding(true)} variant="outline" className="w-full">
+          <Button onClick={() => setIsAdding(true)} variant="outline" className="w-full rounded-full">
             <Plus className="h-4 w-4 mr-2" />
             Ajouter un objectif par défaut
           </Button>
@@ -281,7 +281,7 @@ export function AdminDefaultGoalsManager() {
         {/* Goals list */}
         <div className="space-y-2">
           {goals.map((goal) => (
-            <Card key={goal.id} className={!goal.is_active ? 'opacity-50' : ''}>
+            <Card key={goal.id} className={`rounded-xl border-border/70 shadow-none ${!goal.is_active ? 'opacity-50' : ''}`}>
               <CardContent className="py-3">
                 {editingGoal?.id === goal.id ? (
                   <div className="space-y-3">
@@ -348,10 +348,10 @@ export function AdminDefaultGoalsManager() {
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingGoal(null)}>
+                      <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setEditingGoal(null)}>
                         <X className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" onClick={() => updateGoalMutation.mutate(editingGoal)}>
+                      <Button size="sm" className="rounded-full" onClick={() => updateGoalMutation.mutate(editingGoal)}>
                         <Save className="h-4 w-4" />
                       </Button>
                     </div>
@@ -375,7 +375,7 @@ export function AdminDefaultGoalsManager() {
                         checked={goal.is_active}
                         onCheckedChange={() => toggleGoalActive(goal)}
                       />
-                      <Button variant="ghost" size="icon" onClick={() => setEditingGoal(goal)}>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setEditingGoal(goal)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button

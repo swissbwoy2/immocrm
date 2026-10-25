@@ -1,10 +1,19 @@
 import { useMemo } from 'react';
 import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, startOfDay, startOfWeek, startOfMonth, isSameDay, isSameWeek, isSameMonth, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { BarChart3, LineChart as LineChartIcon } from 'lucide-react';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { DateRange } from './DateRangeFilter';
+import { nombreSuisse, axeSuisse } from './statsFormat';
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'hsl(var(--popover))',
+  border: '1px solid hsl(var(--border))',
+  borderRadius: '12px',
+  fontSize: '12px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+};
 
 interface DataPoint {
   date: Date;
@@ -83,77 +92,77 @@ export function PerformanceChart({
   const total = chartData.reduce((sum, d) => sum + d.value, 0);
   const comparisonTotal = chartData.reduce((sum, d) => sum + d.comparison, 0);
 
+  const isMontant = valueLabel === 'CHF';
+
   return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-medium transition-transform duration-300 group-hover:scale-[1.02] origin-left">{title}</CardTitle>
-          <div className="text-right">
-            <p className="text-2xl font-bold">{total}</p>
-            {showComparison && comparisonTotal > 0 && (
-              <p className="text-xs text-muted-foreground">
-                vs {comparisonTotal} période préc.
-              </p>
-            )}
+    <div className={`${DASH_CARD} flex h-full flex-col p-4 md:p-5`}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <LineChartIcon className="h-[18px] w-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-foreground">{title}</h3>
+            <p className="text-xs text-muted-foreground">sur la période</p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id={`gradient-${title}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fontSize: 10 }} 
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 10 }} 
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-                formatter={(value: number) => [value, valueLabel]}
-              />
-              {showComparison && (
-                <Area
-                  type="monotone"
-                  dataKey="comparison"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth={1}
-                  strokeDasharray="5 5"
-                  fill="transparent"
-                  name="Période précédente"
-                />
-              )}
+        <div className="shrink-0 text-right">
+          <p className="text-2xl font-semibold leading-none tracking-tight tabular-nums text-foreground">{nombreSuisse(total)}</p>
+          {isMontant && <p className="mt-1 text-xs text-muted-foreground">{valueLabel}</p>}
+          {showComparison && comparisonTotal > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              vs {nombreSuisse(comparisonTotal)} période préc.
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-auto h-[240px] min-w-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 10, right: 8, left: isMontant ? -8 : -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              minTickGap={8}
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+              tickFormatter={(v: number) => axeSuisse(v)}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+              formatter={(value: number) => [nombreSuisse(value), valueLabel]}
+            />
+            {showComparison && (
               <Area
                 type="monotone"
-                dataKey="value"
-                stroke={color}
-                strokeWidth={2}
-                fill={`url(#gradient-${title})`}
-                name={valueLabel}
+                dataKey="comparison"
+                stroke="hsl(var(--muted-foreground))"
+                strokeWidth={1}
+                strokeDasharray="5 5"
+                fill="transparent"
+                name="Période précédente"
               />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+            )}
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={2}
+              fill={color}
+              fillOpacity={0.12}
+              name={valueLabel}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
 
@@ -202,50 +211,68 @@ export function MultiSeriesChart({ title, series, dateRange }: MultiSeriesChartP
     });
   }, [series, dateRange, daysDiff]);
 
+  const totals = series.map((s) => ({
+    key: s.key,
+    label: s.label,
+    color: s.color,
+    total: s.data.reduce((sum, d) => sum + d.value, 0),
+  }));
+
   return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium transition-transform duration-300 group-hover:scale-[1.02] origin-left">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fontSize: 10 }} 
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 10 }} 
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '12px' }} />
-              {series.map((s) => (
-                <Bar
-                  key={s.key}
-                  dataKey={s.key}
-                  name={s.label}
-                  fill={s.color}
-                  radius={[4, 4, 0, 0]}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+    <div className={`${DASH_CARD} flex h-full flex-col p-4 md:p-5`}>
+      <div className="mb-4 flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <BarChart3 className="h-[18px] w-[18px]" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">sur la période</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5">
+        {totals.map((s) => (
+          <li key={s.key} className="flex min-w-0 items-center gap-1.5 text-xs">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+            <span className="truncate text-muted-foreground">{s.label}</span>
+            <span className="font-semibold tabular-nums text-foreground">{nombreSuisse(s.total)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-auto h-[240px] min-w-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              minTickGap={8}
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip
+              cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
+              contentStyle={TOOLTIP_STYLE}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+            />
+            {series.map((s) => (
+              <Bar
+                key={s.key}
+                dataKey={s.key}
+                name={s.label}
+                fill={s.color}
+                radius={[4, 4, 0, 0]}
+                maxBarSize={32}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

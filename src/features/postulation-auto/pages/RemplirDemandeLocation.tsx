@@ -16,7 +16,7 @@ import SignaturePad from '@/components/mandat/SignaturePad';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DASH_CARD, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -327,50 +327,52 @@ export default function RemplirDemandeLocation() {
 
   return (
     <div className="flex flex-col lg:h-[calc(100vh-4rem)] pb-24 lg:pb-0">
-      <div className="border-b px-4 py-3 md:px-8">
-        <h1 className="text-xl md:text-2xl font-bold">Postulation automatique</h1>
-        <p className="text-sm text-muted-foreground">Remplissage intelligent du formulaire : l'IA lit le formulaire et le dossier client, puis déduit chaque champ.</p>
+      <div className="border-b border-border/70 px-4 pt-5 md:px-8 [&>header]:mb-4">
+        <DashPageHeader
+          title="Postulation automatique"
+          subtitle="Remplissage intelligent du formulaire : l'IA lit le formulaire et le dossier client, puis déduit chaque champ."
+        />
       </div>
 
       <div className="flex flex-1 flex-col lg:flex-row lg:overflow-hidden">
-        <div className="w-full lg:w-80 lg:shrink-0 lg:overflow-auto border-b lg:border-b-0 lg:border-r p-4 space-y-4">
+        <div className="w-full lg:w-80 lg:shrink-0 lg:overflow-auto border-b border-border/70 lg:border-b-0 lg:border-r p-4 space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs">Modèle</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Modèle</Label>
             <Select value={formulaireId} onValueChange={setFormulaireId}>
-              <SelectTrigger><SelectValue placeholder="Choisir un modèle" /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choisir un modèle" /></SelectTrigger>
               <SelectContent>
                 {formulaires.map((f) => <SelectItem key={f.id} value={f.id}>{f.nom}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Client</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Client</Label>
             <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger><SelectValue placeholder="Choisir un client" /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choisir un client" /></SelectTrigger>
               <SelectContent className="max-h-72">
                 {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Offre / bien</Label>
+            <Label className="text-xs font-medium text-muted-foreground">Offre / bien</Label>
             <Select value={offreId} onValueChange={setOffreId} disabled={!clientId}>
-              <SelectTrigger><SelectValue placeholder="Choisir une offre" /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choisir une offre" /></SelectTrigger>
               <SelectContent className="max-h-72">
                 {offres.map((o) => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Lieu de signature</Label>
-            <Input value={lieu} onChange={(e) => setLieu(e.target.value)} />
+            <Label className="text-xs font-medium text-muted-foreground">Lieu de signature</Label>
+            <Input value={lieu} onChange={(e) => setLieu(e.target.value)} className="rounded-xl" />
           </div>
 
-          <Button onClick={loadValues} disabled={busy} className="w-full gap-2">
+          <Button onClick={loadValues} disabled={busy} className="w-full gap-2 rounded-full">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} Charger les données
           </Button>
 
-          <Button onClick={() => runAi()} disabled={aiLoading || !formulaireId || !clientId} variant="secondary" className="w-full gap-2">
+          <Button onClick={() => runAi()} disabled={aiLoading || !formulaireId || !clientId} variant="secondary" className="w-full gap-2 rounded-full">
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Remplir avec l'IA
           </Button>
           {sectioned && champs.length > 0 && (
@@ -380,32 +382,35 @@ export default function RemplirDemandeLocation() {
             </p>
           )}
           {aiByName && (
-            <p className="text-[11px] leading-4 text-emerald-600">
+            <p className="text-[11px] leading-4 text-emerald-600 dark:text-emerald-400">
               IA : {Object.values(aiByName).filter((v) => String(v ?? '').trim() !== '').length} champ(s) déduit(s).
             </p>
           )}
 
-          <Card className="border-primary/20">
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileSignature className="h-4 w-4 text-primary" />Signature</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
+          <div className={`${DASH_CARD} space-y-3 p-4`}>
+            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><FileSignature className="h-4 w-4" /></span>
+              Signature
+            </p>
+            <div className="space-y-2">
               {signature ? (
-                <img src={signature} alt="Signature enregistrée" className="h-16 w-full object-contain rounded border bg-white" />
+                <img src={signature} alt="Signature enregistrée" className="h-16 w-full object-contain rounded-xl border border-border/70 bg-white" />
               ) : (
                 <p className="text-xs text-muted-foreground">Aucune signature enregistrée.</p>
               )}
-              <Button variant="outline" size="sm" className="w-full" onClick={() => { setTempSignature(''); setSignOpen(true); }}>
+              <Button variant="outline" size="sm" className="w-full rounded-full" onClick={() => { setTempSignature(''); setSignOpen(true); }}>
                 {signature ? 'Re-signer' : 'Signer maintenant'}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {selectedId && overrides[selectedId] && (
-            <Button variant="secondary" size="sm" className="w-full gap-2" onClick={() => memorizePosition(selectedId)}>
+            <Button variant="secondary" size="sm" className="w-full gap-2 rounded-full" onClick={() => memorizePosition(selectedId)}>
               <MapPin className="h-4 w-4" /> Mémoriser cette position pour ce modèle
             </Button>
           )}
 
-          <Button onClick={generate} disabled={generating || !bytes} className="w-full gap-2">
+          <Button onClick={generate} disabled={generating || !bytes} className="w-full gap-2 rounded-full">
             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Générer le PDF rempli
           </Button>
 
@@ -419,7 +424,7 @@ export default function RemplirDemandeLocation() {
           {formulaireId && !doc && <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}
           {doc && isAcro && (
             <div className="text-center">
-              <Badge variant="secondary">Remplissage natif par nom de champ — aperçu réel, aucun placement manuel</Badge>
+              <Badge variant="secondary" className="rounded-full font-medium">Remplissage natif par nom de champ — aperçu réel, aucun placement manuel</Badge>
             </div>
           )}
           {doc && Array.from({ length: numPages }, (_, i) => i + 1).map((p) => (
@@ -462,14 +467,14 @@ export default function RemplirDemandeLocation() {
             </div>
           ))}
           {doc && champs.length === 0 && (
-            <div className="text-center"><Badge variant="secondary">Ce modèle n'a aucun champ mappé</Badge></div>
+            <div className="text-center"><Badge variant="secondary" className="rounded-full font-medium">Ce modèle n'a aucun champ mappé</Badge></div>
           )}
         </div>
       </div>
 
       {/* Barre d'action mobile : le bouton de génération reste toujours accessible */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
-        <Button onClick={generate} disabled={generating || !bytes} className="w-full gap-2 h-12">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
+        <Button onClick={generate} disabled={generating || !bytes} className="w-full gap-2 h-12 rounded-full">
           {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Générer le PDF rempli
         </Button>
       </div>
@@ -479,7 +484,7 @@ export default function RemplirDemandeLocation() {
           <DialogHeader><DialogTitle>Votre signature</DialogTitle></DialogHeader>
           <SignaturePad value={tempSignature} onChange={setTempSignature} />
           <DialogFooter>
-            <Button onClick={saveSignature} disabled={!tempSignature}>Enregistrer</Button>
+            <Button onClick={saveSignature} disabled={!tempSignature} className="rounded-full">Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

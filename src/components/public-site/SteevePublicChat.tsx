@@ -324,7 +324,7 @@ export function SteevePublicChat({ hidden = false, candidat }: { hidden?: boolea
     <div
       data-floating-widget
       className={cn(
-        'steeve-public-launcher fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
+        'steeve-public-launcher fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+90px)] max-[379px]:bottom-[calc(env(safe-area-inset-bottom,0px)+110px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
         hidden && 'pointer-events-none invisible',
       )}
     >

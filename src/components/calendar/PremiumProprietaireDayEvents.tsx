@@ -31,39 +31,39 @@ const eventTypeConfig: Record<string, { icon: any; color: string; bgColor: strin
   bail: { 
     icon: FileText, 
     color: 'text-blue-600', 
-    bgColor: 'bg-blue-500/10 border-blue-500/30', 
+    bgColor: 'bg-blue-500/10', 
     label: 'Bail' 
   },
   hypotheque: { 
     icon: Banknote, 
     color: 'text-purple-600', 
-    bgColor: 'bg-purple-500/10 border-purple-500/30', 
+    bgColor: 'bg-purple-500/10', 
     label: 'Hypothèque' 
   },
   assurance: { 
     icon: Shield, 
     color: 'text-green-600', 
-    bgColor: 'bg-green-500/10 border-green-500/30', 
+    bgColor: 'bg-green-500/10', 
     label: 'Assurance' 
   },
   ticket: { 
     icon: Wrench, 
     color: 'text-orange-600', 
-    bgColor: 'bg-orange-500/10 border-orange-500/30', 
+    bgColor: 'bg-orange-500/10', 
     label: 'Ticket technique' 
   },
   event: { 
     icon: Calendar, 
     color: 'text-primary', 
-    bgColor: 'bg-primary/10 border-primary/30', 
+    bgColor: 'bg-primary/10', 
     label: 'Événement' 
   },
 };
 
 const priorityColors: Record<string, string> = {
-  haute: 'bg-red-500/20 text-red-700 border-red-500/30',
-  normale: 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30',
-  basse: 'bg-green-500/20 text-green-700 border-green-500/30',
+  haute: 'bg-destructive/10 text-destructive border-transparent',
+  normale: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-transparent',
+  basse: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-transparent',
 };
 
 const EventCard = memo(({ event, onClick }: { event: ProprietaireEvent; onClick?: () => void }) => {
@@ -73,34 +73,29 @@ const EventCard = memo(({ event, onClick }: { event: ProprietaireEvent; onClick?
   return (
     <div
       onClick={onClick}
-      className={cn(
-        'p-4 rounded-xl border transition-all duration-300 cursor-pointer group',
-        'hover:shadow-lg hover:scale-[1.02] hover:border-primary/40',
-        'backdrop-blur-sm animate-fade-in',
-        config.bgColor
-      )}
+      className="p-4 rounded-xl border border-border/70 bg-card transition-colors cursor-pointer group hover:border-foreground/30"
     >
       <div className="flex items-start gap-3">
-        <div className={cn(
-          'p-2.5 rounded-xl shrink-0 transition-transform duration-300 group-hover:scale-110',
+        <span className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
           config.bgColor
         )}>
           <Icon className={cn('w-5 h-5', config.color)} />
-        </div>
+        </span>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
-            <Badge variant="outline" className={cn('text-[10px] px-2', config.bgColor, config.color)}>
+            <Badge variant="outline" className={cn('rounded-full border-transparent text-xs font-semibold px-2', config.bgColor, config.color)}>
               {config.label}
             </Badge>
             {event.priority && (
-              <Badge variant="outline" className={cn('text-[10px] px-2', priorityColors[event.priority])}>
+              <Badge variant="outline" className={cn('rounded-full text-xs font-semibold px-2', priorityColors[event.priority])}>
                 {event.priority === 'haute' ? 'Urgent' : event.priority === 'normale' ? 'Normal' : 'Bas'}
               </Badge>
             )}
           </div>
           
-          <h4 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+          <h4 className="text-base font-semibold text-foreground truncate">
             {event.title}
           </h4>
           
@@ -110,7 +105,7 @@ const EventCard = memo(({ event, onClick }: { event: ProprietaireEvent; onClick?
             </p>
           )}
           
-          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
               <span>{formatSwissTime(event.date) || 'Journée'}</span>
@@ -144,10 +139,10 @@ export function PremiumProprietaireDayEvents({ date, events, onEventClick }: Pre
   if (!date) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-        <div className="p-4 rounded-2xl bg-muted/30 mb-4">
-          <Calendar className="w-10 h-10 text-muted-foreground/50" />
-        </div>
-        <h3 className="font-semibold text-foreground/70">Sélectionnez une date</h3>
+        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <Calendar className="w-7 h-7 text-primary" />
+        </span>
+        <h3 className="text-base font-semibold text-foreground">Sélectionnez une date</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Cliquez sur un jour pour voir les événements
         </p>
@@ -162,13 +157,13 @@ export function PremiumProprietaireDayEvents({ date, events, onEventClick }: Pre
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+      <div className="p-4 md:p-5 border-b border-border/70">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <Calendar className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-bold text-foreground">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Calendar className="w-5 h-5" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-foreground">
               {formatSwissRelativeDate(date)}
             </h3>
             <p className="text-xs text-muted-foreground capitalize">
@@ -182,9 +177,9 @@ export function PremiumProprietaireDayEvents({ date, events, onEventClick }: Pre
       <ScrollArea className="flex-1 p-4">
         {sortedEvents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="p-3 rounded-xl bg-muted/30 mb-3">
-              <Calendar className="w-8 h-8 text-muted-foreground/40" />
-            </div>
+            <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Calendar className="w-6 h-6 text-muted-foreground" />
+            </span>
             <p className="text-sm text-muted-foreground">
               Aucun événement ce jour
             </p>
@@ -204,7 +199,7 @@ export function PremiumProprietaireDayEvents({ date, events, onEventClick }: Pre
 
       {/* Summary footer */}
       {sortedEvents.length > 0 && (
-        <div className="p-3 border-t border-border/50 bg-muted/20">
+        <div className="p-3 border-t border-border/70">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{sortedEvents.length} événement{sortedEvents.length > 1 ? 's' : ''}</span>
             <div className="flex items-center gap-2">

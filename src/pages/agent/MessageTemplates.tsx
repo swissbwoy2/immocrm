@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DASH_CARD, DashPage, DashPageHeader, DashBadge } from "@/components/client/dashboard/DashPrimitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,70 +60,70 @@ export default function MessageTemplates() {
   const agence = tpls.filter(t => t.owner_user_id === null);
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">📝 Modèles de messages rapides</h1>
+    <DashPage className="max-w-4xl">
+      <DashPageHeader title="Modèles de messages rapides" />
 
-      <Card className="mb-6">
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Plus className="h-4 w-4" /> Nouveau modèle personnel</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <Input placeholder="Libellé court (ex: Confirmation visite)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
-          <Input placeholder="Catégorie (ex: visite, dossier)" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} />
+      <section className={`${DASH_CARD} mb-6 p-4 md:p-5`} aria-labelledby="tpl-new">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Plus className="h-[18px] w-[18px]" /></span>
+          <h2 id="tpl-new" className="text-base font-semibold text-foreground">Nouveau modèle personnel</h2>
+        </div>
+        <div className="mt-4 space-y-3">
+          <Input className="rounded-xl" placeholder="Libellé court (ex: Confirmation visite)" value={draft.label} onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
+          <Input className="rounded-xl" placeholder="Catégorie (ex: visite, dossier)" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} />
           <Textarea
+            className="rounded-xl"
             placeholder="Corps du message — variables disponibles: {{prenom}}, {{nom}}, {{adresse}}, {{date_visite}}"
             value={draft.body}
             onChange={(e) => setDraft({ ...draft, body: e.target.value })}
             rows={4}
           />
-          <Button onClick={create} disabled={!draft.label.trim() || !draft.body.trim()}>
+          <Button className="rounded-full" onClick={create} disabled={!draft.label.trim() || !draft.body.trim()}>
             <Save className="h-4 w-4 mr-2" /> Enregistrer
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
+        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-muted-foreground" /></div>
       ) : (
         <>
-          <h2 className="text-lg font-semibold mb-3">Mes modèles personnels ({personnels.length})</h2>
+          <h2 className="mb-3 text-base font-semibold text-foreground">Mes modèles personnels ({personnels.length})</h2>
           {personnels.length === 0 ? (
             <p className="text-sm text-muted-foreground mb-6">Aucun modèle personnel.</p>
           ) : (
             <div className="space-y-2 mb-6">
               {personnels.map(t => (
-                <Card key={t.id}>
-                  <CardContent className="p-3 flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{t.label}</span>
-                        {t.category && <Badge variant="outline" className="text-[10px]">{t.category}</Badge>}
-                        {t.use_count > 0 && <Badge variant="secondary" className="text-[10px]">utilisé {t.use_count}×</Badge>}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{t.body}</p>
+                <div key={t.id} className={`${DASH_CARD} flex items-start justify-between gap-3 p-4`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-foreground">{t.label}</span>
+                      {t.category && <DashBadge tone="neutral">{t.category}</DashBadge>}
+                      {t.use_count > 0 && <DashBadge tone="muted">utilisé {t.use_count}×</DashBadge>}
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => remove(t.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </CardContent>
-                </Card>
+                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{t.body}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" className="rounded-full" onClick={() => remove(t.id)}><Trash2 className="h-4 w-4" /></Button>
+                </div>
               ))}
             </div>
           )}
 
-          <h2 className="text-lg font-semibold mb-3">Modèles d'agence ({agence.length})</h2>
+          <h2 className="mb-3 text-base font-semibold text-foreground">Modèles d'agence ({agence.length})</h2>
           <div className="space-y-2">
             {agence.map(t => (
-              <Card key={t.id}>
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{t.label}</span>
-                    <Badge variant="default" className="text-[10px]">agence</Badge>
-                    {t.category && <Badge variant="outline" className="text-[10px]">{t.category}</Badge>}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{t.body}</p>
-                </CardContent>
-              </Card>
+              <div key={t.id} className={`${DASH_CARD} p-4`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-foreground">{t.label}</span>
+                  <DashBadge tone="primary">agence</DashBadge>
+                  {t.category && <DashBadge tone="neutral">{t.category}</DashBadge>}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{t.body}</p>
+              </div>
             ))}
           </div>
         </>
       )}
-    </div>
+    </DashPage>
   );
 }

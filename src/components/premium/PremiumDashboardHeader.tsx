@@ -18,6 +18,8 @@ interface PremiumDashboardHeaderProps {
   className?: string;
   subtitle?: string;
   headingBadge?: string;
+  /** Icône du badge (par défaut : celle du parcours). */
+  badgeIcon?: typeof Home;
   action?: ReactNode;
 }
 
@@ -60,12 +62,13 @@ export function PremiumDashboardHeader({
   className,
   subtitle,
   headingBadge,
+  badgeIcon,
   action,
 }: PremiumDashboardHeaderProps) {
   // Resolve effective parcours: explicit prop wins, else legacy isAcheteur fallback
   const effective: ParcoursType = parcoursType ?? (isAcheteur ? 'achat' : 'location');
   const cfg = PARCOURS_CONFIG[effective] ?? PARCOURS_CONFIG.location;
-  const Icon = cfg.icon;
+  const Icon = badgeIcon ?? cfg.icon;
 
   return (
     <div className={cn(

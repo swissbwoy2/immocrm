@@ -69,7 +69,7 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
     return (
       <div
         key={s.id}
-        className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card/60 p-3"
+        className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3"
       >
         <div className="min-w-0">
           <p className="font-medium truncate">{agentLabel(partner)}</p>
@@ -88,10 +88,12 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="h-5 w-5 text-primary" />
+          <DialogTitle className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Share2 className="h-[18px] w-[18px]" />
+            </span>
             Partage d'agenda entre agents
           </DialogTitle>
           <DialogDescription>
@@ -108,7 +110,7 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
             </h3>
             <div className="flex gap-2">
               <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1 rounded-full">
                   <SelectValue
                     placeholder={
                       availableAgents.length === 0 ? 'Aucun agent disponible' : 'Choisir un agent…'
@@ -123,7 +125,7 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <Button onClick={handleSend} disabled={!selectedAgent}>
+              <Button className="rounded-full" onClick={handleSend} disabled={!selectedAgent}>
                 Envoyer
               </Button>
             </div>
@@ -133,7 +135,7 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
           <section className="space-y-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Inbox className="h-4 w-4" /> Demandes reçues
-              {incoming.length > 0 && <Badge variant="secondary">{incoming.length}</Badge>}
+              {incoming.length > 0 && <Badge variant="secondary" className="rounded-full">{incoming.length}</Badge>}
             </h3>
             {incoming.length === 0 ? (
               <p className="text-xs text-muted-foreground">Aucune demande en attente.</p>
@@ -142,10 +144,10 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
                 {incoming.map((s) =>
                   renderShareLine(s, 'requester', (
                     <>
-                      <Button size="sm" onClick={() => respond(s.id, true)}>
+                      <Button size="sm" className="rounded-full" onClick={() => respond(s.id, true)}>
                         <Check className="h-4 w-4 mr-1" /> Accepter
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => respond(s.id, false)}>
+                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => respond(s.id, false)}>
                         <X className="h-4 w-4 mr-1" /> Refuser
                       </Button>
                     </>
@@ -165,8 +167,8 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
                 {outgoing.map((s) =>
                   renderShareLine(s, 'recipient', (
                     <>
-                      <Badge variant="outline">En attente</Badge>
-                      <Button size="sm" variant="ghost" onClick={() => revoke(s.id)}>
+                      <Badge variant="outline" className="rounded-full border-transparent bg-amber-500/10 text-amber-700 dark:text-amber-400">En attente</Badge>
+                      <Button size="sm" variant="ghost" className="rounded-full" onClick={() => revoke(s.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
@@ -180,7 +182,7 @@ export function AgentCalendarShareDialog({ open, onOpenChange }: Props) {
           <section className="space-y-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <Share2 className="h-4 w-4" /> Partages actifs
-              {accepted.length > 0 && <Badge variant="secondary">{accepted.length}</Badge>}
+              {accepted.length > 0 && <Badge variant="secondary" className="rounded-full">{accepted.length}</Badge>}
             </h3>
             {accepted.length === 0 ? (
               <p className="text-xs text-muted-foreground">Aucun partage actif.</p>
@@ -227,7 +229,7 @@ function ShareAcceptedRow({
   const a = share.requester;
   const b = share.recipient;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-emerald-500/5 p-3">
       <div className="min-w-0">
         <p className="font-medium truncate">
           {agentLabel(a)} ↔ {agentLabel(b)}
@@ -240,7 +242,7 @@ function ShareAcceptedRow({
           })}
         </p>
       </div>
-      <Button size="sm" variant="outline" onClick={onRevoke}>
+      <Button size="sm" variant="outline" className="shrink-0 rounded-full" onClick={onRevoke}>
         <Trash2 className="h-4 w-4 mr-1" /> Révoquer
       </Button>
     </div>

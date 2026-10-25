@@ -1,35 +1,48 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Send, Search, Users, UserCog } from "lucide-react";
+import { CheckCircle2, Home, Megaphone, MessageSquare, RefreshCw, UserCog } from "lucide-react";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
-import { MessageAttachment } from "@/components/MessageAttachment";
-import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
-import { MessagingLayout } from "@/components/MessagingLayout";
 import { AdminNewConversationDialog } from "@/components/AdminNewConversationDialog";
-import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
-import { ChatPatternBackground } from "@/components/messaging/FloatingParticles";
-import { FloatingParticles, MeshGradientBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isSameDay, parseISO } from "date-fns";
-import { ConversationTabs, type ConversationTabKey } from "@/components/messaging/ConversationTabs";
+import { type ConversationTabKey } from "@/components/messaging/ConversationTabs";
 import { computeTabBuckets, type ConvLastMeta } from "@/lib/messagingTabs";
 import { StoriesBar } from "@/components/stories/StoriesBar";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
+import { MessengerSplitLayout, MESSENGER_PAGE_HEIGHT } from "@/components/messaging/MessengerSplitLayout";
+import {
+  ChatEmptyState,
+  ConversationFilterPills,
+  ConversationItemsList,
+  ConversationListEmpty,
+  ConversationListHeader,
+  ConversationSearchField,
+} from "@/components/messaging/ConversationListParts";
+
+type ConvTypeKey = "clients" | "agents" | "proprietaires" | "annonces";
+const CONV_TYPE_LABELS: Record<ConvTypeKey, string> = {
+  clients: "Clients",
+  agents: "Agents",
+  proprietaires: "Propriétaires",
+  annonces: "Annonces",
+};
+const CONV_TYPE_ICONS: Record<ConvTypeKey, React.ElementType> = {
+  clients: MessageSquare,
+  agents: UserCog,
+  proprietaires: Home,
+  annonces: Megaphone,
+};
 
 const ADMIN_TAB_STORAGE_KEY = "messagerie_admin_tab";
 
@@ -40,7 +53,6 @@ const removeAccents = (str: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
-  const isMobile = useIsMobile();
   const { markTypeAsRead } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -73,6 +85,8 @@ const Messagerie = () => {
   useEffect(() => {
     try { localStorage.setItem(ADMIN_TAB_STORAGE_KEY, activeTab); } catch {}
   }, [activeTab]);
+  // Filtre d'affichage par type de conversation (non mémorisé)
+  const [typeFilter, setTypeFilter] = useState<"all" | ConvTypeKey>("all");
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
     const viewport = scrollViewportRef.current;
@@ -557,90 +571,179 @@ const Messagerie = () => {
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
   const currentConversation = conversations.find(c => c.id === selectedConv);
 
-  const getConversationDisplayName = (conv: any) => {
-    if (conv.conversation_type === 'admin-agent') {
-      return (
-        <div className="flex items-center gap-2">
-          <UserCog className="h-4 w-4 text-primary" />
-          <span>{conv.agentName}</span>
-        </div>
-      );
+  // --- Affichage (calculs purement visuels à partir des données déjà chargées) ---
+  const getListName = (conv: any) =>
+    conv.conversation_type === 'admin-agent' ? conv.agentName : conv.clientName || 'Client';
+
+  const typeOf = (conv: any): ConvTypeKey => {
+    switch (conv.conversation_type) {
+      case 'admin-agent': return 'agents';
+      case 'proprietaire': return 'proprietaires';
+      case 'annonce': return 'annonces';
+      default: return 'clients';
     }
-    return (
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-muted-foreground" />
-        <span>{conv.clientName || 'Client'}</span>
-      </div>
-    );
   };
 
+  // Filtre par type (Clients / Agents / Propriétaires / Annonces), appliqué sur « Tout »
+  const typeCounts = useMemo(() => {
+    const counts: Record<ConvTypeKey, number> = { clients: 0, agents: 0, proprietaires: 0, annonces: 0 };
+    searchedConversations.forEach((c) => { counts[typeOf(c)] += 1; });
+    return counts;
+  }, [searchedConversations]);
+  const presentTypes = (Object.keys(typeCounts) as ConvTypeKey[]).filter((k) => typeCounts[k] > 0);
+
+  const visibleConversations = typeFilter === 'all'
+    ? filteredConversations
+    : searchedConversations.filter((c) => typeOf(c) === typeFilter);
+
+  // Résumé de l'en-tête (sur l'ensemble, hors recherche)
+  const totalUnreadConvs = useMemo(
+    () => conversations.filter((c) => (unreadCountsMap.get(c.id) || 0) > 0).length,
+    [conversations, unreadCountsMap]
+  );
+  const headerSummary = isLoadingConversations
+    ? 'Chargement…'
+    : totalUnreadConvs > 0
+      ? `${totalUnreadConvs} conversation${totalUnreadConvs > 1 ? 's' : ''} non lue${totalUnreadConvs > 1 ? 's' : ''} · ${conversations.length} au total`
+      : `${conversations.length} conversation${conversations.length > 1 ? 's' : ''} · tout est lu`;
+
+  type PillKey = ConversationTabKey | `type:${ConvTypeKey}`;
+  const pillOptions: { key: PillKey; label: string; count?: number; alert?: boolean }[] = [
+    { key: 'a_traiter', label: 'À traiter', count: tabCounts.a_traiter, alert: tabCounts.a_traiter > 0 },
+    { key: 'clients', label: 'Réponses clients', count: tabCounts.clients },
+    { key: 'videos', label: 'Vidéos & visites', count: tabCounts.videos },
+    { key: 'robot', label: 'Offres du robot', count: tabCounts.robot },
+    { key: 'tout', label: 'Tout', count: tabCounts.tout },
+    ...(presentTypes.length > 1
+      ? presentTypes.map((k) => ({ key: `type:${k}` as PillKey, label: CONV_TYPE_LABELS[k], count: typeCounts[k] }))
+      : []),
+  ];
+  const activePill: PillKey = typeFilter === 'all' ? activeTab : `type:${typeFilter}`;
+  const handlePillChange = (key: PillKey) => {
+    if (key.startsWith('type:')) {
+      setTypeFilter(key.slice(5) as ConvTypeKey);
+      setActiveTab('tout');
+    } else {
+      setTypeFilter('all');
+      setActiveTab(key as ConversationTabKey);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadConversations();
+    loadUnreadCounts();
+  };
+
+  const emptyTitle = searchQuery
+    ? 'Aucune conversation trouvée'
+    : activePill === 'a_traiter'
+      ? 'Rien à traiter'
+      : 'Aucune conversation';
+  const emptyDescription = searchQuery
+    ? 'Essayez un autre nom de client ou d\'agent.'
+    : activePill === 'a_traiter'
+      ? 'Toutes les conversations ont reçu une réponse.'
+      : 'Rien dans ce filtre pour le moment.';
+
   const conversationsList = (
-    <>
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
       <StoriesBar />
-      <div className="p-3 border-b border-border/50 space-y-3">
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <SidebarTrigger className="shrink-0" />
-            <h2 className="font-semibold text-lg truncate">Conversations</h2>
-          </div>
-          <div className="shrink-0">
-            <AdminNewConversationDialog onConversationCreated={handleConversationCreated} />
-          </div>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par client ou agent..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-muted/50 border-0"
-          />
-        </div>
-      </div>
-      <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
-      <ScrollArea className="flex-1 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
+      <ConversationListHeader
+        title="Messagerie"
+        subtitle={headerSummary}
+        leading={<SidebarTrigger className="hidden lg:inline-flex h-10 w-10 rounded-full" />}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              onClick={handleRefresh}
+              aria-label="Actualiser"
+              title="Actualiser"
+            >
+              <RefreshCw className={isLoadingConversations ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+            </Button>
+            {/* Bouton « Nouvelle conversation » réduit à son icône ronde (le libellé reste lu par les lecteurs d'écran) */}
+            <div className="[&>button]:h-10 [&>button]:w-10 [&>button]:gap-0 [&>button]:rounded-full [&>button]:p-0 [&>button]:text-[0px] [&>button>svg]:m-0">
+              <AdminNewConversationDialog onConversationCreated={handleConversationCreated} />
+            </div>
+          </>
+        }
+      />
+      <ConversationSearchField
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Rechercher par client ou agent"
+      />
+      <ConversationFilterPills options={pillOptions} value={activePill} onChange={handlePillChange} />
+      <div className="border-t border-border/70" />
+      <ScrollArea className="flex-1 min-h-0 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
-        ) : filteredConversations.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground text-sm">
-            Aucune conversation trouvée
-          </div>
+        ) : visibleConversations.length === 0 ? (
+          <ConversationListEmpty
+            icon={activePill === 'a_traiter' && !searchQuery ? CheckCircle2 : MessageSquare}
+            title={emptyTitle}
+            description={emptyDescription}
+          />
         ) : (
-          filteredConversations.map((conv, index) => {
-            const displayName = conv.conversation_type === 'admin-agent' 
-              ? conv.agentName 
-              : conv.clientName || 'Client';
-            
-            return (
-              <PremiumConversationItem
-                key={conv.id}
-                name={displayName}
-                avatarUrl={null}
-                lastMessage={conv.lastMessageText}
-                lastMessageTime={conv.last_message_at}
-                unreadCount={unreadCountsMap.get(conv.id) || 0}
-                isSelected={selectedConv === conv.id}
-                onClick={() => setSelectedConv(conv.id)}
-                index={index}
-                lastSeenAt={conv.conversation_type !== 'admin-agent' ? conv.clientLastSeenAt : undefined}
-                isOnline={conv.conversation_type !== 'admin-agent' ? conv.clientIsOnline : undefined}
-              />
-            );
-          })
+          <ConversationItemsList>
+            {visibleConversations.map((conv, index) => {
+              const isAgentConv = conv.conversation_type === 'admin-agent';
+              const type = typeOf(conv);
+              return (
+                <PremiumConversationItem
+                  key={conv.id}
+                  name={getListName(conv)}
+                  avatarUrl={null}
+                  subtitle={isAgentConv ? 'Agent' : conv.agentName ? `Agent : ${conv.agentName}` : undefined}
+                  lastMessage={conv.lastMessageText}
+                  lastMessageTime={conv.last_message_at}
+                  unreadCount={unreadCountsMap.get(conv.id) || 0}
+                  isSelected={selectedConv === conv.id}
+                  onClick={() => setSelectedConv(conv.id)}
+                  index={index}
+                  lastSeenAt={!isAgentConv ? conv.clientLastSeenAt : undefined}
+                  isOnline={!isAgentConv ? conv.clientIsOnline : undefined}
+                  channelIcon={type === 'clients' ? undefined : CONV_TYPE_ICONS[type]}
+                  channelLabel={type === 'clients' ? undefined : CONV_TYPE_LABELS[type]}
+                />
+              );
+            })}
+          </ConversationItemsList>
         )}
       </ScrollArea>
-    </>
+    </div>
   );
+
+  const headerName = currentConversation
+    ? currentConversation.conversation_type === 'admin-agent'
+      ? currentConversation.agentName
+      : currentConversation.clientName ?? 'Client'
+    : undefined;
+  const headerSubtitle = currentConversation
+    ? [
+        currentConversation.conversation_type === 'admin-agent'
+          ? 'Agent'
+          : currentConversation.agentName
+            ? `avec ${currentConversation.agentName}`
+            : null,
+        currentConversation.subject || null,
+      ].filter(Boolean).join(' · ') || 'Conversation'
+    : undefined;
+  const headerIsOnline =
+    currentConversation?.conversation_type !== 'admin-agent'
+      ? !!currentConversation?.clientIsOnline
+      : false;
 
   const chatHeader = currentConversation && (
     <ChatHeader
-      name={
-        currentConversation.conversation_type === 'admin-agent'
-          ? currentConversation.agentName
-          : `${currentConversation.clientName} ↔ ${currentConversation.agentName}`
-      }
+      name={headerName || 'Conversation'}
       avatarUrl={null}
       status={currentConversation.subject}
+      subtitle={headerSubtitle}
       conversationId={currentConversation.id}
       lastSeenAt={currentConversation.conversation_type !== 'admin-agent' ? currentConversation.clientLastSeenAt : undefined}
       isOnline={currentConversation.conversation_type !== 'admin-agent' ? currentConversation.clientIsOnline : undefined}
@@ -648,28 +751,30 @@ const Messagerie = () => {
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 chat-background relative overflow-hidden">
-      <ChatPatternBackground />
-      <MeshGradientBackground />
-      <FloatingParticles count={12} />
-      <ScrollArea 
-        className="flex-1 relative z-10 min-w-0"
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 relative overflow-hidden bg-background">
+      <ScrollArea
+        className="flex-1 relative min-w-0"
         viewportRef={scrollViewportRef}
-        viewportClassName="p-2 sm:p-4 [&>div]:!block [&>div]:!min-w-0 [&>div]:max-w-full"
+        viewportClassName="px-3 py-2 sm:px-4 [&>div]:!block [&>div]:!min-w-0 [&>div]:max-w-full"
         onScroll={handleScroll}
       >
         {isLoadingMessages ? (
           <MessagesListSkeleton />
+        ) : selectedMessages.length === 0 ? (
+          <ChatEmptyState
+            title="Aucun message"
+            description="Écrivez le premier message de cette conversation."
+          />
         ) : (
-          <div className="space-y-2 max-w-4xl mx-auto min-w-0">
+          <div className="max-w-3xl mx-auto min-w-0 pb-2">
             {selectedMessages.map((msg, index) => {
               const isSent = msg.sender_type === 'admin';
               const senderName = isSent ? undefined : msg.senderName;
-              
-              // Afficher le séparateur de date si c'est le premier message ou si le jour a changé
-              const showDateSeparator = index === 0 || 
+
+              // Séparateur de date : premier message ou changement de jour
+              const showDateSeparator = index === 0 ||
                 !isSameDay(parseISO(msg.created_at), parseISO(selectedMessages[index - 1].created_at));
-              
+
               return (
                 <div key={msg.id}>
                   {showDateSeparator && <DateSeparator date={msg.created_at} />}
@@ -693,72 +798,40 @@ const Messagerie = () => {
         )}
       </ScrollArea>
       <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
-      <div className="relative z-10">
-        <PremiumChatInput
-          onSendMessage={handleSendMessage}
-          message={messageText}
-          onMessageChange={setMessageText}
-          disabled={false}
-          placeholder="Écrivez un message..."
-          pendingAttachment={pendingAttachment}
-          onRemoveAttachment={() => setPendingAttachment(null)}
-          attachmentSlot={
-            <MessageAttachmentUploader
-              conversationId={selectedConv}
-              value={pendingAttachment}
-              onAttachmentReady={setPendingAttachment}
-            />
-          }
-        />
-      </div>
+      <PremiumChatInput
+        onSendMessage={handleSendMessage}
+        message={messageText}
+        onMessageChange={setMessageText}
+        disabled={false}
+        placeholder="Écrivez un message..."
+        pendingAttachment={pendingAttachment}
+        onRemoveAttachment={() => setPendingAttachment(null)}
+        attachmentSlot={
+          <MessageAttachmentUploader
+            conversationId={selectedConv}
+            value={pendingAttachment}
+            onAttachmentReady={setPendingAttachment}
+          />
+        }
+      />
     </div>
   ) : (
-    <div className="flex items-center justify-center h-full text-muted-foreground">
-      Sélectionnez une conversation
-    </div>
+    <ChatEmptyState />
   );
 
-  if (isMobile) {
-    const contactName = currentConversation
-      ? currentConversation.conversation_type === 'admin-agent'
-        ? currentConversation.agentName
-        : `${currentConversation.clientName ?? 'Client'} ↔ ${currentConversation.agentName ?? ''}`.trim()
-      : undefined;
-    return (
-      <MobileMessenger
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onBack={() => setSelectedConv(null)}
-        headerName={contactName}
-        headerSubtitle={
-          currentConversation
-            ? currentConversation.conversation_type !== 'admin-agent' && currentConversation.clientIsOnline
-              ? 'En ligne'
-              : currentConversation.subject || 'Conversation'
-            : undefined
-        }
-        headerAvatarUrl={null}
-        isOnline={
-          currentConversation?.conversation_type !== 'admin-agent'
-            ? !!currentConversation?.clientIsOnline
-            : false
-        }
-      />
-    );
-  }
-
   return (
-    <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
-
-      <MessagingLayout
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onSelectConversation={setSelectedConv}
-        chatHeader={chatHeader}
-      />
-    </div>
+    <MessengerSplitLayout
+      className={MESSENGER_PAGE_HEIGHT}
+      conversationsList={conversationsList}
+      chatView={chatView}
+      chatHeader={chatHeader}
+      selectedConversation={selectedConv}
+      onBack={() => setSelectedConv(null)}
+      headerName={headerName}
+      headerSubtitle={headerSubtitle}
+      headerAvatarUrl={null}
+      isOnline={headerIsOnline}
+    />
   );
 };
 

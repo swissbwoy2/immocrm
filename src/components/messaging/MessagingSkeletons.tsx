@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 export const ConversationSkeleton: React.FC<{ index?: number }> = ({ index = 0 }) => (
   <div 
     style={{ animationDelay: `${index * 100}ms` }}
-    className="flex items-center gap-3 p-4 border-b border-border/30 animate-fade-in"
+    className="flex items-center gap-3 px-5 py-3 animate-fade-in"
   >
     {/* Avatar skeleton */}
     <div className="relative">
@@ -44,8 +44,8 @@ export const MessageSkeleton: React.FC<{ isSent?: boolean; index?: number }> = (
       <div className={cn(
         'rounded-2xl p-4 space-y-2',
         isSent 
-          ? 'bg-primary/20 rounded-br-md' 
-          : 'bg-muted/50 rounded-bl-md'
+          ? 'bg-primary/15 rounded-br-md' 
+          : 'bg-muted rounded-bl-md'
       )}>
         <div className="h-4 w-48 bg-muted rounded animate-pulse" />
         <div className="h-4 w-32 bg-muted rounded animate-pulse" />

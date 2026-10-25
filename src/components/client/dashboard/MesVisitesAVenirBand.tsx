@@ -81,7 +81,7 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <DialogTitle className="text-lg leading-snug">
+        <DialogTitle className="text-lg font-semibold leading-snug">
           {o.titre || item.adresse || 'Ma visite'}
         </DialogTitle>
       </DialogHeader>
@@ -126,7 +126,7 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
         {item.pieces != null && <Badge variant="secondary">{item.pieces} pièces</Badge>}
         {item.surface != null && <Badge variant="secondary">{item.surface} m²</Badge>}
         {item.etage && <Badge variant="secondary">Étage {item.etage}</Badge>}
-        {visite.statut && <Badge>{visite.statut === 'planifiee' ? 'Planifiée' : visite.statut}</Badge>}
+        {visite.statut && <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">{visite.statut === 'planifiee' ? 'Planifiée' : visite.statut}</Badge>}
       </div>
 
       {item.prix != null && (
@@ -143,18 +143,18 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
       )}
 
       {visite.notes && (
-        <p className="flex items-start gap-2 rounded-lg bg-muted p-3 text-sm">
+        <p className="flex items-start gap-2 rounded-xl border border-border/70 bg-muted/40 p-3 text-sm">
           <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span className="whitespace-pre-wrap">{visite.notes}</span>
         </p>
       )}
 
-      <VisitLiveButton visiteId={visite.id} size="default" className="w-full" />
+      <VisitLiveButton visiteId={visite.id} size="default" className="w-full rounded-full" />
 
 
 
       {item.lien_annonce && (
-        <Button asChild variant="outline" className="w-full">
+        <Button asChild variant="outline" className="w-full rounded-full">
           <a href={item.lien_annonce} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="mr-2 h-4 w-4" />
             Voir l'annonce

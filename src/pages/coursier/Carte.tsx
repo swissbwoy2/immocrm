@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { VisitesMapView } from '@/components/maps/VisitesMapView';
+import { DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   en_attente: { label: 'Dispo', className: 'bg-green-500/10 text-green-600 border-green-500/30' },
@@ -14,12 +12,14 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   termine: { label: 'Terminé', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
 };
 
+type Filtre = 'all' | 'available' | 'mine';
+
 export default function CoursierCarte() {
   const { user } = useAuth();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('all');
+  const [filter, setFilter] = useState<Filtre>('all');
 
   useEffect(() => {
     if (user) loadData();
@@ -51,45 +51,38 @@ export default function CoursierCarte() {
     }
   };
 
-  const filteredMissions = missions.filter(m => {
-    if (filter === 'available') return m.statut_coursier === 'en_attente';
-    if (filter === 'mine') return m.coursier_id === coursierId && m.statut_coursier === 'accepte';
+  const matches = (m: any, f: Filtre) => {
+    if (f === 'available') return m.statut_coursier === 'en_attente';
+    if (f === 'mine') return m.coursier_id === coursierId && m.statut_coursier === 'accepte';
     return true;
-  });
+  };
+  const filteredMissions = missions.filter(m => matches(m, filter));
+  const count = (f: Filtre) => missions.filter((m) => matches(m, f)).length;
 
   return (
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6 relative">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-        </div>
-        <PremiumPageHeader
-          icon={MapPin}
-          title="Carte des missions"
-          subtitle="Visualisez les missions sur la carte et planifiez vos trajets"
-        />
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Carte des missions"
+        subtitle={loading ? 'Chargement…' : `${count('mine')} visite${count('mine') > 1 ? 's' : ''} à venir · ${count('available')} disponible${count('available') > 1 ? 's' : ''}`}
+      />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les missions</SelectItem>
-              <SelectItem value="available">Disponibles</SelectItem>
-              <SelectItem value="mine">Mes missions</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <DashFilterPills
+        label="Filtrer les missions"
+        value={filter}
+        onChange={(v) => setFilter(v as Filtre)}
+        options={[
+          { key: 'all', label: 'Toutes les missions', count: count('all') },
+          { key: 'available', label: 'Disponibles', count: count('available') },
+          { key: 'mine', label: 'Mes missions', count: count('mine') },
+        ]}
+      />
 
-        <VisitesMapView
-          missions={filteredMissions}
-          loading={loading}
-          statusField="statut_coursier"
-          statusConfig={STATUS_CONFIG}
-        />
-      </div>
-    </main>
+      <VisitesMapView
+        missions={filteredMissions}
+        loading={loading}
+        statusField="statut_coursier"
+        statusConfig={STATUS_CONFIG}
+      />
+    </DashPage>
   );
 }

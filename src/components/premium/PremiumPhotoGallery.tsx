@@ -163,7 +163,7 @@ export function PremiumPhotoGallery({
 
       {/* Lightbox */}
       <Dialog open={selectedIndex !== null} onOpenChange={closeLightbox}>
-        <DialogContent className="max-w-4xl p-0 bg-black/95">
+        <DialogContent className="max-w-4xl p-0 bg-black">
           {selectedIndex !== null && (
             <div className="relative">
               <img
@@ -177,7 +177,7 @@ export function PremiumPhotoGallery({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 hover:bg-white/40"
                   onClick={goToPrevious}
                 >
                   <ChevronLeft className="w-6 h-6 text-white" />
@@ -188,7 +188,7 @@ export function PremiumPhotoGallery({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/20 hover:bg-white/40"
                   onClick={goToNext}
                 >
                   <ChevronRight className="w-6 h-6 text-white" />
@@ -199,7 +199,7 @@ export function PremiumPhotoGallery({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 bg-white/20 hover:bg-white/40"
+                className="absolute top-2 right-2 rounded-full bg-white/20 hover:bg-white/40"
                 onClick={closeLightbox}
               >
                 <X className="w-5 h-5 text-white" />
@@ -216,7 +216,7 @@ export function PremiumPhotoGallery({
 
               {/* Counter */}
               <div className="absolute bottom-4 left-4">
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="rounded-full">
                   {selectedIndex + 1} / {sortedPhotos.length}
                 </Badge>
               </div>

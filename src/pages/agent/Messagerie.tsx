@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Search, Home, Send,
-  Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2, FileEdit, Loader2
+  Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2, FileEdit, Loader2,
+  Banknote, Ruler, LayoutGrid, MessageSquare, Bell
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,14 +31,13 @@ import { NewConversationDialog } from "@/components/NewConversationDialog";
 import { AgentNewAdminConversationDialog } from "@/components/AgentNewAdminConversationDialog";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
-import { MessagingLayout } from "@/components/MessagingLayout";
+import { MessengerSplitLayout, MESSENGER_PAGE_HEIGHT } from "@/components/messaging/MessengerSplitLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
 import { QuickRepliesMenu } from "@/components/messaging/QuickRepliesMenu";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
-import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
@@ -1276,15 +1276,17 @@ const Messagerie = () => {
 
   // Offer card component
   const OffreCard = ({ offre }: { offre: any }) => (
-    <div className="mt-2 p-3 sm:p-4 w-full max-w-full min-w-0 box-border overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-      <div className="flex items-start gap-2 mb-2">
-        <Home className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+    <div className="mt-2 p-3 sm:p-4 w-full max-w-full min-w-0 box-border overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div className="flex items-start gap-3 mb-2">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Home className="h-4 w-4" />
+        </span>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm break-words [overflow-wrap:anywhere]">{offre.adresse}</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground min-w-0">
-            <span>💰 {offre.prix?.toLocaleString()} CHF</span>
-            {offre.surface && <span>📐 {offre.surface} m²</span>}
-            {offre.pieces && <span>🏠 {offre.pieces} pcs</span>}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground min-w-0">
+            <span className="inline-flex items-center gap-1"><Banknote className="h-3.5 w-3.5" aria-hidden /> {offre.prix?.toLocaleString()} CHF</span>
+            {offre.surface && <span className="inline-flex items-center gap-1"><Ruler className="h-3.5 w-3.5" aria-hidden /> {offre.surface} m²</span>}
+            {offre.pieces && <span className="inline-flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" aria-hidden /> {offre.pieces} pcs</span>}
           </div>
         </div>
       </div>
@@ -1327,12 +1329,12 @@ const Messagerie = () => {
     if (offre.statut === 'visite_planifiee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-primary/10 rounded-xl">
+            <p className="text-xs font-medium text-primary flex items-center gap-1.5">
               <Calendar className="h-3 w-3" /> Visite planifiée
             </p>
           </div>
-          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_visite')} className="w-full">
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_visite')} className="w-full rounded-full">
             {actionLoading === 'confirmer_visite' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Confirmer présence client
           </Button>
         </div>
@@ -1343,8 +1345,8 @@ const Messagerie = () => {
     if (hasConfirmedDelegatedVisit) {
       return (
         <div className="mt-3">
-          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
-            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
               <Check className="h-3 w-3" /> Visite déléguée confirmée
             </p>
           </div>
@@ -1356,8 +1358,8 @@ const Messagerie = () => {
     if (hasRefusedDelegatedVisit) {
       return (
         <div className="mt-3">
-          <div className="p-2 bg-red-50 dark:bg-red-950 rounded-lg">
-            <p className="text-xs text-red-700 dark:text-red-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-destructive/10 rounded-xl">
+            <p className="text-xs font-medium text-destructive flex items-center gap-1.5">
               <X className="h-3 w-3" /> Visite déléguée refusée - en attente de nouvelle date
             </p>
           </div>
@@ -1369,16 +1371,16 @@ const Messagerie = () => {
     if (hasPendingDelegatedVisit) {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
-            <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-amber-500/10 rounded-xl">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
               <Clock className="h-3 w-3" /> Visite déléguée en attente de confirmation
             </p>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_visite_deleguee')} className="flex-1">
+            <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_visite_deleguee')} className="flex-1 rounded-full">
               {actionLoading === 'confirmer_visite_deleguee' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Confirmer visite
             </Button>
-            <Button size="sm" variant="outline" disabled={!!actionLoading} onClick={() => handleAction('refuser_visite_deleguee')} className="flex-1">
+            <Button size="sm" variant="outline" disabled={!!actionLoading} onClick={() => handleAction('refuser_visite_deleguee')} className="flex-1 rounded-full">
               {actionLoading === 'refuser_visite_deleguee' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <X className="h-4 w-4 mr-1" />} Indisponible
             </Button>
           </div>
@@ -1390,16 +1392,16 @@ const Messagerie = () => {
     if (statut === 'en_attente' || statut === 'candidature_deposee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
-            <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-amber-500/10 rounded-xl">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
               <Clock className="h-3 w-3" /> Candidature en attente de validation régie
             </p>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('accepter_candidature')} className="flex-1">
+            <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('accepter_candidature')} className="flex-1 rounded-full">
               {actionLoading === 'accepter_candidature' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Accepter
             </Button>
-            <Button size="sm" variant="destructive" disabled={!!actionLoading} onClick={() => handleAction('refuser_candidature')} className="flex-1">
+            <Button size="sm" variant="destructive" disabled={!!actionLoading} onClick={() => handleAction('refuser_candidature')} className="flex-1 rounded-full">
               {actionLoading === 'refuser_candidature' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <X className="h-4 w-4 mr-1" />} Refuser
             </Button>
           </div>
@@ -1411,12 +1413,12 @@ const Messagerie = () => {
     if (statut === 'bail_conclu') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
-            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
               <Check className="h-3 w-3" /> Client confirme vouloir ce bien
             </p>
           </div>
-          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('valider_regie')} className="w-full">
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('valider_regie')} className="w-full rounded-full">
             {actionLoading === 'valider_regie' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Valider auprès de la régie
           </Button>
         </div>
@@ -1427,12 +1429,12 @@ const Messagerie = () => {
     if (statut === 'attente_bail') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
-            <p className="text-xs text-amber-700 dark:text-amber-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-amber-500/10 rounded-xl">
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
               <Clock className="h-3 w-3" /> En attente du bail de la régie
             </p>
           </div>
-          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('bail_recu')} className="w-full">
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('bail_recu')} className="w-full rounded-full">
             {actionLoading === 'bail_recu' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileSignature className="h-4 w-4 mr-1" />} Bail reçu - Proposer dates signature
           </Button>
         </div>
@@ -1443,8 +1445,8 @@ const Messagerie = () => {
     if (statut === 'signature_planifiee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-primary/10 rounded-xl">
+            <p className="text-xs font-medium text-primary flex items-center gap-1.5">
               <Calendar className="h-3 w-3" /> Signature planifiée
               {candidature?.date_signature_choisie && (
                 <span className="ml-1">
@@ -1453,7 +1455,7 @@ const Messagerie = () => {
               )}
             </p>
           </div>
-          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_signature')} className="w-full">
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_signature')} className="w-full rounded-full">
             {actionLoading === 'confirmer_signature' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Confirmer signature effectuée
           </Button>
         </div>
@@ -1464,12 +1466,12 @@ const Messagerie = () => {
     if (statut === 'signature_effectuee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
-            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
               <Check className="h-3 w-3" /> Bail signé
             </p>
           </div>
-          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('fixer_etat_lieux')} className="w-full">
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('fixer_etat_lieux')} className="w-full rounded-full">
             {actionLoading === 'fixer_etat_lieux' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Key className="h-4 w-4 mr-1" />} Fixer date état des lieux
           </Button>
         </div>
@@ -1480,8 +1482,8 @@ const Messagerie = () => {
     if (statut === 'etat_lieux_fixe') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-primary/10 rounded-xl">
+            <p className="text-xs font-medium text-primary flex items-center gap-1.5">
               <Calendar className="h-3 w-3" /> État des lieux
               {candidature?.date_etat_lieux && (
                 <span className="ml-1">
@@ -1491,7 +1493,7 @@ const Messagerie = () => {
               )}
             </p>
           </div>
-          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('remettre_cles')} className="w-full">
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('remettre_cles')} className="w-full rounded-full">
             {actionLoading === 'remettre_cles' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Key className="h-4 w-4 mr-1" />} Clés remises - Conclure
           </Button>
         </div>
@@ -1501,10 +1503,10 @@ const Messagerie = () => {
     // Clés remises - affaire conclue
     if (statut === 'cles_remises') {
       return (
-        <div className="mt-3 p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 rounded-lg">
-          <p className="text-sm font-semibold text-green-700 dark:text-green-300 flex items-center gap-2">
+        <div className="mt-3 px-3 py-2.5 bg-emerald-500/10 rounded-xl">
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
             <Key className="h-4 w-4" />
-            🎉 Affaire conclue !
+            Affaire conclue !
           </p>
         </div>
       );
@@ -1516,11 +1518,19 @@ const Messagerie = () => {
   const conversationsList = (
     <>
       <StoriesBar />
-      <div className="p-3 border-b border-border/50 space-y-3">
+      <div className="px-4 pt-3 pb-3 border-b border-border/60 space-y-3">
         <div className="space-y-3">
           <div className="flex items-center gap-2 min-w-0">
             <SidebarTrigger className="shrink-0" />
-            <h2 className="font-semibold text-lg truncate">Conversations</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground truncate">Conversations</h2>
+              {!isLoadingConversations && conversations.length > 0 && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
+                  {tabCounts.a_traiter > 0 && ` · ${tabCounts.a_traiter} à traiter`}
+                </p>
+              )}
+            </div>
           </div>
           {agentId && (
             <div className="grid grid-cols-2 gap-2">
@@ -1536,28 +1546,52 @@ const Messagerie = () => {
           )}
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
           <Input
             placeholder="Rechercher..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-muted/50 border-0"
+            className="h-11 rounded-full pl-9 pr-10 bg-muted/50 border-border/60"
+            aria-label="Rechercher une conversation"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Effacer la recherche"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
       {tabCounts.a_traiter > 0 && activeTab !== 'a_traiter' && (
         <button
           type="button"
           onClick={() => setActiveTab('a_traiter')}
-          className="mx-3 mt-3 rounded-lg border border-red-500/40 bg-red-500/10 hover:bg-red-500/15 transition-colors px-3 py-2 text-left text-xs font-medium text-red-700 dark:text-red-300 flex items-center gap-2"
+          className="mx-3 mt-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/15 transition-colors px-3 py-2.5 text-left text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2"
         >
-          🔔 {tabCounts.a_traiter} conversation{tabCounts.a_traiter > 1 ? 's' : ''} à traiter aujourd'hui
+          <Bell className="h-4 w-4 shrink-0" aria-hidden />
+          {tabCounts.a_traiter} conversation{tabCounts.a_traiter > 1 ? 's' : ''} à traiter aujourd'hui
         </button>
       )}
       <ConversationTabs active={activeTab} counts={tabCounts} onChange={setActiveTab} />
       <ScrollArea className="flex-1 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
+        ) : filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-12 text-center" role="status">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <MessageSquare className="h-6 w-6" aria-hidden />
+            </span>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {searchQuery ? 'Aucune conversation trouvée' : 'Aucune conversation'}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {searchQuery ? 'Essayez un autre terme.' : 'Rien dans ce filtre pour le moment.'}
+            </p>
+          </div>
         ) : (
           filteredConversations.map((conv, index) => {
             const contactInfo = getContactInfo(conv);
@@ -1589,14 +1623,11 @@ const Messagerie = () => {
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 chat-background relative overflow-hidden">
-      <ChatPatternBackground />
-      <MeshGradientBackground />
-      <FloatingParticles count={12} />
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-background relative overflow-hidden">
       {currentConversation?.is_archived && (
-        <div className="p-3 bg-warning/10 border-b border-warning/20 relative z-10">
-          <p className="text-xs text-warning text-center flex items-center justify-center gap-2">
-            <Badge variant="outline" className="border-warning text-warning text-xs">
+        <div className="px-4 py-2.5 bg-amber-500/10 border-b border-border/60 relative z-10">
+          <p className="text-xs text-amber-700 dark:text-amber-400 text-center flex items-center justify-center gap-2">
+            <Badge variant="outline" className="rounded-full border-amber-500/40 text-amber-700 dark:text-amber-400 text-xs">
               Archivée
             </Badge>
             Conversation archivée - Vous ne pouvez plus envoyer de messages
@@ -1670,7 +1701,7 @@ const Messagerie = () => {
                   {deposerButtonData && msg.sender_type === 'client' && (
                     <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} w-full max-w-[88%] sm:max-w-[75%] md:max-w-[60%] min-w-0`}>
                       <Button 
-                        className="w-full"
+                        className="w-full rounded-full"
                         onClick={() => navigate(`/agent/deposer-candidature?clientId=${deposerButtonData.clientId}&offreId=${deposerButtonData.offreId}`)}
                       >
                         <FileEdit className="mr-2 h-4 w-4" />
@@ -1735,14 +1766,17 @@ const Messagerie = () => {
       <Dialog open={signatureDatesDialogOpen} onOpenChange={setSignatureDatesDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>📅 Proposer des dates de signature</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Calendar className="h-4 w-4" /></span>
+              Proposer des dates de signature
+            </DialogTitle>
             <DialogDescription>
               Le bail est prêt. Proposez des créneaux au client pour la signature.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {signatureDates.map((slot, idx) => (
-              <div key={idx} className="p-3 border rounded-lg space-y-2">
+              <div key={idx} className="p-3 rounded-xl border border-border/70 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Créneau {idx + 1}</Label>
                   {signatureDates.length > 1 && (
@@ -1779,15 +1813,15 @@ const Messagerie = () => {
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full"
+              className="w-full rounded-full"
               onClick={() => setSignatureDates(prev => [...prev, { date: "", lieu: "Chemin de l'Esparcette 5, 1023 Crissier" }])}
             >
               <Plus className="h-4 w-4 mr-2" /> Ajouter un créneau
             </Button>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSignatureDatesDialogOpen(false)}>Annuler</Button>
-            <Button onClick={submitSignatureDates}>
+            <Button variant="outline" className="rounded-full" onClick={() => setSignatureDatesDialogOpen(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={submitSignatureDates}>
               <Send className="h-4 w-4 mr-2" /> Envoyer au client
             </Button>
           </DialogFooter>
@@ -1798,7 +1832,10 @@ const Messagerie = () => {
       <Dialog open={etatLieuxDialogOpen} onOpenChange={setEtatLieuxDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>🔑 Fixer la date de l'état des lieux</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Key className="h-4 w-4" /></span>
+              Fixer la date de l'état des lieux
+            </DialogTitle>
             <DialogDescription>
               Définissez la date et l'heure de remise des clés pour {selectedOffre?.adresse}
             </DialogDescription>
@@ -1825,8 +1862,8 @@ const Messagerie = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEtatLieuxDialogOpen(false)}>Annuler</Button>
-            <Button onClick={submitEtatLieux} disabled={!etatLieuxDate}>
+            <Button variant="outline" className="rounded-full" onClick={() => setEtatLieuxDialogOpen(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={submitEtatLieux} disabled={!etatLieuxDate}>
               <Key className="h-4 w-4 mr-2" /> Confirmer
             </Button>
           </DialogFooter>
@@ -1834,58 +1871,47 @@ const Messagerie = () => {
       </Dialog>
     </div>
   ) : (
-    <div className="flex items-center justify-center h-full text-muted-foreground">
+    <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
       Sélectionnez une conversation
     </div>
   );
 
-  if (isMobile) {
-    const contact = currentConversation ? getContactInfo(currentConversation) : null;
-    return (
-      <MobileMessenger
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onBack={() => setSelectedConv(null)}
-        headerName={contact?.name}
-        headerSubtitle={
-          contact
-            ? contact.isOnline
-              ? 'En ligne'
-              : contact.type === 'admin'
-                ? 'Admin'
-                : 'Client'
-            : undefined
-        }
-        headerAvatarUrl={null}
-        isOnline={!!contact?.isOnline}
-      />
-    );
-  }
+  const contact = currentConversation ? getContactInfo(currentConversation) : null;
 
+  // Même ossature que l'admin : deux panneaux dès 768 px (tablette, PC), un panneau à la fois sur mobile.
   return (
-    <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
-
-      <MessagingLayout
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onSelectConversation={setSelectedConv}
-        chatHeader={
-          currentConversation ? (
-            <ChatHeader
-              name={getContactInfo(currentConversation).name}
-              avatarUrl={null}
-              conversationId={currentConversation.id}
-              status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
-              isArchived={currentConversation.is_archived}
-              lastSeenAt={getContactInfo(currentConversation).lastSeenAt}
-              isOnline={getContactInfo(currentConversation).isOnline}
-            />
-          ) : null
-        }
-      />
-    </div>
+    <MessengerSplitLayout
+      className={MESSENGER_PAGE_HEIGHT}
+      conversationsList={conversationsList}
+      chatView={chatView}
+      chatHeader={
+        currentConversation && contact ? (
+          <ChatHeader
+            name={contact.name}
+            avatarUrl={null}
+            conversationId={currentConversation.id}
+            status={contact.type === 'admin' ? 'Admin' : undefined}
+            isArchived={currentConversation.is_archived}
+            lastSeenAt={contact.lastSeenAt}
+            isOnline={contact.isOnline}
+          />
+        ) : null
+      }
+      selectedConversation={selectedConv}
+      onBack={() => setSelectedConv(null)}
+      headerName={contact?.name}
+      headerSubtitle={
+        contact
+          ? contact.isOnline
+            ? 'En ligne'
+            : contact.type === 'admin'
+              ? 'Admin'
+              : 'Client'
+          : undefined
+      }
+      headerAvatarUrl={null}
+      isOnline={!!contact?.isOnline}
+    />
   );
 };
 

@@ -28,9 +28,9 @@ export const ScrollToTopButton = ({ show, onClick, className }: ScrollToTopButto
         bottom: 'calc(5.25rem + env(safe-area-inset-bottom, 0px))',
       }}
       className={cn(
-        "absolute right-3 sm:right-4 z-30 h-10 w-10 rounded-full shadow-lg",
-        "bg-background/90 backdrop-blur-sm border border-border/50",
-        "hover:bg-background hover:scale-105 transition-all duration-200",
+        "absolute right-3 sm:right-4 z-30 h-10 w-10 rounded-full shadow-md",
+        "bg-card border border-border/70 text-foreground",
+        "hover:bg-muted transition-colors duration-150",
         "animate-in fade-in slide-in-from-bottom-2",
         "pointer-events-auto",
         className,

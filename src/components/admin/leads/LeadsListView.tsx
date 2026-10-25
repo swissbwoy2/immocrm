@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Card } from "@/components/ui/card";
+import { Users } from "lucide-react";
+import { DASH_CARD, DashEmptyState } from "@/components/client/dashboard/DashPrimitives";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Phone, MapPin, Wallet, ChevronRight } from "lucide-react";
@@ -22,14 +23,12 @@ export function LeadsListView({ leads, appointments, apptByEmail, onSelect }: Pr
 
   if (leads.length === 0) {
     return (
-      <Card className="p-12 text-center text-muted-foreground">
-        Aucun lead pour ces filtres.
-      </Card>
+      <DashEmptyState icon={Users} title="Aucun lead pour ces filtres." />
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className={cn(DASH_CARD, "overflow-hidden divide-y divide-border/70")}>
       <AnimatePresence>
         {leads.map((lead, i) => {
           const src = getLeadSource(lead);
@@ -43,11 +42,11 @@ export function LeadsListView({ leads, appointments, apptByEmail, onSelect }: Pr
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18, delay: Math.min(i * 0.01, 0.15) }}
             >
-              <Card
+              <div
                 onClick={() => onSelect(lead)}
-                className="group flex items-center gap-4 p-4 min-h-[80px] cursor-pointer hover:shadow-md hover:border-primary/40 transition-all"
+                className="group flex items-center gap-4 p-4 min-h-[80px] cursor-pointer transition-colors hover:bg-muted/50"
               >
-                <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold flex items-center justify-center">
+                <div className="flex-shrink-0 h-11 w-11 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center">
                   {initials(lead)}
                 </div>
                 <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
@@ -63,17 +62,17 @@ export function LeadsListView({ leads, appointments, apptByEmail, onSelect }: Pr
                     </div>
                   </div>
                   <div className="sm:col-span-2">
-                    <Badge variant="outline" className={cn("text-[10px]", src.badgeClass)}>{src.label}</Badge>
+                    <Badge variant="outline" className={cn("text-[10px] rounded-full", src.badgeClass)}>{src.label}</Badge>
                   </div>
                   <div className="sm:col-span-2">
                     {appt ? (
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-[10px] gap-1",
+                          "text-[10px] gap-1 rounded-full border-transparent",
                           appt.status === "confirme"
-                            ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30"
-                            : "bg-amber-500/15 text-amber-600 border-amber-500/30"
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                            : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
                         )}
                       >
                         <Phone className="h-3 w-3" />
@@ -85,16 +84,16 @@ export function LeadsListView({ leads, appointments, apptByEmail, onSelect }: Pr
                   </div>
                   <div className="sm:col-span-2 text-right">
                     {lead.contacted ? (
-                      <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">Contacté</Badge>
+                      <Badge className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Contacté</Badge>
                     ) : (
-                      <Badge variant="secondary">Nouveau</Badge>
+                      <Badge variant="secondary" className="rounded-full">Nouveau</Badge>
                     )}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="opacity-60 group-hover:opacity-100">
+                <Button variant="ghost" size="icon" className="rounded-full opacity-60 group-hover:opacity-100">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-              </Card>
+              </div>
             </motion.div>
           );
         })}

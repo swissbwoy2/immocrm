@@ -89,14 +89,14 @@ export function MetaLeadDetailSheet({
         className="w-full sm:max-w-[520px] overflow-y-auto p-0 max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92vh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-2xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom"
       >
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#1877F2]/15 to-[#1877F2]/5 p-6 border-b">
+        <div className="p-6 border-b border-border/70">
           <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#1877F2] to-[#1877F2]/60 text-white font-bold flex items-center justify-center text-lg flex-shrink-0">
+            <div className="h-14 w-14 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-lg flex-shrink-0">
               {metaInitials(lead)}
             </div>
             <div className="flex-1 min-w-0">
               <SheetHeader className="space-y-1 text-left">
-                <SheetTitle className="text-lg truncate">{metaFullName(lead)}</SheetTitle>
+                <SheetTitle className="text-lg font-semibold truncate">{metaFullName(lead)}</SheetTitle>
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="outline" className={cn("text-[10px]", src.className)}>{src.label}</Badge>
                   {stage && <Badge variant="outline" className={cn("text-[10px]", stage.badge)}>{stage.label}</Badge>}
@@ -117,7 +117,7 @@ export function MetaLeadDetailSheet({
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contact</h4>
             <div className="grid grid-cols-1 gap-2">
               {lead.email && (
-                <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5 rounded-full">
                   <a href={`mailto:${lead.email}`}>
                     <Mail className="h-4 w-4 text-primary" />
                     <span className="truncate">{lead.email}</span>
@@ -126,13 +126,13 @@ export function MetaLeadDetailSheet({
               )}
               {lead.phone && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5 rounded-full">
                     <a href={`tel:${lead.phone}`}>
                       <Phone className="h-4 w-4 text-primary" />
                       <span className="truncate">Appeler</span>
                     </a>
                   </Button>
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5 rounded-full">
                     <a
                       href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`}
                       target="_blank"
@@ -165,7 +165,7 @@ export function MetaLeadDetailSheet({
                 <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{lead.form_name}</span>
               )}
             </div>
-            <div className="rounded-lg border bg-gradient-to-br from-[#1877F2]/5 to-transparent p-3 mb-3">
+            <div className="rounded-xl border border-border/70 bg-muted/40 p-3 mb-3">
               {lead.form_name && (
                 <div className="font-semibold text-sm text-foreground mb-1.5">{lead.form_name}</div>
               )}
@@ -197,7 +197,7 @@ export function MetaLeadDetailSheet({
                   <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-1.5 mt-2">
-                  <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                  <div className="rounded-xl border border-border/70 bg-muted/40 p-3 text-xs space-y-1">
                     {[
                       ["Page", lead.page_name, lead.page_id],
                       ["Campagne", lead.campaign_name, lead.campaign_id],
@@ -249,7 +249,7 @@ export function MetaLeadDetailSheet({
                   <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
-                  <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                  <div className="rounded-xl border border-border/70 bg-muted/40 p-3 text-xs space-y-1">
                     {Object.entries(utm).map(([k, v]) => (
                       <div key={k} className="grid grid-cols-[110px_1fr] gap-2">
                         <span className="text-muted-foreground">{k}</span>
@@ -322,11 +322,11 @@ export function MetaLeadDetailSheet({
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-2">
                 <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={handleCopyJson} className="h-7 gap-1 text-xs">
+                  <Button variant="ghost" size="sm" onClick={handleCopyJson} className="h-7 gap-1 text-xs rounded-full">
                     <Copy className="h-3 w-3" /> Copier
                   </Button>
                 </div>
-                <pre className="rounded-md border bg-muted/40 p-3 text-[10px] font-mono overflow-x-auto max-h-[300px] overflow-y-auto">
+                <pre className="rounded-xl border border-border/70 bg-muted/40 p-3 text-[10px] font-mono overflow-x-auto max-h-[300px] overflow-y-auto">
 {JSON.stringify(lead.raw_meta_payload || {}, null, 2)}
                 </pre>
               </CollapsibleContent>
@@ -339,7 +339,7 @@ export function MetaLeadDetailSheet({
           <section className="space-y-2">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Actions</h4>
             <Button
-              className="w-full justify-start gap-2 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white"
+              className="w-full justify-start gap-2 rounded-full"
               disabled={converting || lead.lead_status === "converted"}
               onClick={() => onConvertToClient(lead)}
             >
@@ -348,7 +348,7 @@ export function MetaLeadDetailSheet({
             </Button>
             <Button
               variant="outline"
-              className="w-full justify-start gap-2"
+              className="w-full justify-start gap-2 rounded-full"
               disabled={lead.lead_status === "contacted"}
               onClick={handleMarkContacted}
             >
@@ -356,7 +356,7 @@ export function MetaLeadDetailSheet({
               Marquer contacté
             </Button>
             {lead.email && (
-              <Button variant="outline" className="w-full justify-start gap-2" asChild>
+              <Button variant="outline" className="w-full justify-start gap-2 rounded-full" asChild>
                 <a href={`mailto:${lead.email}?subject=Suivi de votre demande`}>
                   <Send className="h-4 w-4 text-primary" />
                   Envoyer email de relance
@@ -365,7 +365,7 @@ export function MetaLeadDetailSheet({
             )}
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="w-full justify-start gap-2 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => {
                 if (confirm("Supprimer définitivement ce lead Meta ?")) {
                   onDelete(lead);

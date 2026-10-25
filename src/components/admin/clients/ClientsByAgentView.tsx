@@ -473,7 +473,7 @@ export function ClientsByAgentView({
       </p>
 
       {/* Filtres */}
-      <div className="rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-5 space-y-4">
+      <div className="rounded-2xl bg-card border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] p-4 md:p-5 space-y-4">
         <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -648,7 +648,7 @@ export function ClientsByAgentView({
               <div
                 key={bucket.agentId}
                 className={cn(
-                  "rounded-2xl border bg-card/80 backdrop-blur-xl p-4 md:p-5",
+                  "rounded-2xl border bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] p-4 md:p-5",
                   bucket.isUnknown
                     ? "border-dashed border-muted-foreground/30"
                     : "border-border/50",

@@ -125,19 +125,19 @@ export const QuickRepliesMenu: React.FC<QuickRepliesMenuProps> = ({
           size="icon"
           disabled={disabled}
           className={cn(
-            'shrink-0 rounded-xl h-10 w-10',
-            'hover:bg-amber-500/10 hover:text-amber-500',
-            'transition-all duration-200 hover:scale-110',
-            open && 'bg-amber-500/10 text-amber-500'
+            'shrink-0 rounded-full h-10 w-10 text-muted-foreground',
+            'hover:bg-muted hover:text-foreground transition-colors',
+            open && 'bg-muted text-foreground'
           )}
         >
           <Zap className="h-5 w-5" />
+          <span className="sr-only">Messages rapides</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent 
         side="top" 
         align="start" 
-        className="w-80 p-0 max-h-[400px] overflow-hidden"
+        className="w-80 max-w-[calc(100vw-2rem)] p-0 max-h-[400px] overflow-hidden rounded-2xl"
         sideOffset={8}
       >
         <div className="p-3 border-b">
@@ -154,7 +154,7 @@ export const QuickRepliesMenu: React.FC<QuickRepliesMenuProps> = ({
                 key={reply.id}
                 onClick={() => handleSelectReply(reply.template)}
                 className={cn(
-                  'w-full text-left p-3 rounded-lg',
+                  'w-full text-left p-3 rounded-xl',
                   'hover:bg-muted/80 transition-colors',
                   'group cursor-pointer'
                 )}

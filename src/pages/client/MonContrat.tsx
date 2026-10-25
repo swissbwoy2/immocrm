@@ -391,6 +391,27 @@ export default function MonContrat() {
                     ? `Fenêtre close — mandat renouvelé (J${daysSinceSignature ?? 0})`
                     : `Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
               </DashBadge>
+              {/* Demande de remboursement : même règle que le bouton « Annuler mon mandat + remboursement » */}
+              {showRefundRequested ? (
+                <DashBadge tone="success">Remboursement demandé</DashBadge>
+              ) : !hasCancelled && !refundWindowClosed && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={refundEligibleNow ? 'default' : 'outline'}
+                  className="h-9 rounded-full"
+                  disabled={actionLoading !== null}
+                  onClick={() => {
+                    if (refundEligibleNow) {
+                      openCancelDialog();
+                    } else {
+                      setRefundNotAvailableOpen(true);
+                    }
+                  }}
+                >
+                  Demander un remboursement
+                </Button>
+              )}
             </div>
 
             {/* Mandat annulé — avertissement acompte */}

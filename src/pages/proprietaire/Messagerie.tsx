@@ -1,13 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { MessageSquare, Search, Archive, MoreVertical } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { isSameDay, parseISO } from 'date-fns';
 
 // Messaging components
@@ -16,10 +12,17 @@ import { PremiumConversationItem } from '@/components/messaging/PremiumConversat
 import { PremiumChatInput } from '@/components/messaging/PremiumChatInput';
 import { ChatHeader } from '@/components/messaging/ChatHeader';
 import { ConversationListSkeleton, MessagesListSkeleton } from '@/components/messaging/MessagingSkeletons';
-import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from '@/components/messaging/FloatingParticles';
 import DateSeparator from '@/components/messaging/DateSeparator';
+import { MessengerSplitLayout } from '@/components/messaging/MessengerSplitLayout';
+import {
+  ChatEmptyState,
+  ConversationFilterPills,
+  ConversationItemsList,
+  ConversationListEmpty,
+  ConversationListHeader,
+  ConversationSearchField,
+} from '@/components/messaging/ConversationListParts';
 import { MessageAttachmentUploader } from '@/components/MessageAttachmentUploader';
-import { formatSwissTime } from '@/lib/dateUtils';
 
 export default function Messagerie() {
   const { user } = useAuth();
@@ -42,6 +45,8 @@ export default function Messagerie() {
     size: number;
   } | null>(null);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
+  // Filtre d'affichage de la liste (non lues / archivées), purement visuel
+  const [listFilter, setListFilter] = useState<'all' | 'unread' | 'archived'>('all');
 
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
@@ -309,181 +314,174 @@ export default function Messagerie() {
     return acc;
   }, [] as any[]);
 
-  return (
-    <div className="h-[calc(100vh-4rem)] flex overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Conversations sidebar */}
-      <div className={cn(
-        'w-full md:w-80 lg:w-96 border-r border-border/50 flex flex-col bg-card/50 backdrop-blur-sm',
-        selectedConv && 'hidden md:flex'
-      )}>
-        {/* Header */}
-        <div className="p-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="flex items-center gap-3 mb-4">
-            <SidebarTrigger className="md:hidden" />
-            <div className="p-2 rounded-xl bg-primary/10">
-              <MessageSquare className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg">Messagerie</h1>
-              <p className="text-xs text-muted-foreground">Échanges avec votre agent</p>
-            </div>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background/50 border-border/50"
-            />
-          </div>
-        </div>
+  // --- Affichage (calculs purement visuels à partir des données déjà chargées) ---
+  const normalize = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const searchedConversations = searchQuery.trim()
+    ? conversations.filter((c) =>
+        normalize(`${c.subject || ''} ${agentInfo?.name || ''}`).includes(normalize(searchQuery.trim())),
+      )
+    : conversations;
+  const unreadConvs = searchedConversations.filter((c) => (unreadCountsMap.get(c.id) || 0) > 0);
+  const archivedConvs = searchedConversations.filter((c) => c.is_archived);
+  const visibleConversations =
+    listFilter === 'unread' ? unreadConvs : listFilter === 'archived' ? archivedConvs : searchedConversations;
+  const totalUnread = conversations.filter((c) => (unreadCountsMap.get(c.id) || 0) > 0).length;
+  const headerSummary = isLoadingConversations
+    ? 'Chargement…'
+    : agentInfo
+      ? totalUnread > 0
+        ? `Échanges avec ${agentInfo.name} · ${totalUnread} non lue${totalUnread > 1 ? 's' : ''}`
+        : `Échanges avec ${agentInfo.name}`
+      : 'Échanges avec votre agent';
 
-        {/* Conversations list */}
-        <ScrollArea className="flex-1">
-          {isLoadingConversations ? (
-            <ConversationListSkeleton />
-          ) : conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className="p-4 rounded-2xl bg-muted/30 mb-4">
-                <MessageSquare className="w-10 h-10 text-muted-foreground/50" />
-              </div>
-              <h3 className="font-semibold text-foreground/70">Aucune conversation</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {agentInfo ? 'Démarrez une conversation avec votre agent' : 'Aucun agent assigné'}
-              </p>
-            </div>
+  const conversationsList = (
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <ConversationListHeader
+        title="Messagerie"
+        subtitle={headerSummary}
+        leading={<SidebarTrigger className="lg:hidden h-10 w-10 rounded-full" />}
+      />
+      <ConversationSearchField value={searchQuery} onChange={setSearchQuery} placeholder="Rechercher une conversation" />
+      {conversations.length > 1 && (
+        <ConversationFilterPills<'all' | 'unread' | 'archived'>
+          options={[
+            { key: 'all', label: 'Toutes', count: searchedConversations.length },
+            { key: 'unread', label: 'Non lues', count: unreadConvs.length, alert: unreadConvs.length > 0 },
+            { key: 'archived', label: 'Archivées', count: archivedConvs.length },
+          ]}
+          value={listFilter}
+          onChange={setListFilter}
+        />
+      )}
+      <div className="border-t border-border/70" />
+      <ScrollArea className="flex-1 min-h-0">
+        {isLoadingConversations ? (
+          <ConversationListSkeleton />
+        ) : conversations.length === 0 ? (
+          <ConversationListEmpty
+            title="Aucune conversation"
+            description={agentInfo ? 'Démarrez une conversation avec votre agent' : 'Aucun agent assigné'}
+          />
+        ) : visibleConversations.length === 0 ? (
+          <ConversationListEmpty
+            title={searchQuery ? 'Aucune conversation trouvée' : 'Aucune conversation'}
+            description={searchQuery ? 'Essayez un autre terme.' : 'Rien dans ce filtre pour le moment.'}
+          />
+        ) : (
+          <ConversationItemsList>
+            {visibleConversations.map((conv, index) => (
+              <PremiumConversationItem
+                key={conv.id}
+                name={agentInfo?.name || 'Agent'}
+                avatarUrl={agentInfo?.avatarUrl}
+                lastMessage={conv.subject || 'Discussion'}
+                lastMessageTime={conv.last_message_at}
+                unreadCount={unreadCountsMap.get(conv.id) || 0}
+                isSelected={selectedConv === conv.id}
+                isArchived={conv.is_archived}
+                onClick={() => setSelectedConv(conv.id)}
+                index={index}
+                isOnline={agentInfo?.isOnline}
+                lastSeenAt={agentInfo?.lastSeenAt}
+              />
+            ))}
+          </ConversationItemsList>
+        )}
+      </ScrollArea>
+    </div>
+  );
+
+  const chatHeader = selectedConversation ? (
+    <ChatHeader
+      name={agentInfo?.name || 'Agent'}
+      avatarUrl={agentInfo?.avatarUrl}
+      isOnline={agentInfo?.isOnline}
+      lastSeenAt={agentInfo?.lastSeenAt}
+      isArchived={selectedConversation.is_archived}
+      conversationId={selectedConversation.id}
+      onBackClick={() => setSelectedConv(null)}
+    />
+  ) : null;
+
+  const chatView = selectedConv && selectedConversation ? (
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 relative overflow-hidden bg-background">
+      {/* Messages */}
+      <ScrollArea className="flex-1 min-w-0" viewportRef={scrollViewportRef}>
+        <div className="px-3 py-2 sm:px-4 min-h-full">
+          {isLoadingMessages ? (
+            <MessagesListSkeleton />
+          ) : messages.length === 0 ? (
+            <ChatEmptyState title="Démarrez la conversation" description="Envoyez un message à votre agent" />
           ) : (
-            <div className="p-2 space-y-1">
-              {conversations.map((conv, index) => (
-                <PremiumConversationItem
-                  key={conv.id}
-                  name={agentInfo?.name || 'Agent'}
-                  avatarUrl={agentInfo?.avatarUrl}
-                  lastMessage={conv.subject || 'Discussion'}
-                  lastMessageTime={conv.last_message_at}
-                  unreadCount={unreadCountsMap.get(conv.id) || 0}
-                  isSelected={selectedConv === conv.id}
-                  isArchived={conv.is_archived}
-                  onClick={() => setSelectedConv(conv.id)}
-                  index={index}
-                  isOnline={agentInfo?.isOnline}
-                  lastSeenAt={agentInfo?.lastSeenAt}
-                />
-              ))}
+            <div className="max-w-3xl mx-auto min-w-0 pb-2">
+              {groupedMessages.map((item, idx) => {
+                if (item.type === 'date') {
+                  return <DateSeparator key={`date-${idx}`} date={item.date} />;
+                }
+
+                const msg = item.data;
+                const isSent = msg.sender_type === 'proprietaire';
+
+                return (
+                  <PremiumMessageBubble
+                    key={msg.id}
+                    content={msg.content}
+                    senderType={msg.sender_type}
+                    timestamp={msg.created_at}
+                    isSent={isSent}
+                    read={msg.read}
+                    senderName={isSent ? 'Vous' : agentInfo?.name}
+                    attachmentUrl={msg.attachment_url}
+                    attachmentType={msg.attachment_type}
+                    attachmentName={msg.attachment_name}
+                  />
+                );
+              })}
             </div>
           )}
-        </ScrollArea>
-      </div>
-
-      {/* Chat area */}
-      <div className={cn(
-        'flex-1 flex flex-col relative',
-        !selectedConv && 'hidden md:flex'
-      )}>
-        {/* Background effects */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <MeshGradientBackground />
-          <ChatPatternBackground />
-          <FloatingParticles />
         </div>
+      </ScrollArea>
 
-        {selectedConv && selectedConversation ? (
-          <>
-            {/* Chat header */}
-            <ChatHeader
-              name={agentInfo?.name || 'Agent'}
-              avatarUrl={agentInfo?.avatarUrl}
-              isOnline={agentInfo?.isOnline}
-              lastSeenAt={agentInfo?.lastSeenAt}
-              isArchived={selectedConversation.is_archived}
-              conversationId={selectedConversation.id}
-              onBackClick={() => setSelectedConv(null)}
-              className="relative z-10"
-            />
-
-            {/* Messages */}
-            <ScrollArea 
-              className="flex-1 relative z-10"
-              viewportRef={scrollViewportRef}
-            >
-              <div className="p-4 space-y-4 min-h-full">
-                {isLoadingMessages ? (
-                  <MessagesListSkeleton />
-                ) : messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="p-4 rounded-2xl bg-primary/10 mb-4">
-                      <MessageSquare className="w-10 h-10 text-primary" />
-                    </div>
-                    <h3 className="font-semibold">Démarrez la conversation</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Envoyez un message à votre agent
-                    </p>
-                  </div>
-                ) : (
-                  groupedMessages.map((item, idx) => {
-                    if (item.type === 'date') {
-                      return <DateSeparator key={`date-${idx}`} date={item.date} />;
-                    }
-                    
-                    const msg = item.data;
-                    const isSent = msg.sender_type === 'proprietaire';
-                    
-                    return (
-                      <PremiumMessageBubble
-                        key={msg.id}
-                        content={msg.content}
-                        senderType={msg.sender_type}
-                        timestamp={msg.created_at}
-                        isSent={isSent}
-                        read={msg.read}
-                        senderName={isSent ? 'Vous' : agentInfo?.name}
-                        attachmentUrl={msg.attachment_url}
-                        attachmentType={msg.attachment_type}
-                        attachmentName={msg.attachment_name}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </ScrollArea>
-
-            {/* Input */}
-            <div className="relative z-10 p-4 border-t border-border/50 bg-card/80 backdrop-blur-xl">
-              <PremiumChatInput
-                message={messageText}
-                onMessageChange={setMessageText}
-                onSendMessage={handleSendMessage}
-                placeholder="Écrivez votre message..."
-                disabled={selectedConversation.is_archived}
-                attachmentSlot={
-                  <MessageAttachmentUploader
-                    conversationId={selectedConv}
-                    value={pendingAttachment}
-                    onAttachmentReady={(attachment) => {
-                      setPendingAttachment(attachment);
-                    }}
-                  />
-                }
-                pendingAttachment={pendingAttachment}
-                onRemoveAttachment={() => setPendingAttachment(null)}
-              />
-            </div>
-          </>
-        ) : (
-          /* Empty state */
-          <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-            <div className="p-6 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 mb-6 shadow-xl">
-              <MessageSquare className="w-16 h-16 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Messagerie</h2>
-            <p className="text-muted-foreground text-center max-w-sm">
-              Sélectionnez une conversation pour échanger avec votre agent immobilier
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Saisie */}
+      <PremiumChatInput
+        message={messageText}
+        onMessageChange={setMessageText}
+        onSendMessage={handleSendMessage}
+        placeholder="Écrivez votre message..."
+        disabled={selectedConversation.is_archived}
+        attachmentSlot={
+          <MessageAttachmentUploader
+            conversationId={selectedConv}
+            value={pendingAttachment}
+            onAttachmentReady={(attachment) => {
+              setPendingAttachment(attachment);
+            }}
+          />
+        }
+        pendingAttachment={pendingAttachment}
+        onRemoveAttachment={() => setPendingAttachment(null)}
+      />
     </div>
+  ) : null;
+
+  return (
+    <MessengerSplitLayout
+      className={`h-[calc(100dvh-3.5rem)] lg:h-[100dvh] [.imr-mobile-shell_&]:h-full`}
+      conversationsList={conversationsList}
+      chatView={chatView}
+      chatHeader={chatHeader}
+      selectedConversation={selectedConv && selectedConversation ? selectedConv : null}
+      onBack={() => setSelectedConv(null)}
+      headerName={agentInfo?.name || 'Agent'}
+      headerSubtitle={selectedConversation?.is_archived ? 'Conversation archivée' : selectedConversation?.subject || 'Votre agent'}
+      headerAvatarUrl={agentInfo?.avatarUrl ?? null}
+      isOnline={!!agentInfo?.isOnline}
+      emptyState={
+        <ChatEmptyState
+          title="Messagerie"
+          description="Sélectionnez une conversation pour échanger avec votre agent immobilier"
+        />
+      }
+    />
   );
 }

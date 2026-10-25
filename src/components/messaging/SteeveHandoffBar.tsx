@@ -123,7 +123,7 @@ export function SteeveHandoffBar({ conversationId, className }: Props) {
       role="status"
       aria-live="polite"
       className={cn(
-        'flex items-center gap-2 px-3 py-1.5 text-xs border-b border-border/60',
+        'flex items-center gap-2 px-3 py-1.5 text-xs border-b border-border/70 md:px-4',
         steeveAnswers ? 'bg-primary/5 text-foreground' : 'bg-muted/40 text-muted-foreground',
         className,
       )}
@@ -143,7 +143,7 @@ export function SteeveHandoffBar({ conversationId, className }: Props) {
           type="button"
           size="sm"
           variant="outline"
-          className="h-7 px-2 text-xs shrink-0"
+          className="h-8 rounded-full px-3 text-xs shrink-0"
           disabled={busy}
           onClick={() => run(steeveAnswers ? 'conversation_take_over' : 'conversation_give_back')}
         >
