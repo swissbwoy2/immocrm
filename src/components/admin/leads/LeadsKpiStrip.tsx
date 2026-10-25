@@ -1,7 +1,6 @@
-import { motion } from "framer-motion";
-import { Card } from "@/components/ui/card";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { Users, Phone, ShieldCheck, Activity } from "lucide-react";
+import { DASH_CARD } from "@/components/client/dashboard/DashPrimitives";
 import { cn } from "@/lib/utils";
 
 interface Kpi {
@@ -39,8 +38,8 @@ export function LeadsKpiStrip({
     {
       label: "Total leads",
       value: total,
-      icon: <Users className="h-5 w-5" />,
-      accent: "from-sky-500/20 to-sky-500/5 text-sky-500",
+      icon: <Users className="h-[18px] w-[18px]" />,
+      accent: "bg-primary/10 text-primary",
       decimals: 0,
       onClick: onFilterTotal,
     },
@@ -50,10 +49,8 @@ export function LeadsKpiStrip({
       hint: rdvPending > 0
         ? `${rdvPending} à confirmer · ${rdvConfirmed} confirmés`
         : `${rdvConfirmed} confirmés`,
-      icon: <Phone className="h-5 w-5" />,
-      accent: rdvPending > 0
-        ? "from-rose-500/25 to-amber-500/5 text-rose-500"
-        : "from-amber-500/20 to-amber-500/5 text-amber-500",
+      icon: <Phone className="h-[18px] w-[18px]" />,
+      accent: rdvPending > 0 ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary",
       decimals: 0,
       onClick: onFilterRdv,
     },
@@ -61,8 +58,8 @@ export function LeadsKpiStrip({
       label: "Qualifiés",
       value: qualifiedCount,
       hint: `${qualifiedPct.toFixed(0)}% du total`,
-      icon: <ShieldCheck className="h-5 w-5" />,
-      accent: "from-emerald-500/20 to-emerald-500/5 text-emerald-500",
+      icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+      accent: "bg-primary/10 text-primary",
       decimals: 0,
       onClick: onFilterQualified,
     },
@@ -70,8 +67,8 @@ export function LeadsKpiStrip({
       label: "Taux de contact",
       value: contactPct,
       hint: `${contactedCount}/${total}`,
-      icon: <Activity className="h-5 w-5" />,
-      accent: "from-violet-500/20 to-violet-500/5 text-violet-500",
+      icon: <Activity className="h-[18px] w-[18px]" />,
+      accent: "bg-primary/10 text-primary",
       decimals: 0,
       suffix: "%",
       onClick: onFilterContacted,
@@ -80,36 +77,25 @@ export function LeadsKpiStrip({
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {kpis.map((k, i) => (
-        <motion.div
+      {kpis.map((k) => (
+        <button
           key={k.label}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: i * 0.05 }}
+          type="button"
+          onClick={k.onClick}
+          className={cn(
+            DASH_CARD,
+            "flex min-h-[104px] flex-col items-start justify-between gap-2 p-3 text-left transition-colors hover:bg-muted/50 sm:p-4"
+          )}
         >
-          <Card
-            onClick={k.onClick}
-            className={cn(
-              "relative overflow-hidden border-border/50 backdrop-blur-sm",
-              "bg-gradient-to-br hover:shadow-lg cursor-pointer transition-all",
-              "hover:-translate-y-0.5 hover:border-border",
-              k.accent
-            )}
-          >
-            <div className="p-3 sm:p-4 flex flex-col gap-1.5 sm:gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">
-                  {k.label}
-                </span>
-                <div className="opacity-70 flex-shrink-0">{k.icon}</div>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
-                <AnimatedCounter value={k.value} decimals={k.decimals ?? 0} suffix={k.suffix} />
-              </div>
-              {k.hint && <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{k.hint}</div>}
-            </div>
-          </Card>
-        </motion.div>
+          <span className={cn("flex h-9 w-9 items-center justify-center rounded-full", k.accent)}>{k.icon}</span>
+          <span className="block w-full min-w-0">
+            <span className="block text-2xl font-semibold tabular-nums text-foreground">
+              <AnimatedCounter value={k.value} decimals={k.decimals ?? 0} suffix={k.suffix} />
+            </span>
+            <span className="block truncate text-sm font-medium text-foreground">{k.label}</span>
+            {k.hint && <span className="block truncate text-xs text-muted-foreground">{k.hint}</span>}
+          </span>
+        </button>
       ))}
     </div>
   );

@@ -36,14 +36,13 @@ function Column({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[280px] sm:min-w-[260px] snap-start rounded-xl bg-gradient-to-b border border-border/40 p-3 flex flex-col gap-3 transition-all",
-        gradient,
+        "flex-1 min-w-[280px] sm:min-w-[260px] snap-start rounded-2xl bg-muted/40 border border-border/70 p-3 flex flex-col gap-3 transition-colors",
         isOver && `ring-2 ${ring}`
       )}
     >
       <div className="flex items-center justify-between px-1">
         <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-        <span className="text-xs font-medium text-muted-foreground bg-background/60 rounded-full px-2 py-0.5">
+        <span className="text-xs font-medium text-muted-foreground bg-background rounded-full px-2 py-0.5">
           {leads.length}
         </span>
       </div>

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { DASH_CARD, DashBadge, DashFilterPills, DashPage, DashPageHeader } from "@/components/client/dashboard/DashPrimitives";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,6 +54,8 @@ import {
   Smartphone,
   Monitor,
   MessageCircle,
+  RotateCcw,
+  Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -113,10 +115,10 @@ type LeadTracking = {
 };
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  sent: { label: "Envoyé", className: "bg-green-100 text-green-800 border-green-300" },
-  failed: { label: "Échec", className: "bg-red-100 text-red-800 border-red-300" },
-  skipped: { label: "Ignoré", className: "bg-amber-100 text-amber-800 border-amber-300" },
-  pending: { label: "En cours", className: "bg-blue-100 text-blue-800 border-blue-300" },
+  sent: { label: "Envoyé", className: "rounded-full border-transparent bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
+  failed: { label: "Échec", className: "rounded-full border-transparent bg-destructive/10 text-destructive" },
+  skipped: { label: "Ignoré", className: "rounded-full border-transparent bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  pending: { label: "En cours", className: "rounded-full border-transparent bg-muted text-muted-foreground" },
 };
 
 export default function CampagnesSuivi() {
@@ -737,26 +739,27 @@ export default function CampagnesSuivi() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Campagnes de suivi</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Emails de relance pour vos leads importés (Facebook Lead Ads, CSV).
-        </p>
-      </div>
+    <DashPage>
+      <DashPageHeader
+        title="Campagnes de suivi"
+        subtitle="Emails de relance pour vos leads importés (Facebook Lead Ads, CSV)."
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-       <TabsList className="grid grid-cols-4 w-full sm:w-auto">
-          <TabsTrigger value="campagnes">Campagnes</TabsTrigger>
-          <TabsTrigger value="leads">Leads & envoi</TabsTrigger>
-          <TabsTrigger value="whatsapp">
-            <MessageCircle className="h-4 w-4 mr-1" /> WhatsApp
-          </TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-        </TabsList>
+        <DashFilterPills
+          label="Onglets"
+          value={activeTab}
+          onChange={setActiveTab}
+          options={[
+            { key: "campagnes", label: "Campagnes" },
+            { key: "leads", label: "Leads & envoi" },
+            { key: "whatsapp", label: "WhatsApp" },
+            { key: "logs", label: "Logs" },
+          ]}
+        />
 
         {/* ───────── ONGLET 1 : CAMPAGNES ───────── */}
-        <TabsContent value="campagnes" className="space-y-4 mt-4">
+        <TabsContent value="campagnes" className="space-y-4 mt-0">
           {loadingCamp ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -764,19 +767,19 @@ export default function CampagnesSuivi() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {campaigns.map((c) => (
-                <Card key={c.id} className="overflow-hidden">
-                  <CardHeader>
+                <div key={c.id} className={`${DASH_CARD} overflow-hidden p-4 md:p-5`}>
+                  <div className="mb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg">{c.name}</CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2">{c.subject}</CardDescription>
+                        <h3 className="text-base font-semibold text-foreground">{c.name}</h3>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.subject}</p>
                       </div>
-                      <Badge variant={c.status === "active" ? "default" : "secondary"}>
+                      <DashBadge tone={c.status === "active" ? "success" : "muted"}>
                         {c.status === "active" ? "Active" : c.status === "draft" ? "Brouillon" : "Inactive"}
-                      </Badge>
+                      </DashBadge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                  </div>
+                  <div className="space-y-3">
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-foreground">CTA :</span> {c.cta_label}
@@ -789,6 +792,7 @@ export default function CampagnesSuivi() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="rounded-full"
                         onClick={() => handlePreview(c)}
                         disabled={c.status !== "active"}
                       >
@@ -797,6 +801,7 @@ export default function CampagnesSuivi() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="rounded-full"
                         onClick={() => handleTest(c)}
                         disabled={c.status !== "active" || testingKey === c.campaign_key}
                       >
@@ -809,6 +814,7 @@ export default function CampagnesSuivi() {
                       </Button>
                       <Button
                         size="sm"
+                        className="rounded-full"
                         onClick={() => {
                           setSelectedCampaign(c.campaign_key);
                           setActiveTab("leads");
@@ -818,22 +824,22 @@ export default function CampagnesSuivi() {
                         <Send className="h-4 w-4 mr-1" /> Envoyer aux leads
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </TabsContent>
 
         {/* ───────── ONGLET 2 : LEADS & ENVOI ───────── */}
-        <TabsContent value="leads" className="space-y-4 mt-4">
-          <Card>
-            <CardContent className="pt-6 space-y-4">
+        <TabsContent value="leads" className="space-y-4 mt-0">
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="space-y-4">
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[200px]">
                   <Label className="text-xs">Campagne</Label>
                   <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                    <SelectTrigger>
+                    <SelectTrigger className="rounded-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -851,6 +857,7 @@ export default function CampagnesSuivi() {
                     placeholder="Email, nom, téléphone…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    className="rounded-full"
                   />
                 </div>
                 <div className="flex items-center gap-2 pb-1">
@@ -875,10 +882,10 @@ export default function CampagnesSuivi() {
                     }}
                   />
                   <Label htmlFor="allow-resend" className="text-sm cursor-pointer text-amber-700 dark:text-amber-400 font-medium">
-                    🔁 Renvoyer aux leads déjà contactés
+                    Renvoyer aux leads déjà contactés
                   </Label>
                 </div>
-                <Button onClick={() => setImportOpen(true)} variant="outline">
+                <Button onClick={() => setImportOpen(true)} variant="outline" className="rounded-full">
                   <Upload className="h-4 w-4 mr-1" /> Importer CSV
                 </Button>
               </div>
@@ -891,26 +898,26 @@ export default function CampagnesSuivi() {
                 const remaining = totalCampaign - sentInCampaign;
                 return (
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <Badge variant="outline" className="bg-muted/40">
+                    <Badge variant="outline" className="rounded-full border-transparent bg-muted text-foreground">
                       Total campagne : <strong className="ml-1">{totalCampaign}</strong>
                     </Badge>
-                    <Badge variant="outline" className="bg-green-50 text-green-800 border-green-300">
+                    <Badge variant="outline" className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                       Déjà envoyés : <strong className="ml-1">{sentInCampaign}</strong>
                     </Badge>
-                    <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-300">
+                    <Badge variant="outline" className="rounded-full border-transparent bg-primary/10 text-primary">
                       Restants à envoyer : <strong className="ml-1">{remaining}</strong>
                     </Badge>
                     {hideAlreadySent && sentInCampaign > 0 && (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
-                        ⓘ {sentInCampaign} masqués par le filtre
+                      <Badge variant="outline" className="rounded-full border-transparent bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                        {sentInCampaign} masqués par le filtre
                       </Badge>
                     )}
                   </div>
                 );
               })()}
 
-              <div className="border rounded-md">
-                <Table>
+              <div className="overflow-x-auto rounded-xl border border-border/70">
+                <Table className="[&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground [&_tr]:border-border/70 [&_tbody_tr:hover]:bg-muted/50">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12">
@@ -972,29 +979,29 @@ export default function CampagnesSuivi() {
                                 {(() => {
                                   const t = trackingByLead.get(l.id);
                                   if (!already && !t?.sent) {
-                                    return <Badge variant="outline" className="text-xs">En attente</Badge>;
+                                    return <Badge variant="outline" className="text-xs rounded-full">En attente</Badge>;
                                   }
                                   return (
                                     <>
-                                      <Badge variant="secondary" className="text-[10px] bg-green-100 text-green-800 border-green-300" title="Email envoyé">
+                                      <Badge variant="secondary" className="text-[10px] rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400" title="Email envoyé">
                                         ✉ Envoyé{(sentCountByLead.get(l.id) || 0) > 1 ? ` ·${sentCountByLead.get(l.id)}` : ""}
                                       </Badge>
                                       {t?.opened ? (
-                                        <Badge variant="secondary" className="text-[10px] bg-blue-100 text-blue-800 border-blue-300" title="Email ouvert">
+                                        <Badge variant="secondary" className="text-[10px] rounded-full border-transparent bg-primary/10 text-primary hover:bg-primary/10" title="Email ouvert">
                                           👁 Ouvert{t.opens > 1 ? ` ·${t.opens}` : ""}
                                         </Badge>
                                       ) : (
-                                        <Badge variant="outline" className="text-[10px] opacity-50" title="Pas encore ouvert">
+                                        <Badge variant="outline" className="text-[10px] rounded-full opacity-50" title="Pas encore ouvert">
                                           👁 —
                                         </Badge>
                                       )}
                                       {t?.clicked && (
-                                        <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-800 border-purple-300" title="Lien cliqué">
+                                        <Badge variant="secondary" className="text-[10px] rounded-full border-transparent bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400" title="Lien cliqué">
                                           🔗 Cliqué{t.clicks > 1 ? ` ·${t.clicks}` : ""}
                                         </Badge>
                                       )}
                                       {t?.bounced && (
-                                        <Badge variant="secondary" className="text-[10px] bg-red-100 text-red-800 border-red-300" title="Bounce / échec">
+                                        <Badge variant="secondary" className="text-[10px] rounded-full border-transparent bg-destructive/10 text-destructive hover:bg-destructive/10" title="Bounce / échec">
                                           ✗ Bounce
                                         </Badge>
                                       )}
@@ -1005,7 +1012,7 @@ export default function CampagnesSuivi() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 px-2 text-xs"
+                                    className="h-7 px-2 text-xs rounded-full"
                                     onClick={() => openLeadHistory(l)}
                                     title="Voir les emails envoyés"
                                   >
@@ -1022,13 +1029,13 @@ export default function CampagnesSuivi() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {selectedIds.size > 0 && currentCampaign && (
             <div className="sticky bottom-4 z-10">
-              <Card className="border-primary bg-background shadow-lg">
-                <CardContent className="py-4 flex flex-wrap items-center justify-between gap-3">
+              <div className={`${DASH_CARD} border-primary/40`}>
+                <div className="p-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="font-semibold">{selectedIds.size} leads sélectionnés</div>
                     <div className="text-sm text-muted-foreground">
@@ -1037,14 +1044,12 @@ export default function CampagnesSuivi() {
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     {allowResend && (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
-                        🔁 Mode renvoi activé
-                      </Badge>
+                      <DashBadge tone="warning">Mode renvoi activé</DashBadge>
                     )}
-                    <Button variant="outline" onClick={() => setSelectedIds(new Set())}>
+                    <Button variant="outline" className="rounded-full" onClick={() => setSelectedIds(new Set())}>
                       Désélectionner
                     </Button>
-                    <Button onClick={() => setConfirmOpen(true)} disabled={sending}>
+                    <Button onClick={() => setConfirmOpen(true)} disabled={sending} className="rounded-full">
                       {sending ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                       ) : (
@@ -1053,18 +1058,18 @@ export default function CampagnesSuivi() {
                       Envoyer la campagne
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
         </TabsContent>
 
         {/* ───────── ONGLET 3 : LOGS ───────── */}
-        <TabsContent value="logs" className="space-y-4 mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="border rounded-md overflow-hidden">
-                <Table>
+        <TabsContent value="logs" className="space-y-4 mt-0">
+          <div className={`${DASH_CARD} overflow-hidden`}>
+            <div>
+              <div className="overflow-x-auto">
+                <Table className="[&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground [&_tr]:border-border/70 [&_tbody_tr:hover]:bg-muted/50">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
@@ -1100,13 +1105,13 @@ export default function CampagnesSuivi() {
                             <TableCell className="text-sm">
                               {log.recipient_email}
                               {log.test_send && (
-                                <Badge variant="outline" className="ml-2 text-[10px]">
+                                <Badge variant="outline" className="ml-2 text-[10px] rounded-full">
                                   TEST
                                 </Badge>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs capitalize">
+                              <Badge variant="outline" className="text-xs capitalize rounded-full">
                                 {log.campaign_key}
                               </Badge>
                             </TableCell>
@@ -1125,7 +1130,7 @@ export default function CampagnesSuivi() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-2 text-xs"
+                                className="h-7 px-2 text-xs rounded-full"
                                 onClick={() => viewCampaignFromLog(log.campaign_key)}
                               >
                                 <Eye className="h-3.5 w-3.5 mr-1" />
@@ -1139,51 +1144,51 @@ export default function CampagnesSuivi() {
                   </TableBody>
                 </Table>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         {/* ───────── ONGLET WHATSAPP LOCATION ───────── */}
-        <TabsContent value="whatsapp" className="space-y-4 mt-4">
-          {/* Header campagne — bandeau dégradé WhatsApp */}
-          <div className="rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-[hsl(var(--whatsapp-green))] to-[hsl(var(--whatsapp-green-dark))] text-white">
-            <div className="p-4 sm:p-5 flex items-start justify-between gap-3">
+        <TabsContent value="whatsapp" className="space-y-4 mt-0">
+          {/* En-tête campagne WhatsApp */}
+          <div className={`${DASH_CARD} overflow-hidden`}>
+            <div className="p-4 md:p-5 flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0">
-                <div className="shrink-0 h-11 w-11 rounded-full bg-white/15 backdrop-blur flex items-center justify-center">
-                  <MessageCircle className="h-6 w-6" />
+                <div className="shrink-0 h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <MessageCircle className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-base sm:text-lg leading-tight">Location · RDV gratuit Crissier</h3>
+                    <h3 className="text-base font-semibold leading-tight text-foreground">Location · RDV gratuit Crissier</h3>
                     {waMetaTemplateName?.endsWith("_v2") && (
-                      <span className="text-[10px] uppercase tracking-wide bg-white/20 backdrop-blur px-2 py-0.5 rounded-full font-semibold">v2 actif</span>
+                      <DashBadge tone="success">v2 actif</DashBadge>
                     )}
                     {waMetaTemplateName?.endsWith("_v1") && (
-                      <span className="text-[10px] uppercase tracking-wide bg-amber-400/80 text-amber-950 px-2 py-0.5 rounded-full font-semibold">v2 en attente</span>
+                      <DashBadge tone="warning">v2 en attente</DashBadge>
                     )}
                   </div>
-                  <p className="text-xs text-white/85 mt-1 truncate">
-                    Template <code className="bg-white/15 px-1 rounded text-[11px]">{waMetaTemplateName || "—"}</code> · CTA Réserver mon RDV
+                  <p className="text-xs text-muted-foreground mt-1 truncate">
+                    Template <code className="bg-muted px-1 rounded text-[11px]">{waMetaTemplateName || "—"}</code> · CTA Réserver mon RDV
                   </p>
                 </div>
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="outline"
                   onClick={handleWaPreview}
                   disabled={waPreviewLoading}
-                  className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur h-9 px-2.5 sm:px-3"
+                  className="rounded-full h-9 px-2.5 sm:px-3"
                 >
                   {waPreviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
                   <span className="hidden sm:inline ml-1">Aperçu</span>
                 </Button>
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant="outline"
                   onClick={handleWaTest}
                   disabled={waTesting}
-                  className="bg-white/15 hover:bg-white/25 text-white border-0 backdrop-blur h-9 px-2.5 sm:px-3"
+                  className="rounded-full h-9 px-2.5 sm:px-3"
                 >
                   {waTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   <span className="hidden sm:inline ml-1">Test</span>
@@ -1194,7 +1199,7 @@ export default function CampagnesSuivi() {
 
           {/* Aperçu message — bulle WhatsApp réaliste */}
           {waPreview && (
-            <div className="rounded-2xl bg-whatsapp-pattern p-4 sm:p-6 border">
+            <div className="rounded-2xl bg-whatsapp-pattern p-4 sm:p-6 border border-border/70">
               <div className="flex justify-end">
                 <div className="relative max-w-[85%] sm:max-w-[70%] bg-[hsl(var(--whatsapp-bubble-out))] rounded-2xl rounded-br-md px-4 py-3 shadow-sm text-sm">
                   <p className="whitespace-pre-wrap text-foreground leading-relaxed">{waPreview.body_rendered}</p>
@@ -1228,21 +1233,26 @@ export default function CampagnesSuivi() {
               const dispo = waFilteredLeads.length;
               return (
                 <>
-                  <div className="rounded-xl border bg-card p-3 text-center">
-                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Total</div>
-                    <div className="text-2xl font-bold mt-1">{total}</div>
+                  <div className={`${DASH_CARD} p-3 sm:p-4`}>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground">
+                      <MessageCircle className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{total}</div>
+                    <div className="text-xs text-muted-foreground">Total</div>
                   </div>
-                  <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-center">
-                    <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-400 font-medium flex items-center justify-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" /> Reçus
-                    </div>
-                    <div className="text-2xl font-bold mt-1 text-emerald-700 dark:text-emerald-400">{sent}</div>
+                  <div className={`${DASH_CARD} p-3 sm:p-4`}>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                      <CheckCircle2 className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{sent}</div>
+                    <div className="text-xs text-muted-foreground">Reçus</div>
                   </div>
-                  <div className="rounded-xl border border-sky-200 dark:border-sky-900/50 bg-sky-50 dark:bg-sky-950/30 p-3 text-center">
-                    <div className="text-[10px] uppercase tracking-wide text-sky-700 dark:text-sky-400 font-medium flex items-center justify-center gap-1">
-                      <Send className="h-3 w-3" /> Disponibles
-                    </div>
-                    <div className="text-2xl font-bold mt-1 text-sky-700 dark:text-sky-400">{dispo}</div>
+                  <div className={`${DASH_CARD} p-3 sm:p-4`}>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Send className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{dispo}</div>
+                    <div className="text-xs text-muted-foreground">Disponibles</div>
                   </div>
                 </>
               );
@@ -1251,28 +1261,31 @@ export default function CampagnesSuivi() {
 
           {/* Recherche + actions secondaires */}
           <div className="space-y-2">
-            <Input
-              placeholder="🔎 Rechercher email, nom, téléphone…"
-              value={waSearch}
-              onChange={(e) => setWaSearch(e.target.value)}
-              className="h-11 rounded-xl"
-            />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher email, nom, téléphone…"
+                value={waSearch}
+                onChange={(e) => setWaSearch(e.target.value)}
+                className="h-11 rounded-full pl-9"
+              />
+            </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <label className="flex items-center gap-2 text-sm cursor-pointer min-h-[44px]">
                 <Checkbox
                   checked={waAllowResend}
                   onCheckedChange={(v) => setWaAllowResend(v === true)}
                 />
-                <span className="text-amber-700 dark:text-amber-400 font-medium">🔁 Renvoyer aux déjà contactés</span>
+                <span className="text-amber-700 dark:text-amber-400 font-medium">Renvoyer aux déjà contactés</span>
               </label>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleWaRetryFailed}
                 disabled={waSending}
-                className="text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-9"
+                className="rounded-full text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 h-9"
               >
-                {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <span className="mr-1">🔁</span>}
+                {waSending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-1" />}
                 Réessayer les échecs
               </Button>
             </div>
@@ -1280,24 +1293,28 @@ export default function CampagnesSuivi() {
 
           {/* Résultat dernier envoi */}
           {waLastResult && (
-            <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-3">
-              <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-300 font-semibold text-sm">
-                <CheckCircle2 className="h-5 w-5" />
+            <div className={`${DASH_CARD} p-4`}>
+              <div className="flex items-center gap-2 text-foreground font-semibold text-sm">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
                 Envoi terminé : {waLastResult.processed} / {waLastResult.total_requested}
               </div>
-              <div className="text-xs text-emerald-800 dark:text-emerald-400 mt-1.5 flex gap-3 flex-wrap">
-                <span>✅ {waLastResult.sent} envoyés</span>
-                <span>⏭ {waLastResult.skipped} ignorés</span>
-                <span>❌ {waLastResult.failed} échecs</span>
+              <div className="text-xs text-muted-foreground mt-2 flex gap-3 flex-wrap">
+                <span className="text-emerald-700 dark:text-emerald-400">{waLastResult.sent} envoyés</span>
+                <span>{waLastResult.skipped} ignorés</span>
+                <span className="text-destructive">{waLastResult.failed} échecs</span>
               </div>
             </div>
           )}
 
           {/* Liste leads — cartes mobile, table desktop */}
-          <div className="rounded-xl border overflow-hidden bg-card">
+          <div className={`${DASH_CARD} overflow-hidden`}>
             {waFilteredLeads.length === 0 ? (
               <div className="text-center py-12 px-4">
-                <MessageCircle className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <MessageCircle className="h-7 w-7 text-primary" />
+                </span>
                 <p className="text-sm text-muted-foreground">
                   Aucun lead disponible. Importe des leads location ou active "Renvoyer".
                 </p>
@@ -1305,19 +1322,19 @@ export default function CampagnesSuivi() {
             ) : (
               <>
                 {/* Header sélection (mobile + desktop) */}
-                <div className="flex items-center gap-3 px-3 py-2.5 border-b bg-muted/30">
+                <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/70 bg-muted/30">
                   <Checkbox
                     checked={waFilteredLeads.length > 0 && waSelectedIds.size === waFilteredLeads.length}
                     onCheckedChange={toggleWaSelectAll}
                     className="h-5 w-5"
                   />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {waSelectedIds.size > 0
                       ? `${waSelectedIds.size} sélectionné${waSelectedIds.size > 1 ? "s" : ""}`
                       : `${waFilteredLeads.length} lead${waFilteredLeads.length > 1 ? "s" : ""}`}
                   </span>
                 </div>
-                <div className="divide-y max-h-[60vh] overflow-y-auto">
+                <div className="divide-y divide-border/70 max-h-[60vh] overflow-y-auto">
                   {waFilteredLeads.map((l) => {
                     const already = waAlreadySent.has(l.id);
                     const selected = waSelectedIds.has(l.id);
@@ -1327,11 +1344,11 @@ export default function CampagnesSuivi() {
                         key={l.id}
                         onClick={() => toggleWaSelect(l.id)}
                         className={`w-full text-left flex items-center gap-3 px-3 py-3 min-h-[64px] transition-colors ${
-                          selected ? "bg-[hsl(var(--whatsapp-green))/0.08]" : "hover:bg-muted/40"
+                          selected ? "bg-emerald-500/10" : "hover:bg-muted/50"
                         }`}
                       >
                         <Checkbox checked={selected} onCheckedChange={() => toggleWaSelect(l.id)} className="h-5 w-5 pointer-events-none" />
-                        <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-semibold flex items-center justify-center">
+                        <div className="shrink-0 h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center">
                           {(fullName.split(/\s+/).slice(0, 2).map((s) => s[0]).join("") || "?").toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1339,11 +1356,11 @@ export default function CampagnesSuivi() {
                           <div className="text-xs text-muted-foreground truncate">{l.phone || "—"}</div>
                         </div>
                         {already ? (
-                          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-emerald-300 text-[10px] shrink-0">
+                          <Badge className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 text-[10px] shrink-0">
                             <CheckCircle2 className="h-3 w-3 mr-1" /> Reçu
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] shrink-0">En attente</Badge>
+                          <Badge variant="outline" className="text-[10px] shrink-0 rounded-full">En attente</Badge>
                         )}
                       </button>
                     );
@@ -1360,7 +1377,7 @@ export default function CampagnesSuivi() {
                 onClick={() => setWaConfirmOpen(true)}
                 disabled={waSending || waCooldown > 0}
                 size="lg"
-                className="pointer-events-auto h-12 px-6 rounded-full shadow-2xl bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white font-semibold"
+                className="pointer-events-auto h-12 px-6 rounded-full shadow-md bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white font-semibold"
               >
                 {waSending ? (
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -1375,7 +1392,7 @@ export default function CampagnesSuivi() {
           )}
 
           <AlertDialog open={waConfirmOpen} onOpenChange={setWaConfirmOpen}>
-            <AlertDialogContent>
+            <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirmer l'envoi WhatsApp</AlertDialogTitle>
                 <AlertDialogDescription className="space-y-2 pt-2">
@@ -1383,7 +1400,7 @@ export default function CampagnesSuivi() {
                     Vous allez envoyer le template à <strong>{waSelectedIds.size} lead{waSelectedIds.size > 1 ? "s" : ""}</strong>.
                   </span>
                   <span className="block text-amber-600 dark:text-amber-400">
-                    ⚠️ Cette campagne ne doit être envoyée qu'<strong>une seule fois</strong> par lead.
+                    Cette campagne ne doit être envoyée qu'<strong>une seule fois</strong> par lead.
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     Une protection 24h bloque automatiquement les doublons côté serveur.
@@ -1391,14 +1408,14 @@ export default function CampagnesSuivi() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={async () => {
                     setWaConfirmOpen(false);
                     setWaCooldown(30);
                     await handleWaSend();
                   }}
-                  className="bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white"
+                  className="rounded-full bg-[hsl(var(--whatsapp-green))] hover:bg-[hsl(var(--whatsapp-green-dark))] text-white"
                 >
                   Confirmer l'envoi
                 </AlertDialogAction>
@@ -1410,8 +1427,8 @@ export default function CampagnesSuivi() {
 
       {/* ───────── PREVIEW DIALOG ───────── */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-6 pb-4 border-b">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 rounded-2xl overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-border/70">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <DialogTitle className="truncate">{previewCampaign?.name}</DialogTitle>
@@ -1421,6 +1438,7 @@ export default function CampagnesSuivi() {
                 <Button
                   size="sm"
                   variant={previewMode === "desktop" ? "default" : "outline"}
+                  className="rounded-full"
                   onClick={() => setPreviewMode("desktop")}
                 >
                   <Monitor className="h-4 w-4" />
@@ -1428,6 +1446,7 @@ export default function CampagnesSuivi() {
                 <Button
                   size="sm"
                   variant={previewMode === "mobile" ? "default" : "outline"}
+                  className="rounded-full"
                   onClick={() => setPreviewMode("mobile")}
                 >
                   <Smartphone className="h-4 w-4" />
@@ -1442,7 +1461,7 @@ export default function CampagnesSuivi() {
               </div>
             ) : (
               <div
-                className="mx-auto bg-white rounded-md shadow-md overflow-hidden transition-all"
+                className="mx-auto bg-white rounded-xl border border-border/70 overflow-hidden transition-all"
                 style={{ maxWidth: previewMode === "mobile" ? 375 : 700 }}
               >
                 <iframe
@@ -1459,7 +1478,7 @@ export default function CampagnesSuivi() {
 
       {/* ───────── IMPORT CSV DIALOG ───────── */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>Importer un CSV de leads Meta</DialogTitle>
             <DialogDescription>
@@ -1467,7 +1486,7 @@ export default function CampagnesSuivi() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm space-y-1">
+            <div className="rounded-xl border border-border/70 bg-primary/5 p-3 text-sm space-y-1">
               <div className="font-semibold flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-primary" />
                 Routage automatique — Location & Vente
@@ -1486,7 +1505,7 @@ export default function CampagnesSuivi() {
                 type="file"
                 accept=".csv"
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                className="mt-1"
+                className="mt-1 rounded-xl"
               />
               {importFile && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1504,10 +1523,10 @@ export default function CampagnesSuivi() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>
+            <Button variant="outline" className="rounded-full" onClick={() => setImportOpen(false)} disabled={importing}>
               Annuler
             </Button>
-            <Button onClick={handleImport} disabled={!importFile || importing}>
+            <Button onClick={handleImport} disabled={!importFile || importing} className="rounded-full">
               {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
               Importer vers Location
             </Button>
@@ -1517,7 +1536,7 @@ export default function CampagnesSuivi() {
 
       {/* ───────── LEAD HISTORY DIALOG ───────── */}
       <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Mail className="h-4 w-4" /></span>
@@ -1549,18 +1568,18 @@ export default function CampagnesSuivi() {
               {historyRows.map((row) => {
                 const badge = STATUS_BADGE[row.status] || STATUS_BADGE.pending;
                 return (
-                  <Card key={row.id} className="overflow-hidden">
-                    <CardContent className="p-4 space-y-2">
+                  <div key={row.id} className={`${DASH_CARD} overflow-hidden`}>
+                    <div className="p-4 space-y-2">
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs capitalize">
+                          <Badge variant="outline" className="text-xs capitalize rounded-full">
                             {row.campaign_key}
                           </Badge>
                           <Badge variant="outline" className={`text-xs ${badge.className}`}>
                             {badge.label}
                           </Badge>
                           {row.test_send && (
-                            <Badge variant="outline" className="text-[10px]">TEST</Badge>
+                            <Badge variant="outline" className="text-[10px] rounded-full">TEST</Badge>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -1569,21 +1588,21 @@ export default function CampagnesSuivi() {
                       </div>
                       <div className="text-sm font-medium">{row.subject || "(sans sujet)"}</div>
                       <div className="flex flex-wrap gap-1 text-[11px]">
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-transparent" title={row.created_at}>
+                        <Badge variant="outline" className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-transparent" title={row.created_at}>
                           ✉ Envoyé · {format(new Date(row.created_at), "dd/MM HH:mm", { locale: fr })}
                         </Badge>
                         {row.opened_at && (
-                          <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-transparent" title={row.last_opened_at || row.opened_at}>
+                          <Badge variant="outline" className="rounded-full bg-primary/10 text-primary border-transparent" title={row.last_opened_at || row.opened_at}>
                             👁 Ouvert{(row.opens_count || 0) > 1 ? ` ${row.opens_count}×` : ""} · {format(new Date(row.opened_at), "dd/MM HH:mm", { locale: fr })}
                           </Badge>
                         )}
                         {row.clicked_at && (
-                          <Badge variant="outline" className="bg-violet-500/10 text-violet-700 border-transparent" title={row.last_click_url || ""}>
+                          <Badge variant="outline" className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 border-transparent" title={row.last_click_url || ""}>
                             🔗 Cliqué{(row.clicks_count || 0) > 1 ? ` ${row.clicks_count}×` : ""} · {format(new Date(row.clicked_at), "dd/MM HH:mm", { locale: fr })}
                           </Badge>
                         )}
                         {row.bounced_at && (
-                          <Badge variant="outline" className="bg-destructive/10 text-destructive border-transparent">✗ Bounce</Badge>
+                          <Badge variant="outline" className="rounded-full bg-destructive/10 text-destructive border-transparent">✗ Bounce</Badge>
                         )}
                       </div>
                       {row.error_message && (
@@ -1595,6 +1614,7 @@ export default function CampagnesSuivi() {
                         <Button
                           size="sm"
                           variant="outline"
+                          className="rounded-full"
                           onClick={() => {
                             setHistoryOpen(false);
                             viewCampaignFromLog(row.campaign_key);
@@ -1604,8 +1624,8 @@ export default function CampagnesSuivi() {
                           Voir le contenu envoyé
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -1615,7 +1635,7 @@ export default function CampagnesSuivi() {
 
       {/* ───────── CONFIRM SEND ───────── */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><AlertCircle className="h-4 w-4" /></span>
@@ -1631,19 +1651,19 @@ export default function CampagnesSuivi() {
               </span>
               {allowResend && (
                 <span className="block text-sm font-medium text-amber-600 dark:text-amber-400">
-                  ⚠️ Mode renvoi activé : l'email sera également envoyé aux leads ayant déjà reçu cette campagne.
+                  Mode renvoi activé : l'email sera également envoyé aux leads ayant déjà reçu cette campagne.
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSend}>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSend} className="rounded-full">
               <Send className="h-4 w-4 mr-1" /> Confirmer l'envoi
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashPage>
   );
 }

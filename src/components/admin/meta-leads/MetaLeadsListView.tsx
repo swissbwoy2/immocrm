@@ -1,8 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Card } from "@/components/ui/card";
+import { DASH_CARD, DashEmptyState } from "@/components/client/dashboard/DashPrimitives";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, FileText, Megaphone } from "lucide-react";
+import { ChevronRight, FileText, Megaphone, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -15,11 +15,11 @@ interface Props {
 
 export function MetaLeadsListView({ leads, onSelect }: Props) {
   if (leads.length === 0) {
-    return <Card className="p-12 text-center text-muted-foreground">Aucun lead pour ces filtres.</Card>;
+    return <DashEmptyState icon={Users} title="Aucun lead pour ces filtres." />;
   }
 
   return (
-    <div className="space-y-2">
+    <div className={cn(DASH_CARD, "overflow-hidden divide-y divide-border/70")}>
       <AnimatePresence>
         {leads.map((lead, i) => {
           const src = getSourceBadge(lead);
@@ -34,11 +34,11 @@ export function MetaLeadsListView({ leads, onSelect }: Props) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.18, delay: Math.min(i * 0.01, 0.15) }}
             >
-              <Card
+              <div
                 onClick={() => onSelect(lead)}
-                className="group flex items-center gap-4 p-4 min-h-[80px] cursor-pointer hover:shadow-md hover:border-primary/40 transition-all"
+                className="group flex items-center gap-4 p-4 min-h-[80px] cursor-pointer transition-colors hover:bg-muted/50"
               >
-                <div className="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-[#1877F2] to-[#1877F2]/60 text-white font-semibold flex items-center justify-center">
+                <div className="flex-shrink-0 h-11 w-11 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center">
                   {metaInitials(lead)}
                 </div>
                 <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
@@ -61,19 +61,19 @@ export function MetaLeadsListView({ leads, onSelect }: Props) {
                     )}
                   </div>
                   <div className="sm:col-span-2">
-                    <Badge variant="outline" className={cn("text-[10px]", src.className)}>{src.label}</Badge>
+                    <Badge variant="outline" className={cn("text-[10px] rounded-full", src.className)}>{src.label}</Badge>
                   </div>
                   <div className="sm:col-span-2 text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(dateRef), { addSuffix: true, locale: fr })}
                   </div>
                   <div className="sm:col-span-2 text-right">
-                    {stage && <Badge variant="outline" className={cn("text-[10px]", stage.badge)}>{stage.label}</Badge>}
+                    {stage && <Badge variant="outline" className={cn("text-[10px] rounded-full", stage.badge)}>{stage.label}</Badge>}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="opacity-60 group-hover:opacity-100">
+                <Button variant="ghost" size="icon" className="rounded-full opacity-60 group-hover:opacity-100">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-              </Card>
+              </div>
             </motion.div>
           );
         })}

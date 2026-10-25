@@ -91,7 +91,7 @@ export function MetaLeadDetailSheet({
         {/* Header */}
         <div className="p-6 border-b border-border/70">
           <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-[#1877F2]/10 text-[#1877F2] font-semibold flex items-center justify-center text-lg flex-shrink-0">
+            <div className="h-14 w-14 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-lg flex-shrink-0">
               {metaInitials(lead)}
             </div>
             <div className="flex-1 min-w-0">
