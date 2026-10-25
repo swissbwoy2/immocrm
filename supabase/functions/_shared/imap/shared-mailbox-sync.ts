@@ -148,23 +148,35 @@ export function topAuthServer(headers: { key: string; value: string }[] | undefi
  * domaine exact de l'expéditeur, ou DKIM réussi d'un domaine égal au sien ou dont il est un sous-domaine.
  * SPF seul ne prouve rien sur l'adresse affichée.
  */
-export function senderAuthenticated(headers: { key: string; value: string }[] | undefined, fromAddress: string, trustedAuthserv: string): boolean {
+/**
+ * Résultats d'authentification de l'en-tête le plus haut, sans décider de la confiance accordée au serveur :
+ * « pass » si DMARC réussit pour le domaine exact de l'expéditeur, ou DKIM pour son domaine (ou domaine parent).
+ * La confiance dans le serveur (« server ») est décidée à la lecture (shared_mailboxes.trusted_authserv),
+ * ce qui permet de l'accorder après coup aux e-mails déjà relevés.
+ */
+export function authResults(headers: { key: string; value: string }[] | undefined, fromAddress: string): { server: string | null; pass: boolean } {
   const domain = fromAddress.split('@')[1]?.toLowerCase();
-  const trusted = (trustedAuthserv || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
-  if (!domain || trusted.length === 0) return false;
   const top = (headers || []).find((h) => h.key.toLowerCase() === 'authentication-results');
-  if (!top) return false;
+  if (!top) return { server: null, pass: false };
   const { authserv, clauses } = parseAuthResults(top.value);
-  if (!trusted.includes(authserv)) return false;
+  const server = authserv.slice(0, 200) || null;
+  if (!domain) return { server, pass: false };
   for (const c of clauses) {
     if (c.result !== 'pass') continue;
-    if (c.method === 'dmarc' && c.props['header.from'] === domain) return true;
+    if (c.method === 'dmarc' && c.props['header.from'] === domain) return { server, pass: true };
     if (c.method === 'dkim') {
       const d = (c.props['header.d'] || '').replace(/^@/, '');
-      if (d.includes('.') && (d === domain || domain.endsWith(`.${d}`))) return true;
+      if (d.includes('.') && (d === domain || domain.endsWith(`.${d}`))) return { server, pass: true };
     }
   }
-  return false;
+  return { server, pass: false };
+}
+
+/** Expéditeur authentifié par un serveur déclaré de confiance (identifiants exacts, séparés par des virgules). */
+export function senderAuthenticated(headers: { key: string; value: string }[] | undefined, fromAddress: string, trustedAuthserv: string): boolean {
+  const trusted = (trustedAuthserv || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
+  const { server, pass } = authResults(headers, fromAddress);
+  return pass && !!server && trusted.includes(server);
 }
 
 const joinAddresses = (list: any[] | undefined) =>
@@ -198,6 +210,7 @@ export async function toEmailRow(msg: FetchedMessage, mailbox: MailboxRow, uidVa
     received_at: received,
     auth_verified: senderAuthenticated(parsed.headers, fromAddress, mailbox.trusted_authserv ?? ''),
     auth_server: topAuthServer(parsed.headers),
+    auth_pass: authResults(parsed.headers, fromAddress).pass,
   };
 }
 

@@ -16072,6 +16072,56 @@ export type Database = {
     Functions: {
       admin_delete_shared_mailbox: { Args: { p_id: string }; Returns: undefined }
       get_steeve_public_settings: { Args: never; Returns: Json }
+      admin_mailbox_auth_servers: {
+        Args: never
+        Returns: {
+          address: string
+          auth_server: string
+          emails: number
+          favorables: number
+          mailbox_id: string
+          trusted: boolean
+        }[]
+      }
+      admin_set_mailbox_trusted_server: {
+        Args: { p_mailbox_id: string; p_server: string; p_trusted: boolean }
+        Returns: string
+      }
+      admin_set_steeve_settings: { Args: { p_settings: Json }; Returns: Json }
+      admin_steeve_clients: {
+        Args: { p_query?: string | null }
+        Returns: {
+          client_id: string
+          email: string | null
+          email_verifie: boolean
+          has_conversation: boolean
+          in_pilot: boolean
+          nom: string | null
+          prenom: string | null
+          statut: string | null
+        }[]
+      }
+      admin_steeve_journal: {
+        Args: { p_limit?: number }
+        Returns: {
+          calls: number
+          client_id: string | null
+          client_nom: string | null
+          conversation_id: string
+          cost_usd: number
+          created_at: string
+          error: string | null
+          kind: string
+          reason: string | null
+          run_id: string
+          status: string
+        }[]
+      }
+      admin_steeve_overview: { Args: never; Returns: Json }
+      staff_verify_client_email: {
+        Args: { p_client_id: string; p_verified?: boolean }
+        Returns: string | null
+      }
       admin_list_shared_mailboxes: {
         Args: never
         Returns: {
