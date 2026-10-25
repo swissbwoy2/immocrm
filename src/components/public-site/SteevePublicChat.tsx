@@ -47,9 +47,9 @@ const RELANCE_2_DELAY_MS = 120_000;
 const TEASER_DELAY_MS = 8_000;
 /** Pas de relance pour une conversation laissée de côté depuis plus de 30 minutes. */
 const RELANCE_WINDOW_MS = 30 * 60 * 1000;
-const SESSION_KEY = 'logisorama.steeve-public.session';
-const HISTORY_KEY = 'logisorama.steeve-public.conversation';
-const TEASER_KEY = 'logisorama.steeve-public.teaser-vu';
+const SESSION_KEY_BASE = 'logisorama.steeve-public.session';
+const HISTORY_KEY_BASE = 'logisorama.steeve-public.conversation';
+const TEASER_KEY_BASE = 'logisorama.steeve-public.teaser-vu';
 const MAX_CHARS = 1000;
 const MAX_STORED = 40;
 /** L'identifiant de visite est renouvelé après 30 jours sans échange. */
@@ -73,7 +73,7 @@ function writeLocal(key: string, value: string | null) {
 }
 
 /** Identifiant de visite (aléatoire), gardé tant que la conversation sert, renouvelé après 30 jours sans échange. */
-function sessionId(): string {
+function sessionId(SESSION_KEY: string): string {
   try {
     const stored = JSON.parse(readLocal(SESSION_KEY) || 'null');
     if (stored && /^[A-Za-z0-9-]{8,64}$/.test(stored.id) && Date.now() - Number(stored.at) < SESSION_IDLE_MS) {
@@ -89,7 +89,7 @@ function sessionId(): string {
 }
 
 /** Conversation gardée sur l'appareil : elle survit à la fermeture de l'app, pas au vidage du cache. */
-function loadHistory(): ChatMessage[] {
+function loadHistory(HISTORY_KEY: string): ChatMessage[] {
   try {
     const parsed = JSON.parse(readLocal(HISTORY_KEY) || '[]');
     return Array.isArray(parsed)
@@ -165,10 +165,29 @@ function OfferCardView({ offer, onLike, disabled }: { offer: OfferCard; onLike: 
  * offres disponibles et l'invite à activer son mandat. N'apparaît que si l'équipe l'a activé
  * (app_config.steeve_public_enabled), et pas pour un utilisateur connecté (Steeve lui répond dans sa messagerie).
  */
-export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
+export interface SteeveCandidatContext {
+  /** Compte candidat connecté : conversation rangée à part sur l'appareil. */
+  userId: string;
+  prenom?: string | null;
+  /** Critères enregistrés par le candidat, en une phrase (« 3 pièces à Lausanne, 2500 CHF max »). */
+  criteres?: string | null;
+}
+
+export function SteevePublicChat({ hidden = false, candidat }: { hidden?: boolean; candidat?: SteeveCandidatContext }) {
+  // Espace de stockage : visiteur anonyme, ou compte candidat (jamais mélangés sur un même appareil).
+  const space = candidat ? `.candidat.${candidat.userId}` : '';
+  const SESSION_KEY = SESSION_KEY_BASE + space;
+  const HISTORY_KEY = HISTORY_KEY_BASE + space;
+  const TEASER_KEY = TEASER_KEY_BASE + space;
+  const greeting = candidat
+    ? `Salut${candidat.prenom ? ` ${candidat.prenom}` : ''}, moi c'est Steeve ! ${candidat.criteres ? 'Je peux chercher tout de suite les offres qui correspondent à tes critères.' : 'Dis-moi ce que tu cherches et je te montre ce qui est disponible.'} Et si tu veux qu'un agent s'occupe de tout, je t'explique comment activer ton mandat.`
+    : GREETING;
+  const suggestions = candidat?.criteres
+    ? ['Cherche selon mes critères', 'Comment activer mon mandat ?', 'Combien ça coûte ?']
+    : SUGGESTIONS;
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => loadHistory());
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadHistory(HISTORY_KEY));
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   // Invitations jouées par Steeve (bulle du personnage), jamais une ouverture forcée de la discussion.
@@ -185,15 +204,16 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     Promise.all([supabase.rpc('get_steeve_public_settings'), supabase.auth.getSession()]).then(([settings, auth]) => {
       if (!active) return;
       const on = (settings.data as { enabled?: boolean } | null)?.enabled === true;
-      setEnabled(on && !auth.data.session);
+      // Visiteur : seulement sans compte. Candidat connecté : son espace à lui.
+      setEnabled(on && (candidat ? auth.data.session?.user.id === candidat.userId : !auth.data.session));
     });
     return () => { active = false; };
-  }, []);
+  }, [candidat?.userId]);
 
   useEffect(() => {
     writeLocal(HISTORY_KEY, JSON.stringify(messages.slice(-MAX_STORED)));
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, open]);
+  }, [messages, open, HISTORY_KEY]);
 
   useEffect(() => {
     if (!open) return;
@@ -214,7 +234,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
       writeLocal(TEASER_KEY, '1');
     }, TEASER_DELAY_MS);
     return () => clearTimeout(t);
-  }, [enabled, open, hidden, messages.length, react]);
+  }, [enabled, open, hidden, messages.length, react, TEASER_KEY]);
 
   // Relances : sans réponse du visiteur après une proposition de Steeve, deux relances au plus.
   useEffect(() => {
@@ -254,7 +274,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     try {
       const history = next.filter((m) => !m.local).slice(-10).map(({ role, content: c, sig }) => ({ role, content: c, sig }));
       const { data, error } = await supabase.functions.invoke('steeve-public', {
-        body: { session_id: sessionId(), messages: history },
+        body: { session_id: sessionId(SESSION_KEY), messages: history },
       });
       if ((data as { enabled?: boolean } | null)?.enabled === false) {
         setEnabled(false);
@@ -280,7 +300,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     } finally {
       setSending(false);
     }
-  }, [messages, sending, react]);
+  }, [messages, sending, react, SESSION_KEY]);
 
   if (!enabled) return null;
 
@@ -298,13 +318,13 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     void send(`Oui, l'offre ${desc} me plaît !`);
   };
 
-  const all: ChatMessage[] = [{ role: 'assistant', content: GREETING, local: true }, ...messages];
+  const all: ChatMessage[] = [{ role: 'assistant', content: greeting, local: true }, ...messages];
 
   return (
     <div
       data-floating-widget
       className={cn(
-        'fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
+        'steeve-public-launcher fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
         hidden && 'pointer-events-none invisible',
       )}
     >
@@ -379,11 +399,11 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
             )}
             {messages.length === 0 && !sending && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
-                    onClick={() => void send(s)}
+                    onClick={() => void send(s === 'Cherche selon mes critères' && candidat?.criteres ? `Je cherche : ${candidat.criteres}` : s)}
                     className="min-h-[36px] rounded-full border border-primary/40 px-3 py-1 text-xs text-foreground transition-colors hover:bg-primary/10"
                   >
                     {s}

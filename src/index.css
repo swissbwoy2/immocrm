@@ -1837,6 +1837,7 @@ html.dark[data-imr-role="client"] {
   bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
 }
 /* Application mobile : Steeve se place au-dessus de la barre de navigation du bas. */
-html.imr-native-shell .steeve-app-launcher {
+html.imr-native-shell .steeve-app-launcher,
+html.imr-native-shell .steeve-public-launcher {
   bottom: calc(max(env(safe-area-inset-bottom, 0px), 12px) + 84px);
 }

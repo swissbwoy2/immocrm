@@ -4,6 +4,7 @@ import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
 import { useAuth } from '@/contexts/AuthContext';
 import { SteeveLauncher } from '@/components/steeve/SteeveLauncher';
+import { SteeveCandidatChat } from '@/components/steeve/SteeveCandidatChat';
 import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { FloatingConversationList } from './FloatingConversationList';
 import { FloatingConversationView } from './FloatingConversationView';
@@ -73,6 +74,8 @@ export function FloatingMessenger() {
 
   // Don't render until auth loaded; only for logged-in users with eligible roles
   if (loading || !user || !userRole) return null;
+  // Candidat : Steeve l'aide à trouver et l'invite à activer son mandat (même assistant que sur le site).
+  if (userRole === 'candidat') return <SteeveCandidatChat />;
   const eligibleRoles = ['admin', 'agent', 'client', 'proprietaire'];
   if (!eligibleRoles.includes(userRole)) return null;
 

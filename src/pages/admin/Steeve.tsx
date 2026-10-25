@@ -13,12 +13,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { SharedMailboxesManager } from '@/components/settings/SharedMailboxesManager';
 import { SteeveAuthServersCard } from '@/components/settings/SteeveAuthServersCard';
+import { SteeveCopilotCard } from '@/components/admin/SteeveCopilotCard';
 
 type Settings = Record<string, string>;
 type Overview = {
   settings: Settings;
   spend: { month_usd: number; day_usd: number };
   public_spend: { month_usd: number; day_usd: number };
+  admin_spend?: { month_usd: number; day_usd: number };
   today: { reponses: number; accueils: number; transferts: number; echecs: number; site_public: number };
   conversations: { avec_steeve: number; accueillies: number };
 };
@@ -56,6 +58,7 @@ const BUDGET_FIELDS: { key: string; label: string; step: string }[] = [
   { key: 'steeve_public_minute_messages', label: 'Site public : messages par minute (tous visiteurs)', step: '1' },
   { key: 'steeve_public_session_messages', label: 'Site public : messages par visiteur et par jour', step: '1' },
   { key: 'steeve_public_ip_messages', label: 'Site public : messages par adresse IP et par jour', step: '1' },
+  { key: 'steeve_admin_day_usd', label: 'Copilote admin : plafond quotidien (USD)', step: '0.5' },
 ];
 
 const STATUS_LABEL: Record<string, string> = {
@@ -168,10 +171,12 @@ export default function AdminSteeve() {
       <div className="p-4 md:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Steeve</h1>
-          <p className="text-muted-foreground">Activation, clients concernés, budget, journal et boîtes e-mail de l'assistant</p>
+          <p className="text-muted-foreground">Copilote, activation, clients concernés, budget, journal et boîtes e-mail de l'assistant</p>
         </div>
 
         <div className="grid max-w-4xl gap-6">
+          <SteeveCopilotCard />
+
           <Card>
             <CardHeader>
               <CardTitle>Activation</CardTitle>
@@ -221,6 +226,7 @@ export default function AdminSteeve() {
                 <div><p className="text-muted-foreground">Ce mois</p><p className="font-semibold">{usd(overview.spend.month_usd)} / {usd(monthCap)}</p></div>
                 <div><p className="text-muted-foreground">Aujourd'hui</p><p className="font-semibold">{usd(overview.spend.day_usd)}</p></div>
                 <div><p className="text-muted-foreground">Site public ce mois</p><p className="font-semibold">{usd(overview.public_spend?.month_usd)} / {usd(overview.settings.steeve_public_month_usd ?? 5)}</p></div>
+                <div><p className="text-muted-foreground">Copilote ce mois</p><p className="font-semibold">{usd(overview.admin_spend?.month_usd)}</p></div>
                 <div><p className="text-muted-foreground">Conversations avec Steeve</p><p className="font-semibold">{overview.conversations.avec_steeve}</p></div>
                 <div><p className="text-muted-foreground">Réponses du jour</p><p className="font-semibold">{overview.today.reponses}</p></div>
                 <div><p className="text-muted-foreground">Accueils du jour</p><p className="font-semibold">{overview.today.accueils}</p></div>

@@ -831,7 +831,8 @@ const OffresRecues = () => {
           offre_id: offreId,
           type_document: typeDocument,
           url: filePath,
-          statut: 'valide'
+          // Déposé par le client : l'équipe le vérifie (la base impose de toute façon « en attente »).
+          statut: 'en attente'
         });
 
       if (dbError) throw dbError;
