@@ -474,7 +474,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     addText('2. DUREE', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= lineHeight;
     addWrappedText(
-      "Le present contrat est conclu pour une duree de 6 mois a compter de sa date de signature. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires.",
+      "Le present mandat est conclu pour une periode initiale de 6 mois a compter de son activation. A defaut de denonciation ordinaire notifiee au plus tot 15 jours avant l'echeance et jusqu'au jour de l'echeance inclus (par ecrit ou dans l'application Logisorama.ch), il est reconduit tacitement pour une nouvelle periode de 6 mois, sans nouveau montant d'activation. Chaque partie conserve le droit imperatif de revoquer le mandat en tout temps (art. 404 CO), aux consequences financieres prevues a l'article 3.",
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
