@@ -338,7 +338,13 @@ export default function NouveauMandat() {
         signature_data: formData.signature_data,
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
-        legal_consents: formData.legal_consents_at as any,
+        // Horodatage de chaque disposition + copie exacte du mandat affiché et signé (pour « Mon contrat » et l'admin)
+        legal_consents: {
+          ...(formData.legal_consents_at || {}),
+          _contrat_titre: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_texte: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_signe_le: new Date().toISOString(),
+        } as any,
         code_promo: formData.code_promo,
         payment_method: formData.payment_method ?? 'qr_invoice',
         montant_acompte: montantAcompte,
