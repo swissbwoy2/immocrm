@@ -1,8 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
+import { DashPage, DashPageHeader, DASH_CARD, DashBadge, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   'en_attente': { label: 'En attente', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
@@ -414,11 +413,7 @@ export default function AdminCandidatures() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="relative animate-spin rounded-full h-12 w-12 border-b-2 border-primary">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
       </div>
     );
   }
@@ -427,12 +422,12 @@ export default function AdminCandidatures() {
     const agentName = getAgentName(candidature);
     
     return (
-      <div className="space-y-4 pt-4 border-t">
+      <div className="space-y-4 pt-4 mt-4 border-t border-border/70">
         <CandidatureWorkflowTimeline currentStatut={candidature.statut} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div className="space-y-2">
-            <h4 className="font-semibold flex items-center gap-2"><User className="h-4 w-4" />Client</h4>
+            <h4 className="text-sm font-semibold flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />Client</h4>
             <p className="font-medium">{profile ? `${profile.prenom} ${profile.nom}` : 'N/A'}</p>
             <p className="text-muted-foreground">{profile?.email || 'N/A'}</p>
             {profile?.telephone && (
@@ -442,11 +437,11 @@ export default function AdminCandidatures() {
             )}
           </div>
           <div className="space-y-2">
-            <h4 className="font-semibold flex items-center gap-2"><UserCog className="h-4 w-4" />Agent responsable</h4>
+            <h4 className="text-sm font-semibold flex items-center gap-2"><UserCog className="h-4 w-4 text-muted-foreground" />Agent responsable</h4>
             <p className="font-medium">{agentName}</p>
           </div>
           <div className="space-y-2">
-            <h4 className="font-semibold flex items-center gap-2"><Calendar className="h-4 w-4" />Dates</h4>
+            <h4 className="text-sm font-semibold flex items-center gap-2"><Calendar className="h-4 w-4 text-muted-foreground" />Dates</h4>
             <p><span className="text-muted-foreground">Dépôt:</span> {format(new Date(candidature.date_depot || candidature.created_at), 'dd/MM/yyyy', { locale: fr })}</p>
             {candidature.client_accepte_conclure_at && (
               <p><span className="text-muted-foreground">Confirmation:</span> {format(new Date(candidature.client_accepte_conclure_at), 'dd/MM/yyyy', { locale: fr })}</p>
@@ -462,18 +457,20 @@ export default function AdminCandidatures() {
 
         {/* Admin Actions */}
         <div className="space-y-3">
-          <h4 className="font-semibold flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+              <AlertTriangle className="h-4 w-4" />
+            </span>
             Actions Admin (à la place de l'agent)
           </h4>
           
           <div className="flex flex-wrap gap-2">
             {candidature.statut === 'en_attente' && (
               <>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
+                <Button size="sm" className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
                   <CheckCircle className="h-4 w-4 mr-1" />Accepter
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
+                <Button size="sm" variant="destructive" className="rounded-full" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
                   <XCircle className="h-4 w-4 mr-1" />Refuser
                 </Button>
               </>
@@ -483,7 +480,7 @@ export default function AdminCandidatures() {
               <Button 
                 size="sm" 
                 variant="outline" 
-                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                className="rounded-full border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
                 onClick={() => handleForceProgression(candidature, 'bail_conclu', 'Conclure pour le client')}
               >
                 <FastForward className="h-4 w-4 mr-1" />Forcer: Client confirme bail
@@ -491,7 +488,7 @@ export default function AdminCandidatures() {
             )}
 
             {candidature.statut === 'bail_conclu' && (
-              <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'attente_bail', { agent_valide_regie: true, agent_valide_regie_at: new Date().toISOString() })}>
+              <Button size="sm" className="rounded-full" onClick={() => handleStatutChange(candidature.id, 'attente_bail', { agent_valide_regie: true, agent_valide_regie_at: new Date().toISOString() })}>
                 <Building2 className="h-4 w-4 mr-1" />Valider régie
               </Button>
             )}
@@ -500,14 +497,14 @@ export default function AdminCandidatures() {
               <>
                 {/* Missing invoice warning */}
                 {!candidature.facture_finale_invoice_id && candidature.offres?.prix && (
-                  <div className="w-full mb-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
-                      ⚠️ Facture finale manquante
+                  <div className="w-full mb-2 p-3 rounded-xl bg-amber-500/10">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4" />Facture finale manquante
                     </p>
                     <Button 
                       size="sm" 
                       variant="outline"
-                      className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      className="rounded-full border-amber-500/40 bg-background text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
                       onClick={async () => {
                         if (!candidature.offres?.prix) return;
                         const result = await createFinalInvoice({
@@ -531,7 +528,7 @@ export default function AdminCandidatures() {
                     </Button>
                   </div>
                 )}
-                <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
+                <Button size="sm" className="rounded-full" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
                   <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
                 </Button>
               </>
@@ -541,7 +538,7 @@ export default function AdminCandidatures() {
               <Button 
                 size="sm" 
                 variant="outline" 
-                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                className="rounded-full border-amber-500/40 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400"
                 onClick={() => handleForceProgression(candidature, 'signature_planifiee', 'Forcer choix date signature')}
               >
                 <FastForward className="h-4 w-4 mr-1" />Forcer: Date signature choisie
@@ -549,27 +546,27 @@ export default function AdminCandidatures() {
             )}
 
             {candidature.statut === 'signature_planifiee' && (
-              <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'signature_effectuee', { signature_effectuee: true, signature_effectuee_at: new Date().toISOString() })}>
+              <Button size="sm" className="rounded-full" onClick={() => handleStatutChange(candidature.id, 'signature_effectuee', { signature_effectuee: true, signature_effectuee_at: new Date().toISOString() })}>
                 <CheckCircle className="h-4 w-4 mr-1" />Marquer bail signé
               </Button>
             )}
 
             {candidature.statut === 'signature_effectuee' && (
-              <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowEtatLieuxDialog(true); }}>
+              <Button size="sm" className="rounded-full" onClick={() => { setSelectedCandidature(candidature); setShowEtatLieuxDialog(true); }}>
                 <Calendar className="h-4 w-4 mr-1" />Fixer état des lieux
               </Button>
             )}
 
             {candidature.statut === 'etat_lieux_fixe' && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleClesRemises(candidature.id)}>
+              <Button size="sm" className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleClesRemises(candidature.id)}>
                 <Key className="h-4 w-4 mr-1" />Confirmer remise des clés
               </Button>
             )}
 
             {candidature.statut === 'cles_remises' && (
-              <Badge variant="default" className="bg-green-600">
-                <CheckCircle className="h-4 w-4 mr-1" />Affaire conclue
-              </Badge>
+              <DashBadge tone="success">
+                <CheckCircle className="h-3.5 w-3.5 mr-1" />Affaire conclue
+              </DashBadge>
             )}
           </div>
         </div>
@@ -578,67 +575,48 @@ export default function AdminCandidatures() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <DashPage className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <FileCheck className="h-6 w-6" />
-            Toutes les candidatures
-          </h1>
-          <p className="text-muted-foreground">Supervision globale des candidatures en cours</p>
-        </div>
-      </div>
+      <DashPageHeader
+        title="Toutes les candidatures"
+        subtitle="Supervision globale des candidatures en cours"
+      />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Total</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{stats.en_attente}</div>
-            <p className="text-xs text-muted-foreground">En attente</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{stats.en_cours}</div>
-            <p className="text-xs text-muted-foreground">En cours</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{stats.cles_remises}</div>
-            <p className="text-xs text-muted-foreground">Conclues</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-red-500">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{stats.refusee}</div>
-            <p className="text-xs text-muted-foreground">Refusées</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+        {[
+          { label: 'Total', value: stats.total, icon: FileCheck, tone: 'bg-primary/10 text-primary' },
+          { label: 'En attente', value: stats.en_attente, icon: Clock, tone: 'bg-amber-500/10 text-amber-600' },
+          { label: 'En cours', value: stats.en_cours, icon: FastForward, tone: 'bg-primary/10 text-primary' },
+          { label: 'Conclues', value: stats.cles_remises, icon: Key, tone: 'bg-emerald-500/10 text-emerald-600' },
+          { label: 'Refusées', value: stats.refusee, icon: XCircle, tone: 'bg-destructive/10 text-destructive' },
+        ].map(({ label, value, icon: Icon, tone }) => (
+          <div key={label} className={`${DASH_CARD} flex min-h-[104px] flex-col justify-between p-3 sm:p-4`}>
+            <span className={`flex h-9 w-9 items-center justify-center rounded-full ${tone}`}>
+              <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="mt-2 block">
+              <span className="block text-2xl font-semibold tracking-tight text-foreground">{value}</span>
+              <span className="block truncate text-xs text-muted-foreground">{label}</span>
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+      <div className={`${DASH_CARD} p-4 md:p-5`}>
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Rechercher client, adresse, agent..." 
-                className="pl-9"
+                className="pl-9 rounded-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Select value={filterStatut} onValueChange={setFilterStatut}>
-              <SelectTrigger className="w-full md:w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] rounded-full">
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
@@ -649,7 +627,7 @@ export default function AdminCandidatures() {
               </SelectContent>
             </Select>
             <Select value={filterAgent} onValueChange={setFilterAgent}>
-              <SelectTrigger className="w-full md:w-[200px]">
+              <SelectTrigger className="w-full md:w-[200px] rounded-full">
                 <SelectValue placeholder="Agent" />
               </SelectTrigger>
               <SelectContent>
@@ -662,23 +640,18 @@ export default function AdminCandidatures() {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Candidatures List */}
       <div className="space-y-4">
         {filteredCandidatures.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <FileCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-semibold mb-2">Aucune candidature trouvée</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || filterStatut !== 'all' || filterAgent !== 'all'
-                  ? 'Modifiez vos filtres pour voir plus de résultats'
-                  : 'Il n\'y a pas encore de candidatures'}
-              </p>
-            </CardContent>
-          </Card>
+          <DashEmptyState
+            icon={FileCheck}
+            title="Aucune candidature trouvée"
+            description={searchTerm || filterStatut !== 'all' || filterAgent !== 'all'
+              ? 'Modifiez vos filtres pour voir plus de résultats'
+              : 'Il n\'y a pas encore de candidatures'}
+          />
         ) : (
           filteredCandidatures.map(candidature => {
             const profile = candidature.clients?.user_id ? profiles.get(candidature.clients.user_id) : null;
@@ -687,22 +660,25 @@ export default function AdminCandidatures() {
 
             return (
               <Collapsible key={candidature.id} open={isExpanded} onOpenChange={() => toggleCard(candidature.id)}>
-                <Card className={`transition-all ${isExpanded ? 'ring-2 ring-primary' : ''}`}>
-                  <CardContent className="p-4">
+                <div className={`${DASH_CARD} p-4 md:p-5 transition-colors ${isExpanded ? 'ring-1 ring-primary/40' : ''}`} ref={(el) => { cardRefs.current[candidature.id] = el; }}>
                     <CollapsibleTrigger asChild>
                       <div className="flex items-start justify-between cursor-pointer">
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={getStatutBadgeVariant(candidature.statut)} className="flex items-center gap-1">
-                              {getStatutIcon(candidature.statut)}
-                              {getStatutLabel(candidature.statut)}
-                            </Badge>
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <UserCog className="h-3 w-3" />
-                              {agentName}
-                            </Badge>
+                            <DashBadge tone={({ destructive: 'danger', secondary: 'muted', outline: 'neutral', default: candidature.statut === 'cles_remises' ? 'success' : 'primary' } as const)[getStatutBadgeVariant(candidature.statut)]}>
+                              <span className="flex items-center gap-1 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                                {getStatutIcon(candidature.statut)}
+                                {getStatutLabel(candidature.statut)}
+                              </span>
+                            </DashBadge>
+                            <DashBadge tone="neutral">
+                              <span className="flex items-center gap-1">
+                                <UserCog className="h-3 w-3" />
+                                {agentName}
+                              </span>
+                            </DashBadge>
                           </div>
-                          <div className="flex items-center gap-4 text-sm">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                             <span className="flex items-center gap-1">
                               <User className="h-4 w-4 text-muted-foreground" />
                               <span className="font-medium">{profile ? `${profile.prenom} ${profile.nom}` : 'Client inconnu'}</span>
@@ -716,7 +692,7 @@ export default function AdminCandidatures() {
                             Déposée le {format(new Date(candidature.date_depot || candidature.created_at), 'dd/MM/yyyy à HH:mm', { locale: fr })}
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="rounded-full shrink-0">
                           {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                         </Button>
                       </div>
@@ -725,8 +701,7 @@ export default function AdminCandidatures() {
                     <CollapsibleContent>
                       {renderExpandedActions(candidature, profile)}
                     </CollapsibleContent>
-                  </CardContent>
-                </Card>
+                </div>
               </Collapsible>
             );
           })
@@ -757,8 +732,8 @@ export default function AdminCandidatures() {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDatesDialog(false)}>Annuler</Button>
-            <Button onClick={handleProposeDates}>Envoyer au client</Button>
+            <Button variant="outline" className="rounded-full" onClick={() => setShowDatesDialog(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={handleProposeDates}>Envoyer au client</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -780,8 +755,8 @@ export default function AdminCandidatures() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEtatLieuxDialog(false)}>Annuler</Button>
-            <Button onClick={handleSetEtatLieux}>Confirmer</Button>
+            <Button variant="outline" className="rounded-full" onClick={() => setShowEtatLieuxDialog(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={handleSetEtatLieux}>Confirmer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -803,13 +778,13 @@ export default function AdminCandidatures() {
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForceDialog(false)}>Annuler</Button>
-            <Button variant="default" className="bg-orange-600 hover:bg-orange-700" onClick={confirmForceProgression}>
+            <Button variant="outline" className="rounded-full" onClick={() => setShowForceDialog(false)}>Annuler</Button>
+            <Button variant="default" className="rounded-full bg-amber-600 text-white hover:bg-amber-700" onClick={confirmForceProgression}>
               Confirmer
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashPage>
   );
 }

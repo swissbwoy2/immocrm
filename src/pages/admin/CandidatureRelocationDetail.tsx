@@ -4,9 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -15,6 +13,7 @@ import { statutLabel } from '@/hooks/useCandidatCandidatures';
 import { RelocationTimeline } from '@/components/candidature/RelocationTimeline';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { AdminGenererDocuments } from '@/components/candidature/AdminGenererDocuments';
+import { DashPage, DashPageHeader, DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 
 export const CAND_SELECT = '*, annonces_publiques(titre, adresse, ville, slug), annonce_creneaux(date_heure)';
 export const fmtDT = (d?: string | null) => d ? new Date(d).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', dateStyle: 'short', timeStyle: 'short' }) : '—';
@@ -32,7 +31,7 @@ function DataBlock({ data, title }: { data: any; title?: string }) {
   const flat = Object.entries(data).filter(([, v]) => v !== '' && v != null && typeof v !== 'object');
   const nested = Object.entries(data).filter(([, v]) => v && typeof v === 'object');
   return (
-    <div className="space-y-2 rounded-lg border p-3">
+    <div className="space-y-2 rounded-xl border border-border/70 bg-card p-3">
       {title && <p className="font-semibold">{title}</p>}
       {flat.length > 0 && <div className="grid gap-1 sm:grid-cols-2">{flat.map(([k, v]) => <p key={k} className="break-words"><span className="text-muted-foreground">{human(k)} :</span> {val(v)}</p>)}</div>}
       {nested.map(([k, v]) => <DataBlock key={k} data={v} title={human(k)} />)}
@@ -105,28 +104,28 @@ export default function CandidatureRelocationDetail() {
   const s = sel.statut;
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-4xl space-y-4 p-4 text-sm md:p-8">
-        <Button asChild variant="ghost" size="sm" className="min-h-[44px]"><Link to="/admin/candidatures-relocation"><ArrowLeft className="mr-1 h-4 w-4" />Candidats location</Link></Button>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold text-foreground">{sel.prenom} {sel.nom}</h1>
-          <Badge variant={['refusee', 'refuse', 'desiste'].includes(s) ? 'destructive' : 'secondary'}>{statutLabel(s)}</Badge>
-        </div>
-        <p className="text-xs text-muted-foreground">ID {sel.id} · dépôt {fmtDT(sel.date_depot)}</p>
+    <DashPage>
+      <div className="mx-auto max-w-4xl space-y-4 text-sm">
+        <Button asChild variant="ghost" size="sm" className="-ml-2 min-h-[44px] rounded-full"><Link to="/admin/candidatures-relocation"><ArrowLeft className="mr-1 h-4 w-4" />Candidats location</Link></Button>
+        <DashPageHeader
+          title={`${sel.prenom} ${sel.nom}`}
+          subtitle={<span className="text-xs">ID {sel.id} · dépôt {fmtDT(sel.date_depot)}</span>}
+          action={<DashBadge tone={['refusee', 'refuse', 'desiste'].includes(s) ? 'danger' : 'muted'}>{statutLabel(s)}</DashBadge>}
+        />
 
         {s === 'candidature_deposee' && (
-          <Card><CardContent className="flex flex-col gap-2 p-4 sm:flex-row">
+          <div className={`${DASH_CARD} flex flex-col gap-2 p-4 md:p-5 sm:flex-row`}>
             <ConfirmDialog
-              trigger={<Button className="min-h-[44px] flex-1" disabled={busy}>Retenir en pré-sélection</Button>}
+              trigger={<Button className="min-h-[44px] flex-1 rounded-full" disabled={busy}>Retenir en pré-sélection</Button>}
               title="Retenir en pré-sélection ?"
               description="Le candidat sera notifié et invité à transmettre ses documents."
               onConfirm={() => preselection(true)}
             />
-            <Button variant="destructive" className="min-h-[44px] flex-1" disabled={busy} onClick={() => setRefusOpen(true)}>Refuser</Button>
-          </CardContent></Card>
+            <Button variant="destructive" className="min-h-[44px] flex-1 rounded-full" disabled={busy} onClick={() => setRefusOpen(true)}>Refuser</Button>
+          </div>
         )}
 
-        <Card><CardContent className="grid gap-1 p-4 sm:grid-cols-2">
+        <div className={`${DASH_CARD} grid gap-1 p-4 md:p-5 sm:grid-cols-2`}>
           <p><span className="text-muted-foreground">E-mail :</span> <a className="text-primary" href={`mailto:${sel.email}`}>{sel.email}</a></p>
           <p><span className="text-muted-foreground">Téléphone :</span> <a className="text-primary" href={`tel:${sel.telephone}`}>{sel.telephone}</a></p>
           <p><span className="text-muted-foreground">Permis :</span> {sel.type_permis || '—'}</p>
@@ -135,74 +134,74 @@ export default function CandidatureRelocationDetail() {
           <p><span className="text-muted-foreground">Revenus :</span> {sel.revenus_mensuels ? `${sel.revenus_mensuels} CHF` : '—'}</p>
           <p><span className="text-muted-foreground">Occupants :</span> {sel.nombre_occupants ?? '—'}</p>
           <p><span className="text-muted-foreground">Adresse actuelle :</span> {sel.adresse_actuelle || '—'}</p>
-        </CardContent></Card>
+        </div>
 
-        <Card><CardContent className="space-y-1 p-4">
-          <p className="font-semibold">Annonce visitée</p>
+        <div className={`${DASH_CARD} space-y-1 p-4 md:p-5`}>
+          <p className="text-base font-semibold">Annonce visitée</p>
           <p>{bienLabel(sel)} — visite {fmtDT(sel.annonce_creneaux?.date_heure || sel.date_visite)}</p>
           {sel.annonces_publiques?.slug && <Link className="text-primary" to={`/annonces/${sel.annonces_publiques.slug}`}>Voir l'annonce</Link>}
-        </CardContent></Card>
+        </div>
 
         {sel.demande_data && (
           <section className="space-y-2">
-            <p className="font-semibold">Demande de location</p>
+            <p className="text-base font-semibold">Demande de location</p>
             <DataBlock data={sel.demande_data} />
             <p className="text-xs text-muted-foreground">Prêt à louer : {sel.confirme_pret_louer ? 'Oui' : 'Non'} · Références autorisées : {sel.autorise_references ? 'Oui' : 'Non'} · Confirmé {fmtDT(sel.confirme_at)}</p>
           </section>
         )}
 
-        <Card><CardContent className="p-4"><p className="mb-1 font-semibold">Suivi</p><RelocationTimeline r={sel} /></CardContent></Card>
+        <div className={`${DASH_CARD} p-4 md:p-5`}><p className="mb-1 text-base font-semibold">Suivi</p><RelocationTimeline r={sel} /></div>
 
-        <Card><CardContent className="space-y-2 p-4">
-          <p className="font-semibold">Autres pièces du candidat</p>
+        <div className={`${DASH_CARD} space-y-2 p-4 md:p-5`}>
+          <p className="text-base font-semibold">Autres pièces du candidat</p>
           {docs.filter((d) => d.candidature_id !== sel.id).length === 0 ? <p className="text-muted-foreground">Aucune autre pièce.</p> : docs.filter((d) => d.candidature_id !== sel.id).map((d) => (
             <button key={d.id} className="block min-h-[36px] text-left text-primary underline" onClick={() => openDoc(d.url)}>{d.type_document || d.nom} — {d.nom}</button>
           ))}
           {['documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises'].includes(s) && sel.user_id && (
-            <div className="border-t pt-2"><CandidateDocumentsSection clientId="" clientUserId={sel.user_id} clientName="Pièces justificatives du candidat" candidates={[]} candidatureId={sel.id} readOnly /></div>
+            <div className="border-t border-border/70 pt-2"><CandidateDocumentsSection clientId="" clientUserId={sel.user_id} clientName="Pièces justificatives du candidat" candidates={[]} candidatureId={sel.id} readOnly /></div>
           )}
           {['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe'].includes(s) && (
-            <div className="space-y-1 border-t pt-2"><p className="font-semibold">Documents de candidature</p><AdminGenererDocuments candidatureId={sel.id} onDone={refresh} /></div>
+            <div className="space-y-1 border-t border-border/70 pt-2"><p className="font-semibold">Documents de candidature</p><AdminGenererDocuments candidatureId={sel.id} onDone={refresh} /></div>
           )}
-        </CardContent></Card>
+        </div>
 
-        <Card><CardContent className="space-y-2 p-4">
-          <p className="font-semibold">Actions</p>
+        <div className={`${DASH_CARD} space-y-2 p-4 md:p-5`}>
+          <p className="text-base font-semibold">Actions</p>
           {['candidature_deposee', 'documents_demandes'].includes(s) && (
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" disabled={busy} onClick={() => act('retenu_bailleur')}>Attribuer / retenu</Button>
+              <Button size="sm" className="rounded-full" disabled={busy} onClick={() => act('retenu_bailleur')}>Attribuer / retenu</Button>
             </div>
           )}
           {['documents_demandes', 'retenu_bailleur'].includes(s) && (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Textarea value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif du refus" className="min-h-[44px]" />
-              <Button size="sm" variant="destructive" disabled={busy} onClick={() => act('refusee')}>Refuser</Button>
+              <Textarea value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif du refus" className="min-h-[44px] rounded-xl" />
+              <Button size="sm" variant="destructive" className="rounded-full" disabled={busy} onClick={() => act('refusee')}>Refuser</Button>
             </div>
           )}
           {['retenu_bailleur', 'bail_signe', 'etat_lieux_effectue'].includes(s) && (
             <div className="space-y-2">
-              <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
+              <Input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" />
               <div className="flex flex-wrap gap-2">
-                {s === 'retenu_bailleur' && <Button size="sm" disabled={busy} onClick={() => act('bail_signe')}>Bail signé</Button>}
-                {s === 'bail_signe' && <Button size="sm" variant="outline" disabled={busy} onClick={() => act('date_etat_lieux')}>Fixer date état des lieux</Button>}
-                {s === 'bail_signe' && <Button size="sm" disabled={busy} onClick={() => act('etat_lieux_effectue')}>État des lieux effectué</Button>}
-                {s === 'etat_lieux_effectue' && <Button size="sm" disabled={busy} onClick={() => act('cles_remises')}>Remise des clés</Button>}
+                {s === 'retenu_bailleur' && <Button size="sm" className="rounded-full" disabled={busy} onClick={() => act('bail_signe')}>Bail signé</Button>}
+                {s === 'bail_signe' && <Button size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={() => act('date_etat_lieux')}>Fixer date état des lieux</Button>}
+                {s === 'bail_signe' && <Button size="sm" className="rounded-full" disabled={busy} onClick={() => act('etat_lieux_effectue')}>État des lieux effectué</Button>}
+                {s === 'etat_lieux_effectue' && <Button size="sm" className="rounded-full" disabled={busy} onClick={() => act('cles_remises')}>Remise des clés</Button>}
               </div>
             </div>
           )}
-        </CardContent></Card>
+        </div>
       </div>
 
       <Dialog open={refusOpen} onOpenChange={setRefusOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Refuser la candidature</DialogTitle></DialogHeader>
-          <Textarea value={refusMotif} onChange={(e) => setRefusMotif(e.target.value)} placeholder="Motif (optionnel)" className="min-h-[88px]" />
+          <Textarea value={refusMotif} onChange={(e) => setRefusMotif(e.target.value)} placeholder="Motif (optionnel)" className="min-h-[88px] rounded-xl" />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRefusOpen(false)}>Annuler</Button>
-            <Button variant="destructive" disabled={busy} onClick={() => preselection(false, refusMotif)}>Confirmer le refus</Button>
+            <Button variant="outline" className="rounded-full" onClick={() => setRefusOpen(false)}>Annuler</Button>
+            <Button variant="destructive" className="rounded-full" disabled={busy} onClick={() => preselection(false, refusMotif)}>Confirmer le refus</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashPage>
   );
 }

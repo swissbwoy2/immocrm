@@ -1,8 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,8 +20,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
-import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
+import { DashPage, DashPageHeader, DASH_CARD, DashBadge, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
 import { PremiumCandidatureDetails } from '@/components/premium/PremiumCandidatureDetails';
 import { cn } from '@/lib/utils';
 
@@ -442,35 +439,18 @@ export default function Candidatures() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  const getStatutStyles = (statut: string) => {
-    const styles: Record<string, { border: string; glow: string; badge: string }> = {
-      cles_remises: {
-        border: 'border-emerald-500/50',
-        glow: 'shadow-emerald-500/20 shadow-lg',
-        badge: 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-      },
-      acceptee: {
-        border: 'border-blue-500/50',
-        glow: 'shadow-blue-500/10',
-        badge: 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30',
-      },
-      refusee: {
-        border: 'border-destructive/50',
-        glow: 'shadow-destructive/10',
-        badge: 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-700 dark:text-red-300 border-red-500/30',
-      },
-      bail_recu: {
-        border: 'border-violet-500/50',
-        glow: 'shadow-violet-500/10',
-        badge: 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-700 dark:text-violet-300 border-violet-500/30',
-      },
-    };
-    return styles[statut] || { border: 'border-border/50', glow: '', badge: '' };
+  const getStatutTone = (statut: string): 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted' => {
+    if (statut === 'cles_remises') return 'success';
+    const variant = getStatutBadgeVariant(statut);
+    if (variant === 'destructive') return 'danger';
+    if (variant === 'secondary') return 'muted';
+    if (variant === 'outline') return 'neutral';
+    return 'primary';
   };
 
   const renderExpandedActions = (candidature: Candidature, profile: Profile | null) => {
@@ -511,45 +491,51 @@ export default function Candidatures() {
   };
 
   return (
-    <main className="flex-1 overflow-y-auto">
-      <div className="p-4 md:p-8 space-y-6">
-        <PremiumPageHeader
+    <DashPage className="space-y-6">
+        <DashPageHeader
           title="Candidatures déposées"
           subtitle="Gérez le workflow complet des candidatures - Cliquez sur une carte pour voir les détails"
-          icon={FileCheck}
-          badge="Gestion"
         />
 
-        {/* Stats avec PremiumKPICard */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 md:gap-4">
-          <PremiumKPICard title="Total" value={stats.total} icon={FileCheck} delay={0} />
-          <PremiumKPICard title="À envoyer" value={stats.candidature_deposee} icon={Send} delay={50} />
-          <PremiumKPICard title="Envoyées" value={stats.en_attente} icon={Clock} variant="warning" delay={100} />
-          <PremiumKPICard title="En cours" value={stats.acceptee} icon={CheckCircle} variant="success" delay={150} />
-          <PremiumKPICard title="Clés remises" value={stats.cles_remises} icon={Key} variant="success" delay={200} />
-          <PremiumKPICard title="Refusées" value={stats.refusee} icon={XCircle} variant="danger" delay={250} />
+        {/* Compteurs */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            { label: 'Total', value: stats.total, icon: FileCheck, tone: 'bg-primary/10 text-primary' },
+            { label: 'À envoyer', value: stats.candidature_deposee, icon: Send, tone: 'bg-primary/10 text-primary' },
+            { label: 'Envoyées', value: stats.en_attente, icon: Clock, tone: 'bg-amber-500/10 text-amber-600' },
+            { label: 'En cours', value: stats.acceptee, icon: CheckCircle, tone: 'bg-emerald-500/10 text-emerald-600' },
+            { label: 'Clés remises', value: stats.cles_remises, icon: Key, tone: 'bg-emerald-500/10 text-emerald-600' },
+            { label: 'Refusées', value: stats.refusee, icon: XCircle, tone: 'bg-destructive/10 text-destructive' },
+          ].map(({ label, value, icon: Icon, tone }) => (
+            <div key={label} className={`${DASH_CARD} flex min-h-[104px] flex-col justify-between p-3 sm:p-4`}>
+              <span className={`flex h-9 w-9 items-center justify-center rounded-full ${tone}`}>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="mt-2 block">
+                <span className="block text-2xl font-semibold tracking-tight text-foreground">{value}</span>
+                <span className="block truncate text-xs text-muted-foreground">{label}</span>
+              </span>
+            </div>
+          ))}
         </div>
 
-        {/* Premium Filters */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm border border-border/50 p-4 md:p-5">
-          {/* Shine effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent" />
-          
-          <div className="relative flex flex-col sm:flex-row gap-4">
+        {/* Filtres */}
+        <div className={`${DASH_CARD} p-4 md:p-5`}>
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Rechercher par nom ou adresse..." 
                   value={searchTerm} 
                   onChange={(e) => setSearchTerm(e.target.value)} 
-                  className="pl-11 h-12 rounded-xl bg-background/50 border-border/50 focus:border-primary/50 transition-all" 
+                  className="pl-11 h-11 rounded-full" 
                 />
               </div>
             </div>
             <div className="w-full sm:w-64">
               <Select value={filterStatut} onValueChange={setFilterStatut}>
-                <SelectTrigger className="h-12 rounded-xl bg-background/50 border-border/50">
+                <SelectTrigger className="h-11 rounded-full">
                   <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Filtrer par statut" />
                 </SelectTrigger>
@@ -566,78 +552,50 @@ export default function Candidatures() {
 
         {/* Candidatures list */}
         {filteredCandidatures.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredCandidatures.map((candidature, index) => {
               const profile = candidature.clients?.user_id ? profiles.get(candidature.clients.user_id) : null;
               const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client inconnu';
               const isExpanded = expandedCards.has(candidature.id);
-              const styles = getStatutStyles(candidature.statut);
-              const isSpecialStatus = ['cles_remises', 'acceptee'].includes(candidature.statut);
 
               return (
                 <Collapsible key={candidature.id} open={isExpanded} onOpenChange={() => toggleCard(candidature.id)}>
-                  <div 
-                    className={cn(
-                      "group relative overflow-hidden rounded-2xl",
-                      "bg-gradient-to-br from-card/95 to-card/80",
-                      "backdrop-blur-sm border-2 transition-all duration-300",
-                      "hover:shadow-xl hover:border-primary/30",
-                      styles.border,
-                      styles.glow,
-                      "animate-fade-in"
-                    )}
-                    style={{ animationDelay: `${index * 50}ms` }}
-                  >
-                    {/* Gradient glow for special statuses */}
-                    {isSpecialStatus && (
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-50" />
-                    )}
-
-                    {/* Shine effect on hover */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    </div>
-
-                    <CollapsibleTrigger className="w-full text-left p-5 md:p-6 relative z-10 cursor-pointer hover:bg-muted/10 transition-colors">
+                  <div className={cn(DASH_CARD, "overflow-hidden transition-colors", isExpanded && "ring-1 ring-primary/40")} ref={(el) => { cardRefs.current[candidature.id] = el; }}>
+                    <CollapsibleTrigger className="w-full text-left p-4 md:p-5 cursor-pointer hover:bg-muted/50 transition-colors">
                       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                         {/* Info */}
-                        <div className="relative flex-1 min-w-0">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-3 flex-wrap">
                             <div className="flex items-center gap-2">
-                              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                                 <User className="h-4 w-4" />
-                              </div>
-                              <span className="font-bold text-lg">{clientName}</span>
+                              </span>
+                              <span className="text-base font-semibold text-foreground">{clientName}</span>
                             </div>
-                            <Badge 
-                              variant={getStatutBadgeVariant(candidature.statut)} 
-                              className={cn("flex items-center gap-1.5 px-3 py-1", styles.badge)}
-                            >
-                              {getStatutIcon(candidature.statut)}
-                              {getStatutLabel(candidature.statut)}
-                            </Badge>
+                            <DashBadge tone={getStatutTone(candidature.statut)}>
+                              <span className="flex items-center gap-1.5 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                                {getStatutIcon(candidature.statut)}
+                                {getStatutLabel(candidature.statut)}
+                              </span>
+                            </DashBadge>
                             {(candidature.statut === 'acceptee' || candidature.statut === 'bail_recu') && (
-                              <Badge variant="outline" className="text-amber-600 border-amber-400/50 bg-amber-500/10 animate-pulse">
+                              <DashBadge tone="warning">
                                 <Clock className="h-3 w-3 mr-1" />Attente client
-                              </Badge>
+                              </DashBadge>
                             )}
                           </div>
                           
                           {candidature.offres && (
                             <div className="flex items-start gap-3 mb-3">
-                              <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                              <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                               <div>
-                                <p className="font-semibold text-foreground">{candidature.offres.adresse}</p>
-                                <div className="flex flex-wrap gap-3 mt-1.5">
-                                  <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg bg-muted/30">
-                                    <span className="font-bold text-primary">{candidature.offres.prix?.toLocaleString()}</span> CHF
+                                <p className="text-sm font-medium text-foreground">{candidature.offres.adresse}</p>
+                                <div className="flex flex-wrap gap-2 mt-1.5">
+                                  <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full bg-muted">
+                                    <span className="font-semibold text-foreground">{candidature.offres.prix?.toLocaleString()}</span> CHF
                                   </span>
                                   {candidature.offres.pieces && (
-                                    <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg bg-muted/30">
+                                    <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-full bg-muted">
                                       <Home className="h-3.5 w-3.5 text-muted-foreground" />
                                       {candidature.offres.pieces} pièces
                                     </span>
@@ -648,18 +606,18 @@ export default function Candidatures() {
                           )}
 
                           <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/20">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted">
                               <Calendar className="h-3.5 w-3.5" />
                               Déposée le {format(new Date(candidature.date_depot || candidature.created_at), 'dd.MM.yyyy', { locale: fr })}
                             </span>
                             {candidature.date_signature_choisie && (
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                                 <CalendarCheck className="h-3.5 w-3.5" />
                                 Signature: {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy', { locale: fr })}
                               </span>
                             )}
                             {candidature.date_etat_lieux && (
-                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                                 <Key className="h-3.5 w-3.5" />
                                 EDL: {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })}
                               </span>
@@ -669,19 +627,19 @@ export default function Candidatures() {
 
                         {/* Expand indicator */}
                         <div className={cn(
-                          "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300",
-                          isExpanded ? "bg-primary/10 text-primary" : "bg-muted/30 text-muted-foreground"
+                          "flex shrink-0 items-center gap-2 self-start lg:self-center px-4 py-2 rounded-full border transition-colors",
+                          isExpanded ? "border-foreground bg-foreground text-background" : "border-border bg-background text-foreground"
                         )}>
                           <span className="text-sm font-medium">{isExpanded ? 'Réduire' : 'Détails'}</span>
-                          <div className={cn("transition-transform duration-300", isExpanded && "rotate-180")}>
-                            <ChevronDown className="h-5 w-5" />
+                          <div className={cn("transition-transform duration-200", isExpanded && "rotate-180")}>
+                            <ChevronDown className="h-4 w-4" />
                           </div>
                         </div>
                       </div>
                     </CollapsibleTrigger>
 
                     <CollapsibleContent>
-                      <div className="px-5 md:px-6 pb-5 md:pb-6 relative z-10 border-t border-border/30">
+                      <div className="px-4 md:px-5 pb-4 md:pb-5 border-t border-border/70">
                         {renderExpandedActions(candidature, profile || null)}
                       </div>
                     </CollapsibleContent>
@@ -691,17 +649,12 @@ export default function Candidatures() {
             })}
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <FileCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Aucune candidature</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || filterStatut !== 'all' ? "Aucune candidature ne correspond à vos critères" : "Les candidatures apparaîtront ici"}
-              </p>
-            </CardContent>
-          </Card>
+          <DashEmptyState
+            icon={FileCheck}
+            title="Aucune candidature"
+            description={searchTerm || filterStatut !== 'all' ? "Aucune candidature ne correspond à vos critères" : "Les candidatures apparaîtront ici"}
+          />
         )}
-      </div>
 
       {/* Dialog: Proposer dates de signature */}
       <Dialog open={showDatesDialog} onOpenChange={setShowDatesDialog}>
@@ -713,8 +666,8 @@ export default function Candidatures() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              📍 Lieu: Chemin de l'Esparcette 5, 1023 Crissier
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" />Lieu: Chemin de l'Esparcette 5, 1023 Crissier
             </p>
             {proposedDates.map((date, idx) => (
               <div key={idx} className="space-y-2">
@@ -732,8 +685,8 @@ export default function Candidatures() {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDatesDialog(false)}>Annuler</Button>
-            <Button onClick={handleProposeDates} disabled={!proposedDates[0]}>
+            <Button variant="outline" className="rounded-full" onClick={() => setShowDatesDialog(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={handleProposeDates} disabled={!proposedDates[0]}>
               <Send className="h-4 w-4 mr-2" />Envoyer au client
             </Button>
           </DialogFooter>
@@ -750,8 +703,8 @@ export default function Candidatures() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <p className="text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+            <div className="p-3 bg-amber-500/10 rounded-xl">
+              <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Le client recevra une alerte importante concernant les documents nécessaires.
               </p>
@@ -766,8 +719,8 @@ export default function Candidatures() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEtatLieuxDialog(false)}>Annuler</Button>
-            <Button onClick={handleSetEtatLieux} disabled={!etatLieuxDate}>
+            <Button variant="outline" className="rounded-full" onClick={() => setShowEtatLieuxDialog(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={handleSetEtatLieux} disabled={!etatLieuxDate}>
               <Send className="h-4 w-4 mr-2" />Notifier le client
             </Button>
           </DialogFooter>
@@ -795,15 +748,15 @@ export default function Candidatures() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <p className="text-sm text-orange-800 dark:text-orange-200">
+            <div className="p-3 bg-amber-500/10 rounded-xl">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
                 Action: <strong>{forceAction?.label}</strong>
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForceDialog(false)}>Annuler</Button>
-            <Button onClick={confirmForceProgression} className="bg-orange-600 hover:bg-orange-700">
+            <Button variant="outline" className="rounded-full" onClick={() => setShowForceDialog(false)}>Annuler</Button>
+            <Button onClick={confirmForceProgression} className="rounded-full bg-amber-600 text-white hover:bg-amber-700">
             <FastForward className="h-4 w-4 mr-2" />Confirmer
             </Button>
           </DialogFooter>
@@ -824,7 +777,7 @@ export default function Candidatures() {
           </DialogHeader>
           {selectedCandidature && (
             <div className="py-4">
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="p-3 bg-destructive/10 rounded-xl">
                 <p className="text-sm">
                   <strong>Bien:</strong> {selectedCandidature.offres?.adresse || 'N/A'}
                 </p>
@@ -835,8 +788,8 @@ export default function Candidatures() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDeleteCandidature}>
+            <Button variant="outline" className="rounded-full" onClick={() => setShowDeleteDialog(false)}>Annuler</Button>
+            <Button variant="destructive" className="rounded-full" onClick={handleDeleteCandidature}>
               <Trash2 className="h-4 w-4 mr-2" />Supprimer définitivement
             </Button>
           </DialogFooter>
@@ -878,6 +831,6 @@ export default function Candidatures() {
           }}
         />
       )}
-    </main>
+    </DashPage>
   );
 }
