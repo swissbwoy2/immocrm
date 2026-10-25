@@ -87,7 +87,7 @@ export function ActionTile({ item }: { item: ActionTileItem }) {
       type="button"
       onClick={item.onClick}
       title={item.detail}
-      className={`${DASH_CARD} flex min-h-[84px] w-full flex-col justify-between gap-1.5 p-3 text-left transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4 ${zero ? 'opacity-60' : ''}`}
+      className={`imr-lg-card rounded-[22px] flex min-h-[84px] w-full flex-col justify-between gap-1.5 p-3 text-left transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4 ${zero ? 'opacity-60' : ''}`}
     >
       <span className="flex w-full items-start justify-between gap-2">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${TONE_DOT[tone]}`}>
@@ -136,7 +136,7 @@ export function KpiTile({ icon: Icon, label, value, phrase, delta, deltaLabel = 
       {phrase && <span className="mt-0.5 block line-clamp-2 text-xs text-muted-foreground">{phrase}</span>}
     </>
   );
-  const cls = `${DASH_CARD} flex min-h-[96px] flex-col p-3 text-left sm:p-4 ${className}`;
+  const cls = `imr-lg-card rounded-[22px] flex min-h-[96px] flex-col p-3 text-left sm:p-4 ${className}`;
   return onClick ? (
     <button type="button" onClick={onClick} className={`${cls} transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}>{body}</button>
   ) : (
@@ -153,7 +153,7 @@ export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, 
 }) {
   const [showAll, setShowAll] = useState(false);
   return (
-    <section className={`${DASH_CARD} p-4 md:p-5`} aria-label="Ma journée">
+    <section className="imr-lg-hero rounded-[28px] p-4 md:p-5" aria-label="Ma journée">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ma journée · {dateLabel}</p>
@@ -163,7 +163,7 @@ export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, 
         </div>
         <button
           type="button" onClick={onAgenda}
-          className="inline-flex h-10 shrink-0 items-center gap-1 rounded-full border border-border px-3 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="imr-lg-glass inline-flex h-10 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-medium text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <CalendarDays className="h-4 w-4" /><span className="hidden sm:inline">{agendaLabel}</span>
         </button>

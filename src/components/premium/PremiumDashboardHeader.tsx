@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 export type ParcoursType = 'location' | 'achat' | 'vente' | 'renovation' | 'relocation';
 
@@ -72,19 +71,10 @@ export function PremiumDashboardHeader({
 
   return (
     <div className={cn(
-      'relative overflow-hidden rounded-2xl',
-      'bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10',
+      'imr-lg-hero rounded-[28px]',
       'p-6 md:p-8 mb-8 animate-fade-in',
       className
     )}>
-      <FloatingParticles count={8} className="opacity-30" />
-
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-4 right-10 w-32 h-32 bg-gradient-to-br from-primary/20 to-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '0s' }} />
-        <div className="absolute bottom-4 left-20 w-24 h-24 bg-gradient-to-br from-accent/20 to-primary/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-float" style={{ animationDelay: '2s' }} />
-      </div>
-
       <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
@@ -115,7 +105,7 @@ export function PremiumDashboardHeader({
             <Button
               variant="outline"
               onClick={onMessagesClick}
-              className="relative glass-morphism border-primary/20 hover:border-primary/40 hover:scale-105 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group"
+              className="relative group"
             >
               <Bell className="w-4 h-4 mr-2 group-hover:animate-wiggle" />
               Messages
@@ -128,7 +118,7 @@ export function PremiumDashboardHeader({
             <Button
               variant="outline"
               onClick={onOffersClick}
-              className="relative glass-morphism border-primary/20 hover:border-primary/40 hover:scale-105 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group"
+              className="relative group"
             >
               <Send className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
               Offres

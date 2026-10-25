@@ -570,7 +570,8 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
     setOpen(next);
     try { localStorage.setItem(storageKey, next ? 'open' : 'closed'); } catch { /* storage unavailable */ }
   };
-  const menuClair = role === 'client' || role === 'admin' || role === 'agent';
+  // Menu clair en verre liquide pour tous les rôles.
+  const menuClair = true;
   const visible = collapsed || searching || open;
 
   return (
@@ -597,8 +598,8 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
                     <TooltipTrigger asChild>
                       <NavLink to={item.path} end={isRootPath(item.path)}
                         onMouseEnter={() => prefetchSidebarRoute(item.path)} onFocus={() => prefetchSidebarRoute(item.path)}
-                        className="flex items-center justify-center w-full px-2 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors duration-150 relative"
-                        activeClassName="bg-sidebar-primary/15 text-sidebar-primary" onClick={handleNavClick}>
+                        className="flex items-center justify-center w-full px-2 py-2 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors duration-150 relative"
+                        activeClassName="imr-lg-lens text-sidebar-primary" onClick={handleNavClick}>
                         <item.icon className="w-5 h-5 flex-shrink-0" />
                         {notifCount > 0 && <NotificationBadge count={notifCount} className="absolute -top-1 -right-1" />}
                         {showDraftIndicator && <FileEdit className="w-3 h-3 absolute -top-1 -right-1 text-orange-500" />}
@@ -610,10 +611,10 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
                   <NavLink to={item.path} end={isRootPath(item.path)}
                     onMouseEnter={() => prefetchSidebarRoute(item.path)} onFocus={() => prefetchSidebarRoute(item.path)}
                     className={menuClair
-                      ? 'flex min-h-[44px] items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground group/item relative'
+                      ? 'flex min-h-[44px] items-center gap-3 px-3 py-2.5 rounded-full text-sidebar-foreground/80 transition-[background-color,transform] duration-150 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-sidebar-foreground active:scale-[0.98] group/item relative'
                       : 'flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden'}
                     activeClassName={menuClair
-                      ? 'bg-sidebar-primary/10 !text-sidebar-primary font-semibold'
+                      ? 'imr-lg-lens !text-sidebar-primary font-semibold'
                       : 'bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active'} onClick={handleNavClick}>
                     {!menuClair && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />}
                     <item.icon className={menuClair ? 'w-[18px] h-[18px] flex-shrink-0' : 'w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105'} />
@@ -650,7 +651,8 @@ export function AppSidebar() {
     if (userRole === 'client') root.setAttribute('data-imr-role', 'client');
     else root.removeAttribute('data-imr-role');
     // Menu clair (même rendu que l'espace client) pour l'admin et les agents : seul le menu change.
-    if (userRole === 'admin' || userRole === 'agent') root.setAttribute('data-imr-sidebar', 'clair');
+    // Menu clair et accent vert pour tous les autres rôles (admin, agent, candidat, apporteur, propriétaire…).
+    if (userRole && userRole !== 'client') root.setAttribute('data-imr-sidebar', 'clair');
     else root.removeAttribute('data-imr-sidebar');
     return () => { root.removeAttribute('data-imr-role'); root.removeAttribute('data-imr-sidebar'); };
   }, [userRole]);
@@ -798,9 +800,9 @@ export function AppSidebar() {
     path === '/admin' || path === '/agent' || path === '/client' || path === '/closeur';
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="floating">
       {/* Header — Logo */}
-      <SidebarHeader className="border-b border-sidebar-border">
+      <SidebarHeader className="border-b border-black/[0.06] dark:border-white/[0.08]">
         <div className="flex items-center gap-3 p-4">
           <img
             src={logoLogisorama}
@@ -820,7 +822,7 @@ export function AppSidebar() {
 
       {/* User card */}
       {!collapsed && (
-        <div className="px-4 py-3 border-b border-sidebar-border bg-sidebar-accent/30">
+        <div className="px-4 py-3 border-b border-black/[0.06] dark:border-white/[0.08]">
           <div className="text-sm">
             <div className="font-semibold text-sidebar-foreground truncate">{userName}</div>
             <div className="text-xs text-sidebar-foreground/55 truncate mt-0.5">{userEmail}</div>
@@ -832,12 +834,12 @@ export function AppSidebar() {
       )}
 
       <SidebarContent>
-        {!collapsed && <div className="sticky top-0 z-10 bg-sidebar px-3 pt-3 pb-1">
+        {!collapsed && <div className="sticky top-0 z-10 bg-white/40 px-3 pt-3 pb-1 backdrop-blur-xl dark:bg-black/20">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-foreground/60" />
             <Input value={search} onChange={event => setSearch(event.target.value)}
               aria-label="Rechercher une rubrique" placeholder="Rechercher une rubrique…"
-              className="h-10 bg-sidebar-accent/40 pl-9 text-sidebar-foreground placeholder:text-sidebar-foreground/55" />
+              className="imr-lg-glass h-10 rounded-full border-0 pl-9 text-sidebar-foreground placeholder:text-sidebar-foreground/55" />
           </div>
         </div>}
         {filteredSections.map((section) => (
@@ -848,7 +850,7 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
+      <SidebarFooter className="border-t border-black/[0.06] dark:border-white/[0.08]">
         <Button
           variant="ghost"
           className={`w-full ${collapsed ? 'justify-center px-2' : 'justify-start'} text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-150`}

@@ -40,7 +40,7 @@ export function StatTile({ icon: Icon, label, value, count, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`${DASH_CARD} relative flex min-h-[104px] flex-col items-start justify-between p-3 text-left transition-transform duration-150 active:scale-[0.98] sm:p-4`}
+      className="imr-lg-card relative flex min-h-[104px] flex-col items-start justify-between rounded-[22px] p-3 text-left transition-transform duration-150 active:scale-[0.98] sm:p-4"
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
         <Icon className="h-[18px] w-[18px]" />
