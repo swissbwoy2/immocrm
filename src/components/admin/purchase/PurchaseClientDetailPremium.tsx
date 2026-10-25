@@ -335,7 +335,7 @@ export function PurchaseClientDetailPremium({
                     <span className="sm:hidden">Suppr.</span>
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+                <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                       <div className="p-2 rounded-xl bg-red-500/20">

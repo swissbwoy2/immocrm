@@ -353,21 +353,21 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center gap-3 p-3 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
-        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={onBack} aria-label="Retour">
+      <div className="flex items-center gap-3 border-b border-border/70 px-3 py-3">
+        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-muted" onClick={onBack} aria-label="Retour">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <ChatAvatar name={otherName} avatarUrl={otherAvatar || undefined} online={otherOnline} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{otherName}</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="truncate text-[15px] font-semibold text-foreground">{otherName}</p>
+          <p className="text-xs text-muted-foreground">
             {otherOnline ? 'En ligne' : 'Hors ligne'}
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="h-9 w-9 shrink-0 rounded-full hover:bg-muted"
           onClick={handleOpenFullscreen}
           aria-label="Ouvrir en plein écran"
           title="Ouvrir en plein écran"
@@ -380,13 +380,13 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       <SteeveHandoffBar conversationId={conversationId} />
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 bg-muted/20">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-muted/30 p-3">
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Démarrez la conversation
           </div>
         ) : (

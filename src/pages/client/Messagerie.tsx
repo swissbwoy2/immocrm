@@ -1958,7 +1958,7 @@ const Messagerie = () => {
 
       {/* Dialog Planifier Visite */}
       <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-        <DialogContent className="glass-premium border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -2010,7 +2010,7 @@ const Messagerie = () => {
 
       {/* Dialog Déléguer Visite */}
       <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-        <DialogContent className="glass-premium border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />

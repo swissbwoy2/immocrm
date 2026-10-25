@@ -1807,7 +1807,7 @@ export default function ClientDetail() {
                     <span className="sm:hidden">Suppr.</span>
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+                <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                       <div className="p-2 rounded-xl bg-red-500/20">
@@ -1837,7 +1837,7 @@ export default function ClientDetail() {
                     <span>Modifier</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-3">
                       <div className="p-2 rounded-xl bg-primary/10">
@@ -3629,7 +3629,7 @@ export default function ClientDetail() {
 
       {/* Upload Document Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -3733,7 +3733,7 @@ export default function ClientDetail() {
           URL.revokeObjectURL(previewUrl);
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[95vh] bg-card/95 backdrop-blur-xl border-border/50">
+        <DialogContent className="max-w-5xl max-h-[95vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -3776,7 +3776,7 @@ export default function ClientDetail() {
 
       {/* Rename Document Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
