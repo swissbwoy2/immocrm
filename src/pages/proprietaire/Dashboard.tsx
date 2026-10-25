@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 export default function ProprietaireDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -257,6 +258,7 @@ export default function ProprietaireDashboard() {
           onTicketsClick={() => navigate('/proprietaire/tickets')}
           onCalendarClick={() => navigate('/proprietaire/calendrier')}
         />
+        <MaJourneeBanner role="proprietaire" className="mb-6" />
 
         {/* KPIs Grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">

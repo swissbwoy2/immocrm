@@ -35,6 +35,7 @@ import { AchatNotarySection } from '@/components/achat/AchatNotarySection';
 import { AchatDocumentsChecklist, ACHAT_REQUIRED_DOCUMENTS, compterDocumentsAchat } from '@/components/achat/AchatDocumentsChecklist';
 import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 interface DashboardAchatProps {
   profile?: { prenom?: string; nom?: string } | null;
@@ -183,6 +184,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
               onMessagesClick={() => navigate('/client/messagerie')}
               onOffersClick={() => navigate('/client/biens-proposes')}
             />
+            <MaJourneeBanner role="client" />
           </SectionErrorBoundary>
 
           {/* Fin du parcours */}
