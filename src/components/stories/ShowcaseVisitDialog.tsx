@@ -1,6 +1,6 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { CalendarClock, Home, MapPin } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Home } from 'lucide-react';
+import { VISIT_DIALOG_CLASS, VisitBody, VisitHero, VisitInfoTiles } from '@/components/visites/VisitDetailParts';
 import { ShowcaseItem, galleryUrls, usePreviewImage, formatPrix } from '@/components/public-site/showcase/useShowcase';
 import { StoryPhotoLink } from '@/components/public-site/showcase/StoryPhotoLink';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
@@ -19,8 +19,8 @@ interface Props {
 export function ShowcaseVisitDialog({ item, onOpenChange }: Props) {
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto z-[200]">
-        {item && <Body item={item} />}
+      <DialogContent className={`${VISIT_DIALOG_CLASS} z-[200]`}>
+        {item ? <Body item={item} /> : <DialogTitle className="sr-only">Visite</DialogTitle>}
       </DialogContent>
     </Dialog>
   );
@@ -33,64 +33,51 @@ function Body({ item }: { item: ShowcaseItem }) {
   const images = gallery.length > 0 ? gallery : cover ? [cover] : [];
 
   return (
-    <div className="space-y-4">
-      <DialogHeader>
-        <DialogTitle className="text-lg leading-snug">{item.titre || 'Bien immobilier'}</DialogTitle>
-      </DialogHeader>
-
-      {images.length > 0 ? (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar rounded-xl">
-          {images.map((src, i) => (
-            <StoryPhotoLink key={i} href={item.lien_annonce} className="w-full shrink-0 sm:w-[420px]">
-              <img
-                src={src}
-                alt={`${item.titre || 'Bien'} — photo ${i + 1}`}
-                loading="lazy"
-                className="h-48 w-full rounded-xl object-cover"
-              />
-            </StoryPhotoLink>
-          ))}
-        </div>
-
-      ) : canViewInternalListing ? (
-        <div className="flex h-40 items-center justify-center rounded-xl bg-muted">
-          <Home className="h-8 w-8 text-muted-foreground" />
-        </div>
-      ) : (
-        <StoryPhotoLink href={item.lien_annonce} className="block">
-          <div className="h-40 overflow-hidden rounded-xl border border-border">
-            <ExternalListingPlaceholder />
+    <>
+      <VisitHero
+        TitleAs={DialogTitle}
+        date={item.date_visite}
+        kicker="Visite à venir"
+        address={item.adresse}
+        title={item.titre || 'Bien immobilier'}
+      >
+        {images.length > 0 ? (
+          <div className="flex snap-x gap-2 overflow-x-auto no-scrollbar">
+            {images.map((src, i) => (
+              <StoryPhotoLink key={i} href={item.lien_annonce} className="w-[85%] shrink-0 snap-start sm:w-[380px]">
+                <img
+                  src={src}
+                  alt={`${item.titre || 'Bien'} — photo ${i + 1}`}
+                  loading="lazy"
+                  className="h-48 w-full rounded-[20px] object-cover"
+                />
+              </StoryPhotoLink>
+            ))}
           </div>
-        </StoryPhotoLink>
-      )}
+        ) : canViewInternalListing ? (
+          <div className="flex h-40 items-center justify-center rounded-[20px] bg-muted">
+            <Home className="h-8 w-8 text-muted-foreground" />
+          </div>
+        ) : (
+          <StoryPhotoLink href={item.lien_annonce} className="block">
+            <div className="h-40 overflow-hidden rounded-[20px]">
+              <ExternalListingPlaceholder />
+            </div>
+          </StoryPhotoLink>
+        )}
+      </VisitHero>
 
-      <div className="flex flex-wrap gap-2">
-        {item.type_bien && <Badge variant="secondary">{item.type_bien}</Badge>}
-        {item.pieces != null && <Badge variant="secondary">{item.pieces} pièces</Badge>}
-        {item.surface != null && <Badge variant="secondary">{item.surface} m²</Badge>}
-        {item.etage && <Badge variant="secondary">Étage {item.etage}</Badge>}
-      </div>
-
-      {item.adresse && (
-        <p className="flex items-start gap-2 text-sm text-muted-foreground">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          {item.adresse}
-        </p>
-      )}
-
-      {item.date_visite && (
-        <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <CalendarClock className="h-4 w-4 text-primary" />
-          Visite le{' '}
-          {new Date(item.date_visite).toLocaleString('fr-CH', {
-            timeZone: 'Europe/Zurich',
-            dateStyle: 'full',
-            timeStyle: 'short',
-          })}
-        </p>
-      )}
-
-      {item.prix != null && <p className="text-xl font-bold text-primary">{formatPrix(item.prix)}</p>}
-    </div>
+      <VisitBody>
+        <VisitInfoTiles
+          items={[
+            { icon: Home, label: 'Type', value: item.type_bien },
+            { label: 'Pièces', value: item.pieces != null ? item.pieces : undefined },
+            { label: 'Surface', value: item.surface != null ? `${item.surface} m²` : undefined },
+            { label: 'Étage', value: item.etage },
+            { label: 'Loyer / prix', value: item.prix != null ? formatPrix(item.prix) : undefined },
+          ]}
+        />
+      </VisitBody>
+    </>
   );
 }

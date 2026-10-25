@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { CheckCircle, FileText, Loader2, RefreshCw, Search, Users, X } from 'lucide-react';
 import {
   AlertDialog,
@@ -21,6 +21,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DemandeActivationCard, CompteInactifCard } from '@/components/admin/activation/DemandeActivationCard';
 import { DemandeDetailsDialogBody } from '@/components/admin/activation/DemandeDetailsDialogBody';
+import { DETAIL_DIALOG } from '@/components/details/DetailPrimitives';
 import {
   attente, attenteProfil, etapeDemande, nomComplet, rangUrgence, texteRecherche,
   type DemandeMandat, type Etape, type Profile,
@@ -575,15 +576,8 @@ export default function DemandesActivation() {
 
       {/* Fiche de la demande */}
       <Dialog open={!!selectedDemande} onOpenChange={(o) => { if (!o) setSelectedDemande(null); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl">
-          {selectedDemande && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedDemande.prenom} {selectedDemande.nom}</DialogTitle>
-              </DialogHeader>
-              <DemandeDetailsDialogBody demande={selectedDemande} />
-            </>
-          )}
+        <DialogContent className={DETAIL_DIALOG}>
+          {selectedDemande && <DemandeDetailsDialogBody demande={selectedDemande} />}
         </DialogContent>
       </Dialog>
 

@@ -203,23 +203,24 @@ export function VisitCompteRenduAttachments({ visite, visitesGroup, readOnly = f
   if (readOnly && docs.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="imr-lg-card min-w-0 space-y-3 rounded-[22px] p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium flex items-center gap-2">
-          <Paperclip className="w-4 h-4 text-primary" />
-          Pièces jointes du compte-rendu
+        <span className="flex items-center gap-2 text-[15px] font-semibold text-foreground">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Paperclip className="h-4 w-4" />
+          </span>
+          Pièces jointes du compte rendu
         </span>
         {!readOnly && (
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="ml-auto"
+            className="ml-auto min-h-11"
             disabled={uploading}
             onClick={() => inputRef.current?.click()}
           >
-            {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Paperclip className="w-4 h-4 mr-2" />}
-            📎 Joindre un fichier / document
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+            Joindre un document
           </Button>
         )}
       </div>
@@ -244,7 +245,7 @@ export function VisitCompteRenduAttachments({ visite, visitesGroup, readOnly = f
 
       {docs.length === 0 ? (
         !readOnly && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             PDF, Word, images ou texte — 25 Mo max par fichier (ex. demande de location scannée).
           </p>
         )
@@ -257,7 +258,7 @@ export function VisitCompteRenduAttachments({ visite, visitesGroup, readOnly = f
             return (
               <li
                 key={key}
-                className="flex items-center gap-3 rounded-lg border border-border bg-background/60 p-2"
+                className="imr-lg-glass flex min-h-[56px] items-center gap-3 rounded-2xl p-2 pl-3"
               >
                 <Icon className="w-5 h-5 text-primary shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -267,17 +268,17 @@ export function VisitCompteRenduAttachments({ visite, visitesGroup, readOnly = f
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
+                  className="min-h-11"
                   disabled={busy}
                   onClick={() => handleOpen(doc)}
                 >
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  <span className="ml-1 hidden sm:inline">Ouvrir</span>
+                  <span className="hidden sm:inline">Ouvrir</span>
                 </Button>
                 {!readOnly && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button type="button" variant="ghost" size="sm" disabled={busy} className="text-destructive">
+                      <Button type="button" variant="ghost" size="icon" disabled={busy} className="h-11 w-11 text-destructive" aria-label={`Supprimer ${doc.name}`}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </AlertDialogTrigger>

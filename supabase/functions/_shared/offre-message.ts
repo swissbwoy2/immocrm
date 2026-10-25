@@ -4,6 +4,8 @@
  * Règle: une ligne n'est affichée QUE si le champ est réellement renseigné.
  */
 
+import { formatCHF, formatDateTimeFR, humanizeISODates } from "./date-fr.ts";
+
 export interface OffreMessageData {
   adresse?: string | null;
   prix?: number | string | null;
@@ -34,17 +36,8 @@ export function cleanValue(v: unknown): string | null {
 }
 
 export function formatDateVisite(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleString('fr-CH', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Zurich',
-  });
+  // Europe/Zurich ; date seule -> pas d'heure fictive ; texte libre renvoyé tel quel
+  return formatDateTimeFR(dateStr, { fallback: dateStr });
 }
 
 function formatPrix(v: unknown): string | null {
@@ -52,7 +45,7 @@ function formatPrix(v: unknown): string | null {
   if (!s) return null;
   const n = Number(String(s).replace(/[^\d.,-]/g, '').replace(',', '.'));
   if (isNaN(n)) return s;
-  return n.toLocaleString('fr-CH');
+  return formatCHF(n); // « CHF 2'400 »
 }
 
 /**
@@ -86,7 +79,7 @@ export function buildOffreMessage(
   const typeBien = cleanValue(offre.type_bien);
 
   if (adresse) lines.push(`📍 Localisation : ${adresse}`);
-  if (prix) lines.push(`💰 Prix : ${prix} CHF`);
+  if (prix) lines.push(`💰 Prix : ${prix}`);
   if (surface) lines.push(`📐 Surface : ${surface} m²`);
   if (pieces) lines.push(`🏠 Nombre de pièces : ${pieces}`);
   if (typeBien) lines.push(`🏘️ Type de bien : ${typeBien}`);
@@ -117,7 +110,7 @@ export function buildOffreMessage(
   if (dates.length) {
     lines.push('');
     lines.push('Dates de visite proposées :');
-    dates.forEach((d) => lines.push(`• ${d}`));
+    dates.forEach((d) => lines.push(`• ${humanizeISODates(d)}`));
   }
 
   const lien = cleanValue(offre.lien_annonce);

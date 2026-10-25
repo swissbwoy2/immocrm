@@ -1,9 +1,8 @@
-import { EmailLayout, emailStyles } from '../email-layout.tsx'
+import { EmailButton, EmailHeading, EmailLayout, EmailText, emailStyles } from '../email-layout.tsx'
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
 
-import { Button, Heading, Link, Text } from 'npm:@react-email/components@0.0.22'
 
 interface SignupEmailProps {
   siteName: string
@@ -19,31 +18,28 @@ export const SignupEmail = ({
   confirmationUrl,
 }: SignupEmailProps) => (
   <EmailLayout lang="en" category="ACCOUNT & SECURITY" preview={`Confirm your email for ${siteName}`}>
-<Heading className="email-heading" style={h1}>Confirm your email</Heading>
-        <Text style={text}>
+<EmailHeading>Confirm your email</EmailHeading>
+        <EmailText>
           Thanks for signing up for{' '}
-          <Link href={siteUrl} style={link}>
+          <a href={siteUrl} style={emailStyles.link}>
             <strong>{siteName}</strong>
-          </Link>
+          </a>
           !
-        </Text>
-        <Text style={text}>
+        </EmailText>
+        <EmailText>
           Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
+          <a href={`mailto:${recipient}`} style={emailStyles.link}>
             {recipient}
-          </Link>
+          </a>
           ) by clicking the button below:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
-        <Text style={footer}>
+        </EmailText>
+        <EmailButton href={confirmationUrl}>Verify Email</EmailButton>
+        <EmailText muted>
           If you didn't create an account, you can safely ignore this email.
-        </Text>
+        </EmailText>
 
 </EmailLayout>
 )
 
 export default SignupEmail
 
-const { button, footer, h1, link, text } = emailStyles

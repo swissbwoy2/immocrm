@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { denyIfNoProjectAccess } from "../_shared/renovation-access.ts";
+import { formatDateFR } from "../_shared/date-fr.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,7 +138,7 @@ Deno.serve(async (req) => {
           alert_type: "milestone_overdue",
           severity: "warning",
           title: `Jalon en retard: ${m.title}`,
-          message: `Date prévue: ${m.planned_date}`,
+          message: `Date prévue: ${formatDateFR(m.planned_date)}`,
           idempotency_key: key,
           target_table: "renovation_milestones",
           target_id: m.id,
@@ -235,7 +236,7 @@ Deno.serve(async (req) => {
         alert_type: "warranty_expiring",
         severity: "info",
         title: `Garantie expirant: ${w.warranty_type || "N/A"}`,
-        message: `Expire le ${w.end_date}`,
+        message: `Expire le ${formatDateFR(w.end_date)}`,
         idempotency_key: key,
         target_table: "renovation_warranties",
         target_id: w.id,

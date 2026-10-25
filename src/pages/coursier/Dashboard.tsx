@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { format, isToday } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
 import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
@@ -137,7 +138,7 @@ export default function CoursierDashboard() {
   const subtitle = loading
     ? 'Chargement…'
     : nextMission
-      ? `Prochaine visite : ${jourLabel(nextMission.date_visite).toLowerCase()} à ${format(new Date(nextMission.date_visite), 'HH:mm')}${aRendre.length > 0 ? ` · ${aRendre.length} compte${aRendre.length > 1 ? 's' : ''}-rendu${aRendre.length > 1 ? 's' : ''} à faire` : ''}`
+      ? `Prochaine visite : ${jourLabel(nextMission.date_visite).toLowerCase()} à ${formatInTimeZone(new Date(nextMission.date_visite), 'Europe/Zurich', 'HH:mm')}${aRendre.length > 0 ? ` · ${aRendre.length} compte${aRendre.length > 1 ? 's' : ''}-rendu${aRendre.length > 1 ? 's' : ''} à faire` : ''}`
       : aRendre.length > 0
         ? `${aRendre.length} compte${aRendre.length > 1 ? 's' : ''}-rendu${aRendre.length > 1 ? 's' : ''} à faire`
         : availableMissions.length > 0
@@ -250,7 +251,7 @@ export default function CoursierDashboard() {
                 <button type="button" onClick={() => goMission(m)} className="flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40">
                   <span className="w-20 shrink-0">
                     <span className="block text-xs text-muted-foreground first-letter:uppercase">{jourLabel(m.date_visite)}</span>
-                    <span className="block text-sm font-semibold tabular-nums text-foreground">{format(new Date(m.date_visite), 'HH:mm', { locale: fr })}</span>
+                    <span className="block text-sm font-semibold tabular-nums text-foreground">{formatInTimeZone(new Date(m.date_visite), 'Europe/Zurich', 'HH:mm', { locale: fr })}</span>
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-foreground">{m.adresse}</span>

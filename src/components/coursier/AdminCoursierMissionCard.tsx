@@ -1,6 +1,5 @@
 import type React from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatZurichDay } from '@/lib/dateZurich';
 import { AlertTriangle, Bike, CheckCircle, Clock, ExternalLink, Loader2, Mail, Phone, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
@@ -80,7 +79,7 @@ export function AdminCoursierMissionCard({
           <p className="line-clamp-2 text-[15px] font-semibold text-foreground">{m.adresse || m.offres?.adresse || 'Adresse non renseignée'}</p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{clients} client{clients > 1 ? 's' : ''}</span>
-            <span>{format(new Date(m.date_visite), 'dd MMM yyyy', { locale: fr })}</span>
+            <span>{formatZurichDay(m.date_visite, { weekday: false })}</span>
             {m.agents?.profiles?.prenom && <span>Agent : {m.agents.profiles.prenom}</span>}
             {m.offres?.lien_annonce && (
               <a href={m.offres.lien_annonce} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[28px] items-center gap-1 font-medium text-primary hover:underline">

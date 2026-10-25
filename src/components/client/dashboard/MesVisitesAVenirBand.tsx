@@ -1,8 +1,9 @@
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { useMemo, useState } from 'react';
-import { CalendarClock, ExternalLink, Home, MapPin, Phone, StickyNote } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { ExternalLink, Home, Phone, StickyNote } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitSection, VisitStatusBadge, formatCHF } from '@/components/visites/VisitDetailParts';
+import { formatZurichDateTime } from '@/lib/dateZurich';
 import { Button } from '@/components/ui/button';
 import {
   ShowcaseItem,
@@ -34,14 +35,7 @@ const toShowcase = (v: VisiteRow): ShowcaseItem => ({
   date_visite: v.date_visite,
 });
 
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleString('fr-CH', {
-    timeZone: 'Europe/Zurich',
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const fmtDate = (d: string) => formatZurichDateTime(d, { short: true, weekday: false });
 
 function VisiteBubble({ visite, onClick }: { visite: VisiteRow; onClick: () => void }) {
   const item = useMemo(() => toShowcase(visite), [visite]);
@@ -51,7 +45,7 @@ function VisiteBubble({ visite, onClick }: { visite: VisiteRow; onClick: () => v
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5 w-[84px]">
       <button type="button" onClick={onClick} className="rounded-full">
-        <span className="block rounded-full p-[2.5px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105">
+        <span className="block rounded-full p-[2.5px] bg-primary transition-transform hover:scale-105">
           <span className="block rounded-full p-[2px] bg-white/90 dark:bg-background">
             <span className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-full bg-muted">
               {img ? (
@@ -79,89 +73,66 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
   const o = visite.offres || {};
 
   return (
-    <div className="space-y-4">
-      <DialogHeader>
-        <DialogTitle className="text-lg font-semibold leading-snug">
-          {o.titre || item.adresse || 'Ma visite'}
-        </DialogTitle>
-      </DialogHeader>
+    <>
+      <VisitHero
+        TitleAs={DialogTitle}
+        date={visite.date_visite}
+        endDate={(visite as any).date_visite_fin}
+        kicker="Ma visite"
+        badges={<VisitStatusBadge statut={visite.statut} />}
+        address={item.adresse}
+        title={o.titre || undefined}
+      >
+        {images.length > 0 && (
+          <div className="flex snap-x gap-2 overflow-x-auto no-scrollbar">
+            {images.map((src, i) => (
+              <StoryPhotoLink key={i} href={item.lien_annonce} className="w-[85%] shrink-0 snap-start sm:w-[360px]">
+                <img
+                  src={src}
+                  alt={`Photo ${i + 1}`}
+                  loading="lazy"
+                  className="h-44 w-full rounded-[20px] object-cover sm:h-52"
+                />
+              </StoryPhotoLink>
+            ))}
+          </div>
+        )}
+      </VisitHero>
 
-      {images.length > 0 ? (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar rounded-xl">
-          {images.map((src, i) => (
-            <StoryPhotoLink key={i} href={item.lien_annonce} className="w-full shrink-0 sm:w-[400px]">
-              <img
-                src={src}
-                alt={`Photo ${i + 1}`}
-                loading="lazy"
-                className="h-44 w-full rounded-xl object-cover"
-              />
-            </StoryPhotoLink>
-          ))}
-        </div>
-      ) : (
-        <div className="flex h-32 items-center justify-center rounded-xl bg-muted">
-          <Home className="h-8 w-8 text-muted-foreground" />
-        </div>
-      )}
+      <VisitBody>
+        <VisitInfoTiles
+          items={[
+            { icon: Home, label: 'Type', value: item.type_bien },
+            { label: 'Pièces', value: item.pieces != null ? item.pieces : undefined },
+            { label: 'Surface', value: item.surface != null ? `${item.surface} m²` : undefined },
+            { label: 'Étage', value: item.etage },
+            { label: 'Loyer / prix', value: item.prix != null ? formatCHF(item.prix) : undefined },
+            { icon: Phone, label: 'Contact sur place', value: o.contact_visite },
+          ]}
+        />
 
-      <p className="flex items-center gap-2 text-sm font-medium">
-        <CalendarClock className="h-4 w-4 text-primary" />
-        {new Date(visite.date_visite).toLocaleString('fr-CH', {
-          timeZone: 'Europe/Zurich',
-          dateStyle: 'full',
-          timeStyle: 'short',
-        })}
-      </p>
+        {visite.notes && (
+          <VisitSection icon={StickyNote} title="Notes">
+            <VisitNote>{visite.notes}</VisitNote>
+          </VisitSection>
+        )}
 
-      {item.adresse && (
-        <p className="flex items-start gap-2 text-sm text-muted-foreground">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          {item.adresse}
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        {item.type_bien && <Badge variant="secondary">{item.type_bien}</Badge>}
-        {item.pieces != null && <Badge variant="secondary">{item.pieces} pièces</Badge>}
-        {item.surface != null && <Badge variant="secondary">{item.surface} m²</Badge>}
-        {item.etage && <Badge variant="secondary">Étage {item.etage}</Badge>}
-        {visite.statut && <Badge className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">{visite.statut === 'planifiee' ? 'Planifiée' : visite.statut}</Badge>}
-      </div>
-
-      {item.prix != null && (
-        <p className="text-xl font-bold text-primary">
-          {new Intl.NumberFormat('fr-CH').format(Number(item.prix))} CHF
-        </p>
-      )}
-
-      {o.contact_visite && (
-        <p className="flex items-center gap-2 text-sm">
-          <Phone className="h-4 w-4 text-primary" />
-          {o.contact_visite}
-        </p>
-      )}
-
-      {visite.notes && (
-        <p className="imr-lg-glass flex items-start gap-2 rounded-2xl p-3 text-sm">
-          <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <span className="whitespace-pre-wrap">{visite.notes}</span>
-        </p>
-      )}
-
-      <VisitLiveButton visiteId={visite.id} size="default" className="w-full rounded-full" />
-
-
+        <VisitLiveButton visiteId={visite.id} size="default" className="h-12 w-full" />
+      </VisitBody>
 
       {item.lien_annonce && (
-        <Button asChild variant="outline" className="w-full rounded-full">
-          <a href={item.lien_annonce} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Voir l'annonce
-          </a>
-        </Button>
+        <VisitActionBar
+          primary={
+            <Button asChild variant="outline">
+              <a href={item.lien_annonce} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4" />
+                Voir l'annonce
+              </a>
+            </Button>
+          }
+        />
       )}
-    </div>
+    </>
   );
 }
 
@@ -199,8 +170,8 @@ export function MesVisitesAVenirBand({ visites }: Props) {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          {selected && <VisiteDetail visite={selected} />}
+        <DialogContent className={VISIT_DIALOG_CLASS}>
+          {selected ? <VisiteDetail visite={selected} /> : <DialogTitle className="sr-only">Ma visite</DialogTitle>}
         </DialogContent>
       </Dialog>
     </section>

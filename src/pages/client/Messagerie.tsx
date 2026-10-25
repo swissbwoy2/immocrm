@@ -41,7 +41,9 @@ import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/mes
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { format, isSameDay, parseISO } from "date-fns";
+import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from "date-fns/locale";
+import { formatZurichDateTime, zurichInputToIso, zurichNowInput } from "@/lib/dateZurich";
 import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
@@ -986,6 +988,12 @@ const Messagerie = () => {
   // Confirm visit planning
   const confirmPlanVisit = async () => {
     if (!selectedOffre || !visitDate || !user || !clientId) return;
+    // Champ datetime-local = heure suisse → instant ISO (sinon Postgres le lit comme de l'UTC : visite décalée de 1-2 h).
+    const visitIso = zurichInputToIso(visitDate);
+    if (!visitIso) {
+      toast({ title: "Erreur", description: "Choisissez une date et une heure de visite", variant: "destructive" });
+      return;
+    }
 
     try {
       const { data: clientData } = await supabase
@@ -1010,7 +1018,7 @@ const Messagerie = () => {
       if (existingVisites && existingVisites.length > 0) {
         // Update existing visit instead of creating duplicate
         await supabase.from('visites')
-          .update({ date_visite: visitDate })
+          .update({ date_visite: visitIso })
           .eq('id', existingVisites[0].id);
       } else {
         // Create visit
@@ -1019,7 +1027,7 @@ const Messagerie = () => {
           client_id: clientData.id,
           agent_id: clientData.agent_id,
           adresse: selectedOffre.adresse,
-          date_visite: visitDate,
+          date_visite: visitIso,
           statut: 'planifiee',
           est_deleguee: false,
           source: 'planifiee_client'
@@ -1031,7 +1039,7 @@ const Messagerie = () => {
         .update({ statut: 'visite_planifiee' })
         .eq('id', selectedOffre.id);
 
-      const formattedDate = format(new Date(visitDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+      const formattedDate = formatZurichDateTime(visitIso).replace(/^./, (c) => c.toLowerCase());
       
       // Check if calendar event already exists before creating
       const { data: existingEvents } = await supabase
@@ -1045,7 +1053,7 @@ const Messagerie = () => {
         await supabase.from('calendar_events').insert({
           title: `Visite - ${selectedOffre.adresse}`,
           event_type: 'visite',
-          event_date: visitDate,
+          event_date: visitIso,
           description: `Visite planifiée par le client pour ${selectedOffre.adresse}`,
           client_id: clientData.id,
           agent_id: clientData.agent_id,
@@ -1058,7 +1066,7 @@ const Messagerie = () => {
           syncEvent(user.id, {
             title: `Visite - ${selectedOffre.adresse}`,
             description: `Visite planifiée pour ${selectedOffre.adresse}`,
-            start: visitDate,
+            start: visitIso,
           });
         }
       }
@@ -1178,7 +1186,7 @@ const Messagerie = () => {
       let messageContent: string;
       
       if (delegateDate) {
-        const formattedDate = format(new Date(delegateDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+        const formattedDate = formatZurichDateTime(delegateDate);
         
         // Check for existing calendar event before creating
         const { data: existingEvents } = await supabase
@@ -1509,7 +1517,7 @@ const Messagerie = () => {
               <Calendar className="h-3 w-3" /> Visite planifiée
               {visite?.date_visite && (
                 <span className="ml-1">
-                  ({format(new Date(visite.date_visite), 'dd/MM à HH:mm', { locale: fr })})
+                  ({formatInTimeZone(new Date(visite.date_visite), 'Europe/Zurich', 'dd/MM à HH:mm', { locale: fr })})
                 </span>
               )}
             </p>
@@ -2020,7 +2028,7 @@ const Messagerie = () => {
                     <RadioGroupItem value={slot.date_visite} id={`slot-${idx}`} />
                     <Label htmlFor={`slot-${idx}`} className="flex-1 cursor-pointer">
                       <span className="font-medium">
-                        {format(new Date(slot.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                        {formatZurichDateTime(slot.date_visite)}
                       </span>
                     </Label>
                   </div>
@@ -2028,13 +2036,13 @@ const Messagerie = () => {
               </RadioGroup>
             ) : (
               <div>
-                <Label htmlFor="visit-date">Date et heure</Label>
+                <Label htmlFor="visit-date">Date et heure (heure suisse)</Label>
                 <Input
                   id="visit-date"
                   type="datetime-local"
                   value={visitDate}
                   onChange={(e) => setVisitDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={zurichNowInput()}
                   className="mt-1.5"
                 />
               </div>
@@ -2071,7 +2079,7 @@ const Messagerie = () => {
                       <RadioGroupItem value={slot.date_visite} id={`delegate-slot-${idx}`} />
                       <Label htmlFor={`delegate-slot-${idx}`} className="flex-1 cursor-pointer">
                         <span className="font-medium">
-                          {format(new Date(slot.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                          {formatZurichDateTime(slot.date_visite)}
                         </span>
                       </Label>
                     </div>

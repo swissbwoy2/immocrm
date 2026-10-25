@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("send-phone-appointment-reminders");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR, formatTimeFR, greetingFR } from '../_shared/date-fr.ts';
 // Multi-tier reminders for office phone appointments: 24h, 3h, 1h, 30min
 // Email + WhatsApp. Idempotent via per-tier *_sent_at columns. Run every 5 min.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -79,15 +80,19 @@ function normalizePhone(raw: string | null | undefined): string | null {
 }
 
 function buildEmailHtml(prospectName: string, dateStr: string, timeStr: string, intro: string) {
-  return renderCorporateEmail({ title: 'Rendez-vous au bureau', category: 'VOTRE RENDEZ-VOUS', bodyHtml: `<p style="margin:0 0 18px;">Bonjour ${prospectName},</p><div style="background: white; border-radius: 16px; padding: 28px;">
-        <p style="margin: 0 0 18px 0; font-size: 16px; color: #333;">${intro}</p>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 8px 0; color: #777; width: 110px;">Date</td><td style="padding: 8px 0; font-weight: 600;">${dateStr}</td></tr>
-          <tr><td style="padding: 8px 0; color: #777;">Heure</td><td style="padding: 8px 0; font-weight: 600;">${timeStr}</td></tr>
-          <tr><td style="padding: 8px 0; color: #777; vertical-align: top;">Adresse</td><td style="padding: 8px 0; font-weight: 600;">${OFFICE_ADDRESS}</td></tr>
-        </table>
-      </div>
-      ` });
+  return renderCorporateEmail({
+    title: 'Rendez-vous au bureau',
+    preview: `${dateStr} à ${timeStr} — ${OFFICE_ADDRESS}`,
+    category: 'VOTRE RENDEZ-VOUS',
+    bodyHtml:
+      emailParagraph(escapeEmailHtml(greetingFR(prospectName))) +
+      emailParagraph(intro) +
+      emailDetails([
+        ['Date', dateStr],
+        ['Heure', timeStr],
+        ['Adresse', OFFICE_ADDRESS],
+      ]),
+  });
 }
 
 Deno.serve(async (req) => {
@@ -121,13 +126,8 @@ Deno.serve(async (req) => {
 
       let emailSent = 0, waSent = 0, errors = 0;
       for (const appt of appts || []) {
-        const start = new Date(appt.slot_start);
-        const dateStr = start.toLocaleDateString('fr-CH', {
-          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Zurich',
-        });
-        const timeStr = start.toLocaleTimeString('fr-CH', {
-          hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich',
-        });
+        const dateStr = formatDateFR(appt.slot_start, { weekday: true });
+        const timeStr = formatTimeFR(appt.slot_start);
         const firstName = (appt.prospect_name || 'à toi').split(' ')[0];
 
         // EMAIL
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
                 const icsRes = await admin.functions.invoke('send-calendar-invite', {
                   body: {
                     title: 'Rappel : RDV au bureau Logisorama',
-                    description: `${tier.emailIntro}\n\nAdresse : Chemin de l'Esparcette 5, 1023 Crissier`,
+                    description: `${tier.emailIntro.replace(/<[^>]+>/g, '')}\n\nAdresse : Chemin de l'Esparcette 5, 1023 Crissier`,
                     location: "Chemin de l'Esparcette 5, 1023 Crissier",
                     start_date: appt.slot_start,
                     end_date: appt.slot_end,

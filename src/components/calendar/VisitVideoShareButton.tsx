@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Video, Loader2, CheckCircle2 } from 'lucide-react';
+import { Video, Loader2, CheckCircle2, Camera, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +15,11 @@ interface Props {
   variant?: 'default' | 'outline' | 'secondary';
   size?: 'sm' | 'default';
   className?: string;
+  /** Masque le bouton déclencheur (ouverture pilotée par le parent). */
+  hideTrigger?: boolean;
+  /** Ouverture contrôlée du choix « Filmer / Importer ». */
+  chooserOpen?: boolean;
+  onChooserOpenChange?: (open: boolean) => void;
 }
 
 // Inline threshold: ~30 MB. Larger → send link instead of inline attachment.
@@ -42,11 +47,16 @@ async function probeVideoDuration(file: File): Promise<number> {
   });
 }
 
-export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, variant = 'default', size = 'default', className }: Props) {
+export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, variant = 'default', size = 'default', className, hideTrigger = false, chooserOpen: chooserOpenProp, onChooserOpenChange }: Props) {
   const { user } = useAuth();
   const captureInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [chooserOpen, setChooserOpen] = useState(false);
+  const [chooserOpenState, setChooserOpenState] = useState(false);
+  const chooserOpen = chooserOpenProp ?? chooserOpenState;
+  const setChooserOpen = (o: boolean) => {
+    if (chooserOpenProp === undefined) setChooserOpenState(o);
+    onChooserOpenChange?.(o);
+  };
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -321,25 +331,27 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
         className="hidden"
         onChange={onFileChosen}
       />
-      <Button variant={variant} size={size} className={className} onClick={() => setChooserOpen(true)} type="button">
-        <Video className="w-4 h-4 mr-2" />
-        🎥 Ajouter une vidéo
-      </Button>
+      {!hideTrigger && (
+        <Button variant={variant} size={size} className={className} onClick={() => setChooserOpen(true)} type="button">
+          <Video className="w-4 h-4" />
+          Partager une vidéo
+        </Button>
+      )}
 
       <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Ajouter une vidéo de visite</DialogTitle>
+            <DialogTitle>Partager une vidéo de visite</DialogTitle>
             <DialogDescription>
-              Filmez maintenant avec votre appareil ou importez une vidéo déjà enregistrée (max 3 min).
+              Filmez maintenant ou importez une vidéo déjà enregistrée (max 3 min). Elle sera envoyée tout de suite aux clients de la visite.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-2 py-2">
-            <Button onClick={openCapture} className="justify-start" type="button">
-              <Video className="w-4 h-4 mr-2" /> 🎥 Filmer maintenant
+          <div className="grid gap-2 py-1">
+            <Button onClick={openCapture} className="h-12 justify-start" type="button">
+              <Camera className="w-4 h-4" /> Filmer maintenant
             </Button>
-            <Button onClick={openFile} variant="outline" className="justify-start" type="button">
-              <Video className="w-4 h-4 mr-2" /> 📁 Importer une vidéo
+            <Button onClick={openFile} variant="outline" className="h-12 justify-start" type="button">
+              <FolderOpen className="w-4 h-4" /> Importer depuis la galerie
             </Button>
           </div>
           <DialogFooter>
@@ -361,7 +373,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
 
           {pickedFile && (
             <div className="space-y-3 py-2">
-              <div className="text-sm">
+              <div className="imr-lg-glass rounded-2xl px-3.5 py-3 text-sm">
                 <div className="font-medium truncate">{pickedFile.name}</div>
                 <div className="text-muted-foreground text-xs">
                   {(pickedFile.size / (1024 * 1024)).toFixed(1)} Mo
@@ -386,7 +398,7 @@ export function VisitVideoShareButton({ visite, visitesGroup, onUploaded, varian
               Annuler
             </Button>
             <Button onClick={doUploadAndShare} disabled={!pickedFile || uploading || done}>
-              {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Video className="w-4 h-4 mr-2" />}
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
               Envoyer aux clients
             </Button>
           </DialogFooter>

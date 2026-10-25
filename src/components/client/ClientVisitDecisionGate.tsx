@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
-import { formatSwissDateTime } from '@/lib/dateUtils';
+import { formatZurichDateTime } from '@/lib/dateZurich';
+import { CompteRenduView } from '@/components/visites/VisitDetailParts';
 import { useClientParcours, loadClientParcours } from '@/hooks/useClientParcours';
 import {
   confirmerVisiteFaiteAchat, estPrixDAchat, fusionnerComptesRendusAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat, visiteNonFaiteAchat,
@@ -228,17 +229,25 @@ export function ClientVisitDecisionGate() {
 
   if (!loaded || !current || parcours === null) return null;
 
+  const legacyCr = hasCr && current.compte_rendu && typeof current.compte_rendu === 'object' ? current.compte_rendu : null;
+  const btn = 'h-auto min-h-12 w-full whitespace-normal py-2.5 text-[15px]';
+
   return (
     <Dialog open={true}>
       <DialogContent
-        className="max-w-md [&>button]:hidden"
+        className="max-h-[92dvh] max-w-md gap-0 overflow-y-auto overscroll-contain p-0 pt-3 sm:rounded-[26px] md:pt-0 [&>button]:hidden"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle>{hasCr ? 'Compte-rendu de visite disponible' : 'Avez-vous effectué la visite ?'}</DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="space-y-2 px-4 pb-2 pt-2 text-left sm:px-6 sm:pt-6">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {hasCr ? 'Compte rendu disponible' : 'Après la visite'}
+          </span>
+          <DialogTitle className="text-[22px] font-semibold leading-tight tracking-tight">
+            {hasCr ? 'Compte-rendu de visite disponible' : 'Avez-vous effectué la visite ?'}
+          </DialogTitle>
+          <DialogDescription className="text-sm">
             {hasCr
               ? (achatPourCetteVisite
                 ? 'Votre conseiller a visité le bien pour vous. Consultez le compte-rendu puis indiquez la suite.'
@@ -247,69 +256,68 @@ export function ClientVisitDecisionGate() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mb-2 space-y-1 rounded-xl border p-3 text-sm">
-          <div className="flex items-center gap-2 font-medium">
-            <MapPin className="h-4 w-4 text-primary" />
-            {current.adresse || current.offres?.adresse || 'Adresse non renseignée'}
+        <div className="space-y-3 px-4 pb-4 pt-1 sm:px-6">
+          <div className="imr-lg-glass space-y-1 rounded-2xl px-3.5 py-3 text-sm">
+            <div className="flex items-start gap-2 text-[15px] font-medium text-foreground">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span className="min-w-0 break-words">{current.adresse || current.offres?.adresse || 'Adresse non renseignée'}</span>
+            </div>
+            {current.date_visite && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <CalendarClock className="h-4 w-4 shrink-0" />
+                {formatZurichDateTime(current.date_visite)}
+              </div>
+            )}
           </div>
-          {current.date_visite && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <CalendarClock className="h-4 w-4" />
-              {formatSwissDateTime(current.date_visite)}
+
+          {hasCr && videoUrl && <video src={videoUrl} controls playsInline className="max-h-64 w-full rounded-2xl bg-black" />}
+
+          {legacyCr && (
+            <div className="max-h-48 overflow-y-auto">
+              <CompteRenduView legacy={legacyCr} bare />
             </div>
           )}
         </div>
 
-        {hasCr && videoUrl && <video src={videoUrl} controls className="mb-2 max-h-64 w-full rounded-lg bg-black" />}
-
-        {hasCr && current.compte_rendu && typeof current.compte_rendu === 'object' && (
-          <div className="mb-2 max-h-40 space-y-1 overflow-y-auto rounded-xl border p-3 text-sm">
-            {current.compte_rendu.etat_general && (<div><span className="font-medium">État général : </span>{current.compte_rendu.etat_general}</div>)}
-            {current.compte_rendu.avantages && (<div><span className="font-medium">Avantages : </span>{current.compte_rendu.avantages}</div>)}
-            {current.compte_rendu.inconvenients && (<div><span className="font-medium">Inconvénients : </span>{current.compte_rendu.inconvenients}</div>)}
-            {current.compte_rendu.type_sol && (<div><span className="font-medium">Sols : </span>{current.compte_rendu.type_sol}</div>)}
-            {current.compte_rendu.ascenseur && (<div><span className="font-medium">Ascenseur : </span>{current.compte_rendu.ascenseur}</div>)}
-            {current.compte_rendu.autres_infos && (<div><span className="font-medium">Autres : </span>{current.compte_rendu.autres_infos}</div>)}
-          </div>
-        )}
-
-        {achatPourCetteVisite ? (
-          <div className="flex flex-col gap-2">
-            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={!!saving} onClick={achatOffre}>
-              {saving === 'oui' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Banknote className="mr-2 h-4 w-4" />}
-              {hasCr ? "Je souhaite faire une offre d'achat" : "Oui, et je souhaite faire une offre d'achat"}
-            </Button>
-            <Button variant="outline" disabled={!!saving} onClick={achatReflechir}>
-              {saving === 'reflechir' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
-              {hasCr ? 'Il m’intéresse, je réfléchis encore' : 'Oui, je réfléchis encore'}
-            </Button>
-            <Button variant="outline" className="border-red-500/40 text-red-700 hover:bg-red-500/10" disabled={!!saving} onClick={achatRenoncer}>
-              {saving === 'non' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
-              {hasCr ? 'Ce bien ne me convient pas' : 'Oui, mais ce bien ne me convient pas'}
-            </Button>
-            {!hasCr && (
-              <button
-                type="button"
-                disabled={!!saving}
-                onClick={achatPasVisite}
-                className="py-1.5 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                Non, je n'ai pas pu visiter
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={!!saving} onClick={resolveOui}>
-              {saving === 'oui' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-              {hasCr ? 'Je souhaite déposer ma candidature' : 'Oui, et je souhaite déposer ma candidature'}
-            </Button>
-            <Button variant="outline" className="border-red-500/40 text-red-700 hover:bg-red-500/10" disabled={!!saving} onClick={resolveNon}>
-              {saving === 'non' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
-              {hasCr ? `Cette offre ne m'intéresse pas` : `Non, je n'ai pas visité`}
-            </Button>
-          </div>
-        )}
+        <div className="sticky bottom-0 z-10 space-y-2 border-t border-border/60 bg-background/90 px-4 pt-3 backdrop-blur-xl pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-6 sm:pb-5">
+          {achatPourCetteVisite ? (
+            <>
+              <Button className={btn} disabled={!!saving} onClick={achatOffre}>
+                {saving === 'oui' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
+                {hasCr ? "Je souhaite faire une offre d'achat" : "Oui, et je souhaite faire une offre d'achat"}
+              </Button>
+              <Button variant="outline" className={btn} disabled={!!saving} onClick={achatReflechir}>
+                {saving === 'reflechir' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+                {hasCr ? 'Il m’intéresse, je réfléchis encore' : 'Oui, je réfléchis encore'}
+              </Button>
+              <Button variant="outline" className={`${btn} text-destructive hover:text-destructive`} disabled={!!saving} onClick={achatRenoncer}>
+                {saving === 'non' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                {hasCr ? 'Ce bien ne me convient pas' : 'Oui, mais ce bien ne me convient pas'}
+              </Button>
+              {!hasCr && (
+                <button
+                  type="button"
+                  disabled={!!saving}
+                  onClick={achatPasVisite}
+                  className="block min-h-11 w-full text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Non, je n'ai pas pu visiter
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button className={btn} disabled={!!saving} onClick={resolveOui}>
+                {saving === 'oui' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {hasCr ? 'Je souhaite déposer ma candidature' : 'Oui, et je souhaite déposer ma candidature'}
+              </Button>
+              <Button variant="outline" className={`${btn} text-destructive hover:text-destructive`} disabled={!!saving} onClick={resolveNon}>
+                {saving === 'non' ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                {hasCr ? `Cette offre ne m'intéresse pas` : `Non, je n'ai pas visité`}
+              </Button>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

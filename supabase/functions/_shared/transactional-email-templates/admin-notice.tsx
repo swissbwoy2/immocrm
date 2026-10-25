@@ -1,7 +1,6 @@
-import { EmailLayout, emailStyles } from '../email-layout.tsx'
+import { EmailHeading, EmailLayout, EmailText } from '../email-layout.tsx'
 import type { TemplateEntry } from './registry.ts'
 import * as React from 'npm:react@18.3.1'
-import { Heading, Text } from 'npm:@react-email/components@0.0.22'
 
 interface AdminNoticeProps {
   prenom?: string
@@ -23,20 +22,19 @@ const toParagraphs = (body: string) =>
   body.replace(/\r\n/g, '\n').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
 
 export const AdminNoticeEmail = ({ prenom, subject = 'Communication Logisorama', body = '' }: AdminNoticeProps) => (
-  <EmailLayout preview={subject}>
-    <Heading className="email-heading" style={h1}>{subject}</Heading>
-    <Text style={text}>{prenom ? `Bonjour ${prenom},` : 'Bonjour,'}</Text>
+  <EmailLayout category="COMMUNICATION" preview={subject}>
+    <EmailHeading>{subject}</EmailHeading>
+    <EmailText>{prenom ? `Bonjour ${prenom},` : 'Bonjour,'}</EmailText>
     {toParagraphs(body).map((para, pi) => (
-      <Text key={`p-${pi}`} style={text}>
+      <EmailText key={`p-${pi}`}>
         {para.split('\n').map((line, li, arr) => (
           <React.Fragment key={`l-${pi}-${li}`}>
             {renderInline(line, `l-${pi}-${li}`)}
             {li < arr.length - 1 ? <br /> : null}
           </React.Fragment>
         ))}
-      </Text>
+      </EmailText>
     ))}
-    <Text style={text}>L'équipe Logisorama – Immo-Rama</Text>
   </EmailLayout>
 )
 
@@ -51,4 +49,3 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const { h1, text } = emailStyles

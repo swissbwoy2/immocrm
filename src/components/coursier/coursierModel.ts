@@ -8,6 +8,7 @@
  */
 import { differenceInCalendarDays, format, isToday, isTomorrow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { formatZurichDateTime, formatZurichTimeRange, zurichDayKey } from '@/lib/dateZurich';
 
 export type Ton = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted';
 
@@ -51,18 +52,18 @@ export function debutDuJour(now = Date.now()): number {
   return d.getTime();
 }
 
-/** « Aujourd'hui », « Demain », « mar. 12 nov. » */
+/** « Aujourd'hui », « Demain », « mar. 12 nov. » — jour suisse (Europe/Zurich). */
 export function jourLabel(iso: string): string {
-  const d = new Date(iso);
-  if (isToday(d)) return "Aujourd'hui";
-  if (isTomorrow(d)) return 'Demain';
-  return format(d, 'EEE d MMM', { locale: fr });
+  const key = zurichDayKey(iso);
+  if (!key) return '';
+  if (key === zurichDayKey(new Date())) return "Aujourd'hui";
+  if (key === zurichDayKey(new Date(Date.now() + 24 * 3600 * 1000))) return 'Demain';
+  return formatZurichDateTime(iso, { short: true }).split(' à ')[0];
 }
 
-/** « 14:30 » ou « 14:30 – 15:00 » */
+/** « 14:30 » ou « 14:30 – 15:00 » — heure suisse. */
 export function heureLabel(m: Pick<MissionLike, 'date_visite' | 'date_visite_fin'>): string {
-  const debut = format(new Date(m.date_visite), 'HH:mm');
-  return m.date_visite_fin ? `${debut} – ${format(new Date(m.date_visite_fin), 'HH:mm')}` : debut;
+  return formatZurichTimeRange(m.date_visite, m.date_visite_fin);
 }
 
 /** Temps restant avant la visite (ou écoulé depuis), avec un ton d'urgence. */

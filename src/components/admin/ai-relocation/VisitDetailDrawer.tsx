@@ -1,9 +1,9 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { StatusBadge } from './statusBadges';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CalendarClock, MessageSquare, Reply, StickyNote, Home } from 'lucide-react';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import { VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitSection } from '@/components/visites/VisitDetailParts';
+import { formatZurichDateTime, isDateOnly } from '@/lib/dateZurich';
 
 interface Props {
   visit: any;
@@ -11,101 +11,96 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+/** Créneau proposé (JSON libre) → libellé lisible en heure suisse, sinon JSON brut. */
+function slotLabel(slot: any): string {
+  const raw = typeof slot === 'string' ? slot : slot?.start || slot?.date || slot?.datetime || slot?.date_heure || null;
+  if (typeof raw === 'string') {
+    const label = formatZurichDateTime(raw);
+    if (label) {
+      const end = typeof slot === 'object' && slot ? slot.end || slot.fin : null;
+      const endLabel = typeof end === 'string' && !isDateOnly(end) ? formatZurichDateTime(end).split(' à ')[1] : '';
+      return endLabel ? `${label} – ${endLabel}` : label;
+    }
+  }
+  return typeof slot === 'string' ? slot : JSON.stringify(slot);
+}
+
 export function VisitDetailDrawer({ visit, open, onOpenChange }: Props) {
   if (!visit) return null;
+  const slots: any[] = Array.isArray(visit.proposed_slots) ? visit.proposed_slots : [];
+  const hasRawSlots = visit.proposed_slots && !Array.isArray(visit.proposed_slots);
+  const title = visit.property_results?.title || visit.property_results?.address || null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle>Détail de la visite</SheetTitle>
-        </SheetHeader>
-
-        <ScrollArea className="h-[calc(100vh-100px)] pr-4">
-          <div className="space-y-6 py-4">
-            <div className="flex items-center gap-2">
+      <SheetContent className="w-full overflow-y-auto overscroll-contain p-0 sm:max-w-xl">
+        <VisitHero
+          TitleAs={SheetTitle}
+          date={visit.confirmed_date}
+          kicker="Détail de la visite"
+          badges={
+            <>
               <StatusBadge type="visit" value={visit.status} />
-              {visit.approval_required && (
-                <span className="text-xs bg-warning/10 text-warning px-2 py-0.5 rounded">Validation requise</span>
-              )}
-            </div>
+              {visit.approval_required && <DashBadge tone="warning">Validation requise</DashBadge>}
+            </>
+          }
+          address={visit.property_results?.address || null}
+          title={visit.confirmed_date ? title : title || 'Date à confirmer'}
+        />
 
-            {/* Property info */}
-            {visit.property_results && (
-              <div className="text-sm">
-                <span className="text-muted-foreground">Bien:</span>
-                <span className="block font-medium">{visit.property_results.title || visit.property_results.address || '—'}</span>
-              </div>
-            )}
+        <VisitBody className="pb-[max(env(safe-area-inset-bottom),1rem)]">
+          <VisitInfoTiles
+            items={[
+              { icon: Home, label: 'Bien', value: visit.property_results?.title && visit.property_results?.address ? visit.property_results.title : undefined },
+              { icon: CalendarClock, label: 'Envoyée le', value: visit.sent_at ? formatZurichDateTime(visit.sent_at, { short: true, year: true }) : undefined },
+              { label: 'Assignée à', value: visit.assigned_to },
+            ]}
+          />
 
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {visit.confirmed_date && (
-                <div>
-                  <span className="text-muted-foreground">Date confirmée:</span>
-                  <span className="block font-medium">{format(new Date(visit.confirmed_date), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
-                </div>
-              )}
-              {visit.sent_at && (
-                <div>
-                  <span className="text-muted-foreground">Envoyée le:</span>
-                  <span className="block">{format(new Date(visit.sent_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
-                </div>
-              )}
-              {visit.assigned_to && (
-                <div>
-                  <span className="text-muted-foreground">Assignée à:</span>
-                  <span className="block">{visit.assigned_to}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Proposed slots */}
-            {visit.proposed_slots && (
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Créneaux proposés</h4>
-                <pre className="text-xs bg-muted rounded-lg p-3 whitespace-pre-wrap">
+          {(slots.length > 0 || hasRawSlots) && (
+            <VisitSection icon={CalendarClock} title="Créneaux proposés">
+              {slots.length > 0 ? (
+                <ul className="space-y-2">
+                  {slots.map((s, i) => (
+                    <li key={i} className="imr-lg-glass rounded-2xl px-3.5 py-3 text-[15px] font-medium text-foreground">{slotLabel(s)}</li>
+                  ))}
+                </ul>
+              ) : (
+                <pre className="whitespace-pre-wrap break-words rounded-2xl bg-muted/60 p-3 text-xs">
                   {JSON.stringify(visit.proposed_slots, null, 2)}
                 </pre>
-              </div>
-            )}
+              )}
+            </VisitSection>
+          )}
 
-            {/* Contact message */}
-            {visit.contact_message && (
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Message de contact</h4>
-                <p className="text-sm bg-muted rounded-lg p-3 whitespace-pre-wrap">{visit.contact_message}</p>
-              </div>
-            )}
+          {visit.contact_message && (
+            <VisitSection icon={MessageSquare} title="Message de contact">
+              <VisitNote>{visit.contact_message}</VisitNote>
+            </VisitSection>
+          )}
 
-            {/* Source response */}
-            {visit.source_response && (
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Réponse source</h4>
-                <p className="text-sm bg-muted rounded-lg p-3 whitespace-pre-wrap">{visit.source_response}</p>
-              </div>
-            )}
+          {visit.source_response && (
+            <VisitSection icon={Reply} title="Réponse source">
+              <VisitNote>{visit.source_response}</VisitNote>
+            </VisitSection>
+          )}
 
-            {/* Notes */}
-            {visit.notes && (
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Notes</h4>
-                <p className="text-sm text-muted-foreground">{visit.notes}</p>
-              </div>
-            )}
+          {visit.notes && (
+            <VisitSection icon={StickyNote} title="Notes">
+              <VisitNote>{visit.notes}</VisitNote>
+            </VisitSection>
+          )}
 
-            {/* Error message */}
-            {visit.error_message && (
-              <div className="border border-destructive/20 rounded-lg p-3 bg-destructive/5">
-                <h4 className="font-semibold text-sm mb-1 flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="w-4 h-4" />
-                  Erreur
-                </h4>
-                <p className="text-sm text-destructive">{visit.error_message}</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+          {visit.error_message && (
+            <div className="rounded-[22px] bg-destructive/10 p-4">
+              <h4 className="mb-1 flex items-center gap-2 text-[15px] font-semibold text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Erreur
+              </h4>
+              <p className="whitespace-pre-wrap break-words text-sm text-destructive">{visit.error_message}</p>
+            </div>
+          )}
+        </VisitBody>
       </SheetContent>
     </Sheet>
   );

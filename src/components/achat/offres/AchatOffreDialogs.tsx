@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { AchatOffreResume, AchatSlotOption } from './AchatOffreParts';
 
 const DIALOG_CLS = 'max-h-[92vh] overflow-y-auto sm:max-w-lg sm:rounded-2xl';
-const FOOTER_CLS = 'mt-2 flex-row gap-2 sm:space-x-0 border-t border-border/70 pt-4 sm:justify-between [&>*]:flex-1 sm:[&>*]:flex-none';
+// Barre d'actions collée en bas (safe-area), même rendu que les fiches de détail.
+const FOOTER_CLS = 'sticky bottom-0 z-10 -mx-6 -mb-6 mt-2 flex-row gap-2 border-t border-border/50 bg-background/90 px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:space-x-0 sm:justify-between sm:pb-4 [&>*]:flex-1 sm:[&>*]:flex-none';
 
 interface BaseProps {
   open: boolean;
@@ -159,14 +160,14 @@ export function AchatDelegationDialog({
                   role="radio"
                   aria-checked={slotId === 'libre'}
                   onClick={() => setSlotId('libre')}
-                  className={`w-full rounded-xl border p-3.5 text-left text-sm transition-colors duration-150 ${slotId === 'libre' ? 'border-foreground ring-1 ring-foreground' : 'border-border hover:border-foreground/50'}`}
+                  className={`min-h-[56px] w-full rounded-2xl border p-3.5 text-left text-sm transition-colors duration-150 ${slotId === 'libre' ? 'border-primary ring-1 ring-primary' : 'border-border/70 hover:border-foreground/40'}`}
                 >
                   <span className="block font-semibold text-foreground">Mon conseiller fixe la date</span>
                   <span className="block text-muted-foreground">Aucun de ces créneaux : il convient d'une date avec le vendeur.</span>
                 </button>
               </div>
             ) : (
-              <div className="flex items-start gap-3 rounded-xl bg-muted/60 p-4">
+              <div className="flex items-start gap-3 rounded-2xl bg-muted/60 p-4">
                 <User className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <p className="text-sm text-muted-foreground">
                   Aucun créneau n'est encore fixé : votre conseiller convient de la date avec le vendeur et vous tient informé.

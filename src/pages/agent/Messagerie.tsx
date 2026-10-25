@@ -1052,7 +1052,7 @@ const Messagerie = () => {
               conversation_id: selectedConv,
               sender_id: user.id,
               sender_type: 'agent',
-              content: `✅ **Visite confirmée**\n\n📍 ${offre.adresse}\n📅 ${new Date(visiteNormale.date_visite).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}\n🕐 ${new Date(visiteNormale.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}\n\nJe confirme votre présence pour cette visite. À bientôt !`,
+              content: `✅ **Visite confirmée**\n\n📍 ${offre.adresse}\n📅 ${new Date(visiteNormale.date_visite).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}\n🕐 ${new Date(visiteNormale.date_visite).toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })}\n\nJe confirme votre présence pour cette visite. À bientôt !`,
               offre_id: offreId
             });
 

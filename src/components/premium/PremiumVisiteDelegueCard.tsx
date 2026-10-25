@@ -64,7 +64,7 @@ export function PremiumVisiteDelegueCard({
   const getCountdown = () => {
     if (variant !== 'confirmed' || !visite.date_visite) return null;
     
-    const visitDate = toSwissTime(visite.date_visite);
+    const visitDate = new Date(visite.date_visite);
     const now = new Date();
     const daysLeft = differenceInDays(visitDate, now);
     const hoursLeft = differenceInHours(visitDate, now);

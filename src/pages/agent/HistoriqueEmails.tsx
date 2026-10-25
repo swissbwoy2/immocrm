@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { DETAIL_DIALOG, DetailHeader, DetailBody, DetailSection, DetailRow, DetailNotice, DetailActions, dateTimeCH } from "@/components/details/DetailPrimitives";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -351,77 +357,67 @@ export default function HistoriqueEmails() {
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Détail de l'email
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className={DETAIL_DIALOG}>
+          <DetailHeader
+            titleAs={DialogTitle}
+            descriptionAs={DialogDescription}
+            eyebrow={<span className="inline-flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Détail de l'email</span>}
+            title={selectedEmail?.subject || "Détail de l'email"}
+            subtitle={selectedEmail?.sent_at ? `Envoyé le ${dateTimeCH(selectedEmail.sent_at, { day: "numeric", month: "long", year: "numeric" })}` : undefined}
+            badge={selectedEmail ? getStatusBadge(selectedEmail.status) : undefined}
+          />
 
           {selectedEmail && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                {getStatusBadge(selectedEmail.status)}
-                <span className="text-sm text-muted-foreground">
-                  {selectedEmail.sent_at 
-                    ? format(new Date(selectedEmail.sent_at), "dd MMMM yyyy à HH:mm", { locale: fr })
-                    : "-"
+            <DetailBody>
+              <DetailSection>
+                <DetailRow
+                  label="À"
+                  value={
+                    <span className="break-all">
+                      {selectedEmail.recipient_name && `${selectedEmail.recipient_name} `}
+                      &lt;{selectedEmail.recipient_email}&gt;
+                    </span>
                   }
-                </span>
-              </div>
+                />
+                <DetailRow label="Objet" value={selectedEmail.subject} />
+                {getAttachmentCount(selectedEmail.attachments) > 0 && (
+                  <DetailRow
+                    label="Pièces jointes"
+                    value={
+                      <span className="mt-1 flex flex-wrap gap-2">
+                        {getAttachmentsArray(selectedEmail.attachments).map((att, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-normal"
+                          >
+                            <FileText className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{att.filename || `Fichier ${index + 1}`}</span>
+                          </span>
+                        ))}
+                      </span>
+                    }
+                  />
+                )}
+              </DetailSection>
 
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-medium w-16 flex-shrink-0">À :</span>
-                  <span className="text-sm break-all">
-                    {selectedEmail.recipient_name && `${selectedEmail.recipient_name} `}
-                    &lt;{selectedEmail.recipient_email}&gt;
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-medium w-16 flex-shrink-0">Objet :</span>
-                  <span className="text-sm">{selectedEmail.subject}</span>
-                </div>
-              </div>
-
-              {/* Attachments */}
-              {getAttachmentCount(selectedEmail.attachments) > 0 && (
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Pièces jointes :</span>
-                  <div className="flex flex-wrap gap-2">
-                    {getAttachmentsArray(selectedEmail.attachments).map((att, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-md text-sm"
-                      >
-                        <FileText className="h-4 w-4" />
-                        <span className="truncate max-w-[150px]">{att.filename || `Fichier ${index + 1}`}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {selectedEmail.error_message && (
+                <DetailNotice tone="danger">
+                  <strong>Erreur :</strong> {selectedEmail.error_message}
+                </DetailNotice>
               )}
 
-              {/* Body */}
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Message :</span>
-                <div 
-                  className="p-4 border rounded-md bg-muted/30 text-sm max-h-[300px] overflow-y-auto"
+              <DetailSection title="Message">
+                <div
+                  className="max-h-[50vh] overflow-y-auto break-words text-sm [&_img]:h-auto [&_img]:max-w-full [&_table]:max-w-full"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html) }}
                 />
-              </div>
-
-              {/* Error message */}
-              {selectedEmail.error_message && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <p className="text-sm text-destructive">
-                    <strong>Erreur :</strong> {selectedEmail.error_message}
-                  </p>
-                </div>
-              )}
-            </div>
+              </DetailSection>
+            </DetailBody>
           )}
+
+          <DetailActions>
+            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>Fermer</Button>
+          </DetailActions>
         </DialogContent>
       </Dialog>
     </div>

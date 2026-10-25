@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("send-calendar-invite");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR, formatTimeFR, toZurichISODate } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -10,12 +11,45 @@ const corsHeaders = {
 
 function formatDateToICS(date: Date, allDay?: boolean): string {
   if (allDay) {
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const d = String(date.getUTCDate()).padStart(2, '0');
-    return `${y}${m}${d}`;
+    // Jour calendaire en Europe/Zurich (pas en UTC : un minuit suisse = 23:00Z la veille)
+    return (toZurichISODate(date) ?? date.toISOString().slice(0, 10)).replace(/-/g, '');
   }
+  // UTC « Z » : chaque calendrier convertit dans le fuseau de l'utilisateur
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+/** Jour (YYYYMMDD) d'une valeur all-day : chaîne date seule prise telle quelle. */
+function icsDay(value: string, offsetDays = 0): string {
+  const iso = toZurichISODate(value) ?? new Date(value).toISOString().slice(0, 10);
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+/** RFC 5545 §3.1 : lignes de 75 octets max, continuation par CRLF + espace. */
+function foldICSLine(line: string): string {
+  const enc = new TextEncoder();
+  if (enc.encode(line).length <= 75) return line;
+  const out: string[] = [];
+  let cur = '';
+  for (const ch of line) {
+    if (enc.encode(cur + ch).length > (out.length ? 74 : 75)) {
+      out.push(cur);
+      cur = ch;
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out.join('\r\n ');
+}
+
+/** base64 UTF-8 (btoa seul casse sur « — », « ’ »… et encode « é » en Latin-1). */
+function utf8ToBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
 }
 
 function escapeICS(text: string): string {
@@ -46,8 +80,8 @@ function generateICS(event: {
   ];
 
   if (event.all_day) {
-    lines.push(`DTSTART;VALUE=DATE:${formatDateToICS(start, true)}`);
-    lines.push(`DTEND;VALUE=DATE:${formatDateToICS(new Date(end.getTime() + 86400000), true)}`);
+    lines.push(`DTSTART;VALUE=DATE:${icsDay(event.start_date)}`);
+    lines.push(`DTEND;VALUE=DATE:${icsDay(event.end_date || event.start_date, 1)}`);
   } else {
     lines.push(`DTSTART:${formatDateToICS(start)}`);
     lines.push(`DTEND:${formatDateToICS(end)}`);
@@ -65,7 +99,7 @@ function generateICS(event: {
   lines.push('END:VEVENT');
   lines.push('END:VCALENDAR');
 
-  return lines.join('\r\n');
+  return lines.map(foldICSLine).join('\r\n');
 }
 
 serve(async (req) => {
@@ -103,40 +137,30 @@ serve(async (req) => {
     });
 
     // Encode ICS content to base64
-    const icsBase64 = btoa(icsContent);
+    const icsBase64 = utf8ToBase64(icsContent);
 
-    const startDate = new Date(start_date);
-    const SWISS_TZ = 'Europe/Zurich';
-    const dateStr = startDate.toLocaleDateString('fr-CH', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: SWISS_TZ,
-    });
-    const endDateObj = new Date(end_date || new Date(startDate.getTime() + 3600000).toISOString());
+    const endValue = end_date || new Date(new Date(start_date).getTime() + 3600000).toISOString();
+    const dateStr = formatDateFR(start_date, { weekday: true });
     const timeStr = all_day
       ? 'Journée entière'
-      : `${startDate.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} – ${endDateObj.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: SWISS_TZ })} (Heure de Zurich)`;
+      : `${formatTimeFR(start_date)} – ${formatTimeFR(endValue)} (Heure de Zurich)`;
 
-    const htmlBody = renderCorporateEmail({ title: 'Invitation calendrier', category: "VOTRE RENDEZ-VOUS", bodyHtml: `<h2 style="font-size:22px;line-height:28px;color:#193d2c;margin:0 0 18px;">${title}</h2><div style="background: #f3f4ed; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0; color: #666; width: 100px;">Date</td>
-              <td style="padding: 8px 0; font-weight: 600;">${dateStr}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666;">Heure</td>
-              <td style="padding: 8px 0; font-weight: 600;">${timeStr}</td>
-            </tr>
-            ${location ? `<tr><td style="padding: 8px 0; color: #666;">Lieu</td><td style="padding: 8px 0; font-weight: 600;">${location}</td></tr>` : ''}
-            ${description ? `<tr><td style="padding: 8px 0; color: #666;">Détails</td><td style="padding: 8px 0;">${description}</td></tr>` : ''}
-          </table>
-        </div>
-        <p style="color: #666; font-size: 14px; text-align: center;">
-          Ouvrez le fichier joint pour ajouter cet événement à votre calendrier.
-        </p>
-      ` });
+    const htmlBody = renderCorporateEmail({
+      title: 'Invitation calendrier',
+      preview: `${title} — ${dateStr}`,
+      category: "VOTRE RENDEZ-VOUS",
+      bodyHtml:
+        `<p style="margin:0 0 14px;font-size:18px;line-height:26px;font-weight:600;color:#15261d;">${escapeEmailHtml(title)}</p>` +
+        emailDetails([
+          ['Date', dateStr],
+          ['Heure', timeStr],
+          ...(location ? [['Lieu', location] as [string, unknown]] : []),
+          ...(description
+            ? [{ label: 'Détails', html: escapeEmailHtml(description).replace(/\r?\n/g, '<br>') }]
+            : []),
+        ]) +
+        emailParagraph('Ouvrez le fichier joint pour ajouter cet événement à votre calendrier.', true),
+    });
 
     const res = await sendTrackedEmail('https://api.resend.com/emails', {
       method: 'POST',

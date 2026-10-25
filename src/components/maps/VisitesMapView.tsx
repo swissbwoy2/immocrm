@@ -6,6 +6,7 @@ import { MapPin, Clock, Navigation, Loader2, AlertTriangle, Route, RotateCcw, Ex
 import { AddressLink } from '@/components/AddressLink';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from 'date-fns/locale';
 
 interface StatusConfig {
@@ -139,7 +140,7 @@ export function VisitesMapView({
             <div style="max-width:240px;font-family:system-ui">
               <p style="font-weight:600;margin:0 0 4px">${mission.adresse}</p>
               <p style="color:#666;font-size:13px;margin:0 0 4px">${config.label}</p>
-              <p style="color:#666;font-size:13px;margin:0 0 8px">${format(new Date(mission.date_visite), "EEE dd MMM", { locale: fr })} ${mission.date_visite_fin ? `de ${format(new Date(mission.date_visite), "HH:mm")} à ${format(new Date(mission.date_visite_fin), "HH:mm")}` : `à ${format(new Date(mission.date_visite), "HH:mm")}`}</p>
+              <p style="color:#666;font-size:13px;margin:0 0 8px">${formatInTimeZone(new Date(mission.date_visite), 'Europe/Zurich', "EEE dd MMM", { locale: fr })} ${mission.date_visite_fin ? `de ${formatInTimeZone(new Date(mission.date_visite), 'Europe/Zurich', "HH:mm")} à ${formatInTimeZone(new Date(mission.date_visite_fin), 'Europe/Zurich', "HH:mm")}` : `à ${formatInTimeZone(new Date(mission.date_visite), 'Europe/Zurich', "HH:mm")}`}</p>
               <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mission.adresse)}" 
                  target="_blank" rel="noopener" 
                  style="color:#2563eb;font-size:13px;text-decoration:none">
@@ -347,10 +348,10 @@ export function VisitesMapView({
 
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {format(new Date(m.date_visite), "EEE dd MMM", { locale: fr })}{' '}
+                      {formatInTimeZone(new Date(m.date_visite), 'Europe/Zurich', "EEE dd MMM", { locale: fr })}{' '}
                       {m.date_visite_fin
-                        ? `de ${format(new Date(m.date_visite), "HH:mm")} à ${format(new Date(m.date_visite_fin), "HH:mm")}`
-                        : `à ${format(new Date(m.date_visite), "HH:mm")}`
+                        ? `de ${formatInTimeZone(new Date(m.date_visite), 'Europe/Zurich', "HH:mm")} à ${formatInTimeZone(new Date(m.date_visite_fin), 'Europe/Zurich', "HH:mm")}`
+                        : `à ${formatInTimeZone(new Date(m.date_visite), 'Europe/Zurich', "HH:mm")}`
                       }
                     </div>
                     {!optimizedRoute && (

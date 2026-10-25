@@ -1,9 +1,8 @@
-import { EmailLayout, emailStyles } from '../email-layout.tsx'
+import { EmailButton, EmailHeading, EmailLayout, EmailText, emailStyles } from '../email-layout.tsx'
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
 
-import { Button, Heading, Link, Text } from 'npm:@react-email/components@0.0.22'
 
 interface InviteEmailProps {
   siteName: string
@@ -17,26 +16,23 @@ export const InviteEmail = ({
   confirmationUrl,
 }: InviteEmailProps) => (
   <EmailLayout lang="en" category="ACCOUNT & SECURITY" preview={`You've been invited to join ${siteName}`}>
-<Heading className="email-heading" style={h1}>You've been invited</Heading>
-        <Text style={text}>
+<EmailHeading>You've been invited</EmailHeading>
+        <EmailText>
           You've been invited to join{' '}
-          <Link href={siteUrl} style={link}>
+          <a href={siteUrl} style={emailStyles.link}>
             <strong>{siteName}</strong>
-          </Link>
+          </a>
           . Click the button below to accept the invitation and create your
           account.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
+        </EmailText>
+        <EmailButton href={confirmationUrl}>Accept Invitation</EmailButton>
+        <EmailText muted>
           If you weren't expecting this invitation, you can safely ignore this
           email.
-        </Text>
+        </EmailText>
 
 </EmailLayout>
 )
 
 export default InviteEmail
 
-const { button, footer, h1, link, text } = emailStyles
