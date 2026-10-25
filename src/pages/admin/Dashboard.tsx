@@ -25,9 +25,10 @@ import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
 import { ChargesAgenceDialog } from '@/components/admin/dashboard/ChargesAgenceDialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   ACTIVATION_PAYEE, PERIODS, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
-  type ChargeRow, type FinanceInput, type PeriodKey,
+  type ChargeRow, type DetailKey, type FinanceInput, type PeriodKey,
 } from '@/lib/adminFinance';
 
 type Row = Record<string, any>;
@@ -68,6 +69,7 @@ export default function AdminDashboard() {
   const [period, setPeriod] = useState<PeriodKey>('mois');
   const [chargesOpen, setChargesOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [detail, setDetail] = useState<{ key: DetailKey; title: string; path?: string } | null>(null);
 
   const [prenom, setPrenom] = useState<string>('');
   const [agents, setAgents] = useState<Row[]>([]);
@@ -121,15 +123,15 @@ export default function AdminDashboard() {
         supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id').limit(30000),
         supabase.from('candidatures').select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at').limit(20000),
         supabase.from('mandates').select('id, acompte_montant, created_at').limit(20000),
-        supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom').limit(20000),
+        supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom, email').limit(20000),
         supabase
           .from('registre_commissions')
-          .select('id, date_conclusion, honoraire_total, commission_agent, commission_agence, montant_acompte, statut_paiement, type_affaire, agent_id, agent_prenom, agent_nom')
+          .select('id, date_conclusion, honoraire_total, commission_agent, commission_agence, montant_acompte, statut_paiement, type_affaire, agent_id, agent_prenom, agent_nom, client_prenom, client_nom, client_email')
           .limit(20000),
         supabase.from('purchase_projects').select('id, date_paiement_acompte, montant_acompte').not('date_paiement_acompte', 'is', null).limit(5000),
         supabase
           .from('fiches_salaire')
-          .select('annee, mois, statut, mode_remuneration, cout_total_employeur, salaire_net, montant_commissions, employes(mode_remuneration)')
+          .select('annee, mois, statut, mode_remuneration, cout_total_employeur, salaire_net, montant_commissions, employes(mode_remuneration, prenom, nom)')
           .limit(20000),
         supabase.from('user_credits').select('user_id, coins_mandat').limit(20000),
       ]);
@@ -174,7 +176,7 @@ export default function AdminDashboard() {
       setMandates(safe(mandRes as any, [] as Row[]));
       setRegistre(safe(regRes as any, [] as Row[]));
       setAchats(safe(achatRes as any, [] as Row[]));
-      setFiches(safe(fichesRes as any, [] as Row[]).map((f) => ({ ...f, mode_remuneration: f.mode_remuneration || f.employes?.mode_remuneration || null })));
+      setFiches(safe(fichesRes as any, [] as Row[]).map((f) => ({ ...f, mode_remuneration: f.mode_remuneration || f.employes?.mode_remuneration || null, label: [f.employes?.prenom, f.employes?.nom].filter(Boolean).join(' ') || null })));
       setUsersAvecCredits(
         (creditsRes as any).error
           ? null
@@ -205,7 +207,7 @@ export default function AdminDashboard() {
     acomptesAchat: achats as any,
     refunds: clients
       .filter((c) => c.refund_status === 'processed' || c.refund_status === 'pending')
-      .map((c) => ({ refund_status: c.refund_status, refund_processed_at: c.refund_processed_at, refund_requested_at: c.refund_requested_at, montant: c.montantActivation })),
+      .map((c) => ({ refund_status: c.refund_status, refund_processed_at: c.refund_processed_at, refund_requested_at: c.refund_requested_at, montant: c.montantActivation, label: `${c.prenom || ''} ${c.nom || ''}`.trim() || null })),
     fiches: fiches as any,
     charges,
   }), [registre, demandes, achats, clients, fiches, charges]);
@@ -436,9 +438,9 @@ export default function AdminDashboard() {
             <div className={`${DASH_CARD} p-4 md:p-5`}>
               <h3 className="mb-1 text-base font-semibold text-foreground">Recettes</h3>
               <div className="divide-y divide-border/60">
-                <MoneyLine label="Commissions" sub={`${fin.affairesLocation} location · ${fin.affairesAchat} achat/vente${fin.commissionsAEncaisser > 0 ? ` · ${formatCHF(fin.commissionsAEncaisser)} à encaisser` : ''}`} value={fin.commissions} tone="plus" onClick={() => navigate('/admin/registre-commissions')} />
-                <MoneyLine label="Activations de mandat" sub={`${fin.activationsCount} encaissée${fin.activationsCount > 1 ? 's' : ''}`} value={fin.activations} tone="plus" onClick={() => navigate('/admin/demandes-activation')} />
-                <MoneyLine label="Acomptes achat" value={fin.acomptesAchat} tone="plus" />
+                <MoneyLine label="Commissions" sub={`${fin.affairesLocation} location · ${fin.affairesAchat} achat/vente${fin.commissionsAEncaisser > 0 ? ` · ${formatCHF(fin.commissionsAEncaisser)} à encaisser` : ''}`} value={fin.commissions} tone="plus" onClick={() => setDetail({ key: 'commissions', title: 'Commissions', path: '/admin/registre-commissions' })} />
+                <MoneyLine label="Activations de mandat" sub={`${fin.activationsCount} encaissée${fin.activationsCount > 1 ? 's' : ''}`} value={fin.activations} tone="plus" onClick={() => setDetail({ key: 'activations', title: 'Activations de mandat encaissées', path: '/admin/demandes-activation' })} />
+                <MoneyLine label="Acomptes achat" value={fin.acomptesAchat} tone="plus" onClick={() => setDetail({ key: 'acomptesAchat', title: 'Acomptes achat encaissés' })} />
               </div>
             </div>
 
@@ -446,9 +448,9 @@ export default function AdminDashboard() {
             <div className={`${DASH_CARD} p-4 md:p-5`}>
               <h3 className="mb-1 text-base font-semibold text-foreground">Dépenses</h3>
               <div className="divide-y divide-border/60">
-                <MoneyLine label="Remboursements versés" sub={`${fin.remboursementsCount} client${fin.remboursementsCount > 1 ? 's' : ''}`} value={fin.remboursements} tone="minus" onClick={() => navigate('/admin/mandats')} />
-                <MoneyLine label="Salaires (coût employeur)" sub="Fiches de salaire validées ou payées" value={fin.salaires} tone="minus" onClick={() => navigate('/admin/salaires')} />
-                <MoneyLine label="Commissions agents" sub="Hors commissions déjà sur fiche de salaire" value={fin.commissionsAgents} tone="minus" onClick={() => navigate('/admin/salaires-agents')} />
+                <MoneyLine label="Remboursements versés" sub={`${fin.remboursementsCount} client${fin.remboursementsCount > 1 ? 's' : ''}`} value={fin.remboursements} tone="minus" onClick={() => setDetail({ key: 'remboursements', title: 'Remboursements versés', path: '/admin/mandats' })} />
+                <MoneyLine label="Salaires (coût employeur)" sub="Fiches de salaire validées ou payées" value={fin.salaires} tone="minus" onClick={() => setDetail({ key: 'salaires', title: 'Salaires (coût employeur)', path: '/admin/salaires' })} />
+                <MoneyLine label="Commissions agents" sub="Hors commissions déjà sur fiche de salaire" value={fin.commissionsAgents} tone="minus" onClick={() => setDetail({ key: 'commissionsAgents', title: 'Commissions agents', path: '/admin/salaires-agents' })} />
                 <MoneyLine label="Charges de l'agence" sub={chargesAvailable ? (chargesCat[0] ? `dont ${chargeCategoryLabel(chargesCat[0][0]).toLowerCase()} ${formatCHF(chargesCat[0][1])}` : 'Aucune charge saisie') : 'À activer'} value={fin.charges} tone="minus" onClick={() => setChargesOpen(true)} />
               </div>
             </div>
@@ -479,7 +481,7 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Le chiffre sous chaque mois est le bénéfice réel (recettes − dépenses).</p>
+            <p className="mt-3 text-xs text-muted-foreground">Le chiffre sous chaque mois est le bénéfice réel (recettes − dépenses). Touchez une ligne des recettes ou des dépenses pour voir le détail.</p>
           </div>
         </DashSection>
 
@@ -624,6 +626,51 @@ export default function AdminDashboard() {
           <TodoCard icon={AlertTriangle} tone="muted" title="Charges de l'agence à activer" description="Le bénéfice ne compte pas encore le loyer, la publicité ni les autres frais : collez le fichier SQL « charges_agence » dans l'éditeur SQL de Lovable Cloud." />
         )}
       </PremiumPageShellV2>
+
+      <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
+        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+          {detail && (() => {
+            const rows = fin.details[detail.key];
+            const total = rows.reduce((s, r) => s + r.montant, 0);
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{detail.title}</DialogTitle>
+                  <DialogDescription>
+                    {p.label} · {rows.length} ligne{rows.length > 1 ? 's' : ''} · {formatCHF(total)}
+                  </DialogDescription>
+                </DialogHeader>
+                {rows.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Rien sur cette période.</p>
+                ) : (
+                  <div className="divide-y divide-border/60">
+                    {rows.map((r, i) => (
+                      <div key={i} className="flex items-center gap-3 py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-foreground">{r.label}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {r.date ? new Date(r.date).toLocaleDateString('fr-CH') : '—'}{r.note ? ` · ${r.note}` : ''}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatCHF(r.montant)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {detail.key === 'commissionsAgents' && fin.commissionsSurFiches > 0 && (
+                  <p className="text-xs text-muted-foreground">Moins {formatCHF(fin.commissionsSurFiches)} déjà payés sur les fiches de salaire de la période.</p>
+                )}
+                <p className="text-xs text-muted-foreground">Les comptes de test (adresse @immo-rama.ch ou nom « Test ») ne sont jamais comptés.</p>
+                {detail.path && (
+                  <Button variant="outline" className="w-full rounded-lg" onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
+                    Ouvrir la page
+                  </Button>
+                )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <ChargesAgenceDialog open={chargesOpen} onOpenChange={setChargesOpen} charges={charges} available={chargesAvailable} onChanged={loadCharges} />
     </PullToRefresh>
