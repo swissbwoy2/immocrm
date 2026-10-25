@@ -21,9 +21,12 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
   const { immersive } = useMobileImmersive();
   const navigate = useNavigate();
   const isClient = userRole === 'client';
+  const isStaff = userRole === 'admin' || userRole === 'agent';
   const parcours = useClientParcours(isClient);
   const glassNav = isClientGlassNav(userRole, parcours);
-  const unread = useClientUnread(isClient ? user?.id ?? null : null);
+  // Compteurs non lus (table notifications de l'utilisateur) : client, et admin/agent pour l'icône Messagerie.
+  const unread = useClientUnread(isClient || isStaff ? user?.id ?? null : null);
+  const messagerieHref = isClient ? '/client/messagerie' : isStaff ? `/${userRole}/messagerie` : null;
 
   // Coquille native uniquement : verrouille le scroll du document (html/body)
   // pour que seule la zone scrollable interne bouge. N'impacte pas le web public.
@@ -59,10 +62,10 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
           >
             <img src={logoLogisorama} alt="Logisorama" className="h-6 w-auto object-contain" />
           </button>
-          {isClient && (
+          {messagerieHref && (
             <button
               type="button"
-              onClick={() => navigate('/client/messagerie')}
+              onClick={() => navigate(messagerieHref)}
               className="relative flex h-10 w-10 items-center justify-center rounded-full transition-transform active:scale-95"
               aria-label={unread.messages > 0 ? `Messagerie (${unread.messages} non lus)` : 'Messagerie'}
             >

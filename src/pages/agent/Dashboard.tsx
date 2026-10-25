@@ -757,7 +757,7 @@ export default function AgentDashboard() {
 
         {/* (e) Analyses : repliables sur mobile */}
         <FoldSection id="analyses" title="Analyses" subtitle="Statistiques détaillées, badges, dernières offres, documents de mes clients">
-          <div className={`${DASH_CARD} overflow-hidden`}>
+          <div>
             <AgentStatsSection
               offres={offres}
               transactions={transactions}
