@@ -1810,7 +1810,7 @@ export default function ClientDetail() {
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
-                      <div className="p-2 rounded-xl bg-red-500/20">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
                         <Trash2 className="w-5 h-5 text-red-500" />
                       </div>
                       Confirmer la suppression
@@ -1820,8 +1820,8 @@ export default function ClientDetail() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="bg-card/50 backdrop-blur-sm">Annuler</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                    <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full">
                       Supprimer définitivement
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -1840,7 +1840,7 @@ export default function ClientDetail() {
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-primary/10">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Edit className="w-5 h-5 text-primary" />
                       </div>
                       Modifier les informations du client
@@ -1860,7 +1860,7 @@ export default function ClientDetail() {
                             value={editFormData.prenom || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
                             placeholder="Prénom"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1869,7 +1869,7 @@ export default function ClientDetail() {
                             value={editFormData.nom || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
                             placeholder="Nom"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -1881,7 +1881,7 @@ export default function ClientDetail() {
                             value={editFormData.email || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                             placeholder="email@exemple.com"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1890,7 +1890,7 @@ export default function ClientDetail() {
                             value={editFormData.telephone || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
                             placeholder="+41 XX XXX XX XX"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -1901,7 +1901,7 @@ export default function ClientDetail() {
                             value={editFormData.nationalite || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
                             placeholder="Suisse"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1910,7 +1910,7 @@ export default function ClientDetail() {
                             value={editFormData.type_permis || ''} 
                             onValueChange={(value) => setEditFormData({ ...editFormData, type_permis: value })}
                           >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                            <SelectTrigger className="bg-card border-border/70">
                               <SelectValue placeholder="Sélectionner" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1929,7 +1929,7 @@ export default function ClientDetail() {
                             type="date"
                             value={editFormData.date_naissance || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, date_naissance: e.target.value })}
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -1940,7 +1940,7 @@ export default function ClientDetail() {
                             value={editFormData.situation_familiale || ''} 
                             onValueChange={(value) => setEditFormData({ ...editFormData, situation_familiale: value })}
                           >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                            <SelectTrigger className="bg-card border-border/70">
                               <SelectValue placeholder="Sélectionner" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1959,7 +1959,7 @@ export default function ClientDetail() {
                             value={editFormData.nombre_occupants || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) })}
                             placeholder="1"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -1969,12 +1969,12 @@ export default function ClientDetail() {
                           value={editFormData.adresse || ''}
                           onChange={(e) => setEditFormData({ ...editFormData, adresse: e.target.value })}
                           placeholder="Rue, n°, NPA, ville"
-                          className="bg-card/50 backdrop-blur-sm border-border/50"
+                          className="bg-card border-border/70"
                         />
                       </div>
                     </div>
 
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                    <div className="h-px bg-border/70" />
 
                     {/* Situation professionnelle */}
                     <div className="space-y-4">
@@ -1989,7 +1989,7 @@ export default function ClientDetail() {
                             value={editFormData.profession || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, profession: e.target.value })}
                             placeholder="Ingénieur"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -1998,7 +1998,7 @@ export default function ClientDetail() {
                             value={editFormData.employeur || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, employeur: e.target.value })}
                             placeholder="Nom de l'entreprise"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -2009,7 +2009,7 @@ export default function ClientDetail() {
                             value={editFormData.type_contrat || ''} 
                             onValueChange={(value) => setEditFormData({ ...editFormData, type_contrat: value })}
                           >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                            <SelectTrigger className="bg-card border-border/70">
                               <SelectValue placeholder="Sélectionner" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2026,7 +2026,7 @@ export default function ClientDetail() {
                             type="date"
                             value={editFormData.date_engagement || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, date_engagement: e.target.value })}
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -2035,13 +2035,13 @@ export default function ClientDetail() {
                             value={editFormData.secteur_activite || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, secteur_activite: e.target.value })}
                             placeholder="Technologie"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
                     </div>
 
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                    <div className="h-px bg-border/70" />
 
                     {/* Situation financière */}
                     <div className="space-y-4">
@@ -2057,7 +2057,7 @@ export default function ClientDetail() {
                             value={editFormData.revenus_mensuels || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, revenus_mensuels: parseFloat(e.target.value) })}
                             placeholder="5000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -2067,7 +2067,7 @@ export default function ClientDetail() {
                             value={editFormData.charges_mensuelles || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, charges_mensuelles: parseFloat(e.target.value) })}
                             placeholder="1000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -2077,7 +2077,7 @@ export default function ClientDetail() {
                             value={editFormData.apport_personnel || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, apport_personnel: parseFloat(e.target.value) })}
                             placeholder="10000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -2088,7 +2088,7 @@ export default function ClientDetail() {
                             value={editFormData.source_revenus || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, source_revenus: e.target.value })}
                             placeholder="Salaire"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -2097,7 +2097,7 @@ export default function ClientDetail() {
                             value={editFormData.garanties || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, garanties: e.target.value })}
                             placeholder="Cautionnement"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                       </div>
@@ -2129,7 +2129,7 @@ export default function ClientDetail() {
                       </div>
                     </div>
 
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                    <div className="h-px bg-border/70" />
 
                     {/* Critères de recherche */}
                     <div className="space-y-4">
@@ -2145,7 +2145,7 @@ export default function ClientDetail() {
                             value={editFormData.budget_max || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
                             placeholder="2000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -2156,7 +2156,7 @@ export default function ClientDetail() {
                             value={editFormData.pieces || ''}
                             onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
                             placeholder="3.5"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                            className="bg-card border-border/70"
                           />
                         </div>
                         <div className="space-y-2">
@@ -2165,7 +2165,7 @@ export default function ClientDetail() {
                             value={editFormData.type_bien || ''} 
                             onValueChange={(value) => setEditFormData({ ...editFormData, type_bien: value })}
                           >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                            <SelectTrigger className="bg-card border-border/70">
                               <SelectValue placeholder="Sélectionner" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2193,7 +2193,7 @@ export default function ClientDetail() {
                           onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
                           rows={2}
                           placeholder="Balcon, parking, ascenseur..."
-                          className="bg-card/50 backdrop-blur-sm border-border/50"
+                          className="bg-card border-border/70"
                         />
                       </div>
                       <div className="flex items-center space-x-4">
@@ -2224,7 +2224,7 @@ export default function ClientDetail() {
                       </div>
                     </div>
 
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                    <div className="h-px bg-border/70" />
 
                     {/* Notes agent */}
                     <div className="space-y-4">
@@ -2238,17 +2238,17 @@ export default function ClientDetail() {
                           onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
                           rows={4}
                           placeholder="Notes internes..."
-                          className="bg-card/50 backdrop-blur-sm border-border/50"
+                          className="bg-card border-border/70"
                         />
                       </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-                      <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
+                      <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="rounded-full">
                         Annuler
                       </Button>
-                      <Button onClick={handleEditSave} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
+                      <Button onClick={handleEditSave} className="rounded-full">
                         Enregistrer les modifications
                       </Button>
                     </div>
@@ -2334,7 +2334,7 @@ export default function ClientDetail() {
           <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-start gap-2 text-base sm:text-lg">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><MapPin className="h-4 w-4" /></span>
                 <span className="min-w-0 break-words">
                   {selectedVisite?.adresse || selectedVisite?.offres?.adresse || 'Visite'}
                 </span>
@@ -2489,7 +2489,7 @@ export default function ClientDetail() {
           <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-start gap-2 text-base sm:text-lg">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><MapPin className="h-4 w-4" /></span>
                 <span className="min-w-0 break-words">
                   {selectedTodayOffre?.adresse || selectedTodayOffre?.titre || 'Offre'}
                 </span>
@@ -3632,7 +3632,7 @@ export default function ClientDetail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Upload className="w-5 h-5 text-primary" />
               </div>
               Ajouter un document
@@ -3642,7 +3642,7 @@ export default function ClientDetail() {
             <div className="space-y-2">
               <Label>Type de document</Label>
               <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                <SelectTrigger className="bg-card border-border/70">
                   <SelectValue placeholder="Sélectionner le type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3699,7 +3699,7 @@ export default function ClientDetail() {
                 ref={fileInputRef}
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 accept=".pdf,.jpg,.jpeg,.png"
-                className="bg-card/50 backdrop-blur-sm border-border/50"
+                className="bg-card border-border/70"
               />
               <p className="text-xs text-muted-foreground">Formats acceptés: PDF, JPG, PNG (max 1GB)</p>
             </div>
@@ -3712,13 +3712,13 @@ export default function ClientDetail() {
             )}
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} className="rounded-full">
               Annuler
             </Button>
             <Button 
               onClick={handleUploadDocument} 
               disabled={!selectedFile || isUploading}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              className="rounded-full"
             >
               {isUploading ? 'Upload en cours...' : 'Ajouter'}
             </Button>
@@ -3736,7 +3736,7 @@ export default function ClientDetail() {
         <DialogContent className="max-w-5xl max-h-[95vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Eye className="w-5 h-5 text-primary" />
               </div>
               {previewDocument?.nom || 'Aperçu du document'}
@@ -3752,7 +3752,7 @@ export default function ClientDetail() {
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
                   <Button onClick={() => handleDownloadDocument(previewDocument)} className="group">
-                    <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                    <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
                   </Button>
                 </div>
@@ -3779,7 +3779,7 @@ export default function ClientDetail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Pencil className="w-5 h-5 text-primary" />
               </div>
               Renommer / reclasser le document
@@ -3792,13 +3792,13 @@ export default function ClientDetail() {
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
-                className="bg-card/50 backdrop-blur-sm border-border/50"
+                className="bg-card border-border/70"
               />
             </div>
             <div className="space-y-2">
               <Label>Catégorie / type de document</Label>
               <Select value={newDocumentType} onValueChange={setNewDocumentType}>
-                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                <SelectTrigger className="bg-card border-border/70">
                   <SelectValue placeholder="Choisir une catégorie" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3818,13 +3818,13 @@ export default function ClientDetail() {
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="rounded-full">
               Annuler
             </Button>
             <Button 
               onClick={handleRenameDocument} 
               disabled={!newDocumentName.trim()}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              className="rounded-full"
             >
               Enregistrer
             </Button>

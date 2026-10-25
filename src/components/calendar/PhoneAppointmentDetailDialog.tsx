@@ -156,11 +156,11 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${isBureau ? 'bg-emerald-500/10' : 'bg-indigo-500/10'}`}>
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isBureau ? 'bg-emerald-500/10' : 'bg-indigo-500/10'}`}>
               {isBureau ? (
-                <Building2 className="h-5 w-5 text-emerald-600" />
+                <Building2 className="h-4 w-4 text-emerald-600" />
               ) : (
-                <Phone className="h-5 w-5 text-indigo-500" />
+                <Phone className="h-4 w-4 text-indigo-500" />
               )}
             </div>
             <div className="flex-1">
@@ -190,10 +190,10 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
 
         <div className="space-y-4">
           {/* Date & Time */}
-          <div className="p-4 rounded-lg bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent border border-indigo-500/20">
+          <div className="p-4 rounded-xl bg-muted/40 border border-border/70">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-indigo-500" />
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-primary" />
               </div>
               <div>
                 <p className="font-semibold capitalize">
@@ -206,7 +206,7 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
           </div>
 
           {isBureau && (
-            <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-start gap-3">
+            <div className="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 flex items-start gap-3">
               <MapPin className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
               <div className="text-sm">
                 <div className="font-medium">Lieu du rendez-vous</div>
@@ -226,9 +226,9 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
               {phone && (
                 <a
                   href={`tel:${phone}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-border/70 bg-card hover:bg-muted/50 transition-colors group"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                     <Phone className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -243,9 +243,9 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
               {email && (
                 <a
                   href={`mailto:${email}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors group"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-border/70 bg-card hover:bg-muted/50 transition-colors group"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                     <Mail className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -311,7 +311,7 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
           {appt.lead_id && (
             <Button
               variant="outline"
-              className="w-full gap-2"
+              className="w-full gap-2 rounded-full"
               onClick={() => {
                 onClose();
                 navigate(`/admin/leads?id=${appt.lead_id}`);

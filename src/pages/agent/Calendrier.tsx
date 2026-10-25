@@ -1605,7 +1605,7 @@ export default function AgentCalendrier() {
               {selectedVisite.notes && (
                 <div className="space-y-2">
                   <h5 className="font-medium">💬 Notes</h5>
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
                     <p className="text-sm">{selectedVisite.notes}</p>
                   </div>
                 </div>
