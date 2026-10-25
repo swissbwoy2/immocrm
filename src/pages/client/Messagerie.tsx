@@ -65,7 +65,8 @@ const Messagerie = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   // Parcours achat : les actions sur un bien se font dans « Biens proposés » (jamais de postulation locative).
-  const isAchat = useClientParcours() === 'achat';
+  const parcoursClient = useClientParcours();
+  const isAchat = parcoursClient === 'achat';
   const { markTypeAsRead } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -1388,8 +1389,10 @@ const Messagerie = () => {
   // Contextual action buttons based on offer/candidature status
   const OffreActions = ({ offre, visite, onAction }: { offre: any, visite?: any, onAction: (action: string, data?: any) => void }) => {
     if (!offre) return null;
+    // Parcours pas encore connu : aucune action, pour ne jamais proposer « Postuler » à un acheteur.
+    if (parcoursClient === null) return null;
 
-    if (isAchat) {
+    if (isAchat || isBuyer) {
       return (
         <div className="mt-3">
           <Button size="sm" className="w-full" onClick={() => navigate(`/client/biens-proposes?offre=${offre.id}`)}>

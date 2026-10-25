@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
@@ -39,8 +40,23 @@ export default function FinancementAchat() {
     return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  // Pas de projet d'achat : retour au tableau de bord client.
-  if (!project) return <Navigate to="/client" replace />;
+  // Acheteur sans projet d'achat activé : on explique au lieu de renvoyer à l'accueil (onglet jamais « mort »).
+  if (!project) {
+    return (
+      <div className="relative flex-1 overflow-auto">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">Mon financement</h1>
+          <div className={`${DASH_CARD} mt-5 p-6 text-center`}>
+            <p className="font-semibold text-foreground">Votre projet d'achat n'est pas encore activé</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Dès l'activation de votre mandat d'achat, vous retrouverez ici votre capacité d'achat, vos fonds propres et vos co-acquéreurs.
+            </p>
+            <Button className="mt-4 rounded-full" onClick={() => navigate('/client')}>Retour à l'accueil</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 overflow-auto">

@@ -246,7 +246,9 @@ export function PremiumClientDayEvents({
                     isVisiteDatePassed &&
                     data.offres?.statut !== 'interesse' && 
                     data.offres?.statut !== 'refusee' && 
-                    data.offres?.statut !== 'candidature_deposee';
+                    data.offres?.statut !== 'candidature_deposee' &&
+                    data.offres?.statut !== 'offre_envisagee' &&
+                    data.offres?.statut !== 'acceptee';
 
                   return (
                     <div

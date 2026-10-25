@@ -29,13 +29,16 @@ export function AchatVisiteDialog({
 }) {
   const [slotId, setSlotId] = useState<string | null>(null);
   const [dispo, setDispo] = useState('');
+  const [modeDispo, setModeDispo] = useState(false);
 
   useEffect(() => {
-    if (open) { setSlotId(null); setDispo(''); }
+    if (open) { setSlotId(null); setDispo(''); setModeDispo(false); }
   }, [open]);
 
-  const slot = creneaux.find((c) => c.id === slotId) || null;
-  const peutEnvoyer = creneaux.length > 0 ? !!slot : dispo.trim().length >= 3;
+  // Sans créneau proposé, ou si aucun ne convient : le client donne ses disponibilités.
+  const avecCreneaux = creneaux.length > 0 && !modeDispo;
+  const slot = avecCreneaux ? creneaux.find((c) => c.id === slotId) || null : null;
+  const peutEnvoyer = avecCreneaux ? !!slot : dispo.trim().length >= 3;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +46,7 @@ export function AchatVisiteDialog({
         <DialogHeader className="text-left">
           <DialogTitle className="text-xl font-semibold">Je visite avec mon conseiller</DialogTitle>
           <DialogDescription>
-            {creneaux.length > 0
+            {avecCreneaux
               ? 'Choisissez un créneau proposé par votre conseiller.'
               : 'Indiquez vos disponibilités : votre conseiller fixe la visite avec le vendeur.'}
           </DialogDescription>
@@ -53,7 +56,7 @@ export function AchatVisiteDialog({
           <div className="space-y-5">
             <AchatOffreResume offre={offre} />
 
-            {creneaux.length > 0 ? (
+            {avecCreneaux ? (
               <div className="space-y-2" role="radiogroup" aria-label="Créneaux de visite">
                 {creneaux.map((c) => (
                   <AchatSlotOption
@@ -66,9 +69,9 @@ export function AchatVisiteDialog({
                 <button
                   type="button"
                   className="w-full py-2 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                  onClick={onDeleguer}
+                  onClick={() => setModeDispo(true)}
                 >
-                  Aucun créneau ne me convient : je confie la visite à mon conseiller
+                  Aucun créneau ne me convient : je donne mes disponibilités
                 </button>
               </div>
             ) : (
@@ -103,7 +106,7 @@ export function AchatVisiteDialog({
             onClick={() => onConfirm(slot ? { creneau: { id: slot.id, date_visite: slot.date_visite } } : { disponibilites: dispo })}
           >
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {creneaux.length > 0 ? 'Confirmer la visite' : 'Envoyer ma demande'}
+            {avecCreneaux ? 'Confirmer la visite' : 'Envoyer ma demande'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -116,8 +119,9 @@ export function AchatDelegationDialog({
   open, onOpenChange, offre, busy, creneaux, onConfirm,
 }: BaseProps & {
   creneaux: any[];
-  onConfirm: (opts: { date?: string | null }) => void;
+  onConfirm: (opts: { creneau?: { id: string; date_visite: string } | null }) => void;
 }) {
+  // 'libre' = aucun créneau imposé : le conseiller fixe la date avec le vendeur.
   const [slotId, setSlotId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -125,7 +129,7 @@ export function AchatDelegationDialog({
   }, [open]);
 
   const slot = creneaux.find((c) => c.id === slotId) || null;
-  const peutEnvoyer = creneaux.length === 0 || !!slot;
+  const peutEnvoyer = creneaux.length === 0 || !!slot || slotId === 'libre';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,6 +154,16 @@ export function AchatDelegationDialog({
                     onSelect={() => setSlotId(c.id)}
                   />
                 ))}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={slotId === 'libre'}
+                  onClick={() => setSlotId('libre')}
+                  className={`w-full rounded-xl border p-3.5 text-left text-sm transition-colors duration-150 ${slotId === 'libre' ? 'border-foreground ring-1 ring-foreground' : 'border-border hover:border-foreground/50'}`}
+                >
+                  <span className="block font-semibold text-foreground">Mon conseiller fixe la date</span>
+                  <span className="block text-muted-foreground">Aucun de ces créneaux : il convient d'une date avec le vendeur.</span>
+                </button>
               </div>
             ) : (
               <div className="flex items-start gap-3 rounded-xl bg-muted/60 p-4">
@@ -169,7 +183,7 @@ export function AchatDelegationDialog({
           <Button
             className="h-11 rounded-full px-6"
             disabled={!peutEnvoyer || busy}
-            onClick={() => onConfirm({ date: slot?.date_visite ?? null })}
+            onClick={() => onConfirm({ creneau: slot ? { id: slot.id, date_visite: slot.date_visite } : null })}
           >
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confier la visite

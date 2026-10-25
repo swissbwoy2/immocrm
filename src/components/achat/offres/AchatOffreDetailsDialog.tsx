@@ -19,9 +19,32 @@ function libelleVisite(v: any) {
   return `${statut} · ${qui}`;
 }
 
+/** Médias d'une visite partagés avec le client (vidéos et photos). */
+function mediasPartages(v: any): { url: string; video: boolean }[] {
+  const all = [
+    ...(Array.isArray(v.medias) ? v.medias : []),
+    ...(Array.isArray(v.medias_coursier) ? v.medias_coursier : []),
+  ];
+  return all
+    .filter((m: any) => m && m.url && m.shared_to_clients !== false)
+    .map((m: any) => ({
+      url: m.url as string,
+      video: m.type === 'video' || (typeof m.mime === 'string' && m.mime.startsWith('video')),
+    }));
+}
+
+const CR_LIBELLES: [string, string][] = [
+  ['etat_general', 'État général'],
+  ['avantages', 'Avantages'],
+  ['inconvenients', 'Inconvénients'],
+  ['type_sol', 'Sols'],
+  ['ascenseur', 'Ascenseur'],
+  ['autres_infos', 'Autres'],
+];
+
 /** Fiche détaillée d'un bien à l'achat — même structure que la fiche d'une offre de location. */
 export function AchatOffreDetailsDialog({
-  open, onOpenChange, offre, visites, handlers, busy,
+  open, onOpenChange, offre, visites, handlers, busy, demandeEnvoyee = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +52,7 @@ export function AchatOffreDetailsDialog({
   visites: any[];
   handlers: AchatActionsHandlers;
   busy?: boolean;
+  demandeEnvoyee?: boolean;
 }) {
   if (!offre) return null;
 
@@ -109,25 +133,42 @@ export function AchatOffreDetailsDialog({
           </div>
 
           <div className="rounded-xl border border-border/70 p-4">
-            <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={wrapped} busy={busy} />
+            <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={wrapped} busy={busy} demandeEnvoyee={demandeEnvoyee} />
           </div>
 
           {visitesDuBien.length > 0 && (
             <Bloc titre="Vos visites">
               <div className="space-y-3">
                 {visitesDuBien.map((v) => {
-                  const medias = [
-                    ...(Array.isArray(v.medias) ? v.medias : []),
-                    ...(Array.isArray(v.medias_coursier) ? v.medias_coursier : []),
-                  ];
+                  const medias = mediasPartages(v);
+                  const cr = v.compte_rendu && typeof v.compte_rendu === 'object' ? v.compte_rendu : null;
+                  const lignesCr = cr ? CR_LIBELLES.filter(([k]) => cr[k]).map(([k, l]) => [l, String(cr[k])]) : [];
                   return (
                     <div key={v.id} className="rounded-xl bg-muted/50 p-3.5">
                       {v.date_visite && <p className="text-sm font-semibold capitalize text-foreground">{formatVisite(v.date_visite)}</p>}
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {[libelleVisite(v), medias.length > 0 ? `${medias.length} photo${medias.length > 1 ? 's' : ''} ou vidéo${medias.length > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')}
-                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{libelleVisite(v)}</p>
                       {(v.feedback_agent || v.feedback_coursier) && (
                         <p className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground">{v.feedback_agent || v.feedback_coursier}</p>
+                      )}
+                      {lignesCr.length > 0 && (
+                        <dl className="mt-2 space-y-1 text-sm">
+                          {lignesCr.map(([l, val]) => (
+                            <div key={l}><dt className="inline font-medium text-foreground">{l} : </dt><dd className="inline text-muted-foreground">{val}</dd></div>
+                          ))}
+                        </dl>
+                      )}
+                      {medias.length > 0 && (
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          {medias.map((m) =>
+                            m.video ? (
+                              <video key={m.url} src={m.url} controls preload="metadata" className="col-span-2 max-h-64 w-full rounded-lg bg-black" />
+                            ) : (
+                              <a key={m.url} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
+                                <img src={m.url} alt="Photo de la visite" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+                              </a>
+                            ),
+                          )}
+                        </div>
                       )}
                     </div>
                   );

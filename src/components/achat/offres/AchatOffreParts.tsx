@@ -101,17 +101,37 @@ export function AchatSlotOption({ date, selected, onSelect }: { date: string; se
   );
 }
 
-export type AchatEtape = 'decider' | 'organiser' | 'visite_prevue' | 'apres_visite' | 'offre' | 'acceptee' | 'ecarte';
+export type AchatEtape = 'decider' | 'organiser' | 'demande_envoyee' | 'visite_prevue' | 'apres_visite' | 'offre' | 'acceptee' | 'ecarte';
 
-/** Étape du parcours d'achat pour un bien, déduite de l'offre et de ses visites. */
-export function etapeAchat(offre: any, visitesDuBien: any[]): AchatEtape {
+/** Visite à venir réellement retenue (confirmée par le client ou déléguée au conseiller). */
+export function visiteRetenue(visitesDuBien: any[]) {
+  const now = Date.now();
+  return visitesDuBien
+    .filter((v) =>
+      v.date_visite && new Date(v.date_visite).getTime() >= now &&
+      !['annulee', 'refusee', 'proposee'].includes(v.statut) &&
+      (v.statut === 'confirmee' || !!v.client_confirme_visite_at || v.est_deleguee === true),
+    )
+    .sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime())[0];
+}
+
+/**
+ * Étape du parcours d'achat pour un bien, déduite de l'offre et de ses visites.
+ * `demandeEnvoyee` : une demande de visite (sans date) a déjà été transmise au conseiller.
+ */
+export function etapeAchat(offre: any, visitesDuBien: any[], demandeEnvoyee = false): AchatEtape {
   const s = offre?.statut;
   if (s === 'refusee') return 'ecarte';
   if (s === 'acceptee') return 'acceptee';
   if (s === 'offre_envisagee') return 'offre';
   if (canDecideOnOffre(offre, visitesDuBien)) return 'apres_visite';
-  if (s === 'visite_planifiee' || s === 'visite_confirmee') return 'visite_prevue';
-  if (s === 'interesse') return 'organiser';
+  if (visiteRetenue(visitesDuBien) || s === 'visite_planifiee' || s === 'visite_confirmee') return 'visite_prevue';
+  if (s === 'interesse') {
+    const creneaux = visitesDuBien.some((v) =>
+      ['proposee', 'planifiee'].includes(v.statut) && v.est_deleguee !== true && !v.client_confirme_visite_at &&
+      v.date_visite && new Date(v.date_visite).getTime() > Date.now());
+    return demandeEnvoyee && !creneaux ? 'demande_envoyee' : 'organiser';
+  }
   return 'decider';
 }
 
@@ -140,16 +160,18 @@ export interface AchatActionsHandlers {
 
 /** Bloc « prochaine étape » : une seule action claire par bien (identique carte et fiche). */
 export function AchatProchaineEtape({
-  offre, visitesDuBien, handlers, busy, compact,
+  offre, visitesDuBien, handlers, busy, compact, demandeEnvoyee = false,
 }: {
   offre: any;
   visitesDuBien: any[];
   handlers: AchatActionsHandlers;
   busy?: boolean;
   compact?: boolean;
+  demandeEnvoyee?: boolean;
 }) {
-  const etape = etapeAchat(offre, visitesDuBien);
+  const etape = etapeAchat(offre, visitesDuBien, demandeEnvoyee);
   const prochaine = prochaineVisite(visitesDuBien);
+  const retenue = visiteRetenue(visitesDuBien);
   const btn = compact ? 'h-11 w-full rounded-full' : 'h-11 rounded-full';
   const lien = 'mt-2 w-full py-1.5 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50';
 
@@ -182,17 +204,41 @@ export function AchatProchaineEtape({
     );
   }
 
+  if (etape === 'demande_envoyee') {
+    return (
+      <>
+        <p className="text-sm font-semibold text-foreground">Demande de visite envoyée</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Votre conseiller convient d'une date avec le vendeur et vous la propose ici et dans votre agenda.
+        </p>
+        <button type="button" disabled={busy} onClick={() => handlers.onRefuser(offre)} className={lien}>
+          Je ne suis plus intéressé
+        </button>
+      </>
+    );
+  }
+
   if (etape === 'visite_prevue') {
     return (
       <>
-        <p className="text-sm font-semibold text-foreground">Visite planifiée</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {prochaine ? formatVisite(prochaine.date_visite) : 'La date apparaît dans votre agenda.'}
+        <p className="text-sm font-semibold text-foreground">
+          {retenue?.est_deleguee ? 'Votre conseiller visite pour vous' : 'Visite planifiée'}
         </p>
-        <Button variant="outline" className={cn(btn, 'mt-3 w-full')} disabled={busy} onClick={() => handlers.onVisiteFaite(offre)}>
-          <Check className="mr-2 h-4 w-4" />
-          J'ai fait la visite
-        </Button>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {retenue
+            ? `${formatVisite(retenue.date_visite)}${retenue.est_deleguee ? ' · compte-rendu et vidéo ensuite' : ''}`
+            : 'La date apparaît dans votre agenda.'}
+        </p>
+        {retenue ? (
+          <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-center text-xs text-muted-foreground">
+            {retenue.est_deleguee ? 'Vous serez notifié dès que le compte-rendu est disponible.' : 'La suite vous sera proposée après la visite.'}
+          </p>
+        ) : (
+          <Button variant="outline" className={cn(btn, 'mt-3 w-full')} disabled={busy} onClick={() => handlers.onVisiteFaite(offre)}>
+            <Check className="mr-2 h-4 w-4" />
+            J'ai fait la visite
+          </Button>
+        )}
         <button type="button" disabled={busy} onClick={() => handlers.onRefuser(offre)} className={lien}>
           Je ne suis plus intéressé
         </button>

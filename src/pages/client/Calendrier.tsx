@@ -23,7 +23,8 @@ export default function ClientCalendrier() {
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
   // Parcours achat : biens à l'achat (pas de loyer, pas de candidature).
-  const isAchat = useClientParcours() === 'achat';
+  const parcoursClient = useClientParcours();
+  const isAchat = parcoursClient === 'achat';
   const pageOffres = isAchat ? '/client/biens-proposes' : '/client/offres-recues';
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
@@ -170,6 +171,7 @@ export default function ClientCalendrier() {
   };
 
   const accepterOffre = async (visite: any) => {
+    if (parcoursClient === null) return; // parcours pas encore connu : on n'agit pas au hasard
     if (isAchat) {
       try {
         await souhaiteFaireOffreAchat(user!.id, { ...(visite.offres || {}), id: visite.offre_id }, { visites: [visite] });
@@ -243,6 +245,7 @@ export default function ClientCalendrier() {
   };
 
   const refuserOffre = async (visite: any) => {
+    if (parcoursClient === null) return;
     if (isAchat) {
       try {
         await renoncerApresVisiteAchat(user!.id, { ...(visite.offres || {}), id: visite.offre_id }, [visite]);

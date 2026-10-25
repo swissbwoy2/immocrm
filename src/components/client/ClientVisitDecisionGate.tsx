@@ -9,7 +9,7 @@ import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecision
 import { formatSwissDateTime } from '@/lib/dateUtils';
 import { useClientParcours } from '@/hooks/useClientParcours';
 import {
-  confirmerVisiteFaiteAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat,
+  confirmerVisiteFaiteAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat, visiteNonFaiteAchat,
 } from '@/lib/achatOffreActions';
 
 const GATE_SINCE = '2026-09-04T00:00:00+02:00';
@@ -175,7 +175,7 @@ export function ClientVisitDecisionGate() {
       await marquerVisiteFaite();
       await supabase.from('visites').update({ client_decision: 'interesse', client_decision_at: new Date().toISOString() }).eq('id', current.id);
       if (offreAchat?.id && !['visite_effectuee', 'offre_envisagee', 'acceptee'].includes(offreAchat.statut || '')) {
-        await confirmerVisiteFaiteAchat(user.id, offreAchat);
+        await confirmerVisiteFaiteAchat(user.id, offreAchat, [{ ...current, offre_id: offreAchat.id }]);
       }
       toast('Noté. Vous pourrez faire une offre depuis « Biens proposés » quand vous serez prêt.');
     } catch (e: any) {
@@ -207,9 +207,8 @@ export function ClientVisitDecisionGate() {
     if (!user || !current || saving) return;
     setSaving('non');
     try {
-      // Visite non faite : on l'annule sans écarter le bien ; le conseiller propose une nouvelle date.
-      const { error } = await supabase.from('visites').update({ client_decision: 'refuse', client_decision_at: new Date().toISOString(), statut: 'annulee' }).eq('id', current.id);
-      if (error) throw error;
+      // Visite non faite : annulée sans écarter le bien ; le conseiller est prévenu pour proposer une nouvelle date.
+      await visiteNonFaiteAchat(user.id, offreAchat, current.id);
       toast('Merci. Votre conseiller vous proposera une nouvelle date de visite.');
     } catch (e: any) {
       toast.error(e?.message || `Impossible d'enregistrer votre choix`);

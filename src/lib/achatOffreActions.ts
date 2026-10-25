@@ -89,7 +89,7 @@ export async function getAchatClient(userId: string): Promise<AchatClientRef | n
 }
 
 /** Dépose l'action dans le fil client ↔ agent (notifie agent + admins via la base). */
-async function notifierAgent(userId: string, clientId: string, offreId: string, content: string) {
+export async function notifierAgent(userId: string, clientId: string, offreId: string, content: string) {
   const convId = await getOrCreateClientConversation(clientId);
   if (!convId) return;
   const { error } = await supabase.from('messages').insert({
@@ -128,6 +128,14 @@ export async function refuserBienAchat(userId: string, offre: any) {
   const client = await getAchatClient(userId);
   if (!client) throw new Error('Fiche client introuvable');
   await majStatutOffre(offre.id, 'refusee');
+  // Les visites à venir de ce bien n'ont plus lieu d'être : on les retire de l'agenda (conseiller compris).
+  await supabase
+    .from('visites')
+    .update({ statut: 'annulee' })
+    .eq('offre_id', offre.id)
+    .eq('client_id', client.id)
+    .in('statut', ['proposee', 'planifiee', 'confirmee'])
+    .gt('date_visite', new Date().toISOString());
   await notifierAgent(userId, client.id, offre.id, `❌ Le client a refusé ce bien à l'achat\n\n${ligneBien(offre)}`);
 }
 
@@ -176,37 +184,18 @@ export async function demanderVisiteAchat(
 export async function deleguerVisiteAchat(
   userId: string,
   offre: any,
-  opts: { date?: string | null },
+  opts: { creneau?: { id: string; date_visite: string } | null },
 ) {
   const client = await getAchatClient(userId);
   if (!client) throw new Error('Fiche client introuvable');
-  if (!client.agent_id) throw new Error("Aucun conseiller n'est encore assigné à votre dossier.");
 
-  if (opts.date) {
-    const { data: existantes } = await supabase
+  if (opts.creneau) {
+    // Le créneau proposé par le conseiller devient la visite déléguée (pas de doublon dans son agenda).
+    const { error } = await supabase
       .from('visites')
-      .select('id')
-      .eq('offre_id', offre.id)
-      .eq('client_id', client.id)
-      .eq('est_deleguee', true)
-      .eq('statut', 'planifiee');
-    if (existantes && existantes.length > 0) {
-      const { error } = await supabase.from('visites').update({ date_visite: opts.date }).eq('id', existantes[0].id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from('visites').insert({
-        offre_id: offre.id,
-        client_id: client.id,
-        agent_id: client.agent_id,
-        adresse: offre.adresse,
-        date_visite: opts.date,
-        statut: 'planifiee',
-        est_deleguee: true,
-        source: 'deleguee',
-        notes: "Visite déléguée au conseiller par le client (achat)",
-      });
-      if (error) throw error;
-    }
+      .update({ est_deleguee: true, source: 'deleguee', statut: 'planifiee', notes: 'Visite déléguée au conseiller par le client (achat)' })
+      .eq('id', opts.creneau.id);
+    if (error) throw error;
   }
 
   if (['envoyee', 'vue', 'refusee'].includes(offre.statut)) {
@@ -216,21 +205,40 @@ export async function deleguerVisiteAchat(
     userId,
     client.id,
     offre.id,
-    `🏠 **Visite déléguée au conseiller (achat)**\n\n${ligneBien(offre)}\n${opts.date ? `📆 Date retenue : ${formatDateHeure(opts.date)}\n` : ''}\nLe client souhaite que vous visitiez ce bien pour lui, avec compte-rendu et vidéo.${opts.date ? '' : ' Merci de fixer la date avec le vendeur.'}`,
+    `🏠 **Visite déléguée au conseiller (achat)**\n\n${ligneBien(offre)}\n${opts.creneau ? `📆 Créneau retenu : ${formatDateHeure(opts.creneau.date_visite)}\n` : ''}\nLe client souhaite que vous visitiez ce bien pour lui, avec compte-rendu et vidéo.${opts.creneau ? '' : ' Merci de fixer la date avec le vendeur.'}`,
   );
 }
 
 /** « J'ai fait la visite ». */
-export async function confirmerVisiteFaiteAchat(userId: string, offre: any) {
+export async function confirmerVisiteFaiteAchat(userId: string, offre: any, visites: any[] = []) {
   const client = await getAchatClient(userId);
   if (!client) throw new Error('Fiche client introuvable');
+  const visite = derniereVisite(visites, offre.id);
+  if (visite?.id) {
+    // Le client a fait la visite : elle est effectuée et ne sera pas redemandée par la question après visite.
+    await supabase
+      .from('visites')
+      .update({
+        statut: 'effectuee',
+        client_confirme_visite_at: visite.client_confirme_visite_at || new Date().toISOString(),
+        client_decision: 'interesse',
+        client_decision_at: new Date().toISOString(),
+      })
+      .eq('id', visite.id);
+  }
   await majStatutOffre(offre.id, 'visite_effectuee');
   await notifierAgent(userId, client.id, offre.id, `✅ **Visite effectuée (achat)**\n\n${ligneBien(offre)}\n\nLe client indique avoir visité le bien.`);
 }
 
+/** Dernière visite réellement passée (ou effectuée / avec compte-rendu) — jamais un créneau futur. */
 function derniereVisite(visites: any[], offreId: string) {
+  const now = Date.now();
   return visites
-    .filter((v) => v.offre_id === offreId && v.statut !== 'annulee')
+    .filter((v) =>
+      v.offre_id === offreId &&
+      !['annulee', 'proposee'].includes(v.statut) &&
+      (v.statut === 'effectuee' || !!v.compte_rendu_at || (v.date_visite && new Date(v.date_visite).getTime() <= now)),
+    )
     .sort((a, b) => new Date(b.date_visite || 0).getTime() - new Date(a.date_visite || 0).getTime())[0];
 }
 
@@ -273,4 +281,24 @@ export async function renoncerApresVisiteAchat(userId: string, offre: any, visit
   }
   await majStatutOffre(offre.id, 'refusee');
   await notifierAgent(userId, client.id, offre.id, `❌ **Après la visite, ce bien ne convient pas au client (achat)**\n\n${ligneBien(offre)}`);
+}
+
+/** La visite prévue n'a pas pu avoir lieu : annulée, le bien reste en cours et le conseiller propose une autre date. */
+export async function visiteNonFaiteAchat(userId: string, offre: any, visiteId: string) {
+  const client = await getAchatClient(userId);
+  if (!client) throw new Error('Fiche client introuvable');
+  const { error } = await supabase
+    .from('visites')
+    .update({ client_decision: 'refuse', client_decision_at: new Date().toISOString(), statut: 'annulee' })
+    .eq('id', visiteId);
+  if (error) throw error;
+  if (offre?.id) {
+    if (['visite_planifiee', 'visite_confirmee'].includes(offre.statut)) await majStatutOffre(offre.id, 'interesse');
+    await notifierAgent(
+      userId,
+      client.id,
+      offre.id,
+      `📅 **Visite non effectuée (achat)**\n\n${ligneBien(offre)}\n\nLe client n'a pas pu visiter. Merci de lui proposer une nouvelle date.`,
+    );
+  }
 }

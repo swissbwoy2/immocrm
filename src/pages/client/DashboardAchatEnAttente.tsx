@@ -51,7 +51,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
 
   const etapes = [
     { ok: mandatSigne, label: "Mandat d'achat signé électroniquement" },
-    { ok: acompteRegle, label: "Acompte CHF 2'499.– réglé" },
+    { ok: acompteRegle, label: `Acompte ${project?.montant_acompte ? formatCHF(Number(project.montant_acompte)) : "CHF 2'499.–"} réglé` },
     { ok: false, label: "Validation et activation par Immo-Rama" },
   ];
 

@@ -8,7 +8,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { isPurchaseBuyer } from '@/lib/journey';
+import { loadClientParcours } from '@/hooks/useClientParcours';
 import { noteSuiviClient } from '@/lib/offreNote';
 import {
   ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, creneauxProposes, formatPrixAchat,
@@ -38,11 +38,12 @@ export default function BiensProposes() {
   const [loading, setLoading] = useState(true);
   const [offres, setOffres] = useState<any[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
+  // Biens pour lesquels une demande de visite a déjà été transmise au conseiller.
+  const [demandes, setDemandes] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [filtre, setFiltre] = useState<Filtre>(() => {
-    const f = searchParams.get('filtre') as Filtre | null;
-    return f && FILTRES_VALIDES.includes(f) ? f : 'tous';
-  });
+  // Le filtre suit l'URL (liens du tableau de bord, du menu, ancienne page « Biens sélectionnés »).
+  const filtreUrl = searchParams.get('filtre') as Filtre | null;
+  const filtre: Filtre = filtreUrl && FILTRES_VALIDES.includes(filtreUrl) ? filtreUrl : 'tous';
 
   const [detail, setDetail] = useState<any | null>(null);
   const [visiteFor, setVisiteFor] = useState<any | null>(null);
@@ -51,22 +52,19 @@ export default function BiensProposes() {
 
   const load = useCallback(async () => {
     if (!user) return;
-    const { data: client } = await supabase
-      .from('clients')
-      .select('id, user_id, type_recherche, journey_type')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    const { data: project } = await supabase
-      .from('purchase_projects')
-      .select('id, client_id, user_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (!isPurchaseBuyer(client, project)) {
+    // Même règle de parcours que le menu, la barre du bas et la redirection globale (pas de boucle possible).
+    const parcours = await loadClientParcours(user.id);
+    if (parcours !== 'achat') {
       // Compte location : la page équivalente est « Offres reçues ».
       navigate(`/client/offres-recues${window.location.search}`, { replace: true });
       return;
     }
+    markTypeAsRead('new_offer');
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     if (!client?.id) {
       setOffres([]);
       setVisites([]);
@@ -84,14 +82,27 @@ export default function BiensProposes() {
     ]);
     setOffres(offresData || []);
     setVisites(visitesData || []);
+
+    const ids = (offresData || []).map((o: any) => o.id);
+    if (ids.length > 0) {
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('offre_id, content')
+        .eq('sender_type', 'client')
+        .in('offre_id', ids)
+        // (pas de parenthèses dans les motifs : elles casseraient le filtre « or » de l'API)
+        .or('content.ilike.%Demande de visite%,content.ilike.%Visite déléguée au conseiller%,content.ilike.%Visite non effectuée%');
+      setDemandes(new Set((msgs || []).map((m: any) => m.offre_id).filter(Boolean)));
+    } else {
+      setDemandes(new Set());
+    }
     setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
 
   useEffect(() => {
     document.title = 'Biens proposés | Immo-Rama';
     void load();
-    markTypeAsRead('new_offer');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
   // Lien direct ?offre=<id> ou ?offreId=<id> (notifications, tableau de bord) → ouvre la fiche.
@@ -136,7 +147,7 @@ export default function BiensProposes() {
     onDeleguer: (o) => setDelegFor(o),
     onRefuser: (o) => void run(() => refuserBienAchat(user!.id, o), { title: 'Bien écarté', description: 'Votre conseiller en est informé.' }),
     onInteret: (o) => void run(() => marquerInteretAchat(user!.id, o), { title: 'Intérêt transmis', description: 'Votre conseiller vous propose une visite.' }),
-    onVisiteFaite: (o) => void run(() => confirmerVisiteFaiteAchat(user!.id, o), { title: 'Visite enregistrée', description: 'Indiquez maintenant si vous souhaitez faire une offre.' }),
+    onVisiteFaite: (o) => void run(() => confirmerVisiteFaiteAchat(user!.id, o, visites), { title: 'Visite enregistrée', description: 'Indiquez maintenant si vous souhaitez faire une offre.' }),
     onFaireOffre: (o) => setOffreFor(o),
     onRenoncer: (o) => void run(() => renoncerApresVisiteAchat(user!.id, o, visites), { title: 'Choix enregistré', description: 'Votre conseiller en est informé.' }),
   }), [run, user, visites]);
@@ -157,7 +168,6 @@ export default function BiensProposes() {
   const aRepondre = filtres[1].count;
 
   const choisirFiltre = (f: Filtre) => {
-    setFiltre(f);
     const next = new URLSearchParams(searchParams);
     if (f === 'tous') next.delete('filtre'); else next.set('filtre', f);
     setSearchParams(next, { replace: true });
@@ -297,7 +307,7 @@ export default function BiensProposes() {
                         </button>
 
                         <div className="mt-4 flex-1 border-t border-border/70 pt-4">
-                          <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={handlers} busy={busy} compact />
+                          <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={handlers} busy={busy} compact demandeEnvoyee={demandes.has(offre.id)} />
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -334,6 +344,7 @@ export default function BiensProposes() {
         visites={visites}
         handlers={handlers}
         busy={busy}
+        demandeEnvoyee={!!detail && demandes.has(detail.id)}
       />
 
       <AchatVisiteDialog
