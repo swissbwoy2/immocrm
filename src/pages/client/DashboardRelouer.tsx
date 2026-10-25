@@ -21,6 +21,7 @@ import { MessageSquare } from 'lucide-react';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { PremiumDashboardHeader, PremiumKPICard, PremiumAgentCard } from '@/components/premium';
 import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 
 const STATUS_HELP: Record<string, { label: string; tone: string; bgTone: string }> = {
   new_request:           { label: 'Nouvelle demande reçue', tone: 'text-blue-700',    bgTone: 'bg-blue-50 border-blue-200' },
@@ -156,6 +157,7 @@ export default function DashboardRelouer() {
     return (
       <div className="flex-1 overflow-y-auto">
         <PremiumPageShellV2>
+          <DashboardAdBanner />
           <PremiumDashboardHeader userName={profile?.prenom} parcoursType="relocation" headingBadge="Client reloueur" />
           <Card className="p-8 text-center">
             <Key className="h-10 w-10 text-primary mx-auto mb-3" />
@@ -179,6 +181,8 @@ export default function DashboardRelouer() {
   return (
     <div className="flex-1 overflow-y-auto">
     <PremiumPageShellV2>
+      {/* Bannière : tout en haut de l'accueil */}
+      <DashboardAdBanner />
       {/* EN-TÊTE — même habillage que le dashboard client */}
       <PremiumDashboardHeader
         userName={profile?.prenom}

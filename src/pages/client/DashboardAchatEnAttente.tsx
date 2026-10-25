@@ -57,6 +57,8 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
 
   return (
     <PremiumPageShellV2 className="relative z-10 mx-auto w-full max-w-6xl">
+      {/* Bannière : tout en haut de l'accueil */}
+      <DashboardAdBanner />
       <MustChangePasswordBanner />
       <PremiumDashboardHeader
         userName={profile?.prenom}
@@ -64,7 +66,6 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
         isAcheteur
         onMessagesClick={() => navigate('/client/messagerie')}
       />
-      <DashboardAdBanner />
 
       {/* À faire */}
       <div className="space-y-3">
