@@ -104,7 +104,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
         {
           label: 'Communication et marketing',
           items: [
-            { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
+            { name: 'Boîte mail', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
             { name: 'Écrire un e-mail', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
             { name: 'Historique des e-mails', icon: History, path: '/admin/historique-emails', notifKey: null },
             { name: 'WhatsApp', icon: MessageSquare, path: '/admin/whatsapp', notifKey: 'whatsapp_unread' },
