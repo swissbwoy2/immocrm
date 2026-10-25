@@ -140,15 +140,6 @@ export default function Landing() {
         {/* Sticky Mobile CTA */}
         <StickyMobileCTA />
 
-        {/* WhatsApp Widget */}
-        <div
-          data-floating-widget
-          className="fixed bottom-4 left-4 md:bottom-6 md:left-6 z-40 opacity-70 hover:opacity-100 transition-opacity"
-          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
-        >
-          <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
-        </div>
-
         {/* Cookie Consent */}
         <Suspense fallback={null}>
           <CookieConsentBanner />
