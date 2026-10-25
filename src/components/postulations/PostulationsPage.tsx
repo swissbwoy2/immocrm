@@ -16,6 +16,7 @@ import { fr } from 'date-fns/locale';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { DossiersPreparesPanel } from './DossiersPreparesPanel';
 import { toast } from 'sonner';
 
 type PostulationTab = 'a_faire' | 'deposees';
@@ -257,6 +258,8 @@ export function PostulationsPage({ scope, title }: Props) {
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
       </div>
+
+      <DossiersPreparesPanel />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as PostulationTab)}>
         <TabsList>
