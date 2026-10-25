@@ -87,14 +87,27 @@ async function loadTranscript(db: Db, conversationId: string) {
  * (protection contre une consigne glissée dans un e-mail ou un document).
  */
 export function stripUntrusted(text: string): string {
+  const allowed = /^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i;
   return text
+    // Adresses e-mail (le personnel et les tiers ne sont jamais cités).
+    .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi, '[adresse retirée]')
+    // Liens explicites (http, https, www), quel que soit le domaine : seuls les sites de l'agence restent.
     .replace(/\b(?:https?:\/\/|www\.)[^\s<>"]+/gi, (match) => {
       const url = match.replace(/[.,;:!?)\]]+$/, '');
       const tail = match.slice(url.length);
-      const host = url.replace(/^https?:\/\//i, '');
-      return (/^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i.test(host) ? url : '[lien retiré]') + tail;
+      const host = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      return (allowed.test(host) ? url : '[lien retiré]') + tail;
     })
-    .replace(/\b[A-Z]{2}[0-9]{2}(?:[ -]?[0-9A-Z]){11,30}\b/g, '[coordonnées bancaires retirées]');
+    // Domaines écrits sans http ni www.
+    .replace(/(?:https?:\/\/|www\.)?(?<![A-Za-z0-9@.-])[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:ch|com|net|org|io|fr|de|it|li|at|be|nl|es|pt|eu|uk|us|info|biz|co|me|app|xyz|online|site|link|ly|shop|top)(?![A-Za-z0-9])(?:\/[^\s<>"]*)?/gi, (match) => {
+      const url = match.replace(/[.,;:!?)\]]+$/, '');
+      const tail = match.slice(url.length);
+      const host = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      return (allowed.test(host) ? url : '[lien retiré]') + tail;
+    })
+    .replace(/\b[A-Za-z]{2}[0-9]{2}(?:[ .-]?[0-9A-Za-z]){11,30}\b/g, '[coordonnées bancaires retirées]')
+    .replace(/(?:\+[1-9][0-9]{0,2}|(?<![0-9])00(?:41|33|49|39|44|43|32|31|34|351|352|423))(?:[ .-]?\(?[0-9]{1,4}\)?){3,6}/g, '[numéro retiré]')
+    .replace(/(?<![0-9])0[1-9][0-9]?(?:[ .-]?[0-9]{2,3}){3,4}(?![0-9])/g, '[numéro retiré]');
 }
 
 /**

@@ -40,6 +40,7 @@ type Mailbox = {
   last_error: string | null;
   pending_count: number | null;
   emails_count: number;
+  verified_count: number;
 };
 
 type FormState = {
@@ -158,8 +159,8 @@ export function SharedMailboxesManager() {
           Boîtes e-mail lues par Steeve
         </CardTitle>
         <CardDescription>
-          Steeve lit ces boîtes pour retrouver les e-mails qui concernent un client (ses adresses ou son nom complet),
-          et n'en donne que des extraits limités à son dossier. Relève toutes les 5 minutes.
+          Steeve n'y retrouve que les échanges directs avec un client (e-mails qu'il a envoyés ou dont il est destinataire,
+          expéditeur authentifié), en extraits masqués, et seulement si son adresse est de confiance. Relève toutes les 5 minutes.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -183,7 +184,7 @@ export function SharedMailboxesManager() {
                     {passwordState(m)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Dernière relève : {formatDate(m.last_sync_at)} · {m.emails_count} e-mail(s) relevé(s)
+                    Dernière relève : {formatDate(m.last_sync_at)} · {m.emails_count} e-mail(s) relevé(s), dont {m.verified_count} d'expéditeur authentifié
                     {m.pending_count ? ` · ${m.pending_count} en attente` : ''}
                   </p>
                   {m.last_error && <p className="text-xs text-destructive">{m.last_error}</p>}

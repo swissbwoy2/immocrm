@@ -16086,6 +16086,7 @@ export type Database = {
           last_error: string | null
           last_sync_at: string | null
           pending_count: number | null
+          verified_count: number
         }[]
       }
       admin_save_shared_mailbox: {

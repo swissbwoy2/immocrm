@@ -23,6 +23,8 @@ export interface MailboxRow {
   imap_port: number;
   uid_validity: number | null;
   last_uid: number | null;
+  /** Identifiant du serveur de réception dont les résultats d'authentification font foi (ex. « infomaniak »). */
+  trusted_authserv?: string | null;
 }
 
 export interface SyncResult {
@@ -31,6 +33,7 @@ export interface SyncResult {
   stored: number;
   skipped: number;
   pending: number;
+  parseMs: number;
   error?: string;
 }
 
@@ -76,6 +79,30 @@ export function htmlToText(html: string): string {
   return compact.join('\n').trim();
 }
 
+/**
+ * Expéditeur authentifié ? Seul l'en-tête Authentication-Results le plus haut compte (ajouté par le serveur
+ * de réception), et seulement s'il vient du serveur de confiance. Accepté : DMARC réussi pour le domaine de
+ * l'expéditeur, ou signature DKIM réussie d'un domaine aligné. SPF seul ne prouve rien sur l'adresse affichée.
+ */
+export function senderAuthenticated(headers: { key: string; value: string }[] | undefined, fromAddress: string, trustedAuthserv: string): boolean {
+  const domain = fromAddress.split('@')[1]?.toLowerCase();
+  if (!domain || !trustedAuthserv) return false;
+  const top = (headers || []).find((h) => h.key.toLowerCase() === 'authentication-results');
+  if (!top) return false;
+  const value = top.value.replace(/\s+/g, ' ').toLowerCase();
+  const [authserv, ...clauses] = value.split(';');
+  if (!authserv.trim().split(' ')[0].includes(trustedAuthserv.toLowerCase())) return false;
+  const aligned = (d: string) => d.includes('.') && (d === domain || domain.endsWith(`.${d}`) || d.endsWith(`.${domain}`));
+  for (const clause of clauses) {
+    const c = clause.trim();
+    const dmarc = c.match(/^dmarc=pass\b.*\bheader\.from=([a-z0-9.-]+)/);
+    if (dmarc && aligned(dmarc[1])) return true;
+    const dkim = c.match(/^dkim=pass\b.*\bheader\.(?:d|i)=@?([a-z0-9.-]+)/);
+    if (dkim && aligned(dkim[1])) return true;
+  }
+  return false;
+}
+
 const joinAddresses = (list: any[] | undefined) =>
   (list || [])
     .flatMap((a: any) => (a?.group ? a.group : [a]))
@@ -85,6 +112,7 @@ const joinAddresses = (list: any[] | undefined) =>
 
 export async function toEmailRow(msg: FetchedMessage, mailbox: MailboxRow, uidValidity: number, now: Date) {
   const parsed: any = await PostalMime.parse(msg.raw);
+  const fromAddress = clean(parsed.from?.address).toLowerCase();
   const text = clean(parsed.text) || clean(parsed.html ? htmlToText(String(parsed.html).slice(0, MAX_MESSAGE_BYTES)) : '');
   // Date de réception par le serveur (l'en-tête Date est choisi par l'expéditeur), jamais dans le futur.
   const server = parseInternalDate(msg.internalDate);
@@ -97,20 +125,22 @@ export async function toEmailRow(msg: FetchedMessage, mailbox: MailboxRow, uidVa
     uid: msg.uid,
     uid_validity: uidValidity,
     message_key: clean(parsed.messageId).replace(/^<|>$/g, '').slice(0, 100) || null,
-    from_email: clean(parsed.from?.address).toLowerCase().slice(0, 320) || null,
+    from_email: fromAddress.slice(0, 320) || null,
     from_name: clean(parsed.from?.name).slice(0, 200) || null,
     to_emails: joinAddresses(parsed.to).slice(0, 2000) || null,
     cc_emails: joinAddresses(parsed.cc).slice(0, 2000) || null,
     subject: clean(parsed.subject).slice(0, 500) || null,
     body_text: text.slice(0, MAX_BODY_CHARS) || null,
     received_at: received,
+    auth_verified: senderAuthenticated(parsed.headers, fromAddress, mailbox.trusted_authserv ?? 'infomaniak'),
   };
 }
 
-export async function syncMailbox(opts: { db: Db; mailbox: MailboxRow; connect: Connect; now?: Date }): Promise<SyncResult> {
+export async function syncMailbox(opts: { db: Db; mailbox: MailboxRow; connect: Connect; now?: Date; parseBudgetMs?: number }): Promise<SyncResult> {
   const { db, mailbox, connect } = opts;
   const now = opts.now ?? new Date();
-  const result: SyncResult = { mailbox: mailbox.address, ok: false, stored: 0, skipped: 0, pending: 0 };
+  const parseBudget = opts.parseBudgetMs ?? PARSE_BUDGET_MS;
+  const result: SyncResult = { mailbox: mailbox.address, ok: false, stored: 0, skipped: 0, pending: 0, parseMs: 0 };
   // Tentative datée d'emblée : une boîte en échec passe en fin de file et ne bloque pas les autres.
   await db.from('shared_mailboxes').update({ last_attempt_at: now.toISOString() }).eq('id', mailbox.id);
 
@@ -170,7 +200,7 @@ export async function syncMailbox(opts: { db: Db; mailbox: MailboxRow; connect: 
   let parseMs = 0;
   let position = lastUid ?? 0;
   for (const uid of uids.slice(0, PER_RUN)) {
-    if (parseMs > PARSE_BUDGET_MS) break; // la suite au passage suivant
+    if (parseMs > parseBudget) break; // la suite au passage suivant
     const msg = byUid.get(uid);
     if (msg) {
       const t0 = performance.now();
@@ -184,11 +214,15 @@ export async function syncMailbox(opts: { db: Db; mailbox: MailboxRow; connect: 
       if (row) {
         const { error } = await db.from('mailbox_emails').upsert([row], { onConflict: 'mailbox_id,uid_validity,uid', ignoreDuplicates: true });
         if (error) {
+          // Erreur de la base (souvent passagère) : on s'arrête sans avancer, l'e-mail sera relu au prochain passage.
           console.error(`[sync-shared-mailboxes] ${mailbox.address} UID ${uid} non enregistré :`, error.message);
-          result.skipped += 1;
-        } else {
-          result.stored += 1;
+          result.parseMs = parseMs;
+          result.pending = uids.filter((u) => u > position).length;
+          return fail('Enregistrement impossible (nouvel essai au prochain passage).', {
+            uid_validity: uidValidity, last_uid: position, pending_count: result.pending,
+          });
         }
+        result.stored += 1;
       } else {
         result.skipped += 1;
       }
@@ -198,6 +232,7 @@ export async function syncMailbox(opts: { db: Db; mailbox: MailboxRow; connect: 
   }
 
   result.pending = uids.filter((u) => u > position).length;
+  result.parseMs = parseMs;
   await db.from('shared_mailboxes').update({
     uid_validity: uidValidity,
     last_uid: position,

@@ -1,14 +1,15 @@
 -- Steeve, lot 2b : lecture des boîtes e-mail de l'entreprise, strictement limitée au dossier du client.
 -- Additive et idempotente.
---  - shared_mailboxes : boîtes lues par Steeve (info@, martins@, relocation@, visites@, boîtes Logisorama…).
+--  - shared_mailboxes : boîtes lues par Steeve (info@, martins@, relocation@, visites@ immo-rama.ch, support@logisorama.ch).
 --    Mot de passe uniquement dans le coffre (Vault) : jamais relisible depuis l'application.
 --  - mailbox_emails : e-mails relevés par la fonction sync-shared-mailboxes (lecture réservée aux admins).
---  - steeve_client_emails : seule porte d'accès de Steeve. Sources d'identité de confiance seulement :
---      * échange direct : l'adresse de connexion confirmée du client est expéditrice ou destinataire
---        (comparaison exacte) → extrait masqué ;
---      * mention : son nom complet (sans homonyme connu) ET l'adresse d'un bien de SES offres ou visites
---        → aucun texte libre, seulement des repères (statut, date, heure) tirés des lignes qui le nomment.
---    Les e-mails internes, de paiement ou de comptabilité ne sont jamais rendus par mention.
+--  - steeve_client_emails : seule porte d'accès de Steeve. Uniquement les ÉCHANGES DIRECTS avec le client :
+--      * le client est l'expéditeur ou un destinataire (comparaison exacte des adresses) ;
+--      * l'expéditeur est authentifié par le serveur de réception (DMARC ou DKIM aligné) ;
+--      * l'adresse du client est de confiance : client explicitement choisi pour le pilote de Steeve, ou adresse
+--        vérifiée par l'agence (les comptes sont confirmés automatiquement à l'inscription : l'adresse seule ne
+--        prouve pas qu'elle appartient au client).
+--    Aucun e-mail d'un tiers qui se contente de nommer le client n'est transmis (risque de confusion entre personnes).
 
 -- 1) Boîtes lues par Steeve
 CREATE TABLE IF NOT EXISTS public.shared_mailboxes (
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.shared_mailboxes (
   last_uid bigint,
   pending_count integer,
   last_attempt_at timestamptz,
+  trusted_authserv text NOT NULL DEFAULT 'infomaniak',
   last_sync_at timestamptz,
   last_error text,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -30,6 +32,8 @@ CREATE TABLE IF NOT EXISTS public.shared_mailboxes (
   CONSTRAINT shared_mailboxes_address_check CHECK (address ~* '^[^@[:space:]]+@[^@[:space:]]+\.[a-z]{2,}$'),
   CONSTRAINT shared_mailboxes_port_check CHECK (imap_port BETWEEN 1 AND 65535)
 );
+ALTER TABLE public.shared_mailboxes ADD COLUMN IF NOT EXISTS last_attempt_at timestamptz;
+ALTER TABLE public.shared_mailboxes ADD COLUMN IF NOT EXISTS trusted_authserv text NOT NULL DEFAULT 'infomaniak';
 -- Aucune politique : accès uniquement par les fonctions ci-dessous (et la clé de service).
 ALTER TABLE public.shared_mailboxes ENABLE ROW LEVEL SECURITY;
 
@@ -37,7 +41,8 @@ INSERT INTO public.shared_mailboxes (address, label, is_active) VALUES
   ('info@immo-rama.ch', 'Info Immo-Rama', true),
   ('martins@immo-rama.ch', 'Martins', false),
   ('relocation@immo-rama.ch', 'Relocation', false),
-  ('visites@immo-rama.ch', 'Visites', false)
+  ('visites@immo-rama.ch', 'Visites', false),
+  ('support@logisorama.ch', 'Support Logisorama', false)
 ON CONFLICT (address) DO NOTHING;
 
 -- Mot de passe d'info@ : copié une seule fois dans le coffre depuis la configuration de réception existante
@@ -79,17 +84,6 @@ AS $$
     'AAAAAAaaaaaaCcEEEEeeeeIIIIiiiiNnOOOOOoooooUUUUuuuuYyy'''));
 $$;
 
--- Motif « mot entier » pour un texte normalisé (caractères spéciaux échappés, espaces souples).
-CREATE OR REPLACE FUNCTION public.steeve_word_rx(t text)
-RETURNS text
-LANGUAGE sql
-IMMUTABLE
-AS $$
-  SELECT '(^|[^a-z0-9])' ||
-         regexp_replace(regexp_replace(trim(t), '([!-/:-@[-`{-~])', '\\\1', 'g'), '[[:space:]]+', '[[:space:]]+', 'g') ||
-         '($|[^a-z0-9])';
-$$;
-
 CREATE OR REPLACE FUNCTION public.steeve_redact(t text)
 RETURNS text
 LANGUAGE sql
@@ -101,13 +95,16 @@ AS $$
     regexp_replace(
     regexp_replace(
     regexp_replace(
+    regexp_replace(
     regexp_replace(coalesce(t, ''),
-      '(https?://|www\.)[^[:space:]<>"]+', '[lien]', 'gi'),
       '[A-Za-z0-9._%+-]+[[:space:]]*(@|\(at\)|\[at\])[[:space:]]*[A-Za-z0-9-]+([[:space:]]*(\.|\(dot\)|\[dot\])[[:space:]]*[A-Za-z0-9-]+)+', '[e-mail]', 'gi'),
-      '[A-Z]{2}[0-9]{2}([ -]?[0-9A-Z]){11,30}', '[IBAN]', 'g'),
+      '(https?://|www\.)[^[:space:]<>"]+', '[lien]', 'gi'),
+      -- Domaines écrits sans http ni www (« pay-garantie.ch/lea »).
+      '(^|[^A-Za-z0-9@./-])[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.(ch|com|net|org|io|fr|de|it|li|at|be|nl|es|pt|eu|uk|us|info|biz|co|me|app|xyz|online|site|link|ly|shop|top)(/[^[:space:]<>"]*)?($|[^A-Za-z0-9])', '\1[lien]\5', 'gi'),
+      '[A-Za-z]{2}[0-9]{2}([ .-]?[0-9A-Za-z]){11,30}', '[IBAN]', 'g'),
       '756[. ]?[0-9]{4}[. ]?[0-9]{4}[. ]?[0-9]{2}', '[n° AVS]', 'g'),
-      '(\+|00)[0-9]{1,3}([ .-]?\(?[0-9]{1,4}\)?){2,6}', '[téléphone]', 'g'),
-      '(^|[^0-9])0[0-9]{1,2}([ .-]?[0-9]{2,3}){3,4}($|[^0-9])', '\1[téléphone]\3', 'g');
+      '(\+[1-9][0-9]{0,2}|(^|[^0-9])00(41|33|49|39|44|43|32|31|34|351|352|423))([ .-]?\(?[0-9]{1,4}\)?){3,6}', '\2[téléphone]', 'g'),
+      '(^|[^0-9])0[1-9][0-9]?([ .-]?[0-9]{2,3}){3,4}($|[^0-9])', '\1[téléphone]\3', 'g');
 $$;
 
 -- Texte utile d'un e-mail : sans lignes citées (« > ») ni historique ou message transféré.
@@ -133,10 +130,10 @@ AS $$
 $$;
 
 REVOKE ALL ON FUNCTION public.steeve_norm(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.steeve_word_rx(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.steeve_redact(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.steeve_email_top(text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.steeve_norm(text), public.steeve_word_rx(text), public.steeve_redact(text), public.steeve_email_top(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.steeve_norm(text), public.steeve_redact(text), public.steeve_email_top(text) TO service_role;
+DROP FUNCTION IF EXISTS public.steeve_word_rx(text);
 
 -- 3) E-mails relevés (adresses, texte utile et texte normalisé calculés à l'enregistrement)
 CREATE TABLE IF NOT EXISTS public.mailbox_emails (
@@ -156,9 +153,15 @@ CREATE TABLE IF NOT EXISTS public.mailbox_emails (
   addrs text[] NOT NULL DEFAULT '{}',
   top_text text,
   norm_top text,
+  auth_verified boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT mailbox_emails_uid_key UNIQUE (mailbox_id, uid_validity, uid)
 );
+ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS addrs text[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS top_text text;
+ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS norm_top text;
+-- Expéditeur authentifié par le serveur de réception (DMARC ou DKIM aligné), établi à la relève.
+ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS auth_verified boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS mailbox_emails_received_idx ON public.mailbox_emails (received_at DESC);
 CREATE INDEX IF NOT EXISTS mailbox_emails_addrs_idx ON public.mailbox_emails USING gin (addrs);
 
@@ -192,11 +195,12 @@ CREATE TRIGGER trg_mailbox_emails_prepare
   FOR EACH ROW EXECUTE FUNCTION public.mailbox_emails_prepare();
 
 -- 4) Gestion par un admin (écran « Boîtes e-mail lues par Steeve »)
+DROP FUNCTION IF EXISTS public.admin_list_shared_mailboxes();
 CREATE OR REPLACE FUNCTION public.admin_list_shared_mailboxes()
 RETURNS TABLE (
   id uuid, address text, label text, imap_host text, imap_port integer, is_active boolean,
   has_password boolean, last_sync_at timestamptz, last_attempt_at timestamptz, last_error text,
-  pending_count integer, emails_count bigint
+  pending_count integer, emails_count bigint, verified_count bigint
 )
 LANGUAGE plpgsql
 STABLE
@@ -210,7 +214,8 @@ BEGIN
   RETURN QUERY
   SELECT m.id, m.address, m.label, m.imap_host, m.imap_port, m.is_active, m.secret_id IS NOT NULL,
          m.last_sync_at, m.last_attempt_at, m.last_error, m.pending_count,
-         (SELECT count(*) FROM public.mailbox_emails e WHERE e.mailbox_id = m.id)
+         (SELECT count(*) FROM public.mailbox_emails e WHERE e.mailbox_id = m.id),
+         (SELECT count(*) FROM public.mailbox_emails e WHERE e.mailbox_id = m.id AND e.auth_verified)
     FROM public.shared_mailboxes m
    ORDER BY m.address;
 END;
@@ -335,7 +340,79 @@ $$;
 REVOKE ALL ON FUNCTION public.shared_mailbox_credentials(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.shared_mailbox_credentials(uuid) TO service_role;
 
--- 6) E-mails qui concernent un client, pour Steeve uniquement (clé de service).
+-- 6) Adresse du client vérifiée par l'agence (seul le personnel peut la poser ; elle ne vaut que tant que
+--    l'adresse de connexion du client reste la même).
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS steeve_email_verifie text;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS steeve_email_verifie_le timestamptz;
+ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS steeve_email_verifie_par uuid;
+
+-- Exécutée avec les droits de l'appelant : current_user vaut « authenticated » depuis l'application,
+-- le propriétaire dans staff_verify_client_email (SECURITY DEFINER) et « service_role » pour les fonctions.
+CREATE OR REPLACE FUNCTION public.guard_client_steeve_email()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  IF current_user NOT IN ('authenticated', 'anon')
+     OR public.has_role(auth.uid(), 'admin'::app_role) OR public.has_role(auth.uid(), 'agent'::app_role) THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'UPDATE'
+     AND NEW.steeve_email_verifie IS NOT DISTINCT FROM OLD.steeve_email_verifie
+     AND NEW.steeve_email_verifie_le IS NOT DISTINCT FROM OLD.steeve_email_verifie_le
+     AND NEW.steeve_email_verifie_par IS NOT DISTINCT FROM OLD.steeve_email_verifie_par THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    NEW.steeve_email_verifie := NULL;
+    NEW.steeve_email_verifie_le := NULL;
+    NEW.steeve_email_verifie_par := NULL;
+  ELSE
+    NEW.steeve_email_verifie := OLD.steeve_email_verifie;
+    NEW.steeve_email_verifie_le := OLD.steeve_email_verifie_le;
+    NEW.steeve_email_verifie_par := OLD.steeve_email_verifie_par;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_guard_client_steeve_email ON public.clients;
+CREATE TRIGGER trg_guard_client_steeve_email
+  BEFORE INSERT OR UPDATE ON public.clients
+  FOR EACH ROW EXECUTE FUNCTION public.guard_client_steeve_email();
+
+-- Un agent du client ou un admin confirme (ou retire) l'adresse e-mail actuelle du client.
+CREATE OR REPLACE FUNCTION public.staff_verify_client_email(p_client_id uuid, p_verified boolean DEFAULT true)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_email text;
+BEGIN
+  IF NOT (public.has_role(auth.uid(), 'admin'::app_role)
+          OR EXISTS (SELECT 1 FROM public.clients c JOIN public.agents a ON a.id = c.agent_id
+                      WHERE c.id = p_client_id AND a.user_id = auth.uid())
+          OR EXISTS (SELECT 1 FROM public.client_agents ca JOIN public.agents a ON a.id = ca.agent_id
+                      WHERE ca.client_id = p_client_id AND a.user_id = auth.uid())) THEN
+    RAISE EXCEPTION 'Accès refusé' USING ERRCODE = '42501';
+  END IF;
+  SELECT lower(u.email) INTO v_email
+    FROM public.clients c JOIN auth.users u ON u.id = c.user_id
+   WHERE c.id = p_client_id;
+  UPDATE public.clients
+     SET steeve_email_verifie = CASE WHEN p_verified THEN v_email END,
+         steeve_email_verifie_le = CASE WHEN p_verified THEN now() END,
+         steeve_email_verifie_par = CASE WHEN p_verified THEN auth.uid() END
+   WHERE id = p_client_id;
+  RETURN CASE WHEN p_verified THEN v_email END;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.staff_verify_client_email(uuid, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.staff_verify_client_email(uuid, boolean) TO authenticated;
+
+-- 7) Échanges directs avec un client, pour Steeve uniquement (clé de service).
 CREATE OR REPLACE FUNCTION public.steeve_client_emails(p_client_id uuid, p_limit integer DEFAULT 8, p_days integer DEFAULT 120)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -345,14 +422,9 @@ SET search_path = public
 AS $$
 DECLARE
   v_user uuid;
+  v_verified text;
   v_email text;
-  v_prenom text;
-  v_nom text;
-  v_name text;
-  v_name_rev text;
-  v_name_rx text;
-  v_name_rev_rx text;
-  v_streets text[];
+  v_pilot boolean;
   v_staff text[];
   v_boxes text[];
   v_limit integer := least(greatest(coalesce(p_limit, 8), 1), 15);
@@ -360,134 +432,61 @@ DECLARE
   v_internal_rx constant text := '@([a-z0-9-]+\.)*(immo-rama|logisorama)\.ch$';
   v_finance_rx constant text := '@([a-z0-9-]+\.)*(stripe\.com|twint\.ch|postfinance\.ch|ubs\.com|credit-suisse\.com|raiffeisen\.ch|bcv\.ch|intrum\.(com|ch)|lowell\.(com|ch)|creditreform\.ch|bexio\.com|banana\.ch|vd\.ch|ge\.ch|admin\.ch)$';
   v_sensitive_rx constant text := '(factur|paiement|paye|payer|virement|versement|acompte|honorair|commission|rembours|impaye|arriere|rappel|mise en demeure|poursuite|commandement de payer|recouvrement|encaiss|contentieux|tribunal|conciliation|avocat|huissier|litige|plainte|expulsion|resiliation|dette|iban|salaire|comptab)';
-  v_signal_rx constant text := '(visites?|confirm[a-z]*|annul[a-z]*|report[a-z]*|retenue?s?|refus[a-z]*|accept[a-z]*|attribu[a-z]*|dossier complet|dossier incomplet|candidature|contrat|bail|signature|cles|etat des lieux|liste d.attente|plus disponible|disponible|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|[0-9]{1,2}[./][0-9]{1,2}([./][0-9]{2,4})?|[0-9]{1,2} ?(h|:) ?[0-9]{2})';
-  v_stop constant text[] := ARRAY['les', 'des', 'van', 'von', 'del', 'dos', 'das', 'madame', 'monsieur', 'client', 'cliente', 'test', 'admin', 'info', 'contact', 'demo'];
   v_result jsonb;
 BEGIN
-  SELECT c.user_id INTO v_user FROM public.clients c WHERE c.id = p_client_id;
+  SELECT c.user_id, c.steeve_email_verifie INTO v_user, v_verified FROM public.clients c WHERE c.id = p_client_id;
   IF v_user IS NULL THEN
-    RETURN jsonb_build_object('total', 0, 'emails', '[]'::jsonb);
+    RETURN jsonb_build_object('total', 0, 'emails', '[]'::jsonb, 'adresse_verifiee', false);
   END IF;
+  SELECT lower(u.email) INTO v_email FROM auth.users u WHERE u.id = v_user;
 
+  -- Adresse de confiance : client choisi nommément pour le pilote, ou adresse vérifiée par l'agence
+  -- (et inchangée depuis). Jamais une adresse de l'agence, d'une boîte partagée ou du personnel.
+  v_pilot := p_client_id::text = ANY (string_to_array(replace(coalesce(
+    (SELECT value FROM public.app_config WHERE key = 'steeve_pilot_client_ids'), ''), ' ', ''), ','));
   SELECT array_agg(lower(address)) INTO v_boxes FROM public.shared_mailboxes;
   SELECT array_agg(DISTINCT lower(u.email)) INTO v_staff
     FROM auth.users u JOIN public.user_roles r ON r.user_id = u.id
    WHERE r.role::text IN ('admin', 'agent', 'coursier', 'closeur', 'automation_operator') AND u.email IS NOT NULL;
-  v_boxes := coalesce(v_boxes, '{}');
-  v_staff := coalesce(v_staff, '{}');
-
-  -- Adresse de connexion confirmée : la seule adresse de confiance (profil et personnes rattachées
-  -- sont modifiables par le client). Jamais une adresse de l'agence, d'une boîte ou du personnel.
-  SELECT lower(u.email) INTO v_email FROM auth.users u WHERE u.id = v_user AND u.email_confirmed_at IS NOT NULL;
-  IF v_email IS NULL OR v_email ~ v_internal_rx OR v_email = ANY (v_boxes) OR v_email = ANY (v_staff) THEN
-    v_email := NULL;
+  -- Chaque condition est ramenée à vrai/faux : une valeur NULL ne doit jamais ouvrir l'accès.
+  IF v_email IS NULL
+     OR NOT (coalesce(v_pilot, false) OR coalesce(v_verified = v_email, false))
+     OR coalesce(v_email ~ v_internal_rx, true)
+     OR coalesce(v_email = ANY (coalesce(v_boxes, '{}')), true)
+     OR coalesce(v_email = ANY (coalesce(v_staff, '{}')), true) THEN
+    RETURN jsonb_build_object('total', 0, 'emails', '[]'::jsonb, 'adresse_verifiee', false);
   END IF;
 
-  -- Nom complet : seulement s'il est distinctif et n'appartient à aucune autre personne connue
-  -- (homonyme réel, ou nom repris d'un autre client : aucune correspondance par le nom).
-  SELECT trim(p.prenom), trim(p.nom) INTO v_prenom, v_nom FROM public.profiles p WHERE p.id = v_user;
-  IF length(coalesce(v_prenom, '')) >= 3 AND length(coalesce(v_nom, '')) >= 3
-     AND NOT (public.steeve_norm(v_prenom) = ANY (v_stop)) AND NOT (public.steeve_norm(v_nom) = ANY (v_stop)) THEN
-    v_name := public.steeve_norm(v_prenom || ' ' || v_nom);
-    v_name_rev := public.steeve_norm(v_nom || ' ' || v_prenom);
-    IF EXISTS (SELECT 1 FROM public.profiles p
-                WHERE p.id <> v_user
-                  AND public.steeve_norm(trim(coalesce(p.prenom, '')) || ' ' || trim(coalesce(p.nom, ''))) IN (v_name, v_name_rev))
-       OR EXISTS (SELECT 1 FROM public.client_candidates cc
-                   WHERE public.steeve_norm(trim(coalesce(cc.prenom, '')) || ' ' || trim(coalesce(cc.nom, ''))) IN (v_name, v_name_rev)) THEN
-      v_name := NULL;
-    END IF;
-  END IF;
-  IF v_name IS NOT NULL THEN
-    v_name_rx := public.steeve_word_rx(v_name);
-    v_name_rev_rx := public.steeve_word_rx(v_name_rev);
-    -- Adresses des biens de SES offres et visites (rue et numéro), saisies par l'agence.
-    SELECT array_agg(DISTINCT public.steeve_word_rx(s)) INTO v_streets
-      FROM (
-        SELECT public.steeve_norm(substring(split_part(a, ',', 1) FROM '^([^0-9]*[0-9]+)')) AS s
-          FROM (
-            SELECT o.adresse AS a FROM public.offres o WHERE o.client_id::text = p_client_id::text
-            UNION
-            SELECT v.adresse FROM public.visites v WHERE v.client_id::text = p_client_id::text
-          ) x
-         WHERE a IS NOT NULL
-      ) y
-     WHERE length(coalesce(s, '')) >= 8 AND s ~ '[a-z]{3}';
-  END IF;
-
-  IF v_email IS NULL AND v_streets IS NULL THEN
-    RETURN jsonb_build_object('total', 0, 'emails', '[]'::jsonb);
-  END IF;
-
-  WITH boxes AS (
-    SELECT id FROM public.shared_mailboxes WHERE is_active
-  ), base AS (
-    SELECT m.*,
-           (v_email IS NOT NULL AND m.addrs @> ARRAY[v_email]) AS direct,
-           (v_email IS NOT NULL AND m.from_email = v_email) AS from_client,
-           (coalesce(m.from_email, '') ~ v_internal_rx OR m.from_email = ANY (v_staff) OR m.from_email = ANY (v_boxes)) AS internal_sender
+  WITH kept AS (
+    SELECT DISTINCT ON (coalesce(m.message_key, m.id::text), coalesce(m.from_email, '')) m.*,
+           (m.from_email = v_email) AS from_client,
+           (coalesce(m.from_email, '') ~ v_internal_rx OR m.from_email = ANY (coalesce(v_staff, '{}'))) AS internal_sender
       FROM public.mailbox_emails m
-      JOIN boxes b ON b.id = m.mailbox_id
+      JOIN public.shared_mailboxes b ON b.id = m.mailbox_id AND b.is_active
      WHERE m.received_at >= v_since AND m.received_at <= now() + interval '1 day'
-  ), matched AS (
-    SELECT b.*,
-           (NOT b.direct AND v_streets IS NOT NULL
-             AND NOT b.internal_sender
-             AND coalesce(b.from_email, '') !~ v_finance_rx
-             AND (b.norm_top ~ v_name_rx OR b.norm_top ~ v_name_rev_rx)
-             AND EXISTS (SELECT 1 FROM unnest(v_streets) s WHERE b.norm_top ~ s)) AS mention
-      FROM base b
-     WHERE b.direct OR v_streets IS NOT NULL
-  ), kept AS (
-    SELECT DISTINCT ON (coalesce(message_key, id::text), coalesce(from_email, '')) *
-      FROM matched
-     WHERE direct OR mention
-     ORDER BY coalesce(message_key, id::text), coalesce(from_email, ''), received_at
+       AND m.addrs @> ARRAY[v_email]
+       AND m.auth_verified
+     ORDER BY coalesce(m.message_key, m.id::text), coalesce(m.from_email, ''), m.received_at
   ), ranked AS (
     SELECT *, count(*) OVER () AS total FROM kept ORDER BY received_at DESC NULLS LAST LIMIT v_limit
-  ), windowed AS (
-    -- Mention : seules comptent les lignes qui nomment le client (une ligne voisine peut concerner
-    -- une autre personne : elle n'est jamais lue).
-    SELECT r.*,
-      CASE WHEN r.direct THEN r.norm_top ELSE (
-        SELECT string_agg(l, E'\n' ORDER BY i)
-          FROM unnest(string_to_array(r.norm_top, E'\n')) WITH ORDINALITY t(l, i)
-         WHERE t.l ~ v_name_rx OR t.l ~ v_name_rev_rx
-      ) END AS win
-      FROM ranked r
-  ), described AS (
-    SELECT w.*,
-      (coalesce(w.win, '') ~ v_sensitive_rx OR coalesce(w.from_email, '') ~ v_finance_rx) AS sensible,
-      CASE
-        WHEN w.from_client THEN 'le client lui-même'
-        WHEN w.internal_sender THEN 'équipe Logisorama / Immo-Rama'
-        WHEN coalesce(w.from_email, '') ~ '@([a-z0-9-]+\.)*(flatfox|homegate|immobilier|comparis|realadvisor|immoscout24|newhome|anibis|swissmarketplace|acheter-louer)\.(ch|com)$' THEN 'portail immobilier'
-        ELSE 'régie, bailleur ou autre expéditeur'
-      END AS expediteur,
-      CASE WHEN w.mention AND w.win IS NOT NULL THEN (
-        SELECT array_agg(DISTINCT sig[1] ORDER BY sig[1]) FROM regexp_matches(w.win, v_signal_rx, 'g') AS sig
-      ) END AS signaux
-      FROM windowed w
   )
   SELECT jsonb_build_object(
+    'adresse_verifiee', true,
     'total', coalesce(max(total), 0),
-    'emails', coalesce(jsonb_agg(
-      CASE WHEN direct THEN jsonb_build_object(
-        'type', 'échange direct avec le client',
-        'date', to_char(received_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
-        'expediteur', expediteur,
-        'objet', left(public.steeve_redact(subject), 200),
-        'extrait', left(public.steeve_redact(regexp_replace(coalesce(top_text, ''), '[[:space:]]+', ' ', 'g')), 900),
-        'sensible', sensible)
-      ELSE jsonb_build_object(
-        'type', 'e-mail reçu par l''agence qui mentionne le client',
-        'date', to_char(received_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
-        'expediteur', expediteur,
-        'reperes', CASE WHEN sensible THEN '[]'::jsonb ELSE to_jsonb(coalesce(signaux, '{}'::text[])) END,
-        'sensible', sensible)
-      END ORDER BY received_at DESC NULLS LAST), '[]'::jsonb)
+    'emails', coalesce(jsonb_agg(jsonb_build_object(
+      'date', to_char(received_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
+      'expediteur', CASE
+        WHEN from_client THEN 'le client lui-même'
+        WHEN internal_sender THEN 'équipe Logisorama / Immo-Rama'
+        WHEN coalesce(from_email, '') ~ '@([a-z0-9-]+\.)*(flatfox|homegate|immobilier|comparis|realadvisor|immoscout24|newhome|anibis|swissmarketplace|acheter-louer)\.(ch|com)$' THEN 'portail immobilier'
+        ELSE 'régie, bailleur ou autre expéditeur'
+      END,
+      'objet', left(public.steeve_redact(subject), 200),
+      'extrait', left(public.steeve_redact(regexp_replace(coalesce(top_text, ''), '[[:space:]]+', ' ', 'g')), 900),
+      'sensible', (coalesce(norm_top, '') ~ v_sensitive_rx OR coalesce(from_email, '') ~ v_finance_rx)
+    ) ORDER BY received_at DESC NULLS LAST), '[]'::jsonb)
   ) INTO v_result
-  FROM described;
+  FROM ranked;
 
   RETURN v_result;
 END;
@@ -495,7 +494,7 @@ $$;
 REVOKE ALL ON FUNCTION public.steeve_client_emails(uuid, integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.steeve_client_emails(uuid, integer, integer) TO service_role;
 
--- 7) Relève toutes les 5 minutes ; e-mails relevés conservés 180 jours.
+-- 8) Relève toutes les 5 minutes ; e-mails relevés conservés 180 jours.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sync-shared-mailboxes') THEN

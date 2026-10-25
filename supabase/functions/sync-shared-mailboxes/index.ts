@@ -12,6 +12,8 @@ const corsHeaders = {
 
 // Au-delà, les boîtes restantes attendent le passage suivant (la fonction est coupée vers 150 s).
 const TIME_BUDGET_MS = 90_000;
+// Temps de calcul de décodage pour tout l'appel, partagé entre les boîtes (limite de la fonction : ~2 s).
+const PARSE_BUDGET_TOTAL_MS = 900;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -32,7 +34,7 @@ Deno.serve(async (req) => {
   // Boîtes jamais tentées d'abord, puis la plus anciennement tentée : une boîte en échec ne bloque pas les autres.
   const { data: mailboxes, error } = await db
     .from("shared_mailboxes")
-    .select("id, address, imap_host, imap_port, uid_validity, last_uid")
+    .select("id, address, imap_host, imap_port, uid_validity, last_uid, trusted_authserv")
     .eq("is_active", true)
     .order("last_attempt_at", { ascending: true, nullsFirst: true });
   if (error) {
@@ -43,10 +45,13 @@ Deno.serve(async (req) => {
   }
 
   const started = Date.now();
+  let parseLeft = PARSE_BUDGET_TOTAL_MS;
   const results: SyncResult[] = [];
   for (const mailbox of mailboxes ?? []) {
-    if (Date.now() - started > TIME_BUDGET_MS) break;
-    results.push(await syncMailbox({ db, mailbox, connect: LeanImap.connect }));
+    if (Date.now() - started > TIME_BUDGET_MS || parseLeft <= 0) break;
+    const result = await syncMailbox({ db, mailbox, connect: LeanImap.connect, parseBudgetMs: parseLeft });
+    parseLeft -= result.parseMs;
+    results.push(result);
   }
   console.log("[sync-shared-mailboxes]", JSON.stringify(results.map(({ error: _e, ...r }) => r)));
   return new Response(JSON.stringify({ success: true, results: results.map(({ error: _e, ...r }) => r) }), {
