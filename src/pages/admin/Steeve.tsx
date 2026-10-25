@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { SharedMailboxesManager } from '@/components/settings/SharedMailboxesManager';
 import { SteeveAuthServersCard } from '@/components/settings/SteeveAuthServersCard';
 import { SteeveCopilotCard } from '@/components/admin/SteeveCopilotCard';
+import { SteeveProposalsCard } from '@/components/steeve/SteeveProposalsCard';
 
 type Settings = Record<string, string>;
 type Overview = {
@@ -176,6 +177,7 @@ export default function AdminSteeve() {
 
         <div className="grid max-w-4xl gap-6">
           <SteeveCopilotCard />
+          <SteeveProposalsCard basePath="/admin" />
 
           <Card>
             <CardHeader>

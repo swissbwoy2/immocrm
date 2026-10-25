@@ -56,6 +56,21 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'propose_action',
+    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve) : note_agent (information utile pour l'agent, la conversation reste avec Steeve), changement_criteres (le client demande de modifier ses critères, zones, budget…), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
+    input_schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: ['note_agent', 'changement_criteres', 'relance_regie', 'preuve_paiement'] },
+        titre: { type: 'string', description: 'Titre court pour l’équipe, ex. « Ajouter Morges aux zones ».' },
+        texte: { type: 'string', description: "Détail pour l'équipe, ou brouillon de l'e-mail de relance (vouvoiement, factuel, sans promesse)." },
+        bien: { type: 'string', description: 'Pour relance_regie : adresse du bien telle qu’elle figure dans les candidatures.' },
+      },
+      required: ['type', 'titre', 'texte'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'transfer_to_agent',
     description: "Transmet la conversation à l'agent du client (Steeve arrête alors de répondre ici). À utiliser pour toute action que Steeve ne peut pas faire, une demande de contact humain, un client mécontent ou une question sans réponse dans le dossier.",
     input_schema: {
@@ -121,6 +136,8 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
     }
     case 'transfer_to_agent':
       return await transferToAgent(ctx, String(input?.reason || '').slice(0, 200), String(input?.summary || '').slice(0, 1500));
+    case 'propose_action':
+      return await proposeAction(ctx, input);
     default:
       return { content: `Outil inconnu : ${name}`, isError: true };
   }
@@ -167,4 +184,80 @@ export async function transferToAgent(ctx: ToolContext, reason: string, summary:
     });
   }
   return { content: json({ transfere: true, agents_prevenus: recipients.length }), transferred: true };
+}
+
+const PROPOSAL_KINDS = ['note_agent', 'changement_criteres', 'relance_regie', 'preuve_paiement'] as const;
+const PROPOSAL_LABEL: Record<string, string> = {
+  note_agent: 'Note de Steeve',
+  changement_criteres: 'Changement de critères demandé',
+  relance_regie: 'Relance de régie à valider',
+  preuve_paiement: 'Preuve de paiement à vérifier',
+};
+
+/** Enregistre une proposition que l'équipe validera ; aucune action n'est exécutée. */
+export async function proposeAction(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
+  const { db, dossier, conversationId } = ctx;
+  const kind = String(input?.type || '');
+  if (!(PROPOSAL_KINDS as readonly string[]).includes(kind)) return { content: 'Type de proposition inconnu.', isError: true };
+  const title = String(input?.titre || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  const body = String(input?.texte || '').trim().slice(0, 1500);
+  if (!title || !body) return { content: 'Titre et texte requis.', isError: true };
+
+  let candidatureId: string | null = null;
+  let offreId: string | null = null;
+  if (kind === 'relance_regie') {
+    const bien = String(input?.bien || '').trim().toLowerCase();
+    const { data: cands } = await db.from('candidatures').select('id, offre_id').eq('client_id', dossier.clientId).limit(20);
+    const ids = (cands || []).map((c: any) => c.offre_id).filter(Boolean);
+    const { data: offs } = ids.length ? await db.from('offres').select('id, adresse').in('id', ids) : { data: [] };
+    const match = (offs || []).find((o: any) => bien && String(o.adresse || '').toLowerCase().includes(bien.slice(0, 40)))
+      || ((offs || []).length === 1 ? (offs as any[])[0] : null);
+    if (!match) return { content: json({ erreur: "Candidature introuvable pour ce bien : demande au client de préciser l'adresse, ou vérifie avec get_applications." }), isError: true };
+    offreId = match.id;
+    candidatureId = (cands || []).find((c: any) => c.offre_id === match.id)?.id ?? null;
+  }
+
+  // Pas de doublon : même demande encore en attente depuis moins de 24 h.
+  const since = new Date(ctx.now.getTime() - 24 * 3600 * 1000).toISOString();
+  const { data: existing } = await db.from('steeve_proposals').select('id')
+    .eq('client_id', dossier.clientId).eq('kind', kind).eq('status', 'a_valider').eq('title', title).gte('created_at', since).limit(1);
+  if (existing && existing.length) return { content: json({ proposition_enregistree: true, deja_en_attente: true }) };
+
+  const { error } = await db.from('steeve_proposals').insert({
+    kind, client_id: dossier.clientId, conversation_id: conversationId, candidature_id: candidatureId, offre_id: offreId, title, body,
+    status: 'a_valider',
+  });
+  if (error) return { content: `Proposition impossible : ${error.message}`, isError: true };
+
+  // Prévenir l'agent du client (et l'équipe admin pour une preuve de paiement, ou à défaut d'agent).
+  const { data: links } = await db.from('conversation_agents').select('agent_id').eq('conversation_id', conversationId);
+  const agentIds = [...new Set((links || []).map((l: any) => String(l.agent_id)))];
+  const agentUsers: string[] = [];
+  if (agentIds.length) {
+    const { data: agents } = await db.from('agents').select('user_id').in('id', agentIds);
+    for (const a of agents || []) if (a.user_id) agentUsers.push(a.user_id);
+  }
+  const adminUsers: string[] = [];
+  if (kind === 'preuve_paiement' || !agentUsers.length) {
+    const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin');
+    for (const a of admins || []) if (a.user_id) adminUsers.push(a.user_id);
+  }
+  const who = dossier.prenom || 'Un client';
+  for (const [userId, link] of [...agentUsers.map((u) => [u, '/agent'] as const), ...adminUsers.map((u) => [u, '/admin/steeve'] as const)]) {
+    await db.rpc('create_notification', {
+      p_user_id: userId,
+      p_type: 'new_message',
+      p_title: `${PROPOSAL_LABEL[kind]} : ${title}`.slice(0, 200),
+      p_message: `${who} — ${body}`.slice(0, 500),
+      p_link: link,
+      p_metadata: { conversation_id: conversationId, source: 'steeve_proposal', kind },
+    });
+  }
+  return {
+    content: json({
+      proposition_enregistree: true,
+      a_valider_par: kind === 'preuve_paiement' ? "l'équipe" : 'son agent',
+      rappel: "Rien n'est encore fait : l'équipe valide puis s'en occupe. Ne promets aucun délai ni résultat.",
+    }),
+  };
 }

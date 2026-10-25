@@ -21,6 +21,7 @@ import { countUniqueOffres } from '@/utils/visitesCalculator';
 import { ClientReactionsWidget } from '@/components/premium/ClientReactionsWidget';
 import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { SteeveProposalsCard } from '@/components/steeve/SteeveProposalsCard';
 
 export default function AgentDashboard() {
   const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
@@ -316,6 +317,9 @@ export default function AgentDashboard() {
               ) : undefined
             }
           />
+
+          {/* Actions préparées par Steeve, à valider (masqué s'il n'y en a pas) */}
+          <SteeveProposalsCard basePath="/agent" hideWhenEmpty />
 
           {/* KPIs avec effets modernes */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 items-stretch">
