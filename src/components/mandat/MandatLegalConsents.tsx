@@ -10,7 +10,9 @@ interface Props {
 
 /** Une ligne de titre du contrat : « 1. … », « 2.3. … », ou ligne courte en capitales. */
 const isHeading = (line: string) =>
-  /^\d+(\.\d+)*\.?\s/.test(line) && line.length < 90 || (line.length < 70 && line === line.toUpperCase() && /[A-Z]/.test(line));
+  /^Article\s+\d+/i.test(line) ||
+  (/^\d+(\.\d+)*\.?\s/.test(line) && line.length < 90) ||
+  (line.length < 70 && line === line.toUpperCase() && /[A-Z]/.test(line));
 
 export default function MandatLegalConsents({ data, onChange }: Props) {
   const isPurchase = isPurchaseMandat(data.journey, data.type_recherche);
