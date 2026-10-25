@@ -19,6 +19,8 @@ export interface MandatClientLike {
 
 export interface MandatDates {
   start: Date | null;
+  /** Début de la période de 90 jours en cours (= start tant qu'il n'y a pas eu de reconduction). */
+  cycleStart: Date | null;
   end: Date | null;
   /** Jours écoulés depuis la dernière date d'effet (modulo renouvellement auto), borné [0, 90]. */
   daysSinceSignature: number;
@@ -32,12 +34,12 @@ export interface MandatDates {
 
 export function getMandatDates(client: MandatClientLike | null | undefined): MandatDates {
   if (!client) {
-    return { start: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
+    return { start: null, cycleStart: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
   }
 
   const startRaw = client.mandat_date_signature || client.date_ajout || client.created_at;
   if (!startRaw) {
-    return { start: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
+    return { start: null, cycleStart: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
   }
 
   const start = new Date(startRaw);
@@ -88,6 +90,7 @@ export function getMandatDates(client: MandatClientLike | null | undefined): Man
 
   return {
     start,
+    cycleStart: currentCycleStart,
     end,
     daysSinceSignature,
     daysRemaining,
