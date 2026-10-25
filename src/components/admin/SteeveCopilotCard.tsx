@@ -21,6 +21,9 @@ const TOOL_LABEL: Record<string, string> = {
   blocages: 'dossiers bloqués',
   agents: 'agents',
   client: 'fiche client',
+  web: 'recherche web',
+  journal_steeve: 'journal de Steeve',
+  lancer_tache: 'tâche confiée à Steeve',
 };
 
 /**
@@ -72,7 +75,7 @@ export function SteeveCopilotCard() {
         <div>
           <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Copilote</CardTitle>
           <CardDescription>
-            Demande à Steeve l'état de l'activité. Il lit les chiffres et les dossiers, propose des priorités, et ne modifie rien.
+            Demande à Steeve l'état de l'activité. Il lit les chiffres et les dossiers, propose des priorités, et ne lance une tâche (demande de QR, relance, envoi de dossier) que si tu le lui demandes.
           </CardDescription>
         </div>
         {messages.length > 0 && (

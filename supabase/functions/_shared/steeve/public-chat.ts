@@ -1,6 +1,6 @@
 // Steeve sur le site public : un échange (question du visiteur → réponse), sans accès à aucune donnée.
 // deno-lint-ignore-file no-explicit-any
-import { costOf, type CallModel, type ContentBlock, type ModelMessage, type ToolDefinition } from './anthropic.ts';
+import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type ToolDefinition } from './anthropic.ts';
 import { toPlainReply } from './engine.ts';
 import { STEEVE_PUBLIC_PROMPT } from './public-prompt.ts';
 
@@ -198,15 +198,16 @@ export async function handlePublicChat(opts: {
     let text = '';
     // Au plus deux recherches, puis un dernier appel pour la réponse (une demande de trop est refusée).
     for (let call = 0; call <= MAX_SEARCHES + 1; call++) {
-      const resp = await callModel({ model, max_tokens: 600, system, tools: [SEARCH_TOOL], messages });
+      const resp = await callModel({ model, max_tokens: 600, system, tools: [{ ...WEB_SEARCH_TOOL, max_uses: 1 }, SEARCH_TOOL], messages });
       for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] += resp.usage[k] ?? 0;
       cost += costOf(model, resp.usage);
       const uses = resp.content.filter((b): b is Extract<ContentBlock, { type: 'tool_use' }> => b.type === 'tool_use');
-      text = resp.content
-        .filter((b): b is Extract<ContentBlock, { type: 'text' }> => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-        .trim();
+      text = textOf(resp.content);
+      if (resp.stop_reason === 'pause_turn') {
+        messages.push({ role: 'assistant', content: resp.content });
+        text = '';
+        continue;
+      }
       if (!uses.length) break;
       messages.push({ role: 'assistant', content: resp.content });
       const results: ContentBlock[] = [];

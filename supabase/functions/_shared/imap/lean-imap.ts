@@ -199,7 +199,12 @@ export class LeanImap {
   }
 
   async selectInbox(): Promise<SelectInfo> {
-    const res = await this.command('SELECT INBOX');
+    return await this.select('INBOX');
+  }
+
+  /** Ouvre un dossier (lecture-écriture). */
+  async select(folder: string): Promise<SelectInfo> {
+    const res = await this.command(`SELECT ${folder === 'INBOX' ? 'INBOX' : imapQuote(folder)}`);
     const info: SelectInfo = { exists: 0, uidValidity: null, uidNext: null };
     for (const r of res) {
       const exists = r.text.match(/^\* (\d+) EXISTS/i);
@@ -238,6 +243,61 @@ export class LeanImap {
       out.push({ uid: Number(uid[1]), internalDate: date ? date[1] : null, raw: r.literals[r.literals.length - 1] });
     }
     return out;
+  }
+
+  /** Dossiers de la boîte avec leurs attributs (\\Drafts, \\Sent…). */
+  async listFolders(): Promise<{ name: string; flags: string[] }[]> {
+    const res = await this.command('LIST "" "*"');
+    const out: { name: string; flags: string[] }[] = [];
+    for (const r of res) {
+      const m = r.text.match(/^\* LIST \(([^)]*)\) (?:"[^"]*"|NIL) (.+)$/i);
+      if (!m) continue;
+      let name = m[2].trim();
+      if (name.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1).replace(/\\(["\\])/g, '$1');
+      out.push({ name, flags: m[1].split(/\s+/).filter(Boolean) });
+    }
+    return out;
+  }
+
+  async createFolder(folder: string): Promise<void> {
+    try {
+      await this.command(`CREATE ${imapQuote(folder)}`);
+    } catch (err) {
+      // déjà existant : sans gravité
+      if (!/ALREADYEXISTS|exist/i.test(String(err))) throw err;
+    }
+  }
+
+  /** Déplace des messages du dossier ouvert (MOVE, sinon copie + suppression marquée). */
+  async uidMove(uids: number[], folder: string): Promise<void> {
+    if (uids.length === 0) return;
+    try {
+      await this.command(`UID MOVE ${uids.join(',')} ${imapQuote(folder)}`);
+    } catch {
+      await this.command(`UID COPY ${uids.join(',')} ${imapQuote(folder)}`);
+      await this.command(`UID STORE ${uids.join(',')} +FLAGS.SILENT (\\Deleted)`);
+      await this.command(`UID EXPUNGE ${uids.join(',')}`);
+    }
+  }
+
+  /** Ajoute un message brut dans un dossier (ex. copie dans « Envoyés »). */
+  async append(folder: string, raw: Uint8Array, flags = '\\Seen'): Promise<void> {
+    const tag = `S${++this.tagCounter}`;
+    await this.transport.write(encoder.encode(`${tag} APPEND ${imapQuote(folder)} (${flags}) {${raw.length}}\r\n`));
+    for (;;) {
+      const line = await this.readLine();
+      if (line.startsWith('+')) break;
+      if (line.startsWith(`${tag} `)) throw new Error(`IMAP APPEND : ${line.slice(tag.length + 1, 160)}`);
+    }
+    await this.transport.write(raw);
+    await this.transport.write(encoder.encode('\r\n'));
+    for (;;) {
+      const line = await this.readLine();
+      if (line.startsWith(`${tag} `)) {
+        if (!line.slice(tag.length + 1).startsWith('OK')) throw new Error(`IMAP APPEND : ${line.slice(tag.length + 1, 160)}`);
+        return;
+      }
+    }
   }
 
   async logout(): Promise<void> {

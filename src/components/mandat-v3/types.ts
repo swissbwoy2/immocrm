@@ -118,7 +118,7 @@ export const LEGAL_CHECKBOXES: LegalConsent[] = [
   {
     key: 'legal_duree',
     title: 'Durée et reconduction tacite',
-    question: "Acceptez-vous que le mandat soit conclu pour 90 jours, reconduit tacitement par périodes de 90 jours, la dénonciation ordinaire pouvant être notifiée entre le 75e et le 90e jour de la période en cours (par écrit ou dans l'application Logisorama.ch) ?",
+    question: "Acceptez-vous que le mandat soit conclu pour 90 jours, reconduit tacitement par périodes de 90 jours, la dénonciation ordinaire pouvant être notifiée entre le 80e et le 90e jour de la période en cours (par écrit ou dans l'application Logisorama.ch) ?",
     cta: "Oui, j'accepte",
   },
   {

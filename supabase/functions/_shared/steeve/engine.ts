@@ -1,7 +1,7 @@
 // Un passage de Steeve : répondre au(x) dernier(s) message(s) du client d'une conversation.
 // Le code décide (droits, plafonds, publication) ; le modèle comprend, choisit les outils et rédige.
 // deno-lint-ignore-file no-explicit-any
-import { costOf, type CallModel, type ContentBlock, type ModelMessage, type Usage } from './anthropic.ts';
+import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type Usage } from './anthropic.ts';
 import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
 import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
@@ -298,7 +298,7 @@ export async function runTurn(opts: {
           model,
           max_tokens: 800,
           system: [{ type: 'text', text: STEEVE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-          tools: STEEVE_TOOLS.map((t, idx) => (idx === STEEVE_TOOLS.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t)),
+          tools: [WEB_SEARCH_TOOL, ...STEEVE_TOOLS.map((t, idx) => (idx === STEEVE_TOOLS.length - 1 ? { ...t, cache_control: { type: 'ephemeral' as const } } : t))],
           messages,
         });
         totals.calls += 1;
@@ -309,12 +309,14 @@ export async function runTurn(opts: {
         totals.cost += costOf(model, resp.usage);
 
         const toolUses = resp.content.filter((b): b is Extract<ContentBlock, { type: 'tool_use' }> => b.type === 'tool_use');
+        if (resp.content.some((b) => b.type === 'server_tool_use')) totals.tools.push('web_search');
+        // Recherche web longue : Anthropic rend la main, on renvoie le message tel quel pour qu'il continue.
+        if (resp.stop_reason === 'pause_turn') {
+          messages.push({ role: 'assistant', content: resp.content });
+          continue;
+        }
         if (resp.stop_reason !== 'tool_use' || toolUses.length === 0) {
-          finalText = resp.content
-            .filter((b): b is Extract<ContentBlock, { type: 'text' }> => b.type === 'text')
-            .map((b) => b.text)
-            .join('\n')
-            .trim();
+          finalText = textOf(resp.content);
           break;
         }
 

@@ -15,6 +15,7 @@ import { SharedMailboxesManager } from '@/components/settings/SharedMailboxesMan
 import { SteeveAuthServersCard } from '@/components/settings/SteeveAuthServersCard';
 import { SteeveCopilotCard } from '@/components/admin/SteeveCopilotCard';
 import { SteeveProposalsCard } from '@/components/steeve/SteeveProposalsCard';
+import { SteeveOperatorCard } from '@/components/admin/SteeveOperatorCard';
 
 type Settings = Record<string, string>;
 type Overview = {
@@ -172,12 +173,13 @@ export default function AdminSteeve() {
       <div className="p-4 md:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Steeve</h1>
-          <p className="text-muted-foreground">Copilote, activation, clients concernés, budget, journal et boîtes e-mail de l'assistant</p>
+          <p className="text-muted-foreground">Copilote, opérateur, activation, clients concernés, budget, journal et boîtes e-mail de l'assistant</p>
         </div>
 
         <div className="grid max-w-4xl gap-6">
           <SteeveCopilotCard />
           <SteeveProposalsCard basePath="/admin" />
+          <SteeveOperatorCard />
 
           <Card>
             <CardHeader>

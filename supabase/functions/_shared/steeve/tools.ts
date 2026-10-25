@@ -71,6 +71,18 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'demander_postulation',
+    description: "Demande de postuler pour un bien, au nom du client, après la visite (mêmes règles que le bouton « Postuler » de l'application) : l'équipe prépare le dossier, Steeve le contrôle et l'envoie à la régie. À utiliser seulement si le client dit clairement qu'il veut postuler pour ce bien. Rien n'est envoyé à la régie à ce moment.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+      },
+      required: ['bien'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'transfer_to_agent',
     description: "Transmet la conversation à l'agent du client (Steeve arrête alors de répondre ici). À utiliser pour toute action que Steeve ne peut pas faire, une demande de contact humain, un client mécontent ou une question sans réponse dans le dossier.",
     input_schema: {
@@ -118,6 +130,8 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return { content: json(await applications(db, dossier.clientId)) };
     case 'get_mandate':
       return { content: json(mandate(dossier, now)) };
+    case 'demander_postulation':
+      return await requestPostulation(db, dossier.clientId, String(input?.bien ?? ''));
     case 'get_emails': {
       const limit = Number.isInteger(input?.limit) ? Math.min(Math.max(input.limit, 1), 15) : 8;
       const { data, error } = await db.rpc('steeve_client_emails', { p_client_id: dossier.clientId, p_limit: limit });
@@ -258,6 +272,33 @@ export async function proposeAction(ctx: ToolContext, input: Record<string, any>
       proposition_enregistree: true,
       a_valider_par: kind === 'preuve_paiement' ? "l'équipe" : 'son agent',
       rappel: "Rien n'est encore fait : l'équipe valide puis s'en occupe. Ne promets aucun délai ni résultat.",
+    }),
+  };
+}
+
+
+const norm = (v: string | null | undefined) => (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/** Postulation demandée par Steeve pour le client : une seule offre du client doit correspondre. */
+export async function requestPostulation(db: Db, clientId: string, bien: string): Promise<ToolOutcome> {
+  const wanted = norm(bien);
+  if (wanted.length < 3) return { content: "Précise le bien (adresse) pour lequel le client veut postuler.", isError: true };
+  const { data: list } = await db.from('offres').select('id, adresse, statut').eq('client_id', clientId).limit(200);
+  const found = (list ?? []).filter((o: any) => o.id === bien.trim() || (norm(o.adresse) && (norm(o.adresse).includes(wanted) || wanted.includes(norm(o.adresse).split(' ').slice(0, 4).join(' ')))));
+  if (found.length === 0) return { content: "Aucune offre de ce client ne correspond à ce bien : demande-lui de préciser l'adresse.", isError: true };
+  if (found.length > 1) return { content: `Plusieurs offres correspondent (${found.map((o: any) => o.adresse).slice(0, 4).join(' ; ')}) : demande au client laquelle.`, isError: true };
+  const { data, error } = await db.rpc('steeve_request_postulation', { p_client_id: clientId, p_offre_id: found[0].id });
+  if (error) {
+    // Message de la base lisible (ex. visite pas encore effectuée) ; sinon message neutre.
+    const msg = /visite/i.test(error.message ?? '') ? error.message : "La demande de postulation n'a pas pu être enregistrée.";
+    return { content: msg, isError: true };
+  }
+  return {
+    content: json({
+      demande_enregistree: true,
+      bien: found[0].adresse,
+      deja_demandee: Boolean((data as any)?.already_requested),
+      suite: "L'équipe prépare le dossier ; Steeve le contrôle puis l'envoie à la régie. Rien n'est encore envoyé : ne dis pas que la candidature est déposée.",
     }),
   };
 }
