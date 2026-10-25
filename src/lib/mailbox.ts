@@ -145,6 +145,33 @@ export function emailDocument(html: string): string {
   return `<!doctype html><html><head>${head}</head><body>${clean}</body></html>`;
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", zwnj: '', zwj: '', shy: '',
+  hellip: '…', ndash: '–', mdash: '—', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”',
+  laquo: '«', raquo: '»', euro: '€', copy: '©', reg: '®', trade: '™', middot: '·', bull: '•',
+};
+
+/** Aperçu lisible : entités HTML décodées, caractères invisibles retirés, espaces resserrés. */
+export function cleanSnippet(s: string | null | undefined): string {
+  if (!s) return '';
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_m, h) => {
+      const n = parseInt(h, 16);
+      return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : '';
+    })
+    .replace(/&#(\d+);/g, (_m, d) => {
+      const n = parseInt(d, 10);
+      return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : '';
+    })
+    .replace(/&([a-z]+);/gi, (m, name: string) => {
+      const v = NAMED_ENTITIES[name.toLowerCase()];
+      return v === undefined ? m : v;
+    })
+    .replace(/[​-‍⁠﻿­͏]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
