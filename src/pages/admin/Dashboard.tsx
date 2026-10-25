@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   AlertTriangle, ArrowDownRight, ArrowUpRight, BadgeCheck, Banknote, BarChart3, Briefcase, Calendar, CheckCircle2,
-  ChevronDown, ClipboardList, Clock, FileSignature, FileText, Heart, LifeBuoy, MessageSquare, Receipt, RotateCcw,
+  ChevronDown, ClipboardList, Clock, FileSignature, FileText, LifeBuoy, MessageSquare, Receipt, RotateCcw,
   Send, Settings2, ShieldCheck, Undo2, UserCog, UserPlus, Users, Wallet,
 } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
@@ -33,8 +33,25 @@ import {
 
 type Row = Record<string, any>;
 
+/** La base renvoie au plus 1000 lignes par requête : on lit page par page pour avoir TOUTES les lignes. */
+async function fetchAll(build: (from: number, to: number) => any, max = 60000): Promise<{ data: Row[]; error: unknown }> {
+  const out: Row[] = [];
+  for (let from = 0; from < max; from += 1000) {
+    const { data, error } = await build(from, from + 999);
+    if (error) return { data: out, error };
+    out.push(...((data as Row[]) || []));
+    if (!data || data.length < 1000) break;
+  }
+  return { data: out, error: null };
+}
+
+/** Nombre exact de lignes (compté par la base, sans limite). */
+async function countRows(q: any): Promise<number> {
+  const { count, error } = await q;
+  return error ? 0 : count ?? 0;
+}
+
 const VISITE_A_VENIR = ['planifiee', 'confirmee', 'proposee'];
-const REACTIONS = ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation'];
 const CANDIDATURE_A_FINALISER = ['acceptee', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe'];
 
 /** Ligne d'un compte de résultat : libellé, détail, montant. */
@@ -76,7 +93,9 @@ export default function AdminDashboard() {
   const [clients, setClients] = useState<Row[]>([]);
   const [clientAgents, setClientAgents] = useState<Row[]>([]);
   const [transactions, setTransactions] = useState<Row[]>([]);
-  const [offres, setOffres] = useState<Row[]>([]);
+  const [offres, setOffres] = useState<Row[]>([]); // chargées seulement pour les statistiques détaillées
+  const [aPostuler, setAPostuler] = useState(0);
+  const [offresPeriode, setOffresPeriode] = useState<{ total: number; parAgent: Record<string, number> }>({ total: 0, parAgent: {} });
   const [visites, setVisites] = useState<Row[]>([]);
   const [candidatures, setCandidatures] = useState<Row[]>([]);
   const [mandates, setMandates] = useState<Row[]>([]);
@@ -109,31 +128,31 @@ export default function AdminDashboard() {
       const safe = <T,>(r: { data: T | null; error: unknown }, fallback: T): T => (r.error ? fallback : (r.data ?? fallback));
 
       const [
-        meRes, agentsRes, clientsRes, caRes, trRes, offresRes, visitesRes, candRes, mandRes, demRes, regRes, achatRes, fichesRes, creditsRes,
+        meRes, agentsRes, clientsRes, caRes, trRes, aPostulerCount, visitesRes, candRes, mandRes, demRes, regRes, achatRes, fichesRes, creditsRes,
       ] = await Promise.all([
         user?.id ? supabase.from('profiles').select('prenom').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         supabase.from('agents').select('id, user_id, statut'),
-        supabase
+        fetchAll((a, b) => supabase
           .from('clients')
           .select('id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, commission_split, mandat_date_signature, mandate_pause_days, mandate_paused_at, mandate_official_end_date, refund_status, refund_requested_at, refund_processed_at, cancellation_requested_at')
-          .limit(20000),
-        supabase.from('client_agents').select('client_id, agent_id, commission_split, is_primary').limit(20000),
-        supabase.from('transactions').select('*').limit(20000),
-        supabase.from('offres').select('id, date_envoi, created_at, agent_id, statut').limit(30000),
-        supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id').limit(30000),
-        supabase.from('candidatures').select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at').limit(20000),
-        supabase.from('mandates').select('id, acompte_montant, created_at').limit(20000),
-        supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom, email').limit(20000),
-        supabase
+          .order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('client_agents').select('client_id, agent_id, commission_split, is_primary').order('client_id').range(a, b)),
+        fetchAll((a, b) => supabase.from('transactions').select('*').order('id').range(a, b)),
+        countRows(supabase.from('offres').select('id', { count: 'exact', head: true }).eq('statut', 'souhaite_postuler')),
+        fetchAll((a, b) => supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id').order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('candidatures').select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at').order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('mandates').select('id, acompte_montant, created_at').order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom, email').order('id').range(a, b)),
+        fetchAll((a, b) => supabase
           .from('registre_commissions')
           .select('id, date_conclusion, honoraire_total, commission_agent, commission_agence, montant_acompte, statut_paiement, type_affaire, agent_id, agent_prenom, agent_nom, client_prenom, client_nom, client_email')
-          .limit(20000),
-        supabase.from('purchase_projects').select('id, date_paiement_acompte, montant_acompte').not('date_paiement_acompte', 'is', null).limit(5000),
-        supabase
+          .order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('purchase_projects').select('id, date_paiement_acompte, montant_acompte').not('date_paiement_acompte', 'is', null).order('id').range(a, b)),
+        fetchAll((a, b) => supabase
           .from('fiches_salaire')
           .select('annee, mois, statut, mode_remuneration, cout_total_employeur, salaire_net, montant_commissions, employes(mode_remuneration, prenom, nom)')
-          .limit(20000),
-        supabase.from('user_credits').select('user_id, coins_mandat').limit(20000),
+          .order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('user_credits').select('user_id, coins_mandat').order('user_id').range(a, b)),
       ]);
 
       setPrenom((meRes as any)?.data?.prenom || '');
@@ -170,7 +189,7 @@ export default function AdminDashboard() {
       setDemandes(demandesData);
       setClientAgents(safe(caRes as any, [] as Row[]));
       setTransactions(safe(trRes as any, [] as Row[]).map((t) => ({ ...t, dateConclusion: t.date_transaction, partAgence: t.part_agence, commissionTotale: t.commission_totale })));
-      setOffres(safe(offresRes as any, [] as Row[]));
+      setAPostuler(aPostulerCount as number);
       setVisites(safe(visitesRes as any, [] as Row[]));
       setCandidatures(safe(candRes as any, [] as Row[]));
       setMandates(safe(mandRes as any, [] as Row[]));
@@ -213,6 +232,34 @@ export default function AdminDashboard() {
   }), [registre, demandes, achats, clients, fiches, charges]);
 
   const p = useMemo(() => periodRange(period), [period]);
+
+  // Offres envoyées sur la période : comptées par la base (plusieurs milliers de lignes, jamais tronquées).
+  useEffect(() => {
+    let alive = true;
+    const base = () => supabase
+      .from('offres')
+      .select('id', { count: 'exact', head: true })
+      .gte('date_envoi', p.start.toISOString())
+      .lt('date_envoi', p.end.toISOString());
+    (async () => {
+      const [total, ...parAgent] = await Promise.all([
+        countRows(base()),
+        ...agents.map((a) => countRows(base().eq('agent_id', a.id))),
+      ]);
+      if (!alive) return;
+      const map: Record<string, number> = {};
+      agents.forEach((a, i) => { map[a.id] = parAgent[i] ?? 0; });
+      setOffresPeriode({ total, parAgent: map });
+    })();
+    return () => { alive = false; };
+  }, [p, agents]);
+
+  // Lignes d'offres complètes : seulement à l'ouverture des statistiques détaillées.
+  useEffect(() => {
+    if (!showMore || offres.length) return;
+    fetchAll((a, b) => supabase.from('offres').select('id, date_envoi, created_at, agent_id').order('id').range(a, b))
+      .then((r) => setOffres(r.data));
+  }, [showMore, offres.length]);
   const fin = useMemo(() => computeFinance(financeInput, p), [financeInput, p]);
 
   const months = useMemo(() => {
@@ -233,11 +280,11 @@ export default function AdminDashboard() {
 
   const activite = useMemo(() => ({
     mandatsSignes: clients.filter((c) => inPeriod(c.mandat_date_signature, p)).length,
-    offresEnvoyees: offres.filter((o) => inPeriod(o.date_envoi || o.created_at, p)).length,
+    offresEnvoyees: offresPeriode.total,
     visitesEffectuees: visites.filter((v) => v.statut === 'effectuee' && inPeriod(v.date_visite, p)).length,
     candidaturesDeposees: candidatures.filter((c) => inPeriod(c.date_depot || c.created_at, p)).length,
     bauxSignes: candidatures.filter((c) => inPeriod(c.signature_effectuee_at, p)).length,
-  }), [clients, offres, visites, candidatures, p]);
+  }), [clients, offresPeriode, visites, candidatures, p]);
 
   const funnel = [
     { label: 'Offres envoyées', value: activite.offresEnvoyees },
@@ -253,8 +300,6 @@ export default function AdminDashboard() {
     const refundsPending = clients.filter((c) => c.refund_status === 'pending');
     const cancellations = clients.filter((c) => c.cancellation_requested_at && c.statut === 'actif' && c.refund_status !== 'processed');
     const activationsAttente = demandes.filter((d) => ['en_attente', 'facture_envoyee'].includes(d.statut));
-    const aPostuler = offres.filter((o) => o.statut === 'souhaite_postuler');
-    const reactions = offres.filter((o) => REACTIONS.includes(o.statut));
     const visitesSansRetour = visites.filter((v) => {
       const d = v.date_visite ? new Date(v.date_visite) : null;
       return v.statut === 'effectuee' && !v.client_decision && d && d >= ago30;
@@ -263,20 +308,26 @@ export default function AdminDashboard() {
       const d = v.date_visite ? new Date(v.date_visite) : null;
       return VISITE_A_VENIR.includes(v.statut) && d && d >= now && d <= in7;
     });
-    const candEnAttente = candidatures.filter((c) => c.statut === 'en_attente');
+    // Candidatures en attente de réponse déposées ces 60 derniers jours (les plus anciennes sont des dossiers clos jamais mis à jour).
+    const ago60 = new Date(now.getTime() - 60 * 86400000);
+    const candEnAttente = candidatures.filter((c) => {
+      const d = new Date(c.date_depot || c.created_at);
+      return c.statut === 'en_attente' && d >= ago60;
+    });
     const candAFinaliser = candidatures.filter((c) => CANDIDATURE_A_FINALISER.includes(c.statut) && !c.cles_remises);
     const sansAgent = actifs.filter((c) => !c.agentId);
     const critiques = actifs.filter((c) => { const d = mandatElapsedFor(c as any); return d >= 60 && d < 90; });
     const expires = clients.filter((c) => c.statut === 'actif' && mandatElapsedFor(c as any) >= 90);
-    const aEncaisser = registre.filter((r) => (r.statut_paiement ?? '') !== 'paye');
+    // Registre : « Payé / À payer » = commission versée ou non À L'AGENT (pas le paiement du client).
+    const agentsAVerser = registre.filter((r) => (r.statut_paiement ?? '') !== 'paye' && Number(r.commission_agent || 0) > 0);
     return {
       refundsPending, refundsPendingMontant: refundsPending.reduce((s, c) => s + (c.montantActivation || 0), 0),
-      cancellations, activationsAttente, aPostuler, reactions, visitesSansRetour, visitesAVenir,
-      candEnAttente, candAFinaliser, sansAgent, critiques, expires, aEncaisser,
-      aEncaisserMontant: aEncaisser.reduce((s, r) => s + Math.max(0, Number(r.honoraire_total || 0) - Number(r.montant_acompte || 0)), 0),
+      cancellations, activationsAttente, aPostuler, visitesSansRetour, visitesAVenir,
+      candEnAttente, candAFinaliser, sansAgent, critiques, expires, agentsAVerser,
+      agentsAVerserMontant: agentsAVerser.reduce((s, r) => s + Number(r.commission_agent || 0), 0),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, demandes, offres, visites, candidatures, actifs, registre]);
+  }, [clients, demandes, aPostuler, visites, candidatures, actifs, registre]);
 
   /* ---------- Équipe ---------- */
   const team = useMemo(() => agents.map((a) => {
@@ -293,9 +344,9 @@ export default function AdminDashboard() {
       critiques: crit,
       affaires: reg.length,
       commission: reg.reduce((s, r) => s + Number(r.commission_agent || 0), 0),
-      offres: offres.filter((o) => o.agent_id === a.id && inPeriod(o.date_envoi || o.created_at, p)).length,
+      offres: offresPeriode.parAgent[a.id] ?? 0,
     };
-  }).sort((x, y) => Number(y.actif) - Number(x.actif) || y.clients - x.clients), [agents, actifs, registre, offres, p]);
+  }).sort((x, y) => Number(y.actif) - Number(x.actif) || y.clients - x.clients), [agents, actifs, registre, offresPeriode, p]);
 
   /* ---------- Projection (section existante conservée) ---------- */
   const agencyProjections = actifs.map((client) => {
@@ -340,20 +391,16 @@ export default function AdminDashboard() {
       node: <TodoCard icon={Banknote} tone="primary" title={`${todo.activationsAttente.length} activation${todo.activationsAttente.length > 1 ? 's' : ''} à encaisser`} description="Mandats signés en attente de paiement (facture envoyée ou à envoyer)." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/demandes-activation')}>Ouvrir</Button>} />,
     },
     {
-      key: 'postuler', show: todo.aPostuler.length > 0,
-      node: <TodoCard icon={Send} tone="primary" title={`${todo.aPostuler.length} postulation${todo.aPostuler.length > 1 ? 's' : ''} à déposer`} description="Des clients veulent postuler : préparer et envoyer le dossier à la gérance." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/postulations')}>Postuler</Button>} />,
+      key: 'postuler', show: todo.aPostuler > 0,
+      node: <TodoCard icon={Send} tone="primary" title={`${todo.aPostuler} postulation${todo.aPostuler > 1 ? 's' : ''} à déposer`} description="Des clients veulent postuler : préparer et envoyer le dossier à la gérance." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/postulations')}>Postuler</Button>} />,
     },
     {
       key: 'retours', show: todo.visitesSansRetour.length > 0,
       node: <TodoCard icon={MessageSquare} title={`${todo.visitesSansRetour.length} visite${todo.visitesSansRetour.length > 1 ? 's' : ''} sans retour client`} description="Visites effectuées ces 30 derniers jours sans décision du client : relancer pour savoir s'il postule." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/visites')}>Relancer</Button>} />,
     },
     {
-      key: 'reactions', show: todo.reactions.length > 0,
-      node: <TodoCard icon={Heart} tone="primary" title={`${todo.reactions.length} offre${todo.reactions.length > 1 ? 's' : ''} avec intérêt client`} description="Le client est intéressé : organiser la visite ou la candidature." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/offres-envoyees')}>Voir</Button>} />,
-    },
-    {
       key: 'candidatures', show: todo.candEnAttente.length + todo.candAFinaliser.length > 0,
-      node: <TodoCard icon={FileSignature} tone="primary" title={`${todo.candEnAttente.length} candidature${todo.candEnAttente.length > 1 ? 's' : ''} en attente · ${todo.candAFinaliser.length} à finaliser`} description="Réponses des gérances, bail, signature, état des lieux et remise des clés." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/candidatures')}>Suivre</Button>} />,
+      node: <TodoCard icon={FileSignature} tone="primary" title={`${todo.candEnAttente.length} candidature${todo.candEnAttente.length > 1 ? 's' : ''} en attente · ${todo.candAFinaliser.length} à finaliser`} description="En attente : déposées ces 60 derniers jours sans réponse de la gérance. À finaliser : bail, signature, état des lieux, clés." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/candidatures')}>Suivre</Button>} />,
     },
     {
       key: 'mandats', show: todo.critiques.length + todo.expires.length > 0,
@@ -364,8 +411,8 @@ export default function AdminDashboard() {
       node: <TodoCard icon={UserPlus} title={`${todo.sansAgent.length} client${todo.sansAgent.length > 1 ? 's' : ''} actif${todo.sansAgent.length > 1 ? 's' : ''} sans agent`} description="Assigner un agent pour démarrer le suivi." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/assignations')}>Assigner</Button>} />,
     },
     {
-      key: 'encaisser', show: todo.aEncaisser.length > 0,
-      node: <TodoCard icon={Receipt} title={`${formatCHF(todo.aEncaisserMontant)} de commissions à encaisser`} description={`${todo.aEncaisser.length} affaire${todo.aEncaisser.length > 1 ? 's' : ''} conclue${todo.aEncaisser.length > 1 ? 's' : ''} non marquée${todo.aEncaisser.length > 1 ? 's' : ''} « payée » dans le registre.`} action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/registre-commissions')}>Registre</Button>} />,
+      key: 'agents', show: todo.agentsAVerser.length > 0,
+      node: <TodoCard icon={Receipt} title={`${formatCHF(todo.agentsAVerserMontant)} de commission agent à verser`} description={todo.agentsAVerser.map((r) => `${r.agent_prenom || 'Agent'} — ${[r.client_prenom, r.client_nom].filter(Boolean).join(' ')}`).join(' · ') + ' : marqué « À payer » dans le registre.'} action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/registre-commissions')}>Registre</Button>} />,
     },
   ];
   const visibleTodos = todoCards.filter((t) => t.show);
@@ -438,7 +485,7 @@ export default function AdminDashboard() {
             <div className={`${DASH_CARD} p-4 md:p-5`}>
               <h3 className="mb-1 text-base font-semibold text-foreground">Recettes</h3>
               <div className="divide-y divide-border/60">
-                <MoneyLine label="Commissions" sub={`${fin.affairesLocation} location · ${fin.affairesAchat} achat/vente${fin.commissionsAEncaisser > 0 ? ` · ${formatCHF(fin.commissionsAEncaisser)} à encaisser` : ''}`} value={fin.commissions} tone="plus" onClick={() => setDetail({ key: 'commissions', title: 'Commissions', path: '/admin/registre-commissions' })} />
+                <MoneyLine label="Commissions" sub={`${fin.affairesLocation} location · ${fin.affairesAchat} achat/vente`} value={fin.commissions} tone="plus" onClick={() => setDetail({ key: 'commissions', title: 'Commissions', path: '/admin/registre-commissions' })} />
                 <MoneyLine label="Activations de mandat" sub={`${fin.activationsCount} encaissée${fin.activationsCount > 1 ? 's' : ''}`} value={fin.activations} tone="plus" onClick={() => setDetail({ key: 'activations', title: 'Activations de mandat encaissées', path: '/admin/demandes-activation' })} />
                 <MoneyLine label="Acomptes achat" value={fin.acomptesAchat} tone="plus" onClick={() => setDetail({ key: 'acomptesAchat', title: 'Acomptes achat encaissés' })} />
               </div>
@@ -577,7 +624,7 @@ export default function AdminDashboard() {
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             <LinkRow icon={Users} label="Clients" sub={`${actifs.length} actifs · ${clients.length} au total`} onClick={() => navigate('/admin/clients')} />
             <LinkRow icon={FileText} label="Mandats" sub="Échéances, reconductions, remboursements" onClick={() => navigate('/admin/mandats')} />
-            <LinkRow icon={Send} label="Postulations" sub={`${todo.aPostuler.length} à déposer`} onClick={() => navigate('/admin/postulations')} />
+            <LinkRow icon={Send} label="Postulations" sub={`${todo.aPostuler} à déposer`} onClick={() => navigate('/admin/postulations')} />
             <LinkRow icon={ClipboardList} label="Candidatures" sub={`${todo.candEnAttente.length} en attente · ${todo.candAFinaliser.length} à finaliser`} onClick={() => navigate('/admin/candidatures')} />
             <LinkRow icon={Calendar} label="Visites et calendrier" sub={`${todo.visitesAVenir.length} dans les 7 jours`} onClick={() => navigate('/admin/calendrier')} />
             <LinkRow icon={LifeBuoy} label="Support" sub="Demandes d'aide des utilisateurs" onClick={() => navigate('/admin/support')} />
