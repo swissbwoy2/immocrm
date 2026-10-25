@@ -1817,3 +1817,26 @@ html.dark[data-imr-role="client"] {
   .imr-glass-nav { background: rgba(255, 255, 255, 0.97); }
   .dark .imr-glass-nav { background: rgba(28, 28, 30, 0.97); }
 }
+
+/* ==== Steeve 3D, déclencheur de la messagerie ==== */
+/* Largeur du canevas (le personnage en occupe une partie) : discret sur mobile, lisible sur ordinateur. */
+.steeve-launcher-size {
+  --steeve-size: 150px;
+  width: var(--steeve-size);
+}
+@media (max-width: 600px) {
+  .steeve-launcher-size { --steeve-size: 78px; }
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  .steeve-launcher-size { --steeve-size: 112px; }
+}
+@media (min-width: 1800px) {
+  .steeve-launcher-size { --steeve-size: 170px; }
+}
+.steeve-app-launcher {
+  bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+/* Application mobile : Steeve se place au-dessus de la barre de navigation du bas. */
+html.imr-native-shell .steeve-app-launcher {
+  bottom: calc(max(env(safe-area-inset-bottom, 0px), 12px) + 84px);
+}

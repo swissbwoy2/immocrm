@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Send, X, Loader2, RotateCcw, MapPin, ArrowRight, Heart } from 'lucide-react';
+import { Send, X, Loader2, RotateCcw, MapPin, ArrowRight, Heart } from 'lucide-react';
+import { SteeveLauncher, type SteeveInvite } from '@/components/steeve/SteeveLauncher';
 import { supabase } from '@/integrations/supabase/client';
 import { LinkifiedText } from '@/components/messaging/LinkifiedText';
 import { cn } from '@/lib/utils';
@@ -169,10 +170,11 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadHistory());
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [teaser, setTeaser] = useState<string | null>(null);
+  // Invitations jouées par Steeve (bulle du personnage), jamais une ouverture forcée de la discussion.
+  const [invite, setInvite] = useState<SteeveInvite | null>(null);
+  const showInvite = (message: string) => setInvite((prev) => ({ key: (Number(prev?.key) || 0) + 1, message }));
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -191,13 +193,10 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
 
   useEffect(() => {
     if (!open) return;
-    setTeaser(null);
     setTimeout(() => inputRef.current?.focus(), 50);
+    // Échap ferme ; le focus revient alors sur Steeve (SteeveLauncher).
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-        toggleRef.current?.focus();
-      }
+      if (e.key === 'Escape') setOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -207,7 +206,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
   useEffect(() => {
     if (!enabled || open || hidden || messages.length > 0 || readLocal(TEASER_KEY)) return;
     const t = setTimeout(() => {
-      setTeaser("Tu cherches un logement ? Dis-moi ce que tu cherches, je te montre ce qui est disponible.");
+      showInvite('Tu cherches un logement ? Dis-moi ce que tu cherches !');
       writeLocal(TEASER_KEY, '1');
     }, TEASER_DELAY_MS);
     return () => clearTimeout(t);
@@ -233,7 +232,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     const t = setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
       if (open) setMessages((prev) => [...prev, { role: 'assistant', content: text, local: true, at: Date.now() }]);
-      else if (text === RELANCE_1) setTeaser(RELANCE_1);
+      else if (text === RELANCE_1) showInvite('Tu hésites ? Pose-moi une question !');
     }, delay);
     return () => clearTimeout(t);
   }, [enabled, messages, sending, draft, open]);
@@ -293,7 +292,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     <div
       data-floating-widget
       className={cn(
-        'fixed right-4 z-[60] flex flex-col items-end bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] lg:bottom-6 lg:right-6',
+        'fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+80px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
         hidden && 'pointer-events-none invisible',
       )}
     >
@@ -301,7 +300,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
         <div
           role="dialog"
           aria-label="Discuter avec Steeve"
-          className="mb-3 flex h-[min(560px,calc(100dvh-180px))] w-[min(380px,calc(100vw-32px))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+          className="flex h-[min(560px,calc(100dvh-260px))] w-[min(380px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl sm:h-[min(560px,calc(100dvh-120px))] sm:w-[min(380px,calc(100vw-160px))]"
         >
           <div className="flex items-center justify-between gap-2 border-b border-border bg-primary px-4 py-3 text-primary-foreground">
             <div className="min-w-0">
@@ -416,33 +415,12 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
         </div>
       )}
 
-      {!open && teaser && (
-        <div className="mb-3 flex max-w-[min(300px,calc(100vw-32px))] items-start gap-2 rounded-2xl rounded-br-md border border-border bg-background p-3 text-sm shadow-xl">
-          <button type="button" onClick={() => setOpen(true)} className="text-left leading-snug">
-            {teaser}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTeaser(null)}
-            className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-muted"
-            aria-label="Masquer"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
-      <button
-        ref={toggleRef}
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xl transition-transform hover:scale-[1.03]"
-        aria-expanded={open}
-        aria-label={open ? 'Fermer la discussion avec Steeve' : 'Discuter avec Steeve'}
-      >
-        {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
-        <span className="hidden sm:inline">{open ? 'Fermer' : 'Tu cherches un logement ?'}</span>
-      </button>
+      <SteeveLauncher
+        open={open}
+        busy={sending}
+        invite={invite}
+        onActivate={() => setOpen((v) => !v)}
+      />
     </div>
   );
 }

@@ -7,6 +7,9 @@ interface FloatingMessengerContextValue {
   activeConversationId: string | null;
   unreadCount: number;
   hasNew: boolean;
+  /** Attente réelle en cours (envoi, réponse de Steeve attendue) : affichée par Steeve. */
+  busy: boolean;
+  setBusy: (value: boolean) => void;
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -24,6 +27,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNew, setHasNew] = useState(false);
+  const [busy, setBusy] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refreshUnread = useCallback(async () => {
@@ -73,6 +77,14 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
   useEffect(() => {
     refreshUnread();
   }, [refreshUnread]);
+
+  // Changement ou fin de session : la messagerie se referme et oublie la conversation de l'ancien compte.
+  useEffect(() => {
+    setIsOpen(false);
+    setActiveConversationId(null);
+    setHasNew(false);
+    setBusy(false);
+  }, [user?.id]);
 
   // Realtime subscription on messages
   useEffect(() => {
@@ -138,6 +150,8 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
     activeConversationId,
     unreadCount,
     hasNew,
+    busy,
+    setBusy,
     open,
     close,
     toggle,
@@ -145,7 +159,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
     setActiveConversation,
     acknowledgeNew,
     refreshUnread,
-  }), [isOpen, activeConversationId, unreadCount, hasNew, open, close, toggle, openWith, setActiveConversation, acknowledgeNew, refreshUnread]);
+  }), [isOpen, activeConversationId, unreadCount, hasNew, busy, open, close, toggle, openWith, setActiveConversation, acknowledgeNew, refreshUnread]);
 
   return (
     <FloatingMessengerContext.Provider value={value}>
