@@ -16,6 +16,7 @@ const HomeSelection = lazy(() => import('@/components/public-site/home/HomeSelec
 const HomeHowItWorks = lazy(() => import('@/components/public-site/home/HomeHowItWorks').then(m => ({ default: m.HomeHowItWorks })));
 const HomePricing = lazy(() => import('@/components/public-site/home/HomePricing').then(m => ({ default: m.HomePricing })));
 const HomeProof = lazy(() => import('@/components/public-site/home/HomeProof').then(m => ({ default: m.HomeProof })));
+const HomeReviews = lazy(() => import('@/components/public-site/home/HomeReviews').then(m => ({ default: m.HomeReviews })));
 const HomeApp = lazy(() => import('@/components/public-site/home/HomeApp').then(m => ({ default: m.HomeApp })));
 const HomeFaq = lazy(() => import('@/components/public-site/home/HomeFaq').then(m => ({ default: m.HomeFaq })));
 const HomeClosing = lazy(() => import('@/components/public-site/home/HomeClosing').then(m => ({ default: m.HomeClosing })));
@@ -65,6 +66,7 @@ export default function HomePage() {
           <HomeHowItWorks />
           <HomePricing />
           <HomeProof />
+          <HomeReviews />
           <HomeApp />
           <HomeFaq />
           <HomeClosing />
