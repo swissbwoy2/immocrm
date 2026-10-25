@@ -55,12 +55,20 @@ interface MandatData {
   payment_method?: 'twint' | 'qr_invoice';
   demande_id?: string;
   client_id?: string;
+  // Mandat réellement affiché et signé dans le formulaire (texte intégral) + dispositions approuvées
+  contract_title?: string;
+  contract_text?: string;
+  consents?: { key?: string; title: string; question?: string; cta?: string; accepted_at?: string | null }[];
+  signed_at?: string;
 }
 
 // Sanitize text to remove Unicode characters that can't be encoded in WinAnsi
 function sanitizeText(text: string | null | undefined): string {
   if (!text) return '-';
   return String(text)
+    .replace(/[\u2018\u2019\u02BC]/g, "'") // apostrophes typographiques → '
+    .replace(/[\u201C\u201D]/g, '"')       // guillemets anglais → "
+    .replace(/\u2713/g, 'v')                // coche → v
     .replace(/\u202f/g, ' ')  // Narrow no-break space → normal space
     .replace(/\u00a0/g, ' ')  // No-break space → normal space
     .replace(/'/g, "'")       // Right single quotation mark → apostrophe
@@ -72,7 +80,7 @@ function sanitizeText(text: string | null | undefined): string {
     .replace(/[\u2000-\u200B]/g, ' ')  // Various Unicode spaces → normal space
     .replace(/[^\x00-\x7F]/g, (char) => {
       // Keep accented characters that WinAnsi supports
-      const supported = 'àâäçéèêëîïôùûüÿœæÀÂÄÇÉÈÊËÎÏÔÙÛÜŸŒÆ°€£¥©®™±×÷';
+      const supported = 'àâäçéèêëîïôùûüÿœæÀÂÄÇÉÈÊËÎÏÔÙÛÜŸŒÆ°€£¥©®™±×÷«»';
       return supported.includes(char) ? char : '';
     });
 }
@@ -89,6 +97,19 @@ function formatDate(dateString: string): string {
     return sanitizeText(`${day} ${month} ${year}`);
   } catch {
     return sanitizeText(dateString);
+  }
+}
+
+function formatDateTimeCH(iso: string | null | undefined): string {
+  if (!iso) return '-';
+  try {
+    const d = new Date(iso);
+    const s = new Intl.DateTimeFormat('fr-CH', {
+      timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(d);
+    return sanitizeText(s.replace(',', ' a'));
+  } catch {
+    return sanitizeText(iso);
   }
 }
 
@@ -450,7 +471,71 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
 
   const maxTextWidth = pageWidth - 2 * margin;
 
-  if (isPurchase) {
+  // Variante grasse (titres du contrat)
+  const addWrappedBold = (text: string, x: number, maxWidth: number, fontSize: number) => {
+    const words = sanitizeText(text).split(' ');
+    let line = '';
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (helveticaBold.widthOfTextAtSize(test, fontSize) > maxWidth && line) {
+        page.drawText(line, { x, y: yPosition, size: fontSize, font: helveticaBold, color: rgb(0.1, 0.2, 0.4) });
+        yPosition -= lineHeight;
+        line = word;
+        checkNewPage();
+      } else {
+        line = test;
+      }
+    }
+    if (line) {
+      page.drawText(line, { x, y: yPosition, size: fontSize, font: helveticaBold, color: rgb(0.1, 0.2, 0.4) });
+      yPosition -= lineHeight;
+    }
+  };
+  const isContractHeading = (t: string) =>
+    (/^\d+(\.\d+)*\.?\s/.test(t) && t.length < 90) || (t.length < 70 && t === t.toUpperCase() && /[A-Z]/.test(t));
+
+  if (data.contract_text && data.contract_text.trim()) {
+    // Texte intégral du mandat tel qu'affiché et signé dans le formulaire
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    yPosition = pageHeight - margin;
+    addWrappedBold(`TEXTE INTEGRAL DU MANDAT - ${(data.contract_title || (isPurchase ? 'Achat' : 'Location')).toUpperCase()}`, margin, maxTextWidth, 12);
+    yPosition -= 10;
+    for (const raw of data.contract_text.split('\n')) {
+      const t = raw.trim();
+      checkNewPage();
+      if (!t) { yPosition -= 4; continue; }
+      if (isContractHeading(t)) {
+        yPosition -= 4;
+        addWrappedBold(t, margin, maxTextWidth, 10);
+      } else {
+        addWrappedText(t, margin, maxTextWidth, 9);
+      }
+    }
+    yPosition -= 15;
+
+    // Dispositions approuvées une à une par le mandant (horodatées)
+    if (Array.isArray(data.consents) && data.consents.length > 0) {
+      checkNewPage();
+      addWrappedBold('DISPOSITIONS APPROUVEES PAR LE MANDANT', margin, maxTextWidth, 12);
+      yPosition -= 6;
+      addWrappedText(
+        `Le mandant a lu et approuve individuellement les ${data.consents.length} dispositions suivantes avant de signer :`,
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 6;
+      data.consents.forEach((c, i) => {
+        checkNewPage();
+        addWrappedBold(`${i + 1}. ${c.title}`, margin, maxTextWidth, 10);
+        if (c.question) addWrappedText(c.question, margin + 12, maxTextWidth - 12, 9);
+        addWrappedText(
+          `Reponse : ${c.cta || 'Accepte'} - approuve le ${formatDateTimeCH(c.accepted_at || data.signed_at)}`,
+          margin + 12, maxTextWidth - 12, 9
+        );
+        yPosition -= 6;
+      });
+      yPosition -= 10;
+    }
+  } else if (isPurchase) {
     // ACHAT - 5 articles officiels
     addText('DISPOSITIONS DU MANDAT DE RECHERCHE - ACHAT', margin, yPosition, 12, helveticaBold);
     yPosition -= 25;
@@ -684,12 +769,15 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   }
 
   // Signature section
-  checkNewPage();
-  yPosition = Math.min(yPosition, 200);
+  // Bloc signature : toujours entier sur la même page
+  if (yPosition < 260) {
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    yPosition = pageHeight - margin;
+  }
 
   addText('SIGNATURE', margin, yPosition, 12, helveticaBold);
   yPosition -= 15;
-  addText(`Fait à Crissier, le ${formatDate(new Date().toISOString())}`, margin, yPosition, 10);
+  addText(`Signe electroniquement le ${formatDateTimeCH(data.signed_at || new Date().toISOString())}`, margin, yPosition, 10);
   yPosition -= 25;
 
   // Add signature image if available
