@@ -748,28 +748,30 @@ function ClientDashboardLocation() {
               title="Mon dossier"
               action={<DashSectionLink onClick={() => navigate('/client/dossier')} />}
             >
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* Gauche : solvabilité. Droite : pièces du dossier puis candidats (garant, colocataire). */}
+              <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
                 <SectionErrorBoundary sectionName="Solvability">
                   <SolvabilityAlert result={solvabilityResult} appearance="client" />
                 </SectionErrorBoundary>
-                <SectionErrorBoundary sectionName="DossierChecklist">
-                  <PremiumDossierChecklistCard
-                    clientName={clientFullName}
-                    candidates={candidates}
-                    documents={documents}
-                  />
-                </SectionErrorBoundary>
+                <div className="flex min-w-0 flex-col gap-4">
+                  <SectionErrorBoundary sectionName="DossierChecklist">
+                    <PremiumDossierChecklistCard
+                      clientName={clientFullName}
+                      candidates={candidates}
+                      documents={documents}
+                    />
+                  </SectionErrorBoundary>
+                  <SectionErrorBoundary sectionName="Candidates">
+                    <PremiumCandidatesCard
+                      clientId={client.id}
+                      clientRevenus={client.revenus_mensuels || 0}
+                      budgetDemande={client.budget_max || 0}
+                    />
+                  </SectionErrorBoundary>
+                </div>
               </div>
 
-              <SectionErrorBoundary sectionName="Candidates">
-                <PremiumCandidatesCard
-                  clientId={client.id}
-                  clientRevenus={client.revenus_mensuels || 0}
-                  budgetDemande={client.budget_max || 0}
-                />
-              </SectionErrorBoundary>
-
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
                 <LinkRow icon={FolderOpen} label="Mes documents" sub={`${documents.length} document${documents.length > 1 ? 's' : ''}`} onClick={() => navigate('/client/documents')} />
                 <LinkRow icon={FileText} label="Mon contrat" sub="Mandat et conditions" onClick={() => navigate('/client/mon-contrat')} />
               </div>
