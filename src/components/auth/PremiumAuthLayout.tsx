@@ -173,7 +173,7 @@ export function PremiumAuthLayout({
 
   return (
     <div
-      className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 pb-8 pt-20 sm:py-8"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 pb-8 pt-[calc(env(safe-area-inset-top,0px)+72px)] sm:py-8"
     >
       {/* Hero background */}
       <div className="absolute inset-0">
@@ -189,7 +189,8 @@ export function PremiumAuthLayout({
       {/* Back button */}
       {backTo && (
         <motion.div
-          className="absolute top-4 left-4 z-20 sm:top-6 sm:left-6"
+          className="absolute left-4 z-20 sm:left-6"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}

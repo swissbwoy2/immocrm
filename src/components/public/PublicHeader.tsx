@@ -25,7 +25,10 @@ export function PublicHeader() {
 
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+    <>
+    {/* App native plein écran : réserve la hauteur de la barre d'état (0 sur le web). */}
+    <div aria-hidden style={{ height: 'env(safe-area-inset-top, 0px)' }} />
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -158,5 +161,6 @@ export function PublicHeader() {
         </div>
       </div>
     </header>
+    </>
   );
 }

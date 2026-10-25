@@ -82,7 +82,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
         <DemoModeBanner />
         <OpenInBrowserBanner />
         {/* Mobile Header - toujours visible */}
-        <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0">
+        <header className="sticky top-0 z-20 flex items-center min-h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           <SidebarTrigger 
             className="-ml-1 transition-transform duration-200 active:scale-95"
             aria-label="Ouvrir le menu de navigation"
