@@ -13,7 +13,7 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
-import { LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
+import { legalCheckboxesFor } from '@/components/mandat/achat/achatMandat';
 import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
@@ -52,7 +52,7 @@ const PURCHASE_STEPS: StepDef[] = [
   { key: 'financement', title: 'Financement', component: MandatAchatStepFinancing, icon: '💰' },
   { key: 'situation_perso', title: 'Situation personnelle', component: MandatAchatStepPersonal, icon: '👤' },
   { key: 'co_acquereurs', title: 'Co-acquéreurs', component: MandatFormStep5, icon: '👥' },
-  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  // Pas d'étape Documents à l'achat : les justificatifs sont demandés ultérieurement, dans l'espace client.
   { key: 'signature', title: 'Signature', component: MandatAchatStepSignature, icon: '✍️' },
 ];
 
@@ -126,7 +126,9 @@ export default function NouveauMandat() {
 
   const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
   const currentStepDef = steps[currentStep] ?? steps[0];
-  const allLegalAccepted = LEGAL_CHECKBOXES.every((cb) => (formData as any)[cb.key] === true);
+  // Dispositions du parcours choisi (achat : mandat d'achat révisé ; location : mandat de location).
+  const allLegalAccepted = legalCheckboxesFor(formData.journey, formData.type_recherche)
+    .every((cb) => (formData as any)[cb.key] === true);
 
   const validateStep = (step: number): boolean => {
     const def = steps[step];
@@ -213,7 +215,7 @@ export default function NouveauMandat() {
         return;
       }
 
-      const isPurchase = formData.journey === 'purchase' || formData.type_recherche === 'Acheter';
+      const isPurchase = formData.journey ? formData.journey === 'purchase' : formData.type_recherche === 'Acheter';
       // ⚠️ Activation exacte : CHF 2'500 pour achat (imputee sur commission 1 %), CHF 300 pour location.
       const montantAcompte = isPurchase ? 2500 : 300;
 
@@ -431,7 +433,7 @@ export default function NouveauMandat() {
             vehicules: formData.vehicules,
             numero_plaques: formData.numero_plaques,
             decouverte_agence: formData.decouverte_agence,
-            type_recherche: formData.type_recherche,
+            type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
             nombre_occupants: formData.nombre_occupants,
             type_bien: formData.type_bien,
             pieces_recherche: formData.pieces_recherche,
@@ -487,7 +489,7 @@ export default function NouveauMandat() {
               employeur: formData.employeur,
               revenus_mensuels: formData.revenus_mensuels,
               decouverte_agence: formData.decouverte_agence,
-              type_recherche: formData.type_recherche,
+              type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
               nombre_occupants: formData.nombre_occupants,
               type_bien: formData.type_bien,
               pieces_recherche: formData.pieces_recherche,
