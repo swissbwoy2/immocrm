@@ -349,8 +349,8 @@ export function GererOffreDialog({
               </Select>
             </div>
             <div className="col-span-2">
-              <Label>Commentaires</Label>
-              <Textarea rows={3} value={commentaires} onChange={e => setCommentaires(e.target.value)} />
+              <Label>Note de suivi (visible par le client)</Label>
+              <Textarea rows={3} value={commentaires} onChange={e => setCommentaires(e.target.value)} placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente." />
             </div>
           </div>
 
