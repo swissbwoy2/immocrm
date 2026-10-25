@@ -44,7 +44,7 @@ const DialogContent = React.forwardRef<
         ref={ref}
         className={cn(
           // Base styles
-          "fixed z-50 grid gap-4 border border-border/70 bg-background p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] duration-200",
+          "fixed z-50 grid gap-4 overflow-x-hidden [&>*]:min-w-0 border border-border/70 bg-background p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] duration-200",
           // Mobile: bottom sheet style
           isMobile
             ? cn(

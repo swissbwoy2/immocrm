@@ -18,7 +18,7 @@ export function ClientInteretBadge({ statutOffre, className, variantShort }: Cli
   if (state.key === 'inconnu' && !statutOffre) return null;
 
   return (
-    <Badge variant="outline" className={cn('text-xs font-medium', state.className, className)}>
+    <Badge variant="outline" className={cn('rounded-full text-xs font-semibold', state.className, className)}>
       {variantShort ? state.short : state.label}
     </Badge>
   );
