@@ -135,7 +135,7 @@ export function CandidatProspectsList({ rows, loading, error }: { rows: Candidat
 
   return (
     <div className="space-y-4">
-      <Card className="bg-card/80 backdrop-blur-xl border-border/50">
+      <Card className="rounded-2xl border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]">
         <CardContent className="space-y-3 p-4">
           <p className="text-sm text-muted-foreground">
             Comptes inscrits comme candidats (portail d'annonces ou Google) qui n'ont pas encore de dossier client.
@@ -161,7 +161,7 @@ export function CandidatProspectsList({ rows, loading, error }: { rows: Candidat
         {filtered.slice(0, display).map((r) => {
           const name = `${r.prenom || ''} ${r.nom || ''}`.trim() || 'Sans nom';
           return (
-            <Card key={r.user_id} className="bg-card/80 backdrop-blur-xl border-border/50">
+            <Card key={r.user_id} className="rounded-2xl border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]">
               <CardContent className="space-y-2 p-4 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold text-foreground truncate">{name}</p>
