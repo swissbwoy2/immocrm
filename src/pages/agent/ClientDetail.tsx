@@ -32,6 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { Progress } from '@/components/ui/progress';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { ClientNotesManager } from '@/components/ClientNotesManager';
@@ -714,7 +715,7 @@ export default function ClientDetail() {
                         reloggedCandidatureForCalc?.signature_effectuee_at || 
                         reloggedCandidatureForCalc?.date_etat_lieux || null;
   
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
+  const daysElapsed = mandatElapsedFor(client as any, mandatEndDate);
   const daysRemaining = 90 - daysElapsed;
   const progressPercentage = (daysElapsed / 90) * 100;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);

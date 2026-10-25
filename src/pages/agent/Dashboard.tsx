@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { calculateDaysElapsed } from '@/utils/calculations';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -234,8 +235,7 @@ export default function AgentDashboard() {
   
   const deadlinesCritiques = clientsNonReloge.filter(c => {
     if (c.statut !== 'actif') return false;
-    const dateAjout = c.date_ajout || c.created_at;
-    return calculateDaysElapsed(dateAjout) >= 90;
+    return mandatElapsedFor(c as any) >= 90 && mandatRemainingFor(c as any) <= 0;
   }).length;
 
   // Filtrer uniquement les clients actifs des 3 derniers mois pour la projection financière
@@ -268,14 +268,9 @@ export default function AgentDashboard() {
   const commissionsCeMois = transactionsCeMois.reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
   const clientsCritiques = clients.filter(c => {
-    const dateAjout = c.date_ajout || c.created_at;
-    const days = calculateDaysElapsed(dateAjout);
+    const days = mandatElapsedFor(c as any);
     return days >= 60;
-  }).sort((a, b) => {
-    const dateA = a.date_ajout || a.created_at;
-    const dateB = b.date_ajout || b.created_at;
-    return calculateDaysElapsed(dateB) - calculateDaysElapsed(dateA);
-  });
+  }).sort((a, b) => mandatElapsedFor(b as any) - mandatElapsedFor(a as any));
 
   // Réactions clients aux offres (statuts nécessitant une action agent)
   const REACTION_STATUTS = ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation'];
@@ -597,8 +592,8 @@ export default function AgentDashboard() {
                   {clientsCritiques.length > 0 ? (
                     clientsCritiques.map(client => {
                       const dateAjout = client.date_ajout || client.created_at;
-                      const daysElapsed = calculateDaysElapsed(dateAjout);
-                      const daysRemaining = 90 - daysElapsed;
+                      const daysElapsed = mandatElapsedFor(client as any);
+                      const daysRemaining = mandatRemainingFor(client as any);
                       const isExpired = daysRemaining <= 0;
                       const isWarning = daysRemaining > 0 && daysRemaining <= 30;
                       const profile = profiles.get(client.user_id);

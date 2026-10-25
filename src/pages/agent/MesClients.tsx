@@ -10,6 +10,7 @@ import { PremiumClientCard } from "@/components/premium/PremiumClientCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
@@ -316,6 +317,7 @@ const MesClients = () => {
           animaux: false,
           vehicules: false,
           dateInscription: client.date_ajout || client.created_at,
+          mandatRef: client,
           agentId: client.agent_id,
           typeBien: client.type_bien,
           typeRecherche: client.type_recherche || 'Louer',
@@ -808,7 +810,7 @@ const MesClients = () => {
           {/* Grid de clients - Premium */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {sortedClients.map((client, index) => {
-              const daysElapsed = calculateDaysElapsed(client.dateInscription);
+              const daysElapsed = mandatElapsedFor(((client as any).mandatRef ?? client) as any);
               const reminderCount = clientReminders.get(client.id) || 0;
 
               return (
