@@ -60,12 +60,12 @@ export function ConversationsAnnoncePanel({ userId, mode, initialId }: { userId:
   const conv = convs.find((c) => c.id === sel);
 
   return (
-    <div className="grid min-h-[50vh] overflow-hidden rounded-xl border md:grid-cols-[260px_1fr]">
-      <ul className={cn('divide-y overflow-y-auto border-r', sel && 'hidden md:block')}>
+    <div className="grid min-h-[50vh] overflow-hidden rounded-2xl border border-border/70 bg-card md:grid-cols-[300px_1fr]">
+      <ul className={cn('flex flex-col gap-0.5 overflow-y-auto p-2 md:border-r md:border-border/70', sel && 'hidden md:flex')}>
         {convs.map((c) => (
           <li key={c.id}>
-            <button type="button" onClick={() => setSel(c.id)} className={cn('w-full p-3 text-left text-sm hover:bg-muted/50 min-h-[56px]', sel === c.id && 'bg-muted')}>
-              <p className="truncate font-medium">{c.subject || 'Annonce'}</p>
+            <button type="button" onClick={() => setSel(c.id)} aria-current={sel === c.id ? 'true' : undefined} className={cn('w-full min-h-[60px] rounded-xl px-3 py-2.5 text-left text-sm transition-colors', sel === c.id ? 'bg-primary/10' : 'hover:bg-muted/60')}>
+              <p className="truncate font-semibold text-foreground">{c.subject || 'Annonce'}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {mode === 'annonceur' ? c.client_name : c.annonceur_user_id ? 'Bailleur / représentant' : 'Équipe Immo-Rama'}
               </p>
@@ -73,24 +73,24 @@ export function ConversationsAnnoncePanel({ userId, mode, initialId }: { userId:
           </li>
         ))}
       </ul>
-      <div className={cn('flex flex-col', !sel && 'hidden md:flex')}>
+      <div className={cn('flex min-w-0 flex-col', !sel && 'hidden md:flex')}>
         {conv ? (
           <>
-            <div className="flex items-center gap-2 border-b p-3">
-              <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setSel(null)} aria-label="Retour"><ArrowLeft className="h-4 w-4" /></Button>
-              <p className="truncate text-sm font-semibold">{conv.subject}</p>
+            <div className="flex min-h-[56px] items-center gap-2 border-b border-border/70 px-3 py-2">
+              <Button size="icon" variant="ghost" className="h-10 w-10 shrink-0 rounded-full md:hidden" onClick={() => setSel(null)} aria-label="Retour"><ArrowLeft className="h-5 w-5" /></Button>
+              <p className="truncate text-[15px] font-semibold text-foreground">{conv.subject}</p>
             </div>
-            <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            <div className="flex-1 space-y-1.5 overflow-y-auto p-3">
               {msgs.map((m) => (
-                <div key={m.id} className={cn('max-w-[80%] rounded-2xl px-3 py-2 text-sm', m.sender_id === userId ? 'ml-auto bg-primary text-primary-foreground' : 'bg-muted text-foreground')}>
-                  <p className="whitespace-pre-wrap"><LinkifiedText text={m.content ?? ""} /></p>
+                <div key={m.id} className={cn('w-fit max-w-[80%] rounded-2xl px-3 py-2 text-sm', m.sender_id === userId ? 'ml-auto rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-muted text-foreground')}>
+                  <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]"><LinkifiedText text={m.content ?? ""} /></p>
                 </div>
               ))}
               <div ref={endRef} />
             </div>
-            <div className="flex gap-2 border-t p-2">
-              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Votre message…" className="min-h-[44px] flex-1" />
-              <Button size="icon" className="h-11 w-11" disabled={!text.trim() || sending} onClick={send} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
+            <div className="flex items-end gap-2 border-t border-border/70 p-2">
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Votre message…" rows={1} className="min-h-[44px] flex-1 resize-none rounded-3xl border-transparent bg-muted/60 px-4 py-2.5 focus-visible:bg-background" />
+              <Button size="icon" className="h-11 w-11 shrink-0 rounded-full" disabled={!text.trim() || sending} onClick={send} aria-label="Envoyer"><Send className="h-5 w-5" /></Button>
             </div>
           </>
         ) : (
