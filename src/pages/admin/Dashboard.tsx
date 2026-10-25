@@ -25,6 +25,7 @@ import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
 import { ChargesAgenceDialog } from '@/components/admin/dashboard/ChargesAgenceDialog';
+import { RemboursementsDialog, type RemboursementRow, type PendingRefund } from '@/components/admin/dashboard/RemboursementsDialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   ACTIVATION_PAYEE, PERIODS, isTestAccount, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
@@ -85,6 +86,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>('mois');
   const [chargesOpen, setChargesOpen] = useState(false);
+  const [rembOpen, setRembOpen] = useState(false);
+  const [rembRows, setRembRows] = useState<RemboursementRow[]>([]);
+  const [rembAvailable, setRembAvailable] = useState(true);
   const [showMore, setShowMore] = useState(false);
   const [detail, setDetail] = useState<{ key: DetailKey; title: string; path?: string } | null>(null);
 
@@ -106,6 +110,16 @@ export default function AdminDashboard() {
   const [charges, setCharges] = useState<ChargeRow[]>([]);
   const [chargesAvailable, setChargesAvailable] = useState(true);
   const [usersAvecCredits, setUsersAvecCredits] = useState<Set<string> | null>(null);
+
+  const loadRemboursements = useCallback(async () => {
+    const { data, error } = await (supabase as any)
+      .from('remboursements')
+      .select('id, date_remboursement, client_nom, montant, moyen, client_id, notes')
+      .order('date_remboursement', { ascending: false })
+      .limit(5000);
+    if (error) { setRembAvailable(false); setRembRows([]); }
+    else { setRembAvailable(true); setRembRows((data || []) as RemboursementRow[]); }
+  }, []);
 
   const loadCharges = useCallback(async () => {
     const { data, error } = await (supabase as any)
@@ -201,14 +215,14 @@ export default function AdminDashboard() {
           ? null
           : new Set(((creditsRes as any).data || []).filter((r: Row) => Number(r.coins_mandat ?? 0) > 0 && r.user_id).map((r: Row) => r.user_id as string)),
       );
-      await loadCharges();
+      await Promise.all([loadCharges(), loadRemboursements()]);
     } catch (e) {
       console.error('[AdminDashboard]', e);
       toast.error('Erreur de chargement du tableau de bord');
     } finally {
       setLoading(false);
     }
-  }, [user?.id, loadCharges]);
+  }, [user?.id, loadCharges, loadRemboursements]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -224,12 +238,16 @@ export default function AdminDashboard() {
     registre: registre as any,
     activations: demandes as any,
     acomptesAchat: achats as any,
-    refunds: clients
-      .filter((c) => c.refund_status === 'processed' || c.refund_status === 'pending')
-      .map((c) => ({ refund_status: c.refund_status, refund_processed_at: c.refund_processed_at, refund_requested_at: c.refund_requested_at, montant: c.montantActivation, label: `${c.prenom || ''} ${c.nom || ''}`.trim() || null })),
+    // Remboursements versés = journal « remboursements » (+ anciennes fiches marquées traitées sans ligne au journal).
+    refunds: [
+      ...rembRows.map((r) => ({ refund_status: 'processed', refund_processed_at: r.date_remboursement, refund_requested_at: null, montant: Number(r.montant), label: r.client_nom })),
+      ...clients
+        .filter((c) => c.refund_status === 'processed' && !rembRows.some((r) => r.client_id === c.id))
+        .map((c) => ({ refund_status: c.refund_status, refund_processed_at: c.refund_processed_at, refund_requested_at: c.refund_requested_at, montant: c.montantActivation, label: `${c.prenom || ''} ${c.nom || ''}`.trim() || null })),
+    ],
     fiches: fiches as any,
     charges,
-  }), [registre, demandes, achats, clients, fiches, charges]);
+  }), [registre, demandes, achats, clients, fiches, charges, rembRows]);
 
   const p = useMemo(() => periodRange(period), [period]);
 
@@ -382,7 +400,7 @@ export default function AdminDashboard() {
   const todoCards: { key: string; show: boolean; node: ReactElement }[] = [
     {
       key: 'refunds', show: todo.refundsPending.length > 0,
-      node: <TodoCard icon={Undo2} title={`${todo.refundsPending.length} demande${todo.refundsPending.length > 1 ? 's' : ''} de remboursement`} description={`${formatCHF(todo.refundsPendingMontant)} à rembourser dans les 30 jours après l'échéance.`} action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/mandats')}>Traiter</Button>} />,
+      node: <TodoCard icon={Undo2} title={`${todo.refundsPending.length} demande${todo.refundsPending.length > 1 ? 's' : ''} de remboursement`} description={`${formatCHF(todo.refundsPendingMontant)} à rembourser dans les 30 jours après l'échéance.`} action={<Button size="sm" className="rounded-full" onClick={() => setRembOpen(true)}>Marquer remboursé</Button>} />,
     },
     {
       key: 'cancel', show: todo.cancellations.length > 0,
@@ -497,7 +515,7 @@ export default function AdminDashboard() {
             <div className={`${DASH_CARD} p-4 md:p-5`}>
               <h3 className="mb-1 text-base font-semibold text-foreground">Dépenses</h3>
               <div className="divide-y divide-border/60">
-                <MoneyLine label="Remboursements versés" sub={`${fin.remboursementsCount} client${fin.remboursementsCount > 1 ? 's' : ''}`} value={fin.remboursements} tone="minus" onClick={() => setDetail({ key: 'remboursements', title: 'Remboursements versés', path: '/admin/mandats' })} />
+                <MoneyLine label="Remboursements versés" sub={`${fin.remboursementsCount} client${fin.remboursementsCount > 1 ? 's' : ''}`} value={fin.remboursements} tone="minus" onClick={() => setRembOpen(true)} />
                 <MoneyLine label="Salaires (coût employeur)" sub="Fiches de salaire validées ou payées" value={fin.salaires} tone="minus" onClick={() => setDetail({ key: 'salaires', title: 'Salaires (coût employeur)', path: '/admin/salaires' })} />
                 <MoneyLine label="Commissions agents" sub="Hors commissions déjà sur fiche de salaire" value={fin.commissionsAgents} tone="minus" onClick={() => setDetail({ key: 'commissionsAgents', title: 'Commissions agents', path: '/admin/salaires-agents' })} />
                 <MoneyLine label="Charges de l'agence" sub={chargesAvailable ? (chargesCat[0] ? `dont ${chargeCategoryLabel(chargesCat[0][0]).toLowerCase()} ${formatCHF(chargesCat[0][1])}` : 'Aucune charge saisie') : 'À activer'} value={fin.charges} tone="minus" onClick={() => setChargesOpen(true)} />
@@ -632,6 +650,7 @@ export default function AdminDashboard() {
             <LinkRow icon={LifeBuoy} label="Support" sub="Demandes d'aide des utilisateurs" onClick={() => navigate('/admin/support')} />
             <LinkRow icon={Wallet} label="Registre des commissions" sub={`${registre.length} affaires enregistrées`} onClick={() => navigate('/admin/registre-commissions')} />
             <LinkRow icon={Briefcase} label="Salaires" sub="Fiches de salaire et coût employeur" onClick={() => navigate('/admin/salaires')} />
+            <LinkRow icon={Undo2} label="Remboursements" sub={rembAvailable ? `${rembRows.length} enregistré${rembRows.length > 1 ? 's' : ''} · ${todo.refundsPending.length} en attente` : 'À activer'} onClick={() => setRembOpen(true)} />
             <LinkRow icon={Settings2} label="Charges de l'agence" sub={chargesAvailable ? `${charges.length} ligne${charges.length > 1 ? 's' : ''}` : 'À activer'} onClick={() => setChargesOpen(true)} />
             <LinkRow icon={UserCog} label="Assignations" sub={`${todo.sansAgent.length} client${todo.sansAgent.length > 1 ? 's' : ''} sans agent`} onClick={() => navigate('/admin/assignations')} />
           </div>
@@ -720,6 +739,21 @@ export default function AdminDashboard() {
           })()}
         </DialogContent>
       </Dialog>
+
+      <RemboursementsDialog
+        open={rembOpen}
+        onOpenChange={setRembOpen}
+        available={rembAvailable}
+        rows={rembRows}
+        pending={todo.refundsPending.map((c): PendingRefund => ({
+          clientId: c.id,
+          demandeId: c.demande_mandat_id ?? null,
+          nom: `${c.prenom || ''} ${c.nom || ''}`.trim() || 'Client',
+          demandeLe: c.refund_requested_at ?? null,
+          montant: c.montantActivation || 300,
+        }))}
+        onChanged={loadData}
+      />
 
       <ChargesAgenceDialog open={chargesOpen} onOpenChange={setChargesOpen} charges={charges} available={chargesAvailable} onChanged={loadCharges} />
     </PullToRefresh>
