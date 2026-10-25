@@ -119,6 +119,245 @@ const CONSENT_TITLES: Record<string, string> = {
   achat_legal_acceptation_generale: 'Acceptation finale',
 };
 
+// Texte exact des dispositions cochées, selon la version affichée au moment de la signature
+type ConsentText = { t: string; q: string; c: string };
+// Version du 19.08.2026 (13 dispositions, dont la règle de remboursement « Article 7bis »)
+const CONSENTS_V1908: Record<string, ConsentText> = {
+ "legal_objet": {
+  "t": "Objet du mandat",
+  "q": "Confirmez-vous vouloir confier à Immo-rama.ch votre recherche immobilière selon les critères communiqués ?",
+  "c": "Oui, je confirme"
+ },
+ "legal_obligation_moyens": {
+  "t": "Obligation de moyens",
+  "q": "Avez-vous compris qu'Immo-rama.ch met en œuvre ses moyens pour vous accompagner mais ne peut garantir l'obtention d'un logement ou la conclusion d'une transaction ?",
+  "c": "Oui, j'ai compris"
+ },
+ "legal_exclusivite": {
+  "t": "Exclusivité",
+  "q": "Acceptez-vous de confier cette recherche à Immo-rama.ch à titre exclusif pendant la durée du mandat, sous réserve de votre droit légal de résilier le mandat en tout temps ?",
+  "c": "Oui, j'accepte l'exclusivité"
+ },
+ "legal_duree": {
+  "t": "Durée et renouvellement",
+  "q": "Acceptez-vous une durée initiale de 3 mois, renouvelable par périodes de 3 mois, tout en conservant votre droit de résilier le mandat en tout temps conformément à l'art. 404 CO ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_commission": {
+  "t": "Commission",
+  "q": "Si vous obtenez un logement grâce à l'intervention d'Immo-rama.ch, acceptez-vous qu'une commission correspondant à un mois de loyer brut, charges comprises, soit due, plus TVA au taux légal si applicable ?",
+  "c": "Oui, j'accepte la commission"
+ },
+ "legal_acompte": {
+  "t": "Acompte",
+  "q": "Acceptez-vous de verser un acompte de CHF 300.–, déductible de la commission en cas de succès, conformément à l'article 7 du contrat ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_remboursement": {
+  "t": "Remboursement",
+  "q": "Acceptez-vous que l'acompte ne soit remboursable qu'après 90 jours de recherche active (remboursement sous 30 jours si aucun logement n'a été obtenu grâce à Immo-rama.ch), et qu'il ne soit pas remboursable si vous mettez fin au mandat avant 90 jours, sous réserve de votre droit légal de résilier en tout temps ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_transmission_dossier": {
+  "t": "Transmission du dossier",
+  "q": "Autorisez-vous Immo-rama.ch à transmettre aux régies, propriétaires, vendeurs ou partenaires concernés les informations et documents nécessaires aux candidatures que vous demandez ?",
+  "c": "Oui, j'autorise"
+ },
+ "legal_garants_cocandidats": {
+  "t": "Garants et co-candidats",
+  "q": "Lorsque vous nous transmettez les données d'un garant, d'un co-candidat ou d'une autre personne, confirmez-vous l'avoir informé de cette transmission ?",
+  "c": "Oui, je confirme"
+ },
+ "legal_litiges": {
+  "t": "Non-contournement",
+  "q": "Acceptez-vous que la commission puisse rester due si vous concluez directement un contrat portant sur un bien présenté par Immo-rama.ch et que son intervention a contribué à la conclusion de ce contrat ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_protection_donnees": {
+  "t": "Données personnelles",
+  "q": "J'ai pris connaissance de la Politique de confidentialité et des traitements nécessaires à l'exécution de mon mandat.",
+  "c": "Oui, j'en ai pris connaissance"
+ },
+ "legal_cgu": {
+  "t": "CGU",
+  "q": "Acceptez-vous les Conditions Générales d'Utilisation de Logisorama.ch applicables à votre utilisation de la plateforme et de l'application ?",
+  "c": "Oui, j'accepte les CGU"
+ },
+ "legal_acceptation_generale": {
+  "t": "Acceptation finale",
+  "q": "Confirmez-vous avoir lu et compris le contrat et vouloir conclure le mandat avec Immo-rama.ch ?",
+  "c": "SIGNER ET ACTIVER MON MANDAT"
+ }
+};
+// Version révisée du 21.08.2026 (16 dispositions)
+const CONSENTS_V2108: Record<string, ConsentText> = {
+ "legal_objet": {
+  "t": "Objet et portée du mandat",
+  "q": "Confiez-vous à Immo-Rama un mandat exclusif de recherche d'un logement ou local en location, l'exclusivité étant limitée aux objets et bailleurs effectivement présentés par écrit par Immo-Rama, sans vous interdire vos propres recherches ?",
+  "c": "Oui, je confirme"
+ },
+ "legal_commission": {
+  "t": "Naissance et montant de la commission",
+  "q": "Acceptez-vous qu'une commission d'un mois de loyer brut (charges comprises), plus la TVA au taux légal si elle est due, avec un minimum de CHF 500, ne soit due que si un contrat de bail juridiquement valable est conclu et résulte de l'indication ou de la négociation d'Immo-Rama ?",
+  "c": "Oui, j'accepte la commission"
+ },
+ "legal_acompte": {
+  "t": "Montant d'activation",
+  "q": "Acceptez-vous de verser un montant d'activation de CHF 300, imputé sur la commission, pour l'ouverture et l'étude de votre dossier ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_duree": {
+  "t": "Durée et reconduction tacite",
+  "q": "Acceptez-vous que le mandat soit conclu pour 90 jours, reconduit tacitement par périodes de 90 jours, la dénonciation ordinaire pouvant être notifiée entre le 75e et le 90e jour de la période en cours (par écrit ou dans l'application Logisorama.ch) ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_remboursement": {
+  "t": "Résiliation et remboursement",
+  "q": "Avez-vous compris que si Immo-Rama met fin au mandat, ou au terme d'une période sans conclusion de bail, les CHF 300 vous sont remboursés sous 30 jours, mais qu'en cas de résiliation anticipée de votre part ils restent acquis à Immo-Rama en rémunération des démarches déjà engagées ?",
+  "c": "Oui, j'ai compris"
+ },
+ "legal_revocation": {
+  "t": "Révocation en tout temps (art. 404 CO)",
+  "q": "Avez-vous compris que chaque partie conserve le droit impératif de révoquer ou de répudier le mandat avec effet immédiat en tout temps (art. 404 CO), aux conséquences financières décrites ci-dessus ?",
+  "c": "Oui, j'ai compris"
+ },
+ "legal_litiges": {
+  "t": "Contrats ultérieurs",
+  "q": "Acceptez-vous qu'un autre objet ou un contrat ultérieur avec le même bailleur, conclu pendant le mandat ou dans les 3 mois suivant sa fin et résultant d'une indication ou négociation documentée d'Immo-Rama, reste soumis à commission (à annoncer dans les 5 jours), une simple identité de bailleur ne suffisant pas ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_confidentialite": {
+  "t": "Confidentialité",
+  "q": "Vous engagez-vous à traiter confidentiellement les informations non publiques reçues d'Immo-Rama, en ne répondant que du dommage direct, prévisible et prouvé en cas de transmission fautive à un tiers ?",
+  "c": "Oui, je m'engage"
+ },
+ "legal_verifications": {
+  "t": "Informations et vérifications",
+  "q": "Acceptez-vous qu'Immo-Rama demande les justificatifs objectivement nécessaires, tout contrôle de solvabilité ou contact avec l'employeur n'ayant lieu qu'après votre information préalable et votre accord spécifique, dans le respect de la LPD ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_transmission_dossier": {
+  "t": "Transmission du dossier",
+  "q": "Autorisez-vous Immo-Rama à transmettre aux bailleurs et gérances les seules données nécessaires à une candidature déterminée ?",
+  "c": "Oui, j'autorise"
+ },
+ "legal_garants_cocandidats": {
+  "t": "Garants et co-candidats",
+  "q": "Lorsque vous transmettez les données d'un garant, d'un co-candidat ou d'un tiers, confirmez-vous l'avoir informé de cette transmission ?",
+  "c": "Oui, je confirme"
+ },
+ "legal_attribution_gerance": {
+  "t": "Attribution par la gérance",
+  "q": "Avez-vous compris que l'annonce par une gérance de son intention d'attribuer un logement ne rend aucune commission exigible, celle-ci n'étant due qu'après la conclusion juridiquement valable du bail ?",
+  "c": "Oui, j'ai compris"
+ },
+ "legal_obligation_moyens": {
+  "t": "Responsabilité et position d'Immo-Rama",
+  "q": "Avez-vous compris qu'Immo-Rama est tenue à une obligation de moyens, reste tributaire des données des offreurs et ne répond pas des actes des bailleurs ou gérances qui ne sont pas ses auxiliaires ?",
+  "c": "Oui, j'ai compris"
+ },
+ "legal_protection_donnees": {
+  "t": "Protection des données",
+  "q": "J'ai pris connaissance de la Politique de confidentialité ; les communications commerciales reposent sur un consentement séparé, facultatif et révocable, sans effet sur l'exécution du mandat.",
+  "c": "Oui, j'en ai pris connaissance"
+ },
+ "legal_droit_applicable": {
+  "t": "Droit applicable et for",
+  "q": "Acceptez-vous que le mandat soit soumis au droit suisse (art. 394 ss et 412 ss CO) et que, agissant à des fins privées, vous puissiez saisir le tribunal de votre domicile ou celui du siège d'Immo-Rama dans le canton de Vaud (art. 32 CPC) ?",
+  "c": "Oui, j'accepte"
+ },
+ "legal_acceptation_generale": {
+  "t": "Acceptation finale",
+  "q": "Confirmez-vous avoir reçu le mandat complet, en comprendre les dispositions et vouloir le conclure avec Immo-Rama ?",
+  "c": "Signer et activer mon mandat"
+ }
+};
+// Dispositions du mandat d'achat (depuis le 25.10.2026)
+const CONSENTS_ACHAT: Record<string, ConsentText> = {
+ "achat_legal_objet": {
+  "t": "Objet et portée du mandat",
+  "q": "Confiez-vous à Immo-Rama un mandat de recherche pour l'achat d'un logement ou d'un local commercial : rechercher, sélectionner et vous présenter des biens répondant à vos critères puis, selon vos instructions, recueillir des informations, organiser des visites ou intervenir comme courtier négociateur ?",
+  "c": "Oui, je confirme"
+ },
+ "achat_legal_commission": {
+  "t": "Naissance et montant de la commission",
+  "q": "Acceptez-vous une commission de 1 % du prix de vente authentiquement convenu (minimum CHF 500), plus la TVA au taux légal si elle est due, qui n'est due que si une vente est conclue en la forme authentique et résulte causalement de l'indication ou de la négociation d'Immo-Rama ?",
+  "c": "Oui, j'accepte la commission"
+ },
+ "achat_legal_activation": {
+  "t": "Montant d'activation",
+  "q": "Acceptez-vous de verser un montant d'activation de CHF 2'500 lors de l'activation du mandat, imputé sur toute commission valablement acquise (l'excédent éventuel vous étant remboursé dans les 30 jours) ?",
+  "c": "Oui, j'accepte"
+ },
+ "achat_legal_duree": {
+  "t": "Durée et reconduction tacite",
+  "q": "Acceptez-vous que le mandat soit conclu pour une période initiale de 6 mois, reconduite tacitement par périodes de 6 mois sans nouveau montant d'activation, la dénonciation ordinaire pouvant être notifiée dans les 15 derniers jours de la période en cours (par écrit ou dans l'application Logisorama.ch), avec effet à l'échéance ?",
+  "c": "Oui, j'accepte"
+ },
+ "achat_legal_remboursement": {
+  "t": "Résiliation et remboursement",
+  "q": "Avez-vous compris que si Immo-Rama met fin au mandat avant l'échéance, ou si vous le dénoncez dans les 15 derniers jours et qu'il arrive à échéance sans acquisition, les CHF 2'500 vous sont remboursés dans les 30 jours (sur demande en cas de dénonciation), mais qu'en cas de résiliation anticipée de votre part ils restent acquis à Immo-Rama en rémunération des démarches déjà engagées ?",
+  "c": "Oui, j'ai compris"
+ },
+ "achat_legal_revocation": {
+  "t": "Révocation en tout temps (art. 404 CO)",
+  "q": "Avez-vous compris que chaque partie conserve le droit impératif de révoquer ou de répudier le mandat avec effet immédiat en tout temps (art. 404 CO), aux conséquences financières décrites ci-dessus ?",
+  "c": "Oui, j'ai compris"
+ },
+ "achat_legal_information": {
+  "t": "Information et biens déjà connus",
+  "q": "Vous engagez-vous à informer Immo-Rama dans les 5 jours de la conclusion d'un acte d'achat et, si vous connaissiez déjà un bien ou un vendeur présenté, à le signaler dans les 5 jours ouvrables ? Pour un autre bien du même vendeur, la commission n'est due que si Immo-Rama a fourni une contribution causale documentée.",
+  "c": "Oui, je m'engage"
+ },
+ "achat_legal_confidentialite": {
+  "t": "Confidentialité",
+  "q": "Vous engagez-vous à traiter confidentiellement les informations non publiques reçues d'Immo-Rama, en ne répondant que du dommage direct, prévisible et prouvé en cas de transmission fautive à un tiers ?",
+  "c": "Oui, je m'engage"
+ },
+ "achat_legal_verifications": {
+  "t": "Informations et vérifications",
+  "q": "Acceptez-vous qu'Immo-Rama demande les justificatifs objectivement nécessaires (notamment une preuve de financement), tout contrôle de solvabilité ou prise de références n'ayant lieu qu'après votre information préalable et votre accord spécifique, dans le respect de la LPD ?",
+  "c": "Oui, j'accepte"
+ },
+ "achat_legal_transmission": {
+  "t": "Transmission des données",
+  "q": "Autorisez-vous Immo-Rama à transmettre les seules données nécessaires à une démarche déterminée (financement, offre, acte) aux partenaires concernés : banques et courtiers en financement, notaires, agences, propriétaires et vendeurs ?",
+  "c": "Oui, j'autorise"
+ },
+ "achat_legal_coacquereurs": {
+  "t": "Co-acquéreurs et tiers",
+  "q": "Lorsque vous transmettez les données d'un co-acquéreur ou d'un tiers, confirmez-vous l'avoir informé de cette transmission ?",
+  "c": "Oui, je confirme"
+ },
+ "achat_legal_responsabilite": {
+  "t": "Responsabilité et position d'Immo-Rama",
+  "q": "Avez-vous compris qu'Immo-Rama est tenue à une obligation de moyens, ne garantit ni la disponibilité d'un bien, ni l'obtention d'un financement, ni la conclusion d'une vente, et que les décisions juridiques, techniques, fiscales et financières vous appartiennent ?",
+  "c": "Oui, j'ai compris"
+ },
+ "achat_legal_protection_donnees": {
+  "t": "Protection des données",
+  "q": "J'ai pris connaissance de la Politique de confidentialité ; les communications commerciales reposent sur un consentement séparé, facultatif et révocable, sans effet sur l'exécution du mandat.",
+  "c": "Oui, j'en ai pris connaissance"
+ },
+ "achat_legal_droit_applicable": {
+  "t": "Droit applicable et for",
+  "q": "Acceptez-vous que le mandat soit soumis au droit suisse (art. 394 ss et 412 ss CO) et que, agissant à des fins privées, vous puissiez saisir le tribunal de votre domicile ou celui du siège d'Immo-Rama dans le canton de Vaud (art. 32 CPC) ?",
+  "c": "Oui, j'accepte"
+ },
+ "achat_legal_acceptation_generale": {
+  "t": "Acceptation finale",
+  "q": "Confirmez-vous avoir reçu le mandat d'achat complet, en comprendre les dispositions et vouloir le conclure avec Immo-Rama ?",
+  "c": "Signer et activer mon mandat"
+ }
+};
+const V2108_FROM = new Date('2026-08-21T13:48:55+02:00').getTime();
+function consentTextFor(key: string, signedAtIso: string | null): ConsentText | null {
+  if (key.startsWith('achat_')) return CONSENTS_ACHAT[key] ?? null;
+  const t = signedAtIso ? new Date(signedAtIso).getTime() : Date.now();
+  const primary = t < V2108_FROM ? CONSENTS_V1908 : CONSENTS_V2108;
+  return primary[key] ?? CONSENTS_V2108[key] ?? CONSENTS_V1908[key] ?? null;
+}
+
 function formatDateTimeCH(iso: string | null | undefined): string {
   if (!iso) return '-';
   try {
@@ -640,8 +879,12 @@ const handler = async (req: Request): Promise<Response> => {
         yPosition -= 18;
         approved.forEach(([key, at], i) => {
           checkNewPage();
-          const title = CONSENT_TITLES[key] || key.replace(/^achat_/, '').replace(/^legal_/, '').replace(/_/g, ' ');
-          addWrappedText(`${i + 1}. ${title} - approuvé le ${formatDateTimeCH(String(at))}`, margin, maxTextWidth, 9);
+          const ct = consentTextFor(key, signedAtIso);
+          const title = ct?.t || CONSENT_TITLES[key] || key.replace(/^achat_/, '').replace(/^legal_/, '').replace(/_/g, ' ');
+          addWrappedText(`${i + 1}. ${title}`, margin, maxTextWidth, 10, helveticaBold);
+          if (ct?.q) addWrappedText(ct.q, margin + 12, maxTextWidth - 12, 9);
+          addWrappedText(`Réponse : ${ct?.c || 'Accepté'} - approuvé le ${formatDateTimeCH(String(at))}`, margin + 12, maxTextWidth - 12, 9);
+          yPosition -= 6;
         });
         yPosition -= 10;
       }
