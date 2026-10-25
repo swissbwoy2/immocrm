@@ -18,6 +18,7 @@ type Settings = Record<string, string>;
 type Overview = {
   settings: Settings;
   spend: { month_usd: number; day_usd: number };
+  public_spend: { month_usd: number; day_usd: number };
   today: { reponses: number; accueils: number; transferts: number; echecs: number; site_public: number };
   conversations: { avec_steeve: number; accueillies: number };
 };
@@ -50,7 +51,9 @@ const BUDGET_FIELDS: { key: string; label: string; step: string }[] = [
   { key: 'steeve_budget_day_usd', label: 'Plafond quotidien (USD)', step: '0.5' },
   { key: 'steeve_client_day_usd', label: 'Par client et par jour (USD)', step: '0.1' },
   { key: 'steeve_client_day_messages', label: 'Messages par client et par jour', step: '1' },
-  { key: 'steeve_public_day_usd', label: 'Site public : plafond quotidien (USD)', step: '0.5' },
+  { key: 'steeve_public_day_usd', label: 'Site public : plafond quotidien (USD)', step: '0.1' },
+  { key: 'steeve_public_month_usd', label: 'Site public : plafond mensuel (USD)', step: '1' },
+  { key: 'steeve_public_minute_messages', label: 'Site public : messages par minute (tous visiteurs)', step: '1' },
   { key: 'steeve_public_session_messages', label: 'Site public : messages par visiteur et par jour', step: '1' },
   { key: 'steeve_public_ip_messages', label: 'Site public : messages par adresse IP et par jour', step: '1' },
 ];
@@ -217,6 +220,7 @@ export default function AdminSteeve() {
               <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm sm:grid-cols-3">
                 <div><p className="text-muted-foreground">Ce mois</p><p className="font-semibold">{usd(overview.spend.month_usd)} / {usd(monthCap)}</p></div>
                 <div><p className="text-muted-foreground">Aujourd'hui</p><p className="font-semibold">{usd(overview.spend.day_usd)}</p></div>
+                <div><p className="text-muted-foreground">Site public ce mois</p><p className="font-semibold">{usd(overview.public_spend?.month_usd)} / {usd(overview.settings.steeve_public_month_usd ?? 5)}</p></div>
                 <div><p className="text-muted-foreground">Conversations avec Steeve</p><p className="font-semibold">{overview.conversations.avec_steeve}</p></div>
                 <div><p className="text-muted-foreground">Réponses du jour</p><p className="font-semibold">{overview.today.reponses}</p></div>
                 <div><p className="text-muted-foreground">Accueils du jour</p><p className="font-semibold">{overview.today.accueils}</p></div>
@@ -304,7 +308,7 @@ export default function AdminSteeve() {
           <Card>
             <CardHeader>
               <CardTitle>Budget</CardTitle>
-              <CardDescription>Au-delà d'un plafond, Steeve prévient le client et transmet à son agent (site public : message d'attente).</CardDescription>
+              <CardDescription>Au-delà d'un plafond, Steeve prévient le client et transmet à son agent (site public : message d'attente). Le site public a son propre budget : il ne peut jamais entamer celui des clients.</CardDescription>
             </CardHeader>
             <CardContent>
               <form

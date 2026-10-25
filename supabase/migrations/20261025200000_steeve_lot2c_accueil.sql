@@ -2,8 +2,12 @@
 -- Additive et idempotente. Rien ne change tant que Steeve est désactivé (steeve_enabled / pilote).
 --  - Public visé : clients suivis (statut actif, suspendu, en attente) et nouveaux mandats pas encore activés
 --    (demande de mandat en attente, facture envoyée ou payée), dans leur conversation avec l'agence.
+--  - Une seule conversation par client (la principale : la plus ancienne non archivée), jamais une conversation
+--    dont le dernier message attend la réponse de l'agent.
 --  - Au lancement, Steeve prend la conversation sauf si un agent l'a reprise explicitement ou y a écrit
---    dans les 48 dernières heures (elle sera accueillie plus tard, quand elle sera calme).
+--    dans les 48 dernières heures (elle sera accueillie plus tard, quand elle sera calme). Les agents concernés
+--    reçoivent une notification récapitulative.
+--  - Pas de nouvel accueil quand la moitié du plafond du jour ou le plafond du mois est atteint (reporté).
 --  - Le message est rédigé par steeve-turn (passage « welcome ») ; accueil standard si le modèle n'est pas
 --    disponible, et après deux essais bloqués.
 
@@ -22,6 +26,10 @@ DECLARE
   v_stuck int := 0;
   v_user uuid;
   v_run uuid;
+  v_spend jsonb;
+  v_budget_ok boolean;
+  v_taken jsonb := '{}'::jsonb;
+  v_agent record;
 BEGIN
   -- Passages bloqués (fonction coupée, appel réseau perdu).
   FOR r IN
@@ -29,7 +37,7 @@ BEGIN
        SET status = 'failed', reason = 'bloque', error = 'Passage resté sans fin plus de 5 minutes', finished_at = now()
      WHERE status IN ('queued', 'running')
        AND COALESCE(started_at, created_at) < now() - interval '5 minutes'
-    RETURNING conversation_id, kind
+    RETURNING conversation_id, kind, created_at
   LOOP
     BEGIN
       IF r.kind = 'welcome' THEN
@@ -38,6 +46,8 @@ BEGIN
            SET steeve_summary = (COALESCE(steeve_summary, '{}'::jsonb) - 'welcome_queued_at')
                  || jsonb_build_object('welcome_attempts', COALESCE((steeve_summary ->> 'welcome_attempts')::int, 0) + 1)
          WHERE id = r.conversation_id;
+        -- Un message du client arrivé pendant cet accueil a été écarté : il est relancé maintenant.
+        PERFORM public.steeve_requeue_latest(r.conversation_id, r.created_at);
       ELSIF EXISTS (SELECT 1 FROM public.conversations WHERE id = r.conversation_id AND handled_by = 'steeve') THEN
         -- Réponse bloquée : le client n'est jamais laissé sans réponse.
         UPDATE public.conversations
@@ -68,18 +78,43 @@ BEGIN
     RETURN jsonb_build_object('enabled', false, 'bloques', v_stuck);
   END IF;
 
+  -- Budget : pas de nouvel accueil au-delà de la moitié du plafond du jour ou du plafond du mois.
+  v_spend := public.steeve_spend(NULL);
+  v_budget_ok := COALESCE((v_spend ->> 'day_usd')::numeric, 0)
+                   < 0.5 * COALESCE((SELECT nullif(value, '')::numeric FROM public.app_config WHERE key = 'steeve_budget_day_usd'), 3)
+             AND COALESCE((v_spend ->> 'month_usd')::numeric, 0)
+                   < COALESCE((SELECT nullif(value, '')::numeric FROM public.app_config WHERE key = 'steeve_budget_month_usd'), 30);
+
   -- Accueil : 20 conversations au plus par passage (lancement étalé, coût maîtrisé).
   FOR r IN
     SELECT c.id, c.client_id, c.handled_by, COALESCE((c.steeve_summary ->> 'welcome_attempts')::int, 0) AS attempts
-      FROM public.conversations c
-      JOIN public.clients cl ON cl.id::text = c.client_id
-      LEFT JOIN public.demandes_mandat d ON d.id = cl.demande_mandat_id
-     WHERE c.conversation_type = 'client-agent'
-       AND COALESCE(c.steeve_summary ->> 'welcomed_at', '') = ''
+      FROM (
+        -- Conversation principale de chaque client concerné : la plus ancienne non archivée.
+        SELECT DISTINCT ON (c0.client_id) c0.id
+          FROM public.conversations c0
+          JOIN public.clients cl ON cl.id::text = c0.client_id
+          LEFT JOIN public.demandes_mandat d ON d.id = cl.demande_mandat_id
+         WHERE v_budget_ok
+           AND c0.conversation_type = 'client-agent'
+           AND NOT COALESCE(c0.is_archived, false)
+           AND (cl.statut IN ('actif', 'suspendu', 'en_attente')
+                OR (d.statut IN ('en_attente', 'facture_envoyee', 'paye') AND COALESCE(cl.statut, '') NOT IN ('stoppe', 'reloge')))
+         ORDER BY c0.client_id, c0.created_at ASC NULLS LAST, c0.id
+      ) main
+      JOIN public.conversations c ON c.id = main.id
+     WHERE COALESCE(c.steeve_summary ->> 'welcomed_at', '') = ''
        AND COALESCE(c.steeve_summary ->> 'welcome_queued_at', '') = ''
-       AND (cl.statut IN ('actif', 'suspendu', 'en_attente') OR d.statut IN ('en_attente', 'facture_envoyee', 'paye'))
        AND public.steeve_enabled_for_conversation(c.id)
-       AND NOT EXISTS (SELECT 1 FROM public.messages m WHERE m.conversation_id = c.id AND m.sender_type = 'assistant')
+       -- Le client n'a jamais été accueilli dans aucune de ses conversations.
+       AND NOT EXISTS (
+         SELECT 1 FROM public.conversations o
+          WHERE o.client_id = c.client_id AND o.conversation_type = 'client-agent'
+            AND (COALESCE(o.steeve_summary ->> 'welcomed_at', '') <> '' OR COALESCE(o.steeve_summary ->> 'welcome_queued_at', '') <> ''
+                 OR EXISTS (SELECT 1 FROM public.messages m WHERE m.conversation_id = o.id AND m.sender_type = 'assistant')))
+       -- Pas de question du client en attente de réponse : l'accueil ne la remplace pas.
+       AND COALESCE((SELECT m.sender_type FROM public.messages m
+                       WHERE m.conversation_id = c.id AND NOT COALESCE(m.masque_messagerie, false)
+                       ORDER BY m.created_at DESC LIMIT 1), '') <> 'client'
        AND (c.handled_by = 'steeve'
             OR (c.handled_by_user IS NULL
                 AND NOT EXISTS (
@@ -96,6 +131,14 @@ BEGIN
         UPDATE public.conversations
            SET handled_by = 'steeve', handled_by_user = NULL, handled_since = now()
          WHERE id = r.id;
+        -- Agents de la conversation : prévenus une fois par passage (récapitulatif).
+        FOR v_user IN
+          SELECT DISTINCT a.user_id FROM public.conversation_agents ca
+            JOIN public.agents a ON a.id::text = ca.agent_id::text
+           WHERE ca.conversation_id = r.id AND a.user_id IS NOT NULL
+        LOOP
+          v_taken := jsonb_set(v_taken, ARRAY[v_user::text], to_jsonb(COALESCE((v_taken ->> v_user::text)::int, 0) + 1));
+        END LOOP;
       END IF;
 
       IF r.attempts >= 2 THEN
@@ -136,6 +179,16 @@ BEGIN
     END;
   END LOOP;
 
+  FOR v_agent IN SELECT key, value FROM jsonb_each_text(v_taken) LOOP
+    BEGIN
+      PERFORM public.create_notification(v_agent.key::uuid, 'new_message', 'Steeve prend le relais',
+        'Steeve accueille ' || v_agent.value || ' conversation(s) client calme(s). Vous pouvez reprendre la main à tout moment depuis la conversation.',
+        '/agent/messagerie', jsonb_build_object('source', 'steeve_takeover', 'count', v_agent.value::int));
+    EXCEPTION WHEN OTHERS THEN
+      RAISE WARNING 'steeve_scheduler_tick (notification %): %', v_agent.key, SQLERRM;
+    END;
+  END LOOP;
+
   -- Veille : seulement les conversations confiées à Steeve.
   UPDATE public.conversations
      SET steeve_state = 'veille'
@@ -146,7 +199,7 @@ BEGIN
      AND last_client_message_at < now() - interval '48 hours';
   GET DIAGNOSTICS v_slept = ROW_COUNT;
 
-  RETURN jsonb_build_object('enabled', true, 'accueils_lances', v_queued, 'accueils_standard', v_standard, 'veille', v_slept, 'bloques', v_stuck);
+  RETURN jsonb_build_object('enabled', true, 'budget_accueil', v_budget_ok, 'accueils_lances', v_queued, 'accueils_standard', v_standard, 'veille', v_slept, 'bloques', v_stuck);
 END;
 $$;
 

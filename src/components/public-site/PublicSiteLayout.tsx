@@ -83,11 +83,9 @@ function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyC
 
 
       {/* Steeve : assistant des visiteurs (affiché seulement s'il est activé) */}
-      {!storyDialogOpen && (
-        <Suspense fallback={null}>
-          <SteevePublicChat />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <SteevePublicChat hidden={storyDialogOpen} />
+      </Suspense>
 
       {/* Cookie Consent */}
       <Suspense fallback={null}>

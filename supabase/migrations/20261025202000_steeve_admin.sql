@@ -193,8 +193,13 @@ BEGIN
                   WHERE key IN ('steeve_enabled', 'steeve_public_enabled', 'steeve_pilot_client_ids', 'steeve_model',
                                 'steeve_budget_month_usd', 'steeve_alert_month_usd', 'steeve_budget_day_usd',
                                 'steeve_client_day_usd', 'steeve_client_day_messages', 'steeve_public_day_usd',
+                                'steeve_public_month_usd', 'steeve_public_minute_messages',
                                 'steeve_public_session_messages', 'steeve_public_ip_messages')),
     'spend', public.steeve_spend(NULL),
+    'public_spend', jsonb_build_object(
+      'day_usd', (SELECT coalesce(sum(cost_usd), 0) FROM public.steeve_public_usage WHERE created_at >= v_day_start),
+      'month_usd', (SELECT coalesce(sum(cost_usd), 0) FROM public.steeve_public_usage
+                     WHERE created_at >= date_trunc('month', now() AT TIME ZONE 'Europe/Zurich') AT TIME ZONE 'Europe/Zurich')),
     'today', jsonb_build_object(
       'reponses', (SELECT count(*) FROM public.steeve_runs WHERE created_at >= v_day_start AND kind = 'reply' AND status = 'done'),
       'accueils', (SELECT count(*) FROM public.steeve_runs WHERE created_at >= v_day_start AND kind = 'welcome' AND status = 'done'),
@@ -222,7 +227,8 @@ DECLARE
   v_num numeric;
   v_limits constant jsonb := jsonb_build_object(
     'steeve_budget_month_usd', 1000, 'steeve_alert_month_usd', 1000, 'steeve_budget_day_usd', 200,
-    'steeve_client_day_usd', 20, 'steeve_client_day_messages', 500, 'steeve_public_day_usd', 200,
+    'steeve_client_day_usd', 20, 'steeve_client_day_messages', 500, 'steeve_public_day_usd', 50,
+    'steeve_public_month_usd', 200, 'steeve_public_minute_messages', 300,
     'steeve_public_session_messages', 200, 'steeve_public_ip_messages', 2000);
 BEGIN
   IF NOT public.has_role(auth.uid(), 'admin'::app_role) THEN

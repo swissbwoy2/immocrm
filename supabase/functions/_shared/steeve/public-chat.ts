@@ -14,7 +14,32 @@ export const PUBLIC_ERROR_MESSAGE =
 
 export interface PublicChatResult {
   status: number;
-  body: { reply?: string; enabled?: boolean; error?: string };
+  body: { reply?: string; sig?: string; enabled?: boolean; error?: string };
+}
+
+/**
+ * Signature des réponses de Steeve : le site renvoie l'historique, et seules les répliques réellement écrites
+ * par Steeve (signées) sont reprises. Un visiteur ne peut pas inventer une « réponse de Steeve ».
+ */
+export async function signReply(sessionId: string, content: string, salt: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(salt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${sessionId}\n${content}`));
+  return Array.from(new Uint8Array(mac)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Garde les messages du visiteur et les seules répliques de Steeve dont la signature est valide. */
+export async function keepSignedHistory(raw: unknown, sessionId: string, salt: string): Promise<unknown[]> {
+  if (!Array.isArray(raw)) return [];
+  const out: unknown[] = [];
+  for (const m of raw.slice(-20)) {
+    const msg = m as { role?: unknown; content?: unknown; sig?: unknown };
+    if (msg?.role === 'user') out.push({ role: 'user', content: msg.content });
+    else if (msg?.role === 'assistant' && typeof msg.content === 'string' && typeof msg.sig === 'string'
+      && msg.sig === await signReply(sessionId, msg.content, salt)) {
+      out.push({ role: 'assistant', content: msg.content });
+    }
+  }
+  return out;
 }
 
 /** Empreinte SHA-256 salée (aucune adresse IP ni identifiant de session n'est stocké en clair). */
@@ -54,14 +79,14 @@ export async function handlePublicChat(opts: {
   const { db, callModel, body } = opts;
   const sessionId = typeof body?.session_id === 'string' ? body.session_id : '';
   if (!/^[A-Za-z0-9-]{8,64}$/.test(sessionId)) return { status: 400, body: { error: 'session invalide' } };
-  const history = sanitizeHistory(body?.messages);
+  const history = sanitizeHistory(await keepSignedHistory(body?.messages, sessionId, opts.salt));
   if (!history) return { status: 400, body: { error: 'messages invalides' } };
 
   const [sessionHash, ipHash] = await Promise.all([fingerprint(sessionId, opts.salt), fingerprint(opts.ip || 'inconnue', opts.salt)]);
   const { data: admit, error: admitError } = await db.rpc('steeve_public_admit', { p_session_hash: sessionHash, p_ip_hash: ipHash });
   if (admitError) return { status: 200, body: { reply: PUBLIC_ERROR_MESSAGE } };
   if (!admit?.ok) {
-    if (admit?.reason === 'desactive') return { status: 503, body: { enabled: false } };
+    if (admit?.reason === 'desactive') return { status: 200, body: { enabled: false } };
     return { status: 200, body: { reply: PUBLIC_BUSY_MESSAGE } };
   }
   const usageId: string = admit.usage_id;
@@ -94,7 +119,8 @@ export async function handlePublicChat(opts: {
       cost_usd: Number(costOf(model, resp.usage).toFixed(6)),
       error: text ? null : 'réponse vide',
     }).eq('id', usageId);
-    return { status: 200, body: { reply: text ? toPlainReply(text) : PUBLIC_ERROR_MESSAGE } };
+    const reply = text ? toPlainReply(text) : PUBLIC_ERROR_MESSAGE;
+    return { status: 200, body: { reply, sig: text ? await signReply(sessionId, reply, opts.salt) : undefined } };
   } catch (err) {
     await db.from('steeve_public_usage').update({ status: 'failed', error: (err instanceof Error ? err.message : String(err)).slice(0, 500) }).eq('id', usageId);
     return { status: 200, body: { reply: PUBLIC_ERROR_MESSAGE } };

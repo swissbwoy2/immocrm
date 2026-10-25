@@ -55,7 +55,7 @@ Après le transfert, dis au client que tu as transmis sa demande à son agent et
 
 
 /** Consigne du premier message (accueil), remise avec le dossier ; n'entre pas dans les consignes mises en cache. */
-export function welcomeInstructions(opts: { phase: 'non_active' | 'en_mandat' | 'autre'; journey: 'location' | 'achat'; deposit: number | null }): string {
+export function welcomeInstructions(opts: { phase: 'non_active' | 'paiement_recu' | 'en_mandat' | 'autre'; journey: 'location' | 'achat'; deposit: number | null }): string {
   const common = [
     "C'est ton tout premier message à ce client : il ne t'a encore rien écrit. Rédige un message d'accueil personnalisé, chaleureux et court (5 à 8 lignes), en tutoyant, sans titre ni liste longue.",
     "Commence par te présenter en une phrase : tu es Steeve, son assistant de poche chez Logisorama, disponible ici 24h/24 et 7j/7 pour répondre à ses questions sur son dossier.",
@@ -72,7 +72,16 @@ export function welcomeInstructions(opts: { phase: 'non_active' | 'en_mandat' | 
       "Explique que s'il a déjà payé, il peut t'envoyer la preuve de paiement en photo avec le trombone (choisir « Autre(s) ») : elle est classée dans son dossier et l'équipe active son compte dès vérification. Sinon, son compte sera activé dès réception du paiement. Ne promets aucun délai et ne dis jamais que tu actives le compte toi-même.",
       opts.journey === 'achat'
         ? "Si le dossier contient des conditions de remboursement pour son projet d'achat, résume-les en une phrase ; sinon n'en parle pas."
-        : `Rassure-le en une phrase sur la garantie, telle qu'inscrite dans le mandat : si aucun logement n'est trouvé après 90 jours de recherche, ${deposit} lui est remboursé (demande possible à partir du 80e jour, traitement sous 30 jours ; pas de remboursement s'il trouve un logement par lui-même).`,
+        : `Rassure-le en une phrase sur la garantie, telle qu'inscrite dans le mandat : ${deposit} est remboursable sur demande entre le 80e et le 90e jour du cycle si aucun bail n'est conclu (traitement sous 30 jours) ; pas de remboursement s'il trouve un logement par lui-même ou s'il résilie le mandat.`,
+    ].join('\n');
+  }
+  if (opts.phase === 'paiement_recu') {
+    return [
+      ...common,
+      "Son paiement d'activation a bien été reçu : l'équipe finalise l'activation de son compte. Dis-le simplement, sans promettre de délai et sans lui demander de facture ni de preuve de paiement.",
+      opts.journey === 'achat'
+        ? "Résume en une phrase ce qu'il recherche d'après le dossier et explique que son agent prendra contact pour lancer la recherche."
+        : 'Résume en une phrase ce qu\'il recherche (type de bien, pièces, région, budget, d\'après le dossier) et propose-lui de compléter déjà son dossier avec les pièces manquantes, avec le trombone.',
     ].join('\n');
   }
   return [
@@ -85,10 +94,13 @@ export function welcomeInstructions(opts: { phase: 'non_active' | 'en_mandat' | 
 }
 
 /** Accueil de secours (sans modèle : clé absente, plafond atteint ou erreur). */
-export function staticWelcome(opts: { prenom: string | null; phase: 'non_active' | 'en_mandat' | 'autre'; journey: 'location' | 'achat' }): string {
+export function staticWelcome(opts: { prenom: string | null; phase: 'non_active' | 'paiement_recu' | 'en_mandat' | 'autre'; journey: 'location' | 'achat' }): string {
   const hello = `Salut${opts.prenom ? ` ${opts.prenom}` : ''}, je suis Steeve, ton assistant de poche chez Logisorama ! Je suis disponible ici 24h/24 et 7j/7.`;
   if (opts.phase === 'non_active') {
     return `${hello}\nJe vois que ${opts.journey === 'achat' ? 'ton projet' : 'ton compte'} n'est pas encore activé. As-tu bien reçu la facture d'activation par e-mail ? Si tu as déjà payé, tu peux m'envoyer la preuve de paiement en photo avec le trombone (« Autre(s) ») : l'équipe activera ton compte dès vérification.\nUne question sur le mandat ou la recherche ? Demande-moi !`;
+  }
+  if (opts.phase === 'paiement_recu') {
+    return `${hello}\nTon paiement d'activation a bien été reçu : l'équipe finalise l'activation de ${opts.journey === 'achat' ? 'ton projet' : 'ton compte'}. En attendant, tu peux déjà compléter ton dossier avec le trombone.\nUne question ? Demande-moi !`;
   }
   return `${hello}\nTu peux me demander où en sont ton dossier, tes offres, tes visites, tes candidatures et ton mandat, et déposer tes documents avec le trombone : ils sont classés directement dans ton dossier. Par quoi veux-tu commencer ?`;
 }

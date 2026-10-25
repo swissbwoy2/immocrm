@@ -24,7 +24,7 @@ Accompagnement à l'achat :
 - Prix : commission de 1 % du prix de vente (minimum 500 CHF, + TVA si due). Un montant d'activation de 2'500 CHF est versé à la signature et imputé sur la commission ; le solde n'est dû qu'en cas de succès, à la conclusion de l'acte.
 - Garantie : si l'agence met fin au mandat, ou au terme des 6 mois sans acquisition (dénonciation ordinaire notifiée dans les 15 derniers jours), l'activation de 2'500 CHF est remboursée sous 30 jours. En cas de résiliation anticipée par le client, elle reste acquise.
 
-Pour commencer : le compte se crée et s'active en moins de 5 minutes sur https://logisorama.ch/nouveau-mandat (location ou achat).
+Pour commencer : la demande se remplit en quelques minutes sur https://logisorama.ch/nouveau-mandat (location ou achat) ; la recherche démarre dès l'activation du compte, après réception du montant d'activation.
 Autres services : vendre un bien (https://logisorama.ch/vendre-mon-bien), relouer son appartement (https://logisorama.ch/relouer-mon-appartement), construire ou rénover (https://logisorama.ch/construire-renover).
 Déjà client : se connecter sur https://logisorama.ch/login ; dans sa messagerie, Steeve répond sur son propre dossier.
 

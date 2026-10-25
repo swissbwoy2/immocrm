@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LinkifiedText } from '@/components/messaging/LinkifiedText';
 import { cn } from '@/lib/utils';
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type ChatMessage = { role: 'user' | 'assistant'; content: string; sig?: string };
 
 const GREETING =
   "Bonjour, je suis Steeve, l'assistant de Logisorama ! Une question sur la recherche d'un logement, l'achat, nos tarifs ou la garantie ? Je vous réponds tout de suite.";
@@ -29,11 +29,18 @@ function writeStorage(storage: () => Storage, key: string, value: string) {
   }
 }
 
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Identifiant de visite (aléatoire), renouvelé après 24 h. */
 function sessionId(): string {
-  const existing = readStorage(() => localStorage, SESSION_KEY);
-  if (existing && /^[A-Za-z0-9-]{8,64}$/.test(existing)) return existing;
+  try {
+    const stored = JSON.parse(readStorage(() => localStorage, SESSION_KEY) || 'null');
+    if (stored && /^[A-Za-z0-9-]{8,64}$/.test(stored.id) && Date.now() - Number(stored.at) < SESSION_TTL_MS) return stored.id;
+  } catch {
+    // ancienne forme ou valeur illisible : on en crée une nouvelle
+  }
   const id = crypto.randomUUID();
-  writeStorage(() => localStorage, SESSION_KEY, id);
+  writeStorage(() => localStorage, SESSION_KEY, JSON.stringify({ id, at: Date.now() }));
   return id;
 }
 
@@ -53,7 +60,7 @@ function loadHistory(): ChatMessage[] {
  * Steeve sur le site public : bulle de discussion pour les visiteurs (informations publiées uniquement).
  * N'apparaît que si l'équipe l'a activé (app_config.steeve_public_enabled).
  */
-export function SteevePublicChat() {
+export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadHistory());
@@ -61,6 +68,7 @@ export function SteevePublicChat() {
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -76,7 +84,16 @@ export function SteevePublicChat() {
   }, [messages, open]);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+    if (!open) return;
+    setTimeout(() => inputRef.current?.focus(), 50);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
   if (!enabled) return null;
@@ -92,11 +109,12 @@ export function SteevePublicChat() {
       const { data, error } = await supabase.functions.invoke('steeve-public', {
         body: { session_id: sessionId(), messages: next.slice(-10) },
       });
-      if (error || !data?.reply) {
-        if ((data as { enabled?: boolean } | null)?.enabled === false) setEnabled(false);
-        throw error ?? new Error('réponse vide');
+      if ((data as { enabled?: boolean } | null)?.enabled === false) {
+        setEnabled(false);
+        return;
       }
-      setMessages((prev) => [...prev, { role: 'assistant', content: String(data.reply) }]);
+      if (error || !data?.reply) throw error ?? new Error('réponse vide');
+      setMessages((prev) => [...prev, { role: 'assistant', content: String(data.reply), sig: typeof data.sig === 'string' ? data.sig : undefined }]);
     } catch {
       setMessages((prev) => [...prev, {
         role: 'assistant',
@@ -110,7 +128,10 @@ export function SteevePublicChat() {
   return (
     <div
       data-floating-widget
-      className="fixed right-4 z-[60] flex flex-col items-end bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] lg:bottom-6 lg:right-6"
+      className={cn(
+        'fixed right-4 z-[60] flex flex-col items-end bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] lg:bottom-6 lg:right-6',
+        hidden && 'pointer-events-none invisible',
+      )}
     >
       {open && (
         <div
@@ -133,7 +154,7 @@ export function SteevePublicChat() {
             </button>
           </div>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4 text-sm">
+          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4 text-sm" aria-live="polite" aria-relevant="additions">
             {[{ role: 'assistant' as const, content: GREETING }, ...messages].map((m, i) => (
               <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
                 <div
@@ -183,7 +204,7 @@ export function SteevePublicChat() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(draft); }
               }}
-              className="max-h-28 min-h-[40px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              className="max-h-28 min-h-[40px] flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2 text-base outline-none focus:border-primary sm:text-sm"
               aria-label="Votre question pour Steeve"
             />
             <button
@@ -195,13 +216,16 @@ export function SteevePublicChat() {
               <Send className="h-4 w-4" />
             </button>
           </form>
-          <p className="px-3 pb-2 text-[10px] leading-snug text-muted-foreground">
-            Steeve répond à partir des informations publiées sur le site. N'indiquez pas de données personnelles ici.
+          <p className="px-3 pb-2 text-[11px] leading-snug text-muted-foreground">
+            Steeve répond à partir des informations publiées sur le site, avec l'aide d'un service d'IA (Anthropic).
+            N'indiquez pas de données personnelles ici.{' '}
+            <a href="/politique-confidentialite" className="underline underline-offset-2">Confidentialité</a>
           </p>
         </div>
       )}
 
       <button
+        ref={toggleRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-xl transition-transform hover:scale-[1.03]"

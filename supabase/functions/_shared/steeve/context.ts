@@ -361,16 +361,22 @@ export function mandate(dossier: Dossier, now: Date) {
 }
 
 /**
- * Phase du compte : « non_active » tant que la demande de mandat n'est pas activée (facture d'activation
- * en attente, envoyée ou payée mais pas encore traitée), « en_mandat » pour un client suivi, « autre » sinon
- * (relogé, arrêté…).
+ * Phase du compte :
+ *  - « non_active » : demande de mandat en attente ou facture d'activation envoyée, pas encore payée ;
+ *  - « paiement_recu » : paiement reçu, activation en cours de finalisation par l'équipe ;
+ *  - « en_mandat » : client suivi ;
+ *  - « autre » : relogé, arrêté, ou situation inconnue (aucun message d'accueil propre).
  */
-export function accountPhase(dossier: Dossier): 'non_active' | 'en_mandat' | 'autre' {
-  const demande = norm(dossier.demande?.statut);
-  if (['en_attente', 'facture_envoyee', 'paye'].includes(demande)) return 'non_active';
+export type AccountPhase = 'non_active' | 'paiement_recu' | 'en_mandat' | 'autre';
+
+export function accountPhase(dossier: Dossier): AccountPhase {
   const statut = norm(dossier.client.statut);
-  if (demande === 'active' && !['stoppe', 'reloge', 'inactif'].includes(statut)) return 'en_mandat';
+  if (['stoppe', 'reloge'].includes(statut)) return 'autre';
+  const demande = norm(dossier.demande?.statut);
   if (['actif', 'suspendu'].includes(statut)) return 'en_mandat';
+  if (demande === 'paye') return 'paiement_recu';
+  if (['en_attente', 'facture_envoyee'].includes(demande)) return 'non_active';
+  if (demande === 'active' && statut !== 'inactif') return 'en_mandat';
   if (statut === 'en_attente') return 'non_active';
   return 'autre';
 }
