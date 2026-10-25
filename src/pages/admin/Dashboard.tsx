@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   AlertTriangle, ArrowDownRight, ArrowUpRight, BadgeCheck, Banknote, BarChart3, Briefcase, Calendar, CheckCircle2,
-  ChevronDown, ClipboardList, Clock, FileSignature, FileText, LifeBuoy, MessageSquare, Receipt, RotateCcw,
-  Send, Settings2, ShieldCheck, Undo2, UserCog, UserPlus, Users, Wallet,
+  ChevronDown, ClipboardList, Clock, FileSignature, FileText, KeyRound, LifeBuoy, Mail, MessageSquare, Receipt,
+  RefreshCw, Send, Settings2, Undo2, UserPlus, Users, Wallet, Zap,
 } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
@@ -12,15 +12,19 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { mandatElapsedFor } from '@/utils/mandatDates';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { isClientActif } from '@/lib/activeClients';
-import { PremiumPageShellV2 } from '@/components/dashboard/v2';
-import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import {
-  DASH_CARD, DashBadge, DashFilterPills, DashSection, DashSectionLink, LinkRow, StatTile, TodoCard,
+  DASH_CARD, DashBadge, DashFilterPills, DashPageHeader, DashSection, DashSectionLink, LinkRow, TodoCard,
 } from '@/components/client/dashboard/DashPrimitives';
+import {
+  ActionGrid, DayBanner, FoldSection, KpiTile, StaffSectionTitle, StaffShell, type ActionTileItem, type DayVisit,
+} from '@/components/dashboard-staff/StaffDashParts';
+import {
+  formatHeure, formatJourLong, inLastDays, prochaineVisite, s, totalEnAttente, variation, visitesDuJour,
+} from '@/components/dashboard-staff/staffDashboardModel';
 import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
@@ -99,6 +103,7 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState<Row[]>([]);
   const [offres, setOffres] = useState<Row[]>([]); // chargées seulement pour les statistiques détaillées
   const [aPostuler, setAPostuler] = useState(0);
+  const [offresAutoAGerer, setOffresAutoAGerer] = useState<number | undefined>(undefined);
   const [offresPeriode, setOffresPeriode] = useState<{ total: number; parAgent: Record<string, number> }>({ total: 0, parAgent: {} });
   const [visites, setVisites] = useState<Row[]>([]);
   const [candidatures, setCandidatures] = useState<Row[]>([]);
@@ -142,7 +147,7 @@ export default function AdminDashboard() {
       const safe = <T,>(r: { data: T | null; error: unknown }, fallback: T): T => (r.error ? fallback : (r.data ?? fallback));
 
       const [
-        meRes, agentsRes, clientsRes, caRes, trRes, aPostulerCount, visitesRes, candRes, mandRes, demRes, regRes, achatRes, fichesRes, creditsRes,
+        meRes, agentsRes, clientsRes, caRes, trRes, aPostulerCount, visitesRes, candRes, mandRes, demRes, regRes, achatRes, fichesRes, creditsRes, offresAutoCount,
       ] = await Promise.all([
         user?.id ? supabase.from('profiles').select('prenom').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
         supabase.from('agents').select('id, user_id, statut'),
@@ -153,7 +158,7 @@ export default function AdminDashboard() {
         fetchAll((a, b) => supabase.from('client_agents').select('client_id, agent_id, commission_split, is_primary').order('client_id').range(a, b)),
         fetchAll((a, b) => supabase.from('transactions').select('*').order('id').range(a, b)),
         countRows(supabase.from('offres').select('id', { count: 'exact', head: true }).eq('statut', 'souhaite_postuler')),
-        fetchAll((a, b) => supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id').order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id, adresse, client_id').order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('candidatures').select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at').order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('mandates').select('id, acompte_montant, created_at').order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom, email').order('id').range(a, b)),
@@ -167,6 +172,8 @@ export default function AdminDashboard() {
           .select('annee, mois, statut, mode_remuneration, cout_total_employeur, salaire_net, montant_commissions, employes(mode_remuneration, prenom, nom)')
           .order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('user_credits').select('user_id, coins_mandat').order('user_id').range(a, b)),
+        // Compteur « Offres auto à gérer » : même filtre que la statistique « à compléter » de /admin/offres-auto (SELECT count, head).
+        countRows(supabase.from('offres').select('id', { count: 'exact', head: true }).eq('envoi_auto', true).eq('needs_agent_action', true)),
       ]);
 
       setPrenom((meRes as any)?.data?.prenom || '');
@@ -204,6 +211,7 @@ export default function AdminDashboard() {
       setClientAgents(safe(caRes as any, [] as Row[]));
       setTransactions(safe(trRes as any, [] as Row[]).map((t) => ({ ...t, dateConclusion: t.date_transaction, partAgence: t.part_agence, commissionTotale: t.commission_totale })));
       setAPostuler(aPostulerCount as number);
+      setOffresAutoAGerer(offresAutoCount as number);
       setVisites(safe(visitesRes as any, [] as Row[]));
       setCandidatures(safe(candRes as any, [] as Row[]));
       setMandates(safe(mandRes as any, [] as Row[]));
@@ -385,105 +393,216 @@ export default function AdminDashboard() {
   });
   const totalCommissionAgence = agencyProjections.reduce((s, x) => s + x.partAgence, 0);
 
+  /* ---------- Comparaison au mois précédent (données déjà chargées) ---------- */
+  const prevRange = period === 'mois'
+    ? periodRange('mois_precedent')
+    : period === 'mois_precedent'
+      ? monthRange(now.getFullYear(), now.getMonth() - 2)
+      : null;
+  const prevFin = prevRange ? computeFinance(financeInput, prevRange) : null;
+  const prevActivite = prevRange ? {
+    mandatsSignes: clients.filter((c) => inPeriod(c.mandat_date_signature, prevRange)).length,
+    visitesEffectuees: visites.filter((v) => v.statut === 'effectuee' && inPeriod(v.date_visite, prevRange)).length,
+    candidaturesDeposees: candidatures.filter((c) => inPeriod(c.date_depot || c.created_at, prevRange)).length,
+    bauxSignes: candidatures.filter((c) => inPeriod(c.signature_effectuee_at, prevRange)).length,
+  } : null;
+  const deltaLabel = period === 'mois' ? 'vs mois passé' : 'vs mois d’avant';
+
+  /* ---------- Ma journée ---------- */
+  const agentNom = (id?: string | null) => {
+    const a = agents.find((x) => x.id === id);
+    return a ? `${a.prenom || ''} ${a.nom || ''}`.trim() || 'Agent' : 'Sans agent';
+  };
+  const duJour = visitesDuJour(visites as any[], now);
+  const prochaine = prochaineVisite(duJour, now);
+  const STATUT_VISITE: Record<string, string> = { planifiee: 'Planifiée', confirmee: 'Confirmée', proposee: 'Proposée', deleguee: 'Déléguée', effectuee: 'Effectuée' };
+  const toDayVisit = (v: Row): DayVisit => ({
+    id: v.id,
+    heure: formatHeure(v.date_visite),
+    titre: v.adresse || `Visite · ${agentNom(v.agent_id)}`,
+    sous: [
+      (() => { const c = clients.find((x) => x.id === v.client_id); return c ? `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() : null; })(),
+      agentNom(v.agent_id),
+      STATUT_VISITE[v.statut] || v.statut,
+    ].filter(Boolean).join(' · '),
+    onClick: () => navigate('/admin/calendrier'),
+  });
+
+  /* ---------- Cette semaine ---------- */
+  const semaine = {
+    visitesEffectuees: visites.filter((v) => v.statut === 'effectuee' && inLastDays(v.date_visite, 7, now)).length,
+    candidaturesDeposees: candidatures.filter((c) => inLastDays(c.date_depot || c.created_at, 7, now)).length,
+    bauxSignes: candidatures.filter((c) => inLastDays(c.signature_effectuee_at, 7, now)).length,
+    activationsEncaissees: demandes.filter((d) => inLastDays(d.date_paiement, 7, now) && !isTestAccount(d.prenom, d.nom, d.email)).length,
+    mandatsEcheance: actifs.filter((c) => { const r = mandatRemainingFor(c as any); return r > 0 && r <= 7; }).length,
+  };
+
   if (loading) {
     return (
-      <PremiumPageShellV2 className="mx-auto w-full max-w-6xl">
+      <StaffShell>
         <div className="space-y-4" role="status" aria-label="Chargement du tableau de bord">
-          <div className="h-36 rounded-2xl bg-muted/60" />
-          <div className="grid gap-3 md:grid-cols-2"><div className="h-28 rounded-2xl bg-muted/40" /><div className="h-28 rounded-2xl bg-muted/40" /></div>
+          <div className="h-32 rounded-2xl bg-muted/60" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <div key={i} className="h-24 rounded-2xl bg-muted/40" />)}</div>
           <div className="h-64 rounded-2xl bg-muted/40" />
         </div>
-      </PremiumPageShellV2>
+      </StaffShell>
     );
   }
 
-  const todoCards: { key: string; show: boolean; node: ReactElement }[] = [
+  /* ---------- À traiter : raccourcis triés par urgence ---------- */
+  const mandatsATraiter = todo.critiques.length + todo.expires.length + todo.cancellations.length;
+  const actions: ActionTileItem[] = [
     {
-      key: 'refunds', show: todo.refundsPending.length > 0,
-      node: <TodoCard icon={Undo2} title={`${todo.refundsPending.length} demande${todo.refundsPending.length > 1 ? 's' : ''} de remboursement`} description={`${formatCHF(todo.refundsPendingMontant)} à rembourser dans les 30 jours après l'échéance.`} action={<Button size="sm" className="rounded-full" onClick={() => setRembOpen(true)}>Marquer remboursé</Button>} />,
+      key: 'refunds', icon: Undo2, label: 'Remboursements', count: todo.refundsPending.length, tone: 'danger',
+      phrase: todo.refundsPending.length > 0 ? `${formatCHF(todo.refundsPendingMontant)} à rembourser sous 30 jours` : (rembAvailable ? `${rembRows.length} remboursement${s(rembRows.length)} enregistré${s(rembRows.length)}` : 'Journal à activer'),
+      detail: "Demandes de remboursement : à rembourser dans les 30 jours après l'échéance. Ouvre le journal pour marquer remboursé.",
+      onClick: () => setRembOpen(true),
     },
     {
-      key: 'cancel', show: todo.cancellations.length > 0,
-      node: <TodoCard icon={RotateCcw} title={`${todo.cancellations.length} demande${todo.cancellations.length > 1 ? 's' : ''} d'annulation`} description="Mandats dont le client a demandé la fin : vérifier le délai et la règle de remboursement." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/mandats')}>Voir</Button>} />,
+      key: 'mandats', icon: Clock, label: 'Mandats à traiter', count: mandatsATraiter,
+      tone: todo.expires.length + todo.cancellations.length > 0 ? 'danger' : 'warning',
+      phrase: mandatsATraiter > 0
+        ? [todo.expires.length && `${todo.expires.length} échu${s(todo.expires.length)}`, todo.critiques.length && `${todo.critiques.length} à ≤ 30 j`, todo.cancellations.length && `${todo.cancellations.length} annulation${s(todo.cancellations.length)}`].filter(Boolean).join(' · ') + ' : prévenir le client'
+        : 'Aucune échéance proche',
+      detail: 'Selon la date de signature ou de renouvellement : prévenir le client et préparer la reconduction. Annulations : vérifier le délai et la règle de remboursement.',
+      onClick: () => navigate('/admin/mandats'),
     },
     {
-      key: 'activations', show: todo.activationsAttente.length > 0,
-      node: <TodoCard icon={Banknote} tone="primary" title={`${todo.activationsAttente.length} activation${todo.activationsAttente.length > 1 ? 's' : ''} à encaisser`} description="Mandats signés ces 45 derniers jours, en attente de paiement (facture envoyée ou à envoyer)." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/demandes-activation')}>Ouvrir</Button>} />,
+      key: 'activations', icon: Banknote, label: "Demandes d'activation", count: todo.activationsAttente.length, tone: 'warning',
+      phrase: todo.activationsAttente.length > 0 ? 'À encaisser : envoyer la facture ou confirmer le paiement' : 'Aucune activation en attente',
+      detail: 'Mandats signés ces 45 derniers jours, en attente de paiement (facture envoyée ou à envoyer).',
+      onClick: () => navigate('/admin/demandes-activation'),
     },
     {
-      key: 'postuler', show: todo.aPostuler > 0,
-      node: <TodoCard icon={Send} tone="primary" title={`${todo.aPostuler} postulation${todo.aPostuler > 1 ? 's' : ''} à déposer`} description="Des clients veulent postuler : préparer et envoyer le dossier à la gérance." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/postulations')}>Postuler</Button>} />,
+      key: 'postuler', icon: Send, label: 'Postulations', count: todo.aPostuler, tone: 'warning',
+      phrase: todo.aPostuler > 0 ? 'Préparer et déposer le dossier à la gérance' : 'Aucune postulation à déposer',
+      detail: 'Des clients veulent postuler : préparer et envoyer le dossier à la gérance.',
+      onClick: () => navigate('/admin/postulations'),
     },
     {
-      key: 'retours', show: todo.visitesSansRetour.length > 0,
-      node: <TodoCard icon={MessageSquare} title={`${todo.visitesSansRetour.length} visite${todo.visitesSansRetour.length > 1 ? 's' : ''} sans retour client`} description="Visites effectuées ces 30 derniers jours sans décision du client : relancer pour savoir s'il postule." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/visites')}>Relancer</Button>} />,
+      key: 'offresAuto', icon: Zap, label: 'Offres auto à gérer', count: offresAutoAGerer, tone: 'warning',
+      phrase: offresAutoAGerer === undefined ? 'Fixer les visites des offres envoyées' : offresAutoAGerer > 0 ? 'Visite à fixer ou offre à compléter' : 'Aucune action requise',
+      onClick: () => navigate('/admin/offres-auto'),
     },
     {
-      key: 'candidatures', show: todo.candEnAttente.length + todo.candAFinaliser.length > 0,
-      node: <TodoCard icon={FileSignature} tone="primary" title={`${todo.candEnAttente.length} candidature${todo.candEnAttente.length > 1 ? 's' : ''} en attente · ${todo.candAFinaliser.length} à finaliser`} description="En attente : déposées ces 60 derniers jours sans réponse de la gérance. À finaliser : bail, signature, état des lieux, clés." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/candidatures')}>Suivre</Button>} />,
+      key: 'candidatures', icon: FileSignature, label: 'Candidatures', count: todo.candEnAttente.length + todo.candAFinaliser.length, tone: 'primary',
+      phrase: `${todo.candEnAttente.length} en attente de la gérance · ${todo.candAFinaliser.length} à finaliser`,
+      detail: 'En attente : déposées ces 60 derniers jours sans réponse de la gérance. À finaliser : bail, signature, état des lieux, clés.',
+      onClick: () => navigate('/admin/candidatures'),
     },
     {
-      key: 'mandats', show: todo.critiques.length + todo.expires.length > 0,
-      node: <TodoCard icon={Clock} title={`${todo.critiques.length} mandat${todo.critiques.length > 1 ? 's' : ''} à ≤ 30 jours · ${todo.expires.length} échu${todo.expires.length > 1 ? 's' : ''}`} description="Selon la date de signature ou de renouvellement : prévenir le client et préparer la reconduction." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/mandats')}>Mandats</Button>} />,
+      key: 'retours', icon: MessageSquare, label: 'Visites sans retour', count: todo.visitesSansRetour.length, tone: 'warning',
+      phrase: todo.visitesSansRetour.length > 0 ? 'Relancer le client : postule-t-il ?' : 'Tous les retours sont reçus',
+      detail: "Visites effectuées ces 30 derniers jours sans décision du client : relancer pour savoir s'il postule.",
+      onClick: () => navigate('/admin/visites'),
     },
     {
-      key: 'sansAgent', show: todo.sansAgent.length > 0,
-      node: <TodoCard icon={UserPlus} title={`${todo.sansAgent.length} client${todo.sansAgent.length > 1 ? 's' : ''} actif${todo.sansAgent.length > 1 ? 's' : ''} sans agent`} description="Assigner un agent pour démarrer le suivi." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/assignations')}>Assigner</Button>} />,
+      key: 'sansAgent', icon: UserPlus, label: 'Clients sans agent', count: todo.sansAgent.length, tone: 'warning',
+      phrase: todo.sansAgent.length > 0 ? 'Assigner un agent pour démarrer le suivi' : 'Tous les clients actifs sont suivis',
+      onClick: () => navigate('/admin/assignations'),
     },
     {
-      key: 'agents', show: todo.agentsAVerser.length > 0,
-      node: <TodoCard icon={Receipt} title={`${formatCHF(todo.agentsAVerserMontant)} de commission agent à verser`} description={todo.agentsAVerser.map((r) => `${r.agent_prenom || 'Agent'} — ${[r.client_prenom, r.client_nom].filter(Boolean).join(' ')}`).join(' · ') + ' : marqué « À payer » dans le registre.'} action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/registre-commissions')}>Registre</Button>} />,
+      key: 'messages', icon: Mail, label: 'Messages non lus', count: counts.new_message, tone: 'primary',
+      phrase: counts.new_message > 0 ? 'Répondre aux conversations en attente' : 'Messagerie à jour',
+      onClick: () => navigate('/admin/messagerie'),
+    },
+    {
+      key: 'agents', icon: Receipt, label: 'Commissions à verser', count: todo.agentsAVerser.length, tone: 'primary',
+      phrase: todo.agentsAVerser.length > 0 ? `${formatCHF(todo.agentsAVerserMontant)} à verser aux agents` : 'Aucune commission en attente',
+      detail: todo.agentsAVerser.length > 0 ? todo.agentsAVerser.map((r) => `${r.agent_prenom || 'Agent'} — ${[r.client_prenom, r.client_nom].filter(Boolean).join(' ')}`).join(' · ') + ' : marqué « À payer » dans le registre.' : undefined,
+      onClick: () => navigate('/admin/registre-commissions'),
     },
   ];
-  const visibleTodos = todoCards.filter((t) => t.show);
+  const enAttente = totalEnAttente(actions);
+  const pointsOuverts = actions.filter((a) => (a.count ?? 0) > 0).length;
 
   const chargesCat = Object.entries(fin.chargesParCategorie).sort((a, b) => b[1] - a[1]);
   const beneficePositif = fin.benefice >= 0;
+  const deltaBenefice = prevFin ? variation(fin.benefice, prevFin.benefice) : null;
+
+  const teamRetards = team.map((a) => ({
+    ...a,
+    visitesJour: duJour.filter((v) => v.agent_id === a.id).length,
+    sansRetour: todo.visitesSansRetour.filter((v) => v.agent_id === a.id).length,
+  }));
+
+  const subtitle = [
+    pointsOuverts === 0 ? 'Tout est à jour' : `${pointsOuverts} point${s(pointsOuverts)} à traiter (${enAttente} élément${s(enAttente)})`,
+    `bénéfice ${p.label.toLowerCase()} ${beneficePositif ? '' : '− '}${formatCHF(Math.abs(fin.benefice))}`,
+  ].join(' · ');
 
   return (
     <PullToRefresh onRefresh={loadData} className="relative flex-1 overflow-y-auto">
-      <PremiumPageShellV2 className="relative z-10 mx-auto w-full max-w-6xl">
+      <StaffShell>
         {/* Bannière : tout en haut */}
         <DashboardBanner wrapperClassName="mb-0" />
 
-        {/* 1. Accueil */}
-        <SectionErrorBoundary sectionName="AdminHeader">
-          <PremiumDashboardHeader
-            userName={prenom}
-            headingBadge="Administration"
-            badgeIcon={ShieldCheck}
-            subtitle="Pilotage de l'agence : ce qui demande une action, puis les vrais chiffres."
-            messageCount={counts.new_message}
-            onMessagesClick={() => navigate('/admin/messagerie')}
+        <div className="space-y-3">
+          <DashPageHeader
+            title="Tableau de bord"
+            subtitle={subtitle}
+            action={
+              <Button variant="outline" size="sm" className="h-11 rounded-full sm:h-10" onClick={loadData} aria-label="Actualiser">
+                <RefreshCw className="h-4 w-4" /><span className="ml-2 hidden sm:inline">Actualiser</span>
+              </Button>
+            }
           />
-        </SectionErrorBoundary>
 
-        {/* 2. À traiter maintenant */}
-        <DashSection title="À traiter maintenant" action={<span className="text-sm text-muted-foreground">{visibleTodos.length} point{visibleTodos.length > 1 ? 's' : ''}</span>}>
-          {visibleTodos.length === 0 ? (
-            <TodoCard icon={CheckCircle2} tone="primary" title="Tout est à jour" description="Aucune demande en attente pour le moment." />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {visibleTodos.map((t) => <div key={t.key}>{t.node}</div>)}
+          {/* (a) Ma journée + (b) À traiter : premier écran */}
+          <div className="grid gap-3 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <SectionErrorBoundary sectionName="AdminHeader">
+                <DayBanner
+                  greeting={prenom ? `Bonjour ${prenom}` : 'Bonjour'}
+                  dateLabel={formatJourLong(now)}
+                  total={duJour.length}
+                  next={prochaine ? toDayVisit(prochaine) : null}
+                  others={duJour.filter((v) => v !== prochaine).map(toDayVisit)}
+                  onAgenda={() => navigate('/admin/calendrier')}
+                  agendaLabel="Calendrier"
+                />
+              </SectionErrorBoundary>
             </div>
-          )}
-        </DashSection>
+            <section className="space-y-2 lg:col-span-8" aria-label="À traiter">
+              <h2 className="px-0.5 text-base font-semibold text-foreground">
+                À traiter <span className="font-normal text-muted-foreground">· urgent d’abord</span>
+              </h2>
+              <ActionGrid items={actions} />
+            </section>
+          </div>
+        </div>
 
-        {/* 3. Résultat */}
-        <DashSection
-          title="Résultat de l'agence"
-          action={<DashSectionLink label="Charges" onClick={() => setChargesOpen(true)} />}
-        >
+        {/* (c) Cette semaine */}
+        <section className="space-y-3" aria-label="Cette semaine">
+          <StaffSectionTitle title="Cette semaine" subtitle="7 derniers jours et 7 prochains jours" />
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
+            <KpiTile icon={Calendar} label="Visites à venir" value={todo.visitesAVenir.length} phrase="planifiées d’ici 7 jours" onClick={() => navigate('/admin/calendrier')} />
+            <KpiTile icon={CheckCircle2} label="Visites effectuées" value={semaine.visitesEffectuees} phrase="ces 7 derniers jours" onClick={() => navigate('/admin/visites')} />
+            <KpiTile icon={ClipboardList} label="Candidatures" value={semaine.candidaturesDeposees} phrase="déposées en 7 jours" onClick={() => navigate('/admin/candidatures')} />
+            <KpiTile icon={KeyRound} label="Baux signés" value={semaine.bauxSignes} phrase="en 7 jours" onClick={() => navigate('/admin/candidatures')} />
+            <KpiTile icon={Banknote} label="Activations" value={semaine.activationsEncaissees} phrase="encaissées en 7 jours" onClick={() => navigate('/admin/demandes-activation')} />
+            <KpiTile icon={Clock} label="Mandats" value={semaine.mandatsEcheance} phrase={semaine.mandatsEcheance > 0 ? 'échoient dans 7 jours : prévenir' : 'aucune échéance sous 7 jours'} onClick={() => navigate('/admin/mandats')} />
+          </div>
+        </section>
+
+        {/* (d) Performance */}
+        <section className="space-y-3" aria-label="Performance">
+          <StaffSectionTitle title="Performance" subtitle={`Résultat et activité · ${p.label.toLowerCase()}`} />
           <DashFilterPills options={PERIODS.map((x) => ({ key: x.key, label: x.label }))} value={period} onChange={(k) => setPeriod(k as PeriodKey)} label="Période" />
 
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-12">
             {/* Bénéfice */}
-            <div className={`${DASH_CARD} flex flex-col justify-between p-5 lg:col-span-1`}>
+            <div className={`${DASH_CARD} flex flex-col justify-between p-5 lg:col-span-4`}>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Bénéfice réel · {p.label.toLowerCase()}</p>
                 <p className={`mt-1 text-[34px] font-semibold leading-tight tracking-tight tabular-nums ${beneficePositif ? 'text-foreground' : 'text-destructive'}`}>
                   {beneficePositif ? '' : '− '}{formatCHF(Math.abs(fin.benefice))}
                 </p>
+                {deltaBenefice && (
+                  <p className={`mt-0.5 text-xs font-medium ${deltaBenefice.up ? 'text-emerald-700 dark:text-emerald-400' : 'text-destructive'}`}>
+                    {deltaBenefice.up ? '▲' : '▼'} {deltaBenefice.pct} % <span className="font-normal text-muted-foreground">{deltaLabel}</span>
+                  </p>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {fin.marge !== null && <DashBadge tone={beneficePositif ? 'success' : 'danger'}>Marge {fin.marge} %</DashBadge>}
                   <DashBadge tone="muted">{fin.affaires} affaire{fin.affaires > 1 ? 's' : ''}</DashBadge>
@@ -502,7 +621,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Recettes */}
-            <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className={`${DASH_CARD} p-4 md:p-5 lg:col-span-4`}>
               <h3 className="mb-1 text-base font-semibold text-foreground">Recettes</h3>
               <div className="divide-y divide-border/60">
                 <MoneyLine label="Commissions" sub={`${fin.affairesLocation} location · ${fin.affairesAchat} achat/vente`} value={fin.commissions} tone="plus" onClick={() => setDetail({ key: 'commissions', title: 'Commissions', path: '/admin/registre-commissions' })} />
@@ -512,7 +631,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Dépenses */}
-            <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className={`${DASH_CARD} p-4 md:p-5 lg:col-span-4`}>
               <h3 className="mb-1 text-base font-semibold text-foreground">Dépenses</h3>
               <div className="divide-y divide-border/60">
                 <MoneyLine label="Remboursements versés" sub={`${fin.remboursementsCount} client${fin.remboursementsCount > 1 ? 's' : ''}`} value={fin.remboursements} tone="minus" onClick={() => setRembOpen(true)} />
@@ -523,71 +642,27 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* 12 mois */}
-          <div className={`${DASH_CARD} p-4 md:p-5`}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-foreground">12 derniers mois</h3>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-primary" /> Recettes</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-foreground/25" /> Dépenses</span>
-              </div>
-            </div>
-            <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex min-w-[560px] items-end gap-2">
-                {months.map((m, i) => (
-                  <div key={i} className="flex flex-1 flex-col items-center gap-1.5" title={`${m.label} · recettes ${formatCHF(m.recettes)} · dépenses ${formatCHF(m.depenses)} · bénéfice ${formatCHF(m.benefice)}`}>
-                    <div className="flex h-32 w-full items-end justify-center gap-0.5">
-                      <div className="w-1/2 max-w-[14px] rounded-t bg-primary" style={{ height: `${Math.max(2, (m.recettes / maxMonth) * 100)}%` }} />
-                      <div className="w-1/2 max-w-[14px] rounded-t bg-foreground/25" style={{ height: `${Math.max(2, (m.depenses / maxMonth) * 100)}%` }} />
-                    </div>
-                    <span className={`text-[11px] font-semibold tabular-nums ${m.benefice < 0 ? 'text-destructive' : 'text-foreground'}`}>
-                      {Math.abs(m.benefice) >= 1000 ? `${m.benefice < 0 ? '−' : ''}${Math.round(Math.abs(m.benefice) / 1000)}k` : Math.round(m.benefice)}
-                    </span>
-                    <span className="text-[11px] capitalize text-muted-foreground">{m.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">Le chiffre sous chaque mois est le bénéfice réel (recettes − dépenses). Touchez une ligne des recettes ou des dépenses pour voir le détail.</p>
-          </div>
-        </DashSection>
+          {!chargesAvailable && (
+            <TodoCard icon={AlertTriangle} tone="muted" title="Charges de l'agence à activer" description="Le bénéfice ne compte pas encore le loyer, la publicité ni les autres frais : collez le fichier SQL « charges_agence » dans l'éditeur SQL de Lovable Cloud." />
+          )}
 
-        {/* 4. Activité */}
-        <DashSection title={`Activité · ${p.label.toLowerCase()}`}>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
-            <StatTile icon={Users} label="Clients actifs" value={`${actifs.length} en recherche`} count={0} onClick={() => navigate('/admin/clients')} />
-            <StatTile icon={FileText} label="Mandats signés" value={`${activite.mandatsSignes}`} count={0} onClick={() => navigate('/admin/mandats')} />
-            <StatTile icon={Send} label="Offres envoyées" value={`${activite.offresEnvoyees}`} count={0} onClick={() => navigate('/admin/offres-envoyees')} />
-            <StatTile icon={Calendar} label="Visites" value={`${activite.visitesEffectuees} effectuée${activite.visitesEffectuees > 1 ? 's' : ''}`} count={todo.visitesAVenir.length} onClick={() => navigate('/admin/calendrier')} />
-            <StatTile icon={ClipboardList} label="Candidatures" value={`${activite.candidaturesDeposees} déposée${activite.candidaturesDeposees > 1 ? 's' : ''}`} count={todo.candEnAttente.length} onClick={() => navigate('/admin/candidatures')} />
-            <StatTile icon={BadgeCheck} label="Affaires conclues" value={`${fin.affaires}`} count={0} onClick={() => navigate('/admin/registre-commissions')} />
+            <KpiTile icon={FileText} label="Mandats signés" value={activite.mandatsSignes} delta={prevActivite ? variation(activite.mandatsSignes, prevActivite.mandatsSignes) : null} deltaLabel={deltaLabel} phrase="nouveaux clients engagés" onClick={() => navigate('/admin/mandats')} />
+            <KpiTile icon={Send} label="Offres envoyées" value={activite.offresEnvoyees} phrase="biens proposés aux clients" onClick={() => navigate('/admin/offres-envoyees')} />
+            <KpiTile icon={Calendar} label="Visites effectuées" value={activite.visitesEffectuees} delta={prevActivite ? variation(activite.visitesEffectuees, prevActivite.visitesEffectuees) : null} deltaLabel={deltaLabel} phrase="biens visités par les clients" onClick={() => navigate('/admin/calendrier')} />
+            <KpiTile icon={ClipboardList} label="Candidatures" value={activite.candidaturesDeposees} delta={prevActivite ? variation(activite.candidaturesDeposees, prevActivite.candidaturesDeposees) : null} deltaLabel={deltaLabel} phrase="dossiers déposés" onClick={() => navigate('/admin/candidatures')} />
+            <KpiTile icon={KeyRound} label="Baux signés" value={activite.bauxSignes} delta={prevActivite ? variation(activite.bauxSignes, prevActivite.bauxSignes) : null} deltaLabel={deltaLabel} phrase="clients relogés" onClick={() => navigate('/admin/candidatures')} />
+            <KpiTile icon={BadgeCheck} label="Affaires conclues" value={fin.affaires} delta={prevFin ? variation(fin.affaires, prevFin.affaires) : null} deltaLabel={deltaLabel} phrase="au registre des commissions" onClick={() => navigate('/admin/registre-commissions')} />
           </div>
+        </section>
 
-          <div className={`${DASH_CARD} p-4 md:p-5`}>
-            <h3 className="mb-3 text-base font-semibold text-foreground">De l'offre à l'affaire conclue</h3>
-            <div className="space-y-2.5">
-              {funnel.map((f, i) => {
-                const prev = i > 0 ? funnel[i - 1].value : 0;
-                const taux = i > 0 && prev > 0 ? Math.round((f.value / prev) * 100) : null;
-                return (
-                  <div key={f.label} className="flex items-center gap-3">
-                    <span className="w-36 shrink-0 truncate text-sm text-foreground sm:w-44">{f.label}</span>
-                    <div className="h-7 flex-1 overflow-hidden rounded-lg bg-muted">
-                      <div className="flex h-full items-center rounded-lg bg-primary/80 px-2 text-xs font-semibold text-primary-foreground" style={{ width: `${Math.max(6, (f.value / funnelMax) * 100)}%` }}>
-                        {f.value}
-                      </div>
-                    </div>
-                    <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">{taux !== null ? `${taux} %` : ''}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">Le pourcentage compare chaque étape à la précédente, sur la période choisie.</p>
-          </div>
-        </DashSection>
-
-        {/* 5. Équipe */}
-        <DashSection title="Équipe" action={<DashSectionLink label="Agents" onClick={() => navigate('/admin/agents')} />}>
+        {/* Équipe : qui est en retard sur quoi */}
+        <FoldSection
+          id="equipe"
+          title="Équipe"
+          subtitle={`${actifs.length} clients actifs · ${todo.sansAgent.length} sans agent · ${team.filter((a) => a.actif).length} agent${s(team.filter((a) => a.actif).length)} actif${s(team.filter((a) => a.actif).length)}`}
+          action={<DashSectionLink label="Agents" onClick={() => navigate('/admin/agents')} />}
+        >
           <div className={`${DASH_CARD} hidden overflow-hidden lg:block`}>
             <table className="w-full text-sm">
               <thead>
@@ -595,6 +670,8 @@ export default function AdminDashboard() {
                   <th className="px-4 py-3 font-medium">Agent</th>
                   <th className="px-4 py-3 font-medium">Clients actifs</th>
                   <th className="px-4 py-3 font-medium">Mandats ≤ 30 j</th>
+                  <th className="px-4 py-3 font-medium">Visites sans retour</th>
+                  <th className="px-4 py-3 font-medium">Visites aujourd’hui</th>
                   <th className="px-4 py-3 font-medium">Offres ({p.label.toLowerCase()})</th>
                   <th className="px-4 py-3 font-medium">Affaires</th>
                   <th className="px-4 py-3 font-medium">Commission agent</th>
@@ -602,13 +679,15 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {team.map((a) => (
+                {teamRetards.map((a) => (
                   <tr key={a.id} className="border-b border-border/50 last:border-0 hover:bg-muted/40">
                     <td className="px-4 py-3">
                       <button type="button" onClick={() => navigate(`/admin/agents/${a.id}`)} className="font-semibold text-foreground hover:underline">{a.prenom} {a.nom}</button>
                     </td>
                     <td className="px-4 py-3 tabular-nums">{a.clients}</td>
                     <td className="px-4 py-3 tabular-nums">{a.critiques > 0 ? <DashBadge tone="warning">{a.critiques}</DashBadge> : <span className="text-muted-foreground">0</span>}</td>
+                    <td className="px-4 py-3 tabular-nums">{a.sansRetour > 0 ? <DashBadge tone="warning">{a.sansRetour}</DashBadge> : <span className="text-muted-foreground">0</span>}</td>
+                    <td className="px-4 py-3 tabular-nums">{a.visitesJour}</td>
                     <td className="px-4 py-3 tabular-nums">{a.offres}</td>
                     <td className="px-4 py-3 tabular-nums">{a.affaires}</td>
                     <td className="px-4 py-3 tabular-nums">{formatCHF(a.commission)}</td>
@@ -619,45 +698,91 @@ export default function AdminDashboard() {
             </table>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
-            {team.map((a) => (
-              <div key={a.id} className={`${DASH_CARD} p-4`}>
-                <div className="flex items-center justify-between gap-2">
-                  <button type="button" onClick={() => navigate(`/admin/agents/${a.id}`)} className="truncate text-left font-semibold text-foreground">{a.prenom} {a.nom}</button>
-                  <Switch checked={a.actif} onCheckedChange={() => toggleAgentStatus(a.user_id, a.actif)} aria-label={`Activer ${a.prenom}`} />
+            {teamRetards.map((a) => {
+              const retards = [
+                a.critiques > 0 && `${a.critiques} mandat${s(a.critiques)} ≤ 30 j`,
+                a.sansRetour > 0 && `${a.sansRetour} visite${s(a.sansRetour)} sans retour`,
+              ].filter(Boolean).join(' · ');
+              return (
+                <div key={a.id} className={`${DASH_CARD} p-4`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <button type="button" onClick={() => navigate(`/admin/agents/${a.id}`)} className="min-h-11 truncate text-left font-semibold text-foreground">{a.prenom} {a.nom}</button>
+                    <Switch checked={a.actif} onCheckedChange={() => toggleAgentStatus(a.user_id, a.actif)} aria-label={`Activer ${a.prenom}`} />
+                  </div>
+                  {retards && <p className="text-xs font-medium text-amber-700 dark:text-amber-400">À relancer : {retards}</p>}
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+                    {[['Clients', a.clients], ['≤ 30 j', a.critiques], ['Offres', a.offres], ['Affaires', a.affaires]].map(([l, v]) => (
+                      <div key={l as string} className="rounded-lg bg-muted/60 py-2">
+                        <p className="text-base font-semibold tabular-nums text-foreground">{v as number}</p>
+                        <p className="text-[11px] text-muted-foreground">{l as string}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {a.visitesJour} visite{s(a.visitesJour)} aujourd’hui{a.commission > 0 ? ` · Commission agent : ${formatCHF(a.commission)}` : ''}
+                  </p>
                 </div>
-                <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-                  {[['Clients', a.clients], ['≤ 30 j', a.critiques], ['Offres', a.offres], ['Affaires', a.affaires]].map(([l, v]) => (
-                    <div key={l as string} className="rounded-lg bg-muted/60 py-2">
-                      <p className="text-base font-semibold tabular-nums text-foreground">{v as number}</p>
-                      <p className="text-[11px] text-muted-foreground">{l as string}</p>
+              );
+            })}
+          </div>
+        </FoldSection>
+
+        {/* (e) Analyses */}
+        <FoldSection id="analyses" title="Analyses" subtitle="Évolution sur 12 mois, entonnoir de conversion, statistiques détaillées">
+          <div className="grid gap-3 lg:grid-cols-12">
+            {/* 12 mois */}
+            <div className={`${DASH_CARD} p-4 md:p-5 lg:col-span-7`}>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-base font-semibold text-foreground">12 derniers mois</h3>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-primary" /> Recettes</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-foreground/25" /> Dépenses</span>
+                </div>
+              </div>
+              <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex min-w-[560px] items-end gap-2">
+                  {months.map((m, i) => (
+                    <div key={i} className="flex flex-1 flex-col items-center gap-1.5" title={`${m.label} · recettes ${formatCHF(m.recettes)} · dépenses ${formatCHF(m.depenses)} · bénéfice ${formatCHF(m.benefice)}`}>
+                      <div className="flex h-32 w-full items-end justify-center gap-0.5">
+                        <div className="w-1/2 max-w-[14px] rounded-t bg-primary" style={{ height: `${Math.max(2, (m.recettes / maxMonth) * 100)}%` }} />
+                        <div className="w-1/2 max-w-[14px] rounded-t bg-foreground/25" style={{ height: `${Math.max(2, (m.depenses / maxMonth) * 100)}%` }} />
+                      </div>
+                      <span className={`text-[11px] font-semibold tabular-nums ${m.benefice < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                        {Math.abs(m.benefice) >= 1000 ? `${m.benefice < 0 ? '−' : ''}${Math.round(Math.abs(m.benefice) / 1000)}k` : Math.round(m.benefice)}
+                      </span>
+                      <span className="text-[11px] capitalize text-muted-foreground">{m.label}</span>
                     </div>
                   ))}
                 </div>
-                {a.commission > 0 && <p className="mt-2 text-xs text-muted-foreground">Commission agent : {formatCHF(a.commission)}</p>}
               </div>
-            ))}
-          </div>
-        </DashSection>
+              <p className="mt-3 text-xs text-muted-foreground">Le chiffre sous chaque mois est le bénéfice réel (recettes − dépenses). Touchez une ligne des recettes ou des dépenses pour voir le détail.</p>
+            </div>
 
-        {/* 6. Accès rapides */}
-        <DashSection title="Accès rapides">
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            <LinkRow icon={Users} label="Clients" sub={`${actifs.length} actifs · ${clients.length} au total`} onClick={() => navigate('/admin/clients')} />
-            <LinkRow icon={FileText} label="Mandats" sub="Échéances, reconductions, remboursements" onClick={() => navigate('/admin/mandats')} />
-            <LinkRow icon={Send} label="Postulations" sub={`${todo.aPostuler} à déposer`} onClick={() => navigate('/admin/postulations')} />
-            <LinkRow icon={ClipboardList} label="Candidatures" sub={`${todo.candEnAttente.length} en attente · ${todo.candAFinaliser.length} à finaliser`} onClick={() => navigate('/admin/candidatures')} />
-            <LinkRow icon={Calendar} label="Visites et calendrier" sub={`${todo.visitesAVenir.length} dans les 7 jours`} onClick={() => navigate('/admin/calendrier')} />
-            <LinkRow icon={LifeBuoy} label="Support" sub="Demandes d'aide des utilisateurs" onClick={() => navigate('/admin/support')} />
-            <LinkRow icon={Wallet} label="Registre des commissions" sub={`${registre.length} affaires enregistrées`} onClick={() => navigate('/admin/registre-commissions')} />
-            <LinkRow icon={Briefcase} label="Salaires" sub="Fiches de salaire et coût employeur" onClick={() => navigate('/admin/salaires')} />
-            <LinkRow icon={Undo2} label="Remboursements" sub={rembAvailable ? `${rembRows.length} enregistré${rembRows.length > 1 ? 's' : ''} · ${todo.refundsPending.length} en attente` : 'À activer'} onClick={() => setRembOpen(true)} />
-            <LinkRow icon={Settings2} label="Charges de l'agence" sub={chargesAvailable ? `${charges.length} ligne${charges.length > 1 ? 's' : ''}` : 'À activer'} onClick={() => setChargesOpen(true)} />
-            <LinkRow icon={UserCog} label="Assignations" sub={`${todo.sansAgent.length} client${todo.sansAgent.length > 1 ? 's' : ''} sans agent`} onClick={() => navigate('/admin/assignations')} />
+            {/* Entonnoir */}
+            <div className={`${DASH_CARD} p-4 md:p-5 lg:col-span-5`}>
+              <h3 className="mb-3 text-base font-semibold text-foreground">De l'offre à l'affaire conclue</h3>
+              <div className="space-y-2.5">
+                {funnel.map((f, i) => {
+                  const prev = i > 0 ? funnel[i - 1].value : 0;
+                  const taux = i > 0 && prev > 0 ? Math.round((f.value / prev) * 100) : null;
+                  return (
+                    <div key={f.label} className="flex items-center gap-3">
+                      <span className="w-32 shrink-0 truncate text-sm text-foreground sm:w-40">{f.label}</span>
+                      <div className="h-7 flex-1 overflow-hidden rounded-lg bg-muted">
+                        <div className="flex h-full items-center rounded-lg bg-primary/80 px-2 text-xs font-semibold text-primary-foreground" style={{ width: `${Math.max(6, (f.value / funnelMax) * 100)}%` }}>
+                          {f.value}
+                        </div>
+                      </div>
+                      <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">{taux !== null ? `${taux} %` : ''}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">Le pourcentage compare chaque étape à la précédente, sur la période choisie ({p.label.toLowerCase()}).</p>
+            </div>
           </div>
-        </DashSection>
 
-        {/* 7. Statistiques détaillées (sections existantes conservées) */}
-        <section className="space-y-3">
+          {/* Statistiques détaillées (sections existantes conservées, chargées à l'ouverture) */}
           <button
             type="button"
             onClick={() => setShowMore((v) => !v)}
@@ -688,12 +813,20 @@ export default function AdminDashboard() {
               <AgencyProjectionSection projections={agencyProjections} totalCommissionAgence={totalCommissionAgence} />
             </div>
           )}
-        </section>
+        </FoldSection>
 
-        {!chargesAvailable && (
-          <TodoCard icon={AlertTriangle} tone="muted" title="Charges de l'agence à activer" description="Le bénéfice ne compte pas encore le loyer, la publicité ni les autres frais : collez le fichier SQL « charges_agence » dans l'éditeur SQL de Lovable Cloud." />
-        )}
-      </PremiumPageShellV2>
+        {/* Accès rapides : pages de gestion qui ne sont pas déjà dans « À traiter » */}
+        <DashSection title="Accès rapides">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            <LinkRow icon={Users} label="Clients" sub={`${actifs.length} actifs · ${clients.length} au total`} onClick={() => navigate('/admin/clients')} />
+            <LinkRow icon={Calendar} label="Visites et calendrier" sub={`${todo.visitesAVenir.length} dans les 7 jours`} onClick={() => navigate('/admin/calendrier')} />
+            <LinkRow icon={LifeBuoy} label="Support" sub="Demandes d'aide des utilisateurs" onClick={() => navigate('/admin/support')} />
+            <LinkRow icon={Wallet} label="Registre des commissions" sub={`${registre.length} affaires enregistrées`} onClick={() => navigate('/admin/registre-commissions')} />
+            <LinkRow icon={Briefcase} label="Salaires" sub="Fiches de salaire et coût employeur" onClick={() => navigate('/admin/salaires')} />
+            <LinkRow icon={Settings2} label="Charges de l'agence" sub={chargesAvailable ? `${charges.length} ligne${charges.length > 1 ? 's' : ''}` : 'À activer'} onClick={() => setChargesOpen(true)} />
+          </div>
+        </DashSection>
+      </StaffShell>
 
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
         <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
@@ -730,7 +863,7 @@ export default function AdminDashboard() {
                 )}
                 <p className="text-xs text-muted-foreground">Les comptes de test (adresse @immo-rama.ch ou nom « Test ») ne sont jamais comptés.</p>
                 {detail.path && (
-                  <Button variant="outline" className="w-full rounded-lg" onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
+                  <Button variant="outline" className="h-11 w-full rounded-full" onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
                     Ouvrir la page
                   </Button>
                 )}
