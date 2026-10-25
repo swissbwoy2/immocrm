@@ -4,6 +4,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
+import { REFUND_ELIGIBILITY_DAY } from '@/utils/mandatDates';
 
 export type CancellationReason = 'found_alone' | 'not_searching_anymore' | 'searching_alone';
 
@@ -87,7 +88,7 @@ export function CancellationReasonForm({ onSubmit, onCancel, withRefund, loading
 
       {!withRefund && (
         <div className="p-3 rounded-lg border bg-muted/30 text-xs text-muted-foreground">
-          ℹ️ Le remboursement n'est disponible qu'à partir du 82ème jour de votre mandat (jour actuel : {daysSinceSignature}).
+          ℹ️ Le remboursement n'est disponible qu'à partir du {REFUND_ELIGIBILITY_DAY}ème jour de votre mandat (jour actuel : {daysSinceSignature}).
         </div>
       )}
 

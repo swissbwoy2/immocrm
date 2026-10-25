@@ -1110,11 +1110,16 @@ Deno.serve(async (req) => {
           }
 
           if (conversationId) {
-            await supabase.from("messages").insert({
+            // sender_type est obligatoire : sans lui, l'insertion échouait et la réponse du client était perdue.
+            const { error: waMessageError } = await supabase.from("messages").insert({
               conversation_id: conversationId,
               sender_id: profile.id,
+              sender_type: "client",
               content: `📱 [WhatsApp] ${text}`,
             });
+            if (waMessageError) {
+              console.error("[whatsapp-webhook] message insert failed:", waMessageError.message);
+            }
 
             // Notification interne pour l'agent
             await supabase.rpc("create_notification", {

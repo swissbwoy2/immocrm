@@ -434,6 +434,7 @@ export default function Messagerie() {
                       <PremiumMessageBubble
                         key={msg.id}
                         content={msg.content}
+                        senderType={msg.sender_type}
                         timestamp={msg.created_at}
                         isSent={isSent}
                         read={msg.read}

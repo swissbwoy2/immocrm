@@ -4945,10 +4945,16 @@ export type Database = {
           client_name: string | null
           conversation_type: string | null
           created_at: string | null
+          handled_by: string
+          handled_by_user: string | null
+          handled_since: string | null
           id: string
           is_archived: boolean | null
+          last_client_message_at: string | null
           last_message_at: string | null
           status: string | null
+          steeve_state: string
+          steeve_summary: Json | null
           subject: string | null
         }
         Insert: {
@@ -4960,10 +4966,16 @@ export type Database = {
           client_name?: string | null
           conversation_type?: string | null
           created_at?: string | null
+          handled_by?: string
+          handled_by_user?: string | null
+          handled_since?: string | null
           id?: string
           is_archived?: boolean | null
+          last_client_message_at?: string | null
           last_message_at?: string | null
           status?: string | null
+          steeve_state?: string
+          steeve_summary?: Json | null
           subject?: string | null
         }
         Update: {
@@ -4975,10 +4987,16 @@ export type Database = {
           client_name?: string | null
           conversation_type?: string | null
           created_at?: string | null
+          handled_by?: string
+          handled_by_user?: string | null
+          handled_since?: string | null
           id?: string
           is_archived?: boolean | null
+          last_client_message_at?: string | null
           last_message_at?: string | null
           status?: string | null
+          steeve_state?: string
+          steeve_summary?: Json | null
           subject?: string | null
         }
         Relationships: []
@@ -8750,6 +8768,7 @@ export type Database = {
           attachment_thumbnail_url: string | null
           attachment_type: string | null
           attachment_url: string | null
+          client_msg_id: string | null
           content: string | null
           conversation_id: string
           created_at: string | null
@@ -8767,6 +8786,7 @@ export type Database = {
           attachment_thumbnail_url?: string | null
           attachment_type?: string | null
           attachment_url?: string | null
+          client_msg_id?: string | null
           content?: string | null
           conversation_id: string
           created_at?: string | null
@@ -8784,6 +8804,7 @@ export type Database = {
           attachment_thumbnail_url?: string | null
           attachment_type?: string | null
           attachment_url?: string | null
+          client_msg_id?: string | null
           content?: string | null
           conversation_id?: string
           created_at?: string | null
@@ -16088,6 +16109,10 @@ export type Database = {
         Args: { _agent_id: string; _client_id: string }
         Returns: boolean
       }
+      can_manage_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: boolean
+      }
       can_read_offer_attachment: { Args: { _name: string }; Returns: boolean }
       can_read_visite_media: { Args: { _name: string }; Returns: boolean }
       candidat_confirmer_attribution: {
@@ -16213,6 +16238,14 @@ export type Database = {
           p_window_seconds: number
         }
         Returns: boolean
+      }
+      conversation_give_back: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
+      conversation_take_over: {
+        Args: { p_conversation_id: string }
+        Returns: Json
       }
       copy_candidat_garant_to_client: {
         Args: { p_user_id: string }
@@ -16375,6 +16408,7 @@ export type Database = {
           type_bien: string
         }[]
       }
+      get_steeve_settings: { Args: never; Returns: Json }
       google_create_candidat_account: { Args: never; Returns: undefined }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
