@@ -1,9 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { isVisiteReelle } from '@/lib/visitDecision';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User, FolderOpen, Map } from 'lucide-react';
-import { DernieresOffresKPI } from '@/components/client/dashboard/DernieresOffresKPI';
-import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
-import { ProchainesVisitesCard } from '@/components/client/dashboard/ProchainesVisitesCard';
 import { MesVisitesAVenirBand } from '@/components/client/dashboard/MesVisitesAVenirBand';
 import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
 
@@ -48,7 +45,6 @@ import { PremiumDossierChecklistCard } from '@/components/premium';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
-import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
@@ -547,14 +543,25 @@ function ClientDashboardLocation() {
   const candidaturesEnCours = candidatures.filter(c => statusInProgress.includes(c.statut));
 
 
+  // Rang de tri : les compteurs qui demandent une action passent en tête.
+  const visitesLabel = stats.visitesAVenir > 0
+    ? `${stats.visitesAVenir} à venir`
+    : 'Aucune prévue';
+  const offresLabel = stats.offresNonVues > 0
+    ? `${stats.offresNonVues} à traiter`
+    : `${stats.offresRecues} au total`;
+  const candidaturesLabel = stats.candidaturesEnAttente > 0
+    ? `${stats.candidaturesEnAttente} en attente`
+    : `${candidaturesEnCours.length} en cours`;
+  const rienARegarder = offres.length === 0 && stats.visitesAVenir === 0;
+
   return (
     <>
       <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
-        <FloatingParticles count={8} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
-        <PremiumPageShellV2 className="relative z-10">
+        <PremiumPageShellV2 className="relative z-10 mx-auto w-full max-w-6xl">
           <MustChangePasswordBanner />
-          <DashboardAdBanner />
-          {/* Premium Dashboard Header */}
+
+          {/* 1. Accueil */}
           <SectionErrorBoundary sectionName="DashboardHeader">
             <PremiumDashboardHeader
               userName={clientProfile?.prenom}
@@ -571,24 +578,13 @@ function ClientDashboardLocation() {
             />
           </SectionErrorBoundary>
 
-          <MandatCreditsGate />
-          <MesCreditsCard />
+          <DashboardAdBanner />
 
-          {/* Bande horizontale — mes offres reçues */}
-          <SectionErrorBoundary sectionName="MesOffresRecuesBand">
-            <MesOffresRecuesBand offres={offres} />
-          </SectionErrorBoundary>
+          {/* 2. À faire : tout ce qui bloque ou demande une action */}
+          <div className="space-y-3">
+            <MandatCreditsGate />
 
-          {/* Bande horizontale — mes visites à venir */}
-          <SectionErrorBoundary sectionName="MesVisitesAVenirBand">
-            <MesVisitesAVenirBand visites={visites} />
-          </SectionErrorBoundary>
-
-
-
-          {/* Alerte compte non actif */}
-          {profileActif === false && (
-            <div className="mb-6 animate-fade-in">
+            {profileActif === false && (
               <PremiumStatusCard
                 variant="waiting"
                 title="Compte en attente d'activation"
@@ -598,26 +594,23 @@ function ClientDashboardLocation() {
                   onClick: () => navigate('/client/messagerie')
                 } : undefined}
               />
-            </div>
-          )}
+            )}
 
-          {/* Alerte Période d'essai — client sans mandat signé */}
-          {client && !client.mandat_signature_data && !client.demande_mandat_id && (
-            <div className="mb-6 animate-fade-in">
-              <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 md:p-5">
+            {client && !client.mandat_signature_data && !client.demande_mandat_id && (
+              <div className={`${DASH_CARD} p-4 md:p-5`}>
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-full bg-orange-500/20 shrink-0">
-                    <FileText className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-orange-600 dark:text-orange-400">⏳ Période d'essai</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
+                    <FileText className="h-5 w-5 text-amber-600" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">Période d'essai</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Votre compte est en période d'essai. Pour l'activer officiellement et profiter de tous les services, complétez votre dossier.
                     </p>
                     <Button
                       size="sm"
                       data-demo-allow
-                      className="mt-3"
+                      className="mt-3 rounded-full"
                       onClick={() => {
                         if (isDemo) {
                           void signOut().catch(() => {});
@@ -633,30 +626,19 @@ function ClientDashboardLocation() {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Extrait de poursuites — bandeau hero (très visible) */}
-          {profileActif !== false && (
-            <div className="mb-6 animate-fade-in" style={{ animationDelay: '70ms' }}>
-              <ExtraitPoursuitesHeroCard />
-            </div>
-          )}
+            {profileActif !== false && <ExtraitPoursuitesHeroCard />}
 
-          {/* Alerte documents manquants */}
-          {profileActif !== false && (
-            <div className="mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
+            {profileActif !== false && (
               <MissingDocumentsAlert
-                documents={documents} 
+                documents={documents}
                 candidatureStatut={candidatures[0]?.statut}
                 showPostSignature={candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe'].includes(c.statut))}
               />
-            </div>
-          )}
+            )}
 
-          {/* Alerte mandat expirant */}
-          {profileActif !== false && daysRemaining > 0 && daysRemaining <= 30 && (
-            <div className="mb-6 animate-fade-in" style={{ animationDelay: '50ms' }}>
+            {profileActif !== false && daysRemaining > 0 && daysRemaining <= 30 && (
               <PremiumStatusCard
                 variant="warning"
                 title={`Il vous reste ${formatTimeRemaining(daysRemaining)} sur votre mandat !`}
@@ -666,21 +648,18 @@ function ClientDashboardLocation() {
                   onClick: handleRenewMandat
                 }}
               >
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => navigate('/client/messagerie')}
-                  className="mt-2"
+                  className="mt-2 rounded-full"
                 >
                   Contacter mon agent
                 </Button>
               </PremiumStatusCard>
-            </div>
-          )}
+            )}
 
-          {/* Alerte mandat expiré */}
-          {profileActif !== false && daysRemaining <= 0 && (
-            <div className="mb-6 animate-fade-in" style={{ animationDelay: '50ms' }}>
+            {profileActif !== false && daysRemaining <= 0 && (
               <PremiumStatusCard
                 variant="warning"
                 icon={AlertTriangle}
@@ -691,161 +670,114 @@ function ClientDashboardLocation() {
                   onClick: () => navigate('/client/messagerie')
                 }}
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Bouton "Demander un remboursement" — visible en permanence, actif uniquement J80→J90 */}
-          {profileActif !== false && daysRemaining > 0 && (() => {
-            const REFUND_DAY = 80;
-            const elapsedInt = Math.floor(daysElapsed);
-            const refundActive = elapsedInt >= REFUND_DAY && elapsedInt <= 90;
-            const daysUntilRefund = Math.max(0, REFUND_DAY - elapsedInt);
-            const tooltip = refundActive
-              ? 'Vous êtes éligible au remboursement'
-              : `Disponible à partir du 80ème jour (encore ${daysUntilRefund} jour${daysUntilRefund > 1 ? 's' : ''})`;
-            return (
-              <div className="mb-6 animate-fade-in" style={{ animationDelay: '60ms' }}>
-                <div className="rounded-xl border border-border bg-card p-4 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Demander un remboursement</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{tooltip}</p>
+          {/* 3. Ma recherche : offres, visites, candidatures (même ordre que la barre du bas) */}
+          <DashSection
+            title="Ma recherche"
+            action={
+              <button type="button" onClick={() => navigate('/client/offres-recues')}
+                className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-4 hover:underline">
+                Tout voir <ChevronRight className="h-4 w-4" />
+              </button>
+            }
+          >
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+              <StatTile
+                icon={Home}
+                label="Offres reçues"
+                value={offresLabel}
+                count={stats.offresNonVues}
+                onClick={() => navigate('/client/offres-recues')}
+              />
+              <StatTile
+                icon={FileCheck}
+                label="Candidatures"
+                value={candidaturesLabel}
+                count={stats.candidaturesEnAttente}
+                onClick={() => navigate('/client/mes-candidatures')}
+              />
+              <StatTile
+                icon={Calendar}
+                label="Agenda"
+                value={visitesLabel}
+                count={stats.visitesAVenir}
+                onClick={() => navigate('/client/calendrier')}
+              />
+            </div>
+
+            <SectionErrorBoundary sectionName="MesOffresRecuesBand">
+              <MesOffresRecuesBand offres={offres} />
+            </SectionErrorBoundary>
+
+            <SectionErrorBoundary sectionName="MesVisitesAVenirBand">
+              <MesVisitesAVenirBand visites={visites} />
+            </SectionErrorBoundary>
+
+            {rienARegarder && (
+              <div className={`${DASH_CARD} p-5 text-center`}>
+                <p className="font-semibold text-foreground">Aucune offre pour le moment</p>
+                <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                  Chaque bien que votre agent sélectionne pour vous arrive ici, avec les visites qu'il organise.
+                </p>
+              </div>
+            )}
+
+            {candidaturesEnCours.length > 0 && (
+              <div className={`${DASH_CARD} p-4 md:p-5`}>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-foreground">Vos candidatures en cours</h3>
+                    <p className="text-sm text-muted-foreground">Suivez la progression de vos dossiers</p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={refundActive ? 'default' : 'outline'}
-                    disabled={!refundActive}
-                    onClick={() => navigate('/client/mon-contrat?action=refund')}
-                    title={tooltip}
-                  >
-                    {refundActive ? 'Demander mon remboursement' : `J${elapsedInt}/${REFUND_DAY}`}
-                  </Button>
+                  <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground">
+                    {candidaturesEnCours.length}
+                  </span>
                 </div>
+                <div className="space-y-3">
+                  {candidaturesEnCours.slice(0, 3).map((cand, index) => (
+                    <PremiumCandidatureProgressCard
+                      key={cand.id}
+                      candidature={cand}
+                      index={index}
+                      onClick={() => navigate('/client/mes-candidatures')}
+                    />
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  className="mt-4 h-11 w-full rounded-full"
+                  onClick={() => navigate('/client/mes-candidatures')}
+                >
+                  Voir toutes mes candidatures
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
               </div>
-            );
-          })()}
+            )}
+          </DashSection>
 
-          {/* === Dernières offres (style Post / Logisorama mockup) === */}
-          <SectionErrorBoundary sectionName="DernieresOffres">
-            <div className="mb-6">
-              <DernieresOffresKPI
-                offres={offres}
-                onSeeAll={() => navigate('/client/offres-recues')}
-                onOffreClick={(id) => navigate(`/client/offres-recues?offre=${id}`)}
-              />
-            </div>
-          </SectionErrorBoundary>
-
-          {/* === Tuiles d'action XL — 2 colonnes principales === */}
-          <div className="grid grid-cols-2 gap-3 md:gap-4 items-stretch">
-            <QuickTileXL
-              icon={FolderOpen}
-              title="Mon dossier"
-              subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''}`}
-              onClick={() => navigate('/client/dossier')}
-              index={0}
-            />
-            <QuickTileXL
-              icon={Calendar}
-              title="Calendrier"
-              subtitle={stats.visitesAVenir > 0 ? `${stats.visitesAVenir} visite${stats.visitesAVenir > 1 ? 's' : ''} à venir` : 'Aucune visite'}
-              badge={stats.visitesAVenir || undefined}
-              onClick={() => navigate('/client/calendrier')}
-              index={1}
-            />
-          </div>
-
-          {/* === Tuiles secondaires pleine largeur === */}
-          <div className="grid grid-cols-1 gap-3">
-            <QuickTileXL
-              icon={FileText}
-              variant="wide"
-              title="Mes offres reçues"
-              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelle${stats.offresNonVues > 1 ? 's' : ''} à traiter` : `${offres.length} au total`}
-              badge={stats.offresNonVues || undefined}
-              badgeVariant={stats.offresNonVues > 0 ? 'destructive' : 'default'}
-              onClick={() => navigate('/client/offres-recues')}
-              index={2}
-            />
-            <QuickTileXL
-              icon={FileCheck}
-              variant="wide"
-              title="Mes candidatures"
-              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : `${stats.candidaturesDeposees} déposée${stats.candidaturesDeposees > 1 ? 's' : ''}`}
-              badge={stats.candidaturesDeposees || undefined}
-              onClick={() => navigate('/client/mes-candidatures')}
-              index={3}
-            />
-            <QuickTileXL
-              icon={MessageSquare}
-              variant="wide"
-              title="Messagerie"
-              subtitle={
-                counts.new_message > 0
-                  ? `${counts.new_message} nouveau${counts.new_message > 1 ? 'x' : ''} message${counts.new_message > 1 ? 's' : ''}`
-                  : agent
-                    ? `Votre agent : ${agent.prenom} ${agent.nom}`
-                    : 'Aucun agent assigné pour le moment'
-              }
-              badge={counts.new_message > 0 ? counts.new_message : undefined}
-              badgeVariant="destructive"
-              onClick={() => navigate('/client/messagerie')}
-              index={4}
-            />
-          </div>
-
-          {/* === Prochaines visites — liste compacte avec date stylée === */}
-          <SectionErrorBoundary sectionName="ProchainesVisitesNew">
-            <div className="mb-8">
-              <ProchainesVisitesCard
-                visites={visites}
-                onSeeAll={() => navigate('/client/visites')}
-                onVisiteClick={() => navigate('/client/visites')}
-              />
-            </div>
-          </SectionErrorBoundary>
-
-          {/* Section Statistiques détaillées */}
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500 group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              </div>
-              <CardContent className="relative p-0">
-                <SectionErrorBoundary sectionName="ClientStats">
-                  <ClientStatsSection
-                    offres={offres}
-                    visites={visites}
-                    candidatures={candidatures}
-                    client={client}
-                  />
-                </SectionErrorBoundary>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Solvabilité et Checklist */}
+          {/* 4. Mon dossier */}
           {profileActif !== false && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="animate-fade-in group" style={{ animationDelay: '220ms' }}>
-                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  </div>
-                  <div className="relative">
-                    <SectionErrorBoundary sectionName="Solvability">
-                      {isAcheteur ? (
-                        <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
-                      ) : (
-                        <SolvabilityAlert result={solvabilityResult} />
-                      )}
-                    </SectionErrorBoundary>
-                  </div>
+            <DashSection
+              title="Mon dossier"
+              action={
+                <button type="button" onClick={() => navigate('/client/dossier')}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-4 hover:underline">
+                  Ouvrir <ChevronRight className="h-4 w-4" />
+                </button>
+              }
+            >
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className={`${DASH_CARD} overflow-hidden`}>
+                  <SectionErrorBoundary sectionName="Solvability">
+                    {isAcheteur ? (
+                      <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
+                    ) : (
+                      <SolvabilityAlert result={solvabilityResult} />
+                    )}
+                  </SectionErrorBoundary>
                 </div>
-              </div>
-              
-              <div className="animate-fade-in" style={{ animationDelay: '280ms' }}>
                 <SectionErrorBoundary sectionName="DossierChecklist">
                   <PremiumDossierChecklistCard
                     clientName={clientFullName}
@@ -854,12 +786,7 @@ function ClientDashboardLocation() {
                   />
                 </SectionErrorBoundary>
               </div>
-            </div>
-          )}
 
-          {/* Gestion des candidats - Premium */}
-          {profileActif !== false && (
-            <div className="mb-8 animate-fade-in" style={{ animationDelay: '340ms' }}>
               <SectionErrorBoundary sectionName="Candidates">
                 <PremiumCandidatesCard
                   clientId={client.id}
@@ -867,179 +794,203 @@ function ClientDashboardLocation() {
                   budgetDemande={client.budget_max || 0}
                 />
               </SectionErrorBoundary>
-            </div>
+
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                <LinkRow icon={FolderOpen} label="Mes documents" sub={`${documents.length} document${documents.length > 1 ? 's' : ''}`} onClick={() => navigate('/client/documents')} />
+                <LinkRow icon={FileText} label="Mon contrat" sub="Mandat et conditions" onClick={() => navigate('/client/mon-contrat')} />
+              </div>
+            </DashSection>
           )}
 
-          {/* Candidatures en cours - Premium Section */}
-          {candidaturesEnCours.length > 0 && (
-            <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border-2 border-primary/30 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/20 transition-all duration-500 group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10" />
-                <div className="absolute inset-0 opacity-50 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                </div>
-                
-                <div className="relative p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-lg shadow-primary/10">
-                          <FileCheck className="w-6 h-6 text-primary" />
-                        </div>
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
-                          {candidaturesEnCours.length}
-                        </div>
+          {/* 5. Mon mandat et mon agent */}
+          <DashSection title="Mon mandat et mon agent">
+            <MesCreditsCard />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="space-y-3">
+                {profileActif === false ? (
+                  <PremiumStatusCard
+                    variant="waiting"
+                    title="Compte en attente d'activation"
+                    description="La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent."
+                  >
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="p-3 rounded-xl bg-muted/30">
+                        <p className="text-sm text-muted-foreground">Date d'inscription</p>
+                        <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
                       </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-foreground">
-                          Vos candidatures en cours
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Suivez la progression de vos dossiers
-                        </p>
+                      <div className="p-3 rounded-xl bg-muted/30">
+                        <p className="text-sm text-muted-foreground">Statut</p>
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">En attente</Badge>
                       </div>
                     </div>
-                    
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
-                      onClick={() => navigate('/client/mes-candidatures')}
-                    >
-                      <FileCheck className="w-4 h-4" />
-                      Tout voir
-                    </Button>
+                  </PremiumStatusCard>
+                ) : (() => {
+                  const reloggedCandidature = candidatures.find(c =>
+                    ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut)
+                  );
+                  const isRelogged = client.statut === 'reloge' || !!reloggedCandidature;
+                  const reloggedStatus = reloggedCandidature?.statut as 'signature_effectuee' | 'etat_lieux_fixe' | 'cles_remises' | null;
+                  const reloggedDate = reloggedCandidature?.signature_effectuee_at ||
+                                      reloggedCandidature?.cles_remises_at ||
+                                      reloggedCandidature?.date_etat_lieux;
+
+                  return (
+                    <PremiumMandatProgress
+                      daysElapsed={daysElapsed}
+                      daysRemaining={daysRemaining}
+                      totalDays={90}
+                      startDate={client.date_ajout || client.created_at}
+                      isRelogged={isRelogged}
+                      reloggedStatus={reloggedStatus}
+                      reloggedDate={reloggedDate}
+                    />
+                  );
+                })()}
+
+                {/* Remboursement — visible en permanence, actif uniquement J80→J90 */}
+                {profileActif !== false && daysRemaining > 0 && (() => {
+                  const REFUND_DAY = 80;
+                  const elapsedInt = Math.floor(daysElapsed);
+                  const refundActive = elapsedInt >= REFUND_DAY && elapsedInt <= 90;
+                  const daysUntilRefund = Math.max(0, REFUND_DAY - elapsedInt);
+                  const tooltip = refundActive
+                    ? 'Vous êtes éligible au remboursement'
+                    : `Disponible à partir du 80ème jour (encore ${daysUntilRefund} jour${daysUntilRefund > 1 ? 's' : ''})`;
+                  return (
+                    <div className={`${DASH_CARD} flex items-center justify-between gap-3 p-4`}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground">Demander un remboursement</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{tooltip}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="rounded-full"
+                        variant={refundActive ? 'default' : 'outline'}
+                        disabled={!refundActive}
+                        onClick={() => navigate('/client/mon-contrat?action=refund')}
+                        title={tooltip}
+                      >
+                        {refundActive ? 'Demander mon remboursement' : `J${elapsedInt}/${REFUND_DAY}`}
+                      </Button>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div>
+                {agent ? (
+                  <PremiumAgentCard
+                    agent={agent}
+                    onMessage={() => navigate('/client/messagerie')}
+                  />
+                ) : (
+                  <div className={`${DASH_CARD} p-6 text-center`}>
+                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                      <User className="h-7 w-7 text-muted-foreground" />
+                    </span>
+                    <p className="mt-3 font-semibold text-foreground">Aucun agent assigné</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Un agent vous sera bientôt attribué pour vous accompagner dans votre recherche.
+                    </p>
                   </div>
-                  
-                  <div className="space-y-3">
-                    {candidaturesEnCours.slice(0, 3).map((cand, index) => (
-                      <PremiumCandidatureProgressCard
-                        key={cand.id}
-                        candidature={cand}
-                        index={index}
-                        onClick={() => navigate('/client/mes-candidatures')}
-                      />
-                    ))}
-                  </div>
-                  
-                  <Button 
-                    size="lg" 
-                    className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] transition-all duration-300 group/btn"
-                    onClick={() => navigate('/client/mes-candidatures')}
-                  >
-                    <FileCheck className="w-4 h-4 mr-2" />
-                    Voir toutes mes candidatures
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
+                )}
               </div>
             </div>
-          )}
 
-          {/* Mon mandat & Mon agent - Grid Premium */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Mon mandat - PremiumMandatProgress */}
-            <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
-              {profileActif === false ? (
-                <PremiumStatusCard
-                  variant="waiting"
-                  title="Compte en attente d'activation"
-                  description="La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent."
-                >
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="p-3 rounded-xl bg-muted/30">
-                      <p className="text-sm text-muted-foreground">Date d'inscription</p>
-                      <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
-                    </div>
-                    <div className="p-3 rounded-xl bg-muted/30">
-                      <p className="text-sm text-muted-foreground">Statut</p>
-                      <Badge variant="outline" className="text-amber-600 border-amber-300">En attente</Badge>
-                    </div>
-                  </div>
-                </PremiumStatusCard>
-              ) : (() => {
-                // Determine if client is relogged based on candidatures
-                const reloggedCandidature = candidatures.find(c => 
-                  ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut)
-                );
-                const isRelogged = client.statut === 'reloge' || !!reloggedCandidature;
-                const reloggedStatus = reloggedCandidature?.statut as 'signature_effectuee' | 'etat_lieux_fixe' | 'cles_remises' | null;
-                const reloggedDate = reloggedCandidature?.signature_effectuee_at || 
-                                    reloggedCandidature?.cles_remises_at || 
-                                    reloggedCandidature?.date_etat_lieux;
-                
-                return (
-                  <PremiumMandatProgress
-                    daysElapsed={daysElapsed}
-                    daysRemaining={daysRemaining}
-                    totalDays={90}
-                    startDate={client.date_ajout || client.created_at}
-                    isRelogged={isRelogged}
-                    reloggedStatus={reloggedStatus}
-                    reloggedDate={reloggedDate}
-                  />
-                );
-              })()}
-            </div>
-
-            {/* Mon agent - PremiumAgentCard */}
-            <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
-              {agent ? (
-                <PremiumAgentCard
-                  agent={agent}
-                  onMessage={() => navigate('/client/messagerie')}
-                />
-              ) : (
-                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-6 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
-                  <div className="relative">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 rounded-xl bg-primary/10">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                      <h3 className="text-lg font-semibold">Mon agent</h3>
-                    </div>
-                    
-                    <div className="text-center py-6">
-                      <div className="relative inline-block">
-                        <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4 shadow-inner">
-                          <User className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                        <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/30 animate-spin" style={{ animationDuration: '10s' }} />
-                      </div>
-                      <p className="text-muted-foreground font-medium">Aucun agent assigné</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Un agent vous sera bientôt attribué pour vous accompagner dans votre recherche.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Section financière acheteurs - Premium */}
-          {isAcheteur && profileActif !== false && (
-            <div className="mb-8 animate-fade-in" style={{ animationDelay: '550ms' }}>
+            {isAcheteur && profileActif !== false && (
               <PremiumPurchaseCapacityCard
                 result={purchaseSolvabilityResult}
                 apportPersonnel={client.apport_personnel || 0}
               />
-            </div>
-          )}
+            )}
+          </DashSection>
 
-          {/* Anciennes sections "Prochaines visites" et "Mes offres reçues" déplacées plus haut dans la nouvelle hiérarchie */}
+          {/* 6. Statistiques */}
+          <DashSection title="Mes statistiques">
+            <div className={`${DASH_CARD} overflow-hidden`}>
+              <SectionErrorBoundary sectionName="ClientStats">
+                <ClientStatsSection
+                  offres={offres}
+                  visites={visites}
+                  candidatures={candidatures}
+                  client={client}
+                />
+              </SectionErrorBoundary>
+            </div>
+          </DashSection>
         </PremiumPageShellV2>
       </PullToRefresh>
 
       {user && (
         <AccountActivationModal
-          isOpen={showActivationModal} 
+          isOpen={showActivationModal}
           onClose={() => setShowActivationModal(false)}
           userId={user.id}
         />
       )}
     </>
+  );
+}
+
+/* ---------- Briques visuelles du tableau de bord (style Airbnb : blanc, une ombre, coins arrondis) ---------- */
+
+const DASH_CARD =
+  'rounded-2xl border border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]';
+
+function DashSection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3" aria-label={title}>
+      <div className="flex items-end justify-between gap-3 px-0.5">
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function StatTile({ icon: Icon, label, value, count, onClick }: {
+  icon: React.ElementType; label: string; value: string; count: number; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${DASH_CARD} relative flex min-h-[104px] flex-col items-start justify-between p-3 text-left transition-transform duration-150 active:scale-[0.98] sm:p-4`}
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
+      {count > 0 && (
+        <span className="absolute right-2.5 top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+          {count}
+        </span>
+      )}
+      <span className="mt-2 block w-full">
+        <span className="block truncate text-[13px] font-semibold text-foreground sm:text-sm">{label}</span>
+        <span className="block truncate text-xs text-muted-foreground">{value}</span>
+      </span>
+    </button>
+  );
+}
+
+function LinkRow({ icon: Icon, label, sub, onClick }: {
+  icon: React.ElementType; label: string; sub: string; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${DASH_CARD} flex min-h-[64px] items-center gap-3 p-3 text-left transition-transform duration-150 active:scale-[0.98]`}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-foreground">{label}</span>
+        <span className="block truncate text-xs text-muted-foreground">{sub}</span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
   );
 }
