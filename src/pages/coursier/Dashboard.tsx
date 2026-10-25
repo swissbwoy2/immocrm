@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarCheck, Wallet, TrendingUp, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, ArrowRight, Sparkles, Navigation, Users, Timer } from 'lucide-react';
+import { CalendarCheck, Wallet, TrendingUp, Clock, CheckCircle, Navigation, Users, Timer, ChevronRight, FileText, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
-import { format, isToday, isTomorrow, differenceInHours } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
 import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
 import { CoursierClockCard } from '@/components/coursier/CoursierClockCard';
+import { CoursierMissionCard } from '@/components/coursier/CoursierMissionCard';
+import { delaiVisite, etapeCoursier, finVisite, heureLabel, jourLabel, lienItineraire, type EtapeCoursier } from '@/components/coursier/coursierModel';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { DASH_CARD, DashBadge, DashEmptyState, DashPage, DashPageHeader, DashSection, DashSectionLink } from '@/components/client/dashboard/DashPrimitives';
+import { cn } from '@/lib/utils';
 
 export default function CoursierDashboard() {
   const { user } = useAuth();
@@ -100,286 +101,205 @@ export default function CoursierDashboard() {
     }
   };
 
-  const availableGroups = useMemo(
-    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.statut_coursier === 'en_attente') as any[]).filter((g: any) => g.items.some((v: any) => v.est_deleguee === true) && new Date(g.representative.date_visite) >= new Date(new Date().setHours(0, 0, 0, 0))),
-    [missions],
-  );
-  const activeGroups = useMemo(
-    () => groupVisitesByPhysiqueAgent(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte') as any[]).filter((g: any) => new Date(g.representative.date_visite) >= new Date(new Date().setHours(0, 0, 0, 0))),
-    [missions, coursierId],
-  );
-  const availableMissions = availableGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
-  const myActiveMissions = activeGroups.map(g => ({ ...(g.representative as any), _group: g.items, _count: g.count }));
+  /** Missions regroupées par visite physique, rangées par étape (calcul d'affichage). */
+  const parEtape = useMemo(() => {
+    const now = Date.now();
+    const m: Record<EtapeCoursier, any[]> = { disponibles: [], mes_missions: [], a_rendre: [], terminees: [] };
+    for (const g of groupVisitesByPhysiqueAgent(missions as any[])) {
+      const card = {
+        ...(g.representative as any),
+        _group: g.items,
+        _count: g.count,
+        _delegues: g.items.filter((v: any) => v.est_deleguee === true).length,
+      };
+      const e = etapeCoursier(card, g.items as any[], coursierId, now);
+      if (e) m[e].push(card);
+    }
+    const t = (x: any) => new Date(x.date_visite).getTime();
+    m.disponibles.sort((a, b) => t(a) - t(b));
+    m.mes_missions.sort((a, b) => t(a) - t(b));
+    m.a_rendre.sort((a, b) => finVisite(a) - finVisite(b));
+    return m;
+  }, [missions, coursierId]);
 
+  const myActiveMissions = parEtape.mes_missions;
+  const availableMissions = parEtape.disponibles;
+  const aRendre = parEtape.a_rendre;
 
-  // Next upcoming mission (active, sorted by date)
-  const nextMission = myActiveMissions.length > 0
-    ? myActiveMissions.reduce((closest, m) => {
-        const mDate = new Date(m.date_visite);
-        const cDate = new Date(closest.date_visite);
-        return mDate < cDate ? m : closest;
-      })
-    : null;
+  // Prochaine mission = la plus proche de mes missions acceptées non terminées
+  const nextMission = myActiveMissions[0] ?? null;
+  const aujourdHui = myActiveMissions.filter((m) => m !== nextMission && isToday(new Date(m.date_visite)));
+  const aVenir = myActiveMissions.filter((m) => m !== nextMission && !isToday(new Date(m.date_visite)));
 
-  const getTimeLabel = (dateStr: string) => {
-    const d = new Date(dateStr);
-    if (isToday(d)) return "Aujourd'hui";
-    if (isTomorrow(d)) return 'Demain';
-    const hours = differenceInHours(d, new Date());
-    if (hours < 48) return `Dans ${hours}h`;
-    return format(d, "EEE dd MMM", { locale: fr });
-  };
+  const goMission = (m: any, terminer = false) =>
+    navigate(`/coursier/missions?mission=${m.id}${terminer ? '&terminer=1' : ''}`);
+
+  const subtitle = loading
+    ? 'Chargement…'
+    : nextMission
+      ? `Prochaine visite : ${jourLabel(nextMission.date_visite).toLowerCase()} à ${format(new Date(nextMission.date_visite), 'HH:mm')}${aRendre.length > 0 ? ` · ${aRendre.length} compte${aRendre.length > 1 ? 's' : ''}-rendu${aRendre.length > 1 ? 's' : ''} à faire` : ''}`
+      : aRendre.length > 0
+        ? `${aRendre.length} compte${aRendre.length > 1 ? 's' : ''}-rendu${aRendre.length > 1 ? 's' : ''} à faire`
+        : availableMissions.length > 0
+          ? `${availableMissions.length} mission${availableMissions.length > 1 ? 's' : ''} disponible${availableMissions.length > 1 ? 's' : ''} à prendre`
+          : 'Aucune mission prévue pour le moment.';
+
+  const kpis = [
+    { icon: Wallet, label: 'Gains ce mois', value: `${time.earningsThisMonth.toFixed(0)} CHF` },
+    { icon: Timer, label: 'Temps ce mois', value: formatDuration(time.minutesThisMonth) },
+    { icon: TrendingUp, label: 'Gains totaux', value: `${time.earningsTotal.toFixed(0)} CHF` },
+    { icon: CheckCircle, label: 'Terminées ce mois', value: String(stats.completedThisMonth) },
+    { icon: Clock, label: 'En cours', value: String(stats.inProgress) },
+    { icon: CalendarCheck, label: 'Disponibles', value: String(stats.available) },
+  ];
 
   if (loading) {
     return (
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-32 bg-muted rounded-2xl" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-24 bg-muted rounded-xl" />)}
-          </div>
+      <DashPage>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-56 rounded-lg bg-muted" />
+          <div className="h-56 rounded-2xl bg-muted" />
+          <div className="h-24 rounded-2xl bg-muted" />
         </div>
-      </main>
+      </DashPage>
     );
   }
 
+  const delaiNext = nextMission ? delaiVisite(nextMission.date_visite) : null;
+
   return (
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6 relative">
-        <DashboardBanner />
-        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-        </div>
-        <PremiumPageHeader
-          icon={CalendarCheck}
-          title="Tableau de bord"
-          subtitle="Gérez vos missions de visite et suivez vos gains"
-        />
+    <DashPage className="space-y-6">
+      <DashboardBanner />
+      <DashPageHeader title="Tableau de bord" subtitle={subtitle} />
 
-        {/* Prochaine mission highlight */}
-        {nextMission && (
-          <Card className="relative overflow-hidden border-primary/30 bg-gradient-to-r from-primary/5 via-primary/10 to-accent/5">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-8 translate-x-8" />
-            <CardContent className="pt-6 relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-primary">Prochaine mission</span>
-                <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">
-                  {getTimeLabel(nextMission.date_visite)}
-                </Badge>
-              </div>
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-2 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary shrink-0" />
-                    <AddressLink address={nextMission.adresse} className="font-semibold text-base" truncate />
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" />
-                      {format(new Date(nextMission.date_visite), "HH:mm")}
-                      {nextMission.date_visite_fin && ` → ${format(new Date(nextMission.date_visite_fin), "HH:mm")}`}
-                    </div>
-                    {nextMission.offres?.pieces && (
-                      <span className="text-xs bg-muted/60 px-2 py-0.5 rounded">{nextMission.offres.pieces}p</span>
-                    )}
-                    {nextMission.offres?.surface && (
-                      <span className="text-xs bg-muted/60 px-2 py-0.5 rounded">{nextMission.offres.surface}m²</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(nextMission.adresse)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                  >
-                    <Navigation className="h-3.5 w-3.5" />
-                    Itinéraire
-                  </a>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => navigate('/coursier/missions')}
-                    className="text-xs text-primary"
-                  >
-                    Voir détails <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Pointage global (arrivée / départ) */}
-        <CoursierClockCard time={time} />
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {[
-            { icon: Wallet, label: 'Gains ce mois', value: `${time.earningsThisMonth.toFixed(0)} CHF`, color: 'text-green-600', bg: 'bg-green-500/10' },
-            { icon: Timer, label: 'Temps ce mois', value: formatDuration(time.minutesThisMonth), color: 'text-sky-600', bg: 'bg-sky-500/10' },
-            { icon: TrendingUp, label: 'Gains totaux', value: `${time.earningsTotal.toFixed(0)} CHF`, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-            { icon: CheckCircle, label: 'Terminées ce mois', value: stats.completedThisMonth, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: Clock, label: 'En cours', value: stats.inProgress, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-            { icon: CalendarCheck, label: 'Disponibles', value: stats.available, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-          ].map((kpi, i) => (
-
-            <Card key={i} className="border-border/50 bg-card/80 backdrop-blur-sm hover:shadow-md transition-all">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${kpi.bg}`}>
-                    <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold">{kpi.value}</p>
-                    <p className="text-[11px] text-muted-foreground leading-tight">{kpi.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Available Missions */}
-        {availableMissions.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <CalendarCheck className="h-5 w-5 text-primary" />
-                Missions disponibles
-                <Badge variant="secondary" className="animate-pulse">{availableMissions.length}</Badge>
-              </h2>
-              {availableMissions.length > 6 && (
-                <Button variant="ghost" size="sm" onClick={() => navigate('/coursier/missions')}>
-                  Voir tout <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                </Button>
+      {/* 1. Prochaine mission, en grand */}
+      {nextMission ? (
+        <section className={cn(DASH_CARD, 'overflow-hidden')} aria-label="Prochaine mission">
+          <div className="space-y-4 p-4 md:p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-primary">Prochaine mission</span>
+              {delaiNext && (
+                <DashBadge tone={delaiNext.tone === 'danger' || delaiNext.tone === 'warning' ? 'warning' : 'muted'}>{delaiNext.label}</DashBadge>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {availableMissions.slice(0, 6).map((mission) => (
-                <Card key={mission.id} className="group border-border/50 hover:border-primary/30 transition-all hover:shadow-lg">
-                  <CardContent className="pt-5 pb-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <MapPin className="h-4 w-4 text-primary shrink-0" />
-                        <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
-                      </div>
-                      <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
-                        <Users className="h-3 w-3 mr-1" />{mission._count} client{mission._count > 1 ? 's' : ''}
-                      </Badge>
-
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span className="font-medium">{getTimeLabel(mission.date_visite)}</span>
-                      <span>à {format(new Date(mission.date_visite), "HH:mm")}</span>
-                    </div>
-
-                    {mission.offres && (
-                      <div className="flex gap-2 flex-wrap">
-                        {mission.offres.pieces && (
-                          <div className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
-                            <Home className="h-3 w-3" />{mission.offres.pieces}p
-                          </div>
-                        )}
-                        {mission.offres.surface && (
-                          <div className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
-                            <Maximize2 className="h-3 w-3" />{mission.offres.surface}m²
-                          </div>
-                        )}
-                        {mission.offres.prix && (
-                          <div className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
-                            <Banknote className="h-3 w-3" />{mission.offres.prix.toLocaleString('fr-CH')} CHF
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <Button 
-                      onClick={() => handleAcceptMission(mission._group)}
-                      className="w-full mt-1 group-hover:shadow-md transition-all"
-                      size="sm"
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Accepter
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+            <div>
+              <p className="text-sm font-medium text-muted-foreground first-letter:uppercase">{jourLabel(nextMission.date_visite)}</p>
+              <p className="text-4xl font-semibold tabular-nums tracking-tight text-foreground">{heureLabel(nextMission)}</p>
+            </div>
+            <div className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <AddressLink address={nextMission.adresse} showIcon={false} className="text-base font-semibold" />
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1"><Users className="h-3 w-3" />{nextMission._count} client{nextMission._count > 1 ? 's' : ''}</span>
+              {nextMission.offres?.pieces && <span className="rounded-full bg-muted px-2 py-1">{nextMission.offres.pieces}p</span>}
+              {nextMission.offres?.surface && <span className="rounded-full bg-muted px-2 py-1">{nextMission.offres.surface}m²</span>}
             </div>
           </div>
-        )}
-
-        {/* My Active Missions */}
-        {myActiveMissions.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-600" />
-              Mes missions en cours
-              <Badge variant="secondary">{myActiveMissions.length}</Badge>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {myActiveMissions.map((mission) => (
-                <Card key={mission.id} className="border-amber-500/30 bg-amber-500/5 hover:shadow-lg transition-all">
-                  <CardContent className="pt-5 pb-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <MapPin className="h-4 w-4 text-amber-600 shrink-0" />
-                        <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
-                      </div>
-                      <Badge className="shrink-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
-                        {getTimeLabel(mission.date_visite)}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5" />
-                      {format(new Date(mission.date_visite), "HH:mm")}
-                      {mission.date_visite_fin && ` → ${format(new Date(mission.date_visite_fin), "HH:mm")}`}
-                      <span className="inline-flex items-center gap-1 text-xs bg-muted/60 px-2 py-0.5 rounded">
-                        <Users className="h-3 w-3" />{mission._count}
-                      </span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mission.adresse)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <Navigation className="h-3.5 w-3.5" />
-                        Itinéraire
-                      </a>
-                      <Button 
-                        variant="outline"
-                        onClick={() => navigate('/coursier/missions')}
-                        className="flex-1"
-                        size="sm"
-                      >
-                        Détails <ArrowRight className="ml-1 h-3 w-3" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Actions en bas de carte : zone du pouce */}
+          <div className="grid grid-cols-2 gap-2 border-t border-border/60 bg-muted/30 p-3 md:p-4">
+            <Button asChild className="h-12 rounded-full">
+              <a href={lienItineraire(nextMission.adresse)} target="_blank" rel="noopener noreferrer">
+                <Navigation className="mr-2 h-4 w-4" /> Itinéraire
+              </a>
+            </Button>
+            <Button variant="outline" className="h-12 rounded-full" onClick={() => goMission(nextMission)}>
+              Contacts et détails
+            </Button>
           </div>
-        )}
+        </section>
+      ) : (
+        <DashEmptyState
+          icon={CalendarCheck}
+          title="Aucune mission prévue"
+          description={availableMissions.length > 0 ? 'Des missions sont disponibles ci-dessous : acceptez-en une pour la réserver.' : 'Les nouvelles missions apparaîtront ici dès qu’un agent les déléguera.'}
+        />
+      )}
 
-        {availableMissions.length === 0 && myActiveMissions.length === 0 && (
-          <Card className="border-dashed">
-            <CardContent className="pt-6 text-center py-12">
-              <CalendarCheck className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground">Aucune mission pour le moment</h3>
-              <p className="text-sm text-muted-foreground/70 mt-1">Les nouvelles missions apparaîtront ici dès qu'un agent les déléguera.</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </main>
+      {/* 2. Comptes-rendus à faire (action en attente) */}
+      {aRendre.length > 0 && (
+        <DashSection title="Comptes-rendus à faire" action={<DashSectionLink label="Tout voir" onClick={() => navigate('/coursier/missions?tab=a_rendre')} />}>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {aRendre.slice(0, 3).map((m) => (
+              <CoursierMissionCard key={m.id} mission={m} etape="a_rendre" onTerminer={(x) => goMission(x, true)} />
+            ))}
+          </div>
+        </DashSection>
+      )}
+
+      {/* 3. Pointage global (arrivée / départ) */}
+      <CoursierClockCard time={time} />
+
+      {/* 4. Aujourd'hui */}
+      {aujourdHui.length > 0 && (
+        <DashSection title="Aujourd'hui">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {aujourdHui.map((m) => (
+              <CoursierMissionCard key={m.id} mission={m} etape="mes_missions" onOpen={(x) => goMission(x)} />
+            ))}
+          </div>
+        </DashSection>
+      )}
+
+      {/* 5. À venir */}
+      {aVenir.length > 0 && (
+        <DashSection title="À venir" action={<DashSectionLink label="Mes missions" onClick={() => navigate('/coursier/missions?tab=mes_missions')} />}>
+          <ul className={cn(DASH_CARD, 'divide-y divide-border/60 overflow-hidden')}>
+            {aVenir.slice(0, 6).map((m) => (
+              <li key={m.id}>
+                <button type="button" onClick={() => goMission(m)} className="flex min-h-[64px] w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40">
+                  <span className="w-20 shrink-0">
+                    <span className="block text-xs text-muted-foreground first-letter:uppercase">{jourLabel(m.date_visite)}</span>
+                    <span className="block text-sm font-semibold tabular-nums text-foreground">{format(new Date(m.date_visite), 'HH:mm', { locale: fr })}</span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-foreground">{m.adresse}</span>
+                    <span className="block text-xs text-muted-foreground">{m._count} client{m._count > 1 ? 's' : ''}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </DashSection>
+      )}
+
+      {/* 6. Missions disponibles à prendre */}
+      {availableMissions.length > 0 && (
+        <DashSection
+          title="Missions disponibles"
+          action={availableMissions.length > 6 ? <DashSectionLink label="Voir tout" onClick={() => navigate('/coursier/missions?tab=disponibles')} /> : undefined}
+        >
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {availableMissions.slice(0, 6).map((m) => (
+              <CoursierMissionCard key={m.id} mission={m} etape="disponibles" acceptLabel="Accepter" onAccept={(x) => handleAcceptMission(x._group)} />
+            ))}
+          </div>
+        </DashSection>
+      )}
+
+      {/* 7. Chiffres du mois */}
+      <DashSection title="Mes chiffres">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {kpis.map((k) => (
+            <div key={k.label} className={cn(DASH_CARD, 'flex min-h-[96px] flex-col justify-between p-3 sm:p-4')}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <k.icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="mt-2 block">
+                <span className="block truncate text-lg font-semibold text-foreground">{k.value}</span>
+                <span className="block truncate text-xs text-muted-foreground">{k.label}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </DashSection>
+
+      {aRendre.length === 0 && myActiveMissions.length === 0 && availableMissions.length === 0 && (
+        <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <FileText className="h-4 w-4" /> Tout est à jour : aucun compte-rendu en attente.
+        </p>
+      )}
+    </DashPage>
   );
 }
