@@ -1,3 +1,4 @@
+import { libelleStatutBancaire } from '@/lib/purchaseFinancing';
 import { ArrowLeft, Mail, Phone, Building2, Briefcase, User, DollarSign, Home, CheckCircle2, Edit, Trash2, MailPlus, Send, MessageSquare, Sparkles, Clock, TrendingUp, Loader2, Receipt, Users, FileText, Key, Shield, Target, Wallet, Banknote, MapPin, Calendar } from 'lucide-react';
 import { AchatSuiviCompteurs } from '@/components/achat/AchatSuiviCompteurs';
 import { Button } from '@/components/ui/button';
@@ -188,7 +189,7 @@ export function PurchaseClientDetailPremium({
                     {financing?.statut_bancaire && (
                       <Badge className="bg-indigo-500/20 text-primary dark:text-primary border-primary/20/30 backdrop-blur-sm text-xs">
                         <Shield className="w-3 h-3 mr-1" />
-                        Banque : {financing.statut_bancaire}
+                        Banque : {libelleStatutBancaire(financing.statut_bancaire)}
                       </Badge>
                     )}
                     {!profile.actif && (

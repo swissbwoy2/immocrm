@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { loadClientParcours } from '@/hooks/useClientParcours';
 import { noteSuiviClient } from '@/lib/offreNote';
 import {
-  ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, creneauxProposes, formatPrixAchat,
+  ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, chargerVisitesAchat, creneauxProposes, formatPrixAchat,
   confirmerVisiteFaiteAchat, deleguerVisiteAchat, demanderVisiteAchat, marquerInteretAchat,
   refuserBienAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat,
 } from '@/lib/achatOffreActions';
@@ -40,6 +40,9 @@ export default function BiensProposes() {
   const [visites, setVisites] = useState<any[]>([]);
   // Biens pour lesquels une demande de visite a déjà été transmise au conseiller.
   const [demandes, setDemandes] = useState<Set<string>>(new Set());
+  // Dossier d'achat : négociation liée à chaque bien, étape notaire du projet.
+  const [negociations, setNegociations] = useState<Map<string, any>>(new Map());
+  const [notaire, setNotaire] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
   // Le filtre suit l'URL (liens du tableau de bord, du menu, ancienne page « Biens sélectionnés »).
   const filtreUrl = searchParams.get('filtre') as Filtre | null;
@@ -78,12 +81,23 @@ export default function BiensProposes() {
         .select(`*, agent:agents!offres_agent_id_fkey(id, user_id, profile:profiles!agents_user_id_fkey(prenom, nom))`)
         .eq('client_id', client.id)
         .order('date_envoi', { ascending: false }),
-      supabase.from('visites').select('*').eq('client_id', client.id),
+      chargerVisitesAchat(client.id).then((data) => ({ data })),
     ]);
     setOffres(offresData || []);
     setVisites(visitesData || []);
 
     const ids = (offresData || []).map((o: any) => o.id);
+    const { data: projet } = await supabase.from('purchase_projects').select('id').eq('client_id', client.id).limit(1).maybeSingle();
+    if (projet?.id) {
+      const [{ data: negos }, { data: not }] = await Promise.all([
+        (supabase.from as any)('purchase_negotiations').select('*').eq('project_id', projet.id),
+        supabase.from('purchase_notary_steps').select('*').eq('project_id', projet.id).maybeSingle(),
+      ]);
+      const m = new Map<string, any>();
+      ((negos as any[]) || []).forEach((n) => { if (n.offre_id) m.set(n.offre_id, n); });
+      setNegociations(m);
+      setNotaire(not || null);
+    }
     if (ids.length > 0) {
       const { data: msgs } = await supabase
         .from('messages')
@@ -307,7 +321,7 @@ export default function BiensProposes() {
                         </button>
 
                         <div className="mt-4 flex-1 border-t border-border/70 pt-4">
-                          <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={handlers} busy={busy} compact demandeEnvoyee={demandes.has(offre.id)} />
+                          <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={handlers} busy={busy} compact demandeEnvoyee={demandes.has(offre.id)} negociation={negociations.get(offre.id) ?? null} notaire={notaire} />
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -345,6 +359,8 @@ export default function BiensProposes() {
         handlers={handlers}
         busy={busy}
         demandeEnvoyee={!!detail && demandes.has(detail.id)}
+        negociation={detail ? negociations.get(detail.id) ?? null : null}
+        notaire={notaire}
       />
 
       <AchatVisiteDialog

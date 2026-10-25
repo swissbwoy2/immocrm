@@ -36,6 +36,7 @@ function mediasPartages(v: any): { url: string; video: boolean }[] {
 }
 
 const CR_LIBELLES: [string, string][] = [
+  ['appreciation', 'Appréciation du conseiller'],
   ['etat_general', 'État général'],
   ['avantages', 'Avantages'],
   ['inconvenients', 'Inconvénients'],
@@ -46,7 +47,7 @@ const CR_LIBELLES: [string, string][] = [
 
 /** Fiche détaillée d'un bien à l'achat — même structure que la fiche d'une offre de location. */
 export function AchatOffreDetailsDialog({
-  open, onOpenChange, offre, visites, handlers, busy, demandeEnvoyee = false,
+  open, onOpenChange, offre, visites, handlers, busy, demandeEnvoyee = false, negociation = null, notaire = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,6 +56,8 @@ export function AchatOffreDetailsDialog({
   handlers: AchatActionsHandlers;
   busy?: boolean;
   demandeEnvoyee?: boolean;
+  negociation?: any | null;
+  notaire?: any | null;
 }) {
   if (!offre) return null;
 
@@ -135,7 +138,7 @@ export function AchatOffreDetailsDialog({
           </div>
 
           <div className="rounded-xl border border-border/70 p-4">
-            <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={wrapped} busy={busy} demandeEnvoyee={demandeEnvoyee} />
+            <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={wrapped} busy={busy} demandeEnvoyee={demandeEnvoyee} negociation={negociation} notaire={notaire} />
           </div>
 
           {visitesDuBien.length > 0 && (

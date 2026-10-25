@@ -368,6 +368,17 @@ export function getCorrectNotificationLink(
 ): string {
   const stored = currentLink?.trim() || null;
 
+  // Acheteur : tout ce qui concerne la visite d'un bien (compte-rendu, visite déléguée confirmée/refusée)
+  // s'ouvre sur la fiche du bien dans « Biens proposés », où se trouvent le rapport, les photos et la vidéo.
+  if (
+    role === 'client' &&
+    getClientParcoursType() === 'achat' &&
+    ['compte_rendu_visite', 'visit_confirmed', 'visit_refused'].includes(notificationType) &&
+    metadata?.offre_id
+  ) {
+    return `/client/biens-proposes?offreId=${metadata.offre_id}`;
+  }
+
   // 0) Appels : route universelle /appel (existe pour tous les rôles).
   //    Les anciens liens (/messagerie?call=..., /agent/messagerie?call=...)
   //    sont réécrits ici pour ne jamais retomber sur une 404.

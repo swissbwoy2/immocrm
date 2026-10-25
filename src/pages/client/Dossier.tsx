@@ -42,7 +42,7 @@ import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck
 import { usePurchaseProject, computeProgression } from '@/hooks/usePurchaseProject';
 import { getBuyerAnnualIncome, getBuyerMonthlyIncome, parseZones, formatZones } from '@/lib/buyerProfile';
 import { isPurchaseBuyer } from '@/lib/journey';
-import { formatCHF } from '@/lib/purchaseFinancing';
+import { formatCHF, libelleStatutBancaire } from '@/lib/purchaseFinancing';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
@@ -551,7 +551,7 @@ export default function Dossier() {
                 </div>
                 <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
                   <p className="text-sm text-muted-foreground">Statut bancaire</p>
-                  <p className="text-xl font-bold">{financing?.statut_bancaire || 'À évaluer'}</p>
+                  <p className="text-xl font-bold">{libelleStatutBancaire(financing?.statut_bancaire)}</p>
                 </div>
               </div>
             )}

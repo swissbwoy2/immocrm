@@ -1,5 +1,7 @@
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { estPrixDAchat } from '@/lib/achatOffreActions';
 import {
   Dialog,
   DialogContent,
@@ -69,6 +71,8 @@ const STATUS_CONFIG: Record<string, {
   interesse: { label: 'Intéressé', color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: TrendingUp, step: 3 },
   visite_planifiee: { label: 'Visite planifiée', color: 'text-cyan-600 dark:text-cyan-400', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/30', icon: Calendar, step: 4 },
   visite_effectuee: { label: 'Visite effectuée', color: 'text-teal-600 dark:text-teal-400', bgColor: 'bg-teal-500/10', borderColor: 'border-teal-500/30', icon: CheckCircle, step: 5 },
+  souhaite_postuler: { label: 'Souhaite postuler', color: 'text-violet-600 dark:text-violet-400', bgColor: 'bg-violet-500/10', borderColor: 'border-violet-500/30', icon: TrendingUp, step: 5.4 },
+  offre_envisagee: { label: "Offre d'achat envisagée", color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: TrendingUp, step: 5.6 },
   candidature_deposee: { label: 'Candidature déposée', color: 'text-indigo-600 dark:text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'border-indigo-500/30', icon: FileText, step: 6 },
   acceptee: { label: 'Acceptée', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', icon: CheckCircle, step: 7 },
   refusee: { label: 'Refusée', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', icon: XCircle, step: 0 },
@@ -90,6 +94,9 @@ export function PremiumAgentOffreDetailsDialog({
   onStatusChange,
   onResend
 }: PremiumAgentOffreDetailsDialogProps) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const espace = pathname.startsWith('/admin') ? '/admin' : '/agent';
   const [visite, setVisite] = useState<any>(null);
   const [candidature, setCandidature] = useState<any>(null);
   const [transaction, setTransaction] = useState<any>(null);
@@ -557,6 +564,15 @@ export function PremiumAgentOffreDetailsDialog({
             >
               Fermer
             </Button>
+            {offre?.client_id && (
+              <Button
+                variant="outline"
+                onClick={() => { onOpenChange(false); navigate(`${espace}/clients/${offre.client_id}`); }}
+                className="flex-1"
+              >
+                {estPrixDAchat(offre.prix) ? "Dossier d'achat du client" : 'Fiche client'}
+              </Button>
+            )}
             {onResend && (
               <Button
                 onClick={onResend}

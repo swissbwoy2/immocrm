@@ -1,3 +1,4 @@
+import { estPrixDAchat } from '@/lib/achatOffreActions';
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -835,7 +836,7 @@ export default function OffresEnvoyees() {
                         <span className="text-sm font-bold text-primary">
                           {Number(offre.prix).toLocaleString('fr-CH')}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">CHF/mois</span>
+                        <span className="text-[10px] text-muted-foreground">{estPrixDAchat(offre.prix) ? 'CHF · vente' : 'CHF/mois'}</span>
                       </div>
                       <div className="flex flex-col items-center p-2.5 rounded-xl bg-muted/50 border border-border/50">
                         <span className="text-sm font-semibold">{offre.surface || '-'}</span>

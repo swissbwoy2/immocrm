@@ -667,7 +667,7 @@ const AdminEnvoyerOffre = () => {
                 </div>
 
                 <h2 className="text-xl font-bold text-center">
-                  🏠 Nouvelle Offre pour Votre Recherche d'Appartement
+                  {Number(formData.prix) >= 50000 ? "🏠 Nouvelle offre — un bien à vendre pour votre projet d'achat" : "🏠 Nouvelle Offre pour Votre Recherche d'Appartement"}
                 </h2>
 
                 {selectedClient && (

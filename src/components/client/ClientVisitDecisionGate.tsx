@@ -7,9 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 import { formatSwissDateTime } from '@/lib/dateUtils';
-import { useClientParcours } from '@/hooks/useClientParcours';
+import { useClientParcours, loadClientParcours } from '@/hooks/useClientParcours';
 import {
-  confirmerVisiteFaiteAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat, visiteNonFaiteAchat,
+  confirmerVisiteFaiteAchat, fusionnerComptesRendusAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat, visiteNonFaiteAchat,
 } from '@/lib/achatOffreActions';
 
 const GATE_SINCE = '2026-09-04T00:00:00+02:00';
@@ -64,7 +64,11 @@ export function ClientVisitDecisionGate() {
       .is('client_decision', null)
       .gte('date_visite', GATE_SINCE)
       .order('date_visite', { ascending: true });
-    const rows = (data || []).filter((v: any) => {
+    // Acheteur : le compte-rendu envoyé par le conseiller (visite_comptes_rendus) compte comme compte-rendu disponible.
+    const source = (await loadClientParcours(user.id)) === 'achat'
+      ? await fusionnerComptesRendusAchat(client.id, (data as any[]) || [])
+      : (data || []);
+    const rows = source.filter((v: any) => {
       if (v.statut === 'annulee') return false;
       if (['refusee', 'candidature_deposee', 'souhaite_postuler', 'acceptee', 'offre_envisagee'].includes(v.offres?.statut)) return false;
       const cr = crReady(v);

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { annualToMonthly, monthlyToAnnual } from '@/lib/buyerProfile';
+import { STATUTS_BANCAIRES, normaliserStatutBancaire } from '@/lib/purchaseFinancing';
 
 
 // ---------- Generic field grid ----------
@@ -62,7 +63,26 @@ export function SelField({ label, value, onChange, options }: { label: string; v
 }
 
 // ---------- Financing Editor ----------
-export function FinancingEditorDialog({ financing, onSave }: { financing: any; onSave: (patch: any) => Promise<void> }) {
+// Colonnes réellement présentes dans purchase_financing_profiles (les autres clés ne sont jamais envoyées).
+const FINANCING_COLUMNS = [
+  'revenu_annuel_brut', 'revenu_annuel_retenu', 'bonus_3ans_moyenne', 'allocations_familiales', 'pensions_recues',
+  'revenus_locatifs', 'rentes_avs_ai_lpp', 'autres_revenus', 'nouveau_emploi', 'revenu_different_annee_precedente',
+  'fonds_propres_cash', 'fonds_propres_epargne', 'fonds_propres_3a', 'fonds_propres_lpp', 'fonds_propres_libre_passage',
+  'montant_epl_disponible', 'placements', 'donation_avance_hoirie', 'leasing_mensuel', 'credit_prive_mensuel',
+  'cartes_credit_mensuel', 'pensions_versees', 'autres_engagements', 'poursuites', 'etat_civil', 'nombre_enfants',
+  'date_naissance_acheteur_1', 'date_naissance_acheteur_2', 'nationalite', 'type_permis', 'nationalite_2', 'type_permis_2',
+  'prix_cible', 'adresse_bien', 'statut_bancaire', 'partenaire_financier', 'date_envoi_banque', 'date_retour_banque',
+  'commentaire_banque',
+];
+const FINANCING_STAFF_ONLY = ['statut_bancaire', 'partenaire_financier', 'date_envoi_banque', 'date_retour_banque', 'commentaire_banque'];
+
+/**
+ * Financement & tenue des charges.
+ * mode « client » : le client complète ses chiffres ; le volet bancaire (statut, partenaire, commentaire)
+ * reste réservé au conseiller et à l'admin (également protégé en base).
+ */
+export function FinancingEditorDialog({ financing, onSave, mode = 'staff' }: { financing: any; onSave: (patch: any) => Promise<void>; mode?: 'staff' | 'client' }) {
+  const isStaff = mode === 'staff';
   const [open, setOpen] = useState(false);
   const [f, setF] = useState<any>(financing || {});
   const [saving, setSaving] = useState(false);
@@ -125,34 +145,42 @@ export function FinancingEditorDialog({ financing, onSave }: { financing: any; o
 
         <h3 className="font-semibold text-sm mt-4">Situation familiale & identité</h3>
         <FieldGrid>
-          <TxtField label="Situation familiale" value={f.situation_familiale} onChange={set('situation_familiale')} />
+          <TxtField label="État civil" value={f.etat_civil} onChange={set('etat_civil')} />
           <NumField label="Nombre d'enfants" value={f.nombre_enfants} onChange={set('nombre_enfants')} />
-          <TxtField label="Date de naissance" value={f.date_naissance} onChange={set('date_naissance')} type="date" />
+          <TxtField label="Date de naissance (acheteur 1)" value={f.date_naissance_acheteur_1} onChange={set('date_naissance_acheteur_1')} type="date" />
+          <TxtField label="Date de naissance (acheteur 2)" value={f.date_naissance_acheteur_2} onChange={set('date_naissance_acheteur_2')} type="date" />
           <TxtField label="Nationalité" value={f.nationalite} onChange={set('nationalite')} />
           <TxtField label="Type de permis" value={f.type_permis} onChange={set('type_permis')} />
         </FieldGrid>
 
-        <h3 className="font-semibold text-sm mt-4">Cible & banque</h3>
+        <h3 className="font-semibold text-sm mt-4">{isStaff ? 'Cible & banque' : 'Votre cible'}</h3>
         <FieldGrid>
           <NumField label="Prix cible" value={f.prix_cible} onChange={set('prix_cible')} suffix="CHF" />
-          <NumField label="Budget cible" value={f.budget_cible} onChange={set('budget_cible')} suffix="CHF" />
-          <TxtField label="Partenaire bancaire" value={f.partenaire_bancaire} onChange={set('partenaire_bancaire')} />
-          <SelField label="Statut bancaire" value={f.statut_bancaire} onChange={set('statut_bancaire')} options={[
-            { value: 'a_evaluer', label: 'À évaluer' },
-            { value: 'en_analyse', label: 'En analyse' },
-            { value: 'prevalidé', label: 'Prévalidé' },
-            { value: 'valide', label: 'Validé' },
-            { value: 'refuse', label: 'Refusé' },
-            { value: 'bloqué', label: 'Bloqué' },
-          ]} />
-          <AreaField label="Commentaire interne" value={f.commentaire_interne} onChange={set('commentaire_interne')} />
+          {isStaff && (
+            <>
+              <TxtField label="Partenaire bancaire" value={f.partenaire_financier} onChange={set('partenaire_financier')} />
+              <SelField label="Statut bancaire" value={normaliserStatutBancaire(f.statut_bancaire)} onChange={set('statut_bancaire')}
+                options={STATUTS_BANCAIRES.map((x) => ({ value: x.value, label: x.label }))} />
+              <TxtField label="Date d'envoi à la banque" value={f.date_envoi_banque} onChange={set('date_envoi_banque')} type="date" />
+              <TxtField label="Date de retour de la banque" value={f.date_retour_banque} onChange={set('date_retour_banque')} type="date" />
+              <AreaField label="Commentaire banque (interne)" value={f.commentaire_banque} onChange={set('commentaire_banque')} />
+            </>
+          )}
         </FieldGrid>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
           <Button className="bg-gradient-to-r from-primary to-primary/80" disabled={saving} onClick={async () => {
             setSaving(true);
-            try { await onSave(f); toast.success('Financement enregistré'); setOpen(false); }
+            try {
+              const patch: Record<string, any> = {};
+              FINANCING_COLUMNS.forEach((k) => {
+                if (!isStaff && FINANCING_STAFF_ONLY.includes(k)) return;
+                if (k in f) patch[k] = f[k] === '' ? null : f[k];
+              });
+              await onSave(patch);
+              toast.success('Financement enregistré'); setOpen(false);
+            }
             catch (e: any) { toast.error(e?.message || 'Erreur'); }
             finally { setSaving(false); }
           }}>Enregistrer</Button>
@@ -187,9 +215,9 @@ export function PropertyEditorDialog({ initial, onSave, trigger }: { initial?: a
           <NumField label="Étage" value={p.etage} onChange={set('etage')} />
           <NumField label="Année construction" value={p.annee_construction} onChange={set('annee_construction')} />
           <TxtField label="Lien de l'annonce" value={p.lien_annonce} onChange={set('lien_annonce')} />
-          <NumField label="Latitude" value={p.latitude} onChange={set('latitude')} />
-          <NumField label="Longitude" value={p.longitude} onChange={set('longitude')} />
-          <NumField label="Score Immo-Rama (0-100)" value={p.score_immorama} onChange={set('score_immorama')} />
+          <NumField label="Latitude" value={p.lat} onChange={set('lat')} />
+          <NumField label="Longitude" value={p.lng} onChange={set('lng')} />
+          <NumField label="Score Immo-Rama (0-100)" value={p.score} onChange={set('score')} />
           <SelField label="Statut" value={p.statut} onChange={set('statut')} options={[
             { value: 'a_analyser', label: 'À analyser' },
             { value: 'visite_planifiee', label: 'Visite planifiée' },
@@ -231,9 +259,7 @@ export function VisitReportEditorDialog({ initial, properties, onSave, trigger }
         <DialogHeader><DialogTitle>{initial?.id ? 'Modifier le rapport' : 'Nouveau rapport de visite'}</DialogTitle></DialogHeader>
         <FieldGrid>
           <SelField label="Bien visité" value={r.property_id} onChange={set('property_id')} options={properties.map((p) => ({ value: p.id, label: p.titre || p.adresse || 'Bien' }))} />
-          <TxtField label="Adresse du bien (si non listé)" value={r.adresse_bien} onChange={set('adresse_bien')} />
-          <TxtField label="Date de visite" value={r.date_visite} onChange={set('date_visite')} type="date" />
-          <TxtField label="Courtier responsable" value={r.courtier_responsable} onChange={set('courtier_responsable')} />
+          <TxtField label="Date de visite" value={r.date_visite ? String(r.date_visite).slice(0, 10) : ''} onChange={set('date_visite')} type="date" />
           <AreaField label="État général" value={r.etat_general} onChange={set('etat_general')} />
           <AreaField label="Points forts" value={r.points_forts} onChange={set('points_forts')} />
           <AreaField label="Points faibles" value={r.points_faibles} onChange={set('points_faibles')} />
@@ -264,7 +290,7 @@ export function VisitReportEditorDialog({ initial, properties, onSave, trigger }
 }
 
 // ---------- Negotiation Editor ----------
-export function NegotiationEditorDialog({ initial, onSave, trigger }: { initial?: any; onSave: (row: any) => Promise<void>; trigger?: React.ReactNode }) {
+export function NegotiationEditorDialog({ initial, onSave, trigger, properties = [] }: { initial?: any; onSave: (row: any) => Promise<void>; trigger?: React.ReactNode; properties?: any[] }) {
   const [open, setOpen] = useState(false);
   const [n, setN] = useState<any>(initial || {});
   const [saving, setSaving] = useState(false);
@@ -278,6 +304,10 @@ export function NegotiationEditorDialog({ initial, onSave, trigger }: { initial?
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>Offre & négociation</DialogTitle></DialogHeader>
         <FieldGrid>
+          {properties.length > 0 && (
+            <SelField label="Bien concerné" value={n.property_id} onChange={set('property_id')}
+              options={properties.map((p: any) => ({ value: p.id, label: p.titre || p.adresse || 'Bien' }))} />
+          )}
           <NumField label="Montant de l'offre" value={n.montant_offre} onChange={set('montant_offre')} suffix="CHF" />
           <NumField label="Contre-offre" value={n.contre_offre} onChange={set('contre_offre')} suffix="CHF" />
           <TxtField label="Date d'offre" value={n.date_offre} onChange={set('date_offre')} type="date" />
@@ -306,6 +336,15 @@ export function NegotiationEditorDialog({ initial, onSave, trigger }: { initial?
 }
 
 // ---------- Notary Editor ----------
+/** ISO (UTC) → valeur d'un champ datetime-local, en heure de Suisse. */
+function versSaisieLocale(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function NotaryEditorDialog({ initial, onSave }: { initial?: any; onSave: (row: any) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [no, setNo] = useState<any>(initial || {});
@@ -323,7 +362,7 @@ export function NotaryEditorDialog({ initial, onSave }: { initial?: any; onSave:
           <TxtField label="Notaire" value={no.notaire_nom} onChange={set('notaire_nom')} />
           <TxtField label="Email notaire" value={no.notaire_email} onChange={set('notaire_email')} />
           <TxtField label="Téléphone notaire" value={no.notaire_telephone} onChange={set('notaire_telephone')} />
-          <TxtField label="Date RDV" value={no.date_rdv} onChange={set('date_rdv')} type="datetime-local" />
+          <TxtField label="Date et heure du RDV" value={versSaisieLocale(no.date_rdv)} onChange={(v: string) => setNo((prev: any) => ({ ...prev, date_rdv: v ? new Date(v).toISOString() : null }))} type="datetime-local" />
           <TxtField label="Date signature" value={no.date_signature} onChange={set('date_signature')} type="date" />
           <TxtField label="Date remise des clés" value={no.date_remise_cles} onChange={set('date_remise_cles')} type="date" />
           <SelField label="Statut" value={no.statut} onChange={set('statut')} options={[
@@ -338,7 +377,12 @@ export function NotaryEditorDialog({ initial, onSave }: { initial?: any; onSave:
           <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
           <Button disabled={saving} onClick={async () => {
             setSaving(true);
-            try { await onSave(no); toast.success('Notaire enregistré'); setOpen(false); }
+            try {
+              const { id, project_id, notaire_nom, notaire_email, notaire_telephone, date_rdv, date_signature, date_remise_cles, statut, notes } = no;
+              await onSave({ id, project_id, notaire_nom, notaire_email, notaire_telephone, date_rdv: date_rdv || null,
+                date_signature: date_signature || null, date_remise_cles: date_remise_cles || null, statut, notes });
+              toast.success('Étape notaire enregistrée'); setOpen(false);
+            }
             catch (e: any) { toast.error(e?.message || 'Erreur'); }
             finally { setSaving(false); }
           }}>Enregistrer</Button>

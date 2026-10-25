@@ -25,6 +25,8 @@ import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
+import { estClientAcheteur, estPrixDAchat } from '@/lib/achatOffreActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -379,12 +381,9 @@ export default function AgentVisites() {
 
       if (eventError) throw eventError;
 
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', selectedVisite.client_id)
-        .eq('agent_id', agentId)
-        .maybeSingle();
+      // Fil unique du client (même si la conversation a été ouverte par un autre agent ou une routine).
+      const convConfirmId = selectedVisite.client_id ? await getOrCreateClientConversation(selectedVisite.client_id) : null;
+      const conv = convConfirmId ? { id: convConfirmId } : null;
 
       if (conv) {
         await supabase.from('messages').insert({
@@ -418,12 +417,8 @@ export default function AgentVisites() {
 
       if (updateError) throw updateError;
 
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', visite.client_id)
-        .eq('agent_id', agentId)
-        .maybeSingle();
+      const convRefusId = visite.client_id ? await getOrCreateClientConversation(visite.client_id) : null;
+      const conv = convRefusId ? { id: convRefusId } : null;
 
       if (conv) {
         await supabase.from('messages').insert({
@@ -509,29 +504,31 @@ export default function AgentVisites() {
     }
 
     try {
+      // Acheteur : pas de candidature ; le compte-rendu ouvre la décision « faire une offre d'achat ».
+      // (un client peut aussi louer : seule une visite de bien à vendre suit le parcours achat)
+      const acheteur = estPrixDAchat(selectedVisite.offres?.prix) && await estClientAcheteur(selectedVisite.client_id);
       await supabase
         .from('visites')
         .update({
           statut: 'effectuee',
           feedback_agent: feedbackText,
           recommandation_agent: recommandation,
-          medias: feedbackMedias
+          medias: feedbackMedias,
+          ...(acheteur ? { compte_rendu_at: new Date().toISOString() } : {}),
         })
         .eq('id', selectedVisite.id);
 
       if (selectedVisite.offre_id) {
+        // Ne jamais faire reculer un bien déjà plus avancé (offre d'achat, candidature…).
         await supabase
           .from('offres')
           .update({ statut: 'visite_effectuee' })
-          .eq('id', selectedVisite.offre_id);
+          .eq('id', selectedVisite.offre_id)
+          .in('statut', ['envoyee', 'vue', 'interesse', 'visite_planifiee', 'visite_confirmee']);
       }
 
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', selectedVisite.client_id)
-        .eq('agent_id', selectedVisite.agent_id)
-        .maybeSingle();
+      const convId = selectedVisite.client_id ? await getOrCreateClientConversation(selectedVisite.client_id) : null;
+      const conv = convId ? { id: convId } : null;
 
       if (conv) {
         const recommandationEmoji = {
@@ -546,7 +543,9 @@ export default function AgentVisites() {
           deconseille: 'Je ne recommande pas ce bien'
         }[recommandation];
 
-        const postulationMessage = recommandation === 'recommande' 
+        const postulationMessage = acheteur
+          ? `\n\n🏡 **Et maintenant ?**\nRetrouvez le compte-rendu dans « Biens proposés » : si ce bien vous plaît, cliquez sur « Je souhaite faire une offre » et je prépare l'offre d'achat avec vous.`
+          : recommandation === 'recommande' 
           ? `\n\n📝 **Prêt à postuler ?**\nSi ce bien vous intéresse, vous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues". Cliquez sur "Demander l'aide de l'agent" pour que je postule pour vous.`
           : (recommandation === 'neutre' 
             ? `\n\n📝 **Vous souhaitez postuler ?**\nVous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues" si ce bien vous intéresse malgré tout.`
@@ -556,7 +555,7 @@ export default function AgentVisites() {
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'agent',
-          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois` : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`,
+          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? (acheteur ? `💰 CHF ${selectedVisite.offres.prix?.toLocaleString('fr-CH')} (prix de vente)` : `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois`) : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`,
           payload: feedbackMedias.length > 0 ? { type: 'visite_feedback', visite_id: selectedVisite.id, medias: feedbackMedias } : null
         });
       }

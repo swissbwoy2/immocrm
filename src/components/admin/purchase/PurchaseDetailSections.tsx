@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Banknote, Home, Eye, Handshake, Scale, FileText, Sparkles, MapPin, ExternalLink, Layers, Square, Hash, Calendar, Trash2, CheckCircle2, XCircle, MessageSquare, AlertTriangle, TrendingUp, ListChecks, Shield } from 'lucide-react';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
-import { ACHAT_STEPS, computeProgression, formatCHF } from '@/lib/purchaseFinancing';
+import { ACHAT_STEPS, computeProgression, formatCHF, libelleStatutBancaire, normaliserStatutBancaire, libelle, LIBELLE_STATUT_PROJET, LIBELLE_STATUT_MANDAT, LIBELLE_STATUT_ACOMPTE, LIBELLE_STATUT_NEGOCIATION, LIBELLE_STATUT_NOTAIRE } from '@/lib/purchaseFinancing';
 import { AchatDocumentsSection } from '@/components/achat/AchatDocumentsSection';
 import { FinancingEditorDialog, PropertyEditorDialog, VisitReportEditorDialog, NegotiationEditorDialog, NotaryEditorDialog, ProjectMetaEditorDialog } from './PurchaseEditors';
 import { CoAcheteursEditor } from './CoAcheteursEditor';
@@ -65,7 +65,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
             </div>
             <Button
               className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={async () => { await h.activateProject(); toast.success('Parcours achat activé'); }}
+              onClick={async () => { try { await h.activateProject(); toast.success('Parcours achat activé : le client est prévenu'); } catch (e: any) { toast.error(e?.message || 'Activation impossible'); } }}
             >
               <Sparkles className="h-4 w-4 mr-2" /> Activer le parcours achat
             </Button>
@@ -78,7 +78,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
         <CardContent className="pb-5">
           <div className="flex items-start justify-between flex-wrap gap-3 mb-2">
             <div className="flex items-center gap-2">
-              <Badge className="bg-primary/10 text-primary border-0 dark:bg-sky-900/40 dark:text-sky-300">{h.project.statut}</Badge>
+              <Badge className="bg-primary/10 text-primary border-0 dark:bg-sky-900/40 dark:text-sky-300">{libelle(LIBELLE_STATUT_PROJET, h.project.statut)}</Badge>
             </div>
             {mode === 'admin' && <ProjectMetaEditorDialog project={h.project} onSave={h.updateProject} />}
           </div>
@@ -89,8 +89,8 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
           </p>
           {!isPending && <Progress value={prog.pourcentage} className="h-2 mb-4" />}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <Kpi label="Mandat" value={h.project.statut_mandat || '—'} />
-            <Kpi label="Acompte" value={h.project.statut_acompte || '—'} />
+            <Kpi label="Mandat" value={libelle(LIBELLE_STATUT_MANDAT, h.project.statut_mandat)} />
+            <Kpi label="Acompte" value={libelle(LIBELLE_STATUT_ACOMPTE, h.project.statut_acompte)} />
             <Kpi label="Mandat CHF" value={h.project.montant_mandat ? formatCHF(h.project.montant_mandat) : '—'} />
             <Kpi label="Acompte CHF" value={h.project.montant_acompte ? formatCHF(h.project.montant_acompte) : '—'} />
           </div>
@@ -128,19 +128,19 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
           <div className="mt-3 flex items-center gap-2 flex-wrap">
             <Badge
               className={
-                h.financing?.statut_bancaire === 'valide'
+                normaliserStatutBancaire(h.financing?.statut_bancaire) === 'valide'
                   ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-0'
-                  : h.financing?.statut_bancaire === 'refuse' || h.financing?.statut_bancaire === 'bloque'
+                  : ['refuse', 'bloque'].includes(normaliserStatutBancaire(h.financing?.statut_bancaire))
                   ? 'bg-red-500/20 text-red-700 dark:text-red-300 border-0'
-                  : h.financing?.statut_bancaire === 'prevalidé' || h.financing?.statut_bancaire === 'en_analyse'
+                  : ['prevalide', 'en_analyse'].includes(normaliserStatutBancaire(h.financing?.statut_bancaire))
                   ? 'bg-sky-500/20 text-primary dark:text-sky-300 border-0'
                   : 'bg-muted text-muted-foreground border-0'
               }
               variant="outline"
             >
               <Shield className="h-3 w-3 mr-1" />
-              Banque : {h.financing?.statut_bancaire || 'à évaluer'}
-              {h.financing?.partenaire_bancaire ? ` · ${h.financing.partenaire_bancaire}` : ''}
+              Banque : {libelleStatutBancaire(h.financing?.statut_bancaire)}
+              {h.financing?.partenaire_financier ? ` · ${h.financing.partenaire_financier}` : ''}
             </Badge>
           </div>
         </CardContent>
@@ -204,7 +204,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                           </a>
                         )}
                         <PropertyEditorDialog initial={p} onSave={h.upsertProperty} trigger={<Button size="sm" variant="ghost">Modifier</Button>} />
-                        <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Supprimer ce bien ?')) await h.deleteProperty(p.id); }}>
+                        <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Supprimer ce bien ?')) { try { await h.deleteProperty(p.id); } catch (err: any) { toast.error(err?.message || 'Suppression impossible'); } }; }}>
                           <Trash2 className="h-3.5 w-3.5 text-red-600" />
                         </Button>
                       </div>
@@ -242,7 +242,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                       <div className="flex items-center gap-2">
                         <Badge className={`border-0 text-xs ${s.color}`}>{s.label}</Badge>
                         <VisitReportEditorDialog initial={r} properties={h.properties} onSave={h.upsertVisitReport} trigger={<Button size="sm" variant="ghost">Modifier</Button>} />
-                        <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Supprimer ?')) await h.deleteVisitReport(r.id); }}>
+                        <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Supprimer ?')) { try { await h.deleteVisitReport(r.id); } catch (err: any) { toast.error(err?.message || 'Suppression impossible'); } }; }}>
                           <Trash2 className="h-3.5 w-3.5 text-red-600" />
                         </Button>
                       </div>
@@ -267,7 +267,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
       <PremiumCard icon={Handshake} title={`Offres & négociations (${h.negotiations.length})`} delay={300}>
         <CardContent className="pb-6">
           <div className="flex items-center justify-end mb-4">
-            <NegotiationEditorDialog onSave={h.upsertNegotiation} />
+            <NegotiationEditorDialog properties={h.properties} onSave={h.upsertNegotiation} />
           </div>
           {h.negotiations.length === 0 ? (
             <div className="text-center py-10">
@@ -281,14 +281,15 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
               {h.negotiations.map((n) => (
                 <div key={n.id} className="group rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.08)] transition-all duration-300 p-4 flex items-center justify-between flex-wrap gap-2">
                   <div className="text-sm">
-                    <Badge variant="outline" className="mr-2">{n.statut}</Badge>
+                    <Badge variant="outline" className="mr-2">{libelle(LIBELLE_STATUT_NEGOCIATION, n.statut)}</Badge>
+                    {(() => { const b = h.properties.find((p: any) => p.id === n.property_id); return b ? <span className="mr-2 font-medium">{b.titre || b.adresse}</span> : null; })()}
                     Offre {n.montant_offre ? formatCHF(n.montant_offre) : '—'}
                     {n.contre_offre ? ` → contre-offre ${formatCHF(n.contre_offre)}` : ''}
                     {n.date_offre && <span className="text-xs text-muted-foreground ml-2">le {new Date(n.date_offre).toLocaleDateString('fr-CH')}</span>}
                   </div>
                   <div className="flex gap-2">
-                    <NegotiationEditorDialog initial={n} onSave={h.upsertNegotiation} trigger={<Button size="sm" variant="ghost">Modifier</Button>} />
-                    <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Supprimer ?')) await h.deleteNegotiation(n.id); }}>
+                    <NegotiationEditorDialog initial={n} properties={h.properties} onSave={h.upsertNegotiation} trigger={<Button size="sm" variant="ghost">Modifier</Button>} />
+                    <Button size="sm" variant="ghost" onClick={async () => { if (confirm('Supprimer ?')) { try { await h.deleteNegotiation(n.id); } catch (err: any) { toast.error(err?.message || 'Suppression impossible'); } }; }}>
                       <Trash2 className="h-3.5 w-3.5 text-red-600" />
                     </Button>
                   </div>
@@ -315,12 +316,12 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <Kpi label="Notaire" value={h.notary.notaire_nom || '—'} />
-              <Kpi label="Statut" value={h.notary.statut || '—'} />
+              <Kpi label="Statut" value={libelle(LIBELLE_STATUT_NOTAIRE, h.notary.statut)} />
               <Kpi label="RDV" value={h.notary.date_rdv ? new Date(h.notary.date_rdv).toLocaleString('fr-CH') : '—'} />
               <Kpi label="Signature" value={h.notary.date_signature ? new Date(h.notary.date_signature).toLocaleDateString('fr-CH') : '—'} />
               <Kpi label="Remise des clés" value={h.notary.date_remise_cles ? new Date(h.notary.date_remise_cles).toLocaleDateString('fr-CH') : '—'} />
-              {h.notary.notaire_coordonnees && <div className="md:col-span-2"><Kpi label="Coordonnées" value={h.notary.notaire_coordonnees} /></div>}
-              {h.notary.commentaire_interne && <div className="md:col-span-2"><Kpi label="Commentaire interne" value={h.notary.commentaire_interne} /></div>}
+              {(h.notary.notaire_email || h.notary.notaire_telephone) && <div className="md:col-span-2"><Kpi label="Coordonnées" value={[h.notary.notaire_email, h.notary.notaire_telephone].filter(Boolean).join(' · ')} /></div>}
+              {h.notary.notes && <div className="md:col-span-2"><Kpi label="Notes" value={h.notary.notes} /></div>}
             </div>
           )}
         </CardContent>
@@ -354,7 +355,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                 </div>
                 <select
                   value={st.statut || 'a_faire'}
-                  onChange={async (e) => { await h.updateStep(st.id, { statut: e.target.value, date_fait: e.target.value === 'fait' ? new Date().toISOString() : null }); }}
+                  onChange={async (e) => { try { await h.updateStep(st.id, { statut: e.target.value, date_fait: e.target.value === 'fait' ? new Date().toISOString() : null }); } catch (err: any) { toast.error(err?.message || 'Étape non enregistrée'); } }}
                   className="text-xs border rounded-lg px-2 py-1 bg-background border-border/50 hover:border-primary/40 transition-colors"
                 >
                   <option value="a_faire">À faire</option>
