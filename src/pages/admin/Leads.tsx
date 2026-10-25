@@ -17,6 +17,7 @@ import { LeadsListView } from "@/components/admin/leads/LeadsListView";
 import { LeadsCardsView } from "@/components/admin/leads/LeadsCardsView";
 import { LeadDetailSheet } from "@/components/admin/leads/LeadDetailSheet";
 import { useLeadsRealtime } from "@/hooks/useLeadsRealtime";
+import { DashPage } from "@/components/client/dashboard/DashPrimitives";
 import type { Lead, PhoneAppointment, PipelineStage } from "@/components/admin/leads/types";
 
 export default function Leads() {
@@ -494,13 +495,8 @@ export default function Leads() {
   const notContactedCount = filteredLeads.filter((l) => !l.contacted).length;
 
   return (
-    <div className="relative space-y-6">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-      </div>
-
-      <div className="relative space-y-5">
+    <DashPage>
+      <div className="space-y-5">
         <LeadsHero
           view={view}
           setView={setView}
@@ -590,9 +586,9 @@ export default function Leads() {
 
       {/* Relance Dialog */}
       <Dialog open={showRelanceDialog} onOpenChange={setShowRelanceDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Relance marketing</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary"><Zap className="h-[18px] w-[18px]" /></span>Relance marketing</DialogTitle>
             <DialogDescription>
               Chaque lead reçoit l'email de la campagne correspondant à son parcours.
             </DialogDescription>
@@ -606,7 +602,7 @@ export default function Leads() {
               <strong>{relanceBreakdown.ignored.length}</strong>
             </div>
           </div>
-          <div className="rounded-md border bg-muted/40 p-3 text-sm flex items-center justify-between gap-3">
+          <div className="rounded-xl border border-border/70 bg-muted/40 p-3 text-sm flex items-center justify-between gap-3">
             <div>
               <div className="font-medium flex items-center gap-2"><MessageCircle className="h-4 w-4 text-emerald-600" />WhatsApp (template location)</div>
               <div className="text-xs text-muted-foreground">{waCandidates.length} lead(s) avec téléphone — envoi par paquets de 3</div>
@@ -616,15 +612,15 @@ export default function Leads() {
               variant="secondary"
               onClick={sendWhatsappRelanceAll}
               disabled={waSending || relanceSending || waCandidates.length === 0}
-              className="gap-2"
+              className="gap-2 rounded-full"
             >
               {waSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
               {waSending ? "Envoi…" : `WhatsApp (${waCandidates.length})`}
             </Button>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending || waSending}>Annuler</Button>
-            <Button onClick={sendRelanceAll} disabled={relanceSending || waSending || sendableCount === 0} className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending || waSending}>Annuler</Button>
+            <Button onClick={sendRelanceAll} disabled={relanceSending || waSending || sendableCount === 0} className="gap-2 rounded-full">
               {relanceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {relanceSending ? "Envoi…" : `Email (${sendableCount})`}
             </Button>
@@ -632,6 +628,6 @@ export default function Leads() {
         </DialogContent>
       </Dialog>
 
-    </div>
+    </DashPage>
   );
 }

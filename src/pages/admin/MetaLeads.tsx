@@ -23,6 +23,7 @@ import { MetaLeadsCardsView } from "@/components/admin/meta-leads/MetaLeadsCards
 import { MetaLeadDetailSheet } from "@/components/admin/meta-leads/MetaLeadDetailSheet";
 import type { MetaLead, MetaLeadStatus } from "@/components/admin/meta-leads/types";
 import { useMetaLeadsRealtime } from "@/hooks/useMetaLeadsRealtime";
+import { DashPage } from "@/components/client/dashboard/DashPrimitives";
 
 export default function MetaLeads() {
   const [leads, setLeads] = useState<MetaLead[]>([]);
@@ -278,12 +279,7 @@ export default function MetaLeads() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6 relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden -z-10" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[#1877F2]/5 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-
+    <DashPage className="space-y-5">
       <MetaLeadsHero
         view={view}
         setView={setView}
@@ -357,7 +353,7 @@ export default function MetaLeads() {
 
       {/* Sync Meta dialog */}
       <AlertDialog open={showBackfillDialog} onOpenChange={(o) => { if (!o) { setShowBackfillDialog(false); setPageIdError(""); } }}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Synchroniser les leads Meta</AlertDialogTitle>
             <AlertDialogDescription>
@@ -366,8 +362,8 @@ export default function MetaLeads() {
           </AlertDialogHeader>
           <div className="py-2 space-y-3">
             {detectedPageId ? (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-emerald-500/10 border border-emerald-500/30">
-                <Badge className="bg-emerald-500/20 text-emerald-700 border-emerald-500/30">Détecté</Badge>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10">
+                <Badge className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Détecté</Badge>
                 <span className="text-sm font-mono">{detectedPageId}</span>
               </div>
             ) : (
@@ -375,6 +371,7 @@ export default function MetaLeads() {
                 <label className="text-sm font-medium">Page ID Facebook</label>
                 <Input
                   placeholder="Ex: 123456789012345"
+                  className="rounded-xl"
                   value={manualPageId}
                   onChange={(e) => {
                     setManualPageId(e.target.value);
@@ -387,8 +384,8 @@ export default function MetaLeads() {
             )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBackfill} disabled={!canLaunchBackfill}>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction className="rounded-full" onClick={handleBackfill} disabled={!canLaunchBackfill}>
               Lancer
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -397,16 +394,16 @@ export default function MetaLeads() {
 
       {/* Import CSV dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary"><Upload className="h-[18px] w-[18px]" /></span>
               Importer un CSV
             </DialogTitle>
             <DialogDescription>Format Wix accepté. Doublons (par email) ignorés.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+            <div className="border-2 border-dashed border-border rounded-2xl p-6 text-center">
               <Input
                 type="file"
                 accept=".csv"
@@ -424,18 +421,19 @@ export default function MetaLeads() {
           <DialogFooter>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => { setShowImportDialog(false); setImportFile(null); }}
               disabled={importing}
             >
               Annuler
             </Button>
-            <Button onClick={handleImportCSV} disabled={!importFile || importing} className="gap-2">
+            <Button onClick={handleImportCSV} disabled={!importFile || importing} className="gap-2 rounded-full">
               {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {importing ? "Import…" : "Importer"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashPage>
   );
 }

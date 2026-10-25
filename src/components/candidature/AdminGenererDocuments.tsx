@@ -60,7 +60,7 @@ export function AdminGenererDocuments({ candidatureId, onDone }: { candidatureId
 
   return (
     <div className="space-y-2">
-      <Button size="sm" className="min-h-[40px]" onClick={() => setOpen(true)}>{docs.length ? 'Modifier / régénérer les documents' : 'Retenir et générer les documents'}</Button>
+      <Button size="sm" className="min-h-[40px] rounded-full" onClick={() => setOpen(true)}>{docs.length ? 'Modifier / régénérer les documents' : 'Retenir et générer les documents'}</Button>
       <CandidatDocumentsSection candidatureId={candidatureId} canSign={false} />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
@@ -73,13 +73,13 @@ export function AdminGenererDocuments({ candidatureId, onDone }: { candidatureId
                 {list.map((k) => (
                   <label key={k} className="space-y-1 text-xs text-muted-foreground">
                     <span>{k.replace(/_/g, ' ')}</span>
-                    <Input value={vals[k] ?? ''} onChange={(e) => setVals((p) => ({ ...p, [k]: e.target.value }))} className="min-h-[40px] text-foreground" />
+                    <Input value={vals[k] ?? ''} onChange={(e) => setVals((p) => ({ ...p, [k]: e.target.value }))} className="min-h-[40px] rounded-xl text-foreground" />
                   </label>
                 ))}
               </div>
             </section>
           ))}
-          <Button className="min-h-[44px] w-full" disabled={busy} onClick={generer}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Générer les documents</Button>
+          <Button className="min-h-[44px] w-full rounded-full" disabled={busy} onClick={generer}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Générer les documents</Button>
         </DialogContent>
       </Dialog>
     </div>

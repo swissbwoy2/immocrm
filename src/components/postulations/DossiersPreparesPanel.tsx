@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { CheckCircle2, ChevronDown, ExternalLink, Loader2, Paperclip, ShieldAlert, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -47,13 +46,13 @@ const CANAL: Record<string, string> = {
   autre: 'Autre',
 };
 
-const STATUT: Record<string, { label: string; className: string }> = {
-  prepare: { label: 'En contrôle', className: 'bg-muted text-muted-foreground border-border' },
-  a_valider: { label: 'À valider', className: 'bg-amber-100 text-amber-800 border-amber-300' },
-  valide: { label: 'Validé — envoi au prochain passage', className: 'bg-sky-100 text-sky-800 border-sky-300' },
-  envoye: { label: 'Envoyé', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  refuse: { label: 'Refusé', className: 'bg-red-100 text-red-800 border-red-300' },
-  erreur: { label: 'Erreur d’envoi', className: 'bg-red-100 text-red-800 border-red-300' },
+const STATUT: Record<string, { label: string; tone: 'neutral' | 'success' | 'warning' | 'danger' | 'muted' }> = {
+  prepare: { label: 'En contrôle', tone: 'muted' },
+  a_valider: { label: 'À valider', tone: 'warning' },
+  valide: { label: 'Validé — envoi au prochain passage', tone: 'neutral' },
+  envoye: { label: 'Envoyé', tone: 'success' },
+  refuse: { label: 'Refusé', tone: 'danger' },
+  erreur: { label: 'Erreur d’envoi', tone: 'danger' },
 };
 
 const ORDRE = ['a_valider', 'erreur', 'prepare', 'valide', 'envoye', 'refuse'];
@@ -104,21 +103,21 @@ export function DossiersPreparesPanel() {
   if (!loading && rows.length === 0) return null;
 
   return (
-    <Card>
-      <CardContent className="space-y-4 p-4 md:p-5">
+    <div className={DASH_CARD}>
+      <div className="space-y-4 p-4 md:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold">
               Dossiers préparés
               {aValider > 0 && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300">{aValider} à valider</Badge>
+                <DashBadge tone="warning">{aValider} à valider</DashBadge>
               )}
             </h2>
             <p className="text-sm text-muted-foreground">
               Préparés par la routine Postulation, contrôlés par la Surveillance. Ce qui passe tous les contrôles part seul ; le reste attend ici.
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setVoirTout((v) => !v)}>
+          <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setVoirTout((v) => !v)}>
             {voirTout ? 'Masquer envoyés / refusés' : 'Voir aussi envoyés / refusés'}
           </Button>
         </div>
@@ -145,12 +144,12 @@ export function DossiersPreparesPanel() {
                         {' · '}préparé le {format(new Date(d.created_at), 'dd.MM.yyyy HH:mm', { locale: fr })}
                       </p>
                     </div>
-                    <Badge variant="outline" className={s.className}>{s.label}</Badge>
+                    <DashBadge tone={s.tone}>{s.label}</DashBadge>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><Paperclip className="h-3.5 w-3.5" /> {pieces} pièce{pieces > 1 ? 's' : ''}</span>
-                    {d.formulaire_location_ok === false && <span className="text-amber-700">Formulaire de location incomplet</span>}
+                    {d.formulaire_location_ok === false && <span className="text-amber-700 dark:text-amber-400">Formulaire de location incomplet</span>}
                     {d.envoye_le && <span>Envoyé le {format(new Date(d.envoye_le), 'dd.MM.yyyy HH:mm', { locale: fr })}</span>}
                     {d.offre_id && (
                       <Link to={`/admin/offres-auto?offre=${d.offre_id}`} className="inline-flex items-center gap-1 underline-offset-4 hover:underline">
@@ -160,7 +159,7 @@ export function DossiersPreparesPanel() {
                   </div>
 
                   {d.motif_blocage && (
-                    <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm text-amber-900">
+                    <p className="flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-sm text-amber-800 dark:text-amber-300">
                       <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /> {d.motif_blocage}
                     </p>
                   )}
@@ -196,7 +195,7 @@ export function DossiersPreparesPanel() {
             })}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
