@@ -1797,6 +1797,25 @@ html.dark[data-imr-role="client"] {
   --sidebar-border: 217 19% 15%;
 }
 
+/* ===== Menu latéral admin / agent : même menu clair que l'espace client (seul le menu change) ===== */
+html[data-imr-sidebar="clair"] {
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 0 0% 13%;
+  --sidebar-primary: 160 59% 30%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 96%;
+  --sidebar-accent-foreground: 0 0% 13%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-ring: 160 59% 30%;
+}
+html.dark[data-imr-sidebar="clair"] {
+  --sidebar-background: 222 47% 8%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-accent: 217 19% 15%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 19% 15%;
+}
+
 /* Barre du bas client : bulle flottante en verre dépoli (façon iOS) */
 .imr-glass-nav {
   background: rgba(255, 255, 255, 0.72);
