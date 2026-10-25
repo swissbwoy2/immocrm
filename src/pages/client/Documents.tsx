@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   FileText, Upload, Download, Trash2, File, 
   Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList,
-  Sparkles, FolderOpen
+  Sparkles, FolderOpen, Check
 } from 'lucide-react';
+import { DASH_CARD, DashPage, DashPageHeader, DashSection, DashEmptyState, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -642,10 +643,12 @@ export default function Documents() {
 
   if (loading) {
     return (
-      <div className="p-4 md:p-8" role="status" aria-label="Chargement des documents">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-24 rounded bg-muted/40" />
-      </div>
+      <DashPage>
+        <div className="mx-auto w-full max-w-3xl" role="status" aria-label="Chargement des documents">
+          <div className="h-7 w-44 rounded-full bg-muted" />
+          <div className="mt-6 h-24 rounded-2xl bg-muted/60" />
+        </div>
+      </DashPage>
     );
   }
 
@@ -715,134 +718,127 @@ export default function Documents() {
   const requiredDone = requiredItems.filter((i) => countFor(i) >= (i.min ?? 1)).length;
   const openUpload = (type: string) => { setSelectedType(type); setUploadDialogOpen(true); };
 
-  const CARD = 'rounded-[14px] border border-[#dddddd] bg-white';
+  const ROW_DIVIDE = 'divide-y divide-border/70';
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 md:px-8 md:py-8">
+    <DashPage>
+      <div className="mx-auto w-full max-w-3xl space-y-8">
         {/* En-tête */}
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-[26px] font-bold tracking-[-0.02em] text-[#222222] md:text-[28px]">
-              <FolderOpen className="h-6 w-6" /> Mes documents
-            </h1>
-            <p className="mt-1 text-[15px] text-[#6a6a6a]">
-              {documents.length} document{documents.length > 1 ? 's' : ''} · {requiredDone}/{requiredItems.length} pièces essentielles déposées
-            </p>
-          </div>
-          <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="h-11 rounded-lg px-5">
-            <Upload className="mr-2 h-4 w-4" /> Ajouter un document
-          </Button>
-        </header>
+        <DashPageHeader
+          title="Mes documents"
+          subtitle={<>{documents.length} document{documents.length > 1 ? 's' : ''} · {requiredDone}/{requiredItems.length} pièces essentielles déposées</>}
+          action={
+            <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="h-11 rounded-full px-5">
+              <Upload className="mr-2 h-4 w-4" /> Ajouter un document
+            </Button>
+          }
+        />
 
         <DocumentUpdateReminder />
 
         {/* Demandés par l'agent */}
         {documentRequests.length > 0 && (
-          <section className={`${CARD} border-orange-200`} aria-labelledby="docs-demandes">
-            <div className="flex items-center gap-2 border-b border-[#ebebeb] px-5 py-4">
-              <ClipboardList className="h-5 w-5 text-orange-600" />
-              <h2 id="docs-demandes" className="text-[17px] font-semibold text-[#222222]">Demandés par votre agent</h2>
-              <Badge className="ml-auto border-0 bg-orange-500 text-white hover:bg-orange-500">{documentRequests.length}</Badge>
-            </div>
-            <ul className="divide-y divide-[#ebebeb]">
+          <DashSection
+            title="Demandés par votre agent"
+            action={<DashBadge tone="warning">{documentRequests.length}</DashBadge>}
+          >
+            <ul className={`${DASH_CARD} ${ROW_DIVIDE} overflow-hidden`}>
               {documentRequests.map((request) => (
-                <li key={request.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+                <li key={request.id} className="flex flex-wrap items-center gap-3 p-4 md:px-5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                    <ClipboardList className="h-5 w-5" />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-medium text-[#222222]">{request.document_label}</p>
-                    {request.note && <p className="mt-0.5 text-[14px] text-[#3f3f3f]">{request.note}</p>}
-                    <p className="mt-0.5 text-[13px] text-[#6a6a6a]">Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}</p>
+                    <p className="text-base font-semibold text-foreground">{request.document_label}</p>
+                    {request.note && <p className="mt-0.5 text-sm text-muted-foreground">{request.note}</p>}
+                    <p className="mt-0.5 text-xs text-muted-foreground">Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}</p>
                   </div>
-                  <Button size="sm" onClick={() => openUpload(request.document_type)} className="h-9 rounded-lg bg-orange-500 text-white hover:bg-orange-600">
+                  <Button size="sm" onClick={() => openUpload(request.document_type)} className="h-9 shrink-0 rounded-full px-4">
                     <Upload className="mr-1.5 h-4 w-4" /> Déposer
                   </Button>
                 </li>
               ))}
             </ul>
-          </section>
+          </DashSection>
         )}
 
         {/* Checklist du dossier */}
-        <section className={CARD} aria-labelledby="docs-checklist">
-          <div className="border-b border-[#ebebeb] px-5 py-4">
-            <h2 id="docs-checklist" className="text-[17px] font-semibold text-[#222222]">
-              {isClientBuyer ? 'Pièces de votre dossier d\'achat' : 'Pièces de votre dossier'}
-            </h2>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#ebebeb]">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${requiredItems.length ? (requiredDone / requiredItems.length) * 100 : 0}%` }} />
+        <DashSection title={isClientBuyer ? 'Pièces de votre dossier d\'achat' : 'Pièces de votre dossier'}>
+          <div className={`${DASH_CARD} overflow-hidden`}>
+            <div className="p-4 md:p-5">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${requiredItems.length ? (requiredDone / requiredItems.length) * 100 : 0}%` }} />
+              </div>
             </div>
+            {checklist.map((group) => (
+              <div key={group.title} className="border-t border-border/70">
+                {checklist.length > 1 && (
+                  <p className="bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:px-5">{group.title}</p>
+                )}
+                <ul className={ROW_DIVIDE}>
+                  {group.items.map((item) => {
+                    const n = countFor(item);
+                    const need = item.min ?? 1;
+                    const done = n >= need;
+                    return (
+                      <li key={item.label} className="flex items-center gap-3 px-4 py-3.5 md:px-5">
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${done ? 'bg-primary text-primary-foreground' : 'border-2 border-border'}`}>
+                          {done && <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground">{item.label}</p>
+                          <p className={`text-xs ${done ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            {done ? 'Déposé' : need > 1 ? `${n}/${need} déposé${n > 1 ? 's' : ''}` : item.optional ? 'Selon votre situation' : 'À déposer'}
+                          </p>
+                        </div>
+                        {!done && (
+                          <Button size="sm" variant="outline" onClick={() => openUpload(item.uploadType)} className="h-9 shrink-0 rounded-full px-4">
+                            <Upload className="mr-1.5 h-4 w-4" /> Déposer
+                          </Button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {!isClientBuyer && (
+              <p className="border-t border-border/70 px-4 py-3 text-xs text-muted-foreground md:px-5">
+                Indépendant : ajoutez votre dernière déclaration d'impôts. Personne mariée ou en partenariat : les mêmes pièces pour les deux.
+              </p>
+            )}
           </div>
-          {checklist.map((group) => (
-            <div key={group.title}>
-              {checklist.length > 1 && (
-                <p className="bg-[#f7f7f7] px-5 py-2 text-[13px] font-semibold uppercase tracking-wide text-[#6a6a6a]">{group.title}</p>
-              )}
-              <ul className="divide-y divide-[#ebebeb]">
-                {group.items.map((item) => {
-                  const n = countFor(item);
-                  const need = item.min ?? 1;
-                  const done = n >= need;
-                  return (
-                    <li key={item.label} className="flex items-center gap-3 px-5 py-3.5">
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${done ? 'bg-primary text-white' : 'border-2 border-[#dddddd]'}`}>
-                        {done && <span className="text-[13px] font-bold">✓</span>}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[15px] text-[#222222]">{item.label}</p>
-                        <p className="text-[13px] text-[#6a6a6a]">
-                          {done ? 'Déposé' : need > 1 ? `${n}/${need} déposé${n > 1 ? 's' : ''}` : item.optional ? 'Selon votre situation' : 'À déposer'}
-                        </p>
-                      </div>
-                      {!done && (
-                        <Button size="sm" variant="outline" onClick={() => openUpload(item.uploadType)} className="h-9 shrink-0 rounded-lg">
-                          <Upload className="mr-1.5 h-4 w-4" /> Déposer
-                        </Button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-          {!isClientBuyer && (
-            <p className="border-t border-[#ebebeb] px-5 py-3 text-[13px] text-[#6a6a6a]">
-              Indépendant : ajoutez votre dernière déclaration d'impôts. Personne mariée ou en partenariat : les mêmes pièces pour les deux.
-            </p>
-          )}
-        </section>
+        </DashSection>
 
         {/* Fichiers déposés */}
-        <section className={CARD} aria-labelledby="docs-fichiers">
-          <div className="border-b border-[#ebebeb] px-5 py-4">
-            <h2 id="docs-fichiers" className="text-[17px] font-semibold text-[#222222]">Mes fichiers</h2>
-          </div>
+        <DashSection title="Mes fichiers">
           {documents.length > 0 ? (
-            <ul className="divide-y divide-[#ebebeb]">
+            <ul className={`${DASH_CARD} ${ROW_DIVIDE} overflow-hidden`}>
               {documents.map((doc) => {
                 const Icon = getFileIcon(doc.type || '');
                 const canPreview = (doc.type || '').includes('image') || doc.type === 'application/pdf';
                 return (
-                  <li key={doc.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
+                  <li key={doc.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center md:px-5">
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f2f2f2]">
-                        <Icon className="h-5 w-5 text-[#222222]" />
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Icon className="h-5 w-5" />
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-[15px] font-medium text-[#222222]" title={doc.nom}>{doc.nom}</p>
-                        <p className="text-[13px] text-[#6a6a6a]">
+                        <p className="truncate text-sm font-semibold text-foreground" title={doc.nom}>{doc.nom}</p>
+                        <p className="text-xs text-muted-foreground">
                           {getTypeLabel(doc.type_document)} · {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
                           {doc.taille ? ` · ${formatFileSize(doc.taille)}` : ''}
                           {doc.offre_id ? ' · Candidature' : ''}
                         </p>
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5 sm:justify-end">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
                       {canPreview && (
-                        <Button size="sm" variant="outline" onClick={() => handlePreview(doc)} className="h-9 rounded-lg">
+                        <Button size="sm" variant="outline" onClick={() => handlePreview(doc)} className="h-9 rounded-full px-4">
                           <Eye className="mr-1.5 h-4 w-4" /> Voir
                         </Button>
                       )}
-                      <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="h-9 rounded-lg">
+                      <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="h-9 rounded-full px-4">
                         <Download className="mr-1.5 h-4 w-4" /> Télécharger
                       </Button>
                       <Button
@@ -850,7 +846,7 @@ export default function Documents() {
                         variant="ghost"
                         aria-label="Renommer"
                         onClick={() => { setDocumentToRename(doc); setNewDocumentName(doc.nom); setRenameDialogOpen(true); }}
-                        className="h-9 w-9 rounded-lg"
+                        className="h-9 w-9 rounded-full"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -859,7 +855,7 @@ export default function Documents() {
                         variant="ghost"
                         aria-label="Supprimer"
                         onClick={() => { setSelectedDoc(doc); setDeleteDialogOpen(true); }}
-                        className="h-9 w-9 rounded-lg text-[#6a6a6a] hover:bg-red-50 hover:text-red-600"
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -869,28 +865,28 @@ export default function Documents() {
               })}
             </ul>
           ) : (
-            <div className="px-5 py-12 text-center">
-              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2]">
-                <FileText className="h-7 w-7 text-[#6a6a6a]" />
-              </span>
-              <p className="mt-4 text-[17px] font-semibold text-[#222222]">Aucun document pour l'instant</p>
-              <p className="mx-auto mt-1 max-w-sm text-[15px] text-[#6a6a6a]">Déposez vos pièces pour que votre agent puisse envoyer votre dossier rapidement.</p>
-              <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="mt-5 h-11 rounded-lg px-5">
-                <Upload className="mr-2 h-4 w-4" /> Ajouter un document
-              </Button>
-            </div>
+            <DashEmptyState
+              icon={FileText}
+              title="Aucun document pour l'instant"
+              description="Déposez vos pièces pour que votre agent puisse envoyer votre dossier rapidement."
+              action={
+                <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="h-11 rounded-full px-5">
+                  <Upload className="mr-2 h-4 w-4" /> Ajouter un document
+                </Button>
+              }
+            />
           )}
-        </section>
+        </DashSection>
       </div>
 
-      {/* Upload Dialog modernisé */}
+      {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-lg border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                <Upload className="w-5 h-5 text-primary-foreground" />
-              </div>
+            <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Upload className="h-5 w-5" />
+              </span>
               Ajouter un document
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -902,7 +898,7 @@ export default function Documents() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type de document</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
+                <SelectTrigger className="rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -954,89 +950,84 @@ export default function Documents() {
           </div>
 
           <div
-            className={`relative overflow-hidden border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+            className={`rounded-2xl border-2 border-dashed p-6 text-center transition-colors duration-150 sm:p-8 ${
               dragActive
-                ? 'border-primary bg-primary/10 scale-[1.02]'
-                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-foreground/40 hover:bg-muted/40'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            {/* Gradient background on drag */}
-            <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 transition-opacity duration-300 ${dragActive ? 'opacity-100' : 'opacity-0'}`} />
-            
-            <div className="relative">
-              <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center transition-all duration-300 ${dragActive ? 'scale-110 from-primary/20 to-primary/10' : ''}`}>
-                <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              </div>
-              
-              {selectedFile ? (
-                <div className="space-y-3">
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatFileSize(selectedFile.size)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                  >
-                    Changer de fichier
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-medium mb-2">
-                    Glissez-déposez votre fichier ici
+            <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${dragActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+              <Upload className="h-7 w-7" />
+            </span>
+
+            {selectedFile ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-border/70 bg-muted/40 p-4">
+                  <p className="break-all text-sm font-medium text-foreground">{selectedFile.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatFileSize(selectedFile.size)}
                   </p>
-                  <p className="text-xs text-muted-foreground mb-4">ou</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                  >
-                    Sélectionner un fichier
-                  </Button>
-                </>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) {
-                    handleFileSelect(e.target.files[0]);
-                  }
-                }}
-              />
-            </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="rounded-full px-4"
+                >
+                  Changer de fichier
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="mb-2 text-sm font-medium text-foreground">
+                  Glissez-déposez votre fichier ici
+                </p>
+                <p className="mb-4 text-xs text-muted-foreground">ou</p>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-full px-5"
+                >
+                  Sélectionner un fichier
+                </Button>
+              </>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  handleFileSelect(e.target.files[0]);
+                }
+              }}
+            />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="outline" 
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
               onClick={() => {
                 setUploadDialogOpen(false);
                 setSelectedFile(null);
                 setSelectedType('autre');
               }}
-              className="hover:bg-muted"
+              className="rounded-full"
             >
               Annuler
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmUpload}
               disabled={!selectedFile || isUploading}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
+              className="rounded-full"
             >
               {isUploading ? (
                 <>
@@ -1051,9 +1042,9 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog modernisé */}
-      <Dialog 
-        open={previewDialogOpen} 
+      {/* Preview Dialog */}
+      <Dialog
+        open={previewDialogOpen}
         onOpenChange={(open) => {
           setPreviewDialogOpen(open);
           if (!open && previewUrl && previewUrl.startsWith('blob:')) {
@@ -1061,28 +1052,28 @@ export default function Documents() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[95vh] border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="max-w-5xl max-h-[95vh] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Eye className="w-4 h-4 text-primary" />
-              </div>
-              {previewDocument?.nom}
+            <DialogTitle className="flex min-w-0 items-center gap-3 text-base font-semibold">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Eye className="h-4 w-4" />
+              </span>
+              <span className="truncate">{previewDocument?.nom}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="h-[80vh] rounded-xl overflow-hidden bg-muted/30">
+          <div className="h-[80vh] overflow-hidden rounded-xl border border-border/70 bg-muted/40">
             {previewDocument?.type?.includes('pdf') ? (
               <object
                 data={previewUrl}
                 type="application/pdf"
                 className="w-full h-full"
               >
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-4">
-                    <FileText className="w-8 h-8" />
-                  </div>
-                  <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownload(previewDocument)} className="bg-gradient-to-r from-primary to-primary/90">
+                <div className="flex h-full flex-col items-center justify-center px-4 text-center text-muted-foreground">
+                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <FileText className="h-7 w-7" />
+                  </span>
+                  <p className="mb-4 text-sm">Impossible d'afficher le PDF dans le navigateur.</p>
+                  <Button onClick={() => handleDownload(previewDocument)} className="rounded-full">
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
                   </Button>
@@ -1090,14 +1081,14 @@ export default function Documents() {
               </object>
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start p-4">
-                <img 
-                  src={previewUrl} 
+                <img
+                  src={previewUrl}
                   alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-lg shadow-2xl"
+                  className="max-w-full h-auto rounded-lg"
                 />
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-sm text-muted-foreground py-8">
                 Aperçu non disponible pour ce type de fichier
               </p>
             )}
@@ -1105,14 +1096,14 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Rename Dialog modernisé */}
+      {/* Rename Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="sm:max-w-md border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Pencil className="w-5 h-5 text-primary" />
-              </div>
+            <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Pencil className="h-5 w-5" />
+              </span>
               Renommer le document
             </DialogTitle>
           </DialogHeader>
@@ -1123,18 +1114,18 @@ export default function Documents() {
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
-                className="bg-background/50 border-border/50 focus:border-primary/50"
+                className="rounded-xl"
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="rounded-full">
               Annuler
             </Button>
-            <Button 
-              onClick={handleRename} 
+            <Button
+              onClick={handleRename}
               disabled={!newDocumentName.trim()}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              className="rounded-full"
             >
               Renommer
             </Button>
@@ -1142,31 +1133,31 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog modernisé */}
+      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-destructive" />
-              </div>
+            <AlertDialogTitle className="flex items-center gap-3 text-lg font-semibold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <Trash2 className="h-5 w-5" />
+              </span>
               Supprimer le document
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
               Êtes-vous sûr de vouloir supprimer "<span className="font-medium text-foreground">{selectedDoc?.nom}</span>" ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="hover:bg-muted">Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
-              className="bg-gradient-to-r from-destructive to-destructive/90 hover:from-destructive/90 hover:to-destructive text-destructive-foreground"
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashPage>
   );
 }
