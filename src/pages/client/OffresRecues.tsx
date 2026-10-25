@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight, ExternalLink } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight, ExternalLink, StickyNote } from "lucide-react";
+import { noteSuiviClient } from "@/lib/offreNote";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { canDecideOnOffre, visiteIndicatesDone } from '@/lib/visitDecision';
 import { supabase } from "@/integrations/supabase/client";
@@ -1578,7 +1579,13 @@ const OffresRecues = () => {
                             ) : null}
                           </div>
                           {details && <p className="mt-1 text-sm text-muted-foreground">{details}</p>}
-                          <p className="mt-0.5 text-xs text-muted-foreground">
+                          {noteSuiviClient(offre.commentaires) && (
+                            <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-muted/60 px-2.5 py-1.5 text-xs leading-snug text-foreground">
+                              <StickyNote className="mt-px h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                              <span className="line-clamp-2">{noteSuiviClient(offre.commentaires)}</span>
+                            </p>
+                          )}
+                          <p className="mt-1.5 text-xs text-muted-foreground">
                             Reçue le {offre.date_envoi ? new Date(offre.date_envoi).toLocaleDateString('fr-CH') : '—'}
                             {offre.agent?.profile?.prenom ? ` · par ${offre.agent.profile.prenom}` : ''}
                           </p>
