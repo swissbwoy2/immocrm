@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { usePreviewImage, type ShowcaseItem } from "@/components/public-site/showcase/useShowcase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight, ExternalLink } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { canDecideOnOffre, visiteIndicatesDone } from '@/lib/visitDecision';
 import { supabase } from "@/integrations/supabase/client";
@@ -143,44 +144,93 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
 
   if (decision) {
     return (
-      <div className="w-full pt-2">
-        <Badge className={cn(
-          "px-3 py-1.5",
-          decision === 'souhaite_postuler'
-            ? "bg-emerald-500/15 text-emerald-700 border border-emerald-500/30"
-            : "bg-red-500/15 text-red-700 border border-red-500/30"
-        )}>
-          {decision === 'souhaite_postuler' ? '✅ Vous avez confirmé votre intérêt' : '❌ Vous ne souhaitez pas postuler'}
-        </Badge>
-      </div>
+      <p className={cn(
+        "mt-2 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium",
+        decision === 'souhaite_postuler'
+          ? "bg-primary/10 text-primary"
+          : "bg-muted text-muted-foreground"
+      )}>
+        {decision === 'souhaite_postuler' ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+        {decision === 'souhaite_postuler' ? 'Vous souhaitez postuler' : 'Vous ne postulez pas'}
+      </p>
     );
   }
 
   return (
-    <div className="w-full pt-2 space-y-1.5">
-      <div className="flex flex-wrap gap-2">
+    <div className="mt-3 w-full space-y-2">
+      <div className="grid gap-2">
         <Button
-          size="sm"
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          className="h-11 w-full rounded-full"
           disabled={!canDecide || !!saving}
           onClick={() => handle('souhaite_postuler')}
         >
           {saving === 'souhaite_postuler' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
-          ✅ Je souhaite déposer ma candidature
+          Oui, je veux postuler
         </Button>
         <Button
-          size="sm"
           variant="outline"
-          className="border-red-500/40 text-red-700 hover:bg-red-500/10"
+          className="h-11 w-full rounded-full"
           disabled={!canDecide || !!saving}
           onClick={() => handle('refuse')}
         >
           {saving === 'refuse' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <X className="w-4 h-4 mr-2" />}
-          ❌ Je ne souhaite pas postuler
+          Non, je ne postule pas
         </Button>
       </div>
       {!canDecide && (
-        <div className="text-xs text-muted-foreground italic">Disponible après la visite</div>
+        <p className="text-xs text-muted-foreground">Disponible après la visite</p>
+      )}
+    </div>
+  );
+}
+
+type OffreFiltre = 'toutes' | 'a_repondre' | 'en_cours' | 'refusees';
+
+/** Libellé court affiché sur la photo. */
+const STATUT_COURT: Record<string, string> = {
+  envoyee: 'Nouvelle',
+  vue: 'À répondre',
+  interesse: 'Intéressé',
+  visite_planifiee: 'Visite planifiée',
+  visite_confirmee: 'Visite confirmée',
+  visite_effectuee: 'Visitée',
+  souhaite_postuler: 'Je postule',
+  demande_postulation: 'Demande envoyée',
+  candidature_deposee: 'Candidature déposée',
+  acceptee: 'Acceptée',
+  refusee: 'Refusée',
+};
+
+/** Phrase de suite pour les étapes gérées par l'agent. */
+const STATUT_SUITE: Record<string, string> = {
+  demande_postulation: 'Votre demande de postulation est transmise à votre agent.',
+  candidature_deposee: 'Votre candidature est déposée. Suivez-la dans « Candidatures ».',
+  acceptee: 'Bonne nouvelle : votre candidature est acceptée.',
+};
+
+/** Photo de l'offre (galerie ou aperçu de l'annonce), format 4:3. */
+function OffrePhoto({ offre }: { offre: any }) {
+  const item = useMemo<ShowcaseItem>(() => ({
+    id: offre.id,
+    titre: offre.titre ?? null,
+    type_bien: offre.type_bien ?? null,
+    adresse: offre.adresse ?? null,
+    prix: offre.prix ?? null,
+    pieces: offre.pieces ?? null,
+    surface: offre.surface ?? null,
+    etage: offre.etage ?? null,
+    lien_annonce: offre.lien_annonce ?? null,
+    medias_galerie: offre.medias_galerie ?? null,
+  }), [offre]);
+  const img = usePreviewImage(item);
+  return (
+    <div className="aspect-[4/3] w-full overflow-hidden bg-muted">
+      {img ? (
+        <img src={img} alt={offre.adresse || 'Photo du bien'} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Home className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+        </div>
       )}
     </div>
   );
@@ -209,6 +259,7 @@ const OffresRecues = () => {
   const [delegateDate, setDelegateDate] = useState<string>("");
   const [delegateProposedSlots, setDelegateProposedSlots] = useState<any[]>([]);
   const [visitRequiredAlertOpen, setVisitRequiredAlertOpen] = useState(false);
+  const [filtre, setFiltre] = useState<OffreFiltre>('toutes');
   
   const [clientData, setClientData] = useState<any>(null);
   const [visites, setVisites] = useState<any[]>([]);
@@ -1242,30 +1293,20 @@ const OffresRecues = () => {
     }
   };
 
-  // Premium loading state
+  // Chargement : grille de cartes vides, même gabarit que la page.
   if (loading) {
     return (
       <div className="relative flex-1 overflow-auto">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-        <div className="p-4 md:p-8">
-          {/* Header skeleton */}
-          <div className="mb-8 animate-fade-in">
-            <div className="flex items-center gap-3 mb-4">
-              <Skeleton className="h-12 w-12 rounded-xl" />
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-4 w-64" />
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8" role="status" aria-label="Chargement des offres">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="mt-2 h-4 w-64" />
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="aspect-[4/3] w-full rounded-[14px]" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
               </div>
-            </div>
-          </div>
-          
-          {/* Cards skeleton */}
-          <div className="grid gap-6">
-            {[...Array(3)].map((_, i) => (
-              <OffreSkeletonCard key={i} index={i} />
             ))}
           </div>
         </div>
@@ -1273,343 +1314,243 @@ const OffresRecues = () => {
     );
   }
 
+  // Filtres : une seule rangée de pastilles, du plus urgent au plus ancien.
+  const A_REPONDRE = ['envoyee', 'vue'];
+  const EN_COURS = ['interesse', 'visite_planifiee', 'visite_confirmee', 'visite_effectuee', 'souhaite_postuler', 'demande_postulation', 'candidature_deposee', 'acceptee'];
+  const filtres: { key: OffreFiltre; label: string; count: number }[] = [
+    { key: 'toutes', label: 'Toutes', count: offres.length },
+    { key: 'a_repondre', label: 'À répondre', count: offres.filter((o) => A_REPONDRE.includes(o.statut)).length },
+    { key: 'en_cours', label: 'En cours', count: offres.filter((o) => EN_COURS.includes(o.statut)).length },
+    { key: 'refusees', label: 'Refusées', count: offres.filter((o) => o.statut === 'refusee').length },
+  ];
+  const offresFiltrees = offres.filter((o) => {
+    if (filtre === 'a_repondre') return A_REPONDRE.includes(o.statut);
+    if (filtre === 'en_cours') return EN_COURS.includes(o.statut);
+    if (filtre === 'refusees') return o.statut === 'refusee';
+    return true;
+  });
+  const aRepondre = filtres[1].count;
+
   return (
     <div className="flex-1 overflow-auto relative">
-      {/* Mesh gradient background */}
-      <div className="fixed inset-0 pointer-events-none opacity-30">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      </div>
-
-      <div className="p-4 md:p-8 relative z-10">
-        <PremiumPageHeader
-          title="Offres Reçues"
-          subtitle="Découvrez les biens sélectionnés pour vous"
-          icon={Home}
-          badge="Immobilier"
-          action={
-            offres.length > 0 ? (
-              <div className="flex items-center gap-3 flex-wrap">
-                <Badge 
-                  variant="secondary" 
-                  className="px-4 py-2 text-sm bg-gradient-to-r from-primary/20 to-primary/5 border-primary/20 shadow-lg shadow-primary/5"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  <AnimatedValue value={offres.length} /> offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''}
-                </Badge>
-                <Badge variant="outline" className="px-3 py-1.5 text-xs">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  {offres.filter(o => o.statut === 'interesse').length} intéressantes
-                </Badge>
-              </div>
-            ) : null
-          }
-        />
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+        {/* En-tête */}
+        <header className="mb-5">
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">Offres reçues</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">
+            {offres.length === 0
+              ? 'Les biens sélectionnés par votre agent arrivent ici.'
+              : aRepondre > 0
+                ? `${offres.length} offre${offres.length > 1 ? 's' : ''} · ${aRepondre} en attente de votre réponse`
+                : `${offres.length} offre${offres.length > 1 ? 's' : ''} sélectionnée${offres.length > 1 ? 's' : ''} pour vous`}
+          </p>
+        </header>
 
         {offres.length === 0 ? (
-          /* Premium Empty State */
-          <Card className="relative overflow-hidden p-12 text-center border-dashed animate-fade-in group">
-            {/* Animated background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            <div className="relative max-w-md mx-auto space-y-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
-                <div className="relative w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/20 shadow-xl shadow-primary/10">
-                  <Home className="w-12 h-12 text-primary/60 animate-bounce" style={{ animationDuration: '2s' }} />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Aucune offre pour le moment
-                </h3>
-                <p className="text-muted-foreground max-w-sm mx-auto">
-                  Votre agent recherche activement les biens qui correspondent à vos critères. Vous serez notifié dès qu'une nouvelle offre sera disponible.
-                </p>
-              </div>
-              
-              <div className="flex items-center justify-center gap-2 text-sm text-primary">
-                <Zap className="w-4 h-4 animate-pulse" />
-                <span>Recherche en cours...</span>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <div className="grid gap-6">
-            {offres.map((offre, index) => {
-              const { label, variant } = formatStatutOffre(offre.statut);
-              
-              return (
-                <Card 
-                  key={offre.id} 
-                  className={cn(
-                    "group relative overflow-hidden cursor-pointer transition-all duration-500",
-                    "bg-gradient-to-br from-card via-card to-card/80 backdrop-blur-sm",
-                    "border border-border/50 hover:border-primary/40",
-                    "hover:shadow-2xl hover:shadow-primary/10",
-                    "animate-fade-in"
-                  )}
-                  onClick={() => handleViewDetails(offre)}
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
-                  {/* Animated gradient border effect */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 rounded-lg" />
-                  </div>
-                  
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  </div>
-
-                  {/* Status indicator line */}
-                  <div className={cn(
-                    "absolute top-0 left-0 w-1 h-full transition-all duration-300",
-                    offre.statut === 'interesse' && "bg-green-500",
-                    offre.statut === 'visite_planifiee' && "bg-blue-500",
-                    offre.statut === 'visite_effectuee' && "bg-emerald-500",
-                    offre.statut === 'candidature_deposee' && "bg-purple-500",
-                    offre.statut === 'acceptee' && "bg-yellow-500",
-                    offre.statut === 'refusee' && "bg-red-500",
-                    !['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'acceptee', 'refusee'].includes(offre.statut) && "bg-muted-foreground/30"
-                  )} />
-
-                  <div className="relative z-10 p-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-5">
-                      <div className="flex-1 pr-4">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-bold group-hover:text-primary transition-colors duration-300">
-                            {offre.adresse}
-                          </h3>
-                          <Badge 
-                            variant={variant} 
-                            className="shadow-sm transition-transform duration-300 group-hover:scale-105"
-                          >
-                            {label}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1.5 opacity-80">
-                            <Calendar className="h-4 w-4" />
-                            Reçue le {new Date(offre.date_envoi).toLocaleDateString('fr-FR')}
-                          </div>
-                          
-                          {offre.agent?.profile && (
-                            <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
-                                <span className="text-xs font-semibold text-primary">
-                                  {offre.agent.profile.prenom[0]}{offre.agent.profile.nom[0]}
-                                </span>
-                              </div>
-                              <span className="text-sm">
-                                Par <strong className="text-foreground">{offre.agent.profile.prenom}</strong>
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                          CHF <AnimatedValue value={offre.prix} />
-                        </p>
-                        <p className="text-sm text-muted-foreground">par mois</p>
-                      </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-2 mb-5">
-                      {[
-                        { icon: Home, label: 'Pièces', value: offre.pieces, color: 'from-blue-500/20 to-blue-500/5' },
-                        { icon: Square, label: 'Surface', value: `${offre.surface} m²`, color: 'from-emerald-500/20 to-emerald-500/5' },
-                        { icon: MapPin, label: 'Étage', value: offre.etage, color: 'from-amber-500/20 to-amber-500/5' }
-                      ].map((stat, i) => (
-                        <div 
-                          key={i}
-                          className={cn(
-                            "relative overflow-hidden p-2 sm:p-3 rounded-xl",
-                            "bg-gradient-to-br", stat.color,
-                            "border border-border/30",
-                            "transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
-                          )}
-                        >
-                          <div className="flex flex-col items-center text-center gap-1">
-                            <div className="p-2 rounded-lg bg-background/50 backdrop-blur-sm">
-                              <stat.icon className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">{stat.label}</p>
-                              <p className="text-sm font-semibold">{stat.value}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-sm mb-4 line-clamp-2 text-muted-foreground leading-relaxed">
-                      {offre.description}
-                    </p>
-
-                    {offre.disponibilite && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 p-2 rounded-lg bg-muted/30 w-fit">
-                        <Clock className="h-4 w-4 text-primary/70" />
-                        <span>Disponible dès le <strong>{offre.disponibilite}</strong></span>
-                      </div>
-                    )}
-
-                    {/* Intérêt client — question claire */}
-                    {['envoyee', 'vue', 'interesse', 'refusee', 'visite_planifiee'].includes(offre.statut) && (
-                      <OffreInteretPrompt
-                        offre={offre}
-                        visites={visites}
-                        onRespond={(statut) => updateStatut(offre.id, statut)}
-                      />
-                    )}
-
-
-
-                    {/* Chance Indicator */}
-                    {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 
-                      offre.statut === 'visite_effectuee' || offre.statut === 'candidature_deposee') && (
-                      <div className="mb-5 p-3 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/30">
-                        <ChanceIndicator
-                          {...calculateChances(
-                            offre,
-                            clientData,
-                            documentsStats[offre.id] || documentsStats['global'] || {
-                              fiche_salaire: 0,
-                              extrait_poursuites: 0,
-                              piece_identite: 0,
-                              permis_sejour: 0
-                            },
-                            visites
-                          )}
-                          compact
-                        />
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 flex-wrap pt-5 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="group/btn transition-all duration-300"
-                        onClick={() => handleViewDetails(offre)}
-                      >
-                        <Info className="mr-2 h-4 w-4 group-hover/btn:rotate-12 transition-transform" />
-                        Voir les détails
-                        <ArrowRight className="ml-1 h-3 w-3 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all" />
-                      </Button>
-                      
-                      {offre.lien_annonce && (
-                        <LinkPreviewCard url={offre.lien_annonce} />
-                      )}
-                      
-                      {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
-                        <>
-                          <div className="w-full mt-1 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-                            <h5 className="flex items-center gap-2 text-sm font-bold">
-                              <Calendar className="h-4 w-4 text-primary" />
-                              Organiser la visite
-                            </h5>
-                            <p className="mt-1 mb-3 text-sm text-muted-foreground">
-                              Choisissez qui se rend sur place : vous, ou votre agent à votre place.
-                            </p>
-                            <div className="flex flex-col gap-2 sm:flex-row">
-                              <Button
-                                size="sm"
-                                className="min-h-[44px] w-full sm:flex-1"
-                                onClick={() => handleVisiteParClient(offre)}
-                              >
-                                <Calendar className="mr-2 h-4 w-4" />
-                                Je visite moi-même
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="min-h-[44px] w-full border-primary/40 hover:border-primary/60 sm:flex-1"
-                                onClick={() => handleVisiteParAgent(offre)}
-                              >
-                                <User className="mr-2 h-4 w-4" />
-                                Je délègue à mon agent
-                              </Button>
-                            </div>
-                          </div>
-                          {false && (
-                            <>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="hover:bg-green-500/10 hover:border-green-500/50 hover:text-green-600 group/btn"
-                                onClick={() => updateStatut(offre.id, 'interesse')}
-                              >
-                                <Heart className="mr-2 h-4 w-4 group-hover/btn:scale-125 group-hover/btn:text-green-500 transition-all" />
-                                Intéressé
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive group/btn"
-                                onClick={() => updateStatut(offre.id, 'refusee')}
-                              >
-                                <X className="mr-2 h-4 w-4 group-hover/btn:rotate-90 transition-transform" />
-                                Refuser
-                              </Button>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {offre.statut === 'visite_planifiee' && (
-                        <Button 
-                          size="sm" 
-                          className="bg-emerald-600 hover:bg-emerald-700 group/btn"
-                          onClick={() => updateStatut(offre.id, 'visite_effectuee')}
-                        >
-                          <Check className="mr-2 h-4 w-4 group-hover/btn:scale-125 transition-transform" />
-                          Marquer visite effectuée
-                        </Button>
-                      )}
-                      {false && (
-                        <>
-                          <Button 
-                            size="sm"
-                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 group/btn"
-                            onClick={() => handlePostulerDirect(offre)}
-                          >
-                            <FileCheck className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-                            Déposer ma candidature
-                            <Sparkles className="ml-1 h-3 w-3 animate-pulse" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="hover:border-primary/50"
-                            onClick={() => updateStatut(offre.id, 'interesse')}
-                          >
-                            <Heart className="mr-2 h-4 w-4" />
-                            Intéressé
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive"
-                            onClick={() => updateStatut(offre.id, 'refusee')}
-                          >
-                            <X className="mr-2 h-4 w-4" />
-                            Refuser
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                    {(['visite_effectuee','candidature_deposee','souhaite_postuler'].includes(offre.statut) || visites.filter((v) => v.offre_id === offre.id).some(visiteIndicatesDone)) && (<VideoDecisionInlineButtons offre={offre} visites={visites} onDone={() => { loadOffres(); loadVisites(); }} />)}
-                  </div>
-                </Card>
-              );
-            })}
+          <div className="rounded-2xl border border-border/70 bg-card px-6 py-12 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Home className="h-7 w-7 text-primary" aria-hidden="true" />
+            </span>
+            <h2 className="mt-4 text-lg font-semibold text-foreground">Aucune offre pour le moment</h2>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Votre agent recherche les biens qui correspondent à vos critères. Vous serez notifié dès qu'une offre arrive.
+            </p>
           </div>
+        ) : (
+          <>
+            {/* Pastilles de filtre */}
+            <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filtrer les offres">
+              {filtres.map((f) => {
+                const active = filtre === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setFiltre(f.key)}
+                    className={cn(
+                      'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors duration-150',
+                      active
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-border bg-background text-foreground hover:border-foreground/60',
+                    )}
+                  >
+                    {f.label}
+                    <span className={cn('text-xs', active ? 'text-background/70' : 'text-muted-foreground')}>{f.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {offresFiltrees.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">
+                Aucune offre dans cette catégorie.
+              </p>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {offresFiltrees.map((offre) => {
+                  const liees = visites.filter((v) => v.offre_id === offre.id);
+                  const apresVisite =
+                    ['visite_effectuee', 'candidature_deposee', 'souhaite_postuler'].includes(offre.statut) ||
+                    liees.some(visiteIndicatesDone);
+                  const prochaine = liees
+                    .filter((v) => v.date_visite && new Date(v.date_visite).getTime() >= Date.now() && v.statut !== 'annulee')
+                    .sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime())[0];
+                  const details = [
+                    offre.pieces ? `${offre.pieces} pièces` : null,
+                    offre.surface ? `${offre.surface} m²` : null,
+                    offre.etage ? `Étage ${offre.etage}` : null,
+                  ].filter(Boolean).join(' · ');
+
+                  return (
+                    <article
+                      key={offre.id}
+                      className="flex flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]"
+                    >
+                      {/* Photo + statut : ouvre le détail */}
+                      <button
+                        type="button"
+                        onClick={() => handleViewDetails(offre)}
+                        className="group relative block text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label={`Voir le détail : ${offre.adresse || 'offre'}`}
+                      >
+                        <OffrePhoto offre={offre} />
+                        <span
+                          className={cn(
+                            'absolute left-3 top-3 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-none',
+                            A_REPONDRE.includes(offre.statut)
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-background text-foreground',
+                          )}
+                        >
+                          {STATUT_COURT[offre.statut] ?? 'Offre'}
+                        </span>
+                      </button>
+
+                      <div className="flex flex-1 flex-col p-4">
+                        {/* Infos essentielles */}
+                        <button type="button" onClick={() => handleViewDetails(offre)} className="text-left">
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
+                              {offre.adresse || offre.titre || 'Offre reçue'}
+                            </h3>
+                            {offre.prix ? (
+                              <p className="shrink-0 text-right text-[15px] text-foreground">
+                                <span className="font-semibold">CHF {Number(offre.prix).toLocaleString('fr-CH')}</span>
+                                <span className="block text-xs text-muted-foreground">par mois</span>
+                              </p>
+                            ) : null}
+                          </div>
+                          {details && <p className="mt-1 text-sm text-muted-foreground">{details}</p>}
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Reçue le {offre.date_envoi ? new Date(offre.date_envoi).toLocaleDateString('fr-CH') : '—'}
+                            {offre.agent?.profile?.prenom ? ` · par ${offre.agent.profile.prenom}` : ''}
+                          </p>
+                        </button>
+
+                        {/* Prochaine étape : une seule action claire par offre */}
+                        <div className="mt-4 flex-1 border-t border-border/70 pt-4" onClick={(e) => e.stopPropagation()}>
+                          {apresVisite ? (
+                            <>
+                              <p className="text-sm font-semibold text-foreground">Après la visite, voulez-vous postuler ?</p>
+                              <VideoDecisionInlineButtons offre={offre} visites={visites} onDone={() => { loadOffres(); loadVisites(); }} />
+                            </>
+                          ) : A_REPONDRE.includes(offre.statut) || offre.statut === 'interesse' ? (
+                            <>
+                              <p className="text-sm font-semibold text-foreground">
+                                {offre.statut === 'interesse' ? 'Organisez la visite' : 'Ce bien vous intéresse ?'}
+                              </p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {prochaine
+                                  ? `Visite proposée le ${new Date(prochaine.date_visite).toLocaleString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })}`
+                                  : 'Choisissez qui se rend sur place.'}
+                              </p>
+                              <div className="mt-3 grid gap-2">
+                                <Button className="h-11 w-full rounded-full" onClick={() => handleVisiteParClient(offre)}>
+                                  <Calendar className="mr-2 h-4 w-4" />
+                                  Je visite moi-même
+                                </Button>
+                                <Button variant="outline" className="h-11 w-full rounded-full" onClick={() => handleVisiteParAgent(offre)}>
+                                  <User className="mr-2 h-4 w-4" />
+                                  Mon agent visite pour moi
+                                </Button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => updateStatut(offre.id, 'refusee')}
+                                className="mt-2 w-full py-1.5 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                              >
+                                {offre.statut === 'interesse' ? 'Je ne suis plus intéressé' : 'Pas intéressé'}
+                              </button>
+                            </>
+                          ) : offre.statut === 'visite_planifiee' ? (
+                            <>
+                              <p className="text-sm font-semibold text-foreground">Visite planifiée</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {prochaine
+                                  ? new Date(prochaine.date_visite).toLocaleString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+                                  : 'La date apparaît dans votre agenda.'}
+                              </p>
+                              <Button
+                                variant="outline"
+                                className="mt-3 h-11 w-full rounded-full"
+                                onClick={() => updateStatut(offre.id, 'visite_effectuee')}
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                J'ai fait la visite
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => updateStatut(offre.id, 'refusee')}
+                                className="mt-2 w-full py-1.5 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                              >
+                                Je ne suis plus intéressé
+                              </button>
+                            </>
+                          ) : offre.statut === 'refusee' ? (
+                            <>
+                              <p className="text-sm text-muted-foreground">Vous avez refusé cette offre.</p>
+                              <button
+                                type="button"
+                                onClick={() => updateStatut(offre.id, 'interesse')}
+                                className="mt-1 text-sm font-medium text-foreground underline underline-offset-4"
+                              >
+                                Finalement, ce bien m'intéresse
+                              </button>
+                            </>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              {STATUT_SUITE[offre.statut] ?? 'Votre agent s’occupe de la suite.'}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Liens secondaires */}
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <Button variant="ghost" size="sm" className="h-9 rounded-full px-3" onClick={() => handleViewDetails(offre)}>
+                            <Info className="mr-1.5 h-4 w-4" />
+                            Détails
+                          </Button>
+                          {offre.lien_annonce && (
+                            <a
+                              href={/^https?:\/\//i.test(String(offre.lien_annonce).trim()) ? String(offre.lien_annonce).trim() : `https://${String(offre.lien_annonce).trim()}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex h-9 items-center rounded-full px-3 text-sm font-medium text-foreground hover:bg-muted"
+                            >
+                              <ExternalLink className="mr-1.5 h-4 w-4" />
+                              Voir l'annonce
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {/* Dialog des détails - Premium Component */}
