@@ -1,14 +1,20 @@
 // Relève d'une boîte partagée (table shared_mailboxes) vers mailbox_emails.
 // Incrémentale par UID : chaque passage lit au plus PER_RUN nouveaux e-mails, du plus ancien au plus récent ;
 // le retard (premier passage : 30 derniers jours) est rattrapé sur les passages suivants.
+// Robustesse : la position avance message par message (un e-mail illisible est sauté, jamais rejoué sans fin),
+// le temps de calcul et le temps réel sont bornés, et la tentative est datée même en cas d'échec.
 // deno-lint-ignore-file no-explicit-any
 import PostalMime from 'npm:postal-mime@2.4.4';
-import { imapDate, LeanImap, parseInternalDate, type FetchedMessage } from './lean-imap.ts';
+import { imapDate, LeanImap, parseInternalDate, withTimeout, type FetchedMessage } from './lean-imap.ts';
 
 export const PER_RUN = 15;
 export const MAX_MESSAGE_BYTES = 65536;
 export const MAX_BODY_CHARS = 20000;
 export const INITIAL_DAYS = 30;
+/** Temps de calcul maximal consacré au décodage par boîte et par passage (limite de la fonction : ~2 s). */
+export const PARSE_BUDGET_MS = 600;
+/** Temps réel maximal par boîte (connexion, recherche, lecture). */
+export const MAILBOX_TIMEOUT_MS = 30_000;
 
 export interface MailboxRow {
   id: string;
@@ -23,6 +29,7 @@ export interface SyncResult {
   mailbox: string;
   ok: boolean;
   stored: number;
+  skipped: number;
   pending: number;
   error?: string;
 }
@@ -30,23 +37,43 @@ export interface SyncResult {
 type Db = any;
 type Connect = (host: string, port: number) => Promise<LeanImap>;
 
-const clean = (s: string | null | undefined) => (s ?? '').split('\u0000').join('').trim();
+/** Retire les octets NUL (refusés par Postgres) et les espaces de bord. */
+export const clean = (s: string | null | undefined) => (s ?? '').split('\u0000').join('').trim();
 
+const ENTITIES: Record<string, string> = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'" };
+const BLOCK_TAGS = new Set(['br', 'p', 'div', 'li', 'tr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table']);
+
+/** HTML → texte en une seule passe (coût linéaire, même sur un HTML piégé). */
 export function htmlToText(html: string): string {
-  return html
-    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  let out = '';
+  let i = 0;
+  const n = html.length;
+  while (i < n) {
+    const lt = html.indexOf('<', i);
+    if (lt < 0) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, lt);
+    const gt = html.indexOf('>', lt + 1);
+    if (gt < 0) break; // balise non fermée : fin du texte utile
+    const tag = html.slice(lt + 1, Math.min(gt, lt + 12)).replace(/^\//, '').split(/[\s/>]/)[0].toLowerCase();
+    if ((tag === 'script' || tag === 'style') && html[lt + 1] !== '/') {
+      const close = html.toLowerCase().indexOf(`</${tag}`, gt + 1);
+      i = close < 0 ? n : html.indexOf('>', close) + 1 || n;
+      continue;
+    }
+    if (BLOCK_TAGS.has(tag)) out += '\n';
+    i = gt + 1;
+  }
+  out = out.replace(/&(nbsp|amp|lt|gt|quot|#39|apos);/gi, (_, e: string) => ENTITIES[e.toLowerCase()] ?? '');
+  const lines = out.split('\n').map((l) => l.replace(/[ \t]+/g, ' ').trim());
+  const compact: string[] = [];
+  for (const l of lines) {
+    if (l === '' && compact.length > 0 && compact[compact.length - 1] === '') continue;
+    compact.push(l);
+  }
+  return compact.join('\n').trim();
 }
 
 const joinAddresses = (list: any[] | undefined) =>
@@ -56,93 +83,128 @@ const joinAddresses = (list: any[] | undefined) =>
     .filter(Boolean)
     .join(', ');
 
-export async function toEmailRow(msg: FetchedMessage, mailbox: MailboxRow, uidValidity: number) {
+export async function toEmailRow(msg: FetchedMessage, mailbox: MailboxRow, uidValidity: number, now: Date) {
   const parsed: any = await PostalMime.parse(msg.raw);
-  const text = clean(parsed.text) || (parsed.html ? htmlToText(String(parsed.html)) : '');
-  const parsedDate = parsed.date ? new Date(parsed.date) : null;
-  const received = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate.toISOString() : parseInternalDate(msg.internalDate);
+  const text = clean(parsed.text) || clean(parsed.html ? htmlToText(String(parsed.html).slice(0, MAX_MESSAGE_BYTES)) : '');
+  // Date de réception par le serveur (l'en-tête Date est choisi par l'expéditeur), jamais dans le futur.
+  const server = parseInternalDate(msg.internalDate);
+  const header = parsed.date ? new Date(parsed.date) : null;
+  let received = server ?? (header && !isNaN(header.getTime()) ? header.toISOString() : now.toISOString());
+  if (new Date(received).getTime() > now.getTime()) received = now.toISOString();
   return {
     mailbox_id: mailbox.id,
     mailbox: mailbox.address,
     uid: msg.uid,
     uid_validity: uidValidity,
     message_key: clean(parsed.messageId).replace(/^<|>$/g, '').slice(0, 100) || null,
-    from_email: clean(parsed.from?.address).toLowerCase() || null,
+    from_email: clean(parsed.from?.address).toLowerCase().slice(0, 320) || null,
     from_name: clean(parsed.from?.name).slice(0, 200) || null,
     to_emails: joinAddresses(parsed.to).slice(0, 2000) || null,
     cc_emails: joinAddresses(parsed.cc).slice(0, 2000) || null,
     subject: clean(parsed.subject).slice(0, 500) || null,
     body_text: text.slice(0, MAX_BODY_CHARS) || null,
-    received_at: received ?? new Date().toISOString(),
+    received_at: received,
   };
 }
 
 export async function syncMailbox(opts: { db: Db; mailbox: MailboxRow; connect: Connect; now?: Date }): Promise<SyncResult> {
   const { db, mailbox, connect } = opts;
   const now = opts.now ?? new Date();
-  const fail = async (error: string): Promise<SyncResult> => {
-    await db.from('shared_mailboxes').update({ last_error: error.slice(0, 500), updated_at: now.toISOString() }).eq('id', mailbox.id);
-    return { mailbox: mailbox.address, ok: false, stored: 0, pending: 0, error };
+  const result: SyncResult = { mailbox: mailbox.address, ok: false, stored: 0, skipped: 0, pending: 0 };
+  // Tentative datée d'emblée : une boîte en échec passe en fin de file et ne bloque pas les autres.
+  await db.from('shared_mailboxes').update({ last_attempt_at: now.toISOString() }).eq('id', mailbox.id);
+
+  const fail = async (error: string, progress?: Record<string, unknown>): Promise<SyncResult> => {
+    await db.from('shared_mailboxes').update({ ...(progress || {}), last_error: error.slice(0, 500), updated_at: now.toISOString() }).eq('id', mailbox.id);
+    return { ...result, ok: false, error };
   };
 
   const { data: password, error: pwError } = await db.rpc('shared_mailbox_credentials', { p_id: mailbox.id });
-  if (pwError) return fail(`Mot de passe illisible : ${pwError.message}`);
+  if (pwError) return fail('Mot de passe illisible.');
   if (!password) return fail('Mot de passe manquant : à saisir dans « Boîtes e-mail lues par Steeve ».');
 
   let client: LeanImap | null = null;
+  let fetched: FetchedMessage[] = [];
+  let uids: number[] = [];
+  let uidValidity = 0;
+  let lastUid: number | null = null;
   try {
-    client = await connect(mailbox.imap_host, mailbox.imap_port);
-    try {
-      await client.login(mailbox.address, password);
-    } catch {
-      client.close();
-      return fail('Connexion refusée : adresse ou mot de passe incorrect.');
-    }
-    const info = await client.selectInbox();
-    const uidValidity = info.uidValidity ?? 0;
-    let lastUid = mailbox.uid_validity === uidValidity ? mailbox.last_uid : null;
-
-    let uids: number[];
-    if (lastUid === null) {
-      const since = new Date(now.getTime() - INITIAL_DAYS * 86400000);
-      uids = await client.uidSearch(`SINCE ${imapDate(since)}`);
-      if (uids.length === 0) lastUid = info.uidNext ? info.uidNext - 1 : 0;
-    } else {
-      // « n:* » renvoie au moins le dernier message même s'il est déjà lu : on ne garde que les nouveaux.
-      uids = (await client.uidSearch(`UID ${lastUid + 1}:*`)).filter((u) => u > (lastUid as number));
-    }
-
-    const batch = uids.slice(0, PER_RUN);
-    const fetched = await client.uidFetchRaw(batch, MAX_MESSAGE_BYTES);
-    await client.logout();
-    client = null;
-
-    const rows = [];
-    for (const msg of fetched) {
+    await withTimeout((async () => {
+      client = await connect(mailbox.imap_host, mailbox.imap_port);
       try {
-        rows.push(await toEmailRow(msg, mailbox, uidValidity));
+        await client.login(mailbox.address, password);
       } catch (err) {
-        console.error(`[sync-shared-mailboxes] ${mailbox.address} UID ${msg.uid} illisible :`, err);
+        // Refus du serveur (NO/BAD) : message clair, jamais le détail ; délai ou coupure : message d'origine.
+        if (err instanceof Error && err.message.startsWith('IMAP LOGIN')) {
+          throw new Error('Connexion refusée : adresse ou mot de passe incorrect.');
+        }
+        throw err;
       }
-    }
-    if (rows.length > 0) {
-      const { error } = await db.from('mailbox_emails').upsert(rows, { onConflict: 'mailbox_id,uid_validity,uid', ignoreDuplicates: true });
-      if (error) return fail(`Enregistrement impossible : ${error.message}`);
-    }
-
-    const newLastUid = batch.length > 0 ? batch[batch.length - 1] : lastUid;
-    const pending = Math.max(0, uids.length - batch.length);
-    await db.from('shared_mailboxes').update({
-      uid_validity: uidValidity,
-      last_uid: newLastUid,
-      pending_count: pending,
-      last_sync_at: now.toISOString(),
-      last_error: null,
-      updated_at: now.toISOString(),
-    }).eq('id', mailbox.id);
-    return { mailbox: mailbox.address, ok: true, stored: rows.length, pending };
+      const info = await client.selectInbox();
+      uidValidity = info.uidValidity ?? 0;
+      lastUid = mailbox.uid_validity === uidValidity ? mailbox.last_uid : null;
+      if (lastUid === null) {
+        const since = new Date(now.getTime() - INITIAL_DAYS * 86400000);
+        uids = await client.uidSearch(`SINCE ${imapDate(since)}`);
+        if (uids.length === 0) {
+          lastUid = info.uidNext ? info.uidNext - 1 : ((await client.uidSearch('UID *'))[0] ?? 0);
+        } else {
+          lastUid = uids[0] - 1;
+        }
+      } else {
+        // « n:* » renvoie au moins le dernier message même s'il est déjà lu : on ne garde que les nouveaux.
+        const from = lastUid;
+        uids = (await client.uidSearch(`UID ${from + 1}:*`)).filter((u) => u > from);
+      }
+      fetched = await client.uidFetchRaw(uids.slice(0, PER_RUN), MAX_MESSAGE_BYTES);
+      await client.logout();
+      client = null;
+    })(), MAILBOX_TIMEOUT_MS, 'Relève', () => (client as LeanImap | null)?.close());
   } catch (err) {
-    client?.close();
+    (client as LeanImap | null)?.close();
     return fail(err instanceof Error ? err.message : String(err));
   }
+
+  // Décodage et enregistrement message par message, dans l'ordre des UID.
+  const byUid = new Map(fetched.map((m) => [m.uid, m]));
+  let parseMs = 0;
+  let position = lastUid ?? 0;
+  for (const uid of uids.slice(0, PER_RUN)) {
+    if (parseMs > PARSE_BUDGET_MS) break; // la suite au passage suivant
+    const msg = byUid.get(uid);
+    if (msg) {
+      const t0 = performance.now();
+      let row = null;
+      try {
+        row = await toEmailRow(msg, mailbox, uidValidity, now);
+      } catch (err) {
+        console.error(`[sync-shared-mailboxes] ${mailbox.address} UID ${uid} illisible :`, err);
+      }
+      parseMs += performance.now() - t0;
+      if (row) {
+        const { error } = await db.from('mailbox_emails').upsert([row], { onConflict: 'mailbox_id,uid_validity,uid', ignoreDuplicates: true });
+        if (error) {
+          console.error(`[sync-shared-mailboxes] ${mailbox.address} UID ${uid} non enregistré :`, error.message);
+          result.skipped += 1;
+        } else {
+          result.stored += 1;
+        }
+      } else {
+        result.skipped += 1;
+      }
+    }
+    // Message absent (supprimé entre-temps), illisible ou enregistré : la position avance.
+    position = uid;
+  }
+
+  result.pending = uids.filter((u) => u > position).length;
+  await db.from('shared_mailboxes').update({
+    uid_validity: uidValidity,
+    last_uid: position,
+    pending_count: result.pending,
+    last_sync_at: now.toISOString(),
+    last_error: result.skipped > 0 ? `${result.skipped} e-mail(s) illisible(s) ignoré(s) au dernier passage.` : null,
+    updated_at: now.toISOString(),
+  }).eq('id', mailbox.id);
+  return { ...result, ok: true };
 }

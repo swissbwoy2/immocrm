@@ -83,11 +83,26 @@ async function loadTranscript(db: Db, conversationId: string) {
 }
 
 /**
+ * Filtre de sortie : aucun lien hors des sites de l'agence et aucune coordonnée bancaire ne sont publiés
+ * (protection contre une consigne glissée dans un e-mail ou un document).
+ */
+export function stripUntrusted(text: string): string {
+  return text
+    .replace(/\b(?:https?:\/\/|www\.)[^\s<>"]+/gi, (match) => {
+      const url = match.replace(/[.,;:!?)\]]+$/, '');
+      const tail = match.slice(url.length);
+      const host = url.replace(/^https?:\/\//i, '');
+      return (/^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i.test(host) ? url : '[lien retiré]') + tail;
+    })
+    .replace(/\b[A-Z]{2}[0-9]{2}(?:[ -]?[0-9A-Z]){11,30}\b/g, '[coordonnées bancaires retirées]');
+}
+
+/**
  * Texte brut pour la messagerie : la bulle n'affiche pas le Markdown, et un message commençant par
  * un emoji suivi de « ** » serait classé automatique et masqué (message_est_automatique).
  */
 export function toPlainReply(text: string): string {
-  return text
+  return stripUntrusted(text)
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')

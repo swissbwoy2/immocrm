@@ -16082,10 +16082,10 @@ export type Database = {
           imap_port: number
           is_active: boolean
           label: string | null
+          last_attempt_at: string | null
           last_error: string | null
           last_sync_at: string | null
           pending_count: number | null
-          uses_inbox_config: boolean
         }[]
       }
       admin_save_shared_mailbox: {

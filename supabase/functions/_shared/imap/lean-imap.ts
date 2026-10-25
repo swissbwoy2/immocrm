@@ -30,10 +30,27 @@ const CRLF = [13, 10];
 const latin1 = new TextDecoder('latin1');
 const encoder = new TextEncoder();
 
-/** Chaîne IMAP entre guillemets (barres obliques inverses et guillemets échappés). */
+/** Chaîne IMAP entre guillemets (barres obliques inverses et guillemets échappés). Refuse CR, LF et NUL. */
 export function imapQuote(value: string): string {
+  if (/[\r\n\0]/.test(value)) throw new Error('Caractère interdit dans une valeur IMAP');
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
+
+/** Promesse limitée dans le temps (un serveur muet ne bloque pas la relève). */
+export function withTimeout<T>(promise: Promise<T>, ms: number, label: string, onTimeout?: () => void): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => {
+        onTimeout?.();
+        reject(new Error(`${label} : délai dépassé`));
+      }, ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+const READ_TIMEOUT_MS = 20_000;
 
 /** Date au format de recherche IMAP (« 25-Sep-2026 »). */
 export function imapDate(d: Date): string {
@@ -42,14 +59,18 @@ export function imapDate(d: Date): string {
 }
 
 export class LeanImap {
-  private buffer = new Uint8Array(0);
+  // Tampon de lecture : données utiles entre start et end ; compactage et agrandissement au besoin,
+  // sans recopier tout le tampon à chaque ligne lue.
+  private store = new Uint8Array(65536);
+  private start = 0;
+  private end = 0;
   private tagCounter = 0;
   private readonly chunk = new Uint8Array(65536);
 
   constructor(private readonly transport: ImapTransport, private readonly maxResponseBytes = 8 * 1024 * 1024) {}
 
   static async connect(host: string, port: number): Promise<LeanImap> {
-    const conn = await Deno.connectTls({ hostname: host, port });
+    const conn = await withTimeout(Deno.connectTls({ hostname: host, port }), READ_TIMEOUT_MS, 'Connexion IMAP');
     const client = new LeanImap(conn);
     const greeting = await client.readLine();
     if (!greeting.startsWith('* OK') && !greeting.startsWith('* PREAUTH')) {
@@ -74,19 +95,34 @@ export class LeanImap {
     }
   }
 
+  private get available() {
+    return this.end - this.start;
+  }
+
   private async fill(): Promise<boolean> {
-    const n = await this.transport.read(this.chunk);
+    const n = await withTimeout(this.transport.read(this.chunk), READ_TIMEOUT_MS, 'Lecture IMAP', () => this.close());
     if (n === null || n === 0) return false;
-    const merged = new Uint8Array(this.buffer.length + n);
-    merged.set(this.buffer);
-    merged.set(this.chunk.subarray(0, n), this.buffer.length);
-    this.buffer = merged;
+    const live = this.available;
+    if (this.store.length - this.end < n) {
+      if (this.store.length - live >= n) {
+        this.store.copyWithin(0, this.start, this.end);
+      } else {
+        const bigger = new Uint8Array(Math.max(this.store.length * 2, live + n));
+        bigger.set(this.store.subarray(this.start, this.end));
+        this.store = bigger;
+      }
+      this.start = 0;
+      this.end = live;
+    }
+    this.store.set(this.chunk.subarray(0, n), this.end);
+    this.end += n;
     return true;
   }
 
+  /** Position (relative à start) du prochain CRLF à partir de « from », ou -1. */
   private indexOfCrlf(from: number): number {
-    for (let i = from; i < this.buffer.length - 1; i++) {
-      if (this.buffer[i] === CRLF[0] && this.buffer[i + 1] === CRLF[1]) return i;
+    for (let i = this.start + from; i < this.end - 1; i++) {
+      if (this.store[i] === CRLF[0] && this.store[i + 1] === CRLF[1]) return i - this.start;
     }
     return -1;
   }
@@ -96,23 +132,23 @@ export class LeanImap {
     for (;;) {
       const idx = this.indexOfCrlf(searchFrom);
       if (idx >= 0) {
-        const line = latin1.decode(this.buffer.subarray(0, idx));
-        this.buffer = this.buffer.slice(idx + 2);
+        const line = latin1.decode(this.store.subarray(this.start, this.start + idx));
+        this.start += idx + 2;
         return line;
       }
-      searchFrom = Math.max(0, this.buffer.length - 1);
-      if (this.buffer.length > this.maxResponseBytes) throw new Error('Réponse IMAP trop longue');
+      searchFrom = Math.max(0, this.available - 1);
+      if (this.available > this.maxResponseBytes) throw new Error('Réponse IMAP trop longue');
       if (!(await this.fill())) throw new Error('Connexion IMAP fermée');
     }
   }
 
   async readExact(n: number): Promise<Uint8Array> {
     if (n > this.maxResponseBytes) throw new Error('Littéral IMAP trop long');
-    while (this.buffer.length < n) {
+    while (this.available < n) {
       if (!(await this.fill())) throw new Error('Connexion IMAP fermée');
     }
-    const out = this.buffer.slice(0, n);
-    this.buffer = this.buffer.slice(n);
+    const out = this.store.slice(this.start, this.start + n);
+    this.start += n;
     return out;
   }
 

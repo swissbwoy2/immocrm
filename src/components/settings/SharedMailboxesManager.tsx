@@ -35,8 +35,8 @@ type Mailbox = {
   imap_port: number;
   is_active: boolean;
   has_password: boolean;
-  uses_inbox_config: boolean;
   last_sync_at: string | null;
+  last_attempt_at: string | null;
   last_error: string | null;
   pending_count: number | null;
   emails_count: number;
@@ -129,7 +129,9 @@ export function SharedMailboxesManager() {
     });
     setSaving(false);
     if (error) {
-      toast.error(error.message.includes('duplicate') ? 'Cette adresse existe déjà' : "L'enregistrement a échoué");
+      const known = ['Nouveau mot de passe requis', 'Serveur IMAP invalide', 'Mot de passe invalide'];
+      const message = known.find((k) => error.message.includes(k));
+      toast.error(error.message.includes('duplicate') ? 'Cette adresse existe déjà' : message ? error.message : "L'enregistrement a échoué");
       return;
     }
     toast.success('Boîte enregistrée');
@@ -146,11 +148,7 @@ export function SharedMailboxesManager() {
     void load();
   };
 
-  const passwordState = (m: Mailbox) => {
-    if (m.has_password) return 'Mot de passe enregistré';
-    if (m.uses_inbox_config) return 'Utilise la boîte de réception déjà configurée';
-    return 'Mot de passe manquant';
-  };
+  const passwordState = (m: Mailbox) => (m.has_password ? 'Mot de passe enregistré' : 'Mot de passe manquant');
 
   return (
     <Card>
@@ -181,7 +179,7 @@ export function SharedMailboxesManager() {
                     {m.label && <span className="text-sm text-muted-foreground">· {m.label}</span>}
                     <Badge variant={m.is_active ? 'default' : 'secondary'}>{m.is_active ? 'Active' : 'Inactive'}</Badge>
                   </div>
-                  <p className={`text-xs ${!m.has_password && !m.uses_inbox_config ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  <p className={`text-xs ${!m.has_password ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {passwordState(m)}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -212,7 +210,8 @@ export function SharedMailboxesManager() {
           <DialogHeader>
             <DialogTitle>{form?.id ? 'Modifier la boîte' : 'Ajouter une boîte'}</DialogTitle>
             <DialogDescription>
-              Le mot de passe est rangé dans le coffre du serveur et n'est jamais réaffiché.
+              Le mot de passe est rangé dans le coffre du serveur et n'est jamais réaffiché. Un changement d'adresse,
+              de serveur ou de port demande de saisir à nouveau le mot de passe.
             </DialogDescription>
           </DialogHeader>
           {form && (
