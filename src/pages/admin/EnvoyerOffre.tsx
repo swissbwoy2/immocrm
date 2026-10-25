@@ -586,10 +586,11 @@ const AdminEnvoyerOffre = () => {
               </div>
 
               <div>
-                <Label>Commentaires</Label>
+                <Label>Note de suivi (visible par le client)</Label>
                 <Textarea 
                   value={formData.commentaires} 
                   onChange={(e) => setFormData({ ...formData, commentaires: e.target.value })} 
+                  placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente."
                   rows={3}
                 />
               </div>
