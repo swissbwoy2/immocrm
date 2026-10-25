@@ -101,7 +101,7 @@ export function AchatDocumentsChecklist({ documents, onUpload, className, compac
               {rows.length - done > 1 ? 's' : ''} pour finaliser votre dossier
             </p>
             {onUpload && (
-              <Button size="sm" className="bg-gradient-to-r from-primary to-primary/80" onClick={onUpload}>
+              <Button size="sm" className="" onClick={onUpload}>
                 Compléter
               </Button>
             )}

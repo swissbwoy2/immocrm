@@ -239,7 +239,7 @@ export function PremiumCandidaturesTraitementSection({
 
         {/* Action button */}
         <Button 
-          className="w-full mt-4 relative overflow-hidden group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300"
+          className="w-full mt-4 relative overflow-hidden group"
           size="lg"
           onClick={() => navigate('/agent/candidatures')}
         >

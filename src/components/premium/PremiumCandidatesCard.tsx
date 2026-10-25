@@ -302,7 +302,7 @@ export function PremiumCandidatesCard({
 
           {/* Récapitulatif budget */}
           {candidates.length > 0 && (
-            <div className="rounded-xl border border-border/70 p-3 sm:p-4">
+            <div className="imr-lg-glass rounded-2xl p-3 sm:p-4">
               <div className="mb-3 flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <DollarSign className="h-4 w-4" />

@@ -77,7 +77,7 @@ export function VendeurFloatingNav() {
               <Button 
                 asChild 
                 size="sm"
-                className="shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90"
+                className=""
               >
                 <Link to="/login">
                   <LogIn className="h-4 w-4 sm:mr-2" />

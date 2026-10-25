@@ -1116,7 +1116,7 @@ export default function ClientDetail() {
           <p className="text-muted-foreground max-w-md">Ce client n'existe pas ou a été supprimé</p>
           <Button 
             onClick={() => navigate('/admin/clients')} 
-            className="mt-4 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+            className="mt-4 group"
           >
             <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Retour aux clients
@@ -1830,7 +1830,7 @@ export default function ClientDetail() {
               <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogTrigger asChild>
                   <Button 
-                    className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all duration-300" 
+                    className="w-full sm:w-auto group" 
                     onClick={handleEditClick}
                   >
                     <Edit className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
@@ -3059,7 +3059,7 @@ export default function ClientDetail() {
               <div className="flex justify-end mb-2">
                 <Button 
                   onClick={() => navigate(`/admin/envoyer-offre?clientId=${client.id}`)}
-                  className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  className="group"
                 >
                   <Send className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                   Envoyer une offre
@@ -3523,7 +3523,7 @@ export default function ClientDetail() {
                   )}
                   <Button 
                     onClick={() => setUploadDialogOpen(true)}
-                    className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+                    className="group"
                   >
                     <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                     Ajouter un document

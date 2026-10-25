@@ -52,7 +52,7 @@ function VisiteBubble({ visite, onClick }: { visite: VisiteRow; onClick: () => v
     <div className="flex shrink-0 flex-col items-center gap-1.5 w-[84px]">
       <button type="button" onClick={onClick} className="rounded-full">
         <span className="block rounded-full p-[2.5px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105">
-          <span className="block rounded-full p-[2px] bg-background">
+          <span className="block rounded-full p-[2px] bg-white/90 dark:bg-background">
             <span className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-full bg-muted">
               {img ? (
                 <img src={img} alt={adresse} loading="lazy" className="h-full w-full object-cover" />
@@ -143,7 +143,7 @@ function VisiteDetail({ visite }: { visite: VisiteRow }) {
       )}
 
       {visite.notes && (
-        <p className="flex items-start gap-2 rounded-xl border border-border/70 bg-muted/40 p-3 text-sm">
+        <p className="imr-lg-glass flex items-start gap-2 rounded-2xl p-3 text-sm">
           <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span className="whitespace-pre-wrap">{visite.notes}</span>
         </p>
@@ -188,7 +188,7 @@ export function MesVisitesAVenirBand({ visites }: Props) {
   if (upcoming.length === 0) return null;
 
   return (
-    <section className="mb-6 rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm">
+    <section className="imr-lg-card mb-6 rounded-[22px] p-4">
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
         Visites à venir
       </h2>

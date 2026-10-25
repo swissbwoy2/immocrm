@@ -280,7 +280,7 @@ export default function ApporteurDashboard() {
             <CardTitle className="group-hover:translate-x-1 transition-transform duration-300">Actions rapides</CardTitle>
           </CardHeader>
           <CardContent className="relative space-y-2">
-            <Button className="w-full justify-start bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-primary/20" asChild>
+            <Button className="w-full justify-start" asChild>
               <a href="/apporteur/soumettre-client">
                 <Users className="mr-2 h-4 w-4" />
                 Soumettre un nouveau client
