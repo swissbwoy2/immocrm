@@ -33,6 +33,7 @@ import {
   etapeFacture, prochaineActionFacture, RETARD_FACTURE_JOURS, type EtapeFacture, type PeriodeKey,
 } from '@/components/admin/finances/financeModel';
 import { cn } from '@/lib/utils';
+import { nombreSuisse } from '@/lib/montantSuisse';
 
 type VueFactures = EtapeFacture | 'toutes' | 'stats';
 type TriFactures = 'urgence' | 'recent' | 'oldest' | 'montant';
@@ -465,7 +466,7 @@ export default function FacturesAbaNinja() {
                   <BarChart data={monthlyStats}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="mois" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value).toLocaleString('de-CH')}`} />
+                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(value) => nombreSuisse(Number(value))} />
                     <ChartTooltip
                       content={<ChartTooltipContent />}
                       formatter={(value: number) => [chf(value), 'Montant']}

@@ -1,3 +1,4 @@
+import { chfSuisse } from './montantSuisse';
 /**
  * Swiss Payroll Calculation Engine
  * Handles AVS/AI/APG, AC, AANP, IJM, LPP, LPCFam, source tax, employer charges
@@ -177,11 +178,7 @@ export function isSubjectToSourceTax(typePermis: string | null | undefined): boo
 }
 
 export function formatCHF(amount: number): string {
-  return new Intl.NumberFormat('fr-CH', {
-    style: 'currency',
-    currency: 'CHF',
-    minimumFractionDigits: 2,
-  }).format(amount);
+  return chfSuisse(amount, 2);
 }
 
 export const MOIS_LABELS = [
