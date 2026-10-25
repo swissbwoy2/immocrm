@@ -27,7 +27,7 @@ import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSect
 import { ChargesAgenceDialog } from '@/components/admin/dashboard/ChargesAgenceDialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  ACTIVATION_PAYEE, PERIODS, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
+  ACTIVATION_PAYEE, PERIODS, isTestAccount, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
   type ChargeRow, type DetailKey, type FinanceInput, type PeriodKey,
 } from '@/lib/adminFinance';
 
@@ -299,7 +299,9 @@ export default function AdminDashboard() {
   const todo = useMemo(() => {
     const refundsPending = clients.filter((c) => c.refund_status === 'pending');
     const cancellations = clients.filter((c) => c.cancellation_requested_at && c.statut === 'actif' && c.refund_status !== 'processed');
-    const activationsAttente = demandes.filter((d) => ['en_attente', 'facture_envoyee'].includes(d.statut));
+    // Mandats signés en attente de paiement depuis 45 jours au plus (les plus anciens sont des demandes abandonnées).
+    const ago45 = new Date(now.getTime() - 45 * 86400000);
+    const activationsAttente = demandes.filter((d) => ['en_attente', 'facture_envoyee'].includes(d.statut) && new Date(d.created_at) >= ago45 && !isTestAccount(d.prenom, d.nom, d.email));
     const visitesSansRetour = visites.filter((v) => {
       const d = v.date_visite ? new Date(v.date_visite) : null;
       return v.statut === 'effectuee' && !v.client_decision && d && d >= ago30;
@@ -388,7 +390,7 @@ export default function AdminDashboard() {
     },
     {
       key: 'activations', show: todo.activationsAttente.length > 0,
-      node: <TodoCard icon={Banknote} tone="primary" title={`${todo.activationsAttente.length} activation${todo.activationsAttente.length > 1 ? 's' : ''} à encaisser`} description="Mandats signés en attente de paiement (facture envoyée ou à envoyer)." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/demandes-activation')}>Ouvrir</Button>} />,
+      node: <TodoCard icon={Banknote} tone="primary" title={`${todo.activationsAttente.length} activation${todo.activationsAttente.length > 1 ? 's' : ''} à encaisser`} description="Mandats signés ces 45 derniers jours, en attente de paiement (facture envoyée ou à envoyer)." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/demandes-activation')}>Ouvrir</Button>} />,
     },
     {
       key: 'postuler', show: todo.aPostuler > 0,
