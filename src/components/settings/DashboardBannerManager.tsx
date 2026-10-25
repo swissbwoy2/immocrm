@@ -158,10 +158,10 @@ export function DashboardBannerManager() {
   };
 
   return (
-    <Card className="border-primary/20">
+    <Card className="rounded-2xl border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ImageIcon className="w-5 h-5 text-primary" />
+        <CardTitle className="flex items-center gap-3 text-base font-semibold">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><ImageIcon className="h-[18px] w-[18px]" /></span>
           Bannière dashboard client
         </CardTitle>
         <CardDescription>
@@ -173,7 +173,7 @@ export function DashboardBannerManager() {
           <div className="h-32 rounded-xl bg-muted animate-pulse" />
         ) : (
           <>
-            <div className="flex items-center justify-between rounded-xl border p-4">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
               <div>
                 <Label className="text-sm font-medium">Bannière active</Label>
                 <p className="text-xs text-muted-foreground">
@@ -193,12 +193,12 @@ export function DashboardBannerManager() {
                   className="hidden"
                   onChange={handleUpload}
                 />
-                <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <Button variant="outline" className="rounded-full" onClick={() => fileRef.current?.click()} disabled={uploading}>
                   {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
                   {imageUrl ? "Changer l'image" : 'Téléverser une image'}
                 </Button>
                 {imageUrl && (
-                  <Button variant="ghost" onClick={() => setImageUrl('')}>
+                  <Button variant="ghost" className="rounded-full" onClick={() => setImageUrl('')}>
                     Retirer l'image
                   </Button>
                 )}
@@ -210,7 +210,7 @@ export function DashboardBannerManager() {
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border p-4">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
               <div>
                 <Label className="text-sm font-medium">Afficher un texte par-dessus l'image</Label>
                 <p className="text-xs text-muted-foreground">
@@ -295,12 +295,12 @@ export function DashboardBannerManager() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleSave} disabled={saving}>
+              <Button className="rounded-full" onClick={handleSave} disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 Enregistrer
               </Button>
               {id && (
-                <Button variant="outline" onClick={handleDelete} disabled={saving}>
+                <Button variant="outline" className="rounded-full" onClick={handleDelete} disabled={saving}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Supprimer
                 </Button>
