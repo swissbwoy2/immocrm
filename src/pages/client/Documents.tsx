@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  FileText, Upload, Download, Trash2, File,
+import { 
+  FileText, Upload, Download, Trash2, File, 
   Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList,
+  Sparkles, FolderOpen
 } from 'lucide-react';
-import {
-  DASH_CARD, DashPage, DashPageHeader, DashSection, DashFilterPills, DashEmptyState, DashBadge,
-} from '@/components/client/dashboard/DashPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -87,8 +87,6 @@ export default function Documents() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
-  // Filtre d'affichage par catégorie (purement visuel, aucune donnée modifiée)
-  const [docFamilyFilter, setDocFamilyFilter] = useState<string>('all');
 
   useEffect(() => {
     loadDocuments();
@@ -521,76 +519,111 @@ export default function Documents() {
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       // Location
-      'fiche_salaire': 'Fiche salaire',
-      'extrait_poursuites': 'Extrait poursuites',
-      'attestation_domicile': 'Attestation domicile',
-      'rc_menage': 'RC Ménage',
-      'copie_bail': 'Copie bail',
-      'attestation_garantie_loyer': 'Garantie loyer',
+      'fiche_salaire': '💰 Fiche salaire',
+      'extrait_poursuites': '📋 Extrait poursuites',
+      'attestation_domicile': '🏠 Attestation domicile',
+      'rc_menage': '🛡️ RC Ménage',
+      'copie_bail': '📋 Copie bail',
+      'attestation_garantie_loyer': '🔐 Garantie loyer',
       // Commun
-      'piece_identite': 'Pièce d\'identité',
-      'permis_sejour': 'Permis de séjour',
-      'contrat_travail': 'Contrat travail',
-      'attestation_employeur': 'Attestation employeur',
-      'dossier_complet': 'Dossier complet',
+      'piece_identite': '🪪 Pièce d\'identité',
+      'permis_sejour': '🪪 Permis de séjour',
+      'contrat_travail': '📝 Contrat travail',
+      'attestation_employeur': '👔 Attestation employeur',
+      'dossier_complet': '📎 Dossier complet',
       // Achat — revenus
-      'certificat_salaire': 'Certificat de salaire',
-      'fiche_salaire_1': 'Fiche salaire 1',
-      'fiche_salaire_2': 'Fiche salaire 2',
-      'fiche_salaire_3': 'Fiche salaire 3',
+      'certificat_salaire': '💰 Certificat de salaire',
+      'fiche_salaire_1': '💰 Fiche salaire 1',
+      'fiche_salaire_2': '💰 Fiche salaire 2',
+      'fiche_salaire_3': '💰 Fiche salaire 3',
       // Achat — fonds propres
-      'releve_bancaire_fonds_propres': 'Relevé bancaire FP',
-      'attestation_3a': 'Attestation 3a',
-      'attestation_lpp': 'Attestation LPP',
-      'attestation_epl': 'Attestation EPL',
-      'attestation_libre_passage': 'Libre passage',
-      'justificatif_placements': 'Justificatif placements',
-      'justificatif_donation': 'Justificatif donation',
-      'justificatif_avance_hoirie': 'Avance d\'hoirie',
+      'releve_bancaire_fonds_propres': '🏦 Relevé bancaire FP',
+      'attestation_3a': '🏦 Attestation 3a',
+      'attestation_lpp': '🏦 Attestation LPP',
+      'attestation_epl': '🏦 Attestation EPL',
+      'attestation_libre_passage': '🏦 Libre passage',
+      'justificatif_placements': '📊 Justificatif placements',
+      'justificatif_donation': '🎁 Justificatif donation',
+      'justificatif_avance_hoirie': '🎁 Avance d\'hoirie',
       // Achat — charges
-      'justificatif_credit_prive': 'Crédit privé',
-      'justificatif_leasing': 'Leasing',
-      'justificatif_carte_credit': 'Carte de crédit',
-      'justificatif_pension_alimentaire': 'Pension alimentaire',
-      'justificatif_charges_fixes': 'Charges fixes',
+      'justificatif_credit_prive': '💳 Crédit privé',
+      'justificatif_leasing': '🚗 Leasing',
+      'justificatif_carte_credit': '💳 Carte de crédit',
+      'justificatif_pension_alimentaire': '👶 Pension alimentaire',
+      'justificatif_charges_fixes': '📊 Charges fixes',
       // Achat — fiscalité
-      'decision_taxation': 'Décision de taxation',
-      'declaration_fiscale': 'Déclaration fiscale',
+      'decision_taxation': '📋 Décision de taxation',
+      'declaration_fiscale': '📋 Déclaration fiscale',
       // Achat — autorisations
-      'accord_transmission': 'Accord transmission',
-      'consentement_donnees': 'Consentement données',
+      'accord_transmission': '✅ Accord transmission',
+      'consentement_donnees': '✅ Consentement données',
       // Autre
-      'autre': 'Autre',
+      'autre': '📄 Autre',
     };
-    return labels[type] || (type || 'Autre').replace(/_/g, ' ');
+    return labels[type] || '📄 ' + (type || 'Autre').replace(/_/g, ' ');
   };
 
-  // Familles d'affichage (mêmes regroupements que les anciennes couleurs de badge)
-  const DOC_FAMILY: Record<string, string> = {
-    piece_identite: 'identite', permis_sejour: 'identite',
-    fiche_salaire: 'revenus', fiche_salaire_1: 'revenus', fiche_salaire_2: 'revenus', fiche_salaire_3: 'revenus',
-    certificat_salaire: 'revenus', contrat_travail: 'revenus', attestation_employeur: 'revenus',
-    releve_bancaire_fonds_propres: 'fonds_propres', attestation_3a: 'fonds_propres', attestation_lpp: 'fonds_propres',
-    attestation_epl: 'fonds_propres', attestation_libre_passage: 'fonds_propres', justificatif_placements: 'fonds_propres',
-    justificatif_donation: 'fonds_propres', justificatif_avance_hoirie: 'fonds_propres',
-    extrait_poursuites: 'charges', justificatif_credit_prive: 'charges', justificatif_leasing: 'charges',
-    justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges', justificatif_charges_fixes: 'charges',
-    decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
-    accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
-    attestation_domicile: 'logement', rc_menage: 'logement', copie_bail: 'logement',
-    attestation_garantie_loyer: 'logement', dossier_complet: 'logement',
+  const getTypeBadgeStyle = (type: string) => {
+    // Famille identité (bleu)
+    const identite = 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700';
+    // Famille revenus (vert émeraude)
+    const revenus = 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700';
+    // Famille fonds propres (ciel)
+    const fondsPropres = 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-700';
+    // Famille charges (orange)
+    const charges = 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700';
+    // Famille fiscalité (violet)
+    const fiscalite = 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700';
+    // Famille autorisation (indigo)
+    const autorisation = 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700';
+    // Famille location-spécifique
+    const locationStyle = 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700';
+    const autre = 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600';
+
+    const styles: Record<string, string> = {
+      // Identité
+      'piece_identite': identite,
+      'permis_sejour': identite,
+      // Revenus
+      'fiche_salaire': revenus,
+      'fiche_salaire_1': revenus,
+      'fiche_salaire_2': revenus,
+      'fiche_salaire_3': revenus,
+      'certificat_salaire': revenus,
+      'contrat_travail': revenus,
+      'attestation_employeur': revenus,
+      // Fonds propres
+      'releve_bancaire_fonds_propres': fondsPropres,
+      'attestation_3a': fondsPropres,
+      'attestation_lpp': fondsPropres,
+      'attestation_epl': fondsPropres,
+      'attestation_libre_passage': fondsPropres,
+      'justificatif_placements': fondsPropres,
+      'justificatif_donation': fondsPropres,
+      'justificatif_avance_hoirie': fondsPropres,
+      // Charges
+      'extrait_poursuites': charges,
+      'justificatif_credit_prive': charges,
+      'justificatif_leasing': charges,
+      'justificatif_carte_credit': charges,
+      'justificatif_pension_alimentaire': charges,
+      'justificatif_charges_fixes': charges,
+      // Fiscalité
+      'decision_taxation': fiscalite,
+      'declaration_fiscale': fiscalite,
+      // Autorisations
+      'accord_transmission': autorisation,
+      'consentement_donnees': autorisation,
+      // Location-spécifique
+      'attestation_domicile': locationStyle,
+      'rc_menage': 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-950/50 dark:text-pink-300 dark:border-pink-700',
+      'copie_bail': locationStyle,
+      'attestation_garantie_loyer': 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-700',
+      'dossier_complet': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700',
+      'autre': autre,
+    };
+    return styles[type] || autre;
   };
-  const FAMILY_LABELS: { key: string; label: string }[] = [
-    { key: 'identite', label: 'Identité' },
-    { key: 'revenus', label: 'Revenus' },
-    { key: 'fonds_propres', label: 'Fonds propres' },
-    { key: 'charges', label: 'Charges et poursuites' },
-    { key: 'fiscalite', label: 'Fiscalité' },
-    { key: 'autorisation', label: 'Autorisations' },
-    { key: 'logement', label: 'Logement' },
-    { key: 'autre', label: 'Autres' },
-  ];
-  const getDocFamily = (type: string) => DOC_FAMILY[type] || 'autre';
 
   const getFileIcon = (type: string) => {
     if (type.includes('pdf')) return FileText;
@@ -609,279 +642,255 @@ export default function Documents() {
 
   if (loading) {
     return (
-      <DashPage>
-        <div role="status" aria-label="Chargement des documents">
-          <div className="h-8 w-48 rounded-full bg-muted/60" />
-          <div className="mt-2 h-4 w-64 rounded-full bg-muted/40" />
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="h-36 rounded-2xl bg-muted/40" />
-            <div className="h-36 rounded-2xl bg-muted/40" />
-            <div className="hidden h-36 rounded-2xl bg-muted/40 xl:block" />
-          </div>
-        </div>
-      </DashPage>
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement des documents">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 rounded bg-muted/40" />
+      </div>
     );
   }
 
-  const familyOptions = [
-    { key: 'all', label: 'Tous', count: documents.length },
-    ...FAMILY_LABELS
-      .map((f) => ({ ...f, count: documents.filter((d) => getDocFamily(d.type_document) === f.key).length }))
-      .filter((f) => f.count > 0),
+  // ── Checklist du dossier (location / achat) ─────────────────────────────
+  type CheckItem = { label: string; types: string[]; min?: number; optional?: boolean; uploadType: string };
+  const RENTAL_CHECKLIST: { title: string; items: CheckItem[] }[] = [
+    {
+      title: 'Votre dossier de location',
+      items: [
+        { label: "Pièce d'identité ou permis de séjour", types: ['piece_identite', 'permis_sejour'], uploadType: 'piece_identite' },
+        { label: '3 dernières fiches de salaire', types: ['fiche_salaire', 'fiche_salaire_1', 'fiche_salaire_2', 'fiche_salaire_3'], min: 3, uploadType: 'fiche_salaire' },
+        { label: 'Contrat de travail', types: ['contrat_travail'], uploadType: 'contrat_travail' },
+        { label: 'Extrait des poursuites (moins de 3 mois)', types: ['extrait_poursuites'], uploadType: 'extrait_poursuites' },
+        { label: "Attestation de l'employeur", types: ['attestation_employeur'], optional: true, uploadType: 'attestation_employeur' },
+        { label: 'Attestation de domicile', types: ['attestation_domicile'], optional: true, uploadType: 'attestation_domicile' },
+        { label: 'Assurance RC ménage', types: ['rc_menage'], optional: true, uploadType: 'rc_menage' },
+      ],
+    },
   ];
-  const activeFamily = familyOptions.some((o) => o.key === docFamilyFilter) ? docFamilyFilter : 'all';
-  const visibleDocuments = activeFamily === 'all'
-    ? documents
-    : documents.filter((d) => getDocFamily(d.type_document) === activeFamily);
+  const PURCHASE_CHECKLIST: { title: string; items: CheckItem[] }[] = [
+    {
+      title: 'Identité',
+      items: [
+        { label: "Pièce d'identité", types: ['piece_identite'], uploadType: 'piece_identite' },
+        { label: 'Permis de séjour (si applicable)', types: ['permis_sejour'], optional: true, uploadType: 'permis_sejour' },
+        { label: 'Extrait des poursuites', types: ['extrait_poursuites'], uploadType: 'extrait_poursuites' },
+      ],
+    },
+    {
+      title: 'Revenus',
+      items: [
+        { label: 'Certificat de salaire annuel', types: ['certificat_salaire'], uploadType: 'certificat_salaire' },
+        { label: '3 dernières fiches de salaire', types: ['fiche_salaire_1', 'fiche_salaire_2', 'fiche_salaire_3', 'fiche_salaire'], min: 3, uploadType: 'fiche_salaire_1' },
+        { label: 'Contrat de travail', types: ['contrat_travail'], uploadType: 'contrat_travail' },
+        { label: 'Attestation employeur (si nécessaire)', types: ['attestation_employeur'], optional: true, uploadType: 'attestation_employeur' },
+      ],
+    },
+    {
+      title: 'Fonds propres',
+      items: [
+        { label: 'Relevé bancaire des fonds propres', types: ['releve_bancaire_fonds_propres'], uploadType: 'releve_bancaire_fonds_propres' },
+        { label: 'Attestation 3e pilier (3a)', types: ['attestation_3a'], optional: true, uploadType: 'attestation_3a' },
+        { label: 'Attestation LPP', types: ['attestation_lpp'], optional: true, uploadType: 'attestation_lpp' },
+        { label: 'Attestation EPL / libre passage', types: ['attestation_epl', 'attestation_libre_passage'], optional: true, uploadType: 'attestation_epl' },
+        { label: "Donation, avance d'hoirie, placements", types: ['justificatif_donation', 'justificatif_avance_hoirie', 'justificatif_placements'], optional: true, uploadType: 'justificatif_donation' },
+      ],
+    },
+    {
+      title: 'Charges et fiscalité',
+      items: [
+        { label: 'Dernière décision de taxation', types: ['decision_taxation'], uploadType: 'decision_taxation' },
+        { label: 'Crédit privé, leasing, carte de crédit', types: ['justificatif_credit_prive', 'justificatif_leasing', 'justificatif_carte_credit'], optional: true, uploadType: 'justificatif_credit_prive' },
+        { label: 'Pension alimentaire', types: ['justificatif_pension_alimentaire'], optional: true, uploadType: 'justificatif_pension_alimentaire' },
+      ],
+    },
+    {
+      title: 'Autorisations',
+      items: [
+        { label: 'Accord de transmission aux partenaires financiers', types: ['accord_transmission'], uploadType: 'accord_transmission' },
+        { label: 'Consentement au traitement des données financières', types: ['consentement_donnees'], uploadType: 'consentement_donnees' },
+      ],
+    },
+  ];
+  const checklist = isClientBuyer ? PURCHASE_CHECKLIST : RENTAL_CHECKLIST;
+  const countFor = (item: CheckItem) => documents.filter((d) => item.types.includes(d.type_document)).length;
+  const requiredItems = checklist.flatMap((g) => g.items).filter((i) => !i.optional);
+  const requiredDone = requiredItems.filter((i) => countFor(i) >= (i.min ?? 1)).length;
+  const openUpload = (type: string) => { setSelectedType(type); setUploadDialogOpen(true); };
 
-  const requiredDocsBuyer = [
-    "Pièce d'identité (passeport / carte d'identité)",
-    'Permis de séjour (si applicable)',
-    'Certificat de salaire annuel',
-    '3 dernières fiches de salaire',
-    'Contrat de travail',
-    'Attestation employeur (si nécessaire)',
-    'Relevé bancaire fonds propres',
-    'Attestation 3e pilier (3a)',
-    'Attestation LPP',
-    'Attestation EPL / retrait pour logement principal',
-    'Attestation libre passage',
-    'Justificatif placements financiers',
-    "Justificatif donation / avance d'hoirie",
-    'Justificatif crédit privé',
-    'Justificatif leasing',
-    'Justificatif carte de crédit (mensualités)',
-    'Justificatif pension alimentaire',
-    'Dernière décision de taxation',
-    'Déclaration fiscale (si nécessaire)',
-    'Accord de transmission aux partenaires financiers',
-    'Consentement traitement des données financières',
-  ];
-  const requiredDocsRental = [
-    'Formulaire de demande de recherches dûment complété et signé',
-    'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
-    'Copie des 3 dernières fiches de salaire et du contrat de travail',
-    'Attestation de l\'employeur',
-    'Copie de la déclaration d\'impôts (si indépendant)',
-    'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
-    'Attestation de domicile ou d\'établissement de la commune actuelle',
-    'Copie de la RC-ménage (assurance responsabilité civile)'
-  ];
-  const requiredDocs = isClientBuyer ? requiredDocsBuyer : requiredDocsRental;
+  const CARD = 'rounded-[14px] border border-[#dddddd] bg-white';
 
   return (
-    <DashPage>
-      <DashPageHeader
-        title="Mes documents"
-        subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''} dans votre espace`}
-        action={
-          <Button onClick={() => setUploadDialogOpen(true)} className="rounded-full">
-            <Upload className="w-4 h-4 mr-2" />
-            Ajouter un document
+    <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 md:px-8 md:py-8">
+        {/* En-tête */}
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-[26px] font-bold tracking-[-0.02em] text-[#222222] md:text-[28px]">
+              <FolderOpen className="h-6 w-6" /> Mes documents
+            </h1>
+            <p className="mt-1 text-[15px] text-[#6a6a6a]">
+              {documents.length} document{documents.length > 1 ? 's' : ''} · {requiredDone}/{requiredItems.length} pièces essentielles déposées
+            </p>
+          </div>
+          <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="h-11 rounded-lg px-5">
+            <Upload className="mr-2 h-4 w-4" /> Ajouter un document
           </Button>
-        }
-      />
+        </header>
 
-      <div className="space-y-8">
-        {/* Rappel mise à jour mensuelle */}
         <DocumentUpdateReminder />
 
-        {/* Documents demandés par l'agent */}
+        {/* Demandés par l'agent */}
         {documentRequests.length > 0 && (
-          <DashSection
-            title="Documents demandés par votre agent"
-            action={<DashBadge tone="warning">{documentRequests.length}</DashBadge>}
-          >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {documentRequests.map((request) => (
-                <div key={request.id} className={`${DASH_CARD} flex flex-col p-4 md:p-5`}>
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-                      <ClipboardList className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base font-semibold text-foreground">{request.document_label}</p>
-                      {request.note && (
-                        <p className="mt-1 text-sm text-muted-foreground">{request.note}</p>
-                      )}
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setSelectedType(request.document_type);
-                        setUploadDialogOpen(true);
-                      }}
-                      className="rounded-full"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Uploader
-                    </Button>
-                  </div>
-                </div>
-              ))}
+          <section className={`${CARD} border-orange-200`} aria-labelledby="docs-demandes">
+            <div className="flex items-center gap-2 border-b border-[#ebebeb] px-5 py-4">
+              <ClipboardList className="h-5 w-5 text-orange-600" />
+              <h2 id="docs-demandes" className="text-[17px] font-semibold text-[#222222]">Demandés par votre agent</h2>
+              <Badge className="ml-auto border-0 bg-orange-500 text-white hover:bg-orange-500">{documentRequests.length}</Badge>
             </div>
-          </DashSection>
+            <ul className="divide-y divide-[#ebebeb]">
+              {documentRequests.map((request) => (
+                <li key={request.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-medium text-[#222222]">{request.document_label}</p>
+                    {request.note && <p className="mt-0.5 text-[14px] text-[#3f3f3f]">{request.note}</p>}
+                    <p className="mt-0.5 text-[13px] text-[#6a6a6a]">Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}</p>
+                  </div>
+                  <Button size="sm" onClick={() => openUpload(request.document_type)} className="h-9 rounded-lg bg-orange-500 text-white hover:bg-orange-600">
+                    <Upload className="mr-1.5 h-4 w-4" /> Déposer
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
-        {/* Liste des documents */}
-        <DashSection title="Vos documents">
-          {documents.length > 0 ? (
-            <>
-              {familyOptions.length > 2 && (
-                <DashFilterPills
-                  options={familyOptions}
-                  value={activeFamily}
-                  onChange={setDocFamilyFilter}
-                  label="Filtrer par catégorie de document"
-                />
-              )}
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {visibleDocuments.map((doc) => {
-                  const Icon = getFileIcon(doc.type);
-                  return (
-                    <div key={doc.id} className={`${DASH_CARD} flex flex-col p-4 md:p-5`}>
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <Icon className="h-5 w-5" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-base font-semibold text-foreground" title={doc.nom}>
-                            {doc.nom}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
-                            {doc.taille ? ` · ${formatFileSize(doc.taille)}` : ''}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        <DashBadge tone="muted">{getTypeLabel(doc.type_document)}</DashBadge>
-                        {doc.offre_id && <DashBadge tone="primary">Candidature</DashBadge>}
-                      </div>
-
-                      {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
-                        <div className="mt-3 overflow-hidden rounded-xl border border-border/70">
-                          <img
-                            src={doc.url}
-                            alt={doc.nom}
-                            className="h-32 w-full object-cover"
-                          />
-                        </div>
-                      )}
-
-                      <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-3">
-                        {(doc.type.includes('image') || doc.type === 'application/pdf') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePreview(doc)}
-                            className="rounded-full"
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" />
-                            Aperçu
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 rounded-full"
-                          onClick={() => handleDownload(doc)}
-                        >
-                          <Download className="w-3.5 h-3.5 mr-1" />
-                          Télécharger
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          aria-label="Renommer le document"
-                          onClick={() => {
-                            setDocumentToRename(doc);
-                            setNewDocumentName(doc.nom);
-                            setRenameDialogOpen(true);
-                          }}
-                          className="h-9 w-9 shrink-0 rounded-full"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          aria-label="Supprimer le document"
-                          onClick={() => {
-                            setSelectedDoc(doc);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <DashEmptyState
-              icon={FileText}
-              title="Aucun document"
-              description="Commencez par uploader vos documents importants pour constituer votre dossier"
-              action={
-                <Button onClick={() => setUploadDialogOpen(true)} className="rounded-full">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ajouter un document
-                </Button>
-              }
-            />
-          )}
-        </DashSection>
-
-        {/* Documents requis — conditionnel acheteur / locataire */}
-        <DashSection title="Documents requis">
-          <div className={`${DASH_CARD} p-4 md:p-5`}>
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <AlertCircle className="h-5 w-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold text-foreground">
-                  {isClientBuyer
-                    ? "Documents requis pour votre dossier d'achat immobilier :"
-                    : 'Documents requis (Personnes salariées sans garant) :'}
-                </p>
-                <ul className="mt-3 grid gap-x-6 gap-y-2 text-sm text-foreground sm:grid-cols-2">
-                  {requiredDocs.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                {!isClientBuyer && (
-                  <p className="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-                    Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
-                  </p>
-                )}
-              </div>
+        {/* Checklist du dossier */}
+        <section className={CARD} aria-labelledby="docs-checklist">
+          <div className="border-b border-[#ebebeb] px-5 py-4">
+            <h2 id="docs-checklist" className="text-[17px] font-semibold text-[#222222]">
+              {isClientBuyer ? 'Pièces de votre dossier d\'achat' : 'Pièces de votre dossier'}
+            </h2>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#ebebeb]">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${requiredItems.length ? (requiredDone / requiredItems.length) * 100 : 0}%` }} />
             </div>
           </div>
-        </DashSection>
+          {checklist.map((group) => (
+            <div key={group.title}>
+              {checklist.length > 1 && (
+                <p className="bg-[#f7f7f7] px-5 py-2 text-[13px] font-semibold uppercase tracking-wide text-[#6a6a6a]">{group.title}</p>
+              )}
+              <ul className="divide-y divide-[#ebebeb]">
+                {group.items.map((item) => {
+                  const n = countFor(item);
+                  const need = item.min ?? 1;
+                  const done = n >= need;
+                  return (
+                    <li key={item.label} className="flex items-center gap-3 px-5 py-3.5">
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${done ? 'bg-primary text-white' : 'border-2 border-[#dddddd]'}`}>
+                        {done && <span className="text-[13px] font-bold">✓</span>}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[15px] text-[#222222]">{item.label}</p>
+                        <p className="text-[13px] text-[#6a6a6a]">
+                          {done ? 'Déposé' : need > 1 ? `${n}/${need} déposé${n > 1 ? 's' : ''}` : item.optional ? 'Selon votre situation' : 'À déposer'}
+                        </p>
+                      </div>
+                      {!done && (
+                        <Button size="sm" variant="outline" onClick={() => openUpload(item.uploadType)} className="h-9 shrink-0 rounded-lg">
+                          <Upload className="mr-1.5 h-4 w-4" /> Déposer
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          {!isClientBuyer && (
+            <p className="border-t border-[#ebebeb] px-5 py-3 text-[13px] text-[#6a6a6a]">
+              Indépendant : ajoutez votre dernière déclaration d'impôts. Personne mariée ou en partenariat : les mêmes pièces pour les deux.
+            </p>
+          )}
+        </section>
+
+        {/* Fichiers déposés */}
+        <section className={CARD} aria-labelledby="docs-fichiers">
+          <div className="border-b border-[#ebebeb] px-5 py-4">
+            <h2 id="docs-fichiers" className="text-[17px] font-semibold text-[#222222]">Mes fichiers</h2>
+          </div>
+          {documents.length > 0 ? (
+            <ul className="divide-y divide-[#ebebeb]">
+              {documents.map((doc) => {
+                const Icon = getFileIcon(doc.type || '');
+                const canPreview = (doc.type || '').includes('image') || doc.type === 'application/pdf';
+                return (
+                  <li key={doc.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#f2f2f2]">
+                        <Icon className="h-5 w-5 text-[#222222]" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-medium text-[#222222]" title={doc.nom}>{doc.nom}</p>
+                        <p className="text-[13px] text-[#6a6a6a]">
+                          {getTypeLabel(doc.type_document)} · {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                          {doc.taille ? ` · ${formatFileSize(doc.taille)}` : ''}
+                          {doc.offre_id ? ' · Candidature' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5 sm:justify-end">
+                      {canPreview && (
+                        <Button size="sm" variant="outline" onClick={() => handlePreview(doc)} className="h-9 rounded-lg">
+                          <Eye className="mr-1.5 h-4 w-4" /> Voir
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="h-9 rounded-lg">
+                        <Download className="mr-1.5 h-4 w-4" /> Télécharger
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Renommer"
+                        onClick={() => { setDocumentToRename(doc); setNewDocumentName(doc.nom); setRenameDialogOpen(true); }}
+                        className="h-9 w-9 rounded-lg"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Supprimer"
+                        onClick={() => { setSelectedDoc(doc); setDeleteDialogOpen(true); }}
+                        className="h-9 w-9 rounded-lg text-[#6a6a6a] hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="px-5 py-12 text-center">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f2f2f2]">
+                <FileText className="h-7 w-7 text-[#6a6a6a]" />
+              </span>
+              <p className="mt-4 text-[17px] font-semibold text-[#222222]">Aucun document pour l'instant</p>
+              <p className="mx-auto mt-1 max-w-sm text-[15px] text-[#6a6a6a]">Déposez vos pièces pour que votre agent puisse envoyer votre dossier rapidement.</p>
+              <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="mt-5 h-11 rounded-lg px-5">
+                <Upload className="mr-2 h-4 w-4" /> Ajouter un document
+              </Button>
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Dialogue d'ajout */}
+      {/* Upload Dialog modernisé */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Upload className="w-5 h-5" />
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                <Upload className="w-5 h-5 text-primary-foreground" />
+              </div>
               Ajouter un document
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -893,50 +902,50 @@ export default function Documents() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type de document</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="rounded-xl">
+                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {isClientBuyer ? (
                     <>
-                      <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
-                      <SelectItem value="permis_sejour">Permis de séjour</SelectItem>
-                      <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
-                      <SelectItem value="certificat_salaire">Certificat de salaire annuel</SelectItem>
-                      <SelectItem value="fiche_salaire_1">Fiche de salaire 1</SelectItem>
-                      <SelectItem value="fiche_salaire_2">Fiche de salaire 2</SelectItem>
-                      <SelectItem value="fiche_salaire_3">Fiche de salaire 3</SelectItem>
-                      <SelectItem value="contrat_travail">Contrat de travail</SelectItem>
-                      <SelectItem value="attestation_employeur">Attestation employeur</SelectItem>
-                      <SelectItem value="releve_bancaire_fonds_propres">Relevé bancaire fonds propres</SelectItem>
-                      <SelectItem value="attestation_3a">Attestation 3e pilier (3a)</SelectItem>
-                      <SelectItem value="attestation_lpp">Attestation LPP</SelectItem>
-                      <SelectItem value="attestation_epl">Attestation EPL</SelectItem>
-                      <SelectItem value="attestation_libre_passage">Attestation libre passage</SelectItem>
-                      <SelectItem value="justificatif_placements">Justificatif placements</SelectItem>
-                      <SelectItem value="justificatif_donation">Justificatif donation / hoirie</SelectItem>
-                      <SelectItem value="justificatif_credit_prive">Justificatif crédit privé</SelectItem>
-                      <SelectItem value="justificatif_leasing">Justificatif leasing</SelectItem>
-                      <SelectItem value="justificatif_carte_credit">Justificatif carte de crédit</SelectItem>
-                      <SelectItem value="justificatif_pension_alimentaire">Pension alimentaire</SelectItem>
-                      <SelectItem value="decision_taxation">Décision de taxation</SelectItem>
-                      <SelectItem value="declaration_fiscale">Déclaration fiscale</SelectItem>
-                      <SelectItem value="accord_transmission">Accord transmission partenaires</SelectItem>
-                      <SelectItem value="consentement_donnees">Consentement données financières</SelectItem>
-                      <SelectItem value="autre">Autre document achat</SelectItem>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                      <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
+                      <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
+                      <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
+                      <SelectItem value="fiche_salaire_3">💰 Fiche de salaire 3</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
+                      <SelectItem value="attestation_3a">🏦 Attestation 3e pilier (3a)</SelectItem>
+                      <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
+                      <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
+                      <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
+                      <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
+                      <SelectItem value="justificatif_donation">🎁 Justificatif donation / hoirie</SelectItem>
+                      <SelectItem value="justificatif_credit_prive">💳 Justificatif crédit privé</SelectItem>
+                      <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
+                      <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
+                      <SelectItem value="justificatif_pension_alimentaire">👶 Pension alimentaire</SelectItem>
+                      <SelectItem value="decision_taxation">📋 Décision de taxation</SelectItem>
+                      <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
+                      <SelectItem value="accord_transmission">✅ Accord transmission partenaires</SelectItem>
+                      <SelectItem value="consentement_donnees">✅ Consentement données financières</SelectItem>
+                      <SelectItem value="autre">📄 Autre document achat</SelectItem>
                     </>
                   ) : (
                     <>
-                      <SelectItem value="fiche_salaire">Fiche de salaire</SelectItem>
-                      <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
-                      <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
-                      <SelectItem value="attestation_domicile">Attestation de domicile</SelectItem>
-                      <SelectItem value="rc_menage">RC Ménage</SelectItem>
-                      <SelectItem value="contrat_travail">Contrat de travail</SelectItem>
-                      <SelectItem value="attestation_employeur">Attestation employeur</SelectItem>
-                      <SelectItem value="copie_bail">Copie du bail</SelectItem>
-                      <SelectItem value="attestation_garantie_loyer">Attestation garantie de loyer</SelectItem>
-                      <SelectItem value="autre">Autre document</SelectItem>
+                      <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                      <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                      <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                      <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                      <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                      <SelectItem value="autre">📄 Autre document</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -945,88 +954,89 @@ export default function Documents() {
           </div>
 
           <div
-            className={`rounded-2xl border-2 border-dashed p-6 text-center transition-colors duration-150 sm:p-8 ${
+            className={`relative overflow-hidden border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
               dragActive
-                ? 'border-primary bg-primary/5'
-                : 'border-border hover:border-foreground/40 hover:bg-muted/30'
+                ? 'border-primary bg-primary/10 scale-[1.02]'
+                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <span
-              className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full transition-colors duration-150 ${
-                dragActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
-              }`}
-            >
-              <Upload className="w-6 h-6" />
-            </span>
-
-            {selectedFile ? (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-border/70 bg-muted/40 p-4">
-                  <p className="break-all text-sm font-medium text-foreground">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatFileSize(selectedFile.size)}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedFile(null);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                  className="rounded-full"
-                >
-                  Changer de fichier
-                </Button>
+            {/* Gradient background on drag */}
+            <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 transition-opacity duration-300 ${dragActive ? 'opacity-100' : 'opacity-0'}`} />
+            
+            <div className="relative">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center transition-all duration-300 ${dragActive ? 'scale-110 from-primary/20 to-primary/10' : ''}`}>
+                <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
               </div>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-foreground mb-2">
-                  Glissez-déposez votre fichier ici
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">ou</p>
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="rounded-full"
-                >
-                  Sélectionner un fichier
-                </Button>
-              </>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  handleFileSelect(e.target.files[0]);
-                }
-              }}
-            />
+              
+              {selectedFile ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatFileSize(selectedFile.size)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  >
+                    Changer de fichier
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-medium mb-2">
+                    Glissez-déposez votre fichier ici
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">ou</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                  >
+                    Sélectionner un fichier
+                  </Button>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    handleFileSelect(e.target.files[0]);
+                  }
+                }}
+              />
+            </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
               onClick={() => {
                 setUploadDialogOpen(false);
                 setSelectedFile(null);
                 setSelectedType('autre');
               }}
-              className="rounded-full"
+              className="hover:bg-muted"
             >
               Annuler
             </Button>
-            <Button
+            <Button 
               onClick={handleConfirmUpload}
               disabled={!selectedFile || isUploading}
-              className="rounded-full sm:ml-2"
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
             >
               {isUploading ? (
                 <>
@@ -1041,9 +1051,9 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialogue d'aperçu */}
-      <Dialog
-        open={previewDialogOpen}
+      {/* Preview Dialog modernisé */}
+      <Dialog 
+        open={previewDialogOpen} 
         onOpenChange={(open) => {
           setPreviewDialogOpen(open);
           if (!open && previewUrl && previewUrl.startsWith('blob:')) {
@@ -1051,16 +1061,16 @@ export default function Documents() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[95vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh] border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="flex min-w-0 items-center gap-3 pr-6">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Eye className="w-4 h-4" />
-              </span>
-              <span className="truncate">{previewDocument?.nom}</span>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <Eye className="w-4 h-4 text-primary" />
+              </div>
+              {previewDocument?.nom}
             </DialogTitle>
           </DialogHeader>
-          <div className="h-[80vh] rounded-xl overflow-hidden border border-border/70 bg-muted/30">
+          <div className="h-[80vh] rounded-xl overflow-hidden bg-muted/30">
             {previewDocument?.type?.includes('pdf') ? (
               <object
                 data={previewUrl}
@@ -1068,11 +1078,11 @@ export default function Documents() {
                 className="w-full h-full"
               >
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                    <FileText className="w-7 h-7" />
-                  </span>
-                  <p className="mb-4 text-sm">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownload(previewDocument)} className="rounded-full">
+                  <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-4">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
+                  <Button onClick={() => handleDownload(previewDocument)} className="bg-gradient-to-r from-primary to-primary/90">
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
                   </Button>
@@ -1080,14 +1090,14 @@ export default function Documents() {
               </object>
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start p-4">
-                <img
-                  src={previewUrl}
+                <img 
+                  src={previewUrl} 
                   alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-lg"
+                  className="max-w-full h-auto rounded-lg shadow-2xl"
                 />
               </div>
             ) : (
-              <p className="text-center text-sm text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-8">
                 Aperçu non disponible pour ce type de fichier
               </p>
             )}
@@ -1095,14 +1105,14 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialogue de renommage */}
+      {/* Rename Dialog modernisé */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Pencil className="w-5 h-5" />
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <Pencil className="w-5 h-5 text-primary" />
+              </div>
               Renommer le document
             </DialogTitle>
           </DialogHeader>
@@ -1113,18 +1123,18 @@ export default function Documents() {
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
-                className="rounded-xl"
+                className="bg-background/50 border-border/50 focus:border-primary/50"
               />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="rounded-full">
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
               Annuler
             </Button>
-            <Button
-              onClick={handleRename}
+            <Button 
+              onClick={handleRename} 
               disabled={!newDocumentName.trim()}
-              className="rounded-full sm:ml-2"
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
             >
               Renommer
             </Button>
@@ -1132,14 +1142,14 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialogue de suppression */}
+      {/* Delete Dialog modernisé */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                <Trash2 className="w-5 h-5" />
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
               Supprimer le document
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
@@ -1147,16 +1157,16 @@ export default function Documents() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:ml-2"
+            <AlertDialogCancel className="hover:bg-muted">Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              className="bg-gradient-to-r from-destructive to-destructive/90 hover:from-destructive/90 hover:to-destructive text-destructive-foreground"
             >
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DashPage>
+    </div>
   );
 }

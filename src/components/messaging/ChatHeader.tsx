@@ -5,6 +5,7 @@ import { LeadAvatar } from '@/components/whatsapp/LeadAvatar';
 import { cn } from '@/lib/utils';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 import { ConversationCallControls } from '@/components/calls/ConversationCallControls';
+import { SteeveHandoffBar } from '@/components/messaging/SteeveHandoffBar';
 
 interface ChatHeaderProps {
   name: string;
@@ -35,6 +36,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   conversationId,
 }) => {
   return (
+    <>
     <div
       className={cn(
         'flex items-center gap-3 px-3 py-2.5 bg-card border-b border-border/60',
@@ -80,5 +82,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </Button>
       )}
     </div>
+    {/* Qui répond : Steeve ou un humain (invisible tant que Steeve n'est pas activé) */}
+    <SteeveHandoffBar conversationId={conversationId} />
+    </>
   );
 };

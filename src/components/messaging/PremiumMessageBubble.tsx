@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
 import { formatSwissTime } from '@/lib/dateUtils';
 import { MessageAttachment } from '@/components/MessageAttachment';
+import { isSteeveSender, STEEVE_DISPLAY_NAME } from '@/lib/steeve';
 
 interface MessagePayload {
   type?: string;
@@ -16,6 +17,8 @@ interface PremiumMessageBubbleProps {
   timestamp: string;
   read?: boolean;
   senderName?: string;
+  /** messages.sender_type : 'assistant' affiche le nom de Steeve. */
+  senderType?: string | null;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
   attachmentType?: string | null;
@@ -37,6 +40,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   timestamp,
   read = false,
   senderName,
+  senderType,
   attachmentUrl,
   attachmentName,
   attachmentType,
@@ -45,6 +49,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   className,
 }) => {
   const formattedTime = formatSwissTime(timestamp);
+  const displayedSenderName = isSteeveSender(senderType) ? STEEVE_DISPLAY_NAME : senderName;
   const hasAttachments =
     !!attachmentUrl || (payload?.medias && payload.medias.length > 0);
 
@@ -57,9 +62,9 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
       )}
     >
       <div className="flex flex-col max-w-[88%] sm:max-w-[75%] md:max-w-[65%] min-w-0">
-        {!isSent && senderName && (
+        {!isSent && displayedSenderName && (
           <span className="text-[11px] text-muted-foreground mb-0.5 ml-3 font-medium">
-            {senderName}
+            {displayedSenderName}
           </span>
         )}
 

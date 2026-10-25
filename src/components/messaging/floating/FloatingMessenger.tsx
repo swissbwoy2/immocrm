@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
@@ -7,6 +7,7 @@ import { FloatingMessengerBubble } from './FloatingMessengerBubble';
 import { FloatingConversationList } from './FloatingConversationList';
 import { FloatingConversationView } from './FloatingConversationView';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 import { MessageSquare, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -39,6 +40,30 @@ export function FloatingMessenger() {
       return () => clearTimeout(t);
     }
   }, [isOpen, setActiveConversation]);
+
+  // Client avec une seule conversation : la bulle s'ouvre directement sur elle (le bouton retour garde la liste).
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) {
+      autoOpenedRef.current = false;
+      return;
+    }
+    if (userRole !== 'client' || !user || activeConversationId || autoOpenedRef.current) return;
+    autoOpenedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const { data: cli } = await supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle();
+      if (!cli || cancelled) return;
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', cli.id)
+        .eq('conversation_type', 'client-agent')
+        .limit(2);
+      if (!cancelled && convs && convs.length === 1) setActiveConversation(convs[0].id);
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, userRole, user, activeConversationId, setActiveConversation]);
 
   // Don't render until auth loaded; only for logged-in users with eligible roles
   if (loading || !user || !userRole) return null;

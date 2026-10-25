@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Save, Mail, Phone, User, Bell, Trash2 } from 'lucide-react';
+import { Camera, Save, Mail, Phone, User, Bell, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -12,7 +12,6 @@ import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 import { WhatsAppNotificationsCard } from '@/components/settings/WhatsAppNotificationsCard';
-import { DASH_CARD, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 
 export default function ClientParametres() {
   const { user } = useAuth();
@@ -136,136 +135,94 @@ export default function ClientParametres() {
 
   if (loading) {
     return (
-      <DashPage>
-        <div role="status" aria-label="Chargement des paramètres">
-          <div className="h-8 w-44 rounded-full bg-muted/60" />
-          <div className="mt-6 h-24 max-w-xl rounded-2xl bg-muted/40" />
-        </div>
-      </DashPage>
+      <div className="p-4 md:p-8" role="status" aria-label="Chargement des paramètres">
+        <div className="h-7 w-44 rounded bg-muted/60" />
+        <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
+      </div>
     );
   }
 
-  return (
-    <DashPage>
-      <DashPageHeader title="Paramètres" subtitle="Gérez votre profil et vos préférences" />
+  const SECTION = 'rounded-[14px] border border-[#dddddd] bg-white p-5 sm:p-6';
+  const H2 = 'flex items-center gap-2 text-[17px] font-semibold text-[#222222]';
+  const profileDirty = telephone !== (profile?.telephone || '') || prenom !== (profile?.prenom || '') || nom !== (profile?.nom || '');
 
-      <div className="grid gap-4 max-w-2xl">
-        {/* Photo de profil */}
-        <section className={`${DASH_CARD} p-4 md:p-5`}>
-          <h2 className="flex items-center gap-3 text-base font-semibold text-foreground">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Camera className="h-[18px] w-[18px]" />
-            </span>
-            Photo de profil
-          </h2>
-          <div className="mt-4 flex items-center gap-5">
-            <div className="relative group/avatar shrink-0">
-              <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
-                <AvatarImage src={profile?.avatar_url} alt={`${profile?.prenom} ${profile?.nom}`} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary font-semibold">
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-6 md:px-8 md:py-8">
+        <header>
+          <h1 className="flex items-center gap-2 text-[26px] font-bold tracking-[-0.02em] text-[#222222] md:text-[28px]">
+            <Settings className="h-6 w-6" /> Paramètres
+          </h1>
+          <p className="mt-1 text-[15px] text-[#6a6a6a]">Votre profil, vos notifications et la sécurité de votre compte.</p>
+        </header>
+
+        {/* Profil : photo + informations */}
+        <section className={SECTION} aria-labelledby="param-profil">
+          <h2 id="param-profil" className={H2}><User className="h-5 w-5" /> Mon profil</h2>
+
+          <div className="mt-5 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative shrink-0 cursor-pointer rounded-full"
+              aria-label="Changer la photo de profil"
+            >
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={profile?.avatar_url} alt={`${profile?.prenom ?? ''} ${profile?.nom ?? ''}`} />
+                <AvatarFallback className="bg-[#f2f2f2] text-xl font-semibold text-[#222222]">
                   {profile?.prenom?.[0]}{profile?.nom?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <Camera className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="space-y-2 min-w-0">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                className="hidden"
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="rounded-full"
-              >
-                {uploading ? 'Téléchargement...' : 'Changer la photo'}
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <Camera className="h-5 w-5 text-white" />
+              </span>
+            </button>
+            <div className="min-w-0">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="h-10 rounded-lg">
+                <Camera className="mr-2 h-4 w-4" />
+                {uploading ? 'Téléchargement…' : 'Changer la photo'}
               </Button>
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG ou WebP. Max 5 Mo.
-              </p>
+              <p className="mt-1.5 text-[13px] text-[#6a6a6a]">JPG, PNG ou WebP · 5 Mo max.</p>
             </div>
           </div>
-        </section>
 
-        {/* Informations personnelles */}
-        <section className={`${DASH_CARD} p-4 md:p-5`}>
-          <h2 className="flex items-center gap-3 text-base font-semibold text-foreground">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <User className="h-[18px] w-[18px]" />
-            </span>
-            Informations personnelles
-          </h2>
-          <div className="mt-4 space-y-4">
-            <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Prénom</Label>
-                <Input
-                  value={prenom}
-                  onChange={(e) => setPrenom(e.target.value)}
-                  placeholder="Prénom"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Nom</Label>
-                <Input
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                  placeholder="Nom"
-                />
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="param-prenom" className="text-[14px] font-medium text-[#222222]">Prénom</Label>
+              <Input id="param-prenom" value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="param-nom" className="text-[14px] font-medium text-[#222222]">Nom</Label>
+              <Input id="param-nom" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom" className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5 text-[14px] font-medium text-[#222222]"><Mail className="h-4 w-4" /> E-mail</Label>
+              <div className="flex h-11 items-center rounded-md border border-[#ebebeb] bg-[#f7f7f7] px-3 text-[15px] text-[#3f3f3f]">
+                <span className="truncate">{profile?.email}</span>
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-muted/60">
-              <Label className="text-muted-foreground flex items-center gap-2 text-sm">
-                <Mail className="w-4 h-4" />
-                Email
-              </Label>
-              <div className="font-medium mt-1 text-foreground break-all">{profile?.email}</div>
+            <div className="space-y-1.5">
+              <Label htmlFor="param-tel" className="flex items-center gap-1.5 text-[14px] font-medium text-[#222222]"><Phone className="h-4 w-4" /> Téléphone</Label>
+              <Input id="param-tel" type="tel" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+41 79 123 45 67" className="h-11" />
             </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <Phone className="w-4 h-4 text-muted-foreground" />
-                Téléphone
-              </Label>
-              <Input
-                value={telephone}
-                onChange={(e) => setTelephone(e.target.value)}
-                placeholder="+41 XX XXX XX XX"
-                className="max-w-xs"
-              />
-            </div>
-            <Button
-              onClick={handleSaveProfile}
-              disabled={saving || (telephone === profile?.telephone && prenom === profile?.prenom && nom === profile?.nom)}
-              className="rounded-full"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <Button type="button" onClick={handleSaveProfile} disabled={saving || !profileDirty} className="h-11 rounded-lg px-5">
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </div>
         </section>
 
-        {/* Préférences de notification */}
-        <section className={`${DASH_CARD} p-4 md:p-5`}>
-          <h2 className="flex items-center gap-3 text-base font-semibold text-foreground">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Bell className="h-[18px] w-[18px]" />
-            </span>
-            Notifications
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gérez vos préférences de notification
-          </p>
-          <div className="mt-4 flex items-center justify-between gap-4 p-4 rounded-xl border border-border/70">
-            <div className="space-y-0.5 min-w-0">
-              <Label htmlFor="notifications-email" className="font-medium">Notifications par email</Label>
-              <p className="text-sm text-muted-foreground">
-                Recevoir une copie des notifications par email
-              </p>
+        {/* Notifications e-mail */}
+        <section className={SECTION} aria-labelledby="param-notifs">
+          <h2 id="param-notifs" className={H2}><Bell className="h-5 w-5" /> Notifications</h2>
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-[#ebebeb] p-4">
+            <div className="min-w-0">
+              <Label htmlFor="notifications-email" className="text-[15px] font-medium text-[#222222]">Notifications par e-mail</Label>
+              <p className="mt-0.5 text-[14px] text-[#6a6a6a]">Recevoir une copie de vos notifications par e-mail.</p>
             </div>
             <Switch
               id="notifications-email"
@@ -277,49 +234,36 @@ export default function ClientParametres() {
                     .from('profiles')
                     .update({ notifications_email: checked })
                     .eq('id', user?.id);
-                  
                   if (error) throw error;
-                  toast.success(checked ? 'Notifications email activées' : 'Notifications email désactivées');
+                  toast.success(checked ? 'Notifications e-mail activées' : 'Notifications e-mail désactivées');
                 } catch (error) {
                   console.error('Error updating notification preference:', error);
                   setNotificationsEmail(!checked);
                   toast.error('Erreur lors de la mise à jour');
                 }
               }}
-              className="data-[state=checked]:bg-primary"
             />
           </div>
         </section>
 
-        {/* Google Agenda (composant partagé : seuls les coins sont harmonisés ici) */}
-        <div className="[&>*]:rounded-2xl [&>*]:border-border/70">
-          <GoogleCalendarConnect />
-        </div>
-
         {/* WhatsApp */}
         <WhatsAppNotificationsCard />
 
-        {/* Changer le mot de passe (composant partagé : seuls les coins sont harmonisés ici) */}
-        <div className="[&>*]:rounded-2xl">
-          <ChangePasswordCard />
-        </div>
+        {/* Google Agenda */}
+        <GoogleCalendarConnect />
 
-        {/* Supprimer le compte */}
-        <section className={`${DASH_CARD} p-4 md:p-5`}>
-          <h2 className="flex items-center gap-3 text-base font-semibold text-destructive">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-              <Trash2 className="h-[18px] w-[18px]" />
-            </span>
-            Zone de danger
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Supprimer définitivement votre compte et toutes vos données
-          </p>
+        {/* Mot de passe */}
+        <ChangePasswordCard />
+
+        {/* Suppression du compte */}
+        <section className="rounded-[14px] border border-red-200 bg-white p-5 sm:p-6" aria-labelledby="param-danger">
+          <h2 id="param-danger" className="flex items-center gap-2 text-[17px] font-semibold text-red-700"><Trash2 className="h-5 w-5" /> Supprimer mon compte</h2>
+          <p className="mt-1 text-[14px] text-[#6a6a6a]">Suppression définitive de votre compte et de toutes vos données.</p>
           <div className="mt-4">
             <DeleteAccountDialog userType="client" />
           </div>
         </section>
       </div>
-    </DashPage>
+    </div>
   );
 }

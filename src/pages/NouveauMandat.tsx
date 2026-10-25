@@ -14,6 +14,7 @@ import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
 import { legalCheckboxesFor } from '@/components/mandat/achat/achatMandat';
+import { acceptedConsentsFor, contractTextFor, contractTitleFor } from '@/components/mandat/mandatContrats';
 import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
@@ -337,7 +338,13 @@ export default function NouveauMandat() {
         signature_data: formData.signature_data,
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
-        legal_consents: formData.legal_consents_at as any,
+        // Horodatage de chaque disposition + copie exacte du mandat affiché et signé (pour « Mon contrat » et l'admin)
+        legal_consents: {
+          ...(formData.legal_consents_at || {}),
+          _contrat_titre: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_texte: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_signe_le: new Date().toISOString(),
+        } as any,
         code_promo: formData.code_promo,
         payment_method: formData.payment_method ?? 'qr_invoice',
         montant_acompte: montantAcompte,
@@ -444,7 +451,13 @@ export default function NouveauMandat() {
             candidats: formData.candidats,
             signature_data: formData.signature_data,
             code_promo: formData.code_promo,
-            payment_method: formData.payment_method ?? 'qr_invoice'
+            payment_method: formData.payment_method ?? 'qr_invoice',
+            // Mandat réellement affiché et signé + dispositions approuvées (horodatées)
+            demande_id: demandeMandatId,
+            contract_title: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            contract_text: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            consents: acceptedConsentsFor({ ...formData, type_recherche: isPurchase ? 'Acheter' : formData.type_recherche }),
+            signed_at: new Date().toISOString(),
           }
         });
         console.log('Mandat PDF email sent');

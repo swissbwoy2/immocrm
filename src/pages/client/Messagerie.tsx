@@ -1884,6 +1884,7 @@ const Messagerie = () => {
                   <PremiumMessageBubble
                     content={msg.content || ''}
                     isSent={isSent}
+                    senderType={msg.sender_type}
                     timestamp={msg.created_at}
                     read={msg.read}
                     senderName={senderName}

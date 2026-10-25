@@ -37,11 +37,16 @@ class SimpleImapClient {
   }
 
   // Optimized reading with smaller buffer and stricter limits
+  // Seule la fin de la réponse est testée à chaque bloc reçu (et non toute la réponse accumulée),
+  // pour ne pas dépasser le temps de calcul autorisé (erreur 546 WORKER_RESOURCE_LIMIT).
   private async readUntilTag(expectedTag: string): Promise<string> {
     const buf = new Uint8Array(32768); // Reduced to 32KB buffer
-    let fullResponse = '';
+    const chunks: string[] = [];
+    let totalLength = 0;
+    let tail = '';
     let attempts = 0;
     const maxAttempts = 300; // Reduced attempts
+    const tagPattern = expectedTag === '*' ? null : new RegExp(`^${expectedTag} (OK|NO|BAD)`, 'm');
     
     while (attempts < maxAttempts) {
       attempts++;
@@ -50,22 +55,19 @@ class SimpleImapClient {
         const n = await this.conn!.read(buf);
         if (n === null) break;
         
-        const chunk = this.decoder.decode(buf.subarray(0, n));
-        fullResponse += chunk;
+        const chunk = this.decoder.decode(buf.subarray(0, n), { stream: true });
+        chunks.push(chunk);
+        totalLength += chunk.length;
+        const window = tail + chunk;
         
-        // For greeting
-        if (expectedTag === '*' && fullResponse.includes('* OK')) {
-          return fullResponse;
+        // Greeting, or completion tag of the command
+        if (tagPattern ? tagPattern.test(window) : window.includes('* OK')) {
+          return chunks.join('');
         }
-        
-        // Check if we received the completion tag
-        const tagPattern = new RegExp(`^${expectedTag} (OK|NO|BAD)`, 'm');
-        if (tagPattern.test(fullResponse)) {
-          return fullResponse;
-        }
+        tail = window.slice(-1024);
         
         // Reduced max response size to 3MB to prevent memory issues
-        if (fullResponse.length > 3 * 1024 * 1024) {
+        if (totalLength > 3 * 1024 * 1024) {
           console.log('[IMAP] Response size limit reached, stopping read');
           break;
         }
@@ -75,7 +77,7 @@ class SimpleImapClient {
       }
     }
     
-    return fullResponse;
+    return chunks.join('');
   }
 
   private async sendCommand(command: string): Promise<string> {
