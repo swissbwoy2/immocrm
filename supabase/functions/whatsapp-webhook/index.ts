@@ -1121,6 +1121,9 @@ Deno.serve(async (req) => {
               console.error("[whatsapp-webhook] message insert failed:", waMessageError.message);
             }
 
+            // Message enregistré : la notification « Nouveau message » et le push partent déjà du déclencheur
+            // standard de la messagerie (agents et admins). Les envois ci-dessous ne servent que de repli.
+            if (waMessageError) {
             // Notification interne pour l'agent
             await supabase.rpc("create_notification", {
               p_user_id: agent.user_id,
@@ -1152,6 +1155,7 @@ Deno.serve(async (req) => {
                 },
               });
             } catch (e) { console.warn("push notif failed", e); }
+            }
 
 
             // Forward WhatsApp à l'agent + admin via template HSM

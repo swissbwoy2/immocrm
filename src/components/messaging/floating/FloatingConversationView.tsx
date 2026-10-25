@@ -56,6 +56,8 @@ function mergeMessages(prev: MessageRow[], incoming: MessageRow[]): MessageRow[]
 
 export function FloatingConversationView({ conversationId, onBack }: Props) {
   const { user, userRole } = useAuth();
+  // Identifiant stable : l'objet user est recréé à chaque rafraîchissement de session (retour sur l'onglet, jeton).
+  const userId = user?.id ?? null;
   const { close, refreshUnread } = useFloatingMessenger();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -122,22 +124,26 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
   }, [conversationId, userRole]);
 
   const markIncomingAsRead = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     await supabase
       .from('messages')
       .update({ read: true })
       .eq('conversation_id', conversationId)
       .eq('read', false)
-      .neq('sender_id', user.id);
+      .neq('sender_id', userId);
     refreshUnread();
-  }, [conversationId, user, refreshUnread]);
+  }, [conversationId, userId, refreshUnread]);
+
+  // Changement de conversation uniquement : on repart d'une liste vide, sans pièce jointe en attente.
+  useEffect(() => {
+    setMessages([]);
+    setPendingAttachment(null);
+    pendingSendRef.current = null;
+  }, [conversationId]);
 
   // Load messages + mark as read
   useEffect(() => {
     let cancelled = false;
-    setMessages([]);
-    setPendingAttachment(null);
-    pendingSendRef.current = null;
     async function load() {
       setLoading(true);
       const { data, error } = await supabase
@@ -189,7 +195,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
           if (payload.new?.masque_messagerie) return;
           setMessages((prev) => mergeMessages(prev, [payload.new as MessageRow]));
           // auto-mark as read if from other
-          if (user && payload.new.sender_id !== user.id) {
+          if (userId && payload.new.sender_id !== userId) {
             supabase
               .from('messages')
               .update({ read: true })
@@ -207,7 +213,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, user, refreshUnread, markIncomingAsRead]);
+  }, [conversationId, userId, refreshUnread, markIncomingAsRead]);
 
   // Rattrapage au retour sur l'onglet ou au retour du réseau
   useEffect(() => {

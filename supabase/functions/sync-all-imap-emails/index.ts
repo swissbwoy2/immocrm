@@ -632,35 +632,44 @@ async function syncUserEmails(
     for (let n = startMsg; n <= messageCount; n++) allSeqs.push(n);
 
     // Seuls les messages absents de la base sont relus en entier ; ceux déjà enregistrés sont ignorés.
+    // En cas d'erreur de vérification, repli sur l'ancien comportement (relire les derniers messages).
     const keyed = messageCount > 0 ? await client.fetchMessageKeys(startMsg, messageCount) : [];
     let seqsToFetch = allSeqs;
     if (keyed.length > 0) {
-      const dbIdOf = (key: string) => `${config.imap_user}_${key}`;
-      const dbIds = keyed.filter(k => k.key).map(k => dbIdOf(k.key as string));
-      const known = new Set<string>();
-      if (dbIds.length > 0) {
-        const { data: existing, error: existingError } = await supabaseAdmin
-          .from('received_emails')
-          .select('message_id')
-          .eq('user_id', config.user_id)
-          .in('message_id', dbIds);
-        if (existingError) throw existingError;
-        for (const row of existing || []) known.add(row.message_id);
-
-        // Comportement conservé : les e-mails immobilier.ch encore sans HTML sont relus pour compléter leur corps.
-        if (config.imap_user.toLowerCase() === 'info@immo-rama.ch') {
-          const { data: incomplete, error: incompleteError } = await supabaseAdmin
+      try {
+        const dbIdOf = (key: string) => `${config.imap_user}_${key}`;
+        const dbIds = keyed.filter(k => k.key).map(k => dbIdOf(k.key as string));
+        const known = new Set<string>();
+        const isInfoMailbox = config.imap_user.toLowerCase() === 'info@immo-rama.ch';
+        // Lots de 15 identifiants : la requête reste courte (identifiants de messages longs dans l'URL).
+        for (let i = 0; i < dbIds.length; i += 15) {
+          const chunk = dbIds.slice(i, i + 15);
+          const { data: existing, error: existingError } = await supabaseAdmin
             .from('received_emails')
             .select('message_id')
             .eq('user_id', config.user_id)
-            .eq('from_email', 'mail@immobilier.ch')
-            .is('body_html', null)
-            .in('message_id', dbIds);
-          if (incompleteError) throw incompleteError;
-          for (const row of incomplete || []) known.delete(row.message_id);
+            .in('message_id', chunk);
+          if (existingError) throw existingError;
+          for (const row of existing || []) known.add(row.message_id);
+
+          // Comportement conservé : les e-mails immobilier.ch encore sans HTML sont relus pour compléter leur corps.
+          if (isInfoMailbox) {
+            const { data: incomplete, error: incompleteError } = await supabaseAdmin
+              .from('received_emails')
+              .select('message_id')
+              .eq('user_id', config.user_id)
+              .eq('from_email', 'mail@immobilier.ch')
+              .is('body_html', null)
+              .in('message_id', chunk);
+            if (incompleteError) throw incompleteError;
+            for (const row of incomplete || []) known.delete(row.message_id);
+          }
         }
+        seqsToFetch = keyed.filter(k => !k.key || !known.has(dbIdOf(k.key))).map(k => k.seq);
+      } catch (checkError) {
+        console.error('[SYNC] Vérification des e-mails déjà enregistrés impossible, relecture complète :', checkError);
+        seqsToFetch = allSeqs;
       }
-      seqsToFetch = keyed.filter(k => !k.key || !known.has(dbIdOf(k.key))).map(k => k.seq);
     }
     console.log(`[SYNC] ${seqsToFetch.length} new message(s) to read`);
 
@@ -711,13 +720,12 @@ async function syncUserEmails(
         if(error) throw error;
       }
     }
-    // OPTIM Cloud: only update last_sync_at when new emails were actually fetched
-    if (fetchedEmails.length > 0) {
-      await supabaseAdmin
-        .from('imap_configurations')
-        .update({ last_sync_at: new Date().toISOString() })
-        .eq('id', config.id);
-    }
+    // Date de la dernière relève réussie (même sans nouvel e-mail) : elle sert de témoin de bon fonctionnement.
+    // Les passages sans nouvel e-mail ne relisent plus aucun corps, cette seule écriture reste légère.
+    await supabaseAdmin
+      .from('imap_configurations')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('id', config.id);
 
     console.log(`[SYNC] User ${config.user_id}: ${fetchedEmails.length} emails synced`);
     return { success: true, count: fetchedEmails.length };

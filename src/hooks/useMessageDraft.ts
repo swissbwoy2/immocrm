@@ -20,6 +20,20 @@ function writeDraft(conversationId: string, value: string) {
   }
 }
 
+/** Efface tous les brouillons de messages de cet appareil (appelé à la déconnexion). */
+export function clearAllMessageDrafts() {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(KEY_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // Stockage indisponible : rien à effacer.
+  }
+}
+
 /**
  * Brouillon conservé par conversation, sur cet appareil :
  * il survit à un changement de page, à la fermeture de la bulle et au rechargement.

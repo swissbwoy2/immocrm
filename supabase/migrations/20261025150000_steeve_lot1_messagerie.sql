@@ -14,17 +14,23 @@ ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS client_msg_id uuid;
 CREATE UNIQUE INDEX IF NOT EXISTS messages_client_msg_id_key
   ON public.messages (client_msg_id) WHERE client_msg_id IS NOT NULL;
 
--- 3) Seul le serveur peut publier ou réécrire un message au nom de Steeve.
+-- 3) Seul le serveur peut publier un message au nom de Steeve, ou modifier un message de Steeve.
+--    Depuis le navigateur, un message de Steeve ne peut changer que son indicateur de lecture.
 CREATE OR REPLACE FUNCTION public.guard_assistant_sender()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  IF current_user IN ('authenticated', 'anon')
-     AND (NEW.sender_type = 'assistant'
-          OR (TG_OP = 'UPDATE' AND OLD.sender_type = 'assistant' AND NEW.sender_type IS DISTINCT FROM OLD.sender_type)) THEN
+  IF current_user NOT IN ('authenticated', 'anon') THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.sender_type = 'assistant' AND (TG_OP = 'INSERT' OR OLD.sender_type IS DISTINCT FROM 'assistant') THEN
     RAISE EXCEPTION 'Seul le serveur peut publier un message de Steeve' USING ERRCODE = '42501';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.sender_type = 'assistant'
+     AND (to_jsonb(NEW) - 'read') IS DISTINCT FROM (to_jsonb(OLD) - 'read') THEN
+    RAISE EXCEPTION 'Un message de Steeve ne peut pas être modifié' USING ERRCODE = '42501';
   END IF;
   RETURN NEW;
 END;
@@ -32,7 +38,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_guard_assistant_sender ON public.messages;
 CREATE TRIGGER trg_guard_assistant_sender
-  BEFORE INSERT OR UPDATE OF sender_type ON public.messages
+  BEFORE INSERT OR UPDATE ON public.messages
   FOR EACH ROW EXECUTE FUNCTION public.guard_assistant_sender();
 
 -- 4) État de prise en charge de chaque conversation (Steeve ou agent humain).
@@ -103,8 +109,9 @@ CREATE TRIGGER trg_guard_conversation_steeve_fields
 
 -- 6) Suivi automatique à chaque message visible :
 --    - message du client : date du dernier message, conversation réveillée ;
---    - message écrit par un agent ou un admin connecté : la conversation passe en mode agent
---      (les messages automatiques du serveur, comme les offres envoyées, ne changent rien).
+--    - message écrit par un agent de la conversation ou un admin, connecté : la conversation passe en mode agent
+--      (les messages automatiques du serveur, comme les offres envoyées, ne changent rien ; un client qui
+--      se déclarerait « agent » non plus).
 CREATE OR REPLACE FUNCTION public.steeve_track_conversation_activity()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -121,7 +128,8 @@ BEGIN
        SET last_client_message_at = GREATEST(COALESCE(last_client_message_at, NEW.created_at), NEW.created_at),
            steeve_state = 'active'
      WHERE id = NEW.conversation_id;
-  ELSIF NEW.sender_type IN ('agent', 'admin') AND COALESCE(auth.role(), '') = 'authenticated' THEN
+  ELSIF NEW.sender_type IN ('agent', 'admin') AND COALESCE(auth.role(), '') = 'authenticated'
+        AND public.can_manage_conversation(NEW.conversation_id) THEN
     UPDATE public.conversations
        SET handled_by = 'agent',
            handled_by_user = auth.uid(),
