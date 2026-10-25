@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { NormalizedEvent, indexByDay } from './useEventManagerData';
+import { eventTypeChipColors, DEFAULT_EVENT_CHIP } from '../types';
 import { formatSwissDate, formatSwissTime, getSwissDateString } from '@/lib/dateUtils';
 
 interface MonthViewProps {
@@ -30,12 +31,12 @@ export const MonthView = memo(function MonthView({
   return (
     <div className="w-full">
       {/* Week days header */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="mb-1 grid grid-cols-7 gap-1">
         {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, idx) => (
           <div
             key={day}
             className={cn(
-              'text-center text-xs font-semibold py-2 uppercase tracking-wide',
+              'py-2 text-center text-[11px] font-medium sm:text-xs',
               idx >= 5 ? 'text-muted-foreground/60' : 'text-muted-foreground',
             )}
           >
@@ -47,7 +48,7 @@ export const MonthView = memo(function MonthView({
       {/* Grid */}
       <div className="grid grid-cols-7 gap-1">
         {Array.from({ length: paddingDays }).map((_, i) => (
-          <div key={`pad-${i}`} className="h-24 md:h-28 bg-muted/10 rounded-lg" />
+          <div key={`pad-${i}`} className="h-20 rounded-xl sm:h-24 md:h-28" />
         ))}
 
         {days.map((day) => {
@@ -64,31 +65,30 @@ export const MonthView = memo(function MonthView({
               key={day.toISOString()}
               onClick={() => onDateSelect(day)}
               className={cn(
-                'group relative h-24 md:h-28 p-1.5 rounded-lg border text-left transition-all duration-200 cursor-pointer',
-                'bg-card/50 hover:bg-card hover:border-primary/40 hover:shadow-md',
-                'focus:outline-none focus:ring-2 focus:ring-primary/40',
+                'group relative h-20 min-w-0 cursor-pointer rounded-xl border border-border/70 bg-card p-1 text-left transition-colors duration-150 sm:h-24 sm:p-1.5 md:h-28',
+                'hover:border-foreground/30',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 !inMonth && 'opacity-40',
                 isWeekend && inMonth && 'bg-muted/30',
-                isTodayDate && 'border-primary border-2 bg-primary/5',
-                isSelected && 'ring-2 ring-primary bg-accent',
+                isTodayDate && 'border-primary/40',
+                isSelected && 'border-foreground bg-muted/50',
               )}
             >
               <div
                 className={cn(
-                  'text-xs font-semibold mb-1 flex items-center justify-between',
-                  isTodayDate && 'text-primary',
+                  'mb-1 flex items-center justify-between text-xs font-medium text-foreground',
                 )}
               >
                 <span
                   className={cn(
-                    'inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full',
-                    isTodayDate && 'bg-primary text-primary-foreground',
+                    'inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1',
+                    isTodayDate && 'bg-primary font-semibold text-primary-foreground',
                   )}
                 >
                   {formatSwissDate(day, 'd')}
                 </span>
                 {dayEvents.length > 0 && (
-                  <span className="text-[10px] text-muted-foreground font-medium">
+                  <span className="text-[10px] font-medium text-muted-foreground">
                     {dayEvents.length}
                   </span>
                 )}
@@ -103,20 +103,20 @@ export const MonthView = memo(function MonthView({
                       onEventClick(ev);
                     }}
                     className={cn(
-                      'text-[10px] px-1.5 py-0.5 rounded text-white truncate cursor-pointer',
-                      'hover:opacity-90 transition-opacity',
-                      ev.colorClass,
+                      'cursor-pointer truncate rounded-md border px-1 py-0.5 text-[10px] leading-tight sm:px-1.5',
+                      'transition-opacity hover:opacity-80',
+                      eventTypeChipColors[ev.type] || DEFAULT_EVENT_CHIP,
                     )}
                     title={`${ev.typeLabel} — ${ev.title}`}
                   >
                     {!ev.allDay && (
-                      <span className="font-medium mr-1">{formatSwissTime(ev.date)}</span>
+                      <span className="mr-1 font-semibold">{formatSwissTime(ev.date)}</span>
                     )}
                     {ev.title}
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground font-medium pl-1">
+                  <div className="pl-1 text-[10px] font-medium text-muted-foreground">
                     +{dayEvents.length - 3} de plus
                   </div>
                 )}

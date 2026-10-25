@@ -3,7 +3,7 @@ import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 import { 
   Calendar, Clock, User, MapPin, CheckCircle, XCircle, Trash2,
   MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil,
-  Sparkles, Home, Maximize, Building, Users, Download
+  Home, Maximize, Building, Users, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors, priorityColors } from './types';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,8 +44,8 @@ interface PremiumAgentDayEventsProps {
 
 const statusIcons: Record<string, React.ReactNode> = {
   planifie: <Clock className="h-3 w-3" />,
-  effectue: <CheckCircle className="h-3 w-3 text-green-500" />,
-  annule: <XCircle className="h-3 w-3 text-red-500" />,
+  effectue: <CheckCircle className="h-3 w-3 text-emerald-600" />,
+  annule: <XCircle className="h-3 w-3 text-destructive" />,
 };
 
 export function PremiumAgentDayEvents({ 
@@ -53,35 +54,16 @@ export function PremiumAgentDayEvents({
 }: PremiumAgentDayEventsProps) {
   if (!date) {
     return (
-      <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/30 border border-border/50 overflow-hidden">
-        {/* Particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full bg-primary/20 animate-float"
-              style={{
-                left: `${20 + i * 15}%`,
-                top: `${30 + (i % 3) * 20}%`,
-                animationDelay: `${i * 0.5}s`,
-                animationDuration: `${3 + i * 0.5}s`,
-              }}
-            />
-          ))}
-        </div>
-        
+      <div className={cn(DASH_CARD, 'h-full overflow-hidden')}>
         <div className="flex items-center justify-center h-full p-6">
           <div className="text-center">
-            <div className="relative inline-block mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-primary/60 animate-pulse" />
-              </div>
-              <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl animate-pulse" />
-            </div>
-            <p className="text-muted-foreground font-medium">
+            <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Calendar className="w-7 h-7 text-primary" />
+            </span>
+            <p className="text-base font-semibold text-foreground">
               Sélectionnez un jour
             </p>
-            <p className="text-muted-foreground/60 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               pour voir les événements
             </p>
           </div>
@@ -102,22 +84,22 @@ export function PremiumAgentDayEvents({
     const timeDiff = visiteDate.getTime() - now.getTime();
     
     if (timeDiff <= 0) {
-      return { text: 'Passé', color: 'text-muted-foreground', urgent: false };
+      return { text: 'Passé', color: 'bg-muted text-muted-foreground', urgent: false };
     }
     
     if (isToday(visiteDate)) {
       const hours = differenceInHours(visiteDate, now);
-      if (hours <= 0) return { text: 'Maintenant', color: 'text-green-500', urgent: true };
-      if (hours <= 3) return { text: `Dans ${hours}h`, color: 'text-destructive', urgent: true };
-      return { text: `Dans ${hours}h`, color: 'text-orange-500', urgent: false };
+      if (hours <= 0) return { text: 'Maintenant', color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400', urgent: true };
+      if (hours <= 3) return { text: `Dans ${hours}h`, color: 'bg-destructive/10 text-destructive', urgent: true };
+      return { text: `Dans ${hours}h`, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', urgent: false };
     }
     
     if (isTomorrow(visiteDate)) {
-      return { text: 'Demain', color: 'text-blue-500', urgent: false };
+      return { text: 'Demain', color: 'bg-primary/10 text-primary', urgent: false };
     }
     
     const days = differenceInDays(visiteDate, now);
-    return { text: `Dans ${days}j`, color: 'text-primary', urgent: false };
+    return { text: `Dans ${days}j`, color: 'bg-primary/10 text-primary', urgent: false };
   };
 
   // Group visits by address and time to avoid duplicates
@@ -159,50 +141,26 @@ export function PremiumAgentDayEvents({
   });
 
   return (
-    <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/50 overflow-hidden flex flex-col">
-      {/* Animated gradient border */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/20 via-transparent to-primary/20 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/15 animate-float"
-            style={{
-              left: `${10 + i * 15}%`,
-              top: `${20 + (i % 4) * 20}%`,
-              animationDelay: `${i * 0.4}s`,
-              animationDuration: `${4 + i * 0.3}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Premium Header */}
-      <div className="relative p-5 border-b border-border/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary animate-pulse" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg capitalize">
+    <div className={cn(DASH_CARD, 'h-full overflow-hidden flex flex-col')}>
+      {/* Header */}
+      <div className="p-4 md:p-5 border-b border-border/70">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Calendar className="w-5 h-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold capitalize text-foreground truncate">
                 {formatSwissDate(date, 'EEEE d MMMM')}
               </h3>
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
                 {allItems.length === 0 ? (
                   'Aucun événement'
                 ) : (
                   <>
-                    <Sparkles className="h-3 w-3" />
                     <span className="font-medium text-foreground">{allItems.length}</span> élément{allItems.length > 1 ? 's' : ''}
                     {visites.length > 0 && (
-                      <span className="text-blue-600 dark:text-blue-400"> • {visites.length} visite{visites.length > 1 ? 's' : ''}</span>
+                      <span> • {visites.length} visite{visites.length > 1 ? 's' : ''}</span>
                     )}
                   </>
                 )}
@@ -210,7 +168,7 @@ export function PremiumAgentDayEvents({
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {allItems.length > 0 && (
               <>
                 <Button
@@ -248,16 +206,15 @@ export function PremiumAgentDayEvents({
                     const dateStr = formatSwissDate(date, 'yyyy-MM-dd');
                     downloadMultiEventICSFile(icsEvents, `calendrier_${dateStr}.ics`);
                   }}
-                  className="gap-1.5"
+                  className="gap-1.5 rounded-full"
                   title="Exporter tous les événements du jour"
                 >
                   <Download className="h-4 w-4" />
                   <span className="hidden md:inline">Exporter</span>
                 </Button>
-                <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/20">
-                  <Sparkles className="w-3 h-3 mr-1" />
+                <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground">
                   {allItems.length}
-                </Badge>
+                </span>
               </>
             )}
           </div>
@@ -268,16 +225,14 @@ export function PremiumAgentDayEvents({
         <div className="p-4">
           {allItems.length === 0 ? (
             <div className="text-center py-12">
-              <div className="relative inline-block mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                  <Calendar className="w-7 h-7 text-muted-foreground/50" />
-                </div>
-              </div>
-              <p className="text-muted-foreground font-medium">Aucun événement</p>
-              <p className="text-muted-foreground/60 text-sm mt-1">Journée libre</p>
+              <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Calendar className="w-6 h-6 text-muted-foreground" />
+              </span>
+              <p className="text-sm font-medium text-foreground">Aucun événement</p>
+              <p className="text-muted-foreground text-xs mt-1">Journée libre</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {allItems.map((item, idx) => {
                 if (item.type === 'visite-group') {
                   const group = item.data as any[];
@@ -303,31 +258,27 @@ export function PremiumAgentDayEvents({
                         }
                       }}
                       className={cn(
-                        'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300 cursor-pointer',
-                        isShared ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02]' :
-                        timeInfo.urgent ? 'border-destructive/50 hover:border-destructive' : 
-                        hasDeleguee ? 'border-green-500/50 hover:border-green-500' : 
-                        'border-blue-500/30 hover:border-blue-500/60',
+                        'group relative rounded-xl border bg-card overflow-hidden transition-colors cursor-pointer',
+                        isShared ? 'border-dashed border-purple-500/40 hover:border-purple-500/70' :
+                        timeInfo.urgent ? 'border-destructive/40 hover:border-destructive/70' : 
+                        hasDeleguee ? 'border-emerald-500/40 hover:border-emerald-500/70' : 
+                        'border-border/70 hover:border-foreground/30',
                         isPast && 'opacity-70',
                         isShared && 'opacity-90'
                       )}
-                      style={{ animationDelay: `${idx * 50}ms` }}
                     >
-                      {/* Shine effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                      
-                      <div className="relative p-4 space-y-3">
+                      <div className="p-4 space-y-3">
                         {/* Header */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
+                              <Badge variant="outline" className="rounded-full text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent">
                                 Visite
                               </Badge>
                               {isShared && (
                                 <Badge
                                   variant="outline"
-                                  className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                  className="rounded-full text-xs font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-400 border-transparent"
                                   title={`Visite créée par ${sharedByName} (co-agent) — lecture seule`}
                                 >
                                   <Users className="h-3 w-3 mr-1" />
@@ -335,13 +286,13 @@ export function PremiumAgentDayEvents({
                                 </Badge>
                               )}
                               {group.length > 1 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="rounded-full text-xs">
                                   <Users className="h-3 w-3 mr-1" />
                                   {group.length} clients
                                 </Badge>
                               )}
                               {hasDeleguee && (
-                                <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border-0">
+                                <Badge className="rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400 border-0">
                                   Déléguée
                                 </Badge>
                               )}
@@ -349,8 +300,8 @@ export function PremiumAgentDayEvents({
                                 <Badge 
                                   variant="outline" 
                                   className={cn(
-                                    "text-xs",
-                                    timeInfo.urgent && "animate-pulse bg-destructive/10 text-destructive border-destructive/30"
+                                    "rounded-full border-transparent text-xs font-semibold",
+                                    timeInfo.color
                                   )}
                                 >
                                   {timeInfo.urgent && <AlertTriangle className="h-3 w-3 mr-1" />}
@@ -358,23 +309,23 @@ export function PremiumAgentDayEvents({
                                 </Badge>
                               )}
                               {isPast && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="rounded-full text-xs">
                                   {allEffectuees ? 'Effectuée' : 'Passée'}
                                 </Badge>
                               )}
                             </div>
-                            <h4 className="font-bold mt-2 text-base group-hover:text-primary transition-colors">
+                            <h4 className="text-base font-semibold mt-2 text-foreground">
                               {firstVisite.adresse}
                             </h4>
                           </div>
                         </div>
 
                         {/* Date & Time Card */}
-                        <div className="relative p-3 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 overflow-hidden">
+                        <div className="p-3 rounded-xl bg-muted/60">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                              <Clock className="w-5 h-5 text-primary" />
-                            </div>
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                              <Clock className="w-[18px] h-[18px]" />
+                            </span>
                             <div>
                               <p className="font-semibold text-sm">
                                 {formatSwissTime(eventDate)}
@@ -389,20 +340,20 @@ export function PremiumAgentDayEvents({
                         {/* Property details */}
                         {firstVisite.offres && (
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="p-2 rounded-lg bg-muted/50 border border-border/50 text-center">
+                            <div className="p-2 rounded-xl border border-border/70 text-center">
                               <Home className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                               <p className="text-xs text-muted-foreground">Pièces</p>
-                              <p className="font-bold text-sm">{firstVisite.offres.pieces || '-'}</p>
+                              <p className="font-semibold text-sm text-foreground">{firstVisite.offres.pieces || '-'}</p>
                             </div>
-                            <div className="p-2 rounded-lg bg-muted/50 border border-border/50 text-center">
+                            <div className="p-2 rounded-xl border border-border/70 text-center">
                               <Maximize className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                               <p className="text-xs text-muted-foreground">Surface</p>
-                              <p className="font-bold text-sm">{firstVisite.offres.surface || '-'} m²</p>
+                              <p className="font-semibold text-sm text-foreground">{firstVisite.offres.surface || '-'} m²</p>
                             </div>
-                            <div className="p-2 rounded-lg bg-muted/50 border border-border/50 text-center">
+                            <div className="p-2 rounded-xl border border-border/70 text-center">
                               <Building className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                               <p className="text-xs text-muted-foreground">Prix</p>
-                              <p className="font-bold text-sm">{firstVisite.offres.prix} CHF</p>
+                              <p className="font-semibold text-sm text-foreground">{firstVisite.offres.prix} CHF</p>
                             </div>
                           </div>
                         )}
@@ -411,7 +362,7 @@ export function PremiumAgentDayEvents({
                         {(() => {
                           const uniqueClients = getUniqueVisitesByClient(group);
                           return (
-                            <div className="pt-3 border-t border-border/50">
+                            <div className="pt-3 border-t border-border/70">
                               <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1 mb-2">
                                 <Users className="h-3 w-3" />
                                 {uniqueClients.length > 1 ? 'Clients concernés' : 'Client'}
@@ -420,7 +371,7 @@ export function PremiumAgentDayEvents({
                                 {uniqueClients.map((visite) => (
                                   <div 
                                     key={visite.client_id}
-                                    className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/30 border border-border/30 hover:border-primary/30 transition-colors"
+                                    className="flex items-center justify-between gap-2 p-2 rounded-xl border border-border/70"
                                   >
                                     <div className="flex items-center gap-2 min-w-0">
                                       <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -431,10 +382,10 @@ export function PremiumAgentDayEvents({
                                         {visite.client_profile?.prenom} {visite.client_profile?.nom}
                                       </span>
                                       {visite.statut === 'effectuee' && (
-                                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                                       )}
                                       {visite.est_deleguee && (
-                                        <Badge className="text-[10px] h-4 px-1.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                        <Badge className="rounded-full text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">
                                           Déléguée
                                         </Badge>
                                       )}
@@ -442,7 +393,7 @@ export function PremiumAgentDayEvents({
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7 shrink-0 hover:bg-primary/10"
+                                      className="h-7 w-7 shrink-0 rounded-full hover:bg-primary/10"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         onOpenDetail(visite);
@@ -458,24 +409,24 @@ export function PremiumAgentDayEvents({
                         })()}
 
                         {/* Live de visite (Phase B) */}
-                        <div className="pt-3 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
-                          <VisitLiveButton visiteId={firstVisite.id} className="w-full" />
+                        <div className="pt-3 border-t border-border/70" onClick={(e) => e.stopPropagation()}>
+                          <VisitLiveButton visiteId={firstVisite.id} className="w-full rounded-full" />
                         </div>
 
                         {/* Recommendations */}
                         {group.some(v => v.recommandation_agent) && (
                           <div className="flex flex-wrap gap-1.5">
                             {group.filter(v => v.recommandation_agent).map(visite => (
-                              <div key={visite.id} className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted/50 text-xs">
+                              <div key={visite.id} className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-xs">
                                 <span className="text-muted-foreground">{visite.client_profile?.prenom}:</span>
                                 {visite.recommandation_agent === 'recommande' && (
-                                  <ThumbsUp className="h-3 w-3 text-green-600" />
+                                  <ThumbsUp className="h-3 w-3 text-emerald-600" />
                                 )}
                                 {visite.recommandation_agent === 'neutre' && (
                                   <Minus className="h-3 w-3 text-muted-foreground" />
                                 )}
                                 {visite.recommandation_agent === 'deconseille' && (
-                                  <ThumbsDown className="h-3 w-3 text-red-600" />
+                                  <ThumbsDown className="h-3 w-3 text-destructive" />
                                 )}
                               </div>
                             ))}
@@ -505,19 +456,19 @@ export function PremiumAgentDayEvents({
                           }}
                           size="sm"
                           variant="outline"
-                          className="w-full"
+                          className="w-full rounded-full"
                         />
 
                         {/* Action buttons */}
                         {!isShared && group.some(v => v.statut === 'planifiee') && !isPast && (
-                          <div className="pt-3 border-t border-border/50 space-y-2">
+                          <div className="pt-3 border-t border-border/70 space-y-2">
                             {group.filter(v => v.statut === 'planifiee').map(visite => (
                               <Button
                                 key={visite.id}
                                 size="sm"
                                 variant={timeInfo.urgent ? "destructive" : "outline"}
                                 className={cn(
-                                  "w-full text-xs h-9 transition-all",
+                                  "w-full text-xs h-9 rounded-full",
                                   !timeInfo.urgent && "hover:bg-primary hover:text-primary-foreground hover:border-primary"
                                 )}
                                 onClick={(e) => {
@@ -543,7 +494,7 @@ export function PremiumAgentDayEvents({
                         
                         {/* Delete buttons */}
                         {!isShared && onDeleteVisite && (
-                          <div className="pt-2 border-t border-border/30">
+                          <div className="pt-2 border-t border-border/70">
                             {group.map(visite => {
                               const isClesRemises = visite.candidature?.statut === 'cles_remises' || visite.candidature?.cles_remises;
                               return (
@@ -552,7 +503,7 @@ export function PremiumAgentDayEvents({
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      className="w-full text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      className="w-full text-xs h-8 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <Trash2 className="h-3 w-3 mr-1" />
@@ -622,28 +573,23 @@ export function PremiumAgentDayEvents({
                   <div
                     key={`event-${data.id}-${idx}`}
                     className={cn(
-                      'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in transition-all duration-300 hover:shadow-lg',
+                      'group relative rounded-xl border overflow-hidden transition-colors',
                       eventIsShared
-                        ? 'border-dashed border-purple-500/50 hover:border-purple-500 bg-purple-500/[0.02] opacity-90'
-                        : eventTypeColors[item.eventType],
-                      'hover:scale-[1.01]'
+                        ? 'border-dashed border-purple-500/40 hover:border-purple-500/70 bg-card opacity-90'
+                        : eventTypeColors[item.eventType]
                     )}
-                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
-                    {/* Shine effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                    
-                    <div className="relative p-4 space-y-3">
+                    <div className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs font-medium">
+                            <Badge variant="outline" className="rounded-full text-xs font-medium bg-background/70">
                               {eventTypeLabels[item.eventType]}
                             </Badge>
                             {eventIsShared && (
                               <Badge
                                 variant="outline"
-                                className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                className="rounded-full text-xs font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-400 border-transparent"
                                 title={`Événement créé par ${eventSharedByName} (co-agent) — lecture seule`}
                               >
                                 <Users className="h-3 w-3 mr-1" />
@@ -651,7 +597,7 @@ export function PremiumAgentDayEvents({
                               </Badge>
                             )}
                             {data.priority && (
-                              <Badge className={cn('text-xs', priorityColors[data.priority])}>
+                              <Badge className={cn('rounded-full text-xs', priorityColors[data.priority])}>
                                 {data.priority}
                               </Badge>
                             )}
@@ -662,7 +608,7 @@ export function PremiumAgentDayEvents({
                               </span>
                             )}
                           </div>
-                          <h4 className="font-bold mt-2 text-base group-hover:text-primary transition-colors">
+                          <h4 className="text-base font-semibold mt-2 text-foreground">
                             {data.title}
                           </h4>
                           {!data.all_day && (
@@ -689,7 +635,7 @@ export function PremiumAgentDayEvents({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                              className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(data);
@@ -704,7 +650,7 @@ export function PremiumAgentDayEvents({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                  className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -737,11 +683,11 @@ export function PremiumAgentDayEvents({
 
                       {/* Status actions */}
                       {!eventIsShared && onStatusChange && data.status !== 'effectue' && (
-                        <div className="flex gap-2 pt-3 border-t border-border/50">
+                        <div className="flex gap-2 pt-3 border-t border-border/70">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs h-8 flex-1 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/30 transition-all"
+                            className="text-xs h-8 flex-1 rounded-full hover:bg-emerald-500/10 hover:text-emerald-700"
                             onClick={() => onStatusChange(data.id, 'effectue')}
                           >
                             <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
@@ -751,7 +697,7 @@ export function PremiumAgentDayEvents({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-xs h-8 flex-1 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30 transition-all"
+                              className="text-xs h-8 flex-1 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={() => onStatusChange(data.id, 'annule')}
                             >
                               <XCircle className="h-3.5 w-3.5 mr-1.5" />

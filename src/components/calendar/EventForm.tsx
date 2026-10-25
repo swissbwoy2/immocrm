@@ -122,7 +122,7 @@ export function EventForm({
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Modifier l\'événement' : 'Nouvel événement'}</DialogTitle>
         </DialogHeader>
@@ -168,8 +168,8 @@ export function EventForm({
             />
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 min-w-[160px]">
               <Label>Date *</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -228,7 +228,7 @@ export function EventForm({
             <Label>Journée entière</Label>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Agent concerné</Label>
               <Select
@@ -289,10 +289,10 @@ export function EventForm({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" className="rounded-full" onClick={handleClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.title}>
+            <Button type="submit" className="rounded-full" disabled={isLoading || !formData.title}>
               {isLoading ? (isEditing ? 'Enregistrement...' : 'Création...') : (isEditing ? 'Enregistrer' : 'Créer')}
             </Button>
           </DialogFooter>

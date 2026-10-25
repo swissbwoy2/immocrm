@@ -1797,8 +1797,12 @@ html.dark[data-imr-role="client"] {
   --sidebar-border: 217 19% 15%;
 }
 
-/* ===== Menu latéral admin / agent : même menu clair que l'espace client (seul le menu change) ===== */
+/* ===== Admin / agent : même menu clair et même accent vert que l'espace client ===== */
 html[data-imr-sidebar="clair"] {
+  /* Accent vert de la marque sur toutes les pages admin / agent (boutons, liens, sélections) */
+  --primary: 160 59% 30%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 160 59% 30%;
   --sidebar-background: 0 0% 100%;
   --sidebar-foreground: 0 0% 13%;
   --sidebar-primary: 160 59% 30%;

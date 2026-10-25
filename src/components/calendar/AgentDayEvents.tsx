@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { CalendarEvent, eventTypeLabels, eventTypeColors, priorityColors } from './types';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import {
@@ -38,8 +39,8 @@ interface AgentDayEventsProps {
 
 const statusIcons: Record<string, React.ReactNode> = {
   planifie: <Clock className="h-3 w-3" />,
-  effectue: <CheckCircle className="h-3 w-3 text-green-500" />,
-  annule: <XCircle className="h-3 w-3 text-red-500" />,
+  effectue: <CheckCircle className="h-3 w-3 text-emerald-600" />,
+  annule: <XCircle className="h-3 w-3 text-destructive" />,
 };
 
 export function AgentDayEvents({ 
@@ -48,14 +49,14 @@ export function AgentDayEvents({
 }: AgentDayEventsProps) {
   if (!date) {
     return (
-      <div className="bg-card rounded-xl border shadow-sm p-6 h-full flex flex-col items-center justify-center animate-fade-in">
-        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 animate-pulse-soft">
-          <Calendar className="h-8 w-8 text-muted-foreground/50" />
-        </div>
-        <p className="text-muted-foreground text-center font-medium">
+      <div className={cn(DASH_CARD, 'p-6 h-full flex flex-col items-center justify-center')}>
+        <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <Calendar className="h-7 w-7 text-primary" />
+        </span>
+        <p className="text-base font-semibold text-foreground text-center">
           Sélectionnez un jour
         </p>
-        <p className="text-muted-foreground/60 text-sm text-center mt-1">
+        <p className="text-muted-foreground text-sm text-center mt-1">
           pour voir les événements
         </p>
       </div>
@@ -132,22 +133,22 @@ export function AgentDayEvents({
   });
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm h-full flex flex-col animate-fade-in">
-      <div className="p-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
-        <h3 className="font-semibold flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10">
-            <Calendar className="h-4 w-4 text-primary" />
-          </div>
+    <div className={cn(DASH_CARD, 'h-full overflow-hidden flex flex-col')}>
+      <div className="p-4 md:p-5 border-b border-border/70">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Calendar className="h-5 w-5" />
+          </span>
           <span className="capitalize">{format(date, 'EEEE d MMMM', { locale: fr })}</span>
         </h3>
-        <p className="text-sm text-muted-foreground mt-1 ml-9">
+        <p className="text-xs text-muted-foreground mt-1 ml-[52px]">
           {allItems.length === 0 ? (
             'Aucun événement'
           ) : (
             <>
               <span className="font-medium text-foreground">{allItems.length}</span> élément{allItems.length > 1 ? 's' : ''}
               {visites.length > 0 && (
-                <span className="text-blue-600 dark:text-blue-400"> • {visites.length} visite{visites.length > 1 ? 's' : ''}</span>
+                <span> • {visites.length} visite{visites.length > 1 ? 's' : ''}</span>
               )}
             </>
           )}
@@ -158,11 +159,11 @@ export function AgentDayEvents({
         <div className="p-4">
           {allItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                <Calendar className="h-6 w-6 text-muted-foreground/50" />
-              </div>
-              <p className="text-muted-foreground font-medium">Aucun événement</p>
-              <p className="text-muted-foreground/60 text-sm mt-1">Journée libre</p>
+              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Calendar className="h-6 w-6 text-muted-foreground" />
+              </span>
+              <p className="text-sm font-medium text-foreground">Aucun événement</p>
+              <p className="text-muted-foreground text-xs mt-1">Journée libre</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -184,38 +185,38 @@ export function AgentDayEvents({
                     <div
                       key={`visite-group-${firstVisite.id}-${idx}`}
                       className={cn(
-                        'p-3 rounded-lg border',
-                        isUrgent ? 'border-destructive/50 bg-destructive/5' : 
-                        hasDeleguee ? 'border-green-500/50 bg-green-500/5' : 
-                        'bg-blue-500/10 border-blue-500/30',
+                        'p-4 rounded-xl border bg-card',
+                        isUrgent ? 'border-destructive/40' : 
+                        hasDeleguee ? 'border-emerald-500/40' : 
+                        'border-border/70',
                         isPast && 'opacity-60'
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs pointer-events-none">Visite</Badge>
+                            <Badge variant="outline" className="rounded-full text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent pointer-events-none">Visite</Badge>
                             {group.length > 1 && (
-                              <Badge variant="secondary" className="text-xs pointer-events-none">
+                              <Badge variant="secondary" className="rounded-full text-xs pointer-events-none">
                                 {group.length} clients
                               </Badge>
                             )}
                             {hasDeleguee && (
-                              <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 pointer-events-none">Déléguée</Badge>
+                              <Badge className="rounded-full text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 pointer-events-none">Déléguée</Badge>
                             )}
                             {urgency && !isPast && (
-                              <Badge variant={urgency.color} className={cn("text-xs pointer-events-none", isUrgent && "animate-pulse")}>
+                              <Badge variant={urgency.color} className="rounded-full text-xs pointer-events-none">
                                 {isUrgent && <AlertTriangle className="h-3 w-3 mr-1" />}
                                 {urgency.label}
                               </Badge>
                             )}
                             {isPast && (
-                              <Badge variant="secondary" className="text-xs pointer-events-none">
+                              <Badge variant="secondary" className="rounded-full text-xs pointer-events-none">
                                 {allEffectuees ? 'Effectuée' : 'Passée'}
                               </Badge>
                             )}
                           </div>
-                          <h4 className="font-medium mt-1 break-words">{firstVisite.adresse}</h4>
+                          <h4 className="text-base font-semibold text-foreground mt-2 break-words">{firstVisite.adresse}</h4>
                           <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             {format(eventDate, 'HH:mm')}
@@ -230,7 +231,7 @@ export function AgentDayEvents({
                           {(() => {
                             const uniqueClients = getUniqueVisitesByClient(group);
                             return (
-                              <div className="mt-2 pt-2 border-t border-current/10">
+                              <div className="mt-3 pt-3 border-t border-border/70">
                                 <span className="text-xs font-medium text-muted-foreground">
                                   {uniqueClients.length > 1 ? 'Clients concernés :' : 'Client :'}
                                 </span>
@@ -247,16 +248,16 @@ export function AgentDayEvents({
                                           {visite.client_profile?.prenom} {visite.client_profile?.nom}
                                         </span>
                                         {visite.statut === 'effectuee' && (
-                                          <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                                          <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />
                                         )}
                                         {visite.est_deleguee && (
-                                          <Badge className="text-[10px] h-4 px-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Délég.</Badge>
+                                          <Badge className="rounded-full text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Délég.</Badge>
                                         )}
                                       </div>
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-6 w-6 shrink-0"
+                                        className="h-6 w-6 shrink-0 rounded-full"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onOpenDetail(visite);
@@ -280,13 +281,13 @@ export function AgentDayEvents({
                                     {visite.client_profile?.prenom}:
                                   </span>
                                   {visite.recommandation_agent === 'recommande' && (
-                                    <ThumbsUp className="h-3 w-3 text-green-600" />
+                                    <ThumbsUp className="h-3 w-3 text-emerald-600" />
                                   )}
                                   {visite.recommandation_agent === 'neutre' && (
-                                    <Minus className="h-3 w-3 text-gray-500" />
+                                    <Minus className="h-3 w-3 text-muted-foreground" />
                                   )}
                                   {visite.recommandation_agent === 'deconseille' && (
-                                    <ThumbsDown className="h-3 w-3 text-red-600" />
+                                    <ThumbsDown className="h-3 w-3 text-destructive" />
                                   )}
                                 </div>
                               ))}
@@ -297,13 +298,13 @@ export function AgentDayEvents({
 
                       {/* Actions pour les visites non effectuées */}
                       {group.some(v => v.statut === 'planifiee') && !isPast && (
-                        <div className="mt-3 pt-3 border-t border-current/10 space-y-2">
+                        <div className="mt-3 pt-3 border-t border-border/70 space-y-2">
                           {group.filter(v => v.statut === 'planifiee').map(visite => (
                             <Button
                               key={visite.id}
                               size="sm"
                               variant={isUrgent ? "destructive" : "outline"}
-                              className="w-full text-xs h-8"
+                              className="w-full text-xs h-8 rounded-full"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onMarquerEffectuee(visite);
@@ -327,7 +328,7 @@ export function AgentDayEvents({
                       
                       {/* Boutons de suppression */}
                       {onDeleteVisite && (
-                        <div className="mt-2 pt-2 border-t border-current/10">
+                        <div className="mt-2 pt-2 border-t border-border/70">
                           {group.map(visite => {
                             const isClesRemises = visite.candidature?.statut === 'cles_remises' || visite.candidature?.cles_remises;
                             return (
@@ -336,7 +337,7 @@ export function AgentDayEvents({
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="w-full text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    className="w-full text-xs h-7 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <Trash2 className="h-3 w-3 mr-1" />
@@ -407,8 +408,7 @@ export function AgentDayEvents({
                     role="button"
                     tabIndex={0}
                     className={cn(
-                      'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all select-none',
-                      'active:scale-[0.99]',
+                      'p-4 rounded-xl border cursor-pointer hover:border-foreground/30 transition-colors select-none',
                       eventTypeColors[item.eventType]
                     )}
                     onClick={() => {
@@ -425,11 +425,11 @@ export function AgentDayEvents({
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs pointer-events-none">
+                          <Badge variant="outline" className="rounded-full text-xs bg-background/70 pointer-events-none">
                             {eventTypeLabels[item.eventType]}
                           </Badge>
                           {data.priority && (
-                            <Badge className={cn('text-xs pointer-events-none', priorityColors[data.priority])}>
+                            <Badge className={cn('rounded-full text-xs pointer-events-none', priorityColors[data.priority])}>
                               {data.priority}
                             </Badge>
                           )}
@@ -440,7 +440,7 @@ export function AgentDayEvents({
                             </span>
                           )}
                         </div>
-                        <h4 className="font-medium mt-1 break-words">{data.title}</h4>
+                        <h4 className="text-base font-semibold mt-2 break-words">{data.title}</h4>
                         {!data.all_day && (
                           <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
@@ -465,7 +465,7 @@ export function AgentDayEvents({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary"
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
@@ -480,7 +480,7 @@ export function AgentDayEvents({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
@@ -495,11 +495,11 @@ export function AgentDayEvents({
                     </div>
 
                     {onStatusChange && data.status !== 'effectue' && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t border-current/10 relative z-10">
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-border/70 relative z-10">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs h-7"
+                          className="text-xs h-7 rounded-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
@@ -514,7 +514,7 @@ export function AgentDayEvents({
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs h-7"
+                            className="text-xs h-7 rounded-full"
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();

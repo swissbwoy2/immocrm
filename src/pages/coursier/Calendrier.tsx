@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { CalendarCheck, Users, Navigation, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
 import { CalendarEvent } from '@/components/calendar/types';
@@ -95,10 +95,9 @@ export default function CoursierCalendrier() {
     : 0;
 
   return (
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6">
-        <PremiumPageHeader
-          icon={CalendarCheck}
+    <DashPage>
+      <div className="space-y-6">
+        <DashPageHeader
           title="Calendrier des missions"
           subtitle="Vos visites regroupées — compte-rendu et envoi au client depuis la fiche"
         />
@@ -130,14 +129,14 @@ export default function CoursierCalendrier() {
 
       {/* Fiche de visite — même contenu que l'admin, limité à ses missions */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Détails de la visite</DialogTitle>
           </DialogHeader>
 
           {rep && (
             <div className="space-y-6">
-              <div className="p-4 bg-muted rounded-lg space-y-2">
+              <div className="p-4 bg-muted/60 rounded-xl space-y-2">
                 <AddressLink address={rep.adresse} className="font-semibold text-lg" iconClassName="h-5 w-5 text-primary" />
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5" />
@@ -145,13 +144,13 @@ export default function CoursierCalendrier() {
                   {rep.date_visite_fin && ` → ${format(new Date(rep.date_visite_fin), 'HH:mm')}`}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-primary/10 text-primary border-primary/30">
+                  <Badge className="rounded-full border-transparent bg-primary/10 text-primary hover:bg-primary/10">
                     <Users className="h-3 w-3 mr-1" />
                     {clientsCount} client{clientsCount > 1 ? 's' : ''}
                   </Badge>
                   <Badge className={rep.statut_coursier === 'termine'
-                    ? 'bg-green-500/10 text-green-600 border-green-500/30'
-                    : 'bg-amber-500/10 text-amber-600 border-amber-500/30'}>
+                    ? 'rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400'
+                    : 'rounded-full border-transparent bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-400'}>
                     {rep.statut_coursier === 'termine' ? 'Terminée' : 'En cours'}
                   </Badge>
                   <a
@@ -170,25 +169,25 @@ export default function CoursierCalendrier() {
                   <Label className="text-sm font-medium mb-3 block">Caractéristiques du bien</Label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {rep.offres.prix && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="p-3 bg-muted/60 rounded-xl text-center">
                         <p className="text-xs text-muted-foreground">Prix</p>
                         <p className="font-bold text-primary">{Number(rep.offres.prix).toLocaleString('fr-CH')} CHF</p>
                       </div>
                     )}
                     {rep.offres.pieces && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="p-3 bg-muted/60 rounded-xl text-center">
                         <p className="text-xs text-muted-foreground">Pièces</p>
                         <p className="font-bold">{rep.offres.pieces}</p>
                       </div>
                     )}
                     {rep.offres.surface && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="p-3 bg-muted/60 rounded-xl text-center">
                         <p className="text-xs text-muted-foreground">Surface</p>
                         <p className="font-bold">{rep.offres.surface} m²</p>
                       </div>
                     )}
                     {rep.offres.etage && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
+                      <div className="p-3 bg-muted/60 rounded-xl text-center">
                         <p className="text-xs text-muted-foreground">Étage</p>
                         <p className="font-bold">{rep.offres.etage}</p>
                       </div>
@@ -200,7 +199,7 @@ export default function CoursierCalendrier() {
               {rep.offres?.description && (
                 <div>
                   <Label className="text-sm font-medium mb-2 block">Description</Label>
-                  <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="p-4 bg-muted/60 rounded-xl">
                     <p className="text-sm whitespace-pre-wrap">{rep.offres.description}</p>
                   </div>
                 </div>
@@ -224,7 +223,7 @@ export default function CoursierCalendrier() {
               <VisitVideoPlayer medias={rep.medias} />
 
               {/* Compte-rendu complet + médias + envoi à TOUS les clients du groupe */}
-              <div className="border border-primary/20 rounded-lg p-4 bg-muted/30">
+              <div className="border border-border/70 rounded-xl p-4">
                 <CompteRenduVisite
                   role="coursier"
                   visiteId={rep.id}
@@ -236,6 +235,6 @@ export default function CoursierCalendrier() {
           )}
         </DialogContent>
       </Dialog>
-    </main>
+    </DashPage>
   );
 }

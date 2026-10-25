@@ -137,10 +137,12 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
+          <DialogTitle className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Calendar className="w-[18px] h-[18px]" />
+            </span>
             Nouvel événement
           </DialogTitle>
         </DialogHeader>
@@ -221,7 +223,7 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
           )}
 
           {/* Journée entière */}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div className="flex items-center justify-between p-3 border border-border/70 rounded-xl">
             <Label htmlFor="allDay" className="cursor-pointer">
               Journée entière
             </Label>
@@ -251,10 +253,10 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
+          <Button variant="outline" className="rounded-full" onClick={onClose} disabled={loading}>
             Annuler
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button className="rounded-full" onClick={handleSubmit} disabled={loading}>
             {loading ? 'Création...' : 'Créer l\'événement'}
           </Button>
         </DialogFooter>
