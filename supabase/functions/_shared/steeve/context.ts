@@ -360,6 +360,34 @@ export function mandate(dossier: Dossier, now: Date) {
   };
 }
 
+/**
+ * Phase du compte :
+ *  - « non_active » : demande de mandat en attente ou facture d'activation envoyée, pas encore payée ;
+ *  - « paiement_recu » : paiement reçu, activation en cours de finalisation par l'équipe ;
+ *  - « en_mandat » : client suivi ;
+ *  - « autre » : relogé, arrêté, ou situation inconnue (aucun message d'accueil propre).
+ */
+export type AccountPhase = 'non_active' | 'paiement_recu' | 'en_mandat' | 'autre';
+
+export function accountPhase(dossier: Dossier): AccountPhase {
+  const statut = norm(dossier.client.statut);
+  if (['stoppe', 'reloge'].includes(statut)) return 'autre';
+  const demande = norm(dossier.demande?.statut);
+  if (['actif', 'suspendu'].includes(statut)) return 'en_mandat';
+  if (demande === 'paye') return 'paiement_recu';
+  if (['en_attente', 'facture_envoyee'].includes(demande)) return 'non_active';
+  if (demande === 'active' && statut !== 'inactif') return 'en_mandat';
+  if (statut === 'en_attente') return 'non_active';
+  return 'autre';
+}
+
+/** Montant de l'acompte inscrit au dossier (location : demande de mandat ; achat : projet), ou null. */
+export function depositAmount(dossier: Dossier): number | null {
+  const raw = dossier.journey === 'achat' ? dossier.purchaseProject?.montant_acompte : dossier.demande?.montant_acompte;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** Résumé compact remis à Steeve à chaque passage (le détail passe par les outils). */
 export async function overview(db: Db, dossier: Dossier, now: Date) {
   const c = dossier.client;
