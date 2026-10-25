@@ -20,6 +20,7 @@ import { useCandidatCriteres } from '@/hooks/useCandidatCriteres';
 import { CandidatGarantForm, GARANT_CRITERE } from '@/components/candidat/CandidatGarantForm';
 import { CandidatSolvabiliteForm } from '@/components/candidat/CandidatSolvabiliteForm';
 import { isCandidatSolvable, isSolvabiliteRenseignee } from '@/lib/candidatSolvabilite';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 const TRIAL_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -121,6 +122,7 @@ export default function CandidatDashboard() {
             </Button>
           )}
         />
+        <MaJourneeBanner role="candidat" />
 
         {/* 2. À faire */}
         {aFaire && (

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { PremiumPageShellV2, PremiumPageHeaderV2, PremiumEmptyStateV2 } from '@/components/dashboard/v2';
 import { useNotifications } from '@/hooks/useNotifications';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 interface Props {
   profile: { prenom?: string } | null;
@@ -41,6 +42,7 @@ export default function RelocationClientDashboard({ profile }: Props) {
             ) : undefined
           }
         />
+        <MaJourneeBanner role="client" />
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

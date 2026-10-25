@@ -5,7 +5,7 @@ import { trierActions, type ActionItem, type Tone } from './staffDashboardModel'
 
 /** Ossature de page (même gabarit que DashPage, sans second conteneur de défilement : PullToRefresh défile déjà). */
 export function StaffShell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5 md:space-y-8 md:px-8 md:py-8">{children}</div>;
+  return <div className="mx-auto w-full min-w-0 max-w-6xl space-y-6 overflow-x-clip px-4 py-5 md:space-y-8 md:px-8 md:py-8">{children}</div>;
 }
 
 /** Titre de section sobre (h2) + action à droite. */
@@ -147,18 +147,24 @@ export function KpiTile({ icon: Icon, label, value, phrase, delta, deltaLabel = 
 export type DayVisit = { id: string; heure: string; titre: string; sous?: string; badge?: ReactNode; onClick: () => void };
 
 /** Bandeau « Ma journée » : date, nombre de visites, prochaine visite, autres visites du jour. */
-export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, agendaLabel = 'Agenda', aside }: {
+export type DayUnit = { one: string; many: string; none: string; pastHint?: string };
+const VISIT_UNIT: DayUnit = { one: 'visite', many: 'visites', none: 'aucune visite', pastHint: 'Les visites du jour sont passées : pensez au retour client.' };
+
+export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, agendaLabel = 'Agenda', aside, unit = VISIT_UNIT, className = '' }: {
   greeting: string; dateLabel: string; total: number; next: DayVisit | null; others: DayVisit[];
-  onAgenda: () => void; agendaLabel?: string; aside?: ReactNode;
+  onAgenda: () => void; agendaLabel?: string; aside?: ReactNode; unit?: DayUnit; className?: string;
 }) {
   const [showAll, setShowAll] = useState(false);
   return (
-    <section className="imr-lg-hero rounded-[28px] p-4 md:p-5" aria-label="Ma journée">
+    <section className={`imr-lg-hero w-full min-w-0 max-w-full rounded-[28px] p-4 md:p-5 ${className}`} aria-label="Ma journée">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ma journée · {dateLabel}</p>
-          <p className="mt-0.5 text-base font-semibold text-foreground">
-            {greeting} — {total === 0 ? 'aucune visite aujourd’hui' : `${total} visite${total > 1 ? 's' : ''} aujourd’hui`}
+          <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">Ma journée · {dateLabel}</p>
+          <p className="mt-0.5 break-words text-base font-semibold text-foreground">
+            {(() => {
+              const txt = total === 0 ? `${unit.none} aujourd’hui` : `${total} ${total > 1 ? unit.many : unit.one} aujourd’hui`;
+              return greeting ? `${greeting} — ${txt}` : txt.charAt(0).toUpperCase() + txt.slice(1);
+            })()}
           </p>
         </div>
         <button
@@ -172,9 +178,9 @@ export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, 
       {next ? (
         <button
           type="button" onClick={next.onClick}
-          className="mt-3 flex w-full items-center gap-3 rounded-xl bg-primary/[0.06] p-3 text-left hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="imr-lg-glass mt-3 flex w-full min-w-0 items-center gap-3 rounded-2xl p-3 text-left active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <span className="imr-lg-tint flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-xl">
             <span className="text-[10px] font-medium uppercase leading-none opacity-80">Proch.</span>
             <span className="text-sm font-semibold leading-tight tabular-nums">{next.heure}</span>
           </span>
@@ -186,14 +192,14 @@ export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, 
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
       ) : total > 0 ? (
-        <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Clock className="h-4 w-4" /> Les visites du jour sont passées : pensez au retour client.</p>
+        <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"><Clock className="h-4 w-4 shrink-0" /> {unit.pastHint ?? `Les ${unit.many} du jour sont passé(e)s.`}</p>
       ) : null}
 
       {others.length > 0 && (
         <div className="mt-2">
-          <div className={showAll ? 'divide-y divide-border/60' : 'hidden'}>
+          <div className={showAll ? 'max-h-64 divide-y divide-border/60 overflow-y-auto overscroll-contain' : 'hidden'}>
             {others.map((v) => (
-              <button key={v.id} type="button" onClick={v.onClick} className="flex w-full items-center gap-3 px-1 py-2 text-left hover:bg-muted/50">
+              <button key={v.id} type="button" onClick={v.onClick} className="flex w-full min-w-0 items-center gap-3 rounded-xl px-1 py-2 text-left hover:bg-black/[0.03]">
                 <span className="w-12 shrink-0 text-sm font-semibold tabular-nums text-foreground">{v.heure}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-foreground">{v.titre}</span>
@@ -207,7 +213,7 @@ export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, 
             type="button" onClick={() => setShowAll((x) => !x)} aria-expanded={showAll}
             className="mt-1 inline-flex h-9 items-center gap-1 rounded-full px-2 text-sm font-medium text-foreground hover:bg-muted"
           >
-            {showAll ? 'Masquer' : `Voir les ${others.length} autre${others.length > 1 ? 's' : ''} visite${others.length > 1 ? 's' : ''} du jour`}
+            {showAll ? 'Masquer' : `Voir ${others.length > 1 ? `les ${others.length} autres` : 'l’autre'} ${others.length > 1 ? unit.many : unit.one} du jour`}
             <ChevronDown className={`h-4 w-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
           </button>
         </div>

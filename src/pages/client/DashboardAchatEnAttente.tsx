@@ -12,6 +12,7 @@ import { MustChangePasswordBanner } from '@/components/MustChangePasswordBanner'
 import { formatCHF } from '@/lib/purchaseFinancing';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
 import { DASH_CARD, DashSection, LinkRow, TodoCard } from '@/components/client/dashboard/DashPrimitives';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 interface Props {
   profile?: { prenom?: string; nom?: string } | null;
@@ -66,6 +67,7 @@ export default function DashboardAchatEnAttente({ profile }: Props) {
         isAcheteur
         onMessagesClick={() => navigate('/client/messagerie')}
       />
+      <MaJourneeBanner role="client" />
 
       {/* À faire */}
       <div className="space-y-3">
