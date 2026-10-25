@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useSignedUrl } from "@/lib/storageUrl";
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 
 interface MessageAttachmentProps {
@@ -352,8 +353,8 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
                 </Button>
               </DialogTitle>
             </DialogHeader>
-            <iframe 
-              src={`${url}#toolbar=1&navpanes=1&scrollbar=1`}
+            <PdfPreview
+              src={url}
               className="w-full h-full border-0"
               title={name}
             />
