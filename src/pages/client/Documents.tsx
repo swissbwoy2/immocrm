@@ -1,16 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  FileText, Upload, Download, Trash2, File, 
+import {
+  FileText, Upload, Download, Trash2, File,
   Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList,
-  Sparkles, FolderOpen
 } from 'lucide-react';
+import {
+  DASH_CARD, DashPage, DashPageHeader, DashSection, DashFilterPills, DashEmptyState, DashBadge,
+} from '@/components/client/dashboard/DashPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -87,6 +87,8 @@ export default function Documents() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  // Filtre d'affichage par catégorie (purement visuel, aucune donnée modifiée)
+  const [docFamilyFilter, setDocFamilyFilter] = useState<string>('all');
 
   useEffect(() => {
     loadDocuments();
@@ -519,111 +521,76 @@ export default function Documents() {
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       // Location
-      'fiche_salaire': '💰 Fiche salaire',
-      'extrait_poursuites': '📋 Extrait poursuites',
-      'attestation_domicile': '🏠 Attestation domicile',
-      'rc_menage': '🛡️ RC Ménage',
-      'copie_bail': '📋 Copie bail',
-      'attestation_garantie_loyer': '🔐 Garantie loyer',
+      'fiche_salaire': 'Fiche salaire',
+      'extrait_poursuites': 'Extrait poursuites',
+      'attestation_domicile': 'Attestation domicile',
+      'rc_menage': 'RC Ménage',
+      'copie_bail': 'Copie bail',
+      'attestation_garantie_loyer': 'Garantie loyer',
       // Commun
-      'piece_identite': '🪪 Pièce d\'identité',
-      'permis_sejour': '🪪 Permis de séjour',
-      'contrat_travail': '📝 Contrat travail',
-      'attestation_employeur': '👔 Attestation employeur',
-      'dossier_complet': '📎 Dossier complet',
+      'piece_identite': 'Pièce d\'identité',
+      'permis_sejour': 'Permis de séjour',
+      'contrat_travail': 'Contrat travail',
+      'attestation_employeur': 'Attestation employeur',
+      'dossier_complet': 'Dossier complet',
       // Achat — revenus
-      'certificat_salaire': '💰 Certificat de salaire',
-      'fiche_salaire_1': '💰 Fiche salaire 1',
-      'fiche_salaire_2': '💰 Fiche salaire 2',
-      'fiche_salaire_3': '💰 Fiche salaire 3',
+      'certificat_salaire': 'Certificat de salaire',
+      'fiche_salaire_1': 'Fiche salaire 1',
+      'fiche_salaire_2': 'Fiche salaire 2',
+      'fiche_salaire_3': 'Fiche salaire 3',
       // Achat — fonds propres
-      'releve_bancaire_fonds_propres': '🏦 Relevé bancaire FP',
-      'attestation_3a': '🏦 Attestation 3a',
-      'attestation_lpp': '🏦 Attestation LPP',
-      'attestation_epl': '🏦 Attestation EPL',
-      'attestation_libre_passage': '🏦 Libre passage',
-      'justificatif_placements': '📊 Justificatif placements',
-      'justificatif_donation': '🎁 Justificatif donation',
-      'justificatif_avance_hoirie': '🎁 Avance d\'hoirie',
+      'releve_bancaire_fonds_propres': 'Relevé bancaire FP',
+      'attestation_3a': 'Attestation 3a',
+      'attestation_lpp': 'Attestation LPP',
+      'attestation_epl': 'Attestation EPL',
+      'attestation_libre_passage': 'Libre passage',
+      'justificatif_placements': 'Justificatif placements',
+      'justificatif_donation': 'Justificatif donation',
+      'justificatif_avance_hoirie': 'Avance d\'hoirie',
       // Achat — charges
-      'justificatif_credit_prive': '💳 Crédit privé',
-      'justificatif_leasing': '🚗 Leasing',
-      'justificatif_carte_credit': '💳 Carte de crédit',
-      'justificatif_pension_alimentaire': '👶 Pension alimentaire',
-      'justificatif_charges_fixes': '📊 Charges fixes',
+      'justificatif_credit_prive': 'Crédit privé',
+      'justificatif_leasing': 'Leasing',
+      'justificatif_carte_credit': 'Carte de crédit',
+      'justificatif_pension_alimentaire': 'Pension alimentaire',
+      'justificatif_charges_fixes': 'Charges fixes',
       // Achat — fiscalité
-      'decision_taxation': '📋 Décision de taxation',
-      'declaration_fiscale': '📋 Déclaration fiscale',
+      'decision_taxation': 'Décision de taxation',
+      'declaration_fiscale': 'Déclaration fiscale',
       // Achat — autorisations
-      'accord_transmission': '✅ Accord transmission',
-      'consentement_donnees': '✅ Consentement données',
+      'accord_transmission': 'Accord transmission',
+      'consentement_donnees': 'Consentement données',
       // Autre
-      'autre': '📄 Autre',
+      'autre': 'Autre',
     };
-    return labels[type] || '📄 ' + (type || 'Autre').replace(/_/g, ' ');
+    return labels[type] || (type || 'Autre').replace(/_/g, ' ');
   };
 
-  const getTypeBadgeStyle = (type: string) => {
-    // Famille identité (bleu)
-    const identite = 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700';
-    // Famille revenus (vert émeraude)
-    const revenus = 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700';
-    // Famille fonds propres (ciel)
-    const fondsPropres = 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-700';
-    // Famille charges (orange)
-    const charges = 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700';
-    // Famille fiscalité (violet)
-    const fiscalite = 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700';
-    // Famille autorisation (indigo)
-    const autorisation = 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700';
-    // Famille location-spécifique
-    const locationStyle = 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700';
-    const autre = 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600';
-
-    const styles: Record<string, string> = {
-      // Identité
-      'piece_identite': identite,
-      'permis_sejour': identite,
-      // Revenus
-      'fiche_salaire': revenus,
-      'fiche_salaire_1': revenus,
-      'fiche_salaire_2': revenus,
-      'fiche_salaire_3': revenus,
-      'certificat_salaire': revenus,
-      'contrat_travail': revenus,
-      'attestation_employeur': revenus,
-      // Fonds propres
-      'releve_bancaire_fonds_propres': fondsPropres,
-      'attestation_3a': fondsPropres,
-      'attestation_lpp': fondsPropres,
-      'attestation_epl': fondsPropres,
-      'attestation_libre_passage': fondsPropres,
-      'justificatif_placements': fondsPropres,
-      'justificatif_donation': fondsPropres,
-      'justificatif_avance_hoirie': fondsPropres,
-      // Charges
-      'extrait_poursuites': charges,
-      'justificatif_credit_prive': charges,
-      'justificatif_leasing': charges,
-      'justificatif_carte_credit': charges,
-      'justificatif_pension_alimentaire': charges,
-      'justificatif_charges_fixes': charges,
-      // Fiscalité
-      'decision_taxation': fiscalite,
-      'declaration_fiscale': fiscalite,
-      // Autorisations
-      'accord_transmission': autorisation,
-      'consentement_donnees': autorisation,
-      // Location-spécifique
-      'attestation_domicile': locationStyle,
-      'rc_menage': 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-950/50 dark:text-pink-300 dark:border-pink-700',
-      'copie_bail': locationStyle,
-      'attestation_garantie_loyer': 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-700',
-      'dossier_complet': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700',
-      'autre': autre,
-    };
-    return styles[type] || autre;
+  // Familles d'affichage (mêmes regroupements que les anciennes couleurs de badge)
+  const DOC_FAMILY: Record<string, string> = {
+    piece_identite: 'identite', permis_sejour: 'identite',
+    fiche_salaire: 'revenus', fiche_salaire_1: 'revenus', fiche_salaire_2: 'revenus', fiche_salaire_3: 'revenus',
+    certificat_salaire: 'revenus', contrat_travail: 'revenus', attestation_employeur: 'revenus',
+    releve_bancaire_fonds_propres: 'fonds_propres', attestation_3a: 'fonds_propres', attestation_lpp: 'fonds_propres',
+    attestation_epl: 'fonds_propres', attestation_libre_passage: 'fonds_propres', justificatif_placements: 'fonds_propres',
+    justificatif_donation: 'fonds_propres', justificatif_avance_hoirie: 'fonds_propres',
+    extrait_poursuites: 'charges', justificatif_credit_prive: 'charges', justificatif_leasing: 'charges',
+    justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges', justificatif_charges_fixes: 'charges',
+    decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
+    attestation_domicile: 'logement', rc_menage: 'logement', copie_bail: 'logement',
+    attestation_garantie_loyer: 'logement', dossier_complet: 'logement',
   };
+  const FAMILY_LABELS: { key: string; label: string }[] = [
+    { key: 'identite', label: 'Identité' },
+    { key: 'revenus', label: 'Revenus' },
+    { key: 'fonds_propres', label: 'Fonds propres' },
+    { key: 'charges', label: 'Charges et poursuites' },
+    { key: 'fiscalite', label: 'Fiscalité' },
+    { key: 'autorisation', label: 'Autorisations' },
+    { key: 'logement', label: 'Logement' },
+    { key: 'autre', label: 'Autres' },
+  ];
+  const getDocFamily = (type: string) => DOC_FAMILY[type] || 'autre';
 
   const getFileIcon = (type: string) => {
     if (type.includes('pdf')) return FileText;
@@ -642,351 +609,279 @@ export default function Documents() {
 
   if (loading) {
     return (
-      <div className="p-4 md:p-8" role="status" aria-label="Chargement des documents">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-24 rounded bg-muted/40" />
-      </div>
+      <DashPage>
+        <div role="status" aria-label="Chargement des documents">
+          <div className="h-8 w-48 rounded-full bg-muted/60" />
+          <div className="mt-2 h-4 w-64 rounded-full bg-muted/40" />
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="h-36 rounded-2xl bg-muted/40" />
+            <div className="h-36 rounded-2xl bg-muted/40" />
+            <div className="hidden h-36 rounded-2xl bg-muted/40 xl:block" />
+          </div>
+        </div>
+      </DashPage>
     );
   }
 
+  const familyOptions = [
+    { key: 'all', label: 'Tous', count: documents.length },
+    ...FAMILY_LABELS
+      .map((f) => ({ ...f, count: documents.filter((d) => getDocFamily(d.type_document) === f.key).length }))
+      .filter((f) => f.count > 0),
+  ];
+  const activeFamily = familyOptions.some((o) => o.key === docFamilyFilter) ? docFamilyFilter : 'all';
+  const visibleDocuments = activeFamily === 'all'
+    ? documents
+    : documents.filter((d) => getDocFamily(d.type_document) === activeFamily);
+
+  const requiredDocsBuyer = [
+    "Pièce d'identité (passeport / carte d'identité)",
+    'Permis de séjour (si applicable)',
+    'Certificat de salaire annuel',
+    '3 dernières fiches de salaire',
+    'Contrat de travail',
+    'Attestation employeur (si nécessaire)',
+    'Relevé bancaire fonds propres',
+    'Attestation 3e pilier (3a)',
+    'Attestation LPP',
+    'Attestation EPL / retrait pour logement principal',
+    'Attestation libre passage',
+    'Justificatif placements financiers',
+    "Justificatif donation / avance d'hoirie",
+    'Justificatif crédit privé',
+    'Justificatif leasing',
+    'Justificatif carte de crédit (mensualités)',
+    'Justificatif pension alimentaire',
+    'Dernière décision de taxation',
+    'Déclaration fiscale (si nécessaire)',
+    'Accord de transmission aux partenaires financiers',
+    'Consentement traitement des données financières',
+  ];
+  const requiredDocsRental = [
+    'Formulaire de demande de recherches dûment complété et signé',
+    'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
+    'Copie des 3 dernières fiches de salaire et du contrat de travail',
+    'Attestation de l\'employeur',
+    'Copie de la déclaration d\'impôts (si indépendant)',
+    'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
+    'Attestation de domicile ou d\'établissement de la commune actuelle',
+    'Copie de la RC-ménage (assurance responsabilité civile)'
+  ];
+  const requiredDocs = isClientBuyer ? requiredDocsBuyer : requiredDocsRental;
+
   return (
-    <div className="relative flex-1 overflow-y-auto">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="p-4 md:p-8 space-y-6">
+    <DashPage>
+      <DashPageHeader
+        title="Mes documents"
+        subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''} dans votre espace`}
+        action={
+          <Button onClick={() => setUploadDialogOpen(true)} className="rounded-full">
+            <Upload className="w-4 h-4 mr-2" />
+            Ajouter un document
+          </Button>
+        }
+      />
+
+      <div className="space-y-8">
         {/* Rappel mise à jour mensuelle */}
         <DocumentUpdateReminder />
 
-        {/* Header animé avec glassmorphism */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-6 md:p-8">
-          {/* Effets de fond */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-primary/5 rounded-full blur-2xl" />
-          </div>
-          
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                  <FolderOpen className="w-7 h-7 text-primary-foreground" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                  <Sparkles className="w-3 h-3 text-primary" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Mes documents
-                </h1>
-                <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                    {documents.length}
-                  </span>
-                  document{documents.length > 1 ? 's' : ''} dans votre espace
-                </p>
-              </div>
-            </div>
-            
-            <Button 
-              onClick={() => setUploadDialogOpen(true)}
-              className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <Upload className="w-4 h-4 mr-2" />
-              Ajouter un document
-            </Button>
-          </div>
-        </div>
-
-        {/* Info banner — conditionnel acheteur / locataire */}
-        {isClientBuyer ? (
-          <Card className="relative overflow-hidden border-sky-200/50 bg-gradient-to-br from-sky-50/80 to-sky-50/30 dark:from-sky-950/50 dark:to-sky-950/20 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-100/50 via-transparent to-transparent dark:from-sky-900/30" />
-            <CardContent className="relative flex items-start gap-4 pt-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-sky-500/25">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-sm text-sky-800 dark:text-sky-200 space-y-3">
-                <p className="font-semibold text-base">Documents requis pour votre dossier d'achat immobilier :</p>
-                <ul className="grid gap-2">
-                  {[
-                    "Pièce d'identité (passeport / carte d'identité)",
-                    'Permis de séjour (si applicable)',
-                    'Certificat de salaire annuel',
-                    '3 dernières fiches de salaire',
-                    'Contrat de travail',
-                    'Attestation employeur (si nécessaire)',
-                    'Relevé bancaire fonds propres',
-                    'Attestation 3e pilier (3a)',
-                    'Attestation LPP',
-                    'Attestation EPL / retrait pour logement principal',
-                    'Attestation libre passage',
-                    'Justificatif placements financiers',
-                    "Justificatif donation / avance d'hoirie",
-                    'Justificatif crédit privé',
-                    'Justificatif leasing',
-                    'Justificatif carte de crédit (mensualités)',
-                    'Justificatif pension alimentaire',
-                    'Dernière décision de taxation',
-                    'Déclaration fiscale (si nécessaire)',
-                    'Accord de transmission aux partenaires financiers',
-                    'Consentement traitement des données financières',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-sky-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
-            <CardContent className="relative flex items-start gap-4 pt-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
-                <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
-                <ul className="grid gap-2">
-                  {[
-                    'Formulaire de demande de recherches dûment complété et signé',
-                    'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
-                    'Copie des 3 dernières fiches de salaire et du contrat de travail',
-                    'Attestation de l\'employeur',
-                    'Copie de la déclaration d\'impôts (si indépendant)',
-                    'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
-                    'Attestation de domicile ou d\'établissement de la commune actuelle',
-                    'Copie de la RC-ménage (assurance responsabilité civile)'
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
-                  Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Documents demandés par l'agent */}
         {documentRequests.length > 0 && (
-          <Card className="relative overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/80 to-orange-50/30 dark:from-orange-950/50 dark:to-orange-950/20 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-100/50 via-transparent to-transparent dark:from-orange-900/30" />
-            <CardHeader className="relative pb-3">
-              <CardTitle className="flex items-center gap-3 text-orange-800 dark:text-orange-200">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
-                  <ClipboardList className="w-5 h-5 text-white" />
-                </div>
-                <span>Documents demandés par votre agent</span>
-                <Badge className="ml-auto bg-orange-500 hover:bg-orange-600 text-white border-0">
-                  {documentRequests.length}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="space-y-3">
-                {documentRequests.map((request, index) => (
-                  <div 
-                    key={request.id} 
-                    className="group relative flex items-center justify-between p-4 rounded-xl bg-background/80 backdrop-blur-sm border border-orange-200/50 dark:border-orange-800/50 hover:border-orange-300 dark:hover:border-orange-700 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-orange-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-                    <div className="relative flex-1">
-                      <p className="font-medium">{request.document_label}</p>
+          <DashSection
+            title="Documents demandés par votre agent"
+            action={<DashBadge tone="warning">{documentRequests.length}</DashBadge>}
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {documentRequests.map((request) => (
+                <div key={request.id} className={`${DASH_CARD} flex flex-col p-4 md:p-5`}>
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                      <ClipboardList className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base font-semibold text-foreground">{request.document_label}</p>
                       {request.note && (
-                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                          <span>📝</span> {request.note}
-                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">{request.note}</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}
                       </p>
                     </div>
-                    <Button 
-                      size="sm" 
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      size="sm"
                       onClick={() => {
                         setSelectedType(request.document_type);
                         setUploadDialogOpen(true);
                       }}
-                      className="relative overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md shadow-orange-500/25"
+                      className="rounded-full"
                     >
-                      <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
                       <Upload className="w-4 h-4 mr-2" />
                       Uploader
                     </Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </DashSection>
         )}
 
         {/* Liste des documents */}
-        {documents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {documents.map((doc, index) => {
-              const Icon = getFileIcon(doc.type);
-              return (
-                <Card 
-                  key={doc.id} 
-                  className="group relative overflow-hidden bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 animate-fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  
-                  <CardHeader className="relative pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <Icon className="w-6 h-6 text-primary" />
-                        </div>
+        <DashSection title="Vos documents">
+          {documents.length > 0 ? (
+            <>
+              {familyOptions.length > 2 && (
+                <DashFilterPills
+                  options={familyOptions}
+                  value={activeFamily}
+                  onChange={setDocFamilyFilter}
+                  label="Filtrer par catégorie de document"
+                />
+              )}
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleDocuments.map((doc) => {
+                  const Icon = getFileIcon(doc.type);
+                  return (
+                    <div key={doc.id} className={`${DASH_CARD} flex flex-col p-4 md:p-5`}>
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Icon className="h-5 w-5" />
+                        </span>
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-sm truncate group-hover:text-primary transition-colors" title={doc.nom}>
+                          <p className="truncate text-base font-semibold text-foreground" title={doc.nom}>
                             {doc.nom}
-                          </CardTitle>
-                          {doc.taille ? (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatFileSize(doc.taille)}
-                            </p>
-                          ) : null}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                            {doc.taille ? ` · ${formatFileSize(doc.taille)}` : ''}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="relative space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge 
-                          variant="outline" 
-                          className={`text-sm font-medium px-3 py-1 border ${getTypeBadgeStyle(doc.type_document)}`}
-                        >
-                          {getTypeLabel(doc.type_document)}
-                        </Badge>
-                        {doc.offre_id && (
-                          <Badge className="text-xs bg-secondary/80 text-secondary-foreground border-0">
-                            📝 Candidature
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
-                      </p>
-                    </div>
-                    
-                    {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
-                      <div className="relative overflow-hidden rounded-lg">
-                        <img 
-                          src={doc.url} 
-                          alt={doc.nom}
-                          className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    )}
 
-                    <div className="flex gap-2 pt-2">
-                      {(doc.type.includes('image') || doc.type === 'application/pdf') && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <DashBadge tone="muted">{getTypeLabel(doc.type_document)}</DashBadge>
+                        {doc.offre_id && <DashBadge tone="primary">Candidature</DashBadge>}
+                      </div>
+
+                      {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-border/70">
+                          <img
+                            src={doc.url}
+                            alt={doc.nom}
+                            className="h-32 w-full object-cover"
+                          />
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex items-center gap-2 border-t border-border/70 pt-3">
+                        {(doc.type.includes('image') || doc.type === 'application/pdf') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePreview(doc)}
+                            className="rounded-full"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Aperçu
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handlePreview(doc)}
-                          className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+                          className="flex-1 rounded-full"
+                          onClick={() => handleDownload(doc)}
                         >
-                          <Eye className="w-3 h-3 mr-1" />
-                          Aperçu
+                          <Download className="w-3.5 h-3.5 mr-1" />
+                          Télécharger
                         </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setDocumentToRename(doc);
-                          setNewDocumentName(doc.nom);
-                          setRenameDialogOpen(true);
-                        }}
-                        className="hover:bg-primary/10 hover:text-primary"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
-                        onClick={() => handleDownload(doc)}
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Télécharger
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedDoc(doc);
-                          setDeleteDialogOpen(true);
-                        }}
-                        className="hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Renommer le document"
+                          onClick={() => {
+                            setDocumentToRename(doc);
+                            setNewDocumentName(doc.nom);
+                            setRenameDialogOpen(true);
+                          }}
+                          className="h-9 w-9 shrink-0 rounded-full"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Supprimer le document"
+                          onClick={() => {
+                            setSelectedDoc(doc);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <Card className="relative overflow-hidden border-dashed border-2 border-muted-foreground/20 bg-gradient-to-br from-muted/30 to-muted/10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
-            <CardContent className="relative py-16 text-center">
-              <div className="relative inline-flex mb-6">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                  <FileText className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-background border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                  <Upload className="w-4 h-4 text-muted-foreground" />
-                </div>
+                  );
+                })}
               </div>
-              <h3 className="text-xl font-semibold mb-2">Aucun document</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                Commencez par uploader vos documents importants pour constituer votre dossier
-              </p>
-              <Button 
-                onClick={() => setUploadDialogOpen(true)}
-                className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <Upload className="w-4 h-4 mr-2" />
-                Ajouter un document
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+            </>
+          ) : (
+            <DashEmptyState
+              icon={FileText}
+              title="Aucun document"
+              description="Commencez par uploader vos documents importants pour constituer votre dossier"
+              action={
+                <Button onClick={() => setUploadDialogOpen(true)} className="rounded-full">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Ajouter un document
+                </Button>
+              }
+            />
+          )}
+        </DashSection>
+
+        {/* Documents requis — conditionnel acheteur / locataire */}
+        <DashSection title="Documents requis">
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <AlertCircle className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-semibold text-foreground">
+                  {isClientBuyer
+                    ? "Documents requis pour votre dossier d'achat immobilier :"
+                    : 'Documents requis (Personnes salariées sans garant) :'}
+                </p>
+                <ul className="mt-3 grid gap-x-6 gap-y-2 text-sm text-foreground sm:grid-cols-2">
+                  {requiredDocs.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                {!isClientBuyer && (
+                  <p className="mt-4 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                    Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </DashSection>
       </div>
 
-      {/* Upload Dialog modernisé */}
+      {/* Dialogue d'ajout */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-lg border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                <Upload className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Upload className="w-5 h-5" />
+              </span>
               Ajouter un document
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -998,50 +893,50 @@ export default function Documents() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type de document</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
+                <SelectTrigger className="rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {isClientBuyer ? (
                     <>
-                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                      <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
-                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                      <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
-                      <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
-                      <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
-                      <SelectItem value="fiche_salaire_3">💰 Fiche de salaire 3</SelectItem>
-                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                      <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
-                      <SelectItem value="attestation_3a">🏦 Attestation 3e pilier (3a)</SelectItem>
-                      <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
-                      <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
-                      <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
-                      <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
-                      <SelectItem value="justificatif_donation">🎁 Justificatif donation / hoirie</SelectItem>
-                      <SelectItem value="justificatif_credit_prive">💳 Justificatif crédit privé</SelectItem>
-                      <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
-                      <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
-                      <SelectItem value="justificatif_pension_alimentaire">👶 Pension alimentaire</SelectItem>
-                      <SelectItem value="decision_taxation">📋 Décision de taxation</SelectItem>
-                      <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
-                      <SelectItem value="accord_transmission">✅ Accord transmission partenaires</SelectItem>
-                      <SelectItem value="consentement_donnees">✅ Consentement données financières</SelectItem>
-                      <SelectItem value="autre">📄 Autre document achat</SelectItem>
+                      <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
+                      <SelectItem value="permis_sejour">Permis de séjour</SelectItem>
+                      <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
+                      <SelectItem value="certificat_salaire">Certificat de salaire annuel</SelectItem>
+                      <SelectItem value="fiche_salaire_1">Fiche de salaire 1</SelectItem>
+                      <SelectItem value="fiche_salaire_2">Fiche de salaire 2</SelectItem>
+                      <SelectItem value="fiche_salaire_3">Fiche de salaire 3</SelectItem>
+                      <SelectItem value="contrat_travail">Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">Attestation employeur</SelectItem>
+                      <SelectItem value="releve_bancaire_fonds_propres">Relevé bancaire fonds propres</SelectItem>
+                      <SelectItem value="attestation_3a">Attestation 3e pilier (3a)</SelectItem>
+                      <SelectItem value="attestation_lpp">Attestation LPP</SelectItem>
+                      <SelectItem value="attestation_epl">Attestation EPL</SelectItem>
+                      <SelectItem value="attestation_libre_passage">Attestation libre passage</SelectItem>
+                      <SelectItem value="justificatif_placements">Justificatif placements</SelectItem>
+                      <SelectItem value="justificatif_donation">Justificatif donation / hoirie</SelectItem>
+                      <SelectItem value="justificatif_credit_prive">Justificatif crédit privé</SelectItem>
+                      <SelectItem value="justificatif_leasing">Justificatif leasing</SelectItem>
+                      <SelectItem value="justificatif_carte_credit">Justificatif carte de crédit</SelectItem>
+                      <SelectItem value="justificatif_pension_alimentaire">Pension alimentaire</SelectItem>
+                      <SelectItem value="decision_taxation">Décision de taxation</SelectItem>
+                      <SelectItem value="declaration_fiscale">Déclaration fiscale</SelectItem>
+                      <SelectItem value="accord_transmission">Accord transmission partenaires</SelectItem>
+                      <SelectItem value="consentement_donnees">Consentement données financières</SelectItem>
+                      <SelectItem value="autre">Autre document achat</SelectItem>
                     </>
                   ) : (
                     <>
-                      <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
-                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                      <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
-                      <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
-                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                      <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
-                      <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
-                      <SelectItem value="autre">📄 Autre document</SelectItem>
+                      <SelectItem value="fiche_salaire">Fiche de salaire</SelectItem>
+                      <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
+                      <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
+                      <SelectItem value="attestation_domicile">Attestation de domicile</SelectItem>
+                      <SelectItem value="rc_menage">RC Ménage</SelectItem>
+                      <SelectItem value="contrat_travail">Contrat de travail</SelectItem>
+                      <SelectItem value="attestation_employeur">Attestation employeur</SelectItem>
+                      <SelectItem value="copie_bail">Copie du bail</SelectItem>
+                      <SelectItem value="attestation_garantie_loyer">Attestation garantie de loyer</SelectItem>
+                      <SelectItem value="autre">Autre document</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -1050,89 +945,88 @@ export default function Documents() {
           </div>
 
           <div
-            className={`relative overflow-hidden border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+            className={`rounded-2xl border-2 border-dashed p-6 text-center transition-colors duration-150 sm:p-8 ${
               dragActive
-                ? 'border-primary bg-primary/10 scale-[1.02]'
-                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-foreground/40 hover:bg-muted/30'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            {/* Gradient background on drag */}
-            <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 transition-opacity duration-300 ${dragActive ? 'opacity-100' : 'opacity-0'}`} />
-            
-            <div className="relative">
-              <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center transition-all duration-300 ${dragActive ? 'scale-110 from-primary/20 to-primary/10' : ''}`}>
-                <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              </div>
-              
-              {selectedFile ? (
-                <div className="space-y-3">
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatFileSize(selectedFile.size)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                  >
-                    Changer de fichier
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-medium mb-2">
-                    Glissez-déposez votre fichier ici
+            <span
+              className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full transition-colors duration-150 ${
+                dragActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              <Upload className="w-6 h-6" />
+            </span>
+
+            {selectedFile ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-border/70 bg-muted/40 p-4">
+                  <p className="break-all text-sm font-medium text-foreground">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatFileSize(selectedFile.size)}
                   </p>
-                  <p className="text-xs text-muted-foreground mb-4">ou</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                  >
-                    Sélectionner un fichier
-                  </Button>
-                </>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) {
-                    handleFileSelect(e.target.files[0]);
-                  }
-                }}
-              />
-            </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="rounded-full"
+                >
+                  Changer de fichier
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-foreground mb-2">
+                  Glissez-déposez votre fichier ici
+                </p>
+                <p className="text-xs text-muted-foreground mb-4">ou</p>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-full"
+                >
+                  Sélectionner un fichier
+                </Button>
+              </>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  handleFileSelect(e.target.files[0]);
+                }
+              }}
+            />
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setUploadDialogOpen(false);
                 setSelectedFile(null);
                 setSelectedType('autre');
               }}
-              className="hover:bg-muted"
+              className="rounded-full"
             >
               Annuler
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmUpload}
               disabled={!selectedFile || isUploading}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
+              className="rounded-full sm:ml-2"
             >
               {isUploading ? (
                 <>
@@ -1147,9 +1041,9 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog modernisé */}
-      <Dialog 
-        open={previewDialogOpen} 
+      {/* Dialogue d'aperçu */}
+      <Dialog
+        open={previewDialogOpen}
         onOpenChange={(open) => {
           setPreviewDialogOpen(open);
           if (!open && previewUrl && previewUrl.startsWith('blob:')) {
@@ -1157,16 +1051,16 @@ export default function Documents() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[95vh] border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="max-w-5xl max-h-[95vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Eye className="w-4 h-4 text-primary" />
-              </div>
-              {previewDocument?.nom}
+            <DialogTitle className="flex min-w-0 items-center gap-3 pr-6">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Eye className="w-4 h-4" />
+              </span>
+              <span className="truncate">{previewDocument?.nom}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="h-[80vh] rounded-xl overflow-hidden bg-muted/30">
+          <div className="h-[80vh] rounded-xl overflow-hidden border border-border/70 bg-muted/30">
             {previewDocument?.type?.includes('pdf') ? (
               <object
                 data={previewUrl}
@@ -1174,11 +1068,11 @@ export default function Documents() {
                 className="w-full h-full"
               >
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-4">
-                    <FileText className="w-8 h-8" />
-                  </div>
-                  <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownload(previewDocument)} className="bg-gradient-to-r from-primary to-primary/90">
+                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                    <FileText className="w-7 h-7" />
+                  </span>
+                  <p className="mb-4 text-sm">Impossible d'afficher le PDF dans le navigateur.</p>
+                  <Button onClick={() => handleDownload(previewDocument)} className="rounded-full">
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
                   </Button>
@@ -1186,14 +1080,14 @@ export default function Documents() {
               </object>
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start p-4">
-                <img 
-                  src={previewUrl} 
+                <img
+                  src={previewUrl}
                   alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-lg shadow-2xl"
+                  className="max-w-full h-auto rounded-lg"
                 />
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-sm text-muted-foreground py-8">
                 Aperçu non disponible pour ce type de fichier
               </p>
             )}
@@ -1201,14 +1095,14 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Rename Dialog modernisé */}
+      {/* Dialogue de renommage */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="sm:max-w-md border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Pencil className="w-5 h-5 text-primary" />
-              </div>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Pencil className="w-5 h-5" />
+              </span>
               Renommer le document
             </DialogTitle>
           </DialogHeader>
@@ -1219,18 +1113,18 @@ export default function Documents() {
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
-                className="bg-background/50 border-border/50 focus:border-primary/50"
+                className="rounded-xl"
               />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="rounded-full">
               Annuler
             </Button>
-            <Button 
-              onClick={handleRename} 
+            <Button
+              onClick={handleRename}
               disabled={!newDocumentName.trim()}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              className="rounded-full sm:ml-2"
             >
               Renommer
             </Button>
@@ -1238,14 +1132,14 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog modernisé */}
+      {/* Dialogue de suppression */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-destructive" />
-              </div>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <Trash2 className="w-5 h-5" />
+              </span>
               Supprimer le document
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
@@ -1253,16 +1147,16 @@ export default function Documents() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="hover:bg-muted">Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
-              className="bg-gradient-to-r from-destructive to-destructive/90 hover:from-destructive/90 hover:to-destructive text-destructive-foreground"
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:ml-2"
             >
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashPage>
   );
 }
