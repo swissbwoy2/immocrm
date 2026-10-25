@@ -133,7 +133,7 @@ export type DetailKey = 'commissions' | 'activations' | 'acomptesAchat' | 'rembo
 export interface FinanceResult {
   commissions: number;          // commissions facturées, hors acompte déjà encaissé
   commissionsBrutes: number;    // honoraires totaux
-  commissionsAEncaisser: number;
+  commissionsAEncaisser: number; // commissions dont la part agent n'est pas encore versée (statut du registre)
   activations: number;
   activationsCount: number;
   acomptesAchat: number;
@@ -212,7 +212,7 @@ export function computeFinance(d: FinanceInput, p: Period): FinanceResult {
     details: {
       commissions: reg.map((r) => ({
         date: r.date_conclusion, label: fullName(r.client_prenom, r.client_nom), montant: net(r),
-        note: [r.type_affaire, num(r.montant_acompte) ? `acompte ${formatCHF(num(r.montant_acompte))} déduit` : '', (r.statut_paiement ?? '') === 'paye' ? 'payée' : 'à encaisser'].filter(Boolean).join(' · '),
+        note: [r.type_affaire, num(r.montant_acompte) ? `acompte ${formatCHF(num(r.montant_acompte))} déduit` : '', num(r.commission_agent) > 0 ? `commission agent ${(r.statut_paiement ?? '') === 'paye' ? 'versée' : 'à verser'}` : ''].filter(Boolean).join(' · '),
       })).sort(byDate),
       activations: acts.map((a) => ({ date: a.date_paiement, label: fullName(a.prenom, a.nom), montant: actAmount(a), note: a.type_recherche ?? undefined })).sort(byDate),
       acomptesAchat: achats.map((a) => ({ date: a.date_paiement_acompte, label: a.label || 'Projet d\'achat', montant: achatAmount(a) })).sort(byDate),
