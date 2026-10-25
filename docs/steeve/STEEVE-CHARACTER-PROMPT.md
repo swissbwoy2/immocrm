@@ -1,71 +1,85 @@
-# STEEVE — prompt de référence du personnage
+# STEEVE — référence du personnage
 
-Ce document sert à garder Steeve identique dans le temps : code, retouches et futurs visuels.
-Il ne déclenche aucun service de génération. Le modèle validé est en code dans
-`src/components/steeve/mascot/steeve-model.js`. Ce fichier fait foi : toute modification doit le respecter.
+Ce document sert à garder Steeve identique dans le temps. Il ne déclenche aucun service de génération.
+Le modèle en code fait foi : `src/components/steeve/mascot/steeve-model.js`.
+Il vient du pack « steeve-3d-logisorama-v1 » (25.10.2026), seule référence à partir de cette version.
+L'ancien robot du kit « steeve-cursor-kit 3 » est abandonné.
+
+Sources maîtres (dans le pack) :
+- `references/01-corps-face-trois-quarts-profil.png` ;
+- `references/02-tete-visage-tenue.png`.
+
+Référence historique : le grand Steeve des flyers, pas la miniature ancienne dans l'ordinateur.
 
 ## Prompt visuel de référence
 
-> Steeve est une mascotte 3D terminal expressive, élégante et sympathique. Silhouette stylisée compacte avec une
-> grande tête rectangulaire aux angles très arrondis, en verre dépoli blanc perle : reflets doux, volume épais,
-> aspect nacré et translucide. Aucun violet ni rose. Les deux yeux et la bouche sont de véritables volumes
-> anthracite, placés devant la coque avec un petit écart visible, et non dessinés sur une texture. Ils restent
-> lisibles à petite taille. Conserver les petits signes de terminal et la silhouette de la version validée. Le
-> corps porte un vrai costume blanc cassé stylisé : veste distincte, revers, chemise, col, cravate anthracite,
-> bouton, détail de poche, pantalon cohérent et chaussures sombres. Les bras, avant-bras, mains et jambes sont
-> articulables. Pas de membres flottants ou de pénétrations visibles. Visage expressif : neutre, sourire,
-> curiosité, réflexion et sommeil. Éclairage blanc neutre, fond transparent, modèle léger pour le Web. Les
-> proportions, vêtements et matériaux restent identiques pendant tous les mouvements.
+> Mascotte 3D compacte et sympathique, blanche, en costume ivoire, avec une tête surdimensionnée en rectangle
+> arrondi. Tête épaisse, douce, légèrement bombée, face laiteuse claire et pourtour blanc nacré brillant. Yeux
+> noirs verticaux en forme de pilule et petite bouche noire souriante, en volumes séparés, lisibles à la taille
+> d'un bouton Web. Petit tiret « − » en haut à gauche, signe « + » en haut à droite et discret repère au bord
+> droit. Aucun nez, oreille, antenne, cheveu, visage plein noir ou nouvel emblème. Veste ivoire à texture fine de
+> tissu, revers crantés, chemise blanche à col pointu, cravate anthracite, un bouton noir, deux poches basses à
+> rabat. Pantalon droit assorti. Mains blanches arrondies avec une petite transition sombre au poignet.
+> Chaussures noires arrondies, légèrement brillantes, semelles sombres. Éclairage de studio neutre, reflets
+> modérés, aucun violet ni rose, fond transparent.
 
-## Proportions (unités du modèle : hauteur totale ≈ 3,6, Y vers le haut, face vers +Z)
+## Proportions (unités du modèle : hauteur 3,8, Y vers le haut, face vers +Z)
 
 | Élément | Valeur |
 |---|---|
-| Tête (coque) | demi-axes 0,80 × 0,72 × 0,43 ; profil « coussin » (exposant 0,60) ; centre à y = 2,86 |
-| Traits du visage (signes de terminal) | 4 « + » aux coins (±0,60 ; ±0,51) et 2 lignes de 7 tirets (pas 0,145) : en haut les « cheveux », en bas la « barbe ». Tirets 0,098 × 0,034, « + » de 0,136 et 0,034 d'épaisseur, collés à la coque |
-| Visage | groupe détaché, 0,56 devant le centre de la tête (dos des pièces à 0,06–0,10 de la coque) |
-| Yeux | volumes arrondis 0,13 × 0,265 × 0,10, à x = ±0,285, y = +0,14 |
-| Bouche | à y = −0,205 : trait neutre 0,215 × 0,037 ; sourire (tube) ; trois points (réflexion) ; « o » (curiosité) |
-| Torse (veste) | centre y = 1,62 ; largeur ≈ 0,98 ; profondeur 0,36 ; col en V jusqu'à y = 0,32 |
-| Bras | épaules à (±0,52 ; 2,025) ; manche haute 0,39, avant-bras 0,33, manchette, main 0,185 × 0,18 |
-| Jambes | hanches à (±0,205 ; 1,16) ; pantalon continu 0,87 ; chaussures 0,34 × 0,20 × 0,49 + semelle |
+| Tête | boîte arrondie 1,80 × 1,47 × 0,98 (rayon 0,30), centre à y = 3,065 |
+| Pourtour et face | anneau poli 1,744 × 1,412 ; face laiteuse bombée 1,49 × 1,157 |
+| Yeux | pilules 0,16 × 0,345, à x = ±0,381 |
+| Bouche | sourire sculpté de 0,27 de large, à y = −0,34 |
+| Signes | « − » à (−0,454 ; 0,443), « + » à (0,479 ; 0,443), repère fin au bord droit |
+| Torse | veste 1,10 × 1,19, profondeur 0,42, centre à y = 1,75 |
+| Bras | épaules à (±0,59 ; 2,18), repos inclinés de 0,19 rad ; manche haute 0,58, avant-bras 0,47, moufle |
+| Jambes | hanches à (±0,299 ; 1,19) ; pantalon 1,025 ; chaussures 0,49 × 0,29 × 0,74 |
 
 ## Matériaux (couleurs sRGB)
 
-| Matériau | Couleur | Caractère |
-|---|---|---|
-| Coque de tête | `#f6f8fa` | verre dépoli nacré : transmission 0,52, rugosité 0,17, vernis 1 |
-| Visage, bouton | `#24282b` | anthracite satiné, légèrement métallique |
-| Traits du visage (cheveux, barbe, +) | `#2a2f33` | anthracite, comme les yeux, pour rester lisibles à la taille du widget |
-| Veste, manches | `#e9eae6` | ivoire, très légère translucidité |
-| Revers, poche | `#d9ddda` | satin |
-| Chemise, col, manchettes, pochette | `#ffffff` | coton mat |
-| Pantalon | `#d9dcda` | ivoire mat |
-| Cravate | `#303438` | soie anthracite |
-| Chaussures | `#171a1c` | cuir anthracite |
-| Mains | `#f3f5f5` | perle, légère translucidité |
+| Matériau | Couleur |
+|---|---|
+| Coque de tête (céramique nacrée) | `#f4f4f2` |
+| Face laiteuse, pourtour poli | `#fafafa` |
+| Yeux, bouche, expressions | `#070909` |
+| Signes « − » et « + », bouton | `#181a19` |
+| Costume (laine ivoire, micro-tissage) | `#e9e5da` ; revers `#eeeadf` |
+| Chemise | `#ffffff` |
+| Cravate | `#151718` |
+| Mains | `#f6f6f4` |
+| Chaussures et semelles | `#101212` / `#101110` |
 
-Éclairage : environnement de « softbox » procédural (aucune image HDR), lumière hémisphérique, lumière principale
-en haut à gauche et contre-jour à droite. Fond toujours transparent.
+## Expressions (volumes noirs ajoutés, masqués au repos)
 
-## Expressions et gestes
+| Expression | Visage |
+|---|---|
+| neutre | yeux pilules, sourire du personnage |
+| smile | sourire élargi |
+| laugh | yeux rieurs (∩ ∩), grande bouche ouverte |
+| wink | œil gauche ouvert, œil droit rieur |
+| surprise | yeux agrandis, sourcils levés, bouche en « o » |
+| sad | sourcils en accent, bouche à l'envers |
+| oops | sourcils inquiets, petite bouche en « o » |
+| curious | un sourcil levé, petite bouche en « o » |
+| thinking | sourcil levé, trois points |
+| serious | sourcils froncés, bouche droite |
+| sleep | yeux fermés (∪ ∪), petite bouche droite |
 
-- Expressions : neutre, sourire (accueil, invitation, réussite, danse), réflexion (trois points), curiosité
-  (bouche « o » et sourcils), sommeil (yeux fermés en arcs).
-- Clignement automatique toutes les 4,8 à 7 secondes, jamais pendant la saisie ni le sommeil.
-- Gestes : coucou (bras droit levé), invitation, réussite, petite danse, ajustement du col (« stretch »),
-  regard circulaire (« curious »), réaction au défilement, sommeil.
-- Tous les mouvements sont amortis dans le temps. La tête mène, le corps suit, les membres reviennent au repos.
+Les sourcils n'apparaissent que pendant ces expressions. Au repos, le visage reste celui de la référence.
+
+## Gestes
+
+Coucou, invitation, montrer la messagerie, pouce levé, rire, surprise, clin d'œil, oui, non, haussement
+d'épaules, applaudissements, tristesse, célébration, révérence, saut, tour sur soi-même, oups, danse, curiosité,
+étirement, réflexion, sommeil. Voir `steeve-gestes.png`.
 
 ## Règles de cohérence
 
-1. Pas de violet, de rose ni de nouvelle couleur de marque. Le personnage reste blanc, ivoire et anthracite.
-2. Le visage reste en volumes détachés devant la coque. Jamais une texture ni un dessin plat. Les traits
-   « cheveux » et « barbe » restent visibles à toutes les tailles.
-3. Le costume reste complet (veste, revers, chemise, col, cravate, bouton, poche, pantalon, chaussures).
-   Il ne se déforme pas pendant les gestes.
-4. Aucun logo, texte publicitaire ni nouveau personnage ajouté au modèle.
-5. Le verre appartient à la scène 3D : il ne réfracte pas le contenu HTML derrière le canevas.
-6. Toute évolution passe par `steeve-model.js`, sans image plate, vidéo ou scène Spline intégrée.
-7. Inspiration de suivi du regard et de matière : « Rememberall-Robot » d'Aayushi Shukla (Spline).
-   Aucun modèle ni texture n'en a été extrait.
+1. Une seule géométrie et les mêmes matériaux pour tous les états. Seules les pièces du visage changent.
+2. Pas de violet ni de rose, pas de nouvel emblème, pas de cheveux ni d'accessoire ajouté.
+3. Le visage reste en volumes noirs détachés, jamais une texture.
+4. Le personnage reste fixé dans son coin : il ne poursuit jamais le curseur sur la page.
+5. Le verre et la nacre appartiennent à la scène 3D : ils ne réfractent pas le contenu HTML derrière le canevas.
+6. Reconstruction depuis des planches 2D : les côtés non montrés sont interprétés. Il n'y a pas d'identité
+   photographique parfaite.

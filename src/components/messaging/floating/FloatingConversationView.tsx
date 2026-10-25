@@ -62,7 +62,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
   const userId = user?.id ?? null;
   // Client : le trombone propose les pièces du dossier, classées dès l'envoi.
   const dossier = useClientDossier();
-  const { close, refreshUnread, setBusy } = useFloatingMessenger();
+  const { close, refreshUnread, setBusy, react } = useFloatingMessenger();
   // Réponse de Steeve attendue après un message du client (conversation confiée à Steeve) : heure d'envoi.
   const [awaitingSteeveSince, setAwaitingSteeveSince] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -295,11 +295,12 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
     if (answered) {
       setAwaitingSteeveSince(null);
       setBusy(false);
+      react('nod');
       return;
     }
     const t = setTimeout(() => { setAwaitingSteeveSince(null); setBusy(false); }, 60_000);
     return () => clearTimeout(t);
-  }, [awaitingSteeveSince, messages, setBusy]);
+  }, [awaitingSteeveSince, messages, setBusy, react]);
   useEffect(() => () => setBusy(false), [setBusy]);
 
   const handleSend = async (text: string) => {
@@ -332,6 +333,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
     // Déjà enregistré lors d'une tentative précédente (réponse perdue) : rien à renvoyer.
     if (error && !isDuplicateClientMessage(error)) {
       setBusy(false);
+      react('oops');
       toast({ title: 'Erreur', description: error.message || "Impossible d'envoyer", variant: 'destructive' });
       // Rejeté pour que la zone de saisie conserve le texte.
       throw error;
@@ -348,7 +350,11 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       steeveAnswers = (conv as { handled_by?: string } | null)?.handled_by === 'steeve';
     }
     if (steeveAnswers) setAwaitingSteeveSince((inserted as MessageRow | null)?.created_at || new Date().toISOString());
-    else setBusy(false);
+    else {
+      setBusy(false);
+      // Message réellement enregistré : pouce levé.
+      react('success');
+    }
   };
 
   const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
@@ -365,6 +371,8 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       return false;
     }
     if (inserted) setMessages((prev) => mergeMessages(prev, [inserted as MessageRow]));
+    // Pièce réellement classée dans le dossier : Steeve applaudit.
+    react('clap');
     return true;
   };
 

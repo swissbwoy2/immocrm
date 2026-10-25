@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
@@ -29,13 +29,12 @@ const panelMobileVariants: Variants = {
 
 export function FloatingMessenger() {
   const { user, userRole, loading } = useAuth();
-  const { isOpen, close, toggle, activeConversationId, setActiveConversation, unreadCount, hasNew, busy } = useFloatingMessenger();
+  const { isOpen, close, toggle, activeConversationId, setActiveConversation, unreadCount, hasNew, busy, cue, react } = useFloatingMessenger();
   const { tapLight } = useHapticFeedback();
   // Un nouveau message arrivé messagerie fermée : Steeve le signale une fois (sans ouvrir la messagerie).
-  const [inviteKey, setInviteKey] = useState(0);
   useEffect(() => {
-    if (hasNew && !isOpen) setInviteKey((k) => k + 1);
-  }, [hasNew, isOpen]);
+    if (hasNew && !isOpen) react('invite', 'Tu as un nouveau message !');
+  }, [hasNew, isOpen, react]);
   const isMobile = useIsMobile();
   const location = useLocation();
 
@@ -92,7 +91,7 @@ export function FloatingMessenger() {
           open={isOpen}
           unread={isOpen ? 0 : unreadCount}
           busy={busy}
-          invite={inviteKey ? { key: inviteKey, message: 'Tu as un nouveau message !' } : null}
+          cue={cue}
           onActivate={() => { void tapLight(); toggle(); }}
         />
       </div>

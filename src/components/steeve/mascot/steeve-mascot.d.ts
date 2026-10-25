@@ -1,8 +1,14 @@
 // Types du composant <steeve-mascot> (implémentation : steeve-mascot.js).
 
-export type SteeveState =
-  | 'idle' | 'greeting' | 'listening' | 'thinking' | 'success' | 'dance'
-  | 'sleep' | 'invite' | 'curious' | 'stretch' | 'scroll';
+export type SteeveGesture =
+  | 'greeting' | 'invite' | 'point' | 'success' | 'laugh' | 'surprise' | 'wink' | 'nod' | 'shake'
+  | 'shrug' | 'clap' | 'sad' | 'celebrate' | 'bow' | 'jump' | 'spin' | 'oops' | 'dance' | 'curious'
+  | 'stretch' | 'thinking' | 'sleep';
+
+export type SteeveState = SteeveGesture | 'idle' | 'listening' | 'scroll';
+
+/** Durée par défaut de chaque geste (ms). */
+export declare const STEEVE_GESTURES: Readonly<Record<SteeveGesture, number>>;
 
 export interface SteeveMascotElement extends HTMLElement {
   /** Joue un état pendant `duration` millisecondes, avec une bulle facultative. */

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Send, X, Loader2, RotateCcw, MapPin, ArrowRight, Heart } from 'lucide-react';
-import { SteeveLauncher, type SteeveInvite } from '@/components/steeve/SteeveLauncher';
+import { SteeveLauncher, type SteeveCue } from '@/components/steeve/SteeveLauncher';
+import type { SteeveGesture } from '@/components/steeve/mascot/steeve-mascot';
 import { supabase } from '@/integrations/supabase/client';
 import { LinkifiedText } from '@/components/messaging/LinkifiedText';
 import { cn } from '@/lib/utils';
@@ -171,8 +172,11 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   // Invitations jouées par Steeve (bulle du personnage), jamais une ouverture forcée de la discussion.
-  const [invite, setInvite] = useState<SteeveInvite | null>(null);
-  const showInvite = (message: string) => setInvite((prev) => ({ key: (Number(prev?.key) || 0) + 1, message }));
+  const [cue, setCue] = useState<SteeveCue | null>(null);
+  // Réaction de Steeve à un événement réel de la discussion (réponse, offres, erreur, clic…).
+  const react = useCallback((gesture: SteeveGesture, message?: string) => {
+    setCue((prev) => ({ key: (Number(prev?.key) || 0) + 1, gesture, message }));
+  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -206,11 +210,11 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
   useEffect(() => {
     if (!enabled || open || hidden || messages.length > 0 || readLocal(TEASER_KEY)) return;
     const t = setTimeout(() => {
-      showInvite('Tu cherches un logement ? Dis-moi ce que tu cherches !');
+      react('invite', 'Tu cherches un logement ? Dis-moi ce que tu cherches !');
       writeLocal(TEASER_KEY, '1');
     }, TEASER_DELAY_MS);
     return () => clearTimeout(t);
-  }, [enabled, open, hidden, messages.length]);
+  }, [enabled, open, hidden, messages.length, react]);
 
   // Relances : sans réponse du visiteur après une proposition de Steeve, deux relances au plus.
   useEffect(() => {
@@ -231,11 +235,14 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     const text = next;
     const t = setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
-      if (open) setMessages((prev) => [...prev, { role: 'assistant', content: text, local: true, at: Date.now() }]);
-      else if (text === RELANCE_1) showInvite('Tu hésites ? Pose-moi une question !');
+      if (open) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: text, local: true, at: Date.now() }]);
+        react('point');
+      }
+      else if (text === RELANCE_1) react('invite', 'Tu hésites ? Pose-moi une question !');
     }, delay);
     return () => clearTimeout(t);
-  }, [enabled, messages, sending, draft, open]);
+  }, [enabled, messages, sending, draft, open, react]);
 
   const send = useCallback(async (text: string) => {
     const content = text.trim().slice(0, MAX_CHARS);
@@ -254,6 +261,8 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
         return;
       }
       if (error || !data?.reply) throw error ?? new Error('réponse vide');
+      const offers = Array.isArray(data.offers) && data.offers.length > 0;
+      react(offers ? 'point' : 'nod');
       setMessages((prev) => [...prev, {
         role: 'assistant',
         content: String(data.reply),
@@ -262,6 +271,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
         at: Date.now(),
       }]);
     } catch {
+      react('oops');
       setMessages((prev) => [...prev, {
         role: 'assistant',
         local: true,
@@ -270,11 +280,12 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
     } finally {
       setSending(false);
     }
-  }, [messages, sending]);
+  }, [messages, sending, react]);
 
   if (!enabled) return null;
 
   const restart = () => {
+    react('wink');
     setMessages([]);
     writeLocal(HISTORY_KEY, null);
     writeLocal(SESSION_KEY, null);
@@ -283,6 +294,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
 
   const like = (o: OfferCard) => {
     const desc = [o.pieces ? `${o.pieces} pièces` : o.titre, o.ville ? `à ${o.ville}` : null].filter(Boolean).join(' ');
+    react('celebrate');
     void send(`Oui, l'offre ${desc} me plaît !`);
   };
 
@@ -418,7 +430,7 @@ export function SteevePublicChat({ hidden = false }: { hidden?: boolean }) {
       <SteeveLauncher
         open={open}
         busy={sending}
-        invite={invite}
+        cue={cue}
         onActivate={() => setOpen((v) => !v)}
       />
     </div>

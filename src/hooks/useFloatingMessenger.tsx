@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { SteeveCue } from '@/components/steeve/SteeveLauncher';
+import type { SteeveGesture } from '@/components/steeve/mascot/steeve-mascot';
 
 interface FloatingMessengerContextValue {
   isOpen: boolean;
@@ -10,6 +12,9 @@ interface FloatingMessengerContextValue {
   /** Attente réelle en cours (envoi, réponse de Steeve attendue) : affichée par Steeve. */
   busy: boolean;
   setBusy: (value: boolean) => void;
+  /** Dernière réaction demandée à Steeve (événement réel : message envoyé, réponse reçue, erreur…). */
+  cue: SteeveCue | null;
+  react: (gesture: SteeveGesture, message?: string) => void;
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -28,6 +33,10 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNew, setHasNew] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [cue, setCue] = useState<SteeveCue | null>(null);
+  const react = useCallback((gesture: SteeveGesture, message?: string) => {
+    setCue((prev) => ({ key: (Number(prev?.key) || 0) + 1, gesture, message }));
+  }, []);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refreshUnread = useCallback(async () => {
@@ -152,6 +161,8 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
     hasNew,
     busy,
     setBusy,
+    cue,
+    react,
     open,
     close,
     toggle,
@@ -159,7 +170,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
     setActiveConversation,
     acknowledgeNew,
     refreshUnread,
-  }), [isOpen, activeConversationId, unreadCount, hasNew, busy, open, close, toggle, openWith, setActiveConversation, acknowledgeNew, refreshUnread]);
+  }), [isOpen, activeConversationId, unreadCount, hasNew, busy, cue, react, open, close, toggle, openWith, setActiveConversation, acknowledgeNew, refreshUnread]);
 
   return (
     <FloatingMessengerContext.Provider value={value}>

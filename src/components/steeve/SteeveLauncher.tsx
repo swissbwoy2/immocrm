@@ -1,6 +1,6 @@
 import { createElement, useEffect, useRef, useState } from 'react';
-import type { SteeveMascotElement } from './mascot/steeve-mascot';
-import fallbackUrl from './mascot/steeve-master.svg?url';
+import type { SteeveGesture, SteeveMascotElement } from './mascot/steeve-mascot';
+import fallbackUrl from './mascot/steeve-fallback.webp?url';
 import { cn } from '@/lib/utils';
 
 const GREETED_KEY = 'logisorama.steeve.greeted';
@@ -34,11 +34,17 @@ function loadMascot(): Promise<void> {
   return loader;
 }
 
-export interface SteeveInvite {
-  /** Change à chaque nouvelle invitation (une invitation n'est jouée qu'une fois). */
+/**
+ * Réaction de Steeve à un événement réel de l'application (message envoyé, réponse reçue, erreur…).
+ * Chaque nouvelle `key` est jouée une fois. Sans `gesture`, Steeve fait une invitation (« invite »).
+ */
+export interface SteeveCue {
   key: string | number;
-  message: string;
+  gesture?: SteeveGesture;
+  message?: string;
 }
+/** @deprecated remplacé par SteeveCue */
+export type SteeveInvite = SteeveCue;
 
 interface Props {
   /** État réel de la messagerie (ouverte / fermée). */
@@ -51,7 +57,10 @@ interface Props {
   busy?: boolean;
   /** Saisie en cours : Steeve reste calme. */
   quiet?: boolean;
-  invite?: SteeveInvite | null;
+  /** Geste à jouer (avec bulle facultative), déclenché par un événement réel. */
+  cue?: SteeveCue | null;
+  /** Ancien nom de `cue`. */
+  invite?: SteeveCue | null;
   className?: string;
 }
 
@@ -61,7 +70,8 @@ interface Props {
  * Tant que le module 3D n'est pas chargé, ou s'il ne peut pas l'être, un bouton avec l'image fixe de Steeve
  * reste utilisable. Aucune donnée n'est stockée par la mascotte.
  */
-export function SteeveLauncher({ open, onActivate, unread = 0, busy = false, quiet = false, invite, className }: Props) {
+export function SteeveLauncher({ open, onActivate, unread = 0, busy = false, quiet = false, cue: cueProp, invite, className }: Props) {
+  const cue = cueProp ?? invite ?? null;
   const [ready, setReady] = useState(false);
   const ref = useRef<SteeveMascotElement | null>(null);
   const activateRef = useRef(onActivate);
@@ -99,10 +109,14 @@ export function SteeveLauncher({ open, onActivate, unread = 0, busy = false, qui
   useEffect(() => { if (ready) ref.current?.setUnread(unread); }, [ready, unread]);
 
   useEffect(() => {
-    if (!ready || !invite || open) return;
-    ref.current?.play('invite', { duration: 3200, message: invite.message });
+    if (!ready || !cue) return;
+    try {
+      ref.current?.play(cue.gesture ?? 'invite', { message: cue.message });
+    } catch {
+      // geste inconnu : ignoré
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, invite?.key]);
+  }, [ready, cue?.key]);
 
   // Fermeture : le focus revient sur Steeve s'il était resté dans le panneau disparu
   // (vérifié après l'animation de fermeture, sans voler le focus d'un autre champ).
@@ -110,13 +124,15 @@ export function SteeveLauncher({ open, onActivate, unread = 0, busy = false, qui
     const closing = wasOpen.current && !open;
     wasOpen.current = open;
     if (!closing) return;
-    const t = setTimeout(() => {
+    const refocus = () => {
       const active = document.activeElement;
       if (active && active !== document.body) return;
       if (ref.current) (ref.current as HTMLElement).focus();
       else document.getElementById('steeve-launcher-fallback')?.focus();
-    }, 320);
-    return () => clearTimeout(t);
+    };
+    // Après l'animation de fermeture (plus longue sur un appareil lent).
+    const timers = [320, 900].map((ms) => setTimeout(refocus, ms));
+    return () => timers.forEach(clearTimeout);
   }, [open]);
 
   if (!ready) {
@@ -131,7 +147,7 @@ export function SteeveLauncher({ open, onActivate, unread = 0, busy = false, qui
         aria-haspopup="dialog"
         className={cn('steeve-launcher-size relative block min-h-[44px] min-w-[44px] rounded-2xl', className)}
       >
-        <img src={fallbackUrl} alt="" aria-hidden="true" className="block aspect-[0.76] w-full object-contain" />
+        <img src={fallbackUrl} alt="" aria-hidden="true" className="block aspect-[0.75] w-full object-contain" />
         {unread > 0 && (
           <span className="absolute right-[9%] top-[12%] flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-[#283d49] px-1 text-[11px] font-bold text-white">
             {unread > 99 ? '99+' : unread}
@@ -145,6 +161,7 @@ export function SteeveLauncher({ open, onActivate, unread = 0, busy = false, qui
     ref,
     mode: 'inline',
     ...(greetingOff ? { greeting: 'off' } : {}),
-    className: cn('steeve-launcher-size block', className),
+    // React 18 : sur un élément personnalisé, l'attribut s'écrit « class » (className donnerait « classname »).
+    class: cn('steeve-launcher-size block', className),
   });
 }
