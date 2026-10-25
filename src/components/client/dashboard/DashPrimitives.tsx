@@ -163,7 +163,7 @@ export function DashBadge({ children, tone = 'neutral' }: { children: React.Reac
     danger: 'bg-destructive/10 text-destructive',
     muted: 'bg-muted text-muted-foreground',
   }[tone];
-  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-none ${cls}`}>{children}</span>;
+  return <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold leading-none ${cls}`}>{children}</span>;
 }
 
 /** Carte « à faire » : une action qui bloque ou attend le client. */
