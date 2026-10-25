@@ -184,6 +184,141 @@ function VideoDecisionInlineButtons({ offre, visites, onDone }: { offre: any; vi
   );
 }
 
+/* ---------- Briques des fenêtres (style Airbnb : blanc, coins arrondis, une seule action principale) ---------- */
+
+const DIALOG_CLS = 'max-h-[92vh] overflow-y-auto sm:max-w-lg sm:rounded-2xl';
+const FOOTER_CLS = 'mt-2 flex-row gap-2 sm:space-x-0 border-t border-border/70 pt-4 sm:justify-between [&>*]:flex-1 sm:[&>*]:flex-none';
+
+/** Rappel du bien : vignette, adresse, loyer. */
+function OffreResume({ offre }: { offre: any }) {
+  const item = useMemo<ShowcaseItem>(() => ({
+    id: offre.id,
+    titre: offre.titre ?? null,
+    type_bien: offre.type_bien ?? null,
+    adresse: offre.adresse ?? null,
+    prix: offre.prix ?? null,
+    pieces: offre.pieces ?? null,
+    surface: offre.surface ?? null,
+    etage: offre.etage ?? null,
+    lien_annonce: offre.lien_annonce ?? null,
+    medias_galerie: offre.medias_galerie ?? null,
+  }), [offre]);
+  const img = usePreviewImage(item);
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border/70 p-3">
+      <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
+        {img ? (
+          <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center"><Home className="h-5 w-5 text-muted-foreground" /></div>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="line-clamp-2 text-sm font-semibold text-foreground">{offre.adresse || offre.titre || 'Offre reçue'}</p>
+        {offre.prix ? (
+          <p className="mt-0.5 text-sm text-muted-foreground">CHF {Number(offre.prix).toLocaleString('fr-CH')} / mois</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Créneau de visite sélectionnable. */
+function SlotOption({ date, selected, onSelect }: { date: string; selected: boolean; onSelect: () => void }) {
+  const d = new Date(date);
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-colors duration-150',
+        selected ? 'border-foreground ring-1 ring-foreground' : 'border-border hover:border-foreground/50',
+      )}
+    >
+      <span className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-muted leading-none">
+        <span className="text-[10px] font-semibold uppercase text-muted-foreground">
+          {d.toLocaleDateString('fr-CH', { month: 'short' })}
+        </span>
+        <span className="text-base font-semibold text-foreground">{d.getDate()}</span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold capitalize text-foreground">
+          {d.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </span>
+        <span className="block text-sm text-muted-foreground">
+          {d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </span>
+      <span
+        className={cn(
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
+          selected ? 'border-foreground bg-foreground text-background' : 'border-border',
+        )}
+        aria-hidden="true"
+      >
+        {selected && <Check className="h-3 w-3" />}
+      </span>
+    </button>
+  );
+}
+
+/** Bloc d'un document demandé, numéroté. */
+function DocBlock({ numero, titre, aide, complet, children }: {
+  numero: number; titre: string; aide: string; complet: boolean; children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border/70 p-4">
+      <div className="mb-3 flex items-start gap-3">
+        <span
+          className={cn(
+            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+            complet ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+          )}
+        >
+          {complet ? <Check className="h-4 w-4" /> : numero}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">{titre}</p>
+          <p className="text-xs text-muted-foreground">{aide}</p>
+        </div>
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function ExistingDocs({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg bg-muted/60 px-3 py-2">
+      <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <FolderOpen className="h-3.5 w-3.5" />
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+/** Champ fichier (PDF ou image), coché quand un fichier est choisi. */
+function FileField({ ok, onFile }: { ok: boolean; onFile: (file: File) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="file"
+        accept=".pdf,image/*"
+        className="h-11 rounded-lg file:mr-3 file:rounded-full file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFile(file);
+        }}
+      />
+      {ok && <Check className="h-5 w-5 shrink-0 text-primary" aria-label="Fichier ajouté" />}
+    </div>
+  );
+}
+
 type OffreFiltre = 'toutes' | 'a_repondre' | 'en_cours' | 'refusees';
 
 /** Libellé court affiché sur la photo. */
@@ -1570,156 +1705,66 @@ const OffresRecues = () => {
           formatStatutOffre={formatStatutOffre}
         />
 
-        {/* Dialog de visite */}
+        {/* Dialog de visite — je visite moi-même */}
         <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
-                  <Calendar className="h-5 w-5 text-blue-500" />
-                </div>
-                Je visite moi-même
-              </DialogTitle>
-              <DialogDescription>
-                Choisissez une date et heure pour visiter le bien
-              </DialogDescription>
+          <DialogContent className={DIALOG_CLS}>
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-xl font-semibold">Je visite moi-même</DialogTitle>
+              <DialogDescription>Choisissez un créneau proposé par votre agent.</DialogDescription>
             </DialogHeader>
 
             {selectedOffre && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/30">
-                  <h4 className="font-semibold text-sm">{selectedOffre.adresse}</h4>
-                  <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mt-1">
-                    CHF {selectedOffre.prix.toLocaleString()}/mois
-                  </p>
-                </div>
+              <div className="space-y-5">
+                <OffreResume offre={selectedOffre} />
 
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold">Sélectionnez un créneau</Label>
-                  
-                  {proposedSlots.length === 0 ? (
-                    <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-50/50 dark:from-amber-950/30 dark:to-amber-950/10 rounded-xl text-center border border-amber-200 dark:border-amber-800/50">
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <Info className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                        <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                          Aucun créneau proposé par votre agent
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Votre agent doit d'abord proposer des créneaux de visite pour ce bien. En attendant, vous pouvez lui déléguer l'organisation de la visite.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                        onClick={() => {
-                          setVisitDialogOpen(false);
-                          handleDeleguerVisite(selectedOffre);
-                        }}
-                      >
-                        <User className="mr-2 h-4 w-4" />
-                        Déléguer l'organisation à votre agent
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {proposedSlots.map((slot) => (
-                        <Button
-                          key={slot.id}
-                          variant={selectedDate === slot.date_visite ? "default" : "outline"}
-                          className={cn(
-                            "w-full justify-start text-left h-auto py-4 transition-all duration-300",
-                            selectedDate === slot.date_visite && "shadow-lg shadow-primary/20"
-                          )}
-                          onClick={() => setSelectedDate(slot.date_visite)}
-                        >
-                          <div className="flex items-start gap-3 w-full">
-                            <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="font-semibold">
-                                {new Date(slot.date_visite).toLocaleDateString('fr-FR', {
-                                  weekday: 'long',
-                                  day: 'numeric',
-                                  month: 'long',
-                                  year: 'numeric'
-                                })}
-                              </div>
-                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(slot.date_visite).toLocaleTimeString('fr-FR', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </div>
-                            </div>
-                            {selectedDate === slot.date_visite && (
-                              <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
-                            )}
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {proposedSlots.length > 0 && (
-                    <div className="text-xs text-muted-foreground pt-3 border-t border-border/50 space-y-2">
-                      <p className="flex items-center gap-1">
-                        <Info className="h-3 w-3" />
-                        Aucun créneau ne vous convient ?
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full"
-                        onClick={() => {
-                          setVisitDialogOpen(false);
-                          handleDeleguerVisite(selectedOffre);
-                        }}
-                      >
-                        <User className="mr-2 h-4 w-4" />
-                        Déléguer l'organisation à votre agent
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {selectedDate && (
-                    <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl border border-primary/20">
-                      <p className="text-sm font-medium mb-1 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-primary" />
-                        Créneau sélectionné
-                      </p>
-                      <p className="text-sm">
-                        <strong>
-                          {new Date(selectedDate).toLocaleDateString('fr-FR', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </strong>
-                        {' à '}
-                        <strong>
-                          {new Date(selectedDate).toLocaleTimeString('fr-FR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </strong>
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {proposedSlots.length === 0 ? (
+                  <div className="rounded-xl bg-muted/60 p-4">
+                    <p className="text-sm font-semibold text-foreground">Aucun créneau proposé pour l'instant</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Votre agent doit d'abord proposer des créneaux. En attendant, il peut organiser la visite pour vous.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="mt-3 h-11 w-full rounded-full"
+                      onClick={() => {
+                        setVisitDialogOpen(false);
+                        handleDeleguerVisite(selectedOffre);
+                      }}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Confier la visite à mon agent
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2" role="radiogroup" aria-label="Créneaux de visite">
+                    {proposedSlots.map((slot) => (
+                      <SlotOption
+                        key={slot.id}
+                        date={slot.date_visite}
+                        selected={selectedDate === slot.date_visite}
+                        onSelect={() => setSelectedDate(slot.date_visite)}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      className="w-full py-2 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                      onClick={() => {
+                        setVisitDialogOpen(false);
+                        handleDeleguerVisite(selectedOffre);
+                      }}
+                    >
+                      Aucun créneau ne me convient : je confie la visite à mon agent
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>
+            <DialogFooter className={FOOTER_CLS}>
+              <Button variant="ghost" className="h-11 rounded-full" onClick={() => setVisitDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button 
-                onClick={confirmVisit} 
-                disabled={!selectedDate}
-                className="shadow-lg shadow-primary/20"
-              >
-                <CheckCircle className="mr-2 h-4 w-4" />
+              <Button className="h-11 rounded-full px-6" onClick={confirmVisit} disabled={!selectedDate}>
                 Confirmer la visite
               </Button>
             </DialogFooter>
@@ -1728,273 +1773,174 @@ const OffresRecues = () => {
 
         {/* Dialog de candidature */}
         <Dialog open={candidatureDialogOpen} onOpenChange={setCandidatureDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5">
-                  <FileCheck className="h-5 w-5 text-purple-500" />
-                </div>
-                Déposer ma candidature
-              </DialogTitle>
-              <DialogDescription>
-                Complétez votre candidature en fournissant tous les documents requis
-              </DialogDescription>
+          <DialogContent className={cn(DIALOG_CLS, 'sm:max-w-2xl')}>
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-xl font-semibold">Déposer ma candidature</DialogTitle>
+              <DialogDescription>Trois documents suffisent. Reprenez ceux de votre dossier ou ajoutez-en de nouveaux.</DialogDescription>
             </DialogHeader>
 
             {selectedOffre && (
-              <div className="space-y-6 py-4">
-                <Card className="bg-gradient-to-br from-muted/50 to-muted/20 border-border/50">
-                  <CardContent className="pt-4">
-                    <h4 className="font-semibold mb-2">Bien concerné</h4>
-                    <p className="text-sm">{selectedOffre.adresse}</p>
-                    <p className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mt-1">
-                      CHF {selectedOffre.prix.toLocaleString()}/mois
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-5">
+                <OffreResume offre={selectedOffre} />
 
                 {selectedOffre.statut !== 'visite_effectuee' && (
-                  <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-50/50 dark:from-orange-950/50 dark:to-orange-950/20 rounded-xl border border-orange-200 dark:border-orange-800/50">
-                    <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                      ⚠️ <strong>Important :</strong> Une visite du bien sera obligatoire avant la validation finale de votre candidature.
-                    </p>
-                  </div>
+                  <p className="rounded-xl bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
+                    Une visite du bien reste obligatoire avant la validation finale de votre candidature.
+                  </p>
                 )}
 
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Documents à fournir (obligatoires)</h4>
-
-                  {/* Fiches de salaire */}
-                  <div className="border border-border/50 rounded-xl p-4 bg-gradient-to-br from-card to-card/50">
-                    <Label className="text-base font-medium">
-                      📄 3 dernières fiches de salaire *
-                    </Label>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Vos 3 derniers bulletins de salaire ({documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length}/3 fournis)
-                    </p>
-                    
-                    {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 && (
-                      <div className="mb-3 p-3 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
-                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
-                          <FolderOpen className="h-4 w-4" />
-                          Sélectionner depuis mon dossier :
-                        </p>
-                        <div className="space-y-2">
-                          {existingDocuments.filter(d => d.type_document === 'fiche_salaire').map((doc) => (
-                            <div key={doc.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`salaire-${doc.id}`}
-                                checked={selectedExistingSalaire.includes(doc.id)}
-                                disabled={selectedExistingSalaire.length >= 3 && !selectedExistingSalaire.includes(doc.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedExistingSalaire([...selectedExistingSalaire, doc.id]);
-                                  } else {
-                                    setSelectedExistingSalaire(selectedExistingSalaire.filter(id => id !== doc.id));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={`salaire-${doc.id}`} className="text-sm cursor-pointer flex-1">
-                                {doc.nom}
-                              </Label>
-                              {selectedExistingSalaire.includes(doc.id) && (
-                                <Check className="w-4 h-4 text-green-500" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 ? 'Ou uploader de nouveaux fichiers :' : 'Uploader vos fichiers :'}
-                    </p>
-                    <div className="space-y-2">
-                      {[0, 1, 2].map(index => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Input
-                            type="file"
-                            accept=".pdf,image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const newDocs = [...documentsFicheSalaire];
-                                newDocs[index] = file;
-                                setDocumentsFicheSalaire(newDocs);
+                {/* 1. Fiches de salaire */}
+                <DocBlock
+                  numero={1}
+                  titre="3 dernières fiches de salaire"
+                  aide={`${documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length}/3 fournies`}
+                  complet={documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length >= 3}
+                >
+                  {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 && (
+                    <ExistingDocs label="Depuis mon dossier">
+                      {existingDocuments.filter(d => d.type_document === 'fiche_salaire').map((doc) => (
+                        <label key={doc.id} htmlFor={`salaire-${doc.id}`} className="flex cursor-pointer items-center gap-3 py-1.5">
+                          <Checkbox
+                            id={`salaire-${doc.id}`}
+                            checked={selectedExistingSalaire.includes(doc.id)}
+                            disabled={selectedExistingSalaire.length >= 3 && !selectedExistingSalaire.includes(doc.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedExistingSalaire([...selectedExistingSalaire, doc.id]);
+                              } else {
+                                setSelectedExistingSalaire(selectedExistingSalaire.filter(id => id !== doc.id));
                               }
                             }}
                           />
-                          {documentsFicheSalaire[index] && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
+                          <span className="flex-1 truncate text-sm">{doc.nom}</span>
+                        </label>
                       ))}
-                    </div>
-                  </div>
-
-                  {/* Extrait poursuites */}
-                  <div className="border border-border/50 rounded-xl p-4 bg-gradient-to-br from-card to-card/50">
-                    <Label className="text-base font-medium">
-                      📋 Extrait de l'office des poursuites *
-                    </Label>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Datant de moins de 3 mois
-                    </p>
-                    
-                    {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').length > 0 && (
-                      <div className="mb-3 p-3 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
-                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
-                          <FolderOpen className="h-4 w-4" />
-                          Sélectionner depuis mon dossier :
-                        </p>
-                        <div className="space-y-2">
-                          {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').map((doc) => (
-                            <div key={doc.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`poursuites-${doc.id}`}
-                                checked={selectedExistingPoursuites === doc.id}
-                                onCheckedChange={(checked) => {
-                                  setSelectedExistingPoursuites(checked ? doc.id : null);
-                                  if (checked) setDocumentExtraitPoursuites(null);
-                                }}
-                              />
-                              <Label htmlFor={`poursuites-${doc.id}`} className="text-sm cursor-pointer flex-1">
-                                {doc.nom}
-                              </Label>
-                              {selectedExistingPoursuites === doc.id && (
-                                <Check className="w-4 h-4 text-green-500" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').length > 0 ? 'Ou uploader un nouveau fichier :' : 'Uploader votre fichier :'}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="file"
-                        accept=".pdf,image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setDocumentExtraitPoursuites(file);
-                            setSelectedExistingPoursuites(null);
-                          }
+                    </ExistingDocs>
+                  )}
+                  <div className="space-y-2">
+                    {[0, 1, 2].map(index => (
+                      <FileField
+                        key={index}
+                        ok={!!documentsFicheSalaire[index]}
+                        onFile={(file) => {
+                          const newDocs = [...documentsFicheSalaire];
+                          newDocs[index] = file;
+                          setDocumentsFicheSalaire(newDocs);
                         }}
                       />
-                      {documentExtraitPoursuites && (
-                        <Check className="w-5 h-5 text-green-500" />
-                      )}
-                    </div>
+                    ))}
                   </div>
+                </DocBlock>
 
-                  {/* Pièce d'identité */}
-                  <div className="border border-border/50 rounded-xl p-4 bg-gradient-to-br from-card to-card/50">
-                    <Label className="text-base font-medium">
-                      🪪 Pièce d'identité / ID suisse *
-                    </Label>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Document valable (carte identité, passeport, permis de séjour)
-                    </p>
-                    
-                    {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').length > 0 && (
-                      <div className="mb-3 p-3 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
-                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
-                          <FolderOpen className="h-4 w-4" />
-                          Sélectionner depuis mon dossier :
-                        </p>
-                        <div className="space-y-2">
-                          {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').map((doc) => (
-                            <div key={doc.id} className="flex items-center gap-2">
-                              <Checkbox
-                                id={`identite-${doc.id}`}
-                                checked={selectedExistingIdentite === doc.id}
-                                onCheckedChange={(checked) => {
-                                  setSelectedExistingIdentite(checked ? doc.id : null);
-                                  if (checked) setDocumentPieceIdentite(null);
-                                }}
-                              />
-                              <Label htmlFor={`identite-${doc.id}`} className="text-sm cursor-pointer flex-1">
-                                {doc.nom}
-                              </Label>
-                              {selectedExistingIdentite === doc.id && (
-                                <Check className="w-4 h-4 text-green-500" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').length > 0 ? 'Ou uploader un nouveau fichier :' : 'Uploader votre fichier :'}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="file"
-                        accept=".pdf,image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setDocumentPieceIdentite(file);
-                            setSelectedExistingIdentite(null);
-                          }
-                        }}
-                      />
-                      {documentPieceIdentite && (
-                        <Check className="w-5 h-5 text-green-500" />
-                      )}
-                    </div>
-                  </div>
-                </div>
+                {/* 2. Extrait des poursuites */}
+                <DocBlock
+                  numero={2}
+                  titre="Extrait de l'office des poursuites"
+                  aide="Datant de moins de 3 mois"
+                  complet={!!documentExtraitPoursuites || !!selectedExistingPoursuites}
+                >
+                  {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').length > 0 && (
+                    <ExistingDocs label="Depuis mon dossier">
+                      {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').map((doc) => (
+                        <label key={doc.id} htmlFor={`poursuites-${doc.id}`} className="flex cursor-pointer items-center gap-3 py-1.5">
+                          <Checkbox
+                            id={`poursuites-${doc.id}`}
+                            checked={selectedExistingPoursuites === doc.id}
+                            onCheckedChange={(checked) => {
+                              setSelectedExistingPoursuites(checked ? doc.id : null);
+                              if (checked) setDocumentExtraitPoursuites(null);
+                            }}
+                          />
+                          <span className="flex-1 truncate text-sm">{doc.nom}</span>
+                        </label>
+                      ))}
+                    </ExistingDocs>
+                  )}
+                  <FileField
+                    ok={!!documentExtraitPoursuites}
+                    onFile={(file) => {
+                      setDocumentExtraitPoursuites(file);
+                      setSelectedExistingPoursuites(null);
+                    }}
+                  />
+                </DocBlock>
+
+                {/* 3. Pièce d'identité */}
+                <DocBlock
+                  numero={3}
+                  titre="Pièce d'identité ou permis"
+                  aide="Carte d'identité, passeport ou permis de séjour valable"
+                  complet={!!documentPieceIdentite || !!selectedExistingIdentite}
+                >
+                  {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').length > 0 && (
+                    <ExistingDocs label="Depuis mon dossier">
+                      {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').map((doc) => (
+                        <label key={doc.id} htmlFor={`identite-${doc.id}`} className="flex cursor-pointer items-center gap-3 py-1.5">
+                          <Checkbox
+                            id={`identite-${doc.id}`}
+                            checked={selectedExistingIdentite === doc.id}
+                            onCheckedChange={(checked) => {
+                              setSelectedExistingIdentite(checked ? doc.id : null);
+                              if (checked) setDocumentPieceIdentite(null);
+                            }}
+                          />
+                          <span className="flex-1 truncate text-sm">{doc.nom}</span>
+                        </label>
+                      ))}
+                    </ExistingDocs>
+                  )}
+                  <FileField
+                    ok={!!documentPieceIdentite}
+                    onFile={(file) => {
+                      setDocumentPieceIdentite(file);
+                      setSelectedExistingIdentite(null);
+                    }}
+                  />
+                </DocBlock>
 
                 {/* Message optionnel */}
                 <div className="space-y-2">
-                  <Label>💬 Message à votre agent (optionnel)</Label>
+                  <Label htmlFor="message-candidature" className="text-sm font-semibold">Message à votre agent (facultatif)</Label>
                   <Textarea
-                    placeholder="Avez-vous des informations complémentaires à transmettre ?"
+                    id="message-candidature"
+                    placeholder="Une information utile pour votre dossier ?"
                     value={messageClient}
                     onChange={(e) => setMessageClient(e.target.value)}
-                    className="bg-background/50"
+                    className="min-h-[88px] rounded-xl"
                   />
                 </div>
 
-                {/* Conditions */}
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20">
+                {/* Consentement */}
+                <label htmlFor="accepte-conditions" className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 p-4">
                   <Checkbox
                     id="accepte-conditions"
                     checked={accepteConditions}
                     onCheckedChange={(checked) => setAccepteConditions(checked === true)}
+                    className="mt-0.5"
                   />
-                  <Label htmlFor="accepte-conditions" className="text-sm cursor-pointer">
+                  <span className="text-sm text-foreground">
                     Je confirme l'exactitude des informations fournies et autorise votre agence à transmettre mon dossier à la régie concernée.
-                  </Label>
-                </div>
+                  </span>
+                </label>
               </div>
             )}
 
-            <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/50">
-              <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>
+            <DialogFooter className={FOOTER_CLS}>
+              <Button variant="ghost" className="h-11 rounded-full" onClick={() => setCandidatureDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button 
-                onClick={confirmCandidature} 
+              <Button
+                className="h-11 rounded-full px-6"
+                onClick={confirmCandidature}
                 disabled={!accepteConditions || uploadingDocs}
-                className="shadow-lg shadow-primary/20"
               >
                 {uploadingDocs ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                    Envoi en cours...
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Envoi en cours…
                   </>
                 ) : (
-                  <>
-                    <FileCheck className="mr-2 h-4 w-4" />
-                    Déposer ma candidature
-                  </>
+                  'Déposer ma candidature'
                 )}
               </Button>
             </DialogFooter>
@@ -2003,125 +1949,63 @@ const OffresRecues = () => {
 
         {/* Dialog de délégation */}
         <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
-                  <User className="h-5 w-5 text-emerald-500" />
-                </div>
-                Déléguer la visite à votre agent
-              </DialogTitle>
-              <DialogDescription>
-                Votre agent effectuera la visite pour vous et vous fera un compte-rendu
-              </DialogDescription>
+          <DialogContent className={DIALOG_CLS}>
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-xl font-semibold">Mon agent visite pour moi</DialogTitle>
+              <DialogDescription>Votre agent se rend sur place et vous envoie un compte-rendu.</DialogDescription>
             </DialogHeader>
 
             {selectedOffre && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20">
-                  <h4 className="font-semibold text-sm">{selectedOffre.adresse}</h4>
-                  <p className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mt-1">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
-                </div>
+              <div className="space-y-5">
+                <OffreResume offre={selectedOffre} />
 
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold">Choisissez une date pour la visite</Label>
-                  
-                  {delegateProposedSlots.length === 0 ? (
-                    <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-50/50 dark:from-emerald-950/30 dark:to-emerald-950/10 rounded-xl text-center border border-emerald-200 dark:border-emerald-800/50">
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <Info className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                          Aucun créneau proposé
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Votre agent organisera la visite à sa convenance et vous tiendra informé du créneau choisi.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {delegateProposedSlots.map((slot) => (
-                        <Button
-                          key={slot.id}
-                          variant={delegateDate === slot.date_visite ? "default" : "outline"}
-                          className="w-full justify-start text-left h-auto py-3"
-                          onClick={() => setDelegateDate(slot.date_visite)}
-                        >
-                          <div className="flex items-start gap-3 w-full">
-                            <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <div className="font-semibold">
-                                {new Date(slot.date_visite).toLocaleDateString('fr-FR', {
-                                  weekday: 'long',
-                                  day: 'numeric',
-                                  month: 'long',
-                                  year: 'numeric'
-                                })}
-                              </div>
-                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                <Clock className="h-3 w-3" />
-                                {new Date(slot.date_visite).toLocaleTimeString('fr-FR', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </div>
-                            </div>
-                            {delegateDate === slot.date_visite && (
-                              <CheckCircle className="h-5 w-5 text-primary-foreground flex-shrink-0" />
-                            )}
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {delegateDate && (
-                    <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl border border-primary/20">
-                      <p className="text-sm font-medium">✅ Date sélectionnée :</p>
-                      <p className="text-sm mt-1">
-                        <strong>
-                          {new Date(delegateDate).toLocaleDateString('fr-FR', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </strong>
-                        {' à '}
-                        <strong>
-                          {new Date(delegateDate).toLocaleTimeString('fr-FR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </strong>
-                      </p>
-                    </div>
-                  )}
-                </div>
+                {delegateProposedSlots.length === 0 ? (
+                  <div className="rounded-xl bg-muted/60 p-4">
+                    <p className="text-sm font-semibold text-foreground">Aucun créneau proposé</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Votre agent choisira le créneau et vous tiendra informé.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2" role="radiogroup" aria-label="Créneaux de visite">
+                    <p className="text-sm font-semibold text-foreground">Choisissez une date</p>
+                    {delegateProposedSlots.map((slot) => (
+                      <SlotOption
+                        key={slot.id}
+                        date={slot.date_visite}
+                        selected={delegateDate === slot.date_visite}
+                        onSelect={() => setDelegateDate(slot.date_visite)}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                <div className="p-4 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>📋 Comment ça marche :</strong>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      <li>Votre agent sera notifié de votre demande</li>
-                      <li>Il confirmera la visite à la date choisie</li>
-                      <li>Il effectuera la visite et vous fera un compte-rendu</li>
-                      <li>Vous pourrez ensuite décider de postuler ou non</li>
-                    </ul>
-                  </p>
-                </div>
+                <ol className="space-y-2 text-sm text-muted-foreground">
+                  {[
+                    'Votre agent reçoit votre demande',
+                    'Il confirme la visite et se rend sur place',
+                    'Vous recevez son compte-rendu (photos, vidéo, avis)',
+                    'Vous décidez ensuite de postuler ou non',
+                  ].map((etape, i) => (
+                    <li key={etape} className="flex items-start gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">{i + 1}</span>
+                      <span className="pt-0.5">{etape}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 
-            <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/50">
-              <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>
+            <DialogFooter className={FOOTER_CLS}>
+              <Button variant="ghost" className="h-11 rounded-full" onClick={() => setDelegateDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button 
-                onClick={confirmDeleguerVisite} 
+              <Button
+                className="h-11 rounded-full px-6"
+                onClick={confirmDeleguerVisite}
                 disabled={delegateProposedSlots.length === 0 ? false : !delegateDate}
               >
-                {delegateProposedSlots.length === 0 ? 'Demander à mon agent' : 'Confirmer la délégation'}
+                {delegateProposedSlots.length === 0 ? 'Demander à mon agent' : 'Confirmer'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -2129,48 +2013,36 @@ const OffresRecues = () => {
 
         {/* Dialog Visite Requise */}
         <Dialog open={visitRequiredAlertOpen} onOpenChange={setVisitRequiredAlertOpen}>
-          <DialogContent className="max-w-md bg-background/95 backdrop-blur-2xl border-border/50">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5">
-                  <Info className="h-5 w-5 text-amber-500" />
-                </div>
-                Visite obligatoire
-              </DialogTitle>
+          <DialogContent className={cn(DIALOG_CLS, 'sm:max-w-md')}>
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-xl font-semibold">D'abord, la visite</DialogTitle>
+              <DialogDescription>
+                Aucune régie n'étudie un dossier sans visite du logement. Visitez-le vous-même ou confiez la visite à votre agent : vous pourrez postuler juste après.
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                <strong>Aucune régie propriétaire ne considérera votre dossier avant d'avoir visité l'appartement.</strong>
-              </p>
-              <p className="text-sm">
-                Merci de visiter ce bien vous-même ou de déléguer la visite à votre agent avant de postuler.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Après la visite, vous pourrez revenir ici pour demander à votre agent de postuler pour vous.
-              </p>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button variant="outline" onClick={() => setVisitRequiredAlertOpen(false)}>
-                Fermer
-              </Button>
-              <Button 
-                variant="secondary"
-                onClick={() => { 
-                  setVisitRequiredAlertOpen(false);
-                  if (selectedOffre) handleDeleguerVisite(selectedOffre);
-                }}
-              >
-                <User className="mr-2 h-4 w-4" />
-                Je délègue à mon agent
-              </Button>
-              <Button onClick={() => {
+            <div className="grid gap-2">
+              <Button className="h-11 w-full rounded-full" onClick={() => {
                 setVisitRequiredAlertOpen(false);
                 if (selectedOffre) handlePlanVisit(selectedOffre);
               }}>
                 <Calendar className="mr-2 h-4 w-4" />
                 Je visite moi-même
               </Button>
-            </DialogFooter>
+              <Button
+                variant="outline"
+                className="h-11 w-full rounded-full"
+                onClick={() => {
+                  setVisitRequiredAlertOpen(false);
+                  if (selectedOffre) handleDeleguerVisite(selectedOffre);
+                }}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Mon agent visite pour moi
+              </Button>
+              <Button variant="ghost" className="h-11 w-full rounded-full" onClick={() => setVisitRequiredAlertOpen(false)}>
+                Plus tard
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
