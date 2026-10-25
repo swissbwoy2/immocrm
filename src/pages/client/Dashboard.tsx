@@ -46,7 +46,7 @@ import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
 import { MandatCreditsGate } from '@/components/credits/MandatCreditsGate';
-import { DASH_CARD, DashSection, StatTile, LinkRow } from '@/components/client/dashboard/DashPrimitives';
+import { DASH_CARD, DashSection, DashSectionLink, StatTile, LinkRow, TodoCard } from '@/components/client/dashboard/DashPrimitives';
 
 import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
 import VenteClientDashboard from './dashboards/VenteClientDashboard';
@@ -554,6 +554,9 @@ function ClientDashboardLocation() {
     <>
       <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
         <PremiumPageShellV2 className="relative z-10 mx-auto w-full max-w-6xl">
+          {/* Bannière : tout en haut de l'accueil */}
+          <DashboardAdBanner />
+
           <MustChangePasswordBanner />
 
           {/* 1. Accueil */}
@@ -572,8 +575,6 @@ function ClientDashboardLocation() {
             />
           </SectionErrorBoundary>
 
-          <DashboardAdBanner />
-
           {/* 2. À faire : tout ce qui bloque ou demande une action */}
           <div className="space-y-3">
             <MandatCreditsGate />
@@ -591,35 +592,29 @@ function ClientDashboardLocation() {
             )}
 
             {client && !client.mandat_signature_data && !client.demande_mandat_id && (
-              <div className={`${DASH_CARD} p-4 md:p-5`}>
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10">
-                    <FileText className="h-5 w-5 text-amber-600" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">Période d'essai</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Votre compte est en période d'essai. Pour l'activer officiellement et profiter de tous les services, complétez votre dossier.
-                    </p>
-                    <Button
-                      size="sm"
-                      data-demo-allow
-                      className="mt-3 rounded-full"
-                      onClick={() => {
-                        if (isDemo) {
-                          void signOut().catch(() => {});
-                          window.location.assign('/nouveau-mandat');
-                        } else {
-                          navigate('/nouveau-mandat');
-                        }
-                      }}
-                    >
-                      <FileCheck className="w-4 h-4 mr-2" />
-                      Compléter mon dossier
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              <TodoCard
+                icon={FileText}
+                title="Période d'essai"
+                description="Votre compte est en période d'essai. Pour l'activer officiellement et profiter de tous les services, complétez votre dossier."
+                action={
+                  <Button
+                    size="sm"
+                    data-demo-allow
+                    className="rounded-full"
+                    onClick={() => {
+                      if (isDemo) {
+                        void signOut().catch(() => {});
+                        window.location.assign('/nouveau-mandat');
+                      } else {
+                        navigate('/nouveau-mandat');
+                      }
+                    }}
+                  >
+                    <FileCheck className="w-4 h-4 mr-2" />
+                    Compléter mon dossier
+                  </Button>
+                }
+              />
             )}
 
             {profileActif !== false && <ExtraitPoursuitesHeroCard />}
@@ -751,12 +746,7 @@ function ClientDashboardLocation() {
           {profileActif !== false && (
             <DashSection
               title="Mon dossier"
-              action={
-                <button type="button" onClick={() => navigate('/client/dossier')}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-4 hover:underline">
-                  Ouvrir <ChevronRight className="h-4 w-4" />
-                </button>
-              }
+              action={<DashSectionLink onClick={() => navigate('/client/dossier')} />}
             >
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className={`${DASH_CARD} overflow-hidden`}>
@@ -886,16 +876,14 @@ function ClientDashboardLocation() {
 
           {/* 6. Statistiques */}
           <DashSection title="Mes statistiques">
-            <div className={`${DASH_CARD} overflow-hidden`}>
-              <SectionErrorBoundary sectionName="ClientStats">
-                <ClientStatsSection
-                  offres={offres}
-                  visites={visites}
-                  candidatures={candidatures}
-                  client={client}
-                />
-              </SectionErrorBoundary>
-            </div>
+            <SectionErrorBoundary sectionName="ClientStats">
+              <ClientStatsSection
+                offres={offres}
+                visites={visites}
+                candidatures={candidatures}
+                client={client}
+              />
+            </SectionErrorBoundary>
           </DashSection>
         </PremiumPageShellV2>
       </PullToRefresh>
