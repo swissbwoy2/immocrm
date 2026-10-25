@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { isVisiteReelle } from '@/lib/visitDecision';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User, FolderOpen, Map } from 'lucide-react';
 import { MesVisitesAVenirBand } from '@/components/client/dashboard/MesVisitesAVenirBand';
-import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
+import { OffresRecuesCarousel } from '@/components/client/dashboard/OffresRecuesCarousel';
 
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -224,7 +224,7 @@ function ClientDashboardLocation() {
       const [offresResult, visitesResult, candidaturesResult, docsResult] = await Promise.all([
         supabase
           .from('offres')
-          .select('id, adresse, prix, pieces, surface, date_envoi, lien_annonce, statut, client_id, titre, type_bien')
+          .select('id, adresse, prix, pieces, surface, etage, date_envoi, created_at, lien_annonce, medias_galerie, statut, client_id, titre, type_bien')
           .eq('client_id', clientData.id)
           .limit(15000),
         supabase
@@ -674,15 +674,7 @@ function ClientDashboardLocation() {
           </div>
 
           {/* 3. Ma recherche : offres, visites, candidatures (même ordre que la barre du bas) */}
-          <DashSection
-            title="Ma recherche"
-            action={
-              <button type="button" onClick={() => navigate('/client/offres-recues')}
-                className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-4 hover:underline">
-                Tout voir <ChevronRight className="h-4 w-4" />
-              </button>
-            }
-          >
+          <DashSection title="Ma recherche">
             <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
               <StatTile
                 icon={Home}
@@ -707,8 +699,12 @@ function ClientDashboardLocation() {
               />
             </div>
 
-            <SectionErrorBoundary sectionName="MesOffresRecuesBand">
-              <MesOffresRecuesBand offres={offres} />
+            <SectionErrorBoundary sectionName="OffresRecuesCarousel">
+              {offres.length > 0 && (
+                <div className={`${DASH_CARD} p-4 md:p-5`}>
+                  <OffresRecuesCarousel offres={offres} />
+                </div>
+              )}
             </SectionErrorBoundary>
 
             <SectionErrorBoundary sectionName="MesVisitesAVenirBand">
