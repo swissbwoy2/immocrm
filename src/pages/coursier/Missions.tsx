@@ -371,7 +371,7 @@ export default function CoursierMissions() {
             {selectedMission && (
               <div className="px-6 pb-6 space-y-5">
                 {/* Créneau de visite */}
-                <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl border border-amber-500/20">
+                <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
                     <Clock className="h-4 w-4 text-amber-600" />
                     Créneau de visite
@@ -399,7 +399,7 @@ export default function CoursierMissions() {
 
                 {/* Prix */}
                 {selectedMission.offres?.prix && (
-                  <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                  <div className="p-4 bg-muted/40 rounded-xl border border-border/70">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-primary">
                         CHF {Number(selectedMission.offres.prix).toLocaleString('fr-CH')}

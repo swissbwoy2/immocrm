@@ -750,7 +750,7 @@ export default function Candidatures() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
               <p className="text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Le client recevra une alerte importante concernant les documents nécessaires.
@@ -779,7 +779,7 @@ export default function Candidatures() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FastForward className="h-5 w-5 text-orange-500" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><FastForward className="h-4 w-4" /></span>
               Forcer la progression
             </DialogTitle>
             <DialogDescription asChild>
@@ -795,7 +795,7 @@ export default function Candidatures() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
               <p className="text-sm text-orange-800 dark:text-orange-200">
                 Action: <strong>{forceAction?.label}</strong>
               </p>
@@ -815,7 +815,7 @@ export default function Candidatures() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive"><Trash2 className="h-4 w-4" /></span>
               Supprimer la candidature
             </DialogTitle>
             <DialogDescription>

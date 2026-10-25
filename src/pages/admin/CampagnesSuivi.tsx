@@ -1520,7 +1520,7 @@ export default function CampagnesSuivi() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Mail className="h-4 w-4" /></span>
               Emails envoyés
             </DialogTitle>
             <DialogDescription>
@@ -1569,25 +1569,25 @@ export default function CampagnesSuivi() {
                       </div>
                       <div className="text-sm font-medium">{row.subject || "(sans sujet)"}</div>
                       <div className="flex flex-wrap gap-1 text-[11px]">
-                        <Badge variant="outline" className="bg-green-50 border-green-300" title={row.created_at}>
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-transparent" title={row.created_at}>
                           ✉ Envoyé · {format(new Date(row.created_at), "dd/MM HH:mm", { locale: fr })}
                         </Badge>
                         {row.opened_at && (
-                          <Badge variant="outline" className="bg-blue-50 border-blue-300" title={row.last_opened_at || row.opened_at}>
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-transparent" title={row.last_opened_at || row.opened_at}>
                             👁 Ouvert{(row.opens_count || 0) > 1 ? ` ${row.opens_count}×` : ""} · {format(new Date(row.opened_at), "dd/MM HH:mm", { locale: fr })}
                           </Badge>
                         )}
                         {row.clicked_at && (
-                          <Badge variant="outline" className="bg-purple-50 border-purple-300" title={row.last_click_url || ""}>
+                          <Badge variant="outline" className="bg-violet-500/10 text-violet-700 border-transparent" title={row.last_click_url || ""}>
                             🔗 Cliqué{(row.clicks_count || 0) > 1 ? ` ${row.clicks_count}×` : ""} · {format(new Date(row.clicked_at), "dd/MM HH:mm", { locale: fr })}
                           </Badge>
                         )}
                         {row.bounced_at && (
-                          <Badge variant="outline" className="bg-red-50 border-red-300">✗ Bounce</Badge>
+                          <Badge variant="outline" className="bg-destructive/10 text-destructive border-transparent">✗ Bounce</Badge>
                         )}
                       </div>
                       {row.error_message && (
-                        <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">
+                        <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-2">
                           {row.error_message}
                         </div>
                       )}
@@ -1618,7 +1618,7 @@ export default function CampagnesSuivi() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><AlertCircle className="h-4 w-4" /></span>
               Confirmer l'envoi
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 pt-2">

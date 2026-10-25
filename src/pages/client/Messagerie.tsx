@@ -1958,10 +1958,10 @@ const Messagerie = () => {
 
       {/* Dialog Planifier Visite */}
       <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-        <DialogContent className="glass-premium border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Calendar className="h-4 w-4" /></span>
               Planifier une visite
             </DialogTitle>
             <DialogDescription>
@@ -2001,7 +2001,7 @@ const Messagerie = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmPlanVisit} disabled={!visitDate} className="bg-gradient-to-r from-primary to-primary/80">
+            <Button onClick={confirmPlanVisit} disabled={!visitDate} className="rounded-full">
               <Calendar className="h-4 w-4 mr-2" /> Confirmer
             </Button>
           </DialogFooter>
@@ -2010,10 +2010,10 @@ const Messagerie = () => {
 
       {/* Dialog Déléguer Visite */}
       <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-        <DialogContent className="glass-premium border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><User className="h-4 w-4" /></span>
               Déléguer la visite à votre agent
             </DialogTitle>
             <DialogDescription>
@@ -2060,7 +2060,7 @@ const Messagerie = () => {
             <Button 
               onClick={confirmDelegateVisit} 
               disabled={delegateProposedSlots.length > 0 && !delegateDate}
-              className="bg-gradient-to-r from-primary to-primary/80"
+              className="rounded-full"
             >
               <User className="h-4 w-4 mr-2" /> Déléguer
             </Button>
@@ -2145,11 +2145,11 @@ const Messagerie = () => {
         <DialogContent className="max-w-md text-center">
           <DialogHeader>
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
-                <Star className="h-8 w-8 text-amber-500" />
+              <div className="w-14 h-14 bg-amber-500/10 rounded-full flex items-center justify-center">
+                <Star className="h-7 w-7 text-amber-600" />
               </div>
             </div>
-            <DialogTitle className="text-2xl">Merci infiniment ! 🙏</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Merci infiniment ! 🙏</DialogTitle>
             <DialogDescription className="text-base mt-4 space-y-3">
               <p>
                 Votre avis compte énormément pour nous et aide d'autres personnes 

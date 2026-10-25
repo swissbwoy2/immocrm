@@ -1575,7 +1575,7 @@ const Clients = () => {
                     <AlertDialogContent onClick={(e) => e.stopPropagation()} className="max-w-[95vw] sm:max-w-lg">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
-                          <ShieldCheck className="w-5 h-5 text-amber-600" />
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><ShieldCheck className="h-4 w-4" /></span>
                           Anonymiser ce client (RGPD) ?
                         </AlertDialogTitle>
                         <AlertDialogDescription asChild>
@@ -1997,7 +1997,7 @@ const Clients = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><UserPlus className="h-4 w-4" /></span>
               Inviter un client
             </DialogTitle>
           </DialogHeader>
@@ -2062,7 +2062,7 @@ const Clients = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-amber-600" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><ShieldCheck className="h-4 w-4" /></span>
               Anonymiser {selectedIds.size} client(s) — Demande RGPD
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
