@@ -29,8 +29,10 @@ function mediasPartages(v: any): { url: string; video: boolean }[] {
     .filter((m: any) => m && m.url && m.shared_to_clients !== false)
     .map((m: any) => ({
       url: m.url as string,
-      video: m.type === 'video' || (typeof m.mime === 'string' && m.mime.startsWith('video')),
-    }));
+      video: m.type === 'video' || (typeof m.mime === 'string' && m.mime.startsWith('video')) || /\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(String(m.url)),
+    }))
+    // même fichier présent dans deux listes : une seule fois
+    .filter((m, i, arr) => arr.findIndex((x) => x.url === m.url) === i);
 }
 
 const CR_LIBELLES: [string, string][] = [

@@ -3,7 +3,7 @@ import { Calendar, Check, Home, User, Banknote, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { usePreviewImage, type ShowcaseItem } from '@/components/public-site/showcase/useShowcase';
-import { canDecideOnOffre } from '@/lib/visitDecision';
+import { canDecideOnOffre, isVisiteReelle } from '@/lib/visitDecision';
 import { ACHAT_A_REPONDRE } from '@/lib/achatOffreActions';
 
 /** Même carte que la location : blanc, une ombre, coins arrondis. */
@@ -115,6 +115,23 @@ export function visiteRetenue(visitesDuBien: any[]) {
     .sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime())[0];
 }
 
+/** Visite à venir (non annulée, hors simple créneau proposé) : date prévue côté conseiller. */
+export function visiteAVenir(visitesDuBien: any[]) {
+  const now = Date.now();
+  return visitesDuBien
+    .filter((v) => v.date_visite && new Date(v.date_visite).getTime() >= now && !['annulee', 'refusee', 'proposee'].includes(v.statut))
+    .sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime())[0];
+}
+
+/** Visite passée réellement prévue (déléguée, confirmée ou planifiée par une personne) — pas un créneau d'annonce. */
+export function visitePassee(visitesDuBien: any[], offreStatut?: string | null) {
+  const now = Date.now();
+  return visitesDuBien
+    .filter((v) => v.date_visite && new Date(v.date_visite).getTime() < now &&
+      !['annulee', 'refusee', 'proposee'].includes(v.statut) && isVisiteReelle(v, offreStatut))
+    .sort((a, b) => new Date(b.date_visite).getTime() - new Date(a.date_visite).getTime())[0];
+}
+
 /**
  * Étape du parcours d'achat pour un bien, déduite de l'offre et de ses visites.
  * `demandeEnvoyee` : une demande de visite (sans date) a déjà été transmise au conseiller.
@@ -125,8 +142,11 @@ export function etapeAchat(offre: any, visitesDuBien: any[], demandeEnvoyee = fa
   if (s === 'acceptee') return 'acceptee';
   if (s === 'offre_envisagee') return 'offre';
   if (canDecideOnOffre(offre, visitesDuBien)) return 'apres_visite';
-  if (visiteRetenue(visitesDuBien) || s === 'visite_planifiee' || s === 'visite_confirmee') return 'visite_prevue';
-  if (s === 'interesse') {
+  if (visiteRetenue(visitesDuBien)) return 'visite_prevue';
+  // Statut « visite planifiée » : seulement s'il existe vraiment une visite (à venir, ou passée à confirmer).
+  if ((s === 'visite_planifiee' || s === 'visite_confirmee') &&
+      (visiteAVenir(visitesDuBien) || visitePassee(visitesDuBien, s))) return 'visite_prevue';
+  if (s === 'interesse' || s === 'visite_planifiee' || s === 'visite_confirmee') {
     const creneaux = visitesDuBien.some((v) =>
       ['proposee', 'planifiee'].includes(v.statut) && v.est_deleguee !== true && !v.client_confirme_visite_at &&
       v.date_visite && new Date(v.date_visite).getTime() > Date.now());
@@ -171,7 +191,7 @@ export function AchatProchaineEtape({
 }) {
   const etape = etapeAchat(offre, visitesDuBien, demandeEnvoyee);
   const prochaine = prochaineVisite(visitesDuBien);
-  const retenue = visiteRetenue(visitesDuBien);
+  const retenue = visiteRetenue(visitesDuBien) || visiteAVenir(visitesDuBien);
   const btn = compact ? 'h-11 w-full rounded-full' : 'h-11 rounded-full';
   const lien = 'mt-2 w-full py-1.5 text-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50';
 

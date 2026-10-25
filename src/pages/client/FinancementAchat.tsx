@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useClientParcours } from '@/hooks/useClientParcours';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +18,7 @@ export default function FinancementAchat() {
   const navigate = useNavigate();
   const { loading, project, financing, computed, settings, documents, updateFinancing, updateProject } = usePurchaseProject({ userId: user?.id || null });
 
+  const parcours = useClientParcours();
   const [userDocuments, setUserDocuments] = useState<any[]>([]);
 
   useEffect(() => {
@@ -36,7 +38,10 @@ export default function FinancementAchat() {
     return Array.from(byId.values());
   }, [documents, userDocuments]);
 
-  if (loading) {
+  // Page réservée au parcours achat : un compte location retourne à son accueil.
+  if (parcours !== null && parcours !== 'achat') return <Navigate to="/client" replace />;
+
+  if (loading || parcours === null) {
     return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 

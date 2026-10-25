@@ -153,11 +153,13 @@ export async function demanderVisiteAchat(
   if (!client) throw new Error('Fiche client introuvable');
 
   if (opts.creneau) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('visites')
       .update({ statut: 'confirmee', client_confirme_visite_at: new Date().toISOString() })
-      .eq('id', opts.creneau.id);
+      .eq('id', opts.creneau.id)
+      .select('id');
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Ce créneau n'est plus disponible. Actualisez la page.");
     await majStatutOffre(offre.id, 'visite_planifiee');
     await notifierAgent(
       userId,
@@ -168,7 +170,8 @@ export async function demanderVisiteAchat(
     return;
   }
 
-  if (['envoyee', 'vue', 'refusee'].includes(offre.statut)) {
+  // Nouvelle demande : le bien redevient « intéressé » (aussi après une visite annulée).
+  if (['envoyee', 'vue', 'refusee', 'visite_planifiee', 'visite_confirmee'].includes(offre.statut)) {
     await majStatutOffre(offre.id, 'interesse');
   }
   const dispo = (opts.disponibilites || '').trim();
@@ -191,14 +194,17 @@ export async function deleguerVisiteAchat(
 
   if (opts.creneau) {
     // Le créneau proposé par le conseiller devient la visite déléguée (pas de doublon dans son agenda).
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('visites')
       .update({ est_deleguee: true, source: 'deleguee', statut: 'planifiee', notes: 'Visite déléguée au conseiller par le client (achat)' })
-      .eq('id', opts.creneau.id);
+      .eq('id', opts.creneau.id)
+      .select('id');
     if (error) throw error;
+    if (!data || data.length === 0) throw new Error("Ce créneau n'est plus disponible. Actualisez la page.");
   }
 
-  if (['envoyee', 'vue', 'refusee'].includes(offre.statut)) {
+  // Nouvelle demande : le bien redevient « intéressé » (aussi après une visite annulée).
+  if (['envoyee', 'vue', 'refusee', 'visite_planifiee', 'visite_confirmee'].includes(offre.statut)) {
     await majStatutOffre(offre.id, 'interesse');
   }
   await notifierAgent(
@@ -214,20 +220,28 @@ export async function confirmerVisiteFaiteAchat(userId: string, offre: any, visi
   const client = await getAchatClient(userId);
   if (!client) throw new Error('Fiche client introuvable');
   const visite = derniereVisite(visites, offre.id);
+  const parConseiller = visite?.est_deleguee === true;
   if (visite?.id) {
-    // Le client a fait la visite : elle est effectuée et ne sera pas redemandée par la question après visite.
+    // Visite faite : effectuée, et la question après visite ne sera pas reposée.
     await supabase
       .from('visites')
       .update({
         statut: 'effectuee',
-        client_confirme_visite_at: visite.client_confirme_visite_at || new Date().toISOString(),
+        ...(parConseiller ? {} : { client_confirme_visite_at: visite.client_confirme_visite_at || new Date().toISOString() }),
         client_decision: 'interesse',
         client_decision_at: new Date().toISOString(),
       })
       .eq('id', visite.id);
   }
   await majStatutOffre(offre.id, 'visite_effectuee');
-  await notifierAgent(userId, client.id, offre.id, `✅ **Visite effectuée (achat)**\n\n${ligneBien(offre)}\n\nLe client indique avoir visité le bien.`);
+  await notifierAgent(
+    userId,
+    client.id,
+    offre.id,
+    parConseiller
+      ? `✅ **Compte-rendu consulté (achat)**\n\n${ligneBien(offre)}\n\nLe client a pris connaissance de votre visite et le bien l'intéresse ; il réfléchit avant une éventuelle offre.`
+      : `✅ **Visite effectuée (achat)**\n\n${ligneBien(offre)}\n\nLe client indique avoir visité le bien.`,
+  );
 }
 
 /** Dernière visite réellement passée (ou effectuée / avec compte-rendu) — jamais un créneau futur. */
@@ -236,6 +250,9 @@ function derniereVisite(visites: any[], offreId: string) {
   return visites
     .filter((v) =>
       v.offre_id === offreId &&
+      // jamais un simple créneau d'annonce importé : une visite déléguée, confirmée ou planifiée par une personne
+      (v.est_deleguee === true || v.statut === 'confirmee' || !!v.client_confirme_visite_at || !!v.compte_rendu_at || v.statut === 'effectuee' ||
+        ['planifiee_client', 'portail', 'manuel', 'manuelle', 'proposee_agent', 'deleguee'].includes(v.source)) &&
       !['annulee', 'proposee'].includes(v.statut) &&
       (v.statut === 'effectuee' || !!v.compte_rendu_at || (v.date_visite && new Date(v.date_visite).getTime() <= now)),
     )
