@@ -360,6 +360,28 @@ export function mandate(dossier: Dossier, now: Date) {
   };
 }
 
+/**
+ * Phase du compte : « non_active » tant que la demande de mandat n'est pas activée (facture d'activation
+ * en attente, envoyée ou payée mais pas encore traitée), « en_mandat » pour un client suivi, « autre » sinon
+ * (relogé, arrêté…).
+ */
+export function accountPhase(dossier: Dossier): 'non_active' | 'en_mandat' | 'autre' {
+  const demande = norm(dossier.demande?.statut);
+  if (['en_attente', 'facture_envoyee', 'paye'].includes(demande)) return 'non_active';
+  const statut = norm(dossier.client.statut);
+  if (demande === 'active' && !['stoppe', 'reloge', 'inactif'].includes(statut)) return 'en_mandat';
+  if (['actif', 'suspendu'].includes(statut)) return 'en_mandat';
+  if (statut === 'en_attente') return 'non_active';
+  return 'autre';
+}
+
+/** Montant de l'acompte inscrit au dossier (location : demande de mandat ; achat : projet), ou null. */
+export function depositAmount(dossier: Dossier): number | null {
+  const raw = dossier.journey === 'achat' ? dossier.purchaseProject?.montant_acompte : dossier.demande?.montant_acompte;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** Résumé compact remis à Steeve à chaque passage (le détail passe par les outils). */
 export async function overview(db: Db, dossier: Dossier, now: Date) {
   const c = dossier.client;
