@@ -492,7 +492,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     }
   };
   const isContractHeading = (t: string) =>
-    (/^\d+(\.\d+)*\.?\s/.test(t) && t.length < 90) || (t.length < 70 && t === t.toUpperCase() && /[A-Z]/.test(t));
+    /^Article\s+\d+/i.test(t) || (/^\d+(\.\d+)*\.?\s/.test(t) && t.length < 90) || (t.length < 70 && t === t.toUpperCase() && /[A-Z]/.test(t));
 
   if (data.contract_text && data.contract_text.trim()) {
     // Texte intégral du mandat tel qu'affiché et signé dans le formulaire
