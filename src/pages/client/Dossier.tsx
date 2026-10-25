@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
+import { getMandatDates } from '@/utils/mandatDates';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -932,8 +933,12 @@ export default function Dossier() {
     );
   }
 
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
-  const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
+  // Source unique de vérité (identique à « Mon contrat » et au tableau de bord) : date de signature du mandat,
+  // jours de pause, échéance officielle et reconduction de 90 jours.
+  const mandatInfo = getMandatDates(client as any);
+  const daysElapsed = mandatInfo.daysSinceSignature;
+  const daysRemaining = mandatInfo.daysRemaining;
+  const mandatCycleStart = (mandatInfo.cycleStart ?? new Date(client.date_ajout || client.created_at)).toISOString();
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   return (
@@ -959,7 +964,7 @@ export default function Dossier() {
             <MandatProgressCard
               daysElapsed={daysElapsed}
               daysRemaining={daysRemaining}
-              startDate={client.date_ajout || client.created_at}
+              startDate={mandatCycleStart}
               isRelogged={isRelogged}
               reloggedStatus={isRelogged ? 'cles_remises' : null}
             />

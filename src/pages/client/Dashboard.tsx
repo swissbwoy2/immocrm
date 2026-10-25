@@ -813,7 +813,9 @@ function ClientDashboardLocation() {
                       daysElapsed={daysElapsed}
                       daysRemaining={daysRemaining}
                       totalDays={90}
-                      startDate={client.date_ajout || client.created_at}
+                      startDate={reloggedEndDate
+                        ? (client.date_ajout || client.created_at)
+                        : (mandatInfo.cycleStart ? mandatInfo.cycleStart.toISOString() : (client.date_ajout || client.created_at))}
                       isRelogged={isRelogged}
                       reloggedStatus={reloggedStatus}
                       reloggedDate={reloggedDate}

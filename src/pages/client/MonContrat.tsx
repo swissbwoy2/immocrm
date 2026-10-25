@@ -212,7 +212,9 @@ export default function MonContrat() {
     }
   };
 
-  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature, isAutoRenewed } = getMandatDates(client);
+  const { start: signatureStart, cycleStart, end: mandatEnd, daysRemaining, daysSinceSignature, isAutoRenewed } = getMandatDates(client);
+  // Période affichée = période de 90 jours en cours (après reconduction, elle ne commence plus à la signature)
+  const mandatStart = isAutoRenewed && cycleStart ? cycleStart : signatureStart;
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
   const hasPdf = !!client?.id;
@@ -315,7 +317,7 @@ export default function MonContrat() {
           <div className="rounded-xl border border-border/70 p-4">
             <div className="mb-1 flex items-center gap-2 text-muted-foreground">
               <Calendar className="h-4 w-4" />
-              <span className="text-sm">Date de début</span>
+              <span className="text-sm">{isAutoRenewed ? 'Début de la période en cours' : 'Date de début'}</span>
             </div>
             <p className="text-base font-semibold text-foreground">
               {mandatStart ? format(mandatStart, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
