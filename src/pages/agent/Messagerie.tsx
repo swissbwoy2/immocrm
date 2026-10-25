@@ -31,7 +31,7 @@ import { NewConversationDialog } from "@/components/NewConversationDialog";
 import { AgentNewAdminConversationDialog } from "@/components/AgentNewAdminConversationDialog";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
-import { MessagingLayout } from "@/components/MessagingLayout";
+import { MessengerSplitLayout, MESSENGER_PAGE_HEIGHT } from "@/components/messaging/MessengerSplitLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
@@ -1876,53 +1876,42 @@ const Messagerie = () => {
     </div>
   );
 
-  if (isMobile) {
-    const contact = currentConversation ? getContactInfo(currentConversation) : null;
-    return (
-      <MobileMessenger
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onBack={() => setSelectedConv(null)}
-        headerName={contact?.name}
-        headerSubtitle={
-          contact
-            ? contact.isOnline
-              ? 'En ligne'
-              : contact.type === 'admin'
-                ? 'Admin'
-                : 'Client'
-            : undefined
-        }
-        headerAvatarUrl={null}
-        isOnline={!!contact?.isOnline}
-      />
-    );
-  }
+  const contact = currentConversation ? getContactInfo(currentConversation) : null;
 
+  // Même ossature que l'admin : deux panneaux dès 768 px (tablette, PC), un panneau à la fois sur mobile.
   return (
-    <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
-
-      <MessagingLayout
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onSelectConversation={setSelectedConv}
-        chatHeader={
-          currentConversation ? (
-            <ChatHeader
-              name={getContactInfo(currentConversation).name}
-              avatarUrl={null}
-              conversationId={currentConversation.id}
-              status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
-              isArchived={currentConversation.is_archived}
-              lastSeenAt={getContactInfo(currentConversation).lastSeenAt}
-              isOnline={getContactInfo(currentConversation).isOnline}
-            />
-          ) : null
-        }
-      />
-    </div>
+    <MessengerSplitLayout
+      className={MESSENGER_PAGE_HEIGHT}
+      conversationsList={conversationsList}
+      chatView={chatView}
+      chatHeader={
+        currentConversation && contact ? (
+          <ChatHeader
+            name={contact.name}
+            avatarUrl={null}
+            conversationId={currentConversation.id}
+            status={contact.type === 'admin' ? 'Admin' : undefined}
+            isArchived={currentConversation.is_archived}
+            lastSeenAt={contact.lastSeenAt}
+            isOnline={contact.isOnline}
+          />
+        ) : null
+      }
+      selectedConversation={selectedConv}
+      onBack={() => setSelectedConv(null)}
+      headerName={contact?.name}
+      headerSubtitle={
+        contact
+          ? contact.isOnline
+            ? 'En ligne'
+            : contact.type === 'admin'
+              ? 'Admin'
+              : 'Client'
+          : undefined
+      }
+      headerAvatarUrl={null}
+      isOnline={!!contact?.isOnline}
+    />
   );
 };
 

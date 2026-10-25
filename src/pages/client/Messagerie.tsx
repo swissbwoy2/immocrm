@@ -31,7 +31,7 @@ import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
-import { MessagingLayout } from "@/components/MessagingLayout";
+import { MessengerSplitLayout, MESSENGER_PAGE_HEIGHT } from "@/components/messaging/MessengerSplitLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
@@ -2223,37 +2223,26 @@ const Messagerie = () => {
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <MobileMessenger
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onBack={() => setSelectedConv(null)}
-        headerName={currentConversation ? getAgentName(currentConversation.agent_id) : undefined}
-        headerSubtitle={
-          currentConversation
-            ? getAgentInfo(currentConversation.agent_id).isOnline
-              ? "En ligne"
-              : "Hors ligne"
-            : undefined
-        }
-        headerAvatarUrl={null}
-        isOnline={currentConversation ? !!getAgentInfo(currentConversation.agent_id).isOnline : false}
-      />
-    );
-  }
-
+  // Même ossature que l'admin : deux panneaux dès 768 px (tablette, PC), un panneau à la fois sur mobile.
   return (
-    <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
-      <MessagingLayout
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onSelectConversation={setSelectedConv}
-        chatHeader={chatHeader}
-      />
-    </div>
+    <MessengerSplitLayout
+      className={MESSENGER_PAGE_HEIGHT}
+      conversationsList={conversationsList}
+      chatView={chatView}
+      chatHeader={chatHeader}
+      selectedConversation={selectedConv}
+      onBack={() => setSelectedConv(null)}
+      headerName={currentConversation ? getAgentName(currentConversation.agent_id) : undefined}
+      headerSubtitle={
+        currentConversation
+          ? getAgentInfo(currentConversation.agent_id).isOnline
+            ? "En ligne"
+            : "Hors ligne"
+          : undefined
+      }
+      headerAvatarUrl={null}
+      isOnline={currentConversation ? !!getAgentInfo(currentConversation.agent_id).isOnline : false}
+    />
   );
 };
 
