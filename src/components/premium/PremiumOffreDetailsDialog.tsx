@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
-import { Home, Calendar, FileCheck, User, ExternalLink } from "lucide-react";
+import { Home, Calendar, FileCheck, User, ExternalLink, StickyNote } from "lucide-react";
+import { noteSuiviClient } from "@/lib/offreNote";
 import { usePreviewImage, type ShowcaseItem } from "@/components/public-site/showcase/useShowcase";
 import { cn } from "@/lib/utils";
 import { ChanceIndicator } from "@/components/ChanceIndicator";
@@ -263,10 +264,13 @@ export function PremiumOffreDetailsDialog({
             </Bloc>
           )}
 
-          {/* Mot de l'agent */}
-          {offre.commentaires && (
-            <Bloc titre="Le mot de votre agent">
-              <p className="whitespace-pre-line rounded-xl bg-muted/50 p-3.5 text-sm leading-relaxed text-foreground">{offre.commentaires}</p>
+          {/* Note de suivi (les notes techniques sont filtrées) */}
+          {noteSuiviClient(offre.commentaires) && (
+            <Bloc titre="Suivi">
+              <p className="flex items-start gap-2.5 rounded-xl bg-muted/50 p-3.5 text-sm leading-relaxed text-foreground">
+                <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="whitespace-pre-line">{noteSuiviClient(offre.commentaires)}</span>
+              </p>
             </Bloc>
           )}
 
