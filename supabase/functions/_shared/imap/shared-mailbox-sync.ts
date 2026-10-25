@@ -23,7 +23,7 @@ export interface MailboxRow {
   imap_port: number;
   uid_validity: number | null;
   last_uid: number | null;
-  /** Identifiant du serveur de réception dont les résultats d'authentification font foi (ex. « infomaniak »). */
+  /** Identifiants exacts (séparés par des virgules) du serveur de réception dont les résultats font foi. */
   trusted_authserv?: string | null;
 }
 
@@ -79,26 +79,90 @@ export function htmlToText(html: string): string {
   return compact.join('\n').trim();
 }
 
+/** En-tête Authentication-Results analysé (RFC 8601) : commentaires retirés, guillemets respectés. */
+export function parseAuthResults(value: string): { authserv: string; clauses: { method: string; result: string; props: Record<string, string> }[] } {
+  let cleaned = '';
+  let depth = 0;
+  let quoted = false;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (quoted) {
+      cleaned += ch;
+      if (ch === '\\' && i + 1 < value.length) cleaned += value[++i];
+      else if (ch === '"') quoted = false;
+      continue;
+    }
+    if (depth > 0) {
+      if (ch === '\\') i++;
+      else if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+      continue;
+    }
+    if (ch === '(') depth = 1;
+    else {
+      if (ch === '"') quoted = true;
+      cleaned += ch;
+    }
+  }
+  // Découpage sur « ; » hors guillemets.
+  const parts: string[] = [];
+  let current = '';
+  quoted = false;
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (quoted) {
+      current += ch;
+      if (ch === '\\' && i + 1 < cleaned.length) current += cleaned[++i];
+      else if (ch === '"') quoted = false;
+    } else if (ch === '"') {
+      quoted = true;
+      current += ch;
+    } else if (ch === ';') {
+      parts.push(current);
+      current = '';
+    } else current += ch;
+  }
+  parts.push(current);
+  const authserv = (parts.shift() || '').trim().split(/\s+/)[0].toLowerCase();
+  const clauses = parts.map((raw) => {
+    const c = raw.replace(/\s+/g, ' ').trim();
+    const head = c.match(/^([a-z0-9-]+)\s*=\s*([a-z0-9-]+)/i);
+    const props: Record<string, string> = {};
+    for (const m of c.matchAll(/\b([a-z]+\.[a-z0-9-]+)\s*=\s*("((?:[^"\\]|\\.)*)"|[^\s]+)/gi)) {
+      props[m[1].toLowerCase()] = (m[3] ?? m[2]).toLowerCase();
+    }
+    return { method: head ? head[1].toLowerCase() : '', result: head ? head[2].toLowerCase() : '', props };
+  }).filter((c) => c.method);
+  return { authserv, clauses };
+}
+
+/** Identifiant du serveur qui a ajouté l'en-tête Authentication-Results le plus haut (pour le réglage). */
+export function topAuthServer(headers: { key: string; value: string }[] | undefined): string | null {
+  const top = (headers || []).find((h) => h.key.toLowerCase() === 'authentication-results');
+  return top ? parseAuthResults(top.value).authserv.slice(0, 200) || null : null;
+}
+
 /**
- * Expéditeur authentifié ? Seul l'en-tête Authentication-Results le plus haut compte (ajouté par le serveur
- * de réception), et seulement s'il vient du serveur de confiance. Accepté : DMARC réussi pour le domaine de
- * l'expéditeur, ou signature DKIM réussie d'un domaine aligné. SPF seul ne prouve rien sur l'adresse affichée.
+ * Expéditeur authentifié ? Seul l'en-tête Authentication-Results le plus haut compte, et seulement si son
+ * identifiant de serveur est exactement l'un de ceux déclarés pour la boîte. Accepté : DMARC réussi pour le
+ * domaine exact de l'expéditeur, ou DKIM réussi d'un domaine égal au sien ou dont il est un sous-domaine.
+ * SPF seul ne prouve rien sur l'adresse affichée.
  */
 export function senderAuthenticated(headers: { key: string; value: string }[] | undefined, fromAddress: string, trustedAuthserv: string): boolean {
   const domain = fromAddress.split('@')[1]?.toLowerCase();
-  if (!domain || !trustedAuthserv) return false;
+  const trusted = (trustedAuthserv || '').toLowerCase().split(',').map((t) => t.trim()).filter(Boolean);
+  if (!domain || trusted.length === 0) return false;
   const top = (headers || []).find((h) => h.key.toLowerCase() === 'authentication-results');
   if (!top) return false;
-  const value = top.value.replace(/\s+/g, ' ').toLowerCase();
-  const [authserv, ...clauses] = value.split(';');
-  if (!authserv.trim().split(' ')[0].includes(trustedAuthserv.toLowerCase())) return false;
-  const aligned = (d: string) => d.includes('.') && (d === domain || domain.endsWith(`.${d}`) || d.endsWith(`.${domain}`));
-  for (const clause of clauses) {
-    const c = clause.trim();
-    const dmarc = c.match(/^dmarc=pass\b.*\bheader\.from=([a-z0-9.-]+)/);
-    if (dmarc && aligned(dmarc[1])) return true;
-    const dkim = c.match(/^dkim=pass\b.*\bheader\.(?:d|i)=@?([a-z0-9.-]+)/);
-    if (dkim && aligned(dkim[1])) return true;
+  const { authserv, clauses } = parseAuthResults(top.value);
+  if (!trusted.includes(authserv)) return false;
+  for (const c of clauses) {
+    if (c.result !== 'pass') continue;
+    if (c.method === 'dmarc' && c.props['header.from'] === domain) return true;
+    if (c.method === 'dkim') {
+      const d = (c.props['header.d'] || '').replace(/^@/, '');
+      if (d.includes('.') && (d === domain || domain.endsWith(`.${d}`))) return true;
+    }
   }
   return false;
 }
@@ -132,7 +196,8 @@ export async function toEmailRow(msg: FetchedMessage, mailbox: MailboxRow, uidVa
     subject: clean(parsed.subject).slice(0, 500) || null,
     body_text: text.slice(0, MAX_BODY_CHARS) || null,
     received_at: received,
-    auth_verified: senderAuthenticated(parsed.headers, fromAddress, mailbox.trusted_authserv ?? 'infomaniak'),
+    auth_verified: senderAuthenticated(parsed.headers, fromAddress, mailbox.trusted_authserv ?? ''),
+    auth_server: topAuthServer(parsed.headers),
   };
 }
 

@@ -5,11 +5,12 @@
 --  - mailbox_emails : e-mails relevés par la fonction sync-shared-mailboxes (lecture réservée aux admins).
 --  - steeve_client_emails : seule porte d'accès de Steeve. Uniquement les ÉCHANGES DIRECTS avec le client :
 --      * le client est l'expéditeur ou un destinataire (comparaison exacte des adresses) ;
---      * l'expéditeur est authentifié par le serveur de réception (DMARC ou DKIM aligné) ;
---      * l'adresse du client est de confiance : client explicitement choisi pour le pilote de Steeve, ou adresse
---        vérifiée par l'agence (les comptes sont confirmés automatiquement à l'inscription : l'adresse seule ne
---        prouve pas qu'elle appartient au client).
---    Aucun e-mail d'un tiers qui se contente de nommer le client n'est transmis (risque de confusion entre personnes).
+--      * l'expéditeur est authentifié par le serveur de réception (DMARC ou DKIM, identifiant de serveur exact) ;
+--      * l'adresse du client a été vérifiée par son agent ou un admin, et n'a pas changé depuis (les comptes sont
+--        confirmés automatiquement à l'inscription : l'adresse seule ne prouve pas qu'elle appartient au client) ;
+--      * extrait seulement si le client est l'expéditeur ou si l'e-mail vient de l'agence ; un e-mail externe
+--        où il n'est que destinataire ou en copie est seulement signalé (date, type d'expéditeur).
+--    Aucun e-mail d'un tiers qui se contente de nommer le client n'est transmis.
 
 -- 1) Boîtes lues par Steeve
 CREATE TABLE IF NOT EXISTS public.shared_mailboxes (
@@ -24,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.shared_mailboxes (
   last_uid bigint,
   pending_count integer,
   last_attempt_at timestamptz,
-  trusted_authserv text NOT NULL DEFAULT 'infomaniak',
+  trusted_authserv text NOT NULL DEFAULT '',
   last_sync_at timestamptz,
   last_error text,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -33,7 +34,11 @@ CREATE TABLE IF NOT EXISTS public.shared_mailboxes (
   CONSTRAINT shared_mailboxes_port_check CHECK (imap_port BETWEEN 1 AND 65535)
 );
 ALTER TABLE public.shared_mailboxes ADD COLUMN IF NOT EXISTS last_attempt_at timestamptz;
-ALTER TABLE public.shared_mailboxes ADD COLUMN IF NOT EXISTS trusted_authserv text NOT NULL DEFAULT 'infomaniak';
+-- Identifiants exacts (séparés par des virgules) du serveur de réception dont les résultats d'authentification
+-- font foi ; vide = aucun e-mail authentifié tant que l'identifiant réel n'a pas été relevé (colonne auth_server).
+ALTER TABLE public.shared_mailboxes ADD COLUMN IF NOT EXISTS trusted_authserv text NOT NULL DEFAULT '';
+ALTER TABLE public.shared_mailboxes ALTER COLUMN trusted_authserv SET DEFAULT '';
+UPDATE public.shared_mailboxes SET trusted_authserv = '' WHERE trusted_authserv = 'infomaniak';
 -- Aucune politique : accès uniquement par les fonctions ci-dessous (et la clé de service).
 ALTER TABLE public.shared_mailboxes ENABLE ROW LEVEL SECURITY;
 
@@ -154,6 +159,7 @@ CREATE TABLE IF NOT EXISTS public.mailbox_emails (
   top_text text,
   norm_top text,
   auth_verified boolean NOT NULL DEFAULT false,
+  auth_server text,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT mailbox_emails_uid_key UNIQUE (mailbox_id, uid_validity, uid)
 );
@@ -162,6 +168,8 @@ ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS top_text text;
 ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS norm_top text;
 -- Expéditeur authentifié par le serveur de réception (DMARC ou DKIM aligné), établi à la relève.
 ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS auth_verified boolean NOT NULL DEFAULT false;
+-- Serveur qui a ajouté l'en-tête Authentication-Results le plus haut (sert à régler trusted_authserv).
+ALTER TABLE public.mailbox_emails ADD COLUMN IF NOT EXISTS auth_server text;
 CREATE INDEX IF NOT EXISTS mailbox_emails_received_idx ON public.mailbox_emails (received_at DESC);
 CREATE INDEX IF NOT EXISTS mailbox_emails_addrs_idx ON public.mailbox_emails USING gin (addrs);
 
@@ -354,8 +362,11 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  IF current_user NOT IN ('authenticated', 'anon')
-     OR public.has_role(auth.uid(), 'admin'::app_role) OR public.has_role(auth.uid(), 'agent'::app_role) THEN
+  IF current_user NOT IN ('authenticated', 'anon') OR public.has_role(auth.uid(), 'admin'::app_role)
+     OR (TG_OP = 'UPDATE' AND (
+          EXISTS (SELECT 1 FROM public.agents a WHERE a.id = OLD.agent_id AND a.user_id = auth.uid())
+          OR EXISTS (SELECT 1 FROM public.client_agents ca JOIN public.agents a ON a.id = ca.agent_id
+                      WHERE ca.client_id = OLD.id AND a.user_id = auth.uid()))) THEN
     RETURN NEW;
   END IF;
   IF TG_OP = 'UPDATE'
@@ -424,7 +435,6 @@ DECLARE
   v_user uuid;
   v_verified text;
   v_email text;
-  v_pilot boolean;
   v_staff text[];
   v_boxes text[];
   v_limit integer := least(greatest(coalesce(p_limit, 8), 1), 15);
@@ -440,17 +450,15 @@ BEGIN
   END IF;
   SELECT lower(u.email) INTO v_email FROM auth.users u WHERE u.id = v_user;
 
-  -- Adresse de confiance : client choisi nommément pour le pilote, ou adresse vérifiée par l'agence
-  -- (et inchangée depuis). Jamais une adresse de l'agence, d'une boîte partagée ou du personnel.
-  v_pilot := p_client_id::text = ANY (string_to_array(replace(coalesce(
-    (SELECT value FROM public.app_config WHERE key = 'steeve_pilot_client_ids'), ''), ' ', ''), ','));
+  -- Adresse de confiance : vérifiée par l'agence et inchangée depuis. Jamais une adresse de l'agence,
+  -- d'une boîte partagée ou du personnel.
   SELECT array_agg(lower(address)) INTO v_boxes FROM public.shared_mailboxes;
   SELECT array_agg(DISTINCT lower(u.email)) INTO v_staff
     FROM auth.users u JOIN public.user_roles r ON r.user_id = u.id
    WHERE r.role::text IN ('admin', 'agent', 'coursier', 'closeur', 'automation_operator') AND u.email IS NOT NULL;
   -- Chaque condition est ramenée à vrai/faux : une valeur NULL ne doit jamais ouvrir l'accès.
   IF v_email IS NULL
-     OR NOT (coalesce(v_pilot, false) OR coalesce(v_verified = v_email, false))
+     OR NOT coalesce(v_verified = v_email, false)
      OR coalesce(v_email ~ v_internal_rx, true)
      OR coalesce(v_email = ANY (coalesce(v_boxes, '{}')), true)
      OR coalesce(v_email = ANY (coalesce(v_staff, '{}')), true) THEN
@@ -473,18 +481,23 @@ BEGIN
   SELECT jsonb_build_object(
     'adresse_verifiee', true,
     'total', coalesce(max(total), 0),
-    'emails', coalesce(jsonb_agg(jsonb_build_object(
-      'date', to_char(received_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
-      'expediteur', CASE
-        WHEN from_client THEN 'le client lui-même'
-        WHEN internal_sender THEN 'équipe Logisorama / Immo-Rama'
-        WHEN coalesce(from_email, '') ~ '@([a-z0-9-]+\.)*(flatfox|homegate|immobilier|comparis|realadvisor|immoscout24|newhome|anibis|swissmarketplace|acheter-louer)\.(ch|com)$' THEN 'portail immobilier'
-        ELSE 'régie, bailleur ou autre expéditeur'
-      END,
-      'objet', left(public.steeve_redact(subject), 200),
-      'extrait', left(public.steeve_redact(regexp_replace(coalesce(top_text, ''), '[[:space:]]+', ' ', 'g')), 900),
-      'sensible', (coalesce(norm_top, '') ~ v_sensitive_rx OR coalesce(from_email, '') ~ v_finance_rx)
-    ) ORDER BY received_at DESC NULLS LAST), '[]'::jsonb)
+    'emails', coalesce(jsonb_agg(
+      CASE WHEN from_client OR internal_sender THEN jsonb_build_object(
+        'date', to_char(received_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
+        'expediteur', CASE WHEN from_client THEN 'le client lui-même' ELSE 'équipe Logisorama / Immo-Rama' END,
+        'objet', left(public.steeve_redact(subject), 200),
+        'extrait', left(public.steeve_redact(regexp_replace(coalesce(top_text, ''), '[[:space:]]+', ' ', 'g')), 900),
+        'sensible', (coalesce(norm_top, '') ~ v_sensitive_rx OR coalesce(from_email, '') ~ v_finance_rx))
+      ELSE jsonb_build_object(
+        -- E-mail externe où le client n'est que destinataire ou en copie : signalé sans contenu
+        -- (un expéditeur peut ajouter n'importe quelle adresse en copie sans l'envoyer réellement).
+        'date', to_char(received_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
+        'expediteur', CASE
+          WHEN coalesce(from_email, '') ~ '@([a-z0-9-]+\.)*(flatfox|homegate|immobilier|comparis|realadvisor|immoscout24|newhome|anibis|swissmarketplace|acheter-louer)\.(ch|com)$' THEN 'portail immobilier'
+          ELSE 'régie, bailleur ou autre expéditeur' END,
+        'client_en_copie', true)
+      END
+    ORDER BY received_at DESC NULLS LAST), '[]'::jsonb)
   ) INTO v_result
   FROM ranked;
 
