@@ -12,6 +12,7 @@ import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 import { WhatsAppNotificationsCard } from '@/components/settings/WhatsAppNotificationsCard';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 
 export default function ClientParametres() {
   const { user } = useAuth();
@@ -245,6 +246,9 @@ export default function ClientParametres() {
             />
           </div>
         </section>
+
+        {/* Notifications dans l'application + alertes sur le téléphone */}
+        <PushNotificationsCard />
 
         {/* WhatsApp */}
         <WhatsAppNotificationsCard />
