@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { UserPlus } from 'lucide-react';
+import { CalendarDays, UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -306,10 +306,12 @@ export const AddClientsToVisiteDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!sending) onOpenChange(o); }}>
-      <DialogContent className="max-w-2xl flex flex-col max-h-[92dvh] p-0 gap-0">
+      <DialogContent className="max-w-2xl flex flex-col max-h-[92dvh] p-0 gap-0 rounded-2xl overflow-hidden">
         <DialogHeader className="p-6 pb-3 shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <UserPlus className="h-[18px] w-[18px]" />
+            </span>
             Ajouter des clients à cette visite
           </DialogTitle>
           <DialogDescription className="hidden sm:block">
@@ -319,13 +321,13 @@ export const AddClientsToVisiteDialog = ({
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4 space-y-4">
-          <div className="p-4 border rounded-lg space-y-2">
-            <h4 className="font-semibold">{adresse}</h4>
+          <div className="p-4 border border-border/70 rounded-xl space-y-2">
+            <h4 className="text-base font-semibold text-foreground">{adresse}</h4>
             <div className="flex flex-wrap gap-2">
-              {sourceOffre.prix != null && <Badge variant="secondary">CHF {sourceOffre.prix.toLocaleString('fr-CH')}.-</Badge>}
-              {sourceOffre.pieces != null && <Badge variant="outline">{sourceOffre.pieces} pièces</Badge>}
-              {sourceOffre.surface != null && <Badge variant="outline">{sourceOffre.surface} m²</Badge>}
-              <Badge>📅 {visitDateLabel}</Badge>
+              {sourceOffre.prix != null && <Badge variant="secondary" className="rounded-full">CHF {sourceOffre.prix.toLocaleString('fr-CH')}.-</Badge>}
+              {sourceOffre.pieces != null && <Badge variant="outline" className="rounded-full">{sourceOffre.pieces} pièces</Badge>}
+              {sourceOffre.surface != null && <Badge variant="outline" className="rounded-full">{sourceOffre.surface} m²</Badge>}
+              <Badge className="rounded-full border-transparent bg-primary/10 text-primary hover:bg-primary/10"><CalendarDays className="h-3 w-3 mr-1" />{visitDateLabel}</Badge>
             </div>
           </div>
 
@@ -344,11 +346,11 @@ export const AddClientsToVisiteDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 border-t bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
+        <DialogFooter className="shrink-0 border-t border-border/70 bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] gap-2">
+          <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)} disabled={sending}>
             Annuler
           </Button>
-          <Button onClick={handleAdd} disabled={sending || selectedClientIds.length === 0}>
+          <Button className="rounded-full" onClick={handleAdd} disabled={sending || selectedClientIds.length === 0}>
             <UserPlus className="h-4 w-4 mr-2" />
             {sending ? 'Envoi...' : `Ajouter ${selectedClientIds.length} client(s)`}
           </Button>

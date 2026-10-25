@@ -29,7 +29,7 @@ import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DASH_CARD, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
@@ -938,40 +938,33 @@ export default function AgentCalendrier() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-primary/20"></div>
-          <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
-        </div>
-        <p className="text-muted-foreground animate-pulse">Chargement du calendrier...</p>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3" role="status">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Chargement du calendrier...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
+    <DashPage className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 page-header">
-        <div className="animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 animate-bounce-soft">
-              <CalendarIcon className="h-6 w-6 text-primary" />
-            </div>
-            Mon calendrier
-          </h1>
-          <p className="text-muted-foreground mt-1 ml-12">
-            <span className="font-medium text-blue-600 dark:text-blue-400">{visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date()).length}</span> visites confirmées
+      <DashPageHeader
+        title="Mon calendrier"
+        subtitle={
+          <>
+            <span className="font-medium text-foreground">{visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date()).length}</span> visites confirmées
             <span className="mx-2">•</span>
-            <span className="font-medium text-amber-600 dark:text-amber-400">{visites.filter(v => v.statut === 'proposee').length}</span> en attente
+            <span className="font-medium text-foreground">{visites.filter(v => v.statut === 'proposee').length}</span> en attente
             <span className="mx-2">•</span>
-            <span className="font-medium">{events.length}</span> événements
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">{events.length}</span> événements
+          </>
+        }
+        action={
+        <>
           <Button
             variant="outline"
             onClick={() => setShowShareDialog(true)}
-            className="animate-fade-in animate-delay-100 relative"
+            className="relative rounded-full"
           >
             <Share2 className="h-4 w-4 mr-2" />
             Partage d'agenda
@@ -987,20 +980,21 @@ export default function AgentCalendrier() {
               setEditingEvent(null);
               setShowEventForm(true);
             }}
-            className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+            className="rounded-full"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nouvel événement
           </Button>
-        </div>
-      </div>
+        </>
+        }
+      />
 
       <AgentCalendarShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} />
 
       {/* Urgent visits alert */}
       {visitesUrgentes.length > 0 && (
-        <Alert variant="destructive" className="animate-fade-in animate-delay-150 border-destructive/50 bg-destructive/10">
-          <AlertTriangle className="h-5 w-5 animate-pulse" />
+        <Alert variant="destructive" className="rounded-2xl border-destructive/30 bg-destructive/5">
+          <AlertTriangle className="h-5 w-5" />
           <AlertDescription>
             <div className="ml-2">
               <h2 className="font-semibold text-destructive mb-2">
@@ -1010,11 +1004,10 @@ export default function AgentCalendrier() {
                 {visitesUrgentes.map((visite, idx) => (
                   <div 
                     key={visite.id} 
-                    className="flex items-center justify-between p-3 bg-background/80 backdrop-blur rounded-lg border border-destructive/20 shadow-sm transition-all duration-200 hover:shadow-md"
-                    style={{ animationDelay: `${idx * 50}ms` }}
+                    className="flex items-center justify-between gap-3 p-3 bg-card rounded-xl border border-border/70"
                   >
-                    <div>
-                      <p className="font-medium">{visite.adresse}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground">{visite.adresse}</p>
                       <p className="text-sm text-muted-foreground">
                         <Clock className="h-3 w-3 inline mr-1" />
                         {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
@@ -1030,7 +1023,7 @@ export default function AgentCalendrier() {
                     <Button 
                       size="sm" 
                       variant="destructive"
-                      className="shadow-sm hover:shadow-md transition-all"
+                      className="shrink-0 rounded-full"
                       onClick={() => handleMarquerEffectuee(visite)}
                     >
                       {visite.est_deleguee ? 'Feedback' : 'Effectuée'}
@@ -1044,13 +1037,15 @@ export default function AgentCalendrier() {
       )}
 
       {/* Filter */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
+      <div className={`${DASH_CARD} flex flex-wrap items-center gap-3 p-3 md:p-4`}>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          <Label className="text-sm font-medium">Filtrer par client</Label>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+            <Filter className="h-4 w-4" />
+          </span>
+          <Label className="text-sm font-medium text-foreground">Filtrer par client</Label>
         </div>
         <Select value={filterClient} onValueChange={setFilterClient}>
-          <SelectTrigger className="w-[220px] bg-background border-muted-foreground/20 focus:ring-primary/30">
+          <SelectTrigger className="w-full sm:w-[220px] rounded-full bg-background">
             <SelectValue placeholder="Tous les clients" />
           </SelectTrigger>
           <SelectContent>
@@ -1064,7 +1059,7 @@ export default function AgentCalendrier() {
         </Select>
 
         <Select value={scope} onValueChange={(v) => setScope(v as 'mine' | 'co' | 'all')}>
-          <SelectTrigger className="w-[200px] bg-background border-muted-foreground/20">
+          <SelectTrigger className="w-full sm:w-[200px] rounded-full bg-background">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1074,26 +1069,22 @@ export default function AgentCalendrier() {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={confirmedOnly ? 'default' : 'outline'}
-            onClick={() => setConfirmedOnly(true)}
-          >
-            Confirmées par le client
-          </Button>
-          <Button
-            size="sm"
-            variant={confirmedOnly ? 'outline' : 'default'}
-            onClick={() => setConfirmedOnly(false)}
-          >
-            Toutes
-          </Button>
+        <div className="flex min-w-0 max-w-full items-center gap-2 [&>div]:mx-0 [&>div]:mb-0 [&>div]:px-0">
+          <DashFilterPills
+            label="Visites affichées"
+            options={[
+              { key: 'confirmees', label: 'Confirmées par le client' },
+              { key: 'toutes', label: 'Toutes' },
+            ]}
+            value={confirmedOnly ? 'confirmees' : 'toutes'}
+            onChange={(key) => setConfirmedOnly(key === 'confirmees')}
+          />
         </div>
 
         <Button
           variant={showFullHistory ? 'default' : 'outline'}
           size="sm"
+          className="rounded-full"
           onClick={() => setShowFullHistory((v) => !v)}
           title={showFullHistory ? 'Limiter à J-14 → J+90' : 'Afficher tout l\'historique'}
         >
@@ -1105,7 +1096,7 @@ export default function AgentCalendrier() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in animate-delay-300">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
           <EventManagerCalendar
             events={filteredEvents}
             visites={filteredVisites}
@@ -1116,7 +1107,7 @@ export default function AgentCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="min-w-0 h-[600px] animate-fade-in animate-delay-400">
+        <div className="min-w-0 h-[600px]">
           <PremiumAgentDayEvents
             date={selectedDate}
             events={selectedDayEvents}
@@ -1148,23 +1139,23 @@ export default function AgentCalendrier() {
 
       {/* Event detail dialog */}
       <Dialog open={eventDetailDialogOpen} onOpenChange={setEventDetailDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Détails de l'événement
-              {selectedEvent?.status === 'effectue' && <Badge variant="secondary">Effectué</Badge>}
-              {selectedEvent?.status === 'annule' && <Badge variant="destructive">Annulé</Badge>}
+              {selectedEvent?.status === 'effectue' && <Badge variant="secondary" className="rounded-full">Effectué</Badge>}
+              {selectedEvent?.status === 'annule' && <Badge variant="destructive" className="rounded-full">Annulé</Badge>}
             </DialogTitle>
           </DialogHeader>
 
           {selectedEvent && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline">
+                <Badge variant="outline" className="rounded-full">
                   {eventTypeLabels[selectedEvent.event_type] || selectedEvent.event_type}
                 </Badge>
                 {selectedEvent.priority && (
-                  <Badge variant={selectedEvent.priority === 'urgente' ? 'destructive' : selectedEvent.priority === 'haute' ? 'default' : 'secondary'}>
+                  <Badge className="rounded-full" variant={selectedEvent.priority === 'urgente' ? 'destructive' : selectedEvent.priority === 'haute' ? 'default' : 'secondary'}>
                     {priorityLabels[selectedEvent.priority] || selectedEvent.priority}
                   </Badge>
                 )}
@@ -1186,12 +1177,12 @@ export default function AgentCalendrier() {
                   </div>
                 )}
                 {selectedEvent.all_day && (
-                  <Badge variant="outline">Journée entière</Badge>
+                  <Badge variant="outline" className="rounded-full">Journée entière</Badge>
                 )}
               </div>
 
               {selectedEvent.description && (
-                <div className="p-3 bg-muted rounded-lg">
+                <div className="p-3 bg-muted/60 rounded-xl">
                   <p className="text-sm">{selectedEvent.description}</p>
                 </div>
               )}
@@ -1206,11 +1197,12 @@ export default function AgentCalendrier() {
           )}
 
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setEventDetailDialogOpen(false)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setEventDetailDialogOpen(false)}>
               Fermer
             </Button>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setEventDetailDialogOpen(false);
                 if (selectedEvent) handleEditEvent(selectedEvent);
@@ -1221,6 +1213,7 @@ export default function AgentCalendrier() {
             </Button>
             <Button
               variant="destructive"
+              className="rounded-full"
               onClick={() => {
                 if (selectedEvent) handleDeleteEvent(selectedEvent.id);
               }}
@@ -1244,7 +1237,7 @@ export default function AgentCalendrier() {
 
       {/* Feedback dialog */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl rounded-2xl">
           <DialogHeader>
             <DialogTitle>Feedback de la visite déléguée</DialogTitle>
             <DialogDescription>
@@ -1254,7 +1247,7 @@ export default function AgentCalendrier() {
 
           {selectedVisite && (
             <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-muted/60 rounded-xl">
                 <AddressLink address={selectedVisite.adresse} className="font-semibold" iconClassName="h-4 w-4" />
                 {selectedVisite.offres && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -1269,7 +1262,7 @@ export default function AgentCalendrier() {
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="recommande" id="recommande" />
                     <Label htmlFor="recommande" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <ThumbsUp className="h-4 w-4 text-green-600" />
+                      <ThumbsUp className="h-4 w-4 text-emerald-600" />
                       <div>
                         <p className="font-medium">Je recommande ce bien</p>
                         <p className="text-xs text-muted-foreground">Le bien correspond aux attentes du client</p>
@@ -1279,7 +1272,7 @@ export default function AgentCalendrier() {
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="neutre" id="neutre" />
                     <Label htmlFor="neutre" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <Minus className="h-4 w-4 text-gray-600" />
+                      <Minus className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Avis neutre</p>
                         <p className="text-xs text-muted-foreground">Le bien a des points positifs et négatifs</p>
@@ -1289,7 +1282,7 @@ export default function AgentCalendrier() {
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="deconseille" id="deconseille" />
                     <Label htmlFor="deconseille" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <ThumbsDown className="h-4 w-4 text-red-600" />
+                      <ThumbsDown className="h-4 w-4 text-destructive" />
                       <div>
                         <p className="font-medium">Je ne recommande pas ce bien</p>
                         <p className="text-xs text-muted-foreground">Le bien ne convient pas au client</p>
@@ -1358,10 +1351,10 @@ export default function AgentCalendrier() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFeedbackDialogOpen(false)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setFeedbackDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleSaveFeedback} disabled={!feedbackText.trim()}>
+            <Button className="rounded-full" onClick={handleSaveFeedback} disabled={!feedbackText.trim()}>
               Enregistrer et notifier
             </Button>
           </DialogFooter>
@@ -1370,17 +1363,17 @@ export default function AgentCalendrier() {
 
       {/* Detail dialog enrichi */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               Détails de la visite
-              {selectedVisite?.est_deleguee ? <Badge className="bg-green-600 text-white">Visite déléguée</Badge> : isVisiteConfirmedByClient(offreStatutOf(selectedVisite)) ? <Badge className="bg-emerald-600 text-white">Client s'en occupe</Badge> : null}
-              {selectedVisite?.statut === 'effectuee' && <Badge variant="secondary">Effectuée</Badge>}
+              {selectedVisite?.est_deleguee ? <Badge className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Visite déléguée</Badge> : isVisiteConfirmedByClient(offreStatutOf(selectedVisite)) ? <Badge className="rounded-full border-transparent bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">Client s'en occupe</Badge> : null}
+              {selectedVisite?.statut === 'effectuee' && <Badge variant="secondary" className="rounded-full">Effectuée</Badge>}
             </DialogTitle>
           </DialogHeader>
 
           {selectedVisite?.id && (
-            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
+            <div className="rounded-xl border border-border/70 bg-primary/5 p-3">
               <VisitLiveButton
                 visiteId={selectedVisite.id}
                 dateVisite={selectedVisite.date_visite}
@@ -1393,7 +1386,7 @@ export default function AgentCalendrier() {
           {selectedVisite && (
             <div className="space-y-6">
               {/* En-tête avec adresse et date/heure */}
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-muted/60 rounded-xl">
                 <AddressLink
                   address={selectedVisite.adresse}
                   className="font-semibold text-lg"
@@ -1412,11 +1405,11 @@ export default function AgentCalendrier() {
               </div>
 
               {/* Intérêt client */}
-              <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
+              <div className="p-3 rounded-xl border border-border/70 flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium">Intérêt du client :</span>
                 <ClientInteretBadge statutOffre={selectedVisite.offres?.statut} />
                 {getInteretState(selectedVisite.offres?.statut).key === 'attente' && (
-                  <span className="text-xs text-amber-700">
+                  <span className="text-xs text-amber-700 dark:text-amber-400">
                     À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
                   </span>
                 )}
@@ -1431,11 +1424,11 @@ export default function AgentCalendrier() {
                       <User className="h-4 w-4" />
                       {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client concerné'}
                     </h5>
-                    <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
-                      ➕ Ajouter des clients
+                    <Button size="sm" variant="outline" className="rounded-full" onClick={() => setAddClientsDialogOpen(true)}>
+                      Ajouter des clients
                     </Button>
                   </div>
-                  <div className="p-3 border rounded-lg">
+                  <div className="p-3 border border-border/70 rounded-xl">
                     <p className="font-medium">
                       {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
                     </p>
@@ -1453,7 +1446,7 @@ export default function AgentCalendrier() {
                     <Home className="h-4 w-4" />
                     Détails de l'offre envoyée
                   </h5>
-                  <div className="p-4 border rounded-lg space-y-4">
+                  <div className="p-4 border border-border/70 rounded-xl space-y-4">
                     {/* Lien de l'annonce */}
                     {selectedVisite.offres.lien_annonce && (
                       <div>
@@ -1477,23 +1470,23 @@ export default function AgentCalendrier() {
                     {/* Grille des caractéristiques */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {selectedVisite.offres.pieces && (
-                        <div className="p-2 bg-muted rounded">
+                        <div className="p-2 bg-muted/60 rounded-xl">
                           <p className="text-xs text-muted-foreground">Pièces</p>
                           <p className="font-medium">{selectedVisite.offres.pieces}</p>
                         </div>
                       )}
                       {selectedVisite.offres.surface && (
-                        <div className="p-2 bg-muted rounded">
+                        <div className="p-2 bg-muted/60 rounded-xl">
                           <p className="text-xs text-muted-foreground">Surface</p>
                           <p className="font-medium">{selectedVisite.offres.surface} m²</p>
                         </div>
                       )}
-                      <div className="p-2 bg-muted rounded">
+                      <div className="p-2 bg-muted/60 rounded-xl">
                         <p className="text-xs text-muted-foreground">Prix</p>
                         <p className="font-medium">{selectedVisite.offres.prix} CHF/mois</p>
                       </div>
                       {selectedVisite.offres.etage && (
-                        <div className="p-2 bg-muted rounded">
+                        <div className="p-2 bg-muted/60 rounded-xl">
                           <p className="text-xs text-muted-foreground">Étage</p>
                           <p className="font-medium">{selectedVisite.offres.etage}</p>
                         </div>
@@ -1512,7 +1505,7 @@ export default function AgentCalendrier() {
                     {selectedVisite.offres.description && (
                       <div>
                         <Label className="text-muted-foreground text-xs">Description</Label>
-                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-muted/50 rounded max-h-32 overflow-y-auto">
+                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-muted/60 rounded-xl max-h-32 overflow-y-auto">
                           {selectedVisite.offres.description}
                         </p>
                       </div>
@@ -1522,7 +1515,7 @@ export default function AgentCalendrier() {
                     {selectedVisite.offres.commentaires && (
                       <div>
                         <Label className="text-muted-foreground text-xs">Commentaires</Label>
-                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-primary/5 rounded">
+                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-primary/5 rounded-xl">
                           {selectedVisite.offres.commentaires}
                         </p>
                       </div>
@@ -1530,15 +1523,15 @@ export default function AgentCalendrier() {
 
                     {/* Infos contact */}
                     {(selectedVisite.offres.concierge_nom || selectedVisite.offres.locataire_nom || selectedVisite.offres.code_immeuble) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/70">
                         {selectedVisite.offres.code_immeuble && (
-                          <div className="p-2 border rounded">
+                          <div className="p-2 border border-border/70 rounded-xl">
                             <p className="text-xs text-muted-foreground">Code immeuble</p>
                             <p className="font-mono font-medium">{selectedVisite.offres.code_immeuble}</p>
                           </div>
                         )}
                         {selectedVisite.offres.concierge_nom && (
-                          <div className="p-2 border rounded">
+                          <div className="p-2 border border-border/70 rounded-xl">
                             <p className="text-xs text-muted-foreground">Concierge</p>
                             <p className="font-medium">{selectedVisite.offres.concierge_nom}</p>
                             {selectedVisite.offres.concierge_tel && (
@@ -1550,7 +1543,7 @@ export default function AgentCalendrier() {
                           </div>
                         )}
                         {selectedVisite.offres.locataire_nom && (
-                          <div className="p-2 border rounded">
+                          <div className="p-2 border border-border/70 rounded-xl">
                             <p className="text-xs text-muted-foreground">Locataire actuel</p>
                             <p className="font-medium">{selectedVisite.offres.locataire_nom}</p>
                             {selectedVisite.offres.locataire_tel && (
@@ -1571,15 +1564,15 @@ export default function AgentCalendrier() {
               {selectedVisite.candidature && (
                 <div className="space-y-3">
                   <h5 className="font-medium flex items-center gap-2">
-                    📋 Étape du dossier
-                    <Badge variant={
+                    Étape du dossier
+                    <Badge className="rounded-full" variant={
                       selectedVisite.candidature.statut === 'cles_remises' ? 'default' :
                       selectedVisite.candidature.statut === 'refusee' ? 'destructive' : 'secondary'
                     }>
                       {candidatureStatusLabels[selectedVisite.candidature.statut] || selectedVisite.candidature.statut}
                     </Badge>
                   </h5>
-                  <div className="p-4 border rounded-lg bg-muted/30">
+                  <div className="p-4 border border-border/70 rounded-xl">
                     <CandidatureWorkflowTimeline currentStatut={selectedVisite.candidature.statut} />
                   </div>
                   
@@ -1591,6 +1584,7 @@ export default function AgentCalendrier() {
                           key={option.value}
                           variant={option.value === 'refusee' ? 'destructive' : 'outline'}
                           size="sm"
+                          className="rounded-full"
                           onClick={() => handleUpdateCandidatureStatus(selectedVisite.candidature.id, option.value)}
                         >
                           {option.label}
@@ -1604,8 +1598,8 @@ export default function AgentCalendrier() {
               {/* Notes de la visite */}
               {selectedVisite.notes && (
                 <div className="space-y-2">
-                  <h5 className="font-medium">💬 Notes</h5>
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                  <h5 className="font-medium">Notes</h5>
+                  <div className="p-3 bg-amber-500/10 rounded-xl">
                     <p className="text-sm">{selectedVisite.notes}</p>
                   </div>
                 </div>
@@ -1615,10 +1609,10 @@ export default function AgentCalendrier() {
               {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
                 <div className="space-y-2">
                   <h5 className="font-medium flex items-center gap-2">
-                    📝 Mon feedback
+                    Mon feedback
                     {selectedVisite.recommandation_agent && getRecommandationBadge(selectedVisite.recommandation_agent)}
                   </h5>
-                  <div className="p-3 bg-muted rounded-lg">
+                  <div className="p-3 bg-muted/60 rounded-xl">
                     <p className="text-sm">{selectedVisite.feedback_agent}</p>
                   </div>
                 </div>
@@ -1633,21 +1627,21 @@ export default function AgentCalendrier() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 pt-4 border-t">
+          <DialogFooter className="gap-2 pt-4 border-t border-border/70">
             {selectedVisite && (
-              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+              <Button variant="outline" className="rounded-full" onClick={() => setEditVisiteOpen(true)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Modifier la visite
               </Button>
             )}
             {selectedVisite && (
-              <VisitVideoShareButton visite={selectedVisite} variant="outline" />
+              <VisitVideoShareButton visite={selectedVisite} variant="outline" className="rounded-full" />
             )}
-            <Button variant="outline" onClick={() => handleDelegateToCoursier(selectedVisite)} className='bg-blue-600 hover:bg-blue-700 text-white'>Deleguer au coursier</Button><Button variant='outline' onClick={() => setDetailDialogOpen(false)}>
+            <Button variant="outline" onClick={() => handleDelegateToCoursier(selectedVisite)} className='rounded-full'>Deleguer au coursier</Button><Button variant='outline' className='rounded-full' onClick={() => setDetailDialogOpen(false)}>
               Fermer
             </Button>
             {selectedVisite?.statut === 'planifiee' && (
-              <Button onClick={() => {
+              <Button className="rounded-full" onClick={() => {
                 setDetailDialogOpen(false);
                 handleMarquerEffectuee(selectedVisite);
               }}>
@@ -1695,6 +1689,6 @@ export default function AgentCalendrier() {
           loadData();
         }}
       />
-    </div>
+    </DashPage>
   );
 }
