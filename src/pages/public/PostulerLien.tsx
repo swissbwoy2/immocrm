@@ -4,10 +4,7 @@ import { Loader2, MailCheck, AlertTriangle, Home } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FunnelCardPage, Note, PrimaryButton, SecondaryButton } from '@/components/funnel-ui/FunnelKit';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const cle = (token: string) => `postulation-lien:${token}`;
@@ -106,86 +103,59 @@ export default function PostulerLien() {
 
   const bien = annonce ? [annonce.adresse, annonce.ville].filter(Boolean).join(', ') || annonce.titre : '';
 
-  if (chargement || authLoading) {
-    return <main className="flex min-h-screen items-center justify-center bg-muted/30"><Loader2 className="h-6 w-6 animate-spin text-primary" /></main>;
-  }
+  const spinner = (
+    <FunnelCardPage>
+      <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-[#222222]" /></div>
+    </FunnelCardPage>
+  );
+
+  if (chargement || authLoading) return spinner;
 
   if (erreur) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <AlertTriangle className="h-5 w-5 text-destructive" /> Lien indisponible
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">{erreur}</p>
-            <Button className="w-full min-h-[44px]" onClick={() => navigate('/annonces')}>
-              <Home className="mr-2 h-4 w-4" /> Voir les annonces
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
+      <FunnelCardPage>
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff4ef] text-[#c13515]"><AlertTriangle className="h-6 w-6" /></span>
+        <h1 className="mt-5 text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-[#222222]">Lien indisponible</h1>
+        <p className="mt-3 text-[16px] leading-relaxed text-[#3f3f3f]">{erreur}</p>
+        <div className="mt-8"><PrimaryButton full onClick={() => navigate('/annonces')}><Home className="h-4 w-4" /> Voir les annonces</PrimaryButton></div>
+      </FunnelCardPage>
     );
   }
 
-  if (user) {
-    return <main className="flex min-h-screen items-center justify-center bg-muted/30"><Loader2 className="h-6 w-6 animate-spin text-primary" /></main>;
-  }
+  if (user) return spinner;
+
+  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-xl">Votre demande de location</CardTitle>
-          <CardDescription>{bien}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {envoye ? (
-            <div className="space-y-4 text-center">
-              <MailCheck className="mx-auto h-10 w-10 text-primary" />
-              <p className="text-sm">
-                Nous venons d'envoyer un lien de connexion à <strong className="break-all">{form.email.trim()}</strong>.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Ouvrez-le depuis cet appareil : vous arriverez directement sur le formulaire. Pensez aux indésirables si vous ne le voyez pas.
-              </p>
-              <Button variant="outline" className="w-full min-h-[44px]" disabled={envoi} onClick={() => setEnvoye(false)}>
-                Modifier mon adresse
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={envoyerLien} className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Renseignez vos coordonnées : nous vous enverrons un lien de connexion à usage unique pour accéder au formulaire.
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="pl-prenom">Prénom *</Label>
-                  <Input id="pl-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="pl-nom">Nom *</Label>
-                  <Input id="pl-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pl-email">E-mail *</Label>
-                <Input id="pl-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pl-tel">Téléphone</Label>
-                <Input id="pl-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
-              </div>
-              <Button type="submit" className="w-full min-h-[44px]" disabled={envoi}>
-                {envoi ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MailCheck className="mr-2 h-4 w-4" />}
-                Recevoir mon lien de connexion
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </main>
+    <FunnelCardPage>
+      <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-[#222222]">Votre demande de location</h1>
+      {bien && <p className="mt-2 text-[16px] leading-relaxed text-[#3f3f3f]">{bien}</p>}
+      {envoye ? (
+        <div className="mt-6 grid gap-4">
+          <Note tone="ok">
+            <span className="flex items-start gap-2"><MailCheck className="mt-0.5 h-5 w-5 flex-none" />
+              <span>Nous venons d'envoyer un lien de connexion à <strong className="break-all font-semibold">{form.email.trim()}</strong>.</span>
+            </span>
+          </Note>
+          <p className="text-[15px] leading-relaxed text-[#3f3f3f]">
+            Ouvrez-le depuis cet appareil : vous arriverez directement sur le formulaire. Pensez aux indésirables si vous ne le voyez pas.
+          </p>
+          <SecondaryButton disabled={envoi} onClick={() => setEnvoye(false)}>Modifier mon adresse</SecondaryButton>
+        </div>
+      ) : (
+        <form onSubmit={envoyerLien} noValidate className="mt-6 grid gap-3">
+          <p className="text-[15px] leading-relaxed text-[#3f3f3f]">
+            Renseignez vos coordonnées : nous vous enverrons un lien de connexion à usage unique pour accéder au formulaire.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="pl-prenom" label="Prénom" maxLength={80} value={form.prenom} onChange={set('prenom')} autoComplete="given-name" />
+            <Field id="pl-nom" label="Nom" maxLength={80} value={form.nom} onChange={set('nom')} autoComplete="family-name" />
+          </div>
+          <Field id="pl-email" label="E-mail" type="email" inputMode="email" maxLength={255} value={form.email} onChange={set('email')} autoComplete="email" />
+          <Field id="pl-tel" label="Téléphone (facultatif)" type="tel" inputMode="tel" maxLength={30} placeholder="+41 …" value={form.telephone} onChange={set('telephone')} autoComplete="tel" />
+          <div className="mt-3"><PrimaryButton type="submit" full loading={envoi}>Recevoir mon lien de connexion</PrimaryButton></div>
+        </form>
+      )}
+    </FunnelCardPage>
   );
 }

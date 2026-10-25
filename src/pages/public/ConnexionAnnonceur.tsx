@@ -187,9 +187,9 @@ export default function ConnexionAnnonceur() {
 
       {/* Reset password dialog */}
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-        <DialogContent className="bg-background border-border text-foreground">
+        <DialogContent className="funnel-skin border-0 bg-white text-[#222222] sm:rounded-[14px]">
           <DialogHeader>
-            <DialogTitle className="font-serif">Réinitialiser le mot de passe</DialogTitle>
+            <DialogTitle className="text-[22px] font-semibold tracking-[-0.2px] text-[#222222]">Réinitialiser le mot de passe</DialogTitle>
             <DialogDescription className="text-muted-foreground">
               Entrez votre email pour recevoir un lien de réinitialisation.
             </DialogDescription>

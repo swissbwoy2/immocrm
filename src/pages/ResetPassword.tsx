@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { FUNNEL_FONT } from '@/components/funnel-ui/FunnelKit';
 import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/auth/PremiumAuthLayout';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import heroBg from '@/assets/hero-bg.jpg';
 import logoLogisorama from '@/assets/logisorama-logo.png';
@@ -86,25 +87,10 @@ export default function ResetPassword() {
   // Loading screen — premium version with hero bg
   if (isInitializing) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover" loading="eager" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/80" />
-        </div>
-        <motion.div
-          className="relative z-10 flex flex-col items-center gap-5"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <img
-            src={logoLogisorama}
-            alt="Logisorama"
-            className="h-20 w-auto drop-shadow-xl brightness-0 invert"
-          />
-          <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />
-          <p className="text-sm text-white/70 font-medium">Vérification du lien...</p>
-        </motion.div>
+      <div className="funnel-skin flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-white" style={{ fontFamily: FUNNEL_FONT }}>
+        <img src={logoLogisorama} alt="Logisorama" className="h-8 w-auto" />
+        <Loader2 className="h-6 w-6 animate-spin text-[#222222]" />
+        <p className="text-[15px] font-medium text-[#3f3f3f]">Vérification du lien…</p>
       </div>
     );
   }
