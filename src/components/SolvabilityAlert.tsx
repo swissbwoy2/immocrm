@@ -6,12 +6,15 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 
 interface SolvabilityAlertProps {
   result: SolvabilityResult;
   onAddCandidate?: () => void;
   compact?: boolean;
   className?: string;
+  /** 'client' : rendu sobre des tableaux de bord client (DASH_CARD). 'default' : rendu historique (fiches admin/agent). */
+  appearance?: 'default' | 'client';
 }
 
 const CANDIDATE_TYPE_LABELS: Record<string, string> = {
@@ -22,7 +25,7 @@ const CANDIDATE_TYPE_LABELS: Record<string, string> = {
   occupant: 'Occupant',
 };
 
-export function SolvabilityAlert({ result, onAddCandidate, compact = false, className }: SolvabilityAlertProps) {
+export function SolvabilityAlert({ result, onAddCandidate, compact = false, className, appearance = 'default' }: SolvabilityAlertProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { 
     isSolvable, 
@@ -50,6 +53,292 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
   const solvabilityPercentage = budgetDemande > 0 
     ? Math.min(Math.round((budgetPossible / budgetDemande) * 100), 100)
     : 100;
+
+  // Rendu « client » (espace client, style DASH_CARD sobre). Le rendu par défaut ci-dessous reste inchangé.
+  if (appearance === 'client') {
+    const barCls = solvabilityPercentage >= 100 ? 'bg-emerald-500' : solvabilityPercentage >= 80 ? 'bg-amber-500' : 'bg-destructive';
+    const pctCls = solvabilityPercentage >= 100 ? 'text-emerald-600' : solvabilityPercentage >= 80 ? 'text-amber-600' : 'text-destructive';
+    const possibleCls = budgetPossible >= budgetDemande ? 'text-emerald-600' : 'text-destructive';
+
+    if (compact) {
+      if (isSolvable && problems.length === 0) {
+        return (
+          <div className={cn(DASH_CARD, 'flex items-center gap-3 p-4', className)}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+              <CheckCircle className="h-5 w-5" />
+            </span>
+            <p className="font-semibold text-foreground">Dossier solvable</p>
+            {hasValidGarant && (
+              <span className="ml-auto"><DashBadge tone="success">Garant valide</DashBadge></span>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+          <div className={cn(DASH_CARD, className)}>
+            <CollapsibleTrigger asChild>
+              <div className="cursor-pointer p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-foreground">Dossier non solvable</p>
+                      {criticalProblems.length > 0 && (
+                        <DashBadge tone="danger">
+                          {criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}
+                        </DashBadge>
+                      )}
+                      <div className="ml-auto">
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Demandé:</span>
+                        <span className="ml-1 font-medium text-foreground">{budgetDemande.toLocaleString()} CHF</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Possible:</span>
+                        <span className={cn('ml-1 font-medium', possibleCls)}>
+                          {budgetPossible.toLocaleString()} CHF
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="space-y-3 px-4 pb-4">
+              <div className="rounded-xl bg-muted/40 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Solutions</span>
+                </div>
+                <div className="space-y-2">
+                  {criticalProblems.map((problem, index) => (
+                    <div key={index} className="rounded-lg bg-background p-2 text-xs">
+                      <p className="mb-1 font-medium text-destructive">{problem.message}</p>
+                      <p className="text-muted-foreground">{problem.solution}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {onAddCandidate && (
+                <Button size="sm" className="w-full rounded-full" onClick={onAddCandidate}>
+                  <UserPlus className="mr-1 h-3 w-3" />
+                  Ajouter un candidat
+                </Button>
+              )}
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      );
+    }
+
+    return (
+      <div className={cn(DASH_CARD, 'p-4 md:p-5', className)}>
+        {/* Header */}
+        <div className="mb-4 flex items-start gap-3">
+          <span className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+            isSolvable ? 'bg-emerald-500/10 text-emerald-600' : 'bg-destructive/10 text-destructive'
+          )}>
+            {isSolvable ? <CheckCircle className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold text-foreground">
+              {isSolvable ? 'Dossier solvable' : 'Dossier non solvable'}
+            </h3>
+            {solvabilitySource === 'garant' && (
+              <p className="mt-0.5 text-xs text-muted-foreground">Via garant</p>
+            )}
+          </div>
+          {isSolvable ? (
+            hasValidGarant && <DashBadge tone="success">Garant valide</DashBadge>
+          ) : (
+            <DashBadge tone="danger">
+              {criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}
+            </DashBadge>
+          )}
+        </div>
+
+        {/* Résumé financier */}
+        <div className="mb-4 grid grid-cols-2 gap-2.5">
+          {([
+            { icon: Wallet, label: 'Revenus client', value: clientRevenus, cls: 'text-foreground' },
+            { icon: TrendingUp, label: 'Revenus totaux', value: totalRevenus, cls: 'text-foreground' },
+            { icon: Target, label: 'Budget demandé', value: budgetDemande, cls: 'text-foreground' },
+            { icon: Calculator, label: `Budget possible${solvabilitySource === 'garant' ? ' (garant)' : ''}`, value: budgetPossible, cls: possibleCls },
+          ] as const).map(({ icon: Icon, label, value, cls }) => (
+            <div key={label} className="rounded-xl border border-border/70 p-3">
+              <div className="mb-1 flex items-center gap-1.5">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <p className="truncate text-xs text-muted-foreground">{label}</p>
+              </div>
+              <p className={cn('text-base font-semibold', cls)}>{value.toLocaleString()} CHF</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Barre de solvabilité */}
+        {budgetDemande > 0 && (
+          <div className="mb-4">
+            <div className="mb-1.5 flex justify-between text-sm">
+              <span className="text-muted-foreground">Capacité de solvabilité</span>
+              <span className={cn('font-semibold', pctCls)}>{solvabilityPercentage}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div className={cn('h-full rounded-full transition-all duration-500', barCls)} style={{ width: `${solvabilityPercentage}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* Statut du permis client */}
+        {!clientHasStableStatus && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl bg-amber-500/10 p-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+              <FileWarning className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Permis non stable détecté</p>
+              <p className="text-xs text-muted-foreground">
+                Un garant avec permis B/C ou nationalité suisse est nécessaire
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Info garant valide */}
+        {hasValidGarant && garantInfo && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl bg-emerald-500/10 p-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+              <Shield className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Garant valide: {garantInfo.nom}</p>
+              <p className="text-xs text-muted-foreground">
+                Revenus: {garantInfo.revenus.toLocaleString()} CHF → Max {garantInfo.maxLoyer.toLocaleString()} CHF/mois
+                {garantInfo.permis && ` • Permis ${garantInfo.permis}`}
+              </p>
+            </div>
+            <DashBadge tone="success">Permis stable</DashBadge>
+          </div>
+        )}
+
+        {/* Problèmes détectés */}
+        {problems.length > 0 && (
+          <div className="mb-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive" />
+              <p className="text-sm font-semibold text-foreground">
+                Problèmes à résoudre ({problems.length})
+              </p>
+            </div>
+
+            {criticalProblems.length > 0 && (
+              <div className="space-y-2">
+                <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-destructive">
+                  <span className="h-2 w-2 rounded-full bg-destructive" />
+                  Problèmes bloquants
+                </p>
+                {criticalProblems.map((problem, index) => (
+                  <div key={index} className="rounded-xl border border-destructive/20 p-3">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-xs font-semibold text-destructive">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">{problem.message}</p>
+                        <p className="mt-1.5 flex items-start gap-2 text-sm text-muted-foreground">
+                          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span><strong className="text-foreground">Solution:</strong> {problem.solution}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {warningProblems.length > 0 && (
+              <div className="space-y-2">
+                <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-amber-600">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  Alertes
+                </p>
+                {warningProblems.map((problem, index) => (
+                  <div key={index} className="rounded-xl border border-amber-500/30 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-sm font-medium text-foreground">{problem.message}</p>
+                        <p className="text-xs text-muted-foreground">{problem.solution}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Candidats exclus */}
+        {excludedCandidates.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-500/30 p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <Ban className="h-4 w-4 text-amber-600" />
+              <p className="text-sm font-semibold text-foreground">
+                Candidats non comptabilisés ({excludedCandidates.length})
+              </p>
+            </div>
+            <div className="space-y-2">
+              {excludedCandidates.map((candidate, index) => (
+                <div key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/40 p-2.5 text-xs">
+                  <span className="font-medium text-foreground">
+                    {candidate.name} ({CANDIDATE_TYPE_LABELS[candidate.type] || candidate.type})
+                  </span>
+                  <DashBadge tone="warning">{candidate.reason}</DashBadge>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+              <span><strong className="text-foreground">Pour comptabiliser ces revenus:</strong> Ces candidats doivent avoir un permis B, C ou être de nationalité suisse</span>
+            </p>
+          </div>
+        )}
+
+        {/* Bouton ajouter candidat */}
+        {!isSolvable && onAddCandidate && (
+          <Button onClick={onAddCandidate} className="mb-4 w-full rounded-full sm:w-auto">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Ajouter un candidat au dossier
+          </Button>
+        )}
+
+        {/* Info sur le calcul */}
+        <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
+          <div className="flex items-start gap-2">
+            <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <p>
+              <strong className="text-foreground">Règle de calcul:</strong> Budget possible = Revenus totaux ÷ 3. 
+              Les revenus ne sont comptabilisés que pour les personnes sans poursuites ni actes de défaut de bien, avec permis B, C ou nationalité suisse.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Affichage compact amélioré pour le dashboard
   if (compact) {

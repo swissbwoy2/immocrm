@@ -749,11 +749,9 @@ function ClientDashboardLocation() {
               action={<DashSectionLink onClick={() => navigate('/client/dossier')} />}
             >
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className={`${DASH_CARD} overflow-hidden`}>
-                  <SectionErrorBoundary sectionName="Solvability">
-                    <SolvabilityAlert result={solvabilityResult} />
-                  </SectionErrorBoundary>
-                </div>
+                <SectionErrorBoundary sectionName="Solvability">
+                  <SolvabilityAlert result={solvabilityResult} appearance="client" />
+                </SectionErrorBoundary>
                 <SectionErrorBoundary sectionName="DossierChecklist">
                   <PremiumDossierChecklistCard
                     clientName={clientFullName}
