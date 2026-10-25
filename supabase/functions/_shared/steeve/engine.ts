@@ -2,8 +2,8 @@
 // Le code décide (droits, plafonds, publication) ; le modèle comprend, choisit les outils et rédige.
 // deno-lint-ignore-file no-explicit-any
 import { costOf, type CallModel, type ContentBlock, type ModelMessage, type Usage } from './anthropic.ts';
-import { loadDossier, overview, type Db } from './context.ts';
-import { STEEVE_SYSTEM_PROMPT } from './prompt.ts';
+import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
+import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
 
 export const MAX_MODEL_CALLS = 6;
@@ -11,6 +11,15 @@ export const MAX_MODEL_CALLS = 6;
 export const TURN_DEADLINE_MS = 100_000;
 const MAX_ATTEMPTS = 2;
 const TRANSCRIPT_SIZE = 30;
+
+/** Sujets qui exigent la règle « sujet sensible » (prudence + recommandation d'un responsable). */
+const SENSITIVE_TOPIC = /\b(paiement|pay[ée]e?s?|payer|vers[ée]|virement|factur|rembours|acompte|honorai|argent|dette|poursuite|commandement de payer|litige|plainte|tribunal|justice|avocat|proc[ée]dure|r[ée]clamation|comptab|financ|chiffre d'affaires|salaire d|banque|encaiss|contentieux|recouvrement)/i;
+
+export function sensitiveNote(text: string): string {
+  return SENSITIVE_TOPIC.test(text)
+    ? "\n\nAttention : le dernier message du client touche un sujet sensible. Applique strictement la règle de confidentialité : rien sur l'entreprise ni sur des tiers ; pour ce qui le concerne, uniquement ce que montre son dossier, et recommande toujours d'en parler avec un responsable."
+    : '';
+}
 
 export const CAPPED_MESSAGE =
   "Je ne peux pas te répondre en détail pour le moment. J'ai transmis ton message à ton agent, qui te répondra ici.";
@@ -74,11 +83,39 @@ async function loadTranscript(db: Db, conversationId: string) {
 }
 
 /**
+ * Filtre de sortie : aucun lien hors des sites de l'agence et aucune coordonnée bancaire ne sont publiés
+ * (protection contre une consigne glissée dans un e-mail ou un document).
+ */
+export function stripUntrusted(text: string): string {
+  const allowed = /^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i;
+  return text
+    // Adresses e-mail (le personnel et les tiers ne sont jamais cités).
+    .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi, '[adresse retirée]')
+    // Liens explicites (http, https, www), quel que soit le domaine : seuls les sites de l'agence restent.
+    .replace(/\b(?:https?:\/\/|www\.)[^\s<>"]+/gi, (match) => {
+      const url = match.replace(/[.,;:!?)\]]+$/, '');
+      const tail = match.slice(url.length);
+      const host = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      return (allowed.test(host) ? url : '[lien retiré]') + tail;
+    })
+    // Domaines écrits sans http ni www.
+    .replace(/(?:https?:\/\/|www\.)?(?<![A-Za-z0-9@.-])[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:ch|com|net|org|io|fr|de|it|li|at|be|nl|es|pt|eu|uk|us|info|biz|co|me|app|xyz|online|site|link|ly|shop|top)(?![A-Za-z0-9])(?:\/[^\s<>"]*)?/gi, (match) => {
+      const url = match.replace(/[.,;:!?)\]]+$/, '');
+      const tail = match.slice(url.length);
+      const host = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      return (allowed.test(host) ? url : '[lien retiré]') + tail;
+    })
+    .replace(/\b[A-Za-z]{2}[0-9]{2}(?:[ .-]?[0-9A-Za-z]){11,30}\b/g, '[coordonnées bancaires retirées]')
+    .replace(/(?:\+[1-9][0-9]{0,2}|(?<![0-9])00(?:41|33|49|39|44|43|32|31|34|351|352|423))(?:[ .-]?\(?[0-9]{1,4}\)?){3,6}/g, '[numéro retiré]')
+    .replace(/(?<![0-9])0[1-9][0-9]?(?:[ .-]?[0-9]{2,3}){3,4}(?![0-9])/g, '[numéro retiré]');
+}
+
+/**
  * Texte brut pour la messagerie : la bulle n'affiche pas le Markdown, et un message commençant par
  * un emoji suivi de « ** » serait classé automatique et masqué (message_est_automatique).
  */
 export function toPlainReply(text: string): string {
-  return text
+  return stripUntrusted(text)
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
@@ -88,7 +125,7 @@ export function toPlainReply(text: string): string {
     .slice(0, 2500);
 }
 
-async function postReply(db: Db, conversationId: string, runId: string, content: string): Promise<string | null> {
+async function postReply(db: Db, conversationId: string, runId: string, content: string, extra: Record<string, unknown> = {}): Promise<string | null> {
   const { data, error } = await db
     .from('messages')
     .insert({
@@ -96,7 +133,7 @@ async function postReply(db: Db, conversationId: string, runId: string, content:
       sender_id: 'steeve',
       sender_type: 'assistant',
       content,
-      payload: { steeve_run_id: runId },
+      payload: { steeve_run_id: runId, ...extra },
     })
     .select('id')
     .single();
@@ -170,7 +207,7 @@ export async function runTurn(opts: {
 
   const { data: run } = await db
     .from('steeve_runs')
-    .select('id, conversation_id, client_id, reason, trigger_message_id')
+    .select('id, conversation_id, client_id, reason, trigger_message_id, kind, created_at')
     .eq('id', runId)
     .single();
   const conversationId: string = run.conversation_id;
@@ -212,13 +249,16 @@ export async function runTurn(opts: {
       'Steeve : seuil d’alerte du budget atteint',
       `Dépense du mois : ${Number(s.month_usd).toFixed(2)} USD (alerte à ${alertAt} USD, plafond ${monthCap} USD).`);
   }
-  if ((s.month_usd ?? 0) >= monthCap || (s.day_usd ?? 0) >= num(cfg.steeve_budget_day_usd, 3)) {
-    return fallback('capped', 'plafond_global', CAPPED_MESSAGE);
+  const globalCapped = (s.month_usd ?? 0) >= monthCap || (s.day_usd ?? 0) >= num(cfg.steeve_budget_day_usd, 3);
+  const clientCapped = (s.client_day_usd ?? 0) >= num(cfg.steeve_client_day_usd, 0.5)
+    || (s.client_day_runs ?? 0) >= num(cfg.steeve_client_day_messages, 40);
+
+  if (run.kind === 'welcome') {
+    return await welcomeTurn({ db, runId, runCreatedAt: run.created_at, conversationId, dossier, callModel: globalCapped || clientCapped ? null : callModel, model, totals, now, startedAt, deadlineMs, finish });
   }
-  if ((s.client_day_usd ?? 0) >= num(cfg.steeve_client_day_usd, 0.5)
-    || (s.client_day_runs ?? 0) >= num(cfg.steeve_client_day_messages, 40)) {
-    return fallback('capped', 'plafond_client', CAPPED_MESSAGE);
-  }
+
+  if (globalCapped) return fallback('capped', 'plafond_global', CAPPED_MESSAGE);
+  if (clientCapped) return fallback('capped', 'plafond_client', CAPPED_MESSAGE);
 
   if (!callModel) return fallback('failed', 'cle_api_absente', TECHNICAL_MESSAGE, 'ANTHROPIC_API_KEY non configurée');
 
@@ -247,7 +287,7 @@ export async function runTurn(opts: {
         content:
           `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
           `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
-          (note || '\n\nRéponds maintenant au dernier message du client.').trimStart(),
+          ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart(),
       }];
 
       let finalText = '';
@@ -332,4 +372,100 @@ export async function runTurn(opts: {
       return finish({ status: 'failed', reason: 'erreur' }, `${message} / repli : ${inner instanceof Error ? inner.message : String(inner)}`);
     }
   }
+}
+
+
+/**
+ * Premier message (accueil) : bilan personnalisé du dossier, rédigé par le modèle à partir des données ;
+ * accueil standard si le modèle n'est pas disponible (clé absente, plafond, erreur). Jamais de transfert.
+ */
+async function welcomeTurn(opts: {
+  db: Db;
+  runId: string;
+  runCreatedAt: string;
+  conversationId: string;
+  dossier: Awaited<ReturnType<typeof loadDossier>> & object;
+  callModel: CallModel | null;
+  model: string;
+  totals: Totals;
+  now: () => Date;
+  startedAt: number;
+  deadlineMs: number;
+  finish: (result: TurnResult, error?: string) => Promise<TurnResult>;
+}): Promise<TurnResult> {
+  const { db, runId, conversationId, dossier, callModel, model, totals, now, finish } = opts;
+
+  const markWelcomed = async () => {
+    const { data: conv } = await db.from('conversations').select('steeve_summary').eq('id', conversationId).single();
+    const summary = { ...((conv?.steeve_summary as Record<string, unknown>) || {}), welcomed_at: now().toISOString() };
+    await db.from('conversations').update({ steeve_summary: summary }).eq('id', conversationId);
+  };
+
+  // Déjà accueilli (ou Steeve a déjà écrit) : rien à faire.
+  const { data: already } = await db.from('messages').select('id').eq('conversation_id', conversationId).eq('sender_type', 'assistant').limit(1);
+  if (already && already.length > 0) {
+    await markWelcomed();
+    return finish({ status: 'skipped', reason: 'deja_accueilli' });
+  }
+
+  const phase = accountPhase(dossier);
+  let text = '';
+  let error: string | undefined;
+  if (callModel) {
+    try {
+      const facts = await overview(db, dossier, now());
+      const messages: ModelMessage[] = [{
+        role: 'user',
+        content: `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
+          welcomeInstructions({ phase, journey: dossier.journey, deposit: depositAmount(dossier) }),
+      }];
+      for (let i = 0; i < 2 && !text; i++) {
+        if (Date.now() - opts.startedAt > opts.deadlineMs) throw new Error('délai dépassé');
+        const resp = await callModel({
+          model,
+          max_tokens: 600,
+          system: [{ type: 'text', text: STEEVE_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+          tools: STEEVE_TOOLS.map((t, idx) => (idx === STEEVE_TOOLS.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t)),
+          messages,
+        });
+        totals.calls += 1;
+        totals.usage.input_tokens += resp.usage.input_tokens;
+        totals.usage.cache_creation_input_tokens += resp.usage.cache_creation_input_tokens;
+        totals.usage.cache_read_input_tokens += resp.usage.cache_read_input_tokens;
+        totals.usage.output_tokens += resp.usage.output_tokens;
+        totals.cost += costOf(model, resp.usage);
+        const toolUses = resp.content.filter((b): b is Extract<ContentBlock, { type: 'tool_use' }> => b.type === 'tool_use');
+        if (toolUses.length > 0) {
+          // Accueil : pas d'outil (le dossier suffit) ; on redemande le message.
+          messages.push({ role: 'assistant', content: resp.content });
+          messages.push({
+            role: 'user',
+            content: toolUses.map((u) => ({ type: 'tool_result' as const, tool_use_id: u.id, content: "Pas d'outil pour le message d'accueil : rédige-le avec le dossier fourni.", is_error: true })),
+          });
+          continue;
+        }
+        text = resp.content
+          .filter((b): b is Extract<ContentBlock, { type: 'text' }> => b.type === 'text')
+          .map((b) => b.text)
+          .join('\n')
+          .trim();
+      }
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+    }
+  }
+  const generated = !!text;
+  if (!text) text = staticWelcome({ prenom: dossier.prenom, phase, journey: dossier.journey });
+
+  // Un agent a pu reprendre la conversation pendant la rédaction.
+  const { data: check } = await db.from('conversations').select('handled_by').eq('id', conversationId).single();
+  if (check?.handled_by !== 'steeve') return finish({ status: 'skipped', reason: 'pris_en_main_pendant_redaction' }, error);
+
+  const replyId = await postReply(db, conversationId, runId, toPlainReply(text), { steeve: 'welcome', phase });
+  await markWelcomed();
+  const done = await finish({ status: 'done', reason: generated ? 'accueil' : 'accueil_standard', replyMessageId: replyId }, error);
+  // Un message du client arrivé pendant la rédaction de l'accueil a été écarté : on le relance
+  // (après la fin du passage, sinon la relance serait de nouveau écartée).
+  await db.rpc('steeve_requeue_latest', { p_conversation_id: conversationId, p_after: opts.runCreatedAt });
+  return done;
 }

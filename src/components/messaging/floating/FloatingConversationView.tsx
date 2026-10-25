@@ -62,7 +62,9 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
   const userId = user?.id ?? null;
   // Client : le trombone propose les pièces du dossier, classées dès l'envoi.
   const dossier = useClientDossier();
-  const { close, refreshUnread } = useFloatingMessenger();
+  const { close, refreshUnread, setBusy, react } = useFloatingMessenger();
+  // Réponse de Steeve attendue après un message du client (conversation confiée à Steeve) : heure d'envoi.
+  const [awaitingSteeveSince, setAwaitingSteeveSince] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -285,8 +287,25 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
 
   const senderType = userRole || 'client';
 
+  // Steeve « réfléchit » tant que sa réponse n'est pas arrivée ; jamais plus de 60 s (délai dépassé : on libère).
+  useEffect(() => {
+    if (!awaitingSteeveSince) return;
+    const since = new Date(awaitingSteeveSince).getTime();
+    const answered = messages.some((m) => isSteeveSender(m.sender_type) && new Date(m.created_at).getTime() > since);
+    if (answered) {
+      setAwaitingSteeveSince(null);
+      setBusy(false);
+      react('nod');
+      return;
+    }
+    const t = setTimeout(() => { setAwaitingSteeveSince(null); setBusy(false); }, 60_000);
+    return () => clearTimeout(t);
+  }, [awaitingSteeveSince, messages, setBusy, react]);
+  useEffect(() => () => setBusy(false), [setBusy]);
+
   const handleSend = async (text: string) => {
     if (!user || (!text && !pendingAttachment)) return;
+    setBusy(true);
     const attachment = pendingAttachment;
     const signature = `${text}\u0000${attachment?.url || ''}`;
     if (!pendingSendRef.current || pendingSendRef.current.signature !== signature) {
@@ -313,6 +332,8 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
 
     // Déjà enregistré lors d'une tentative précédente (réponse perdue) : rien à renvoyer.
     if (error && !isDuplicateClientMessage(error)) {
+      setBusy(false);
+      react('oops');
       toast({ title: 'Erreur', description: error.message || "Impossible d'envoyer", variant: 'destructive' });
       // Rejeté pour que la zone de saisie conserve le texte.
       throw error;
@@ -321,6 +342,19 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
     if (inserted) setMessages((prev) => mergeMessages(prev, [inserted as MessageRow]));
     pendingSendRef.current = null;
     setPendingAttachment(null);
+
+    // Client dont la conversation est confiée à Steeve : on attend sa réponse réelle ; sinon l'attente s'arrête.
+    let steeveAnswers = false;
+    if (senderType === 'client') {
+      const { data: conv } = await supabase.from('conversations').select('handled_by').eq('id', conversationId).maybeSingle();
+      steeveAnswers = (conv as { handled_by?: string } | null)?.handled_by === 'steeve';
+    }
+    if (steeveAnswers) setAwaitingSteeveSince((inserted as MessageRow | null)?.created_at || new Date().toISOString());
+    else {
+      setBusy(false);
+      // Message réellement enregistré : pouce levé.
+      react('success');
+    }
   };
 
   const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
@@ -337,6 +371,8 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       return false;
     }
     if (inserted) setMessages((prev) => mergeMessages(prev, [inserted as MessageRow]));
+    // Pièce réellement classée dans le dossier : Steeve applaudit.
+    react('clap');
     return true;
   };
 

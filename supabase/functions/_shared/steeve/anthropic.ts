@@ -77,7 +77,8 @@ export function anthropicCaller(apiKey: string): CallModel {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(req),
+      // Sans outil (site public) : le champ est omis.
+      body: JSON.stringify(req.tools.length ? req : { ...req, tools: undefined }),
     });
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 500);

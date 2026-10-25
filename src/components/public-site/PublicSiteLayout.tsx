@@ -8,6 +8,7 @@ import { ScrollProgressBar } from './animations/ScrollProgressBar';
 import { useStoryDialogOpen } from './showcase/storyDialogState';
 
 const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
+const SteevePublicChat = lazy(() => import('./SteevePublicChat').then(m => ({ default: m.SteevePublicChat })));
 
 function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyCta?: ReactNode }) {
   useWhatsAppTracking();
@@ -69,6 +70,11 @@ function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyC
 
       {/* Sticky Mobile CTA (une page peut fournir sa propre barre, ex. l'accueil) */}
       {stickyCta === undefined ? <StickyMobileCTA /> : stickyCta}
+
+      {/* Steeve : assistant des visiteurs (affiché seulement s'il est activé) */}
+      <Suspense fallback={null}>
+        <SteevePublicChat hidden={storyDialogOpen} />
+      </Suspense>
 
       {/* Cookie Consent */}
       <Suspense fallback={null}>
