@@ -59,8 +59,8 @@ export function VisiteConfirmGate({ list, force, forceStep, onClose }: { list: U
           <DialogDescription>{current.adresse}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="min-h-[44px] flex-1" disabled={busy} onClick={() => answer(true)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Oui</Button>
-          <Button variant="outline" className="min-h-[44px] flex-1" disabled={busy} onClick={() => answer(false)}>Non</Button>
+          <Button className="min-h-[44px] flex-1 rounded-full" disabled={busy} onClick={() => answer(true)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Oui</Button>
+          <Button variant="outline" className="min-h-[44px] flex-1 rounded-full" disabled={busy} onClick={() => answer(false)}>Non</Button>
         </div>
         <button type="button" className="text-xs text-muted-foreground underline" onClick={close}>Répondre plus tard</button>
       </DialogContent>

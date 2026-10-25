@@ -79,6 +79,93 @@ export function LinkRow({ icon: Icon, label, sub, onClick }: {
   );
 }
 
+/**
+ * Ossature d'une page de l'espace client / candidat (même rendu que « Biens proposés » et « Offres reçues ») :
+ * fond uni, largeur 6xl, marges 16px mobile / 32px desktop, défilement interne.
+ */
+export function DashPage({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className="relative flex-1 overflow-auto">
+      <div className={`mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8 ${className}`}>{children}</div>
+    </div>
+  );
+}
+
+/** Titre de page : grand titre sobre + sous-titre, action éventuelle à droite. */
+export function DashPageHeader({ title, subtitle, action }: { title: string; subtitle?: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">{title}</h1>
+        {subtitle && <p className="mt-1 text-[15px] text-muted-foreground">{subtitle}</p>}
+      </div>
+      {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+    </header>
+  );
+}
+
+/** Filtres en pastilles (onglets) : la pastille active est pleine, les autres soulignées d'un trait. */
+export function DashFilterPills<K extends string>({ options, value, onChange, label = 'Filtrer' }: {
+  options: { key: K; label: string; count?: number }[];
+  value: K;
+  onChange: (key: K) => void;
+  label?: string;
+}) {
+  return (
+    <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label={label}>
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(o.key)}
+            className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors duration-150 ${
+              active ? 'border-foreground bg-foreground text-background' : 'border-border bg-background text-foreground hover:border-foreground/60'
+            }`}
+          >
+            {o.label}
+            {typeof o.count === 'number' && (
+              <span className={`text-xs ${active ? 'text-background/70' : 'text-muted-foreground'}`}>{o.count}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** État vide : pastille d'icône, titre, explication, action éventuelle. */
+export function DashEmptyState({ icon: Icon, title, description, action }: {
+  icon: React.ElementType; title: string; description?: React.ReactNode; action?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card px-6 py-12 text-center">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+        <Icon className="h-7 w-7 text-primary" aria-hidden="true" />
+      </span>
+      <h2 className="mt-4 text-lg font-semibold text-foreground">{title}</h2>
+      {description && <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>}
+      {action && <div className="mt-5 flex justify-center">{action}</div>}
+    </div>
+  );
+}
+
+/** Pastille de statut (sur photo ou dans une carte). */
+export function DashBadge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted' }) {
+  const cls = {
+    neutral: 'bg-background text-foreground border border-border/70',
+    primary: 'bg-primary text-primary-foreground',
+    success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    danger: 'bg-destructive/10 text-destructive',
+    muted: 'bg-muted text-muted-foreground',
+  }[tone];
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-none ${cls}`}>{children}</span>;
+}
+
 /** Carte « à faire » : une action qui bloque ou attend le client. */
 export function TodoCard({ icon: Icon, tone = 'amber', title, description, action }: {
   icon: React.ElementType;

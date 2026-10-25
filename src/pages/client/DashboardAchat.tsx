@@ -167,6 +167,9 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
     <>
       <PullToRefresh onRefresh={handleRefresh} className="relative flex-1 overflow-y-auto">
         <PremiumPageShellV2 className="relative z-10 mx-auto w-full max-w-6xl">
+          {/* Bannière : tout en haut de l'accueil */}
+          <DashboardAdBanner />
+
           <MustChangePasswordBanner />
 
           {/* 1. Accueil */}
@@ -181,8 +184,6 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
               onOffersClick={() => navigate('/client/biens-proposes')}
             />
           </SectionErrorBoundary>
-
-          <DashboardAdBanner />
 
           {/* Fin du parcours */}
           {finalise && (

@@ -5,6 +5,7 @@ import {
   ShowcaseItem,
   usePreviewImage,
 } from '@/components/public-site/showcase/useShowcase';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 
 interface OffreRow {
   id: string;
@@ -46,7 +47,7 @@ function OffreBubble({ offre, onClick, candidature = false }: { offre: OffreRow;
   return (
     <div className="flex shrink-0 flex-col items-center gap-1.5 w-[84px]">
       <button type="button" onClick={onClick} className="rounded-full" aria-label={label}>
-        <span className="block rounded-full p-[2.5px] bg-gradient-to-br from-primary to-accent transition-transform hover:scale-105">
+        <span className="block rounded-full p-[2.5px] bg-primary transition-transform duration-150 active:scale-[0.98]">
           <span className="block rounded-full p-[2px] bg-background">
             <span className="flex h-[64px] w-[64px] items-center justify-center overflow-hidden rounded-full bg-muted">
               {img ? (
@@ -91,10 +92,10 @@ export function MesOffresRecuesBand({ offres, title = 'Offres reçues', onItemCl
   if (list.length === 0) return null;
 
   return (
-    <section className="mb-4 rounded-2xl border border-border/60 bg-card/80 p-4 backdrop-blur-sm">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
+    <section className={`${DASH_CARD} p-4 md:p-5`}>
+      <h3 className="mb-3 text-base font-semibold text-foreground">
          {title}
-      </h2>
+      </h3>
       <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
         {list.map((o) => (
           <OffreBubble

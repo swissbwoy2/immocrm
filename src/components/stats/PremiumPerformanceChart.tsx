@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Card, CardContent } from '@/components/ui/card';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { DateRange } from './DateRangeFilter';
 import { TrendingUp, TrendingDown, Minus, Mail, Eye, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -34,8 +34,7 @@ export function PremiumPerformanceChart({
   showComparison = false,
   comparisonData,
 }: PremiumPerformanceChartProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const daysDiff = differenceInDays(dateRange.to, dateRange.from);
+    const daysDiff = differenceInDays(dateRange.to, dateRange.from);
   
   const chartData = useMemo(() => {
     let intervals: Date[];
@@ -104,105 +103,28 @@ export function PremiumPerformanceChart({
 
   const TrendIcon = trend.direction === 'up' ? TrendingUp : trend.direction === 'down' ? TrendingDown : Minus;
   const trendColor = trend.direction === 'up' ? 'text-emerald-500' : trend.direction === 'down' ? 'text-rose-500' : 'text-muted-foreground';
-  const trendBgColor = trend.direction === 'up' ? 'bg-emerald-500/10' : trend.direction === 'down' ? 'bg-rose-500/10' : 'bg-muted/50';
-
+  
   const gradientId = `premium-gradient-${title.replace(/\s+/g, '-')}`;
   const glowId = `premium-glow-${title.replace(/\s+/g, '-')}`;
 
   return (
-    <Card 
-      className={cn(
-        "group relative overflow-hidden transition-all duration-500",
-        "bg-gradient-to-br from-background via-background to-muted/20",
-        "border-border/50 hover:border-primary/40",
-        "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
-        isHovered && "ring-1 ring-primary/20"
-      )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Animated background gradient */}
-      <div 
-        className={cn(
-          "absolute inset-0 opacity-0 transition-opacity duration-500",
-          "bg-gradient-to-br from-primary/5 via-transparent to-primary/3",
-          isHovered && "opacity-100"
-        )} 
-      />
-      
-      {/* Shine effect */}
-      <div 
-        className={cn(
-          "absolute inset-0 opacity-0 transition-opacity duration-700",
-          "bg-gradient-to-r from-transparent via-white/5 to-transparent",
-          "-translate-x-full group-hover:translate-x-full group-hover:opacity-100",
-          "transition-transform duration-1000 ease-out"
-        )} 
-      />
-
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className={cn(
-              "absolute w-1 h-1 rounded-full bg-primary/20",
-              "animate-pulse"
-            )}
-            style={{
-              left: `${20 + i * 30}%`,
-              top: `${30 + i * 15}%`,
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${2 + i * 0.5}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      <CardContent className="relative pt-5 pb-4">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div 
-              className={cn(
-                "p-2.5 rounded-xl transition-all duration-300",
-                "bg-gradient-to-br from-primary/15 to-primary/5",
-                "border border-primary/20",
-                "group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/20",
-                "group-hover:from-primary/25 group-hover:to-primary/10"
-              )}
-            >
-              <Icon className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-105" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground transition-colors duration-300 group-hover:text-primary">
-                {title}
-              </h3>
-              <p className="text-xs text-muted-foreground">{valueLabel}</p>
+    <div className={`${DASH_CARD} p-4 md:p-5`}>
+      <div>
+        {/* En-tête */}
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-semibold text-foreground">{title}</h3>
+              <p className="text-xs text-muted-foreground">sur la période</p>
             </div>
           </div>
-          
-          <div className="text-right">
-            <div className="flex items-center gap-2 justify-end">
-              <span 
-                className={cn(
-                  "px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1",
-                  trendBgColor, trendColor,
-                  "transition-all duration-300",
-                  trend.direction !== 'stable' && "animate-pulse"
-                )}
-              >
-                <TrendIcon className="h-3 w-3" />
-                {trend.percentage > 0 && `${trend.percentage}%`}
-              </span>
-              <span className="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                {total}
-              </span>
-            </div>
+          <div className="shrink-0 text-right">
+            <span className="text-2xl font-semibold tracking-tight text-foreground">{total}</span>
             {showComparison && comparisonTotal > 0 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                vs {comparisonTotal} période préc.
-              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">vs {comparisonTotal} période préc.</p>
             )}
           </div>
         </div>
@@ -255,7 +177,7 @@ export function PremiumPerformanceChart({
                 content={({ active, payload, label }) => {
                   if (!active || !payload?.length) return null;
                   return (
-                    <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg px-3 py-2 shadow-xl">
+                    <div className="rounded-lg border border-border/70 bg-popover px-3 py-2 shadow-md">
                       <p className="text-xs font-medium text-foreground">{label}</p>
                       <p className="text-sm font-bold text-primary">
                         {payload[0].value} {valueLabel}
@@ -283,8 +205,7 @@ export function PremiumPerformanceChart({
                 stroke={color}
                 strokeWidth={2.5}
                 fill={`url(#${gradientId})`}
-                filter={isHovered ? `url(#${glowId})` : undefined}
-                name={valueLabel}
+                                name={valueLabel}
                 dot={(props) => {
                   const { cx, cy, value } = props;
                   if (value === 0) return null;
@@ -292,7 +213,7 @@ export function PremiumPerformanceChart({
                     <circle
                       cx={cx}
                       cy={cy}
-                      r={isHovered ? 4 : 3}
+                      r={3}
                       fill={color}
                       stroke="hsl(var(--background))"
                       strokeWidth={2}
@@ -313,7 +234,7 @@ export function PremiumPerformanceChart({
         </div>
 
         {/* Mini stats footer */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30">
+        <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3">
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-primary/60" />
@@ -338,7 +259,7 @@ export function PremiumPerformanceChart({
             </span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

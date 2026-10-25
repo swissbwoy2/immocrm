@@ -6,11 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useCandidatCandidatures, RETENU_BAILLEUR } from '@/hooks/useCandidatCandidatures';
-import { PremiumDashboardHeader, PremiumKPICard } from '@/components/premium';
-import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumDashboardHeader } from '@/components/premium';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
-import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+import { DashPage, DashSection, DashSectionLink, LinkRow, StatTile, TodoCard } from '@/components/client/dashboard/DashPrimitives';
 import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
 import { StoriesBar } from '@/components/stories/StoriesBar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -97,58 +97,109 @@ export default function CandidatDashboard() {
     await runTrialRpc();
   };
 
+  const aFaire = (!criteresLoading && !criteresComplete) || retenues > 0;
+
   return (
-    <div className="flex-1 overflow-y-auto">
-      <PremiumPageShellV2>
+    <>
+      <DashPage className="space-y-6">
+        {/* 1. Bannière et accueil */}
+        <DashboardAdBanner />
         <PortailBannieres />
-        <StoriesBar className="rounded-xl overflow-hidden" showVisites={false} />
+        <StoriesBar className="rounded-2xl overflow-hidden" showVisites={false} />
         <PremiumDashboardHeader
           userName={prenom}
           headingBadge="Espace candidat"
           subtitle="Suivez l'avancement de vos candidatures"
           action={isClient ? (
-            <Button onClick={() => { switchRole('client'); navigate('/client'); }} className="min-h-[44px]">
+            <Button onClick={() => { switchRole('client'); navigate('/client'); }} className="min-h-[44px] rounded-full">
               <CheckCircle2 className="mr-2 h-4 w-4" /> Aller à mon espace client
             </Button>
           ) : (
-            <Button onClick={() => setConfirmOpen(true)} disabled={activating} className="min-h-[44px]">
+            <Button onClick={() => setConfirmOpen(true)} disabled={activating} className="min-h-[44px] rounded-full">
               {activating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
               Essayer gratuitement (3 jours)
             </Button>
           )}
         />
-        {!criteresLoading && !criteresComplete && (
-          <button type="button" onClick={() => setCriteresOpen(true)} className="flex w-full items-center gap-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-left text-sm text-foreground min-h-[44px]">
-            <Search className="h-5 w-5 shrink-0 text-primary" />
-            <span className="flex-1">{CRITERES_DISCLAIMER}</span>
-            <span className="font-semibold text-primary">Compléter</span>
-          </button>
+
+        {/* 2. À faire */}
+        {aFaire && (
+          <div className="space-y-3">
+            {!criteresLoading && !criteresComplete && (
+              <TodoCard
+                icon={Search}
+                tone="amber"
+                title="Mes critères de recherche"
+                description={CRITERES_DISCLAIMER}
+                action={<Button size="sm" className="min-h-[44px] rounded-full" onClick={() => setCriteresOpen(true)}>Compléter</Button>}
+              />
+            )}
+            {retenues > 0 && (
+              <TodoCard
+                icon={FolderOpen}
+                tone="primary"
+                title="Pièces à fournir"
+                description={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`}
+                action={<Button size="sm" className="min-h-[44px] rounded-full" onClick={() => navigate('/candidat/candidatures')}>Mes candidatures</Button>}
+              />
+            )}
+          </div>
         )}
+
         <MesCreditsCard />
-        {candidaturesAvecOffre.length > 0 && (
-          <MesOffresRecuesBand
-            title="Offres / candidatures"
-            offres={candidaturesAvecOffre.map((c) => ({ id: c.id, adresse: c.adresse, created_at: c.date, statut: c.statut, lien_annonce: c.lien_annonce, prix: c.prix, pieces: c.pieces, surface: c.surface, medias_galerie: c.medias_galerie }))}
-            onItemClick={() => navigate('/candidat/candidatures')}
-          />
-        )}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 items-stretch">
-          <PremiumKPICard title="Candidatures" value={isLoading ? '—' : data.length} icon={FileText} onClick={() => navigate('/candidat/candidatures')} />
-          <PremiumKPICard title="En cours" value={isLoading ? '—' : enCours} icon={FolderOpen} onClick={() => navigate('/candidat/candidatures')} />
-          <PremiumKPICard title="Retenues" value={isLoading ? '—' : retenues} icon={FileCheck} variant="success" onClick={() => navigate('/candidat/candidatures')} />
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:gap-4 items-stretch">
-          <QuickTileXL icon={Clipboard} title="Ma demande de location" subtitle="Compléter mes informations" onClick={() => navigate('/candidat/demande')} />
-          <QuickTileXL icon={Calendar} title="Agenda" subtitle="Suivi des candidatures" onClick={() => navigate('/candidat/agenda')} />
-        </div>
-        <div className="grid gap-3">
-          <QuickTileXL icon={FileCheck} variant="wide" title="Mes candidatures" subtitle={`${data.length} candidature${data.length > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />
-          <QuickTileXL icon={Search} variant="wide" title="Mes critères de recherche" subtitle={criteresComplete ? 'Modifier mes critères' : 'À compléter'} onClick={() => setCriteresOpen(true)} />
-          <QuickTileXL icon={ShieldCheck} variant="wide" title="Mon garant" subtitle="Renseigner / modifier mon garant" onClick={() => setGarantOpen(true)} />
-          <QuickTileXL icon={MessageSquare} variant="wide" title="Messages" subtitle="Mes échanges sur les annonces" onClick={() => navigate('/candidat/messages')} />
-          {retenues > 0 && <QuickTileXL icon={FolderOpen} variant="wide" title="Pièces à fournir" subtitle={`${retenues} dossier${retenues > 1 ? 's' : ''} retenu${retenues > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />}
-        </div>
-      </PremiumPageShellV2>
+
+        {/* 3. Mes candidatures */}
+        <DashSection title="Mes candidatures" action={<DashSectionLink label="Tout voir" onClick={() => navigate('/candidat/candidatures')} />}>
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+            <StatTile
+              icon={FileText}
+              label="Candidatures"
+              value={isLoading ? '—' : `${data.length} au total`}
+              count={0}
+              onClick={() => navigate('/candidat/candidatures')}
+            />
+            <StatTile
+              icon={FolderOpen}
+              label="En cours"
+              value={isLoading ? '—' : enCours > 0 ? `${enCours} en cours` : 'Aucune'}
+              count={0}
+              onClick={() => navigate('/candidat/candidatures')}
+            />
+            <StatTile
+              icon={FileCheck}
+              label="Retenues"
+              value={isLoading ? '—' : retenues > 0 ? `${retenues} retenue${retenues > 1 ? 's' : ''}` : 'Aucune'}
+              count={retenues}
+              onClick={() => navigate('/candidat/candidatures')}
+            />
+          </div>
+          {candidaturesAvecOffre.length > 0 && (
+            <MesOffresRecuesBand
+              title="Offres / candidatures"
+              offres={candidaturesAvecOffre.map((c) => ({ id: c.id, adresse: c.adresse, created_at: c.date, statut: c.statut, lien_annonce: c.lien_annonce, prix: c.prix, pieces: c.pieces, surface: c.surface, medias_galerie: c.medias_galerie }))}
+              onItemClick={() => navigate('/candidat/candidatures')}
+            />
+          )}
+          <LinkRow icon={FileCheck} label="Mes candidatures" sub={`${data.length} candidature${data.length > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />
+        </DashSection>
+
+        {/* 4. Mon dossier */}
+        <DashSection title="Mon dossier">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+            <LinkRow icon={Clipboard} label="Ma demande de location" sub="Compléter mes informations" onClick={() => navigate('/candidat/demande')} />
+            <LinkRow icon={Search} label="Mes critères de recherche" sub={criteresComplete ? 'Modifier mes critères' : 'À compléter'} onClick={() => setCriteresOpen(true)} />
+            <LinkRow icon={ShieldCheck} label="Mon garant" sub="Renseigner / modifier mon garant" onClick={() => setGarantOpen(true)} />
+          </div>
+        </DashSection>
+
+        {/* 5. Agenda et messages */}
+        <DashSection title="Agenda et messages">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+            <LinkRow icon={Calendar} label="Agenda" sub="Suivi des candidatures" onClick={() => navigate('/candidat/agenda')} />
+            <LinkRow icon={MessageSquare} label="Messages" sub="Mes échanges sur les annonces" onClick={() => navigate('/candidat/messages')} />
+          </div>
+        </DashSection>
+      </DashPage>
       <Dialog open={confirmOpen} onOpenChange={(o) => !activating && setConfirmOpen(o)}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
@@ -170,10 +221,10 @@ export default function CandidatDashboard() {
             </p>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button variant="outline" className="min-h-[44px]" onClick={() => setConfirmOpen(false)} disabled={activating}>
+            <Button variant="outline" className="min-h-[44px] rounded-full" onClick={() => setConfirmOpen(false)} disabled={activating}>
               Pas maintenant
             </Button>
-            <Button className="min-h-[44px]" onClick={startTrial} disabled={activating}>
+            <Button className="min-h-[44px] rounded-full" onClick={startTrial} disabled={activating}>
               {activating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Clock className="mr-2 h-4 w-4" />}
               Démarrer mes 3 jours
             </Button>
@@ -209,6 +260,6 @@ export default function CandidatDashboard() {
           {garantOpen && <CandidatGarantForm onSaved={() => setGarantOpen(false)} />}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

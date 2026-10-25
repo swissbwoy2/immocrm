@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Trash2, Clipboard } from 'lucide-react';
-import { PremiumPageShellV2 } from '@/components/dashboard/v2';
-import { PremiumPageHeader } from '@/components/premium';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { DASH_CARD, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -142,15 +140,13 @@ export default function CandidatDemande() {
 
   if (!candId) {
     return (
-      <div className="flex-1 overflow-y-auto">
-        <PremiumPageShellV2 className="mx-auto max-w-3xl">
-          <PremiumPageHeader
-          title="Demande de location"
-          subtitle="Votre dossier pour le logement visité"
-          icon={Clipboard}
-          badge="Espace candidat"
-        />
-          <Card><CardContent className="space-y-3 p-4">
+      <DashPage>
+        <div className="mx-auto w-full max-w-3xl">
+          <DashPageHeader
+            title="Demande de location"
+            subtitle="Votre dossier pour le logement visité"
+          />
+          <div className={`${DASH_CARD} space-y-3 p-4 md:p-5`}>
             {eligibles.length === 0 ? (
               <p className="text-sm text-muted-foreground">Réservez et effectuez d'abord une visite pour pouvoir déposer une demande de location.</p>
             ) : (
@@ -162,9 +158,9 @@ export default function CandidatDemande() {
                 </Select>
               </>
             )}
-          </CardContent></Card>
-        </PremiumPageShellV2>
-      </div>
+          </div>
+        </div>
+      </DashPage>
     );
   }
 
@@ -214,61 +210,59 @@ export default function CandidatDemande() {
   const setP = (i: number, k: string, v: string) => (i === 0 ? setPrincipal((p) => ({ ...p, [k]: v })) : setCo((l) => l.map((x, j) => (j === i - 1 ? { ...x, [k]: v } : x))));
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <PremiumPageShellV2 className="mx-auto max-w-3xl pb-28">
-        <PremiumPageHeader
+    <>
+      <DashPage>
+      <div className="mx-auto w-full max-w-3xl space-y-4 pb-28">
+        <DashPageHeader
           title="Demande de location"
           subtitle="Votre dossier pour le logement visité"
-          icon={Clipboard}
-          badge="Espace candidat"
         />
 
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">{a.titre || 'Objet'}</CardTitle></CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
-              {header.map(([k, v]) => <div key={k} className={k === 'Adresse' ? 'col-span-2 sm:col-span-3' : ''}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-medium text-foreground">{v}</dd></div>)}
-            </dl>
-          </CardContent>
-        </Card>
+        <div className={`${DASH_CARD} p-4 md:p-5`}>
+          <h2 className="mb-3 text-base font-semibold text-foreground">{a.titre || 'Objet'}</h2>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
+            {header.map(([k, v]) => <div key={k} className={k === 'Adresse' ? 'col-span-2 sm:col-span-3' : ''}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-medium text-foreground">{v}</dd></div>)}
+          </dl>
+        </div>
 
-        {deja && <Card><CardContent className="p-4 text-sm text-muted-foreground">Votre formulaire de candidature a déjà été envoyé pour cet objet.</CardContent></Card>}
+        {deja && <div className={`${DASH_CARD} p-4 text-sm text-muted-foreground md:p-5`}>Votre formulaire de candidature a déjà été envoyé pour cet objet.</div>}
 
         {errors.length > 0 && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive">
             <p className="font-semibold">Champs obligatoires manquants :</p>
             <ul className="list-disc pl-5">{errors.slice(0, 12).map((e) => <li key={e}>{e}</li>)}</ul>
           </div>
         )}
 
         {[principal, ...co].map((p, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base">{i === 0 ? 'Locataire principal' : `Autre personne ${i}`}</CardTitle>
-              {i > 0 && <Button variant="ghost" size="icon" aria-label="Retirer" onClick={() => setCo((l) => l.filter((_, j) => j !== i - 1))}><Trash2 className="h-4 w-4" /></Button>}
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div key={i} className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-foreground">{i === 0 ? 'Locataire principal' : `Autre personne ${i}`}</h2>
+              {i > 0 && <Button variant="ghost" size="icon" className="rounded-full" aria-label="Retirer" onClick={() => setCo((l) => l.filter((_, j) => j !== i - 1))}><Trash2 className="h-4 w-4" /></Button>}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
               {P_FIELDS.map((f) => <Field key={f.k} id={`p${i}-${f.k}`} f={f} value={p[f.k] ?? ''} onChange={(v) => setP(i, f.k, v)} />)}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
-        <Button variant="outline" className="min-h-[44px] w-full" onClick={() => setCo((l) => [...l, { pays: 'Suisse' }])}><Plus className="mr-2 h-4 w-4" />Ajouter autre personne</Button>
+        <Button variant="outline" className="min-h-[44px] w-full rounded-full" onClick={() => setCo((l) => [...l, { pays: 'Suisse' }])}><Plus className="mr-2 h-4 w-4" />Ajouter autre personne</Button>
 
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Renseignements généraux</CardTitle></CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+        <div className={`${DASH_CARD} p-4 md:p-5`}>
+          <h2 className="mb-4 text-base font-semibold text-foreground">Renseignements généraux</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
             {G_FIELDS.map((f) => <Field key={f.k} id={`g-${f.k}`} f={f} value={gen[f.k] ?? ''} onChange={(v) => setGen((g) => ({ ...g, [f.k]: v }))} />)}
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="g-comm">Commentaires</Label>
               <Textarea id="g-comm" rows={4} value={commentaires} onChange={(e) => setCommentaires(e.target.value)} />
             </div>
-          </CardContent>
-        </Card>
-
-        <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 p-4 backdrop-blur md:mx-0 md:rounded-lg md:border">
-          <Button className="min-h-[48px] w-full" disabled={!!deja} onClick={() => validate() && setConfirmOpen(true)}>Envoyer le formulaire de candidature</Button>
+          </div>
         </div>
-      </PremiumPageShellV2>
+
+        <div className="sticky bottom-0 -mx-4 border-t border-border/70 bg-background p-4 md:mx-0 md:rounded-2xl md:border">
+          <Button className="min-h-[48px] w-full rounded-full" disabled={!!deja} onClick={() => validate() && setConfirmOpen(true)}>Envoyer le formulaire de candidature</Button>
+        </div>
+      </div>
+      </DashPage>
 
       <Dialog open={confirmOpen} onOpenChange={(o) => !sending && setConfirmOpen(o)}>
         <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
@@ -276,7 +270,7 @@ export default function CandidatDemande() {
             <DialogTitle>Soumettre formulaire de candidature ?</DialogTitle>
             <DialogDescription>Le formulaire de candidature sera envoyé à l'annonceur. Veuillez confirmer :</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 rounded-lg bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
+          <div className="space-y-3 rounded-xl bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
             <p>Cette demande de location est sans engagement de part et d'autre. La régie se réserve le droit de l'accepter ou de la refuser sans avoir à en indiquer les motifs. Si le candidat locataire se retire après l'établissement du contrat de bail convenu, il doit s'acquitter d'une indemnité qui se monte à 10% du loyer mensuel brut mais au minimum de CHF 100.- (TVA non comprise) pour couvrir les frais administratifs dus à son désistement (art. 82 LP).</p>
             <p>Si votre candidature est sélectionnée sur la base du présent formulaire, nous vous demanderons de produire les pièces justificatives suivantes avant d'établir un contrat :</p>
             <ul className="list-none space-y-0.5">
@@ -290,11 +284,11 @@ export default function CandidatDemande() {
           <label className="flex items-start gap-3 text-sm"><Checkbox className="mt-0.5" checked={c1} onCheckedChange={(v) => setC1(v === true)} />Je confirme que j'ai visité la propriété et que je suis prêt(e) à la louer aux conditions indiquées.</label>
           <label className="flex items-start gap-3 text-sm"><Checkbox className="mt-0.5" checked={c2} onCheckedChange={(v) => setC2(v === true)} />J'accorde à l'annonceur le droit de chercher des références sur le candidat auprès de son employeur et bailleur.</label>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" className="min-h-[44px] flex-1" disabled={sending} onClick={() => setConfirmOpen(false)}>Annuler</Button>
-            <Button className="min-h-[44px] flex-1" disabled={!c1 || !c2 || sending} onClick={submit}>{sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Soumettre</Button>
+            <Button variant="outline" className="min-h-[44px] flex-1 rounded-full" disabled={sending} onClick={() => setConfirmOpen(false)}>Annuler</Button>
+            <Button className="min-h-[44px] flex-1 rounded-full" disabled={!c1 || !c2 || sending} onClick={submit}>{sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Soumettre</Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

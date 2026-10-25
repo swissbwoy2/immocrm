@@ -1,7 +1,7 @@
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, Clock, Home, Maximize, Building, FileText } from 'lucide-react';
+import { Calendar, Clock, Home, Maximize, Building, FileText, Lightbulb, MessageSquareText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -54,12 +54,12 @@ export function ClientEventDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 flex-wrap">
+          <DialogTitle className="flex items-center gap-2 flex-wrap text-lg font-semibold">
             {visite ? 'Détails de la visite' : "Détails de l'événement"}
             {visite?.statut && (
-              <Badge variant={visite.statut === 'effectuee' ? 'secondary' : 'outline'}>
+              <Badge variant={visite.statut === 'effectuee' ? 'secondary' : 'outline'} className="rounded-full">
                 {statutLabels[visite.statut] || visite.statut}
               </Badge>
             )}
@@ -69,7 +69,7 @@ export function ClientEventDetailDialog({
         {/* ---------- VISITE ---------- */}
         {visite && (
           <div className="space-y-5 min-w-0">
-            <div className="p-4 bg-muted rounded-lg min-w-0">
+            <div className="p-4 bg-muted/60 rounded-xl min-w-0">
               <AddressLink
                 address={visite.adresse}
                 className="font-semibold text-lg break-words"
@@ -89,24 +89,24 @@ export function ClientEventDetailDialog({
 
             {offre && (
               <div className="space-y-3 min-w-0">
-                <h5 className="font-medium flex items-center gap-2">
-                  <Home className="h-4 w-4" />
+                <h5 className="text-base font-semibold flex items-center gap-2">
+                  <Home className="h-4 w-4 text-muted-foreground" />
                   Détails du bien
                 </h5>
-                <div className="p-4 border rounded-lg space-y-4 min-w-0">
+                <div className="p-4 border border-border/70 rounded-xl space-y-4 min-w-0">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-2 bg-muted rounded">
+                    <div className="p-2 bg-muted/60 rounded-lg">
                       <p className="text-xs text-muted-foreground">Prix</p>
                       <p className="font-medium">{offre.prix?.toLocaleString('fr-CH')} {isAchat ? 'CHF' : 'CHF/mois'}</p>
                     </div>
                     {offre.pieces && (
-                      <div className="p-2 bg-muted rounded">
+                      <div className="p-2 bg-muted/60 rounded-lg">
                         <p className="text-xs text-muted-foreground">Pièces</p>
                         <p className="font-medium">{offre.pieces}</p>
                       </div>
                     )}
                     {offre.surface && (
-                      <div className="p-2 bg-muted rounded">
+                      <div className="p-2 bg-muted/60 rounded-lg">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Maximize className="h-3 w-3" /> Surface
                         </p>
@@ -114,7 +114,7 @@ export function ClientEventDetailDialog({
                       </div>
                     )}
                     {offre.etage && (
-                      <div className="p-2 bg-muted rounded">
+                      <div className="p-2 bg-muted/60 rounded-lg">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Building className="h-3 w-3" /> Étage
                         </p>
@@ -133,7 +133,7 @@ export function ClientEventDetailDialog({
                   {offre.description && (
                     <div>
                       <Label className="text-muted-foreground text-xs">Description</Label>
-                      <p className="text-sm whitespace-pre-wrap break-words mt-1 p-3 bg-muted/50 rounded max-h-40 overflow-y-auto">
+                      <p className="text-sm whitespace-pre-wrap break-words mt-1 p-3 bg-muted/50 rounded-lg max-h-40 overflow-y-auto">
                         {offre.description}
                       </p>
                     </div>
@@ -153,8 +153,11 @@ export function ClientEventDetailDialog({
 
             {visite.notes && (
               <div className="space-y-2">
-                <h5 className="font-medium">💡 Informations</h5>
-                <div className="p-3 bg-muted rounded-lg">
+                <h5 className="text-base font-semibold flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                  Informations
+                </h5>
+                <div className="p-3 bg-muted/60 rounded-xl">
                   <p className="text-sm whitespace-pre-wrap break-words">{visite.notes}</p>
                 </div>
               </div>
@@ -162,8 +165,11 @@ export function ClientEventDetailDialog({
 
             {visite.feedback_agent && (
               <div className="space-y-2">
-                <h5 className="font-medium">📝 Retour de votre agent</h5>
-                <div className="p-3 bg-muted rounded-lg">
+                <h5 className="text-base font-semibold flex items-center gap-2">
+                  <MessageSquareText className="h-4 w-4 text-muted-foreground" />
+                  Retour de votre agent
+                </h5>
+                <div className="p-3 bg-muted/60 rounded-xl">
                   <p className="text-sm whitespace-pre-wrap break-words">{visite.feedback_agent}</p>
                 </div>
               </div>
@@ -178,11 +184,11 @@ export function ClientEventDetailDialog({
             {/* Compte-rendu (lecture seule côté client) */}
             {cr && (
               <div className="space-y-2">
-                <h5 className="font-medium flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
+                <h5 className="text-base font-semibold flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
                   Compte-rendu de visite
                 </h5>
-                <div className="p-3 border rounded-lg space-y-2 text-sm">
+                <div className="p-3 border border-border/70 rounded-xl space-y-2 text-sm">
                   <div className="grid gap-1 sm:grid-cols-2">
                     {cr.ascenseur && (
                       <p>🛗 Ascenseur : {cr.ascenseur === 'oui' ? 'Oui' : 'Non'}</p>
@@ -204,7 +210,7 @@ export function ClientEventDetailDialog({
             )}
 
             {/* Live de visite en cours (spectateur) */}
-            <VisitLiveButton visiteId={visite.id} size="default" className="w-full" />
+            <VisitLiveButton visiteId={visite.id} size="default" className="w-full rounded-full" />
 
             <AddToCalendarButton
               event={{
@@ -225,7 +231,7 @@ export function ClientEventDetailDialog({
               }}
               size="sm"
               variant="outline"
-              className="w-full"
+              className="w-full rounded-full"
             />
           </div>
         )}
@@ -233,7 +239,7 @@ export function ClientEventDetailDialog({
         {/* ---------- EVENT ---------- */}
         {!visite && event && (
           <div className="space-y-4 min-w-0">
-            <Badge variant="outline">
+            <Badge variant="outline" className="rounded-full">
               {eventTypeLabels[event.event_type] || event.event_type}
             </Badge>
             <h3 className="text-lg font-semibold break-words">{event.title}</h3>
@@ -248,11 +254,11 @@ export function ClientEventDetailDialog({
                   {format(new Date(event.event_date), 'HH:mm')}
                 </span>
               ) : (
-                <Badge variant="outline">Journée entière</Badge>
+                <Badge variant="outline" className="rounded-full">Journée entière</Badge>
               )}
             </div>
             {event.description && (
-              <div className="p-3 bg-muted rounded-lg">
+              <div className="p-3 bg-muted/60 rounded-xl">
                 <p className="text-sm whitespace-pre-wrap break-words">{event.description}</p>
               </div>
             )}
@@ -266,15 +272,16 @@ export function ClientEventDetailDialog({
               }}
               size="sm"
               variant="outline"
-              className="w-full"
+              className="w-full rounded-full"
             />
           </div>
         )}
 
-        <DialogFooter className="gap-2 pt-4 border-t flex-wrap">
+        <DialogFooter className="gap-2 pt-4 border-t border-border/70 flex-wrap">
           {visite && onVoirOffre && (
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 onOpenChange(false);
                 onVoirOffre();
@@ -283,7 +290,7 @@ export function ClientEventDetailDialog({
               {isAchat ? 'Voir le bien' : "Voir l'offre"}
             </Button>
           )}
-          <Button onClick={() => onOpenChange(false)}>Fermer</Button>
+          <Button className="rounded-full" onClick={() => onOpenChange(false)}>Fermer</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
