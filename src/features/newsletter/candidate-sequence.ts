@@ -101,7 +101,7 @@ const messages = [
     heading: "Un acompte pour démarrer. Des conditions claires.",
     paragraphs: [
       "Un acompte de CHF 300 est dû pour activer votre recherche. Il est déduit de la commission en cas de succès. Cette commission correspond à un mois de loyer brut, avec un minimum de CHF 500 et la TVA uniquement si elle est due, conformément au mandat.",
-      "Sans bail conclu, vous pouvez demander le remboursement de l’acompte à l’échéance des 90 jours : la fin du mandat et la demande de remboursement doivent être notifiées entre le 75e et le 90e jour. Le remboursement intervient alors sous 30 jours après l’échéance. Sans cette démarche, le mandat se renouvelle ; en cas de résiliation anticipée de votre part, l’acompte reste acquis selon le contrat.",
+      "Sans bail conclu, vous pouvez demander le remboursement de l’acompte à l’échéance des 90 jours : la fin du mandat et la demande de remboursement doivent être notifiées entre le 80e et le 90e jour. Le remboursement intervient alors sous 30 jours après l’échéance. Sans cette démarche, le mandat se renouvelle ; en cas de résiliation anticipée de votre part, l’acompte reste acquis selon le contrat.",
     ],
     highlight: "Les conditions complètes sont présentées avant votre signature.",
     closing: "Vous souhaitez avancer avec un professionnel et un cadre transparent ? Consultez votre mandat, posez-nous vos questions si nécessaire, puis activez votre recherche lorsque vous êtes prêt.",

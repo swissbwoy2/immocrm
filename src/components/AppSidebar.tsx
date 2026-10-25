@@ -159,6 +159,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           label: 'Aide et paramètres',
           items: [
             { name: 'Support', icon: LifeBuoy, path: '/admin/support', notifKey: null },
+            { name: 'Steeve', icon: Bot, path: '/admin/steeve', notifKey: null },
             { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
           ],
         },

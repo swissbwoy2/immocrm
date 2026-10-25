@@ -16,6 +16,7 @@ const routes: Record<string, () => Promise<unknown>> = {
   '/admin/messagerie': () => import('../pages/admin/Messagerie'),
   '/admin/notifications': () => import('../pages/admin/Notifications'),
   '/admin/parametres': () => import('../pages/admin/Parametres'),
+  '/admin/steeve': () => import('../pages/admin/Steeve'),
   '/admin/whatsapp-notifications': () => import('../pages/admin/WhatsAppNotifications'),
   '/admin/envoyer-email': () => import('../pages/admin/EnvoyerEmail'),
   '/admin/comptes-rendus': () => import('../pages/admin/ComptesRendus'),

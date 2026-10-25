@@ -104,6 +104,7 @@ const AdminNotifications = lazyWithRetry(() => import("./pages/admin/Notificatio
 const SupportClient = lazyWithRetry(() => import("./pages/support/SupportClient"));
 const SupportStaff = lazyWithRetry(() => import("./pages/support/SupportStaff"));
 const AdminParametres = lazyWithRetry(() => import("./pages/admin/Parametres"));
+const AdminSteeve = lazyWithRetry(() => import("./pages/admin/Steeve"));
 const AdminWhatsAppNotifications = lazyWithRetry(() => import("./pages/admin/WhatsAppNotifications"));
 const AdminEnvoyerEmail = lazyWithRetry(() => import("./pages/admin/EnvoyerEmail"));
 const AdminEnvoyerOffre = lazyWithRetry(() => import("./pages/admin/EnvoyerOffre"));
@@ -430,6 +431,7 @@ const App = () => (
               <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminParametres /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/steeve" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminSteeve /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/whatsapp-notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminWhatsAppNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-email" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerEmail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/comptes-rendus" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminComptesRendus /></AppLayout></ProtectedRoute>} />

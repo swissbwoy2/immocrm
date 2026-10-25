@@ -208,7 +208,7 @@ const CONSENTS_V2108: Record<string, ConsentText> = {
  },
  "legal_duree": {
   "t": "Durée et reconduction tacite",
-  "q": "Acceptez-vous que le mandat soit conclu pour 90 jours, reconduit tacitement par périodes de 90 jours, la dénonciation ordinaire pouvant être notifiée entre le 75e et le 90e jour de la période en cours (par écrit ou dans l'application Logisorama.ch) ?",
+  "q": "Acceptez-vous que le mandat soit conclu pour 90 jours, reconduit tacitement par périodes de 90 jours, la dénonciation ordinaire pouvant être notifiée entre le 80e et le 90e jour de la période en cours (par écrit ou dans l'application Logisorama.ch) ?",
   "c": "Oui, j'accepte"
  },
  "legal_remboursement": {
@@ -991,7 +991,7 @@ const handler = async (req: Request): Promise<Response> => {
       addText('2.1', margin + 5, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "La commission est de 1 mois de loyer brut (charges comprises), plus la TVA au taux legal si elle est due, min. CHF 500, et n'est due qu'a la conclusion d'un bail valable resultant de l'activite d'Immo-Rama. Un montant d'activation de CHF 300.- est verse a l'ouverture du dossier et impute sur la commission. Le mandat est conclu pour 90 jours, reconduit tacitement par periodes de 90 jours; la denonciation ordinaire se notifie entre le 75e et le 90e jour (par ecrit ou dans l'application Logisorama.ch). Si Immo-Rama met fin au mandat, ou au terme sans conclusion de bail, les CHF 300.- sont rembourses sous 30 jours; en cas de resiliation anticipee du mandant, ils restent acquis. Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
+        "La commission est de 1 mois de loyer brut (charges comprises), plus la TVA au taux legal si elle est due, min. CHF 500, et n'est due qu'a la conclusion d'un bail valable resultant de l'activite d'Immo-Rama. Un montant d'activation de CHF 300.- est verse a l'ouverture du dossier et impute sur la commission. Le mandat est conclu pour 90 jours, reconduit tacitement par periodes de 90 jours; la denonciation ordinaire se notifie entre le 80e et le 90e jour (par ecrit ou dans l'application Logisorama.ch). Si Immo-Rama met fin au mandat, ou au terme sans conclusion de bail, les CHF 300.- sont rembourses sous 30 jours; en cas de resiliation anticipee du mandant, ils restent acquis. Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
         margin + 25, maxTextWidth - 30, 9
       );
       yPosition -= 10;

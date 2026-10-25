@@ -1841,6 +1841,30 @@ html.dark[data-imr-sidebar="clair"] {
   .dark .imr-glass-nav { background: rgba(28, 28, 30, 0.97); }
 }
 
+/* ==== Steeve 3D, déclencheur de la messagerie ==== */
+/* Largeur du canevas (le personnage en occupe une partie) : discret sur mobile, lisible sur ordinateur. */
+.steeve-launcher-size {
+  --steeve-size: 145px;
+  width: var(--steeve-size);
+}
+@media (max-width: 600px) {
+  .steeve-launcher-size { --steeve-size: 82px; }
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  .steeve-launcher-size { --steeve-size: 115px; }
+}
+@media (min-width: 1800px) {
+  .steeve-launcher-size { --steeve-size: 165px; }
+}
+.steeve-app-launcher {
+  bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+/* Application mobile : Steeve se place au-dessus de la barre de navigation du bas. */
+html.imr-native-shell .steeve-app-launcher,
+html.imr-native-shell .steeve-public-launcher {
+  bottom: calc(max(env(safe-area-inset-bottom, 0px), 12px) + 84px);
+}
+
 /* ───────────── Liquid Glass (style Apple iOS 26) ─────────────
    Verre clair qui laisse passer le contenu, reflet spéculaire en haut,
    liseré lumineux, ombre douce. Boutons en capsule, barre du bas flottante. */

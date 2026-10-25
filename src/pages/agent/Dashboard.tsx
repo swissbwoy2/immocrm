@@ -16,6 +16,7 @@ import { AgentBadges } from '@/components/stats/AgentBadges';
 import { countUniqueOffres } from '@/utils/visitesCalculator';
 import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { SteeveProposalsCard } from '@/components/steeve/SteeveProposalsCard';
 import { DASH_CARD, DashBadge, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import {
   ActionGrid, DayBanner, FoldSection, KpiTile, StaffSectionTitle, StaffShell, type ActionTileItem, type DayVisit,
@@ -598,6 +599,9 @@ export default function AgentDashboard() {
             </div>
           </FoldSection>
         )}
+
+        {/* Actions préparées par Steeve, à valider (masqué s'il n'y en a pas) */}
+        <SteeveProposalsCard basePath="/agent" hideWhenEmpty />
 
         {/* (c) Cette semaine */}
         <section className="space-y-3" aria-label="Cette semaine">

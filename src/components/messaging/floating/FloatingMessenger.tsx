@@ -3,7 +3,9 @@ import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
 import { useAuth } from '@/contexts/AuthContext';
-import { FloatingMessengerBubble } from './FloatingMessengerBubble';
+import { SteeveLauncher } from '@/components/steeve/SteeveLauncher';
+import { SteeveCandidatChat } from '@/components/steeve/SteeveCandidatChat';
+import { useHapticFeedback } from '@/hooks/useHapticFeedback';
 import { FloatingConversationList } from './FloatingConversationList';
 import { FloatingConversationView } from './FloatingConversationView';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -28,7 +30,12 @@ const panelMobileVariants: Variants = {
 
 export function FloatingMessenger() {
   const { user, userRole, loading } = useAuth();
-  const { isOpen, close, activeConversationId, setActiveConversation } = useFloatingMessenger();
+  const { isOpen, close, toggle, activeConversationId, setActiveConversation, unreadCount, hasNew, busy, cue, react } = useFloatingMessenger();
+  const { tapLight } = useHapticFeedback();
+  // Un nouveau message arrivé messagerie fermée : Steeve le signale une fois (sans ouvrir la messagerie).
+  useEffect(() => {
+    if (hasNew && !isOpen) react('invite', 'Tu as un nouveau message !');
+  }, [hasNew, isOpen, react]);
   const isMobile = useIsMobile();
   const location = useLocation();
 
@@ -67,6 +74,8 @@ export function FloatingMessenger() {
 
   // Don't render until auth loaded; only for logged-in users with eligible roles
   if (loading || !user || !userRole) return null;
+  // Candidat : Steeve l'aide à trouver et l'invite à activer son mandat (même assistant que sur le site).
+  if (userRole === 'candidat') return <SteeveCandidatChat />;
   const eligibleRoles = ['admin', 'agent', 'client', 'proprietaire'];
   if (!eligibleRoles.includes(userRole)) return null;
 
@@ -76,7 +85,19 @@ export function FloatingMessenger() {
 
   return (
     <>
-      <FloatingMessengerBubble />
+      {/* Steeve 3D remplace l'ancienne bulle : même action (ouvrir / fermer la messagerie existante). */}
+      <div
+        data-floating-widget
+        className="steeve-app-launcher fixed z-[45] right-2 md:right-4"
+      >
+        <SteeveLauncher
+          open={isOpen}
+          unread={isOpen ? 0 : unreadCount}
+          busy={busy}
+          cue={cue}
+          onActivate={() => { void tapLight(); toggle(); }}
+        />
+      </div>
 
       <AnimatePresence>
         {isOpen && (
@@ -103,7 +124,7 @@ export function FloatingMessenger() {
               className={
                 isMobile
                   ? 'fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
-                  : 'fixed z-50 right-4 md:right-6 bottom-24 md:bottom-24 w-[380px] h-[560px] rounded-2xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
+                  : 'fixed z-50 right-[180px] min-[1800px]:right-[200px] bottom-6 w-[380px] h-[min(560px,calc(100dvh-48px))] rounded-2xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
               }
               style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
             >
