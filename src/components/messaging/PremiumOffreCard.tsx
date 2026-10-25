@@ -28,7 +28,7 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
     >
 
       {/* Animated gradient border */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+      <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
         <div 
           className="absolute inset-0 rounded-2xl"
           style={{
