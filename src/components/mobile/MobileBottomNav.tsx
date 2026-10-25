@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu, LifeBuoy, Bell, FileText, FileCheck, Inbox } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu, LifeBuoy, Bell, FileText, FileCheck, Inbox, Banknote } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useClientParcours } from '@/hooks/useClientParcours';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -13,22 +13,23 @@ export interface BottomNavItem {
   badgeKey?: 'offres' | 'agenda' | null;
 }
 
-/** La barre « bulle » flottante est réservée au chercheur de logement (4 onglets). */
+/** La barre « bulle » flottante (4 onglets) : chercheur de logement et acheteur, même expérience. */
 export function isClientGlassNav(role: string | null, parcours?: string | null): boolean {
   if (role !== 'client') return false;
-  return !['achat', 'relouer', 'renovation', 'vente'].includes(parcours ?? '');
+  return !['relouer', 'renovation', 'vente'].includes(parcours ?? '');
 }
 
 export function getBottomNavItems(role: string | null, parcours?: string | null): BottomNavItem[] {
   // Client : la barre du bas suit le parcours (même règle que le menu latéral).
   if (role === 'client') {
     if (parcours === 'achat') {
+      // Acheteur : même barre que la location, dans l'ordre du parcours d'achat.
+      // Messagerie et menu complet restent accessibles depuis l'en-tête.
       return [
-        { name: 'Accueil', icon: LayoutDashboard, path: '/client' },
-        { name: 'Biens', icon: Home, path: '/client/biens-proposes' },
-        { name: 'Messages', icon: MessageSquare, path: '/client/messagerie' },
-        { name: 'Agenda', icon: Calendar, path: '/client/calendrier' },
-        { name: 'Support', icon: LifeBuoy, path: '/support' },
+        { name: 'Accueil', icon: Home, path: '/client', badgeKey: null },
+        { name: 'Biens', icon: Inbox, path: '/client/biens-proposes', badgeKey: 'offres' },
+        { name: 'Financement', icon: Banknote, path: '/client/financement', badgeKey: null },
+        { name: 'Agenda', icon: Calendar, path: '/client/calendrier', badgeKey: 'agenda' },
       ];
     }
     if (parcours === 'relouer' || parcours === 'renovation' || parcours === 'vente') {

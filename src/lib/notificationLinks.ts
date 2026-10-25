@@ -285,11 +285,13 @@ export function getClientParcoursType(): string | null {
 export function remapClientPathForParcours(path: string, parcours?: string | null): string {
   const p = parcours ?? currentClientParcoursType;
   if (p !== 'achat' || !path.startsWith('/client')) return path;
+  // Les biens à l'achat, leurs visites déléguées (vidéos) et les suites données vivent dans « Biens proposés ».
   if (path.startsWith('/client/offres-recues')) return '/client/biens-proposes';
-  if (path.startsWith('/client/videos-recues')) return '/client/biens-selectionnes';
+  if (path.startsWith('/client/videos-recues')) return '/client/biens-proposes';
+  if (path.startsWith('/client/biens-selectionnes')) return '/client/biens-proposes';
   if (path.startsWith('/client/visites-deleguees')) return '/client/calendrier';
   if (path.startsWith('/client/visites')) return '/client/calendrier';
-  if (path.startsWith('/client/mes-candidatures')) return '/client/biens-selectionnes';
+  if (path.startsWith('/client/mes-candidatures')) return '/client/biens-proposes';
   if (path.startsWith('/client/mon-contrat')) return '/client/dossier';
   return path;
 }

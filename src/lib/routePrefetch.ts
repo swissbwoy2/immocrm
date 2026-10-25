@@ -105,7 +105,6 @@ const routes: Record<string, () => Promise<unknown>> = {
   '/client/annonces': () => import('../pages/client/Annonces'),
   '/client/carte': () => import('../pages/client/Carte'),
   '/client/biens-proposes': () => import('../pages/client/BiensProposes'),
-  '/client/biens-selectionnes': () => import('../pages/client/BiensSelectionnes'),
   '/client/financement': () => import('../pages/client/FinancementAchat'),
   '/client/renovation': () => import('../features/renovation/pages/RenovationProjectsPage'),
   '/apporteur': () => import('../pages/apporteur/Dashboard'),

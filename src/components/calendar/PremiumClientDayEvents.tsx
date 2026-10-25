@@ -25,11 +25,13 @@ interface PremiumClientDayEventsProps {
   onVoirOffre: () => void;
   /** Opens the full detail dialog for a visite or an event */
   onOpenDetail?: (data: any, type: 'event' | 'visite') => void;
+  /** Parcours achat : prix de vente (pas de loyer) et « faire une offre » au lieu de « candidater ». */
+  isAchat?: boolean;
 }
 
 export function PremiumClientDayEvents({ 
   date, events, visites, 
-  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre, onOpenDetail
+  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre, onOpenDetail, isAchat = false
 }: PremiumClientDayEventsProps) {
   if (!date) {
     return (
@@ -282,7 +284,7 @@ export function PremiumClientDayEvents({
                               <p className="text-2xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                                 {data.offres.prix?.toLocaleString('fr-CH')}
                               </p>
-                              <p className="text-xs text-muted-foreground font-medium">CHF/mois</p>
+                              <p className="text-xs text-muted-foreground font-medium">{isAchat ? 'CHF · prix de vente' : 'CHF/mois'}</p>
                             </div>
                           )}
                         </div>
@@ -404,7 +406,7 @@ export function PremiumClientDayEvents({
                               title: `Visite - ${data.adresse}`,
                               description: buildVisiteICSDescription({
                                 adresse: data.adresse,
-                                prix: data.offres?.prix ? `${data.offres.prix} CHF/mois` : undefined,
+                                prix: data.offres?.prix ? (isAchat ? `CHF ${Number(data.offres.prix).toLocaleString('fr-CH')} (prix de vente)` : `${data.offres.prix} CHF/mois`) : undefined,
                                 pieces: data.offres?.pieces,
                                 surface: data.offres?.surface,
                                 etage: data.offres?.etage,
@@ -441,7 +443,7 @@ export function PremiumClientDayEvents({
                           {showPostVisitActions && (
                             <div className="p-3 rounded-lg bg-gradient-to-r from-muted/80 to-muted/40 border border-border/50 space-y-3">
                               <p className="text-xs font-semibold text-center text-muted-foreground">
-                                Suite à cette visite, souhaitez-vous donner suite ?
+                                {isAchat ? "Suite à cette visite, souhaitez-vous faire une offre d'achat ?" : 'Suite à cette visite, souhaitez-vous donner suite ?'}
                               </p>
                               <div className="grid grid-cols-3 gap-2">
                                 <Button 
@@ -450,7 +452,7 @@ export function PremiumClientDayEvents({
                                   className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
                                 >
                                   <Check className="mr-1 h-3 w-3" />
-                                  Oui
+                                  {isAchat ? 'Offre' : 'Oui'}
                                 </Button>
                                 <Button 
                                   variant="outline"
@@ -459,7 +461,7 @@ export function PremiumClientDayEvents({
                                   className="border-primary/30 hover:bg-primary/10"
                                 >
                                   <FileCheck className="mr-1 h-3 w-3" />
-                                  Candidater
+                                  {isAchat ? 'Voir le bien' : 'Candidater'}
                                 </Button>
                                 <Button 
                                   variant="outline"
@@ -493,7 +495,7 @@ export function PremiumClientDayEvents({
                               className="flex-1 min-w-0 group/btn border-border/50 hover:border-primary/50 hover:bg-primary/5"
                             >
                               <Eye className="mr-2 h-4 w-4 group-hover/btn:text-primary transition-colors" />
-                              Voir l'offre
+                              {isAchat ? 'Voir le bien' : "Voir l'offre"}
                               <ArrowRight className="ml-auto h-4 w-4 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all" />
                             </Button>
                             {data.offres?.lien_annonce && (

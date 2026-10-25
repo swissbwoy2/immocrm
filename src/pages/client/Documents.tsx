@@ -77,6 +77,7 @@ export default function Documents() {
     justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
     justificatif_charges_fixes: 'charges',
     decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    extrait_poursuites: 'autre',
     accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
     autre: 'autre',
   };
@@ -1005,6 +1006,7 @@ export default function Documents() {
                     <>
                       <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
                       <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
                       <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
                       <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
                       <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>

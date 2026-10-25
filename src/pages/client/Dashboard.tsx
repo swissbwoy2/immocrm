@@ -16,7 +16,6 @@ import {
   PremiumStatusCard,
   PremiumDashboardHeader,
   PremiumCandidatureProgressCard,
-  PremiumPurchaseCapacityCard,
   PremiumCandidatesCard
 } from '@/components/premium';
 import { Button } from '@/components/ui/button';
@@ -40,15 +39,14 @@ import { MustChangePasswordBanner } from '@/components/MustChangePasswordBanner'
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
 import { ExtraitPoursuitesHeroCard } from '@/components/ExtraitPoursuitesHeroCard';
-import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { PremiumDossierChecklistCard } from '@/components/premium';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
-import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
 import { MandatCreditsGate } from '@/components/credits/MandatCreditsGate';
+import { DASH_CARD, DashSection, StatTile, LinkRow } from '@/components/client/dashboard/DashPrimitives';
 
 import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
 import VenteClientDashboard from './dashboards/VenteClientDashboard';
@@ -143,10 +141,7 @@ function ClientDashboardLocation() {
   // Hooks pour les candidats et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
-  const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
-  
-  // Détecter si le client est un acheteur
-  const isAcheteur = client?.type_recherche === 'Acheter';
+  // Les acheteurs ont leur propre tableau de bord (DashboardAchat) : celui-ci ne sert que la location.
 
   // Définir loadData comme useCallback AVANT les returns conditionnels
   const loadData = useCallback(async () => {
@@ -565,7 +560,6 @@ function ClientDashboardLocation() {
           <SectionErrorBoundary sectionName="DashboardHeader">
             <PremiumDashboardHeader
               userName={clientProfile?.prenom}
-              isAcheteur={isAcheteur}
               parcoursType={
                 (['location','achat','vente','renovation','relocation'] as const).includes(clientProfile?.parcours_type)
                   ? clientProfile.parcours_type
@@ -767,11 +761,7 @@ function ClientDashboardLocation() {
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className={`${DASH_CARD} overflow-hidden`}>
                   <SectionErrorBoundary sectionName="Solvability">
-                    {isAcheteur ? (
-                      <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
-                    ) : (
-                      <SolvabilityAlert result={solvabilityResult} />
-                    )}
+                    <SolvabilityAlert result={solvabilityResult} />
                   </SectionErrorBoundary>
                 </div>
                 <SectionErrorBoundary sectionName="DossierChecklist">
@@ -892,13 +882,6 @@ function ClientDashboardLocation() {
                 )}
               </div>
             </div>
-
-            {isAcheteur && profileActif !== false && (
-              <PremiumPurchaseCapacityCard
-                result={purchaseSolvabilityResult}
-                apportPersonnel={client.apport_personnel || 0}
-              />
-            )}
           </DashSection>
 
           {/* 6. Statistiques */}
@@ -925,68 +908,5 @@ function ClientDashboardLocation() {
         />
       )}
     </>
-  );
-}
-
-/* ---------- Briques visuelles du tableau de bord (style Airbnb : blanc, une ombre, coins arrondis) ---------- */
-
-const DASH_CARD =
-  'rounded-2xl border border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]';
-
-function DashSection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3" aria-label={title}>
-      <div className="flex items-end justify-between gap-3 px-0.5">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">{title}</h2>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function StatTile({ icon: Icon, label, value, count, onClick }: {
-  icon: React.ElementType; label: string; value: string; count: number; onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${DASH_CARD} relative flex min-h-[104px] flex-col items-start justify-between p-3 text-left transition-transform duration-150 active:scale-[0.98] sm:p-4`}
-    >
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
-      {count > 0 && (
-        <span className="absolute right-2.5 top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
-          {count}
-        </span>
-      )}
-      <span className="mt-2 block w-full">
-        <span className="block truncate text-[13px] font-semibold text-foreground sm:text-sm">{label}</span>
-        <span className="block truncate text-xs text-muted-foreground">{value}</span>
-      </span>
-    </button>
-  );
-}
-
-function LinkRow({ icon: Icon, label, sub, onClick }: {
-  icon: React.ElementType; label: string; sub: string; onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`${DASH_CARD} flex min-h-[64px] items-center gap-3 p-3 text-left transition-transform duration-150 active:scale-[0.98]`}
-    >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-        <Icon className="h-[18px] w-[18px]" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-foreground">{label}</span>
-        <span className="block truncate text-xs text-muted-foreground">{sub}</span>
-      </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-    </button>
   );
 }

@@ -29,6 +29,8 @@ interface ClientEventDetailDialogProps {
   event?: CalendarEvent | null;
   /** Optional: navigate to the offers page */
   onVoirOffre?: () => void;
+  /** Parcours achat : prix de vente au lieu d'un loyer mensuel. */
+  isAchat?: boolean;
 }
 
 const statutLabels: Record<string, string> = {
@@ -45,6 +47,7 @@ export function ClientEventDetailDialog({
   visite,
   event,
   onVoirOffre,
+  isAchat = false,
 }: ClientEventDetailDialogProps) {
   const offre = visite?.offres;
   const cr = visite?.compte_rendu && typeof visite.compte_rendu === 'object' ? visite.compte_rendu : null;
@@ -94,7 +97,7 @@ export function ClientEventDetailDialog({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="p-2 bg-muted rounded">
                       <p className="text-xs text-muted-foreground">Prix</p>
-                      <p className="font-medium">{offre.prix?.toLocaleString('fr-CH')} CHF/mois</p>
+                      <p className="font-medium">{offre.prix?.toLocaleString('fr-CH')} {isAchat ? 'CHF' : 'CHF/mois'}</p>
                     </div>
                     {offre.pieces && (
                       <div className="p-2 bg-muted rounded">
@@ -209,7 +212,7 @@ export function ClientEventDetailDialog({
                 title: `Visite - ${visite.adresse}`,
                 description: buildVisiteICSDescription({
                   adresse: visite.adresse,
-                  prix: offre?.prix ? `${offre.prix} CHF/mois` : undefined,
+                  prix: offre?.prix ? (isAchat ? `CHF ${Number(offre.prix).toLocaleString('fr-CH')} (prix de vente)` : `${offre.prix} CHF/mois`) : undefined,
                   pieces: offre?.pieces,
                   surface: offre?.surface,
                   etage: offre?.etage,
@@ -277,7 +280,7 @@ export function ClientEventDetailDialog({
                 onVoirOffre();
               }}
             >
-              Voir l'offre
+              {isAchat ? 'Voir le bien' : "Voir l'offre"}
             </Button>
           )}
           <Button onClick={() => onOpenChange(false)}>Fermer</Button>

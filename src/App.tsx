@@ -214,7 +214,6 @@ const ClientParametres = lazyWithRetry(() => import("./pages/client/Parametres")
 const ClientAnnonces = lazyWithRetry(() => import("./pages/client/Annonces"));
 const ClientCarte = lazyWithRetry(() => import("./pages/client/Carte"));
 const ClientBiensProposes = lazyWithRetry(() => import("./pages/client/BiensProposes"));
-const ClientBiensSelectionnes = lazyWithRetry(() => import("./pages/client/BiensSelectionnes"));
 const ClientFinancementAchat = lazyWithRetry(() => import("./pages/client/FinancementAchat"));
 
 // Apporteur pages
@@ -538,7 +537,8 @@ const App = () => (
               <Route path="/client/annonces" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientAnnonces /></AppLayout></ProtectedRoute>} />
               <Route path="/client/carte" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCarte /></AppLayout></ProtectedRoute>} />
               <Route path="/client/biens-proposes" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientBiensProposes /></AppLayout></ProtectedRoute>} />
-              <Route path="/client/biens-selectionnes" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientBiensSelectionnes /></AppLayout></ProtectedRoute>} />
+              {/* Ancienne page « Biens sélectionnés » : regroupée dans Biens proposés (filtre « En cours »). */}
+              <Route path="/client/biens-selectionnes" element={<Navigate to="/client/biens-proposes?filtre=en_cours" replace />} />
               <Route path="/client/financement" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientFinancementAchat /></AppLayout></ProtectedRoute>} />
               <Route path="/client/renovation" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/client/renovation/:id" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
