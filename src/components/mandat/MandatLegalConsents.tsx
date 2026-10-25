@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
+import { ACHAT_CONTRACT_TEXT, isPurchaseMandat, legalCheckboxesFor } from './achat/achatMandat';
 import { MandatFormData } from './types';
 import { Loader2, CheckCircle2, FileText } from 'lucide-react';
 
@@ -13,10 +13,19 @@ interface Props {
 }
 
 export default function MandatLegalConsents({ data, onChange }: Props) {
+  const isPurchase = isPurchaseMandat(data.journey, data.type_recherche);
+  const LEGAL_CHECKBOXES = legalCheckboxesFor(data.journey, data.type_recherche);
   const [contractText, setContractText] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Achat : texte du mandat d'achat révisé (dans le code). Location : contrat actif en base.
+    if (isPurchase) {
+      setContractText(ACHAT_CONTRACT_TEXT);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const fetchContract = async () => {
       const { data: ct } = await supabase
         .from('mandate_contract_texts' as any)
@@ -29,7 +38,7 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
       setLoading(false);
     };
     fetchContract();
-  }, []);
+  }, [isPurchase]);
 
   const checkedCount = LEGAL_CHECKBOXES.filter(
     (cb) => (data as any)[cb.key] === true
@@ -59,7 +68,7 @@ export default function MandatLegalConsents({ data, onChange }: Props) {
         <div className="px-4 py-2.5 border-b border-border flex items-center gap-2">
           <FileText size={14} className="text-primary" />
           <h3 className="text-sm font-semibold text-foreground">
-            Contrat de mandat de recherche immobilière
+            {isPurchase ? "Contrat de mandat de recherche immobilière — Achat" : 'Contrat de mandat de recherche immobilière'}
           </h3>
         </div>
         <ScrollArea className="h-[260px] sm:h-[340px]">
