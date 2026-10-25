@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Loader2, RefreshCw, ExternalLink, CheckCircle2, Mailbox, Trash2 } from 'lucide-react';
+import { DASH_CARD, DashPage, DashPageHeader, DashFilterPills, DashBadge, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
@@ -49,13 +47,14 @@ type JobInfo = {
   ai_result: { missing_items?: string[]; concise_staff_summary?: string } | null;
 };
 
-const JOB_STATUS: Record<string, { label: string; className: string }> = {
-  queued: { label: 'En file', className: 'bg-muted text-muted-foreground border-border' },
-  processing: { label: 'Analyse…', className: 'bg-sky-100 text-sky-800 border-sky-300' },
-  ready: { label: 'Prêt', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  blocked: { label: 'Bloqué', className: 'bg-amber-100 text-amber-800 border-amber-300' },
-  failed: { label: 'Erreur', className: 'bg-red-100 text-red-800 border-red-300' },
-  completed: { label: 'Terminé', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted';
+const JOB_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  queued: { label: 'En file', tone: 'muted' },
+  processing: { label: 'Analyse…', tone: 'neutral' },
+  ready: { label: 'Prêt', tone: 'success' },
+  blocked: { label: 'Bloqué', tone: 'warning' },
+  failed: { label: 'Erreur', tone: 'danger' },
+  completed: { label: 'Terminé', tone: 'success' },
 };
 const PRIORITY_LABEL: Record<string, string> = { low: 'Basse', normal: 'Normale', high: 'Haute', urgent: 'Urgente' };
 
@@ -244,46 +243,39 @@ export function PostulationsPage({ scope, title }: Props) {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Mailbox className="w-6 h-6 text-primary" /> {title || 'Postulations à faire'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Offres pour lesquelles le client a demandé à déposer sa candidature.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
-      </div>
+    <DashPage className="space-y-6">
+      <DashPageHeader
+        title={title || 'Postulations à faire'}
+        subtitle="Offres pour lesquelles le client a demandé à déposer sa candidature."
+        action={
+          <Button variant="outline" size="sm" className="rounded-full" onClick={load} disabled={loading} aria-label="Actualiser">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
+        }
+      />
 
       <DossiersPreparesPanel />
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as PostulationTab)}>
-        <TabsList>
-          <TabsTrigger value="a_faire" className="gap-2">
-            À faire
-            <Badge variant="secondary" className="bg-violet-100 text-violet-800 border-violet-300">{counts.a_faire}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="deposees" className="gap-2">
-            Déposées
-            <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-300">{counts.deposees}</Badge>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div>
+      <DashFilterPills
+        label="Onglets postulations"
+        value={tab}
+        onChange={(v) => setTab(v as PostulationTab)}
+        options={[
+          { key: 'a_faire', label: 'À faire', count: counts.a_faire },
+          { key: 'deposees', label: 'Déposées', count: counts.deposees },
+        ]}
+      />
 
-      <Card>
-        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="md:col-span-2">
-            <label className="text-xs text-muted-foreground">Recherche (client, email, adresse)</label>
-            <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" />
+      <div className={`${DASH_CARD} grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5`}>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Recherche (client, email, adresse)</label>
+            <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" className="rounded-full" />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Trier par</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Trier par</label>
             <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="recent">Plus récentes</SelectItem>
                 <SelectItem value="oldest">Plus anciennes</SelectItem>
@@ -292,9 +284,9 @@ export function PostulationsPage({ scope, title }: Props) {
             </Select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Période</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Période</label>
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toutes</SelectItem>
                 <SelectItem value="7d">7 derniers jours</SelectItem>
@@ -302,23 +294,22 @@ export function PostulationsPage({ scope, title }: Props) {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-4 -mt-1">
-            <Badge variant="outline" className={tab === 'a_faire' ? 'bg-violet-100 text-violet-800 border-violet-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}>
+          <div className="sm:col-span-2 md:col-span-4">
+            <DashBadge tone={tab === 'a_faire' ? 'warning' : 'success'}>
               {filtered.length} {tab === 'a_faire' ? 'à traiter' : 'déposée(s)'}
-            </Badge>
+            </DashBadge>
           </div>
-        </CardContent>
-      </Card>
+      </div>
+      </div>
 
       {paged.length === 0 ? (
-        <div className="text-center text-sm text-muted-foreground py-12 border rounded-lg">
-          {tab === 'a_faire' ? 'Aucune postulation en attente.' : 'Aucune candidature déposée.'}
-        </div>
+        <DashEmptyState icon={Mailbox} title={tab === 'a_faire' ? 'Aucune postulation en attente.' : 'Aucune candidature déposée.'} />
       ) : (
-        <div className="border rounded-lg overflow-x-auto">
+        <div className={`${DASH_CARD} overflow-hidden`}>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-transparent [&>th]:text-xs [&>th]:font-medium [&>th]:text-muted-foreground">
                 <TableHead>Demandé le</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Adresse</TableHead>
@@ -329,7 +320,7 @@ export function PostulationsPage({ scope, title }: Props) {
                 <TableHead className="text-right">{tab === 'a_faire' ? 'Action' : 'Statut'}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="[&>tr]:border-border/70 [&>tr:hover]:bg-muted/50">
               {paged.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="whitespace-nowrap text-xs">
@@ -345,7 +336,7 @@ export function PostulationsPage({ scope, title }: Props) {
                   <TableCell>
                     {r.lien_annonce ? (
                       <a href={r.lien_annonce} target="_blank" rel="noreferrer"
-                         className="text-blue-600 hover:underline inline-flex items-center gap-1 text-xs">
+                         className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
                         <ExternalLink className="h-3.5 w-3.5" /> Voir l'annonce
                       </a>
                     ) : '—'}
@@ -354,18 +345,18 @@ export function PostulationsPage({ scope, title }: Props) {
                     {r._job ? (
                       <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-1">
-                          <Badge variant="outline" className={JOB_STATUS[r._job.status]?.className}>
+                          <DashBadge tone={JOB_STATUS[r._job.status]?.tone ?? 'neutral'}>
                             {JOB_STATUS[r._job.status]?.label ?? r._job.status}
-                          </Badge>
+                          </DashBadge>
                           {r._job.priority && (
-                            <Badge variant="outline">Priorité {PRIORITY_LABEL[r._job.priority] ?? r._job.priority}</Badge>
+                            <DashBadge tone="neutral">Priorité {PRIORITY_LABEL[r._job.priority] ?? r._job.priority}</DashBadge>
                           )}
                         </div>
                         <div className="text-muted-foreground">
                           Demande : {format(new Date(r._job.created_at), 'dd MMM HH:mm', { locale: fr })}
                         </div>
                         {(r._job.ai_result?.missing_items?.length ?? 0) > 0 && (
-                          <ul className="list-disc pl-4 text-amber-700">
+                          <ul className="list-disc pl-4 text-amber-700 dark:text-amber-400">
                             {r._job.ai_result!.missing_items!.slice(0, 6).map((m) => <li key={m}>{m}</li>)}
                           </ul>
                         )}
@@ -378,13 +369,13 @@ export function PostulationsPage({ scope, title }: Props) {
                   <TableCell className="text-right">
                     <div className="inline-flex items-center gap-2">
                       {r.statut === 'candidature_deposee' ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <DashBadge tone="success">
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
-                        </Badge>
+                        </DashBadge>
                       ) : (
                         <Button
                           size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                          className="rounded-full"
                           disabled={savingId === r.id}
                           onClick={() => markCandidatureDeposee(r)}
                         >
@@ -393,13 +384,13 @@ export function PostulationsPage({ scope, title }: Props) {
                           ) : (
                             <CheckCircle2 className="w-4 h-4 mr-2" />
                           )}
-                          ✅ Candidature déposée
+                          Candidature déposée
                         </Button>
                       )}
                       {scope === 'admin' && (
                         <ConfirmDialog
                           trigger={
-                            <Button variant="destructive" size="sm" disabled={deletingId === r.id}>
+                            <Button variant="destructive" size="sm" className="rounded-full" disabled={deletingId === r.id}>
                               {deletingId === r.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
@@ -421,6 +412,7 @@ export function PostulationsPage({ scope, title }: Props) {
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       )}
 
@@ -431,6 +423,6 @@ export function PostulationsPage({ scope, title }: Props) {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
       />
-    </div>
+    </DashPage>
   );
 }

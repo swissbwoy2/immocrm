@@ -1,8 +1,6 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ElementType } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +9,8 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil } from "lucide-react";
+import { Loader2, RefreshCw, ExternalLink, AlertTriangle, Pencil, CalendarDays, CalendarRange, ThumbsUp, ThumbsDown, CalendarCheck, Inbox } from "lucide-react";
+import { DASH_CARD, DashPage, DashPageHeader, DashFilterPills, DashBadge, DashEmptyState } from "@/components/client/dashboard/DashPrimitives";
 import { format } from "date-fns";
 import { TablePagination, type PageSize } from "@/components/offres-auto/TablePagination";
 import { fr } from "date-fns/locale";
@@ -199,33 +197,32 @@ export default function OffresAuto() {
 
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Offres automatiques</h1>
-          <p className="text-sm text-muted-foreground">Suivi des offres créées par la routine Auto-Offres.</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => { load(); loadStats(); }} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
+    <DashPage className="space-y-6">
+      <DashPageHeader
+        title="Offres automatiques"
+        subtitle="Suivi des offres créées par la routine Auto-Offres."
+        action={
+          <Button variant="outline" size="sm" className="rounded-full" onClick={() => { load(); loadStats(); }} disabled={loading} aria-label="Actualiser">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatCard icon={CalendarDays} label="Aujourd'hui" value={stats.today} />
+        <StatCard icon={CalendarRange} label="7 derniers jours" value={stats.last7} />
+        <StatCard icon={ThumbsUp} label="Intéressés" value={stats.interesses} tone="success" />
+        <StatCard icon={ThumbsDown} label="Refusés" value={stats.refuses} tone="danger" />
+        <StatCard icon={CalendarCheck} label="Visites planifiées" value={stats.visites} tone="info" />
+        <StatCard icon={AlertTriangle} label="À compléter" value={stats.aCompleter} tone="warning" />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <StatCard label="Aujourd'hui" value={stats.today} />
-        <StatCard label="7 derniers jours" value={stats.last7} />
-        <StatCard label="Intéressés" value={stats.interesses} tone="success" />
-        <StatCard label="Refusés" value={stats.refuses} tone="danger" />
-        <StatCard label="Visites planifiées" value={stats.visites} tone="info" />
-        <StatCard label="⚠️ À compléter" value={stats.aCompleter} tone="danger" />
-      </div>
 
-
-      <Card>
-        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className={`${DASH_CARD} grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5`}>
           <div>
-            <label className="text-xs text-muted-foreground">Statut</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Statut</label>
             <Select value={statut} onValueChange={setStatut}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous</SelectItem>
                 <SelectItem value="envoyee">Envoyée</SelectItem>
@@ -236,38 +233,42 @@ export default function OffresAuto() {
             </Select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Client (nom/email)</label>
-            <Input value={clientQ} onChange={e => setClientQ(e.target.value)} placeholder="Rechercher..." />
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Client (nom/email)</label>
+            <Input value={clientQ} onChange={e => setClientQ(e.target.value)} placeholder="Rechercher..." className="rounded-full" />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Du</label>
-            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Du</label>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="rounded-full" />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Au</label>
-            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Au</label>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="rounded-full" />
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "all" | "manual")}>
-        <TabsList>
-          <TabsTrigger value="all">Toutes ({totalAll})</TabsTrigger>
-          <TabsTrigger value="manual">
-            <AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />
-            À gérer manuellement ({totalManual})
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="all">
-          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresGroupesTable groupes={groupes} onEdit={(g, o) => { setEditingGroupe(g); setEditing(o); }} /></div>
-          <TablePagination total={totalAll} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-        </TabsContent>
-        <TabsContent value="manual">
-          <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresGroupesTable groupes={groupes} showMissing onEdit={(g, o) => { setEditingGroupe(g); setEditing(o); }} /></div>
-          <TablePagination total={totalManual} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-        </TabsContent>
-
-      </Tabs>
+      <div>
+        <DashFilterPills
+          label="Onglets offres automatiques"
+          value={tab}
+          onChange={(v) => setTab(v as "all" | "manual")}
+          options={[
+            { key: "all", label: "Toutes", count: totalAll },
+            { key: "manual", label: "À gérer manuellement", count: totalManual },
+          ]}
+        />
+        {tab === "all" && (
+          <div className="space-y-3">
+            <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresGroupesTable groupes={groupes} onEdit={(g, o) => { setEditingGroupe(g); setEditing(o); }} /></div>
+            <TablePagination total={totalAll} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          </div>
+        )}
+        {tab === "manual" && (
+          <div className="space-y-3">
+            <div className={loading ? "opacity-60 transition-opacity" : "transition-opacity"} aria-busy={loading}><OffresGroupesTable groupes={groupes} showMissing onEdit={(g, o) => { setEditingGroupe(g); setEditing(o); }} /></div>
+            <TablePagination total={totalManual} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          </div>
+        )}
+      </div>
 
       {editing && <Suspense fallback={null}><GererOffreDialog
         offre={editing as any}
@@ -276,41 +277,50 @@ export default function OffresAuto() {
         onOpenChange={v => { if (!v) { setEditing(null); setEditingGroupe(null); } }}
         onSaved={load}
       /></Suspense>}
+    </DashPage>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, tone }: { icon: ElementType; label: string; value: number; tone?: "success" | "danger" | "info" | "warning" }) {
+  const pill = tone === "success" ? "bg-emerald-500/10 text-emerald-600"
+    : tone === "danger" ? "bg-destructive/10 text-destructive"
+    : tone === "warning" ? "bg-amber-500/10 text-amber-600"
+    : "bg-primary/10 text-primary";
+  return (
+    <div className={`${DASH_CARD} flex min-h-[104px] flex-col items-start justify-between p-3 sm:p-4`}>
+      <span className={`flex h-9 w-9 items-center justify-center rounded-full ${pill}`}>
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
+      <span className="mt-2 block w-full">
+        <span className="block text-2xl font-semibold tracking-tight text-foreground">{value}</span>
+        <span className="block truncate text-xs text-muted-foreground">{label}</span>
+      </span>
     </div>
   );
 }
 
-function StatCard({ label, value, tone }: { label: string; value: number; tone?: "success" | "danger" | "info" }) {
-  const color = tone === "success" ? "text-emerald-600" : tone === "danger" ? "text-red-600" : tone === "info" ? "text-blue-600" : "";
-  return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground font-medium">{label}</CardTitle></CardHeader>
-      <CardContent><div className={`text-2xl font-bold ${color}`}>{value}</div></CardContent>
-    </Card>
-  );
-}
-
 function statutBadge(s: string | null) {
-  const map: Record<string, { label: string; cls: string }> = {
-    envoyee: { label: "Envoyée", cls: "bg-blue-100 text-blue-800" },
-    interesse: { label: "Intéressé", cls: "bg-emerald-100 text-emerald-800" },
-    souhaite_postuler: { label: "Souhaite postuler", cls: "bg-violet-100 text-violet-800 border border-violet-300" },
-    refuse: { label: "Refusé", cls: "bg-red-100 text-red-800" },
-    refusee: { label: "Refusée", cls: "bg-red-100 text-red-800" },
+  const map: Record<string, { label: string; tone: "neutral" | "primary" | "success" | "danger" | "muted" }> = {
+    envoyee: { label: "Envoyée", tone: "neutral" },
+    interesse: { label: "Intéressé", tone: "success" },
+    souhaite_postuler: { label: "Souhaite postuler", tone: "primary" },
+    refuse: { label: "Refusé", tone: "danger" },
+    refusee: { label: "Refusée", tone: "danger" },
   };
-  const v = map[s ?? ""] ?? { label: s ?? "—", cls: "bg-muted" };
-  return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
+  const v = map[s ?? ""] ?? { label: s ?? "—", tone: "muted" as const };
+  return <DashBadge tone={v.tone}>{v.label}</DashBadge>;
 }
 
 function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?: boolean; onEdit?: (r: Row) => void }) {
   if (rows.length === 0) {
-    return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
+    return <DashEmptyState icon={Inbox} title="Aucune offre." />;
   }
   return (
-    <div className="border rounded-lg overflow-x-auto">
+    <div className={`${DASH_CARD} overflow-hidden`}>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="hover:bg-transparent [&>th]:text-xs [&>th]:font-medium [&>th]:text-muted-foreground">
             <TableHead>Date</TableHead>
             <TableHead>Client</TableHead>
             <TableHead>Adresse</TableHead>
@@ -322,9 +332,9 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="[&>tr]:border-border/70 [&>tr:hover]:bg-muted/50">
           {rows.map(r => (
-            <TableRow key={r.id} className={r.needs_agent_action ? "bg-amber-50" : ""}>
+            <TableRow key={r.id} className={r.needs_agent_action ? "bg-amber-500/5" : ""}>
               <TableCell className="whitespace-nowrap text-xs">
                 {format(new Date(r.created_at), "dd MMM HH:mm", { locale: fr })}
               </TableCell>
@@ -337,7 +347,7 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
               <TableCell className="text-sm">{r.pieces ?? "—"}</TableCell>
               <TableCell>{statutBadge(r.statut)}</TableCell>
               {showMissing && (
-                <TableCell className="text-xs text-amber-700 max-w-[220px]">
+                <TableCell className="text-xs text-amber-700 dark:text-amber-400 max-w-[220px]">
                   {r.missing_info ?? "—"}
                 </TableCell>
               )}
@@ -348,12 +358,12 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
               <TableCell>
                 <div className="flex items-center gap-1">
                   {onEdit && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(r)} title="Gérer l'offre">
+                    <Button size="icon" variant="ghost" className="h-7 w-7 rounded-full" onClick={() => onEdit(r)} title="Gérer l'offre">
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
                   {r.lien_annonce && (
-                    <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" title="Ouvrir l'annonce externe">
+                    <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="text-primary hover:underline" title="Ouvrir l'annonce externe">
                       <ExternalLink className="h-4 w-4" />
                     </a>
                   )}
@@ -363,6 +373,7 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
           ))}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
@@ -370,13 +381,14 @@ function OffresTable({ rows, showMissing, onEdit }: { rows: Row[]; showMissing?:
 
 function OffresGroupesTable({ groupes, showMissing, onEdit }: { groupes: Groupe[]; showMissing?: boolean; onEdit?: (groupe: Row[], offre: Row) => void }) {
   if (groupes.length === 0) {
-    return <div className="text-center text-sm text-muted-foreground py-8">Aucune offre.</div>;
+    return <DashEmptyState icon={Inbox} title="Aucune offre." />;
   }
   return (
-    <div className="border rounded-lg overflow-x-auto">
+    <div className={`${DASH_CARD} overflow-hidden`}>
+      <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="hover:bg-transparent [&>th]:text-xs [&>th]:font-medium [&>th]:text-muted-foreground">
             <TableHead>Dernier envoi</TableHead>
             <TableHead>Annonce</TableHead>
             <TableHead>Prix</TableHead>
@@ -386,20 +398,20 @@ function OffresGroupesTable({ groupes, showMissing, onEdit }: { groupes: Groupe[
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="[&>tr]:border-border/70 [&>tr:hover]:bg-muted/50">
           {groupes.map(g => {
             const ref = g.offres[0];
             if (!ref) return null;
             const missing = g.offres.find(o => o.needs_agent_action && o.missing_info)?.missing_info;
             return (
-              <TableRow key={g.cle} className={g.besoinAction ? "bg-amber-50" : ""}>
+              <TableRow key={g.cle} className={g.besoinAction ? "bg-amber-500/5" : ""}>
                 <TableCell className="whitespace-nowrap text-xs align-top">
                   {format(new Date(g.derniere), "dd MMM HH:mm", { locale: fr })}
                 </TableCell>
                 <TableCell className="text-sm align-top max-w-[260px]">
                   <div className="font-medium">{ref.adresse ?? "—"}</div>
                   {ref.lien_annonce && (
-                    <a href={ref.lien_annonce} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
+                    <a href={ref.lien_annonce} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline inline-flex items-center gap-1">
                       <ExternalLink className="h-3 w-3" /> Annonce
                     </a>
                   )}
@@ -421,11 +433,11 @@ function OffresGroupesTable({ groupes, showMissing, onEdit }: { groupes: Groupe[
                   </div>
                 </TableCell>
                 {showMissing && (
-                  <TableCell className="text-xs text-amber-700 max-w-[220px] align-top">{missing ?? "—"}</TableCell>
+                  <TableCell className="text-xs text-amber-700 dark:text-amber-400 max-w-[220px] align-top">{missing ?? "—"}</TableCell>
                 )}
                 <TableCell className="align-top">
                   {onEdit && (
-                    <Button size="sm" variant="outline" className="h-7" onClick={() => onEdit(g.offres, ref)} title="Gérer l'annonce pour tous les clients">
+                    <Button size="sm" variant="outline" className="h-8 rounded-full" onClick={() => onEdit(g.offres, ref)} title="Gérer l'annonce pour tous les clients">
                       <Pencil className="h-3.5 w-3.5 mr-1" /> Gérer
                     </Button>
                   )}
@@ -435,6 +447,7 @@ function OffresGroupesTable({ groupes, showMissing, onEdit }: { groupes: Groupe[
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }
