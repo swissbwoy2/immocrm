@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
 import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
+import { useClientParcours } from "@/hooks/useClientParcours";
 import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJob";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
@@ -63,6 +64,9 @@ const Messagerie = () => {
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const navigate = useNavigate();
+  // Parcours achat : les actions sur un bien se font dans « Biens proposés » (jamais de postulation locative).
+  const parcoursClient = useClientParcours();
+  const isAchat = parcoursClient === 'achat';
   const { markTypeAsRead } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -1385,6 +1389,18 @@ const Messagerie = () => {
   // Contextual action buttons based on offer/candidature status
   const OffreActions = ({ offre, visite, onAction }: { offre: any, visite?: any, onAction: (action: string, data?: any) => void }) => {
     if (!offre) return null;
+    // Parcours pas encore connu : aucune action, pour ne jamais proposer « Postuler » à un acheteur.
+    if (parcoursClient === null) return null;
+
+    if (isAchat || isBuyer) {
+      return (
+        <div className="mt-3">
+          <Button size="sm" className="w-full" onClick={() => navigate(`/client/biens-proposes?offre=${offre.id}`)}>
+            <Home className="h-4 w-4 mr-1" /> Voir ce bien et donner suite
+          </Button>
+        </div>
+      );
+    }
     
     // Check if this offer has been processed (action already taken)
     if (processedOffreIds.has(offre.id)) {

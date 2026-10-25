@@ -11,6 +11,8 @@ import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEv
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { useClientParcours } from '@/hooks/useClientParcours';
+import { renoncerApresVisiteAchat, souhaiteFaireOffreAchat } from '@/lib/achatOffreActions';
 
 const EventManagerCalendar = lazy(() => import('@/components/calendar/EventManagerCalendar').then(m => ({ default: m.EventManagerCalendar })));
 const ClientEventDetailDialog = lazy(() => import('@/components/calendar/ClientEventDetailDialog').then(m => ({ default: m.ClientEventDetailDialog })));
@@ -20,6 +22,10 @@ export default function ClientCalendrier() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
+  // Parcours achat : biens à l'achat (pas de loyer, pas de candidature).
+  const parcoursClient = useClientParcours();
+  const isAchat = parcoursClient === 'achat';
+  const pageOffres = isAchat ? '/client/biens-proposes' : '/client/offres-recues';
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
@@ -165,6 +171,18 @@ export default function ClientCalendrier() {
   };
 
   const accepterOffre = async (visite: any) => {
+    if (parcoursClient === null) return; // parcours pas encore connu : on n'agit pas au hasard
+    if (isAchat) {
+      try {
+        await souhaiteFaireOffreAchat(user!.id, { ...(visite.offres || {}), id: visite.offre_id }, { visites: [visite] });
+        toast({ title: "Souhait d'offre transmis", description: "Votre conseiller vous recontacte pour préparer l'offre d'achat." });
+        await loadData();
+      } catch (error) {
+        console.error('Error offre achat:', error);
+        toast({ title: 'Erreur', description: "Impossible d'enregistrer votre choix", variant: 'destructive' });
+      }
+      return;
+    }
     try {
       await supabase
         .from('offres')
@@ -227,6 +245,18 @@ export default function ClientCalendrier() {
   };
 
   const refuserOffre = async (visite: any) => {
+    if (parcoursClient === null) return;
+    if (isAchat) {
+      try {
+        await renoncerApresVisiteAchat(user!.id, { ...(visite.offres || {}), id: visite.offre_id }, [visite]);
+        toast({ title: 'Choix enregistré', description: 'Votre conseiller en est informé.' });
+        await loadData();
+      } catch (error) {
+        console.error('Error refus achat:', error);
+        toast({ title: 'Erreur', description: "Impossible d'enregistrer votre choix", variant: 'destructive' });
+      }
+      return;
+    }
     try {
       await supabase
         .from('offres')
@@ -326,8 +356,9 @@ export default function ClientCalendrier() {
             onMarquerEffectuee={marquerVisiteEffectuee}
             onAccepterOffre={accepterOffre}
             onRefuserOffre={refuserOffre}
-            onVoirOffre={() => navigate('/client/offres-recues')}
+            onVoirOffre={() => navigate(pageOffres)}
             onOpenDetail={handleOpenDetail}
+            isAchat={isAchat}
           />
         </div>
       </div>
@@ -337,7 +368,8 @@ export default function ClientCalendrier() {
         onOpenChange={setDetailOpen}
         visite={detailVisite}
         event={detailEvent}
-        onVoirOffre={() => navigate('/client/offres-recues')}
+        onVoirOffre={() => navigate(pageOffres)}
+        isAchat={isAchat}
       /></Suspense>}
 
       {/* Empty state when no visites */}
@@ -353,11 +385,11 @@ export default function ClientCalendrier() {
               Vous n'avez pas de visite programmée pour le moment.
             </p>
             <Button 
-              onClick={() => navigate('/client/offres-recues')}
+              onClick={() => navigate(pageOffres)}
               className="relative overflow-hidden group"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="relative">Voir mes offres</span>
+              <span className="relative">{isAchat ? 'Voir mes biens proposés' : 'Voir mes offres'}</span>
             </Button>
           </div>
         </div>

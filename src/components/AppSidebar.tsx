@@ -242,37 +242,37 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
       ];
 
     case 'client': {
+      // Acheteur : même ossature que le chercheur de logement (Au quotidien → Mon achat → Mon dossier → Aide).
       if (parcoursType === 'achat') {
         return [
           {
             label: 'Au quotidien',
             items: [
-              { name: 'Tableau de bord', icon: LayoutDashboard, path: '/client', notifKey: null },
+              { name: 'Accueil', icon: Home, path: '/client', notifKey: null },
+              { name: 'Biens proposés', icon: Inbox, path: '/client/biens-proposes', notifKey: 'new_offer' },
+              { name: 'Agenda', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
               { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
-              { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
               { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
-              { name: 'Aide & support', icon: LifeBuoy, path: '/support', notifKey: null },
             ],
           },
           {
             label: 'Mon achat',
             items: [
-              { name: 'Biens proposés', icon: Home, path: '/client/biens-proposes', notifKey: 'new_offer' },
-              { name: 'Biens sélectionnés', icon: Building2, path: '/client/biens-selectionnes', notifKey: null },
-              { name: 'Financement', icon: Banknote, path: '/client/financement', notifKey: null },
-              { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
+              { name: 'Mon financement', icon: Banknote, path: '/client/financement', notifKey: null },
+              { name: 'Carte des biens', icon: MapPin, path: '/client/carte', notifKey: null },
             ],
           },
           {
             label: 'Mon dossier',
             items: [
               { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
-              { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
+              { name: 'Mes documents', icon: Clipboard, path: '/client/documents', notifKey: null },
             ],
           },
           {
             label: 'Aide et paramètres',
             items: [
+              { name: 'Aide & support', icon: LifeBuoy, path: '/support', notifKey: null },
               { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
             ],
           },

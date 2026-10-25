@@ -647,6 +647,7 @@ export default function ClientDetail() {
       'vue': 'Vue',
       'interesse': 'Intéressé',
       'souhaite_postuler': 'Souhaite postuler',
+      'offre_envisagee': "Offre d'achat envisagée",
       'visite_planifiee': 'Visite planifiée',
       'visite_effectuee': 'Visite effectuée',
       'candidature_deposee': 'Candidature déposée',

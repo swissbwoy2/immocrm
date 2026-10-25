@@ -1,70 +1,98 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useClientParcours } from '@/hooks/useClientParcours';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
-import { PremiumPageShellV2 } from '@/components/dashboard/v2';
-import { Card } from '@/components/ui/card';
-import { Loader2, Banknote } from 'lucide-react';
 import { AchatFinancingCard } from '@/components/achat/AchatFinancingCard';
 import { AchatDocumentsChecklist } from '@/components/achat/AchatDocumentsChecklist';
 import { FinancingEditorDialog } from '@/components/admin/purchase/PurchaseEditors';
 import { CoAcheteursEditor } from '@/components/admin/purchase/CoAcheteursEditor';
+import { DASH_CARD, DashSection } from '@/components/client/dashboard/DashPrimitives';
 
+/** Financement du projet d'achat : capacité, fonds propres, co-acquéreurs et documents bancaires. */
 export default function FinancementAchat() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { loading, project, financing, computed, settings, documents, updateFinancing, updateProject } = usePurchaseProject({ userId: user?.id || null });
 
+  const parcours = useClientParcours();
+  const [userDocuments, setUserDocuments] = useState<any[]>([]);
+
   useEffect(() => {
     document.title = 'Financement | Immo-Rama';
   }, []);
 
-  if (loading) {
-    return <div className="py-16 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from('documents').select('id, type_document').eq('user_id', user.id)
+      .then(({ data }) => setUserDocuments(data || []));
+  }, [user?.id]);
+
+  // Même règle que le tableau de bord : documents du projet + documents déposés par le client, sans doublon.
+  const tousDocuments = useMemo(() => {
+    const byId = new Map<string, any>();
+    [...(documents || []), ...userDocuments].forEach((d: any) => { if (d?.id) byId.set(d.id, d); });
+    return Array.from(byId.values());
+  }, [documents, userDocuments]);
+
+  // Page réservée au parcours achat : un compte location retourne à son accueil.
+  if (parcours !== null && parcours !== 'achat') return <Navigate to="/client" replace />;
+
+  if (loading || parcours === null) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
+  // Acheteur sans projet d'achat activé : on explique au lieu de renvoyer à l'accueil (onglet jamais « mort »).
   if (!project) {
-    // Pas acheteur → renvoyer vers le dashboard client
-    navigate('/client', { replace: true });
-    return null;
+    return (
+      <div className="relative flex-1 overflow-auto">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">Mon financement</h1>
+          <div className={`${DASH_CARD} mt-5 p-6 text-center`}>
+            <p className="font-semibold text-foreground">Votre projet d'achat n'est pas encore activé</p>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+              Dès l'activation de votre mandat d'achat, vous retrouverez ici votre capacité d'achat, vos fonds propres et vos co-acquéreurs.
+            </p>
+            <Button className="mt-4 rounded-full" onClick={() => navigate('/client')}>Retour à l'accueil</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <PremiumPageShellV2>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Banknote className="h-6 w-6 text-primary" /> Financement de votre projet d'achat
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Capacité d'achat, fonds propres, statut bancaire et prochaines étapes.
-        </p>
-      </div>
+    <div className="relative flex-1 overflow-auto">
+      <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-6 md:px-8 md:py-8">
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">Mon financement</h1>
+            <p className="mt-1 text-[15px] text-muted-foreground">Capacité d'achat, fonds propres, statut bancaire et co-acquéreurs.</p>
+          </div>
+          <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
+        </header>
 
-      <div className="flex justify-end mb-4">
-        <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
-      </div>
+        <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
 
-      <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <CoAcheteursEditor
-          title="Co-acquéreur(s)"
-          value={(project as any).co_acheteurs || []}
-          onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
-        />
-        <AchatDocumentsChecklist
-          documents={documents}
-          onUpload={() => navigate('/client/documents')}
-        />
-      </div>
-
-      {!computed && (
-        <Card className="p-6 mt-4 border-primary/20">
-          <p className="text-sm text-muted-foreground">
-            Votre profil de financement sera complété par votre conseiller après vos premiers échanges.
+        {!computed && (
+          <p className={`${DASH_CARD} p-4 text-sm text-muted-foreground`}>
+            Votre profil de financement sera complété avec votre conseiller après vos premiers échanges.
           </p>
-        </Card>
-      )}
-    </PremiumPageShellV2>
+        )}
+
+        <DashSection title="Co-acquéreurs et documents bancaires">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <CoAcheteursEditor
+              title="Co-acquéreur(s)"
+              value={(project as any).co_acheteurs || []}
+              onSave={async (next) => { await updateProject({ co_acheteurs: next } as any); }}
+            />
+            <AchatDocumentsChecklist documents={tousDocuments} onUpload={() => navigate('/client/documents')} />
+          </div>
+        </DashSection>
+      </div>
+    </div>
   );
 }
