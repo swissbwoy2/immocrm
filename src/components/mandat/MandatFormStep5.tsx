@@ -87,10 +87,12 @@ export default function MandatFormStep5({ data, onChange }: Props) {
             </button>
           </DialogTrigger>
 
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-muted/40 border-border">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-foreground font-serif">
-                <UserPlus size={18} className="text-primary" />
+              <DialogTitle className="flex items-center gap-3 text-lg font-semibold text-foreground">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <UserPlus size={18} />
+                </span>
                 {dialogTitle}
               </DialogTitle>
             </DialogHeader>
@@ -228,7 +230,7 @@ export default function MandatFormStep5({ data, onChange }: Props) {
                 type="button"
                 onClick={handleAddCandidat}
                 disabled={!currentCandidat.prenom || !currentCandidat.nom || !currentCandidat.lien_avec_client}
-                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-primary text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
               >
                 <Plus size={16} /> Ajouter
               </button>

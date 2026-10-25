@@ -111,21 +111,21 @@ export function PublicHeader() {
                   ))}
                 </nav>
 
-                <div className="border-t pt-6 flex flex-col gap-3">
+                <div className="border-t border-border/70 pt-6 flex flex-col gap-3">
                   <Link to="/annonces/recherche" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start rounded-full">
                       <Search className="h-4 w-4 mr-2" />
                       Rechercher
                     </Button>
                   </Link>
                   <DeposerAnnonceButton
-                    className="w-full justify-start"
+                    className="w-full justify-start rounded-full"
                     size="default"
                     onNavigate={() => setIsOpen(false)}
                   />
                   {isAuthenticated && (
                     <Link to="/mes-messages-annonces" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full justify-start">
+                      <Button variant="outline" className="w-full justify-start rounded-full">
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Messagerie
                         {unreadAnnonces > 0 && (
@@ -135,7 +135,7 @@ export function PublicHeader() {
                     </Link>
                   )}
                   <Link to={isAuthenticated ? '/espace-annonceur' : '/connexion-annonceur'} onClick={() => setIsOpen(false)}>
-                    <Button className="w-full justify-start">
+                    <Button className="w-full justify-start rounded-full">
                       {isAuthenticated ? <Megaphone className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
                       {isAuthenticated ? 'Mon espace' : 'Connexion'}
                     </Button>
@@ -147,7 +147,7 @@ export function PublicHeader() {
 
                 </div>
 
-                <div className="border-t pt-6">
+                <div className="border-t border-border/70 pt-6">
                   <Link to="/" onClick={() => setIsOpen(false)} className="text-sm text-muted-foreground hover:text-foreground">
                     ← Retour au site principal
                   </Link>

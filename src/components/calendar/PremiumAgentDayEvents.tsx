@@ -582,7 +582,7 @@ export function PremiumAgentDayEvents({
                                       <AlertDialogCancel>Annuler</AlertDialogCancel>
                                       {isClesRemises && (
                                         <AlertDialogAction
-                                          className="bg-orange-500 text-white hover:bg-orange-600"
+                                          className="bg-amber-500 text-white hover:bg-amber-600"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             onDeleteVisite(visite.id, true);

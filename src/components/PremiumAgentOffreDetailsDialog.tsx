@@ -152,7 +152,7 @@ export function PremiumAgentOffreDetailsDialog({
   const InfoRow = ({ icon: Icon, label, value, href }: { icon: any; label: string; value: string | null | undefined; href?: string }) => {
     if (!value) return null;
     const content = (
-      <div className="flex items-start gap-3 py-2.5 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+      <div className="flex items-start gap-3 py-2.5 px-3 rounded-xl border border-border/70 bg-card hover:bg-muted/40 transition-colors">
         <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <span className="text-xs text-muted-foreground">{label}</span>
@@ -181,25 +181,21 @@ export function PremiumAgentOffreDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
         {/* Premium Header */}
-        <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 p-6 border-b border-border/50">
-          {/* Floating particles */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-4 right-10 w-20 h-20 bg-primary/10 rounded-full blur-2xl animate-pulse" />
-            <div className="absolute bottom-4 left-10 w-16 h-16 bg-accent/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
-          </div>
-          
+        <div className="relative p-6 border-b border-border/70">
           <DialogHeader className="relative">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0 space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <MapPin className="h-4 w-4" />
+                  </span>
                   <span>Offre envoyée</span>
                 </div>
-                <DialogTitle className="text-xl font-bold line-clamp-2 leading-tight">
+                <DialogTitle className="text-lg font-semibold line-clamp-2 leading-tight">
                   <AddressLink 
                     address={offre.adresse}
                     showIcon={false}
-                    className="text-xl font-bold"
+                    className="text-lg font-semibold"
                   />
                 </DialogTitle>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -216,7 +212,7 @@ export function PremiumAgentOffreDetailsDialog({
               </div>
               <Badge 
                 className={cn(
-                  "shrink-0 font-semibold shadow-lg transition-all",
+                  "shrink-0 rounded-full font-semibold",
                   statusConfig.bgColor,
                   statusConfig.color,
                   statusConfig.borderColor,
@@ -233,12 +229,12 @@ export function PremiumAgentOffreDetailsDialog({
         <ScrollArea className="max-h-[calc(90vh-220px)]">
           <div className="p-6 space-y-6">
             {/* Prix Premium */}
-            <div className="relative overflow-hidden p-5 bg-gradient-to-br from-primary/15 via-primary/10 to-accent/10 rounded-2xl border border-primary/20">
+            <div className="relative overflow-hidden p-5 bg-muted/40 rounded-2xl border border-border/70">
               <div className="absolute top-2 right-2">
                 <Sparkles className="h-5 w-5 text-primary/40" />
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <div className="text-3xl font-bold text-primary">
                   CHF {Number(offre.prix).toLocaleString('fr-CH')}
                 </div>
                 <div className="text-sm text-muted-foreground mt-1">par mois</div>
@@ -252,7 +248,7 @@ export function PremiumAgentOffreDetailsDialog({
                   <TrendingUp className="h-4 w-4 text-primary" />
                   Progression
                 </h4>
-                <div className="flex items-center gap-1 p-3 bg-muted/30 rounded-xl">
+                <div className="flex items-center gap-1 p-3 rounded-xl border border-border/70 bg-card">
                   {TIMELINE_STEPS.map((step, i) => (
                     <div key={step.step} className="flex items-center flex-1">
                       <div className="relative flex-1">
@@ -260,7 +256,7 @@ export function PremiumAgentOffreDetailsDialog({
                           className={cn(
                             "h-2 rounded-full transition-all duration-500",
                             currentStep >= step.step 
-                              ? "bg-gradient-to-r from-primary to-primary/80" 
+                              ? "bg-primary" 
                               : "bg-muted"
                           )}
                         />
@@ -284,7 +280,7 @@ export function PremiumAgentOffreDetailsDialog({
                   <FileText className="h-4 w-4 text-primary" />
                   Workflow Candidature
                 </h4>
-                <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                <div className="p-4 bg-card rounded-2xl border border-border/70">
                   <CandidatureWorkflowInteractive
                     currentStatut={candidature.statut}
                     candidature={candidature}
@@ -302,20 +298,20 @@ export function PremiumAgentOffreDetailsDialog({
                 Caractéristiques
               </h4>
               <div className="grid grid-cols-3 gap-3">
-                <div className="group p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/10 transition-all">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                <div className="p-4 rounded-xl bg-card border border-border/70">
+                  <div className="text-2xl font-bold text-foreground">
                     {offre.pieces || '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">pièces</div>
                 </div>
-                <div className="group p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 hover:shadow-lg hover:shadow-green-500/10 transition-all">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 group-hover:scale-110 transition-transform">
+                <div className="p-4 rounded-xl bg-card border border-border/70">
+                  <div className="text-2xl font-bold text-foreground">
                     {offre.surface || '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">m²</div>
                 </div>
-                <div className="group p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 hover:shadow-lg hover:shadow-purple-500/10 transition-all">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                <div className="p-4 rounded-xl bg-card border border-border/70">
+                  <div className="text-2xl font-bold text-foreground">
                     {offre.etage || '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">étage</div>
@@ -345,12 +341,12 @@ export function PremiumAgentOffreDetailsDialog({
                     )}
                   </h4>
                   <div className={cn(
-                    "p-4 rounded-xl border transition-all",
+                    "p-4 rounded-2xl border transition-all",
                     visite.statut === 'effectuee' 
-                      ? "bg-green-500/10 border-green-500/30" 
+                      ? "bg-emerald-500/10 border-emerald-500/30" 
                       : visite.statut === 'confirmee'
-                        ? "bg-blue-500/10 border-blue-500/30"
-                        : "bg-muted/30 border-border/50"
+                        ? "bg-primary/10 border-primary/30"
+                        : "bg-card border-border/70"
                   )}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -359,7 +355,7 @@ export function PremiumAgentOffreDetailsDialog({
                           {format(new Date(visite.date_visite), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                         </span>
                       </div>
-                      <Badge variant={visite.statut === 'effectuee' ? 'default' : 'secondary'}>
+                      <Badge variant={visite.statut === 'effectuee' ? 'default' : 'secondary'} className="rounded-full">
                         {visite.statut === 'effectuee' ? 'Effectuée' : visite.statut === 'confirmee' ? 'Confirmée' : 'Planifiée'}
                       </Badge>
                     </div>
@@ -369,7 +365,7 @@ export function PremiumAgentOffreDetailsDialog({
                       <VisitLiveButton
                         visiteId={visite.id}
                         dateVisite={visite.date_visite}
-                        className="w-full"
+                        className="w-full rounded-full"
                       />
                     </div>
 
@@ -385,7 +381,7 @@ export function PremiumAgentOffreDetailsDialog({
                               if (!info) return null;
                               const Icon = info.icon;
                               return (
-                                <Badge className={cn(info.bg, info.color, "border-0")}>
+                                <Badge className={cn(info.bg, info.color, "border-0 rounded-full")}>
                                   <Icon className="h-3 w-3 mr-1" />
                                   {info.label}
                                 </Badge>
@@ -393,7 +389,7 @@ export function PremiumAgentOffreDetailsDialog({
                             })()}
                           </div>
                         )}
-                        <div className="p-3 bg-background rounded-lg">
+                        <div className="p-3 bg-background rounded-xl border border-border/70">
                           <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                             {visite.feedback_agent}
                           </p>
@@ -441,13 +437,13 @@ export function PremiumAgentOffreDetailsDialog({
                     </Badge>
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+                    <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
                       <div className="text-xs text-muted-foreground">Commission totale</div>
                       <div className="text-xl font-bold text-primary">
                         CHF {Number(transaction.commission_totale).toLocaleString('fr-CH')}
                       </div>
                     </div>
-                    <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                    <div className="p-4 rounded-xl bg-card border border-border/70">
                       <div className="text-xs text-muted-foreground">Part agent</div>
                       <div className="text-xl font-bold">
                         CHF {Number(transaction.part_agent).toLocaleString('fr-CH')}
@@ -484,7 +480,7 @@ export function PremiumAgentOffreDetailsDialog({
                     <InfoRow icon={KeyRound} label="Code immeuble" value={offre.code_immeuble} />
                     
                     {offre.concierge_nom && (
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-2">
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/70 space-y-2">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <User className="h-3 w-3" />
                           Concierge
@@ -503,7 +499,7 @@ export function PremiumAgentOffreDetailsDialog({
                     )}
 
                     {offre.locataire_nom && (
-                      <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-2">
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/70 space-y-2">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <User className="h-3 w-3" />
                           Locataire actuel
@@ -534,7 +530,7 @@ export function PremiumAgentOffreDetailsDialog({
                     <MessageSquare className="h-4 w-4 text-primary" />
                     Vos commentaires
                   </h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap p-4 bg-muted/30 rounded-xl border border-border/50">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap p-4 bg-muted/40 rounded-xl border border-border/70">
                     {offre.commentaires}
                   </p>
                 </div>
@@ -555,12 +551,12 @@ export function PremiumAgentOffreDetailsDialog({
         </ScrollArea>
 
         {/* Footer Actions */}
-        <DialogFooter className="p-4 bg-muted/30 border-t border-border/50">
+        <DialogFooter className="p-4 bg-muted/40 border-t border-border/70">
           <div className="flex gap-2 w-full">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
+              className="flex-1 rounded-full"
             >
               Fermer
             </Button>
@@ -568,7 +564,7 @@ export function PremiumAgentOffreDetailsDialog({
               <Button
                 variant="outline"
                 onClick={() => { onOpenChange(false); navigate(`${espace}/clients/${offre.client_id}`); }}
-                className="flex-1"
+                className="flex-1 rounded-full"
               >
                 {estPrixDAchat(offre.prix) ? "Dossier d'achat du client" : 'Fiche client'}
               </Button>
@@ -576,7 +572,7 @@ export function PremiumAgentOffreDetailsDialog({
             {onResend && (
               <Button
                 onClick={onResend}
-                className="flex-1 gap-2"
+                className="flex-1 gap-2 rounded-full"
               >
                 <Send className="h-4 w-4" />
                 Renvoyer

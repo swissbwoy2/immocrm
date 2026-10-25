@@ -489,15 +489,14 @@ export function RentalApplicationFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden">
         {/* Premium Header */}
-        <div className="relative bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 border-b">
-          <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+        <div className="relative p-6 border-b border-border/70">
           <DialogHeader className="relative">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg">
-                <FileText className="h-6 w-6" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <FileText className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold">
+                <DialogTitle className="text-lg font-semibold">
                   Demande de Location Habitation
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -505,7 +504,7 @@ export function RentalApplicationFormDialog({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="absolute top-0 right-0 bg-background/80">
+            <Badge variant="outline" className="absolute top-0 right-0 rounded-full bg-background">
               <Sparkles className="h-3 w-3 mr-1" />
               Pré-rempli automatiquement
             </Badge>
@@ -513,16 +512,16 @@ export function RentalApplicationFormDialog({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 p-2 bg-muted/30 border-b overflow-x-auto">
+        <div className="flex gap-1 p-2 bg-muted/40 border-b border-border/70 overflow-x-auto">
           {tabs.map((tab) => (
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 whitespace-nowrap ${
+              className={`flex items-center gap-2 whitespace-nowrap rounded-full ${
                 activeTab === tab.id 
-                  ? 'bg-primary text-primary-foreground shadow-md' 
+                  ? 'bg-primary text-primary-foreground' 
                   : 'hover:bg-muted'
               }`}
             >
@@ -537,10 +536,12 @@ export function RentalApplicationFormDialog({
             {/* Bien Tab */}
             {activeTab === 'bien' && (
               <div className="space-y-6 animate-in fade-in-50">
-                <Card className="border-primary/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Home className="h-5 w-5 text-primary" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Home className="h-4 w-4" />
+                      </span>
                       Informations du Bien
                     </CardTitle>
                   </CardHeader>
@@ -612,10 +613,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-green-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <DollarSign className="h-5 w-5 text-green-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <DollarSign className="h-4 w-4" />
+                      </span>
                       Loyer et Charges
                     </CardTitle>
                   </CardHeader>
@@ -677,10 +680,12 @@ export function RentalApplicationFormDialog({
             {/* Locataire Tab */}
             {activeTab === 'locataire' && (
               <div className="space-y-6 animate-in fade-in-50">
-                <Card className="border-blue-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <User className="h-5 w-5 text-blue-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <User className="h-4 w-4" />
+                      </span>
                       Locataire Principal
                     </CardTitle>
                   </CardHeader>
@@ -745,10 +750,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-muted">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                      </span>
                       Adresse Actuelle
                     </CardTitle>
                   </CardHeader>
@@ -770,10 +777,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-orange-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Building2 className="h-5 w-5 text-orange-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Building2 className="h-4 w-4" />
+                      </span>
                       Gérance / Propriétaire Actuel
                     </CardTitle>
                   </CardHeader>
@@ -822,10 +831,12 @@ export function RentalApplicationFormDialog({
             {/* Conjoint Tab */}
             {activeTab === 'conjoint' && (
               <div className="space-y-6 animate-in fade-in-50">
-                <Card className="border-purple-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Users className="h-5 w-5 text-purple-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Users className="h-4 w-4" />
+                      </span>
                       Conjoint / Co-locataire
                     </CardTitle>
                   </CardHeader>
@@ -893,10 +904,12 @@ export function RentalApplicationFormDialog({
             {/* Emploi Tab */}
             {activeTab === 'emploi' && (
               <div className="space-y-6 animate-in fade-in-50">
-                <Card className="border-emerald-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Briefcase className="h-5 w-5 text-emerald-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Briefcase className="h-4 w-4" />
+                      </span>
                       Situation Professionnelle
                     </CardTitle>
                   </CardHeader>
@@ -933,10 +946,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-muted">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Phone className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <Phone className="h-4 w-4" />
+                      </span>
                       Coordonnées
                     </CardTitle>
                   </CardHeader>
@@ -978,10 +993,12 @@ export function RentalApplicationFormDialog({
             {/* Questions Tab */}
             {activeTab === 'questions' && (
               <div className="space-y-6 animate-in fade-in-50">
-                <Card className="border-red-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <AlertCircle className="h-5 w-5 text-red-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                      </span>
                       Questions Importantes
                     </CardTitle>
                   </CardHeader>
@@ -1081,10 +1098,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-muted">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Home className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <Home className="h-4 w-4" />
+                      </span>
                       Occupation du Logement
                     </CardTitle>
                   </CardHeader>
@@ -1144,10 +1163,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-muted">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <PawPrint className="h-5 w-5 text-muted-foreground" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <PawPrint className="h-4 w-4" />
+                      </span>
                       Animaux, Véhicules, Instruments
                     </CardTitle>
                   </CardHeader>
@@ -1263,9 +1284,9 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-muted">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-lg">Remarques / Références</CardTitle>
+                    <CardTitle className="text-base font-semibold">Remarques / Références</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Textarea
@@ -1282,10 +1303,12 @@ export function RentalApplicationFormDialog({
             {/* Signature Tab */}
             {activeTab === 'signature' && (
               <div className="space-y-6 animate-in fade-in-50">
-                <Card className="border-primary/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Pen className="h-5 w-5 text-primary" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Pen className="h-4 w-4" />
+                      </span>
                       Lieu et Date de Signature
                     </CardTitle>
                   </CardHeader>
@@ -1309,10 +1332,12 @@ export function RentalApplicationFormDialog({
                   </CardContent>
                 </Card>
 
-                <Card className="border-blue-500/20">
+                <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                   <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <User className="h-5 w-5 text-blue-500" />
+                    <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <User className="h-4 w-4" />
+                      </span>
                       Signature du Locataire Principal
                     </CardTitle>
                   </CardHeader>
@@ -1325,10 +1350,12 @@ export function RentalApplicationFormDialog({
                 </Card>
 
                 {(formData.conjoint_nom || formData.conjoint_prenom) && (
-                  <Card className="border-purple-500/20">
+                  <Card className="rounded-2xl border-border/70 bg-card shadow-sm">
                     <CardHeader className="pb-4">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Users className="h-5 w-5 text-purple-500" />
+                      <CardTitle className="flex items-center gap-3 text-base font-semibold">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <Users className="h-4 w-4" />
+                        </span>
                         Signature du Conjoint / Co-locataire
                       </CardTitle>
                     </CardHeader>
@@ -1346,20 +1373,20 @@ export function RentalApplicationFormDialog({
         </ScrollArea>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between gap-4 p-4 border-t bg-muted/30">
+        <div className="flex items-center justify-between gap-4 p-4 border-t border-border/70 bg-muted/40">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle2 className="h-4 w-4 text-green-500" />
             <span>Données pré-remplies depuis le profil client</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="rounded-full" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>
             <Button
               variant="outline"
               onClick={saveToDocuments}
               disabled={isSaving}
-              className="gap-2"
+              className="gap-2 rounded-full"
             >
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1371,7 +1398,7 @@ export function RentalApplicationFormDialog({
             <Button
               onClick={generatePDF}
               disabled={isGenerating}
-              className="gap-2 bg-gradient-to-r from-primary to-primary/80"
+              className="gap-2 rounded-full"
             >
               {isGenerating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
