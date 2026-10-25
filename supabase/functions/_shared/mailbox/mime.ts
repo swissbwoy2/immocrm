@@ -305,9 +305,33 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", zwnj: "", zwj: "", shy: "",
+  hellip: "…", ndash: "–", mdash: "—", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+  laquo: "«", raquo: "»", euro: "€", copy: "©", reg: "®", trade: "™", middot: "·", bull: "•",
+};
+
+/** Décode les entités HTML restantes et retire les caractères invisibles (aperçus lisibles). */
+export function decodeEntities(s: string): string {
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_m, h) => {
+      const n = parseInt(h, 16);
+      return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : "";
+    })
+    .replace(/&#(\d+);/g, (_m, d) => {
+      const n = parseInt(d, 10);
+      return n > 0 && n < 0x110000 ? String.fromCodePoint(n) : "";
+    })
+    .replace(/&([a-z]+);/gi, (m, name) => {
+      const v = NAMED_ENTITIES[name.toLowerCase()];
+      return v === undefined ? m : v;
+    })
+    .replace(/[​-‍⁠﻿­͏]/g, "");
+}
+
 export function makeSnippet(text: string | null, html: string | null): string {
   const base = text && text.trim() ? text : html ? htmlToText(html) : "";
-  return base.replace(/\s+/g, " ").trim().slice(0, 220);
+  return decodeEntities(base).replace(/\s+/g, " ").trim().slice(0, 220);
 }
 
 /** Supprime les caractères refusés par Postgres (NUL). */
