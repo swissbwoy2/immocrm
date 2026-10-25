@@ -66,7 +66,7 @@ function PremiumPersonChecklist({
   const isComplete = completedCount === totalRequired;
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/70 p-3 sm:p-4">
+    <div className="imr-lg-glass space-y-3 rounded-2xl p-3 sm:p-4">
       {/* En-tête personne */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">

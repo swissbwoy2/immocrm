@@ -328,7 +328,7 @@ export function PremiumFeedbackCard({
             <Button
               onClick={handlePostuler}
               disabled={posting}
-              className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              className="flex-1"
             >
               {posting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               Déposer ma candidature

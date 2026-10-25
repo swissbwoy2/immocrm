@@ -43,7 +43,7 @@ export function MesCreditsCard() {
       <h3 className="mb-3 text-base font-semibold text-foreground">Mes crédits</h3>
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
         {tiles.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background p-3">
+          <div key={label} className="imr-lg-glass flex items-center gap-3 rounded-2xl p-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Icon className="h-[18px] w-[18px]" />
             </span>

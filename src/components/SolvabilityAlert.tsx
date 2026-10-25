@@ -180,7 +180,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             { icon: Target, label: 'Budget demandé', value: budgetDemande, cls: 'text-foreground' },
             { icon: Calculator, label: `Budget possible${solvabilitySource === 'garant' ? ' (garant)' : ''}`, value: budgetPossible, cls: possibleCls },
           ] as const).map(({ icon: Icon, label, value, cls }) => (
-            <div key={label} className="rounded-xl border border-border/70 p-3">
+            <div key={label} className="imr-lg-glass rounded-2xl p-3">
               <div className="mb-1 flex items-center gap-1.5">
                 <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <p className="truncate text-xs text-muted-foreground">{label}</p>
@@ -433,7 +433,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             {onAddCandidate && (
               <Button 
                 size="sm" 
-                className="w-full bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300"
+                className="w-full"
                 onClick={onAddCandidate}
               >
                 <UserPlus className="w-3 h-3 mr-1" />
@@ -736,7 +736,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
           <Button 
             onClick={onAddCandidate} 
             size="lg"
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300 group/btn"
+            className="w-full group/btn"
           >
             <UserPlus className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
             Ajouter un candidat au dossier

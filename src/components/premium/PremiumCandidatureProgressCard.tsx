@@ -116,8 +116,8 @@ export function PremiumCandidatureProgressCard({
   return (
     <div 
       className={cn(
-        'cursor-pointer rounded-xl border border-border/70 bg-card p-3 sm:p-4',
-        'transition-colors duration-150 hover:bg-muted/40 active:scale-[0.99] group/card',
+        'imr-lg-card cursor-pointer rounded-[22px] p-3 sm:p-4',
+        'transition-transform duration-150 active:scale-[0.99] group/card',
         className
       )}
       onClick={onClick}

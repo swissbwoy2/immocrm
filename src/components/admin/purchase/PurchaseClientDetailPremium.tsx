@@ -356,7 +356,7 @@ export function PurchaseClientDetailPremium({
                 </AlertDialogContent>
               </AlertDialog>
               <Button
-                className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all duration-300"
+                className="w-full sm:w-auto group"
                 onClick={onEditOpen}
               >
                 <Edit className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />

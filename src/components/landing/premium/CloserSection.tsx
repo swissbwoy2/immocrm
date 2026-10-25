@@ -32,7 +32,7 @@ export function CloserSection() {
           </div>
 
           {/* CTA principal */}
-          <Button asChild size="lg" className="group shadow-lg shadow-primary/20 bg-gradient-to-r from-primary to-primary/90 text-base md:text-lg px-8 md:px-12 py-6">
+          <Button asChild size="lg" className="group text-base md:text-lg px-8 md:px-12 py-6">
             <Link to="/nouveau-mandat">
               <Rocket className="h-5 w-5 mr-2" />
               Activer ma recherche maintenant
