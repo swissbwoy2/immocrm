@@ -403,12 +403,12 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
             </h4>
 
             <div className="space-y-2">
-              <Label htmlFor="commentaires">Notes internes</Label>
+              <Label htmlFor="commentaires">Note de suivi (visible par le client)</Label>
               <Textarea
                 id="commentaires"
                 value={formData.commentaires}
                 onChange={(e) => setFormData({ ...formData, commentaires: e.target.value })}
-                placeholder="Notes et commentaires pour le suivi..."
+                placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente."
                 rows={3}
               />
             </div>
