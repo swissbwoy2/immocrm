@@ -351,26 +351,27 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           },
         ];
       }
-      // Default: location / relocation
+      // Default: location / relocation — même ordre que la barre du bas (Accueil, Offres, Candidatures, Agenda).
       return [
         {
           label: 'Au quotidien',
           items: [
-            { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
+            { name: 'Accueil', icon: Home, path: '/client', notifKey: null },
+            { name: 'Offres reçues', icon: Inbox, path: '/client/offres-recues', notifKey: 'new_offer' },
+            { name: 'Mes candidatures', icon: FileCheck, path: '/client/mes-candidatures', notifKey: null },
+            { name: 'Agenda', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
             { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
-            { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
             { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
           ],
         },
         {
           label: 'Mon logement',
           items: [
-            { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
             { name: 'Visite effectuée par votre agent 📷', icon: CheckCircle2, path: '/client/videos-recues', notifKey: null },
-            { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
             { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
-            { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
             { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
+            { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
+            { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
           ],
         },
         {
@@ -378,8 +379,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
           items: [
             { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
             { name: 'Mon contrat', icon: FileText, path: '/client/mon-contrat', notifKey: null },
-            { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
-            { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
+            { name: 'Mes documents', icon: Clipboard, path: '/client/documents', notifKey: null },
             // Parcours mixte (chercheur + reloueur) : accès à son dossier de relocation.
             ...(parcoursType === 'mixte'
               ? [{ name: 'Mon logement à relouer', icon: Home, path: '/dashboard/relouer', notifKey: null }]
@@ -389,6 +389,7 @@ const getMenuForRole = (role: string, parcoursType?: string | null): MenuSection
         {
           label: 'Aide et paramètres',
           items: [
+            { name: 'Aide & support', icon: LifeBuoy, path: '/support', notifKey: null },
             { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
           ],
         },
@@ -607,10 +608,14 @@ function NavigationSection({ section, role, collapsed, searching, getNotificatio
                 ) : (
                   <NavLink to={item.path} end={isRootPath(item.path)}
                     onMouseEnter={() => prefetchSidebarRoute(item.path)} onFocus={() => prefetchSidebarRoute(item.path)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden"
-                    activeClassName="bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active" onClick={handleNavClick}>
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />
-                    <item.icon className="w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105" />
+                    className={role === 'client'
+                      ? 'flex min-h-[44px] items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/80 transition-colors duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground group/item relative'
+                      : 'flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 hover:bg-sidebar-accent/60 hover:translate-x-0.5 group/item relative overflow-hidden'}
+                    activeClassName={role === 'client'
+                      ? 'bg-sidebar-primary/10 !text-sidebar-primary font-semibold'
+                      : 'bg-sidebar-primary/12 text-sidebar-primary font-medium sidebar-item-active'} onClick={handleNavClick}>
+                    {role !== 'client' && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-sidebar-primary opacity-0 transition-opacity duration-150 sidebar-active-bar" />}
+                    <item.icon className={role === 'client' ? 'w-[18px] h-[18px] flex-shrink-0' : 'w-4 h-4 flex-shrink-0 transition-transform duration-150 group-hover/item:scale-105'} />
                     <span className="truncate flex-1 text-sm">{item.name}</span>
                     {showDraftIndicator && <span className="text-orange-500 text-xs animate-pulse" title="Brouillons sauvegardés"><FileEdit className="w-3 h-3" /></span>}
                     {notifCount > 0 && <NotificationBadge count={notifCount} />}
@@ -638,12 +643,20 @@ export function AppSidebar() {
   const [hasDrafts, setHasDrafts] = useState(false);
   const [search, setSearch] = useState('');
 
+  // Thème client (accent vert, menu clair) : variables CSS limitées à l'espace client.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (userRole === 'client') root.setAttribute('data-imr-role', 'client');
+    else root.removeAttribute('data-imr-role');
+    return () => { root.removeAttribute('data-imr-role'); };
+  }, [userRole]);
+
   useEffect(() => {
     if (!userRole) return;
     const common: Record<string, string[]> = {
       admin: ['/admin', '/admin/messagerie', '/admin/calendrier'],
       agent: ['/agent', '/agent/messagerie', '/agent/calendrier'],
-      client: ['/client', '/client/offres-recues', '/client/calendrier'],
+      client: ['/client', '/client/offres-recues', '/client/mes-candidatures', '/client/calendrier'],
       candidat: ['/candidat', '/candidat/candidatures'],
     };
     const paths = common[userRole] ?? [`/${userRole}`];
@@ -723,6 +736,14 @@ export function AppSidebar() {
     if (userRole === 'admin') return base;
     const portail: MenuItem = { name: "Portail d'annonces", icon: Globe, path: '/annonces', notifKey: null };
     const espaceAnnonceur: MenuItem = { name: 'Espace annonceur', icon: Megaphone, path: '/espace-annonceur', notifKey: null };
+    // Client chercheur : les liens du portail rejoignent « Mon logement » pour garder
+    // le haut du menu aligné sur la barre du bas.
+    const logementIdx = userRole === 'client' ? base.findIndex((sec) => sec.label === 'Mon logement') : -1;
+    if (logementIdx >= 0) {
+      return base.map((sec, idx) => idx === logementIdx
+        ? { ...sec, items: [...sec.items, portail, espaceAnnonceur] }
+        : sec);
+    }
     const [first, ...rest] = base;
     const items = [...first.items];
     if (!items.some((i) => i.path === '/annonces')) {
