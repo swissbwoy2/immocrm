@@ -1,98 +1,36 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bell, Check, Trash2, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bell, Check, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { getCorrectNotificationLink } from '@/lib/notificationLinks';
+import { DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
+import { AdminNotificationCard } from '@/components/admin/notifications/AdminNotificationCard';
+import {
+  GROUPES_JOUR, THEMES, estATraiter, getNotificationTypeName, groupeJour, themeOf,
+  type GroupeJour, type Theme,
+} from '@/components/admin/notifications/notificationsModel';
 
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case 'new_client_activated': return '👤';
-    case 'client_assigned': return '🤝';
-    case 'client_removed': return '👋';
-    case 'new_message': return '💬';
-    case 'new_offer': case 'new_offer_admin': return '🏠';
-    case 'new_visit': case 'new_visit_admin': return '📅';
-    case 'visit_reminder': return '⏰';
-    case 'visit_confirmed': case 'visit_confirmed_admin': return '✅';
-    case 'visit_refused': case 'visit_refused_admin': return '❌';
-    case 'visit_delegated': return '🔄';
-    case 'activation_request': return '🆕';
-    case 'nouvelle_demande_mandat': return '📋';
-    case 'document_request': return '📄';
-    case 'dossier_complete': return '✅';
-    case 'badge_earned': return '🏆';
-    case 'coagent_added': case 'coagent_assignment': return '👥';
-    case 'new_candidature': case 'candidature_deposee': return '📝';
-    case 'candidature_acceptee': case 'candidature_acceptee_admin': return '🎉';
-    case 'candidature_refusee': case 'candidature_refusee_admin': return '❌';
-    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': return '✍️';
-    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return '⏳';
-    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return '📨';
-    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': return '📅';
-    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return '✅';
-    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return '🏠';
-    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return '🔑';
-    case 'signature_reminder': return '🔔';
-    case 'bail_conclu': return '📋';
-    case 'date_signature_choisie': return '📅';
-    default: return '🔔';
-  }
-};
+type Filtre = 'all' | 'unread' | 'urgent';
 
-const getNotificationTypeName = (type: string) => {
-  switch (type) {
-    case 'new_client_activated': return 'Nouveau client';
-    case 'client_assigned': return 'Client assigné';
-    case 'client_removed': return 'Client retiré';
-    case 'new_message': return 'Message';
-    case 'new_offer': case 'new_offer_admin': return 'Offre';
-    case 'new_visit': case 'new_visit_admin': return 'Visite';
-    case 'visit_reminder': return 'Rappel visite';
-    case 'visit_confirmed': case 'visit_confirmed_admin': return 'Visite confirmée';
-    case 'visit_refused': case 'visit_refused_admin': return 'Visite refusée';
-    case 'visit_delegated': return 'Visite déléguée';
-    case 'activation_request': return 'Demande activation';
-    case 'nouvelle_demande_mandat': return 'Demande mandat';
-    case 'document_request': return 'Demande document';
-    case 'dossier_complete': return 'Dossier complet';
-    case 'badge_earned': return 'Badge';
-    case 'coagent_added': case 'coagent_assignment': return 'Co-agent';
-    case 'new_candidature': case 'candidature_deposee': return 'Candidature';
-    case 'candidature_acceptee': case 'candidature_acceptee_admin': return 'Candidature acceptée';
-    case 'candidature_refusee': case 'candidature_refusee_admin': return 'Candidature refusée';
-    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': return 'Bail conclu';
-    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return 'Attente bail';
-    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return 'Bail reçu';
-    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': return 'Signature planifiée';
-    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return 'Bail signé';
-    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return 'État des lieux';
-    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return 'Clés remises';
-    case 'signature_reminder': return 'Rappel signature';
-    case 'bail_conclu': return 'Bail conclu';
-    case 'date_signature_choisie': return 'Date signature';
-    default: return 'Autre';
-  }
-};
-
+/**
+ * Notifications de l'admin — « qu'est-ce que je dois faire maintenant ? » :
+ * en tête, les notifications non lues qui attendent une action ; ensuite le reste, groupé par jour.
+ * Filtres Toutes / Non lues / À traiter, filtre par thème et recherche ; les compteurs suivent.
+ */
 export default function AdminNotifications() {
-  const { notifications, counts, loading, recordClick, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const { notifications, counts, loading, recordClick, markAsRead, markAllAsRead, deleteNotification, refresh } = useNotifications();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
-
-  const filteredNotifications = filter === 'unread' 
-    ? notifications.filter(n => !n.read)
-    : notifications;
+  const [filter, setFilter] = useState<Filtre>('all');
+  const [theme, setTheme] = useState<'all' | Theme>('all');
+  const [q, setQ] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleNotificationClick = (notification: Notification) => {
     void recordClick(notification.id);
-    
+
     // Get the correct link using centralized logic
     const url = getCorrectNotificationLink(
       notification.type,
@@ -100,134 +38,173 @@ export default function AdminNotifications() {
       'admin',
       notification.metadata as Record<string, string> | null
     );
-    
+
     navigate(url);
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try { await refresh(); } finally { setRefreshing(false); }
+  };
+
+  // Thème + recherche : s'appliquent à tous les filtres, les compteurs suivent.
+  const base = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return notifications.filter((n) => {
+      if (theme !== 'all' && themeOf(n.type) !== theme) return false;
+      if (!needle) return true;
+      return `${n.title} ${n.message ?? ''} ${getNotificationTypeName(n.type)}`.toLowerCase().includes(needle);
+    });
+  }, [notifications, theme, q]);
+
+  const filtreCounts: Record<Filtre, number> = {
+    all: base.length,
+    unread: base.filter((n) => !n.read).length,
+    urgent: base.filter((n) => estATraiter(n)).length,
+  };
+
+  const themeCounts = useMemo(() => {
+    const m = new Map<Theme, number>();
+    for (const n of notifications) m.set(themeOf(n.type), (m.get(themeOf(n.type)) ?? 0) + 1);
+    return m;
+  }, [notifications]);
+
+  const visibles = useMemo(() => base.filter((n) =>
+    filter === 'unread' ? !n.read : filter === 'urgent' ? estATraiter(n) : true,
+  ), [base, filter]);
+
+  // « À traiter maintenant » = non lues qui attendent une action ; le reste par jour.
+  const aTraiter = visibles.filter((n) => !n.read && estATraiter(n));
+  const reste = visibles.filter((n) => !(!n.read && estATraiter(n)));
+  const parJour = useMemo(() => {
+    const m: Record<GroupeJour, Notification[]> = { aujourdhui: [], hier: [], semaine: [], ancien: [] };
+    const now = new Date();
+    for (const n of reste) m[groupeJour(n.created_at, now)].push(n);
+    return m;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibles]);
+
+  const nbATraiterTotal = notifications.filter((n) => !n.read && estATraiter(n)).length;
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-48" />
-          <div className="h-64 bg-muted rounded" />
+      <DashPage>
+        <div role="status" aria-label="Chargement des notifications">
+          <div className="h-8 w-44 rounded-full bg-muted/60" />
+          <div className="mt-6 h-16 rounded-2xl bg-muted/40" />
+          <div className="mt-3 h-16 rounded-2xl bg-muted/40" />
         </div>
-      </div>
+      </DashPage>
     );
   }
 
+  const carte = (n: Notification) => (
+    <AdminNotificationCard
+      key={n.id}
+      notification={n}
+      onOpen={handleNotificationClick}
+      onMarkRead={(id) => markAsRead(id)}
+      onDelete={(id) => deleteNotification(id)}
+    />
+  );
+
+  const filtresActifs = theme !== 'all' || !!q;
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bell className="h-6 w-6" />
-            Notifications
-          </h1>
-          <p className="text-muted-foreground">
-            {counts.total} notification{counts.total > 1 ? 's' : ''} non lue{counts.total > 1 ? 's' : ''}
-          </p>
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Notifications"
+        subtitle={
+          counts.total === 0
+            ? 'Toutes vos notifications sont lues'
+            : `${counts.total} notification${counts.total > 1 ? 's' : ''} non lue${counts.total > 1 ? 's' : ''}${nbATraiterTotal > 0 ? ` · ${nbATraiterTotal} à traiter` : ''}`
+        }
+        action={
+          <>
+            <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={handleRefresh} disabled={refreshing} aria-label="Actualiser">
+              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <span className="ml-2 hidden sm:inline">Actualiser</span>
+            </Button>
+            {counts.total > 0 && (
+              <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={() => markAllAsRead()}>
+                <Check className="mr-2 h-4 w-4" />
+                Tout marquer comme lu
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      {/* Recherche pleine largeur sur mobile, thème à côté sur grand écran */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Titre, message, type…"
+            aria-label="Rechercher une notification"
+            className="h-11 rounded-full pl-10 pr-10"
+          />
+          {q && (
+            <button type="button" onClick={() => setQ('')} aria-label="Effacer la recherche"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        {counts.total > 0 && (
-          <Button variant="outline" onClick={() => markAllAsRead()}>
-            <Check className="h-4 w-4 mr-2" />
-            Tout marquer comme lu
-          </Button>
-        )}
+        <Select value={theme} onValueChange={(v) => setTheme(v as 'all' | Theme)}>
+          <SelectTrigger className="h-11 rounded-full md:w-[230px]" aria-label="Type de notification"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les types ({notifications.length})</SelectItem>
+            {THEMES.filter((t) => (themeCounts.get(t.key) ?? 0) > 0).map((t) => (
+              <SelectItem key={t.key} value={t.key}>{t.label} ({themeCounts.get(t.key)})</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Toutes les notifications</CardTitle>
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'unread')}>
-              <TabsList>
-                <TabsTrigger value="all">Toutes ({notifications.length})</TabsTrigger>
-                <TabsTrigger value="unread">Non lues ({counts.total})</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredNotifications.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Aucune notification</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50",
-                    !notification.read && "bg-primary/5 border-primary/20"
-                  )}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <span className="text-2xl">
-                    {getNotificationIcon(notification.type)}
-                  </span>
-                  <div className="relative flex-1 min-w-0">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className={cn(
-                        "font-medium",
-                        !notification.read && "font-semibold"
-                      )}>
-                        {notification.title}
-                      </p>
-                      <Badge variant="secondary" className="text-xs">
-                        {getNotificationTypeName(notification.type)}
-                      </Badge>
-                      {!notification.read && (
-                        <Badge variant="default" className="text-xs">
-                          Nouveau
-                        </Badge>
-                      )}
-                    </div>
-                    {notification.message && (
-                      <p className="text-sm text-muted-foreground">
-                        {notification.message}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {format(new Date(notification.created_at), "dd MMMM yyyy 'à' HH:mm", { locale: fr })}
-                      {' '}({formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })})
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!notification.read && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markAsRead(notification.id);
-                        }}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notification.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      <DashFilterPills
+        label="Filtrer les notifications"
+        value={filter}
+        onChange={(v) => setFilter(v)}
+        options={[
+          { key: 'all', label: 'Toutes', count: filtreCounts.all },
+          { key: 'unread', label: 'Non lues', count: filtreCounts.unread },
+          { key: 'urgent', label: 'À traiter', count: filtreCounts.urgent },
+        ]}
+      />
+
+      {visibles.length === 0 ? (
+        <DashEmptyState
+          icon={Bell}
+          title={filtresActifs ? 'Aucune notification pour ces filtres' : filter === 'unread' ? 'Aucune notification non lue' : filter === 'urgent' ? 'Rien à traiter' : 'Aucune notification'}
+          action={filtresActifs ? (
+            <Button variant="outline" className="rounded-full" onClick={() => { setTheme('all'); setQ(''); }}>Réinitialiser les filtres</Button>
+          ) : undefined}
+        />
+      ) : (
+        <div className="space-y-6">
+          {aTraiter.length > 0 && (
+            <section className="space-y-3" aria-label="À traiter maintenant">
+              <h2 className="flex items-center gap-2 px-0.5 text-base font-semibold text-foreground">
+                À traiter maintenant
+                <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">{aTraiter.length}</span>
+              </h2>
+              <div className="space-y-3">{aTraiter.map(carte)}</div>
+            </section>
           )}
-        </CardContent>
-      </Card>
-    </div>
+
+          {GROUPES_JOUR.filter((g) => parJour[g.key].length > 0).map((g) => (
+            <section key={g.key} className="space-y-3" aria-label={g.label}>
+              <h2 className="px-0.5 text-sm font-semibold text-muted-foreground">
+                {aTraiter.length > 0 ? `Informations · ${g.label}` : g.label}
+              </h2>
+              <div className="space-y-3">{parJour[g.key].map(carte)}</div>
+            </section>
+          ))}
+        </div>
+      )}
+    </DashPage>
   );
 }

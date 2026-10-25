@@ -1,26 +1,29 @@
 import { useState, useEffect, useMemo } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2, Pause, StopCircle, RotateCcw } from "lucide-react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, FileSignature, Loader2, RefreshCw, Search, Undo2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
-import { getMandatDates, mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { toast } from "sonner";
 import { useFullMandatAssembler } from "@/hooks/useFullMandatAssembler";
 import { useAbaNinjaInvoice } from "@/hooks/useAbaNinjaInvoice";
+import { DASH_CARD, DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from "@/components/client/dashboard/DashPrimitives";
+import { MandatCard } from "@/components/admin/mandats/MandatCard";
+import {
+  ETAPES_A_TRAITER, ONGLETS, etapeMandat, getMandateStatus, hasCancellationPending, hasRefundPending,
+  nomClient, rangUrgence, type EtapeMandat, type OngletMandat,
+} from "@/components/admin/mandats/mandatsModel";
 
-type SortField = 'days' | 'name' | 'agent' | 'date';
+type SortField = 'urgence' | 'days' | 'name' | 'agent' | 'date';
 type SortOrder = 'asc' | 'desc';
 
 const Mandats = () => {
+  const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [renouvellements, setRenouvellements] = useState<any[]>([]);
@@ -44,8 +47,10 @@ const Mandats = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAgent, setFilterAgent] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [sortField, setSortField] = useState<SortField>('days');
+  const [sortField, setSortField] = useState<SortField>('urgence');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [tab, setTab] = useState<OngletMandat>('a_traiter');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -121,13 +126,6 @@ const Mandats = () => {
     const agent = agents.find(a => a.id === agentId);
     if (!agent?.profiles) return "Non assigné";
     return `${agent.profiles.prenom} ${agent.profiles.nom}`;
-  };
-
-  const getMandateStatus = (daysElapsed: number) => {
-    if (daysElapsed <= 30) return { label: "Nouveau", variant: "default" as const, color: "text-primary", key: "nouveau" };
-    if (daysElapsed <= 60) return { label: "En cours", variant: "secondary" as const, color: "text-muted-foreground", key: "en_cours" };
-    if (daysElapsed < 90) return { label: "Critique", variant: "outline" as const, color: "text-warning", key: "critique" };
-    return { label: "Expiré", variant: "destructive" as const, color: "text-destructive", key: "expire" };
   };
 
   const getLatestRenewal = (clientId: string) => {
@@ -366,21 +364,44 @@ const Mandats = () => {
     }
   };
 
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  const handleAssemble = async (client: any) => {
+    setAssemblingClientId(client.id);
+    const clientName = client.profiles 
+      ? `${client.profiles.nom}_${client.profiles.prenom}`.replace(/\s+/g, '_')
+      : 'client';
+    const result = await assembleFullMandat(client.id, clientName);
+    if (result.success) {
+      toast.success(`Mandat complet téléchargé (${result.pagesAdded || 0} pages d'annexes)`);
     } else {
-      setSortField(field);
-      setSortOrder('desc');
+      toast.error(result.error || "Erreur lors de l'assemblage");
+    }
+    setAssemblingClientId(null);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  const filteredAndSortedClients = useMemo(() => {
-    let filtered = clients.filter(client => {
-      // Exclude non-activated clients
-      const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(client.statut);
-      if (!isActivated) return false;
-      
+  // Changer de critère repart en ordre décroissant (comme les anciens boutons de tri) ; le bouton d'ordre inverse.
+  const changeSortField = (field: SortField) => {
+    setSortField(field);
+    setSortOrder('desc');
+  };
+
+  // Clients dont le mandat est activé (mêmes règles que l'écran d'origine).
+  const activatedClients = useMemo(
+    () => clients.filter(client => ['actif', 'reloge', 'stoppe', 'suspendu'].includes(client.statut)),
+    [clients]
+  );
+
+  // Recherche + filtres agent / phase : s'appliquent à tous les onglets, les compteurs suivent.
+  const filteredClients = useMemo(() => {
+    return activatedClients.filter(client => {
       // Filtre recherche
       const clientName = client.profiles ? `${client.profiles.prenom} ${client.profiles.nom}`.toLowerCase() : '';
       const matchSearch = clientName.includes(searchTerm.toLowerCase()) || 
@@ -403,12 +424,35 @@ const Mandats = () => {
       
       return matchSearch && matchAgent;
     });
+  }, [activatedClients, searchTerm, filterAgent, filterStatus]);
+
+  const etapeCounts = useMemo(() => {
+    const m: Record<OngletMandat, number> = {
+      a_traiter: 0, demandes: 0, echus: 0, bientot: 0, actifs: 0, suspendus: 0, reloges: 0, stoppes: 0, tous: filteredClients.length,
+    };
+    for (const c of filteredClients) {
+      const e = etapeMandat(c);
+      m[e] += 1;
+      if (ETAPES_A_TRAITER.includes(e)) m.a_traiter += 1;
+    }
+    return m;
+  }, [filteredClients]);
+
+  const filteredAndSortedClients = useMemo(() => {
+    const filtered = filteredClients.filter(client => {
+      if (tab === 'tous') return true;
+      const e = etapeMandat(client);
+      return tab === 'a_traiter' ? ETAPES_A_TRAITER.includes(e) : e === (tab as EtapeMandat);
+    });
 
     // Tri
     filtered.sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
+        case 'urgence':
+          // Demandes en attente, puis mandats échus, puis échéances les plus proches.
+          return rangUrgence(a) - rangUrgence(b);
         case 'days':
           const daysA = mandatElapsedFor(a as any);
           const daysB = mandatElapsedFor(b as any);
@@ -435,87 +479,134 @@ const Mandats = () => {
     });
 
     return filtered;
-  }, [clients, searchTerm, filterAgent, filterStatus, sortField, sortOrder, agents]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredClients, tab, sortField, sortOrder, agents]);
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-muted-foreground">Chargement...</p>
-      </div>
+      <DashPage>
+        <div className="flex justify-center py-16" role="status" aria-label="Chargement">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </DashPage>
     );
   }
 
+  // Synthèse (sur tous les mandats, indépendamment des filtres) : mêmes compteurs que l'écran d'origine.
+  const synthese: { label: string; value: number; cls: string; onClick: () => void }[] = [
+    { label: 'Total clients', value: clients.length, cls: 'text-foreground', onClick: () => { setFilterStatus('all'); setTab('tous'); } },
+    { label: 'Nouveaux (≤30j)', value: clients.filter(c => ['actif'].includes(c.statut) && mandatElapsedFor(c as any) <= 30).length, cls: 'text-primary', onClick: () => { setFilterStatus('nouveau'); setTab('tous'); } },
+    {
+      label: 'En cours (30-60j)',
+      value: clients.filter(c => {
+        if (c.statut !== 'actif') return false;
+        const days = mandatElapsedFor(c as any);
+        return days > 30 && days <= 60;
+      }).length,
+      cls: 'text-muted-foreground',
+      onClick: () => { setFilterStatus('en_cours'); setTab('tous'); },
+    },
+    {
+      label: 'Critiques (60-89j)',
+      value: clients.filter(c => {
+        if (c.statut !== 'actif') return false;
+        const days = mandatElapsedFor(c as any);
+        return days > 60 && days < 90;
+      }).length,
+      cls: 'text-amber-700 dark:text-amber-400',
+      onClick: () => { setFilterStatus('critique'); setTab('tous'); },
+    },
+    { label: 'Expirés (90+j)', value: clients.filter(c => c.statut === 'actif' && mandatElapsedFor(c as any) >= 90).length, cls: 'text-destructive', onClick: () => { setFilterStatus('expire'); setTab('tous'); } },
+    { label: 'Relogés', value: clients.filter(c => c.statut === 'reloge').length, cls: 'text-emerald-700 dark:text-emerald-400', onClick: () => { setFilterStatus('reloge'); setTab('tous'); } },
+  ];
+
+  // Sous-titre : ce qui attend une action, sur l'ensemble des mandats activés.
+  const nbATraiter = activatedClients.filter(c => ETAPES_A_TRAITER.includes(etapeMandat(c))).length;
+  const nbDemandes = activatedClients.filter(c => hasRefundPending(c) || hasCancellationPending(c)).length;
+  const nbEchus = activatedClients.filter(c => etapeMandat(c) === 'echus').length;
+  const subtitle = nbATraiter === 0
+    ? 'Tout est à jour : aucun mandat à traiter.'
+    : [
+        `${nbATraiter} mandat${nbATraiter > 1 ? 's' : ''} à traiter`,
+        nbDemandes > 0 ? `${nbDemandes} demande${nbDemandes > 1 ? 's' : ''} de remboursement ou résiliation` : null,
+        nbEchus > 0 ? `${nbEchus} échu${nbEchus > 1 ? 's' : ''}` : null,
+      ].filter(Boolean).join(' · ');
+
+  const filtresActifs = !!searchTerm || filterAgent !== 'all' || filterStatus !== 'all';
+
   return (
-    <div className="flex-1 overflow-auto relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Gestion des Mandats"
+        subtitle={subtitle}
+        action={
+          <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={handleRefresh} disabled={refreshing} aria-label="Actualiser">
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">Actualiser</span>
+          </Button>
+        }
+      />
+
+      {/* Synthèse : un clic filtre la liste sur cette phase */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-6">
+        {synthese.map((t) => (
+          <button
+            key={t.label}
+            type="button"
+            onClick={t.onClick}
+            className={`${DASH_CARD} min-h-[72px] p-3 text-left transition-transform duration-150 active:scale-[0.98]`}
+          >
+            <span className="block truncate text-[11px] text-muted-foreground sm:text-xs">{t.label}</span>
+            <span className={`mt-1 block text-xl font-semibold tabular-nums ${t.cls}`}>{t.value}</span>
+          </button>
+        ))}
       </div>
-      <div className="p-4 md:p-8">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestion des Mandats</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Suivi de la durée des mandats clients</p>
-        </div>
 
-        {/* Stats résumé */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
-          <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">Total clients</p>
-            <p className="text-xl md:text-2xl font-bold">{clients.length}</p>
-          </Card>
-          <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">Nouveaux (≤30j)</p>
-            <p className="text-xl md:text-2xl font-bold text-primary">
-              {clients.filter(c => ['actif'].includes(c.statut) && mandatElapsedFor(c as any) <= 30).length}
-            </p>
-          </Card>
-          <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">En cours (30-60j)</p>
-            <p className="text-xl md:text-2xl font-bold text-muted-foreground">
-              {clients.filter(c => {
-                if (c.statut !== 'actif') return false;
-                const days = mandatElapsedFor(c as any);
-                return days > 30 && days <= 60;
-              }).length}
-            </p>
-          </Card>
-          <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">Critiques (60-89j)</p>
-            <p className="text-xl md:text-2xl font-bold text-warning">
-              {clients.filter(c => {
-                if (c.statut !== 'actif') return false;
-                const days = mandatElapsedFor(c as any);
-                return days > 60 && days < 90;
-              }).length}
-            </p>
-          </Card>
-          <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">Expirés (90+j)</p>
-            <p className="text-xl md:text-2xl font-bold text-destructive">
-              {clients.filter(c => c.statut === 'actif' && mandatElapsedFor(c as any) >= 90).length}
-            </p>
-          </Card>
-          <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">Relogés</p>
-            <p className="text-xl md:text-2xl font-bold text-emerald-600">
-              {clients.filter(c => c.statut === 'reloge').length}
-            </p>
-          </Card>
+      {/* Barre d'outils : recherche plein écran sur mobile ; tri, ordre, agent et phase à côté sur grand écran */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un client..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Rechercher un client"
+            className="h-11 rounded-full pl-10 pr-10"
+          />
+          {searchTerm && (
+            <button type="button" onClick={() => setSearchTerm('')} aria-label="Effacer la recherche"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-
-        {/* Filtres et tri */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un client..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+        <div className="grid grid-cols-2 gap-2 lg:flex lg:w-auto">
+          <div className="flex gap-2">
+            <Select value={sortField} onValueChange={(v) => changeSortField(v as SortField)}>
+              <SelectTrigger className="h-11 min-w-0 flex-1 rounded-full lg:w-[170px]" aria-label="Trier par"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="urgence">Urgent d’abord</SelectItem>
+                <SelectItem value="days">Jours écoulés</SelectItem>
+                <SelectItem value="name">Nom</SelectItem>
+                <SelectItem value="agent">Agent</SelectItem>
+                <SelectItem value="date">Date début</SelectItem>
+              </SelectContent>
+            </Select>
+            {sortField !== 'urgence' && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0 rounded-full"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                aria-label={sortOrder === 'asc' ? 'Ordre croissant (inverser)' : 'Ordre décroissant (inverser)'}
+                title={sortOrder === 'asc' ? 'Croissant' : 'Décroissant'}
+              >
+                {sortOrder === 'asc' ? <ArrowUpNarrowWide className="h-4 w-4" /> : <ArrowDownWideNarrow className="h-4 w-4" />}
+              </Button>
+            )}
           </div>
           <Select value={filterAgent} onValueChange={setFilterAgent}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="h-11 rounded-full lg:w-[180px]" aria-label="Agent">
               <SelectValue placeholder="Agent" />
             </SelectTrigger>
             <SelectContent>
@@ -528,7 +619,7 @@ const Mandats = () => {
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectTrigger className="col-span-2 h-11 rounded-full lg:w-[160px]" aria-label="Statut">
               <SelectValue placeholder="Statut" />
             </SelectTrigger>
             <SelectContent>
@@ -543,313 +634,71 @@ const Mandats = () => {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Boutons de tri */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <span className="text-sm text-muted-foreground py-1">Trier par:</span>
-          <Button
-            variant={sortField === 'days' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => toggleSort('days')}
-            className="h-8 text-xs"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Jours écoulés
-          </Button>
-          <Button
-            variant={sortField === 'name' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => toggleSort('name')}
-            className="h-8 text-xs"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Nom
-          </Button>
-          <Button
-            variant={sortField === 'agent' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => toggleSort('agent')}
-            className="h-8 text-xs"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Agent
-          </Button>
-          <Button
-            variant={sortField === 'date' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => toggleSort('date')}
-            className="h-8 text-xs"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Date début
-          </Button>
-        </div>
-
-        <p className="text-sm text-muted-foreground mb-4">
-          {filteredAndSortedClients.length} résultat{filteredAndSortedClients.length > 1 ? 's' : ''}
-        </p>
-
-        <div className="grid gap-3 md:gap-4">
-          {filteredAndSortedClients.map((client) => {
-            const isReloge = client.statut === 'reloge';
-            const isSuspendu = client.statut === 'suspendu';
-            const isStoppe = client.statut === 'stoppe';
-            const isFrozen = isReloge || isSuspendu || isStoppe;
-            
-            const daysElapsed = mandatElapsedFor(client as any);
-            const daysRemaining = mandatRemainingFor(client as any);
-            const progress = isReloge ? 100 : Math.min((daysElapsed / 90) * 100, 100);
-            const status = isFrozen 
-              ? isReloge 
-                ? { label: "Relogé", variant: "default" as const, color: "text-emerald-600", key: "reloge" }
-                : isSuspendu
-                  ? { label: "Suspendu", variant: "secondary" as const, color: "text-amber-600", key: "suspendu" }
-                  : { label: "Stoppé", variant: "destructive" as const, color: "text-destructive", key: "stoppe" }
-              : getMandateStatus(daysElapsed);
-            const renewed = isRecentlyRenewed(client.id);
-
-            const progressBarColor = isReloge 
-              ? "bg-emerald-500" 
-              : isSuspendu 
-                ? "bg-amber-500" 
-                : isStoppe 
-                  ? "bg-destructive" 
-                  : undefined;
-            
-            return (
-              <Card key={client.id} className={`p-4 md:p-6 ${isFrozen ? 'opacity-80' : ''}`}>
-                <div className="space-y-3 md:space-y-4">
-                  {/* Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="text-lg md:text-xl font-semibold">
-                          {client.profiles 
-                            ? `${client.profiles.prenom} ${client.profiles.nom}` 
-                            : 'Client (sans profil)'}
-                        </h3>
-                        {isReloge ? (
-                          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs border-emerald-300">✅ Relogé</Badge>
-                        ) : isSuspendu ? (
-                          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs border-amber-300">⏸️ Suspendu</Badge>
-                        ) : isStoppe ? (
-                          <Badge variant="destructive" className="text-xs">⛔ Stoppé</Badge>
-                        ) : (
-                          <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
-                        )}
-                        {renewed && !isFrozen && (
-                          <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200 text-xs">
-                            🔄 Renouvelé
-                          </Badge>
-                        )}
-                        {!isFrozen && getLatestRenewal(client.id) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedClient(client);
-                              setSelectedRenewal(getLatestRenewal(client.id));
-                              setCancelRenewalDialogOpen(true);
-                            }}
-                          >
-                            <Undo2 className="h-3 w-3 mr-1" />
-                            Annuler renouvellement
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        Agent: {getAgentName(client.agent_id)}
-                      </p>
-                    </div>
-                    <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
-                      {isFrozen ? (
-                        <div className={`text-lg md:text-xl font-bold ${status.color}`}>
-                          {status.label}
-                        </div>
-                      ) : (
-                        <>
-                          <div className={`text-2xl md:text-3xl font-bold ${status.color}`}>
-                            J+{Math.floor(daysElapsed)}
-                          </div>
-                          <p className="text-xs md:text-sm text-muted-foreground">
-                            {daysRemaining > 0 ? formatTimeRemaining(daysRemaining) : "Expiré"}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs md:text-sm">
-                      <span>Progression du mandat</span>
-                      <span>{Math.round(progress)}%</span>
-                    </div>
-                    <Progress 
-                      value={progress} 
-                      className="h-2" 
-                      indicatorClassName={progressBarColor}
-                    />
-                  </div>
-
-                  {/* Infos */}
-                  <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs md:text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Début:</span> {(getMandatDates(client as any).cycleStart ?? new Date(client.date_ajout || client.created_at)).toLocaleDateString('fr-CH')}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      Split: {client.commission_split}%
-                    </div>
-                    {!isFrozen && daysElapsed > 60 && (
-                      <div className="flex items-center gap-1.5 text-destructive">
-                        <AlertCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                        <span className="hidden sm:inline">Proche expiration</span>
-                        <span className="sm:hidden">Urgent</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Recherche info */}
-                  <div className="pt-3 border-t">
-                    <div className="text-xs md:text-sm flex flex-wrap gap-x-3 gap-y-1">
-                      <span><span className="font-medium">Recherche:</span> {client.type_bien || 'N/A'} {client.pieces || '-'} pièces</span>
-                      <span><span className="font-medium">Budget:</span> CHF {client.budget_max?.toLocaleString() || 'N/A'}</span>
-                    </div>
-                  </div>
-
-                  {/* Action boutons */}
-                  <div className="pt-3 border-t flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => handleViewMandat(client)}
-                      variant="outline"
-                      size="sm"
-                      disabled={isDownloadingPdf === client.id || (isAssembling && assemblingClientId === client.id)}
-                    >
-                      {isDownloadingPdf === client.id ? (
-                        <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4 mr-2" />
-                      )}
-                      Contrat
-                    </Button>
-                    
-                    <Button
-                      onClick={async () => {
-                        setAssemblingClientId(client.id);
-                        const clientName = client.profiles 
-                          ? `${client.profiles.nom}_${client.profiles.prenom}`.replace(/\s+/g, '_')
-                          : 'client';
-                        const result = await assembleFullMandat(client.id, clientName);
-                        if (result.success) {
-                          toast.success(`Mandat complet téléchargé (${result.pagesAdded || 0} pages d'annexes)`);
-                        } else {
-                          toast.error(result.error || "Erreur lors de l'assemblage");
-                        }
-                        setAssemblingClientId(null);
-                      }}
-                      variant="default"
-                      size="sm"
-                      disabled={isAssembling && assemblingClientId === client.id}
-                    >
-                      {isAssembling && assemblingClientId === client.id ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          {assemblyProgress ? `${Math.round(assemblyProgress.percent)}%` : 'Assemblage...'}
-                        </>
-                      ) : (
-                        <>
-                          <FileArchive className="h-4 w-4 mr-2" />
-                          Mandat complet
-                        </>
-                      )}
-                    </Button>
-                    
-                    {!isFrozen && daysRemaining <= 30 && (
-                      <Button
-                        onClick={() => {
-                          setSelectedClient(client);
-                          setRenewalDialogOpen(true);
-                        }}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Renouveler le mandat
-                      </Button>
-                    )}
-
-                    {['reloge', 'inactif', 'stoppe', 'suspendu'].includes(client.statut) && client.journey_type !== 'purchase_search' && (
-                      <ConfirmDialog
-                        trigger={
-                          <Button variant="default" size="sm" disabled={relaunchingId === client.id}>
-                            {relaunchingId === client.id ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <RotateCcw className="h-4 w-4 mr-2" />
-                            )}
-                            Relancer une nouvelle recherche (90 jours)
-                          </Button>
-                        }
-                        title="Relancer une nouvelle recherche"
-                        description={`Un nouveau cycle de 90 jours va démarrer pour ${client.profiles?.prenom} ${client.profiles?.nom}, et une nouvelle facture d'acompte CHF 300.- sera envoyée par email. Continuer ?`}
-                        confirmText="Relancer"
-                        onConfirm={() => handleRelaunchSearch(client)}
-                      />
-                    )}
-
-                    {!isFrozen && client.statut !== 'reloge' && (
-                      <>
-                        <ConfirmDialog
-                          trigger={
-                            <Button variant="warning" size="sm">
-                              <Pause className="h-4 w-4 mr-2" />
-                              Suspendre
-                            </Button>
-                          }
-                          title="Suspendre le mandat"
-                          description={`Voulez-vous suspendre le mandat de ${client.profiles?.prenom} ${client.profiles?.nom} ? La progression sera figée.`}
-                          confirmText="Suspendre"
-                          variant="default"
-                          onConfirm={() => handleUpdateClientStatus(client, 'suspendu')}
-                        />
-                        <ConfirmDialog
-                          trigger={
-                            <Button variant="destructive" size="sm">
-                              <StopCircle className="h-4 w-4 mr-2" />
-                              Stopper
-                            </Button>
-                          }
-                          title="Stopper le mandat"
-                          description={`Voulez-vous stopper définitivement le mandat de ${client.profiles?.prenom} ${client.profiles?.nom} ? Cette action est irréversible.`}
-                          confirmText="Stopper le mandat"
-                          variant="destructive"
-                          onConfirm={() => handleUpdateClientStatus(client, 'stoppe')}
-                        />
-                      </>
-                    )}
-                  </div>
-                  
-                  {/* Progress bar for assembly */}
-                  {isAssembling && assemblingClientId === client.id && assemblyProgress && (
-                    <div className="pt-2 space-y-1">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{assemblyProgress.step}</span>
-                        <span>{assemblyProgress.current}/{assemblyProgress.total}</span>
-                      </div>
-                      <Progress value={assemblyProgress.percent} className="h-1.5" />
-                    </div>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
       </div>
+
+      <DashFilterPills
+        label="Étapes des mandats"
+        value={tab}
+        onChange={(v) => setTab(v as OngletMandat)}
+        options={ONGLETS.map((o) => ({ key: o.key, label: o.label, count: etapeCounts[o.key] }))}
+      />
+
+      <p className="-mt-2 text-sm text-muted-foreground">
+        {filteredAndSortedClients.length} résultat{filteredAndSortedClients.length > 1 ? 's' : ''}
+        {filtresActifs && (
+          <button
+            type="button"
+            className="ml-2 font-medium text-foreground underline-offset-4 hover:underline"
+            onClick={() => { setSearchTerm(''); setFilterAgent('all'); setFilterStatus('all'); }}
+          >
+            Réinitialiser les filtres
+          </button>
+        )}
+      </p>
+
+      {filteredAndSortedClients.length === 0 ? (
+        <DashEmptyState
+          icon={FileSignature}
+          title={
+            filtresActifs ? 'Aucun mandat pour ces filtres'
+              : tab === 'a_traiter' ? 'Rien à traiter pour le moment'
+              : 'Aucun mandat dans cette étape'
+          }
+          description={tab === 'a_traiter' && !filtresActifs
+            ? 'Les mandats échus, proches de l’échéance ou avec une demande de remboursement ou de résiliation apparaissent ici.'
+            : undefined}
+        />
+      ) : (
+        <div className="space-y-3">
+          {filteredAndSortedClients.map((client) => (
+            <MandatCard
+              key={client.id}
+              client={client}
+              agentName={getAgentName(client.agent_id)}
+              renewed={isRecentlyRenewed(client.id)}
+              latestRenewal={getLatestRenewal(client.id)}
+              downloading={isDownloadingPdf === client.id}
+              assembling={isAssembling && assemblingClientId === client.id}
+              assemblyProgress={assemblyProgress}
+              relaunching={relaunchingId === client.id}
+              onOpenFiche={(c) => navigate(`/admin/clients/${c.id}`)}
+              onViewMandat={handleViewMandat}
+              onAssemble={handleAssemble}
+              onRenew={(c) => {
+                setSelectedClient(c);
+                setRenewalDialogOpen(true);
+              }}
+              onRelaunch={handleRelaunchSearch}
+              onUpdateStatus={handleUpdateClientStatus}
+              onCancelRenewal={(c, renewal) => {
+                setSelectedClient(c);
+                setSelectedRenewal(renewal);
+                setCancelRenewalDialogOpen(true);
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       <Dialog open={renewalDialogOpen} onOpenChange={setRenewalDialogOpen}>
         <DialogContent>
@@ -871,7 +720,7 @@ const Mandats = () => {
               </p>
               {selectedClient && mandatRemainingFor(selectedClient as any) <= 0 && (
                 <p className="text-sm text-destructive font-medium">
-                  ⚠️ Ce mandat a expiré
+                  Ce mandat a expiré
                 </p>
               )}
             </div>
@@ -887,16 +736,17 @@ const Mandats = () => {
               />
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                📅 Le nouveau mandat débutera aujourd'hui et sera valable pour 90 jours supplémentaires.
+            <div className="rounded-xl bg-muted/60 p-3">
+              <p className="text-sm text-foreground">
+                Le nouveau mandat débutera aujourd'hui et sera valable pour 90 jours supplémentaires.
               </p>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setRenewalDialogOpen(false);
                 setRenewalReason("");
@@ -907,6 +757,7 @@ const Mandats = () => {
               Annuler
             </Button>
             <Button
+              className="rounded-full"
               onClick={handleRenewMandate}
               disabled={isRenewing}
             >
@@ -921,7 +772,9 @@ const Mandats = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Undo2 className="h-5 w-5 text-destructive" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <Undo2 className="h-4 w-4" />
+              </span>
               Annuler le renouvellement
             </DialogTitle>
           </DialogHeader>
@@ -956,16 +809,17 @@ const Mandats = () => {
               )}
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-md">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                ⚠️ Cette action va restaurer la date du mandat à sa valeur avant le renouvellement ({selectedRenewal ? new Date(selectedRenewal.date_ancien_mandat).toLocaleDateString('fr-CH') : ''}).
+            <div className="rounded-xl bg-amber-500/10 p-3">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                Cette action va restaurer la date du mandat à sa valeur avant le renouvellement ({selectedRenewal ? new Date(selectedRenewal.date_ancien_mandat).toLocaleDateString('fr-CH') : ''}).
               </p>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setCancelRenewalDialogOpen(false);
                 setSelectedRenewal(null);
@@ -977,6 +831,7 @@ const Mandats = () => {
             </Button>
             <Button
               variant="destructive"
+              className="rounded-full"
               onClick={handleCancelRenewal}
               disabled={isCancelling}
             >
@@ -985,7 +840,7 @@ const Mandats = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashPage>
   );
 };
 
