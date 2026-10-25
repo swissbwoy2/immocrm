@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { calculateDaysElapsed } from '@/utils/calculations';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
         // Clients with reduced columns
         supabase
           .from('clients')
-          .select('id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, pieces, region_recherche, commission_split'),
+          .select('id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, pieces, region_recherche, commission_split, mandat_date_signature, mandate_pause_days, mandate_paused_at, mandate_official_end_date, refund_status, cancellation_requested_at'),
         // Client agents
         supabase
           .from('client_agents')
@@ -264,14 +265,14 @@ export default function AdminDashboard() {
   // Clients critiques = 30 jours ou moins restants avant expiration (60-89 jours écoulés)
   const clientsCritiques = clients.filter(c => {
     if (c.statut !== 'actif') return false;
-    const days = calculateDaysElapsed(c.dateInscription);
+    const days = mandatElapsedFor(c as any);
     return days >= 60 && days < 90;
   });
   
   // Clients expirés = mandat dépassé (90+ jours)
   const clientsExpires = clients.filter(c => {
     if (c.statut !== 'actif') return false;
-    return calculateDaysElapsed(c.dateInscription) >= 90;
+    return mandatElapsedFor(c as any) >= 90;
   });
   
   const revenusAgenceMois = transactions
@@ -491,7 +492,7 @@ export default function AdminDashboard() {
                       const agentClients = actifs.filter(c => c.agentId === agent.id);
                       // Critique = 60-89 jours écoulés (30 jours ou moins restants)
                       const critiquesClients = agentClients.filter(c => {
-                        const days = calculateDaysElapsed(c.dateInscription);
+                        const days = mandatElapsedFor(c as any);
                         return days >= 60 && days < 90;
                       });
                       const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
@@ -554,7 +555,7 @@ export default function AdminDashboard() {
                   const agentClients = actifs.filter(c => c.agentId === agent.id);
                   // Critique = 60-89 jours écoulés (30 jours ou moins restants)
                   const critiquesClients = agentClients.filter(c => {
-                    const days = calculateDaysElapsed(c.dateInscription);
+                    const days = mandatElapsedFor(c as any);
                     return days >= 60 && days < 90;
                   });
                   const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);

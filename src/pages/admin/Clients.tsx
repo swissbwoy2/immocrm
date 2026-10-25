@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionsBar, STATUT_LABELS as BULK_STATUT_LABELS, type BulkStatut } from "@/components/admin/clients/BulkActionsBar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -633,8 +634,8 @@ const Clients = () => {
           comparison = (a.budget_max || 0) - (b.budget_max || 0);
           break;
         case 'days':
-          const daysA = calculateDaysElapsed(a.date_ajout || a.created_at);
-          const daysB = calculateDaysElapsed(b.date_ajout || b.created_at);
+          const daysA = mandatElapsedFor(a as any);
+          const daysB = mandatElapsedFor(b as any);
           comparison = daysA - daysB;
           break;
       }
@@ -1389,7 +1390,7 @@ const Clients = () => {
             const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(clientStatut);
             const isFrozen = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut);
             const frozenEndDate = isFrozen ? ((client as any).date_changement_statut || (client as any).updated_at) : undefined;
-            const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate) : 0;
+            const daysElapsed = isActivated ? mandatElapsedFor(client as any, frozenEndDate) : 0;
             const progressPercent = isActivated ? (daysElapsed / 90) * 100 : 0;
             const candidates = clientCandidates.get(client.id) || [];
 

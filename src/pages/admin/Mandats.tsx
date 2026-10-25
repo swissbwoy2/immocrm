@@ -12,6 +12,7 @@ import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
+import { getMandatDates, mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { toast } from "sonner";
 import { useFullMandatAssembler } from "@/hooks/useFullMandatAssembler";
 import { useAbaNinjaInvoice } from "@/hooks/useAbaNinjaInvoice";
@@ -394,7 +395,7 @@ const Mandats = () => {
           if (client.statut !== filterStatus) return false;
         } else {
           if (client.statut === 'reloge' || client.statut === 'suspendu' || client.statut === 'stoppe') return false;
-          const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+          const daysElapsed = mandatElapsedFor(client as any);
           const status = getMandateStatus(daysElapsed);
           if (status.key !== filterStatus) return false;
         }
@@ -409,8 +410,8 @@ const Mandats = () => {
       
       switch (sortField) {
         case 'days':
-          const daysA = calculateDaysElapsed(a.date_ajout || a.created_at);
-          const daysB = calculateDaysElapsed(b.date_ajout || b.created_at);
+          const daysA = mandatElapsedFor(a as any);
+          const daysB = mandatElapsedFor(b as any);
           comparison = daysA - daysB;
           break;
         case 'name':
@@ -465,7 +466,7 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Nouveaux (≤30j)</p>
             <p className="text-xl md:text-2xl font-bold text-primary">
-              {clients.filter(c => ['actif'].includes(c.statut) && calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
+              {clients.filter(c => ['actif'].includes(c.statut) && mandatElapsedFor(c as any) <= 30).length}
             </p>
           </Card>
           <Card className="p-3 md:p-4">
@@ -473,7 +474,7 @@ const Mandats = () => {
             <p className="text-xl md:text-2xl font-bold text-muted-foreground">
               {clients.filter(c => {
                 if (c.statut !== 'actif') return false;
-                const days = calculateDaysElapsed(c.date_ajout || c.created_at);
+                const days = mandatElapsedFor(c as any);
                 return days > 30 && days <= 60;
               }).length}
             </p>
@@ -483,7 +484,7 @@ const Mandats = () => {
             <p className="text-xl md:text-2xl font-bold text-warning">
               {clients.filter(c => {
                 if (c.statut !== 'actif') return false;
-                const days = calculateDaysElapsed(c.date_ajout || c.created_at);
+                const days = mandatElapsedFor(c as any);
                 return days > 60 && days < 90;
               }).length}
             </p>
@@ -491,7 +492,7 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Expirés (90+j)</p>
             <p className="text-xl md:text-2xl font-bold text-destructive">
-              {clients.filter(c => c.statut === 'actif' && calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
+              {clients.filter(c => c.statut === 'actif' && mandatElapsedFor(c as any) >= 90).length}
             </p>
           </Card>
           <Card className="p-3 md:p-4">
@@ -595,8 +596,8 @@ const Mandats = () => {
             const isStoppe = client.statut === 'stoppe';
             const isFrozen = isReloge || isSuspendu || isStoppe;
             
-            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
-            const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
+            const daysElapsed = mandatElapsedFor(client as any);
+            const daysRemaining = mandatRemainingFor(client as any);
             const progress = isReloge ? 100 : Math.min((daysElapsed / 90) * 100, 100);
             const status = isFrozen 
               ? isReloge 
@@ -698,7 +699,7 @@ const Mandats = () => {
                   <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs md:text-sm text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      <span className="hidden sm:inline">Début:</span> {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}
+                      <span className="hidden sm:inline">Début:</span> {(getMandatDates(client as any).cycleStart ?? new Date(client.date_ajout || client.created_at)).toLocaleDateString('fr-CH')}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -868,7 +869,7 @@ const Mandats = () => {
                   {selectedClient?.date_ajout ? new Date(selectedClient.date_ajout).toLocaleDateString('fr-CH') : '-'}
                 </span>
               </p>
-              {selectedClient && calculateDaysRemaining(selectedClient.date_ajout || selectedClient.created_at) <= 0 && (
+              {selectedClient && mandatRemainingFor(selectedClient as any) <= 0 && (
                 <p className="text-sm text-destructive font-medium">
                   ⚠️ Ce mandat a expiré
                 </p>
