@@ -1373,26 +1373,24 @@ export default function AgentCalendrier() {
           </DialogHeader>
 
           {selectedVisite?.id && (
-            <div className="rounded-xl border border-border/70 bg-primary/5 p-3">
-              <VisitLiveButton
-                visiteId={selectedVisite.id}
-                dateVisite={selectedVisite.date_visite}
-                size="default"
-                className="w-full"
-              />
-            </div>
+            <VisitLiveButton
+              visiteId={selectedVisite.id}
+              dateVisite={selectedVisite.date_visite}
+              size="default"
+              className="w-full rounded-full"
+            />
           )}
 
           {selectedVisite && (
             <div className="space-y-6">
               {/* En-tête avec adresse et date/heure */}
-              <div className="p-4 bg-muted/60 rounded-xl">
+              <div className="rounded-2xl border border-border/70 bg-card p-4">
                 <AddressLink
                   address={selectedVisite.adresse}
-                  className="font-semibold text-lg"
+                  className="text-base font-semibold leading-snug"
                   iconClassName="h-5 w-5 text-primary"
                 />
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground pl-7">
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     {format(new Date(selectedVisite.date_visite), 'EEEE d MMMM yyyy', { locale: fr })}
@@ -1405,8 +1403,8 @@ export default function AgentCalendrier() {
               </div>
 
               {/* Intérêt client */}
-              <div className="p-3 rounded-xl border border-border/70 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">Intérêt du client :</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">Intérêt du client</span>
                 <ClientInteretBadge statutOffre={selectedVisite.offres?.statut} />
                 {getInteretState(selectedVisite.offres?.statut).key === 'attente' && (
                   <span className="text-xs text-amber-700 dark:text-amber-400">
@@ -1451,7 +1449,7 @@ export default function AgentCalendrier() {
                     {selectedVisite.offres.lien_annonce && (
                       <div>
                         <Label className="text-muted-foreground text-xs">Lien de l'annonce</Label>
-                        <div className="mt-1">
+                        <div className="mt-1 min-w-0 overflow-hidden">
                           <LinkPreviewCard url={selectedVisite.offres.lien_annonce} showInline />
                         </div>
                       </div>
@@ -1470,23 +1468,23 @@ export default function AgentCalendrier() {
                     {/* Grille des caractéristiques */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {selectedVisite.offres.pieces && (
-                        <div className="p-2 bg-muted/60 rounded-xl">
+                        <div className="min-w-0 rounded-xl border border-border/70 bg-card p-2.5">
                           <p className="text-xs text-muted-foreground">Pièces</p>
                           <p className="font-medium">{selectedVisite.offres.pieces}</p>
                         </div>
                       )}
                       {selectedVisite.offres.surface && (
-                        <div className="p-2 bg-muted/60 rounded-xl">
+                        <div className="min-w-0 rounded-xl border border-border/70 bg-card p-2.5">
                           <p className="text-xs text-muted-foreground">Surface</p>
                           <p className="font-medium">{selectedVisite.offres.surface} m²</p>
                         </div>
                       )}
-                      <div className="p-2 bg-muted/60 rounded-xl">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-2.5">
                         <p className="text-xs text-muted-foreground">Prix</p>
                         <p className="font-medium">{selectedVisite.offres.prix} CHF/mois</p>
                       </div>
                       {selectedVisite.offres.etage && (
-                        <div className="p-2 bg-muted/60 rounded-xl">
+                        <div className="min-w-0 rounded-xl border border-border/70 bg-card p-2.5">
                           <p className="text-xs text-muted-foreground">Étage</p>
                           <p className="font-medium">{selectedVisite.offres.etage}</p>
                         </div>

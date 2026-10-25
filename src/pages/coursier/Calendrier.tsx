@@ -135,9 +135,9 @@ export default function CoursierCalendrier() {
           </DialogHeader>
 
           {rep && (
-            <div className="space-y-6">
-              <div className="p-4 bg-muted/60 rounded-xl space-y-2">
-                <AddressLink address={rep.adresse} className="font-semibold text-lg" iconClassName="h-5 w-5 text-primary" />
+            <div className="space-y-5">
+              <div className="space-y-2 rounded-2xl border border-border/70 bg-card p-4">
+                <AddressLink address={rep.adresse} className="text-base font-semibold leading-snug" iconClassName="h-5 w-5 text-primary" />
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Clock className="h-3.5 w-3.5" />
                   {format(new Date(rep.date_visite), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
@@ -166,30 +166,30 @@ export default function CoursierCalendrier() {
 
               {rep.offres && (
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">Caractéristiques du bien</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Caractéristiques du bien</p>
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                     {rep.offres.prix && (
-                      <div className="p-3 bg-muted/60 rounded-xl text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Prix</p>
-                        <p className="font-bold text-primary">{Number(rep.offres.prix).toLocaleString('fr-CH')} CHF</p>
+                        <p className="font-semibold text-foreground">{Number(rep.offres.prix).toLocaleString('fr-CH')} CHF</p>
                       </div>
                     )}
                     {rep.offres.pieces && (
-                      <div className="p-3 bg-muted/60 rounded-xl text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Pièces</p>
-                        <p className="font-bold">{rep.offres.pieces}</p>
+                        <p className="font-semibold text-foreground">{rep.offres.pieces}</p>
                       </div>
                     )}
                     {rep.offres.surface && (
-                      <div className="p-3 bg-muted/60 rounded-xl text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Surface</p>
-                        <p className="font-bold">{rep.offres.surface} m²</p>
+                        <p className="font-semibold text-foreground">{rep.offres.surface} m²</p>
                       </div>
                     )}
                     {rep.offres.etage && (
-                      <div className="p-3 bg-muted/60 rounded-xl text-center">
+                      <div className="min-w-0 rounded-xl border border-border/70 bg-card p-3 text-center">
                         <p className="text-xs text-muted-foreground">Étage</p>
-                        <p className="font-bold">{rep.offres.etage}</p>
+                        <p className="font-semibold text-foreground">{rep.offres.etage}</p>
                       </div>
                     )}
                   </div>
