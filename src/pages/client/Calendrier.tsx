@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay } from 'date-fns';
-import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
 import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Badge } from '@/components/ui/badge';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DashEmptyState, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { useClientParcours } from '@/hooks/useClientParcours';
 import { estPrixDAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat } from '@/lib/achatOffreActions';
 
@@ -322,20 +321,19 @@ export default function ClientCalendrier() {
   const pendingVisites = visites.filter(v => v.statut === 'proposee');
 
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
-      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
-      {/* Header modernisé */}
-      <PremiumPageHeader
+    <DashPage>
+      <DashPageHeader
         title="Mon calendrier"
-        icon={CalendarIcon}
-        badge={upcomingVisites.length > 0 ? `${upcomingVisites.length} visite${upcomingVisites.length > 1 ? 's' : ''} à venir` : undefined}
+        subtitle={upcomingVisites.length > 0 ? `${upcomingVisites.length} visite${upcomingVisites.length > 1 ? 's' : ''} à venir` : undefined}
       />
+      {loading && <p className="mb-4 text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
 
+      <div className="space-y-6">
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden">
-          <Suspense fallback={<div className="h-72 rounded bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
+          <Suspense fallback={<div className="h-72 rounded-2xl bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={events}
             visites={visites}
@@ -374,26 +372,18 @@ export default function ClientCalendrier() {
 
       {/* Empty state when no visites */}
       {!loading && visites.length === 0 && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-8 text-center">
-          <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-          <div className="relative">
-            <div className="inline-block relative mb-4">
-              <CalendarIcon className="w-16 h-16 text-muted-foreground/50" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Aucune visite planifiée</h3>
-            <p className="text-muted-foreground mb-4">
-              Vous n'avez pas de visite programmée pour le moment.
-            </p>
-            <Button 
-              onClick={() => navigate(pageOffres)}
-              className="relative overflow-hidden group"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="relative">{isAchat ? 'Voir mes biens proposés' : 'Voir mes offres'}</span>
+        <DashEmptyState
+          icon={CalendarIcon}
+          title="Aucune visite planifiée"
+          description="Vous n'avez pas de visite programmée pour le moment."
+          action={
+            <Button onClick={() => navigate(pageOffres)} className="rounded-full">
+              {isAchat ? 'Voir mes biens proposés' : 'Voir mes offres'}
             </Button>
-          </div>
-        </div>
+          }
+        />
       )}
-    </div>
+      </div>
+    </DashPage>
   );
 }
