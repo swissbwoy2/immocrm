@@ -140,3 +140,38 @@ export function nomClient(c?: ClientInfo): string {
   const n = `${c?.prenom ?? ''} ${c?.nom ?? ''}`.trim();
   return n || c?.email || 'Client';
 }
+
+/** Regroupe des demandes par client en gardant l'ordre de la liste (le 1er élément de chaque client fixe sa place). */
+export function grouperParClient(rows: Row[]): { clientId: string; rows: Row[] }[] {
+  const groupes = new Map<string, Row[]>();
+  for (const r of rows) {
+    const k = r.client_id || `sans-client-${r.id}`;
+    groupes.set(k, [...(groupes.get(k) ?? []), r]);
+  }
+  return Array.from(groupes, ([clientId, list]) => ({ clientId, rows: list }));
+}
+
+/** Candidature déposée récemment (date de dernière mise à jour de l'offre, faute de date de dépôt dédiée). */
+export function deposeeDepuis(r: Row, jours: number): boolean {
+  if (r.statut !== 'candidature_deposee') return false;
+  const t = new Date(r.updated_at || r.created_at || 0).getTime();
+  return Date.now() - t <= jours * 24 * 3600 * 1000;
+}
+
+/** Libellé lisible d'un agent responsable. */
+export function libelleAgent(agentId: string | null | undefined, noms: Map<string, string>): string {
+  if (!agentId) return 'Sans agent';
+  return noms.get(agentId) || `Agent #${agentId.slice(0, 6)}`;
+}
+
+/** Résumé de l'en-tête : « 3 à traiter (1 > 24 h) · 2 dossiers à valider · 5 déposées sur 7 jours ». */
+export function resumeEnTete(p: { aTraiter: number; aTraiterEnRetard: number; dossiersAValider: number; deposeesSemaine: number }): string {
+  const s = (n: number) => (n > 1 ? 's' : '');
+  const parts: string[] = [];
+  parts.push(p.aTraiter === 0
+    ? 'Tout est à jour : aucune action en attente'
+    : `${p.aTraiter} à traiter${p.aTraiterEnRetard > 0 ? ` (${p.aTraiterEnRetard} > 24 h)` : ''}`);
+  if (p.dossiersAValider > 0) parts.push(`${p.dossiersAValider} dossier${s(p.dossiersAValider)} à valider`);
+  if (p.deposeesSemaine > 0) parts.push(`${p.deposeesSemaine} déposée${s(p.deposeesSemaine)} sur 7 jours`);
+  return parts.join(' · ');
+}

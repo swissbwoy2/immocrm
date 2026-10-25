@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   AlertTriangle, Check, CheckCircle2, ChevronDown, Clock, ExternalLink, FileText, Loader2, Mail,
-  Paperclip, ShieldAlert, Trash2, XCircle,
+  Paperclip, ShieldAlert, Trash2, UserRound, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -14,6 +14,9 @@ import {
   CANAL, DOSSIER_STATUT, JOB_STATUS, PRIORITY_LABEL, attente, nomClient, prochaineAction,
   type Dossier, type Row, type Ton,
 } from './postulationsModel';
+
+/** Anneau de focus clavier commun (boutons texte, liens). */
+const FOCUS = 'rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 const TON_TEXTE: Record<Ton, string> = {
   neutral: 'text-foreground',
@@ -43,7 +46,9 @@ function Frise({ r }: { r: Row }) {
     <ol className="flex items-center gap-1" aria-label="Avancement">
       {etapes.map((e, i) => (
         <li key={e.label} className="flex min-w-0 flex-1 items-center gap-1">
+          <span className="sr-only">{`${e.label} : ${e.etat === 'ok' ? 'fait' : e.etat === 'ko' ? 'à vérifier' : 'en attente'}`}</span>
           <span
+            aria-hidden="true"
             className={cn(
               'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
               e.etat === 'ok' && 'bg-primary text-primary-foreground',
@@ -54,7 +59,7 @@ function Frise({ r }: { r: Row }) {
           >
             {e.etat === 'ok' ? <Check className="h-3 w-3" /> : e.etat === 'ko' ? '!' : i + 1}
           </span>
-          <span className="hidden truncate text-[11px] text-muted-foreground sm:inline">{e.label}</span>
+          <span aria-hidden="true" className="hidden truncate text-[11px] text-muted-foreground sm:inline">{e.label}</span>
           {i < etapes.length - 1 && <span className={cn('h-px flex-1', e.etat === 'ok' ? 'bg-primary/50' : 'bg-border')} />}
         </li>
       ))}
@@ -101,7 +106,7 @@ export function DossierBloc({ d, busy, onDecider, compact }: {
         <>
           <button
             type="button"
-            className="inline-flex min-h-[32px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline"
+            className={cn('inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline sm:min-h-[32px]', FOCUS)}
             onClick={() => setOuvert((o) => !o)}
             aria-expanded={ouvert}
           >
@@ -118,11 +123,11 @@ export function DossierBloc({ d, busy, onDecider, compact }: {
       )}
       {decidable && (
         <div className="grid grid-cols-2 gap-2 pt-1 sm:flex sm:flex-wrap">
-          <Button size="sm" className="h-10 rounded-full sm:h-9" disabled={busy} onClick={() => onDecider(d, 'valide')}>
+          <Button size="sm" className="h-11 rounded-full sm:h-9" disabled={busy} onClick={() => onDecider(d, 'valide')}>
             {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-4 w-4" />}
             Valider l’envoi
           </Button>
-          <Button size="sm" variant="outline" className="h-10 rounded-full sm:h-9" disabled={busy} onClick={() => onDecider(d, 'refuse')}>
+          <Button size="sm" variant="outline" className="h-11 rounded-full sm:h-9" disabled={busy} onClick={() => onDecider(d, 'refuse')}>
             <XCircle className="mr-1.5 h-4 w-4" /> Refuser
           </Button>
         </div>
@@ -140,13 +145,17 @@ interface CardProps {
   onDeposer: (r: Row) => void;
   onSupprimer: (r: Row) => void;
   onDecider: (d: Dossier, statut: 'valide' | 'refuse') => void;
+  /** Admin : nom de l'agent responsable (affiché sous le client). */
+  agentLabel?: string;
+  /** Dans un groupe client : le nom du client est déjà dans l'en-tête du groupe. */
+  dansGroupe?: boolean;
 }
 
 /**
  * Une demande de postulation = une carte. Mobile : tout empilé, action en pleine largeur.
  * Grand écran : trois colonnes (client et bien | avancement et prochaine action | actions).
  */
-export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDeposer, onSupprimer, onDecider }: CardProps) {
+export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDeposer, onSupprimer, onDecider, agentLabel, dansGroupe }: CardProps) {
   const [voirPrep, setVoirPrep] = useState(false);
   const next = prochaineAction(r);
   const att = attente(r);
@@ -156,17 +165,30 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
   const lienOffre = `/${scope}/offres-auto?offre=${r.id}`;
 
   return (
-    <article className={cn(DASH_CARD, 'overflow-hidden', att.enRetard && 'ring-1 ring-amber-500/40')}>
+    <article
+      data-postulation-card
+      tabIndex={-1}
+      aria-label={`${nomClient(r._client)} — ${r.adresse ?? 'adresse non renseignée'} — ${next.texte}`}
+      className={cn(
+        DASH_CARD, 'overflow-hidden scroll-mt-24 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        att.enRetard && 'ring-1 ring-amber-500/40',
+      )}
+    >
       <div className="grid gap-4 p-4 md:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_auto] lg:items-start lg:gap-6">
         {/* 1. Client et bien */}
         <div className="min-w-0 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-foreground">{nomClient(r._client)}</p>
-              {r._client?.email && (
-                <a href={`mailto:${r._client.email}`} className="inline-flex max-w-full items-center gap-1 truncate text-xs text-muted-foreground hover:text-foreground">
-                  <Mail className="h-3 w-3 shrink-0" /> <span className="truncate">{r._client.email}</span>
+              {!dansGroupe && <p className="truncate text-[15px] font-semibold text-foreground">{nomClient(r._client)}</p>}
+              {!dansGroupe && r._client?.email && (
+                <a href={`mailto:${r._client.email}`} className={cn('inline-flex max-w-full items-center gap-1 truncate text-xs text-muted-foreground hover:text-foreground', FOCUS)}>
+                  <Mail className="h-3 w-3 shrink-0" aria-hidden="true" /> <span className="truncate">{r._client.email}</span>
                 </a>
+              )}
+              {agentLabel && (
+                <p className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate text-xs text-muted-foreground">
+                  <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" /> <span className="truncate">{agentLabel}</span>
+                </p>
               )}
             </div>
             <span
@@ -176,7 +198,7 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
               )}
               title={r.demande_at ? `Demandé le ${format(new Date(r.demande_at), 'dd.MM.yyyy HH:mm', { locale: fr })}` : undefined}
             >
-              <Clock className="h-3 w-3" /> {att.label}
+              <Clock className="h-3 w-3" aria-hidden="true" /> <span className="sr-only">Demande </span>{att.label}
             </span>
           </div>
           <div className="rounded-xl bg-muted/40 px-3 py-2">
@@ -186,11 +208,11 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
             </p>
             <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
               {r.lien_annonce && (
-                <a href={r.lien_annonce} target="_blank" rel="noreferrer" className="inline-flex min-h-[28px] items-center gap-1 text-xs font-medium text-primary hover:underline">
-                  <ExternalLink className="h-3.5 w-3.5" /> Annonce
+                <a href={r.lien_annonce} target="_blank" rel="noreferrer" className={cn('inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-primary hover:underline sm:min-h-[28px]', FOCUS)}>
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" /> Annonce<span className="sr-only"> (nouvel onglet)</span>
                 </a>
               )}
-              <Link to={lienOffre} className="inline-flex min-h-[28px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline">
+              <Link to={lienOffre} className={cn('inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline sm:min-h-[28px]', FOCUS)}>
                 Fiche de l’offre
               </Link>
             </div>
@@ -213,7 +235,7 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
             <div>
               <button
                 type="button"
-                className="inline-flex min-h-[32px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline"
+                className={cn('inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline sm:min-h-[32px]', FOCUS)}
                 onClick={() => setVoirPrep((v) => !v)}
                 aria-expanded={voirPrep}
               >
@@ -251,6 +273,7 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
               className="h-11 flex-1 rounded-full lg:h-10 lg:flex-none"
               disabled={saving}
               onClick={() => onDeposer(r)}
+              aria-label={`Candidature déposée — ${r.adresse ?? 'logement'}`}
             >
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
               Candidature déposée
@@ -263,7 +286,7 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
                   variant="outline"
                   className="h-11 w-11 shrink-0 rounded-full p-0 text-destructive hover:bg-destructive/10 hover:text-destructive lg:h-10 lg:w-auto lg:px-4"
                   disabled={deleting}
-                  aria-label="Supprimer l'offre"
+                  aria-label={`Supprimer l'offre — ${r.adresse ?? 'logement'}`}
                 >
                   {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   <span className="hidden lg:ml-2 lg:inline">Supprimer</span>
@@ -293,12 +316,70 @@ export function DossierSeulCard({ d, busy, onDecider, scope }: {
         <p className="truncate text-[15px] font-semibold text-foreground">{d.client_nom || 'Client'}</p>
         <p className="line-clamp-2 text-sm text-muted-foreground">{d.adresse_bien || d.objet || 'Bien'}</p>
         {d.offre_id && (
-          <Link to={`/${scope}/offres-auto?offre=${d.offre_id}`} className="mt-1 inline-flex min-h-[28px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline">
+          <Link to={`/${scope}/offres-auto?offre=${d.offre_id}`} className={cn('mt-1 inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline sm:min-h-[28px]', FOCUS)}>
             <ExternalLink className="h-3.5 w-3.5" /> Fiche de l’offre
           </Link>
         )}
       </div>
       <DossierBloc d={d} busy={busy} onDecider={onDecider} compact />
     </article>
+  );
+}
+
+/**
+ * En-tête d'un groupe quand un client a plusieurs demandes dans l'étape :
+ * nom, nombre de demandes, repli, et « Tout marquer déposé » (avec confirmation),
+ * qui appelle la même action que le bouton de chaque carte, demande par demande.
+ */
+export function ClientGroupe({ id, client, rows, ouvert, onBasculer, busy, onDeposerTout, children }: {
+  id: string;
+  client?: Row['_client'];
+  rows: Row[];
+  ouvert: boolean;
+  onBasculer: () => void;
+  busy: boolean;
+  onDeposerTout: (rows: Row[]) => void;
+  children: ReactNode;
+}) {
+  const aDeposer = rows.filter((r) => r.statut !== 'candidature_deposee');
+  const enRetard = rows.filter((r) => attente(r).enRetard).length;
+  const nom = nomClient(client);
+  const panneau = `groupe-${id}`;
+  return (
+    <section className="space-y-3 rounded-3xl border border-dashed border-border p-2 sm:p-3" aria-label={`Demandes de ${nom}`}>
+      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          onClick={onBasculer}
+          aria-expanded={ouvert}
+          aria-controls={panneau}
+          className={cn('flex min-h-[44px] min-w-0 flex-1 items-center gap-2 text-left', FOCUS)}
+        >
+          <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', !ouvert && '-rotate-90')} aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-semibold text-foreground">{nom}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {rows.length} demandes{enRetard > 0 ? ` · ${enRetard} > 24 h` : ''}{client?.email ? ` · ${client.email}` : ''}
+            </span>
+          </span>
+        </button>
+        {aDeposer.length > 1 && (
+          <ConfirmDialog
+            trigger={
+              <Button variant="outline" className="h-11 w-full rounded-full sm:h-9 sm:w-auto" disabled={busy}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                Tout marquer déposé ({aDeposer.length})
+              </Button>
+            }
+            title="Marquer toutes les candidatures déposées"
+            description={`${aDeposer.length} candidatures de ${nom} vont passer en « déposée ». Le client recevra une notification pour chacune. Confirmez seulement si elles ont toutes été déposées auprès des régies.`}
+            confirmText="Tout marquer déposé"
+            cancelText="Annuler"
+            onConfirm={() => onDeposerTout(aDeposer)}
+          />
+        )}
+      </div>
+      {ouvert && <div id={panneau} className="space-y-3">{children}</div>}
+    </section>
   );
 }
