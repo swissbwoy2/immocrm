@@ -109,7 +109,7 @@ const AdminWhatsAppNotifications = lazyWithRetry(() => import("./pages/admin/Wha
 const AdminEnvoyerEmail = lazyWithRetry(() => import("./pages/admin/EnvoyerEmail"));
 const AdminEnvoyerOffre = lazyWithRetry(() => import("./pages/admin/EnvoyerOffre"));
 const AdminHistoriqueEmails = lazyWithRetry(() => import("./pages/admin/HistoriqueEmails"));
-const AdminBoiteReception = lazyWithRetry(() => import("./pages/admin/BoiteReception"));
+const AdminBoiteReception = lazyWithRetry(() => import("./pages/admin/BoiteMail"));
 const AdminCalendrier = lazyWithRetry(() => import("./pages/admin/Calendrier"));
 const AdminVisites = lazyWithRetry(() => import("./pages/admin/Visites"));
 const AdminPortailBannieres = lazyWithRetry(() => import("./pages/admin/PortailBannieres"));
