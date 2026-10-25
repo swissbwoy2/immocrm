@@ -51,6 +51,7 @@ import { downloadBlob } from '@/lib/candidatureDocs';
 import {
   addressLabel,
   base64ToBlob,
+  cleanSnippet,
   db,
   emailDocument,
   FOLDER_LABEL,
@@ -554,7 +555,7 @@ export default function BoiteMail() {
                           <span className={cn('truncate text-sm', !it.is_seen && !isSentLike ? 'font-medium text-foreground' : 'text-foreground/80')}>
                             {it.subject || '(sans objet)'}
                           </span>
-                          <span className="line-clamp-1 text-xs text-muted-foreground">{it.snippet}</span>
+                          <span className="line-clamp-1 text-xs text-muted-foreground">{cleanSnippet(it.snippet)}</span>
                         </button>
                       </li>
                     );
