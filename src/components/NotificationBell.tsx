@@ -1,5 +1,9 @@
 import React from 'react';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import {
+  AlarmClock, Bell, BellRing, CalendarCheck, CalendarDays, CalendarX, Check, ChevronRight, ClipboardList,
+  FileCheck, FilePen, FileText, Handshake, Home, Hourglass, KeyRound, Mail, MessageCircle, PartyPopper,
+  PenLine, RefreshCw, Trash2, Trophy, UserCheck, UserMinus, UserPlus, Users, XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -16,36 +20,38 @@ import { NotificationBadge } from './NotificationBadge';
 import { getCorrectNotificationLink, detectRoleFromPath } from '@/lib/notificationLinks';
 import { useAuth } from '@/contexts/AuthContext';
 
-const getNotificationIcon = (type: string) => {
+/** Icône (lucide) par type de notification — même langage visuel que la page Notifications. */
+const getNotificationIcon = (type: string): React.ElementType => {
   switch (type) {
-    case 'new_client_activated': return '👤';
-    case 'client_assigned': return '🤝';
-    case 'client_removed': return '👋';
-    case 'new_message': return '💬';
-    case 'new_offer': case 'new_offer_admin': return '🏠';
-    case 'new_visit': case 'new_visit_admin': return '📅';
-    case 'visit_reminder': return '⏰';
-    case 'visit_confirmed': case 'visit_confirmed_admin': return '✅';
-    case 'visit_refused': case 'visit_refused_admin': return '❌';
-    case 'visit_delegated': return '🔄';
-    case 'activation_request': return '🆕';
-    case 'nouvelle_demande_mandat': return '📋';
-    case 'document_request': return '📄';
-    case 'dossier_complete': return '✅';
-    case 'badge_earned': return '🏆';
-    case 'coagent_added': case 'coagent_assignment': return '👥';
-    case 'new_candidature': case 'candidature_deposee': return '📝';
-    case 'candidature_acceptee': case 'candidature_acceptee_admin': return '🎉';
-    case 'candidature_refusee': case 'candidature_refusee_admin': return '❌';
-    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': case 'bail_conclu': return '✍️';
-    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return '⏳';
-    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return '📨';
-    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': case 'date_signature_choisie': return '📅';
-    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return '✅';
-    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return '🏠';
-    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return '🔑';
-    case 'signature_reminder': return '🔔';
-    default: return '🔔';
+    case 'new_client_activated': return UserCheck;
+    case 'client_assigned': return Handshake;
+    case 'client_removed': return UserMinus;
+    case 'new_message': return MessageCircle;
+    case 'new_offer': case 'new_offer_admin': return Home;
+    case 'new_visit': case 'new_visit_admin': return CalendarDays;
+    case 'visit_reminder': return AlarmClock;
+    case 'visit_confirmed': case 'visit_confirmed_admin': return CalendarCheck;
+    case 'visit_refused': case 'visit_refused_admin': return CalendarX;
+    case 'visit_delegated': return RefreshCw;
+    case 'activation_request': return UserPlus;
+    case 'nouvelle_demande_mandat': return ClipboardList;
+    case 'document_request': return FileText;
+    case 'dossier_complete': return FileCheck;
+    case 'badge_earned': return Trophy;
+    case 'coagent_added': case 'coagent_assignment': return Users;
+    case 'new_candidature': case 'candidature_deposee': return FilePen;
+    case 'candidature_acceptee': case 'candidature_acceptee_admin': return PartyPopper;
+    case 'candidature_refusee': case 'candidature_refusee_admin': return XCircle;
+    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': case 'bail_conclu': return PenLine;
+    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return Hourglass;
+    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return Mail;
+    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': case 'date_signature_choisie': return CalendarDays;
+    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return Check;
+    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return Home;
+    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return KeyRound;
+    case 'achat_update': return Home;
+    case 'signature_reminder': return BellRing;
+    default: return Bell;
   }
 };
 
@@ -95,117 +101,130 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={counts.total > 0 ? `Notifications : ${counts.total} non lue${counts.total > 1 ? 's' : ''}` : 'Notifications'}
           className={cn(
-            "relative transition-transform duration-200 hover:scale-110",
+            "relative rounded-full transition-colors hover:bg-muted",
             isAnimating && "notification-bell-ring"
           )}
         >
-          <Bell className={cn(
-            "h-5 w-5 transition-colors",
-            counts.total > 0 && "text-primary"
-          )} />
+          <Bell className="h-5 w-5 text-foreground" />
           {counts.total > 0 && (
-            <NotificationBadge 
-              count={counts.total} 
-              className="absolute -top-1 -right-1 animate-bounce-in"
+            <NotificationBadge
+              count={counts.total}
+              className="absolute -top-0.5 -right-0.5 ring-2 ring-background"
             />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 animate-scale-in" align="end">
-        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-          <h4 className="font-semibold flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </h4>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border-border/70 p-0 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.10)]"
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
+          <div className="min-w-0">
+            <h4 className="text-base font-semibold text-foreground">Notifications</h4>
+            <p className="text-xs text-muted-foreground">
+              {counts.total > 0 ? `${counts.total} non lue${counts.total > 1 ? 's' : ''}` : 'Vous êtes à jour'}
+            </p>
+          </div>
           {counts.total > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => markAllAsRead()}
-              className="text-xs hover:bg-primary/10 transition-colors"
+              className="h-8 shrink-0 rounded-full px-3 text-xs font-medium"
             >
-              <Check className="h-3 w-3 mr-1" />
+              <Check className="mr-1 h-3.5 w-3.5" />
               Tout marquer lu
             </Button>
           )}
         </div>
-        
-        <ScrollArea className="h-[300px]">
+
+        <ScrollArea className="h-[min(360px,60vh)]">
           {recentNotifications.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground empty-state">
-              <Bell className="h-12 w-12 mx-auto mb-3 opacity-20 empty-state-icon" />
-              <p className="text-sm">Aucune notification</p>
+            <div className="px-6 py-10 text-center">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Bell className="h-6 w-6 text-primary" />
+              </span>
+              <p className="mt-3 text-sm font-semibold text-foreground">Aucune notification</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Les nouveautés de votre dossier apparaîtront ici.</p>
             </div>
           ) : (
-            <div className="divide-y">
-              {recentNotifications.map((notification, index) => (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "p-3 cursor-pointer transition-all duration-200",
-                    "hover:bg-muted/50 hover:translate-x-1",
-                    !notification.read && "bg-primary/5 border-l-2 border-l-primary",
-                    "animate-fade-in"
-                  )}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg animate-bounce-in" style={{ animationDelay: `${index * 50 + 100}ms` }}>
-                      {getNotificationIcon(notification.type)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
+            <ul className="divide-y divide-border/70">
+              {recentNotifications.map((notification) => {
+                const Icon = getNotificationIcon(notification.type);
+                return (
+                  <li key={notification.id}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleNotificationClick(notification)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(notification); } }}
+                      className={cn(
+                        "group flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:outline-none",
+                        !notification.read && "bg-primary/[0.04]"
+                      )}
+                    >
+                      <span className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                        notification.read ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                      )}>
+                        <Icon className="h-[18px] w-[18px]" />
+                      </span>
+                      <div className="min-w-0 flex-1">
                         <p className={cn(
-                          "text-sm truncate",
-                          !notification.read && "font-semibold"
+                          "line-clamp-2 text-sm leading-snug text-foreground",
+                          !notification.read ? "font-semibold" : "font-medium"
                         )}>
                           {notification.title}
                         </p>
+                        {notification.message && (
+                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                            {notification.message}
+                          </p>
+                        )}
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(notification.created_at), {
+                            addSuffix: true,
+                            locale: fr,
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        {!notification.read && (
+                          <span className="mt-1.5 h-2 w-2 rounded-full bg-primary" aria-label="Non lue" />
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                          aria-label="Supprimer la notification"
+                          className="h-7 w-7 rounded-full text-muted-foreground opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      {notification.message && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {notification.message}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notification.created_at), {
-                          addSuffix: true,
-                          locale: fr,
-                        })}
-                      </p>
                     </div>
-                    {!notification.read && (
-                      <div className="w-2 h-2 bg-primary rounded-full shrink-0 mt-1 animate-pulse-soft" />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </ScrollArea>
-        
+
         {notifications.length > 10 && (
-          <div className="p-2 border-t text-center bg-muted/20">
+          <div className="border-t border-border/70 p-2">
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs w-full hover:bg-primary/10 transition-colors"
+              className="h-9 w-full rounded-full text-sm font-medium"
               onClick={() => {
                 const path = window.location.pathname.split('/')[1];
                 setOpen(false);
@@ -213,6 +232,7 @@ export function NotificationBell() {
               }}
             >
               Voir toutes les notifications
+              <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         )}
