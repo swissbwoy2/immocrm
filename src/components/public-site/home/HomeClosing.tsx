@@ -85,7 +85,7 @@ export function HomeClosing() {
               </ul>
               <Link
                 to="/login"
-                className="mt-6 inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-lg bg-white px-6 text-[16px] font-medium text-foreground ring-1 ring-inset ring-foreground/80 transition-colors duration-150 hover:bg-[var(--home-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+                className="mt-6 inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full imr-lg-glass px-6 text-[16px] font-medium text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
               >
                 Devenir partenaire
                 <ArrowRight className="h-5 w-5" aria-hidden="true" />

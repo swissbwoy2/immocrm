@@ -862,16 +862,16 @@ export default function AnnonceDetail() {
                 )}
 
                 <div className="mt-4 space-y-3">
-                  <Button className="w-full h-12 rounded-lg text-base font-medium" onClick={() => setShowReserverDialog(true)}>
+                  <Button className="w-full h-12 text-base font-medium" onClick={() => setShowReserverDialog(true)}>
                     <CalendarCheck className="h-4 w-4 mr-2" />
                     Réserver une visite / Postuler
                   </Button>
-                  <Button className="w-full h-12 rounded-lg text-base font-medium border-foreground text-foreground" variant="outline" onClick={handleContact}>
+                  <Button className="w-full h-12 text-base font-medium" variant="outline" onClick={handleContact}>
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Contacter
                   </Button>
                   {annonce.annonceurs?.telephone && (
-                    <Button variant="outline" className="w-full h-12 rounded-lg text-base font-medium border-foreground text-foreground" asChild>
+                    <Button variant="outline" className="w-full h-12 text-base font-medium" asChild>
                       <a href={`tel:${annonce.annonceurs.telephone}`}>
                         <Phone className="h-4 w-4 mr-2" />
                         {annonce.annonceurs.telephone}
@@ -913,11 +913,11 @@ export default function AnnonceDetail() {
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
-                  <Button variant="outline" className="flex-1 h-11 rounded-lg border-foreground text-foreground" onClick={handleFavorite}>
+                  <Button variant="outline" className="flex-1 h-11" onClick={handleFavorite}>
                     <Heart className={`h-4 w-4 mr-2 ${isFavorite ? 'fill-primary text-primary' : ''}`} />
                     {isFavorite ? 'Favori' : 'Sauvegarder'}
                   </Button>
-                  <Button variant="outline" className="flex-1 h-11 rounded-lg border-foreground text-foreground" onClick={handleShare}>
+                  <Button variant="outline" className="flex-1 h-11" onClick={handleShare}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Partager
                   </Button>
