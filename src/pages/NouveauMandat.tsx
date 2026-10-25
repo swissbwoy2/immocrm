@@ -14,6 +14,7 @@ import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
 import { legalCheckboxesFor } from '@/components/mandat/achat/achatMandat';
+import { acceptedConsentsFor, contractTextFor, contractTitleFor } from '@/components/mandat/mandatContrats';
 import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
@@ -444,7 +445,13 @@ export default function NouveauMandat() {
             candidats: formData.candidats,
             signature_data: formData.signature_data,
             code_promo: formData.code_promo,
-            payment_method: formData.payment_method ?? 'qr_invoice'
+            payment_method: formData.payment_method ?? 'qr_invoice',
+            // Mandat réellement affiché et signé + dispositions approuvées (horodatées)
+            demande_id: demandeMandatId,
+            contract_title: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            contract_text: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            consents: acceptedConsentsFor({ ...formData, type_recherche: isPurchase ? 'Acheter' : formData.type_recherche }),
+            signed_at: new Date().toISOString(),
           }
         });
         console.log('Mandat PDF email sent');
