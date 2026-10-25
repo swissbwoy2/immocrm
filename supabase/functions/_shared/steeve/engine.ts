@@ -12,6 +12,15 @@ export const TURN_DEADLINE_MS = 100_000;
 const MAX_ATTEMPTS = 2;
 const TRANSCRIPT_SIZE = 30;
 
+/** Sujets qui exigent la règle « sujet sensible » (prudence + recommandation d'un responsable). */
+const SENSITIVE_TOPIC = /\b(paiement|pay[ée]e?s?|payer|vers[ée]|virement|factur|rembours|acompte|honorai|argent|dette|poursuite|commandement de payer|litige|plainte|tribunal|justice|avocat|proc[ée]dure|r[ée]clamation|comptab|financ|chiffre d'affaires|salaire d|banque|encaiss|contentieux|recouvrement)/i;
+
+export function sensitiveNote(text: string): string {
+  return SENSITIVE_TOPIC.test(text)
+    ? "\n\nAttention : le dernier message du client touche un sujet sensible. Applique strictement la règle de confidentialité : rien sur l'entreprise ni sur des tiers ; pour ce qui le concerne, uniquement ce que montre son dossier, et recommande toujours d'en parler avec un responsable."
+    : '';
+}
+
 export const CAPPED_MESSAGE =
   "Je ne peux pas te répondre en détail pour le moment. J'ai transmis ton message à ton agent, qui te répondra ici.";
 export const TECHNICAL_MESSAGE =
@@ -74,11 +83,39 @@ async function loadTranscript(db: Db, conversationId: string) {
 }
 
 /**
+ * Filtre de sortie : aucun lien hors des sites de l'agence et aucune coordonnée bancaire ne sont publiés
+ * (protection contre une consigne glissée dans un e-mail ou un document).
+ */
+export function stripUntrusted(text: string): string {
+  const allowed = /^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i;
+  return text
+    // Adresses e-mail (le personnel et les tiers ne sont jamais cités).
+    .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi, '[adresse retirée]')
+    // Liens explicites (http, https, www), quel que soit le domaine : seuls les sites de l'agence restent.
+    .replace(/\b(?:https?:\/\/|www\.)[^\s<>"]+/gi, (match) => {
+      const url = match.replace(/[.,;:!?)\]]+$/, '');
+      const tail = match.slice(url.length);
+      const host = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      return (allowed.test(host) ? url : '[lien retiré]') + tail;
+    })
+    // Domaines écrits sans http ni www.
+    .replace(/(?:https?:\/\/|www\.)?(?<![A-Za-z0-9@.-])[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:ch|com|net|org|io|fr|de|it|li|at|be|nl|es|pt|eu|uk|us|info|biz|co|me|app|xyz|online|site|link|ly|shop|top)(?![A-Za-z0-9])(?:\/[^\s<>"]*)?/gi, (match) => {
+      const url = match.replace(/[.,;:!?)\]]+$/, '');
+      const tail = match.slice(url.length);
+      const host = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '');
+      return (allowed.test(host) ? url : '[lien retiré]') + tail;
+    })
+    .replace(/\b[A-Za-z]{2}[0-9]{2}(?:[ .-]?[0-9A-Za-z]){11,30}\b/g, '[coordonnées bancaires retirées]')
+    .replace(/(?:\+[1-9][0-9]{0,2}|(?<![0-9])00(?:41|33|49|39|44|43|32|31|34|351|352|423))(?:[ .-]?\(?[0-9]{1,4}\)?){3,6}/g, '[numéro retiré]')
+    .replace(/(?<![0-9])0[1-9][0-9]?(?:[ .-]?[0-9]{2,3}){3,4}(?![0-9])/g, '[numéro retiré]');
+}
+
+/**
  * Texte brut pour la messagerie : la bulle n'affiche pas le Markdown, et un message commençant par
  * un emoji suivi de « ** » serait classé automatique et masqué (message_est_automatique).
  */
 export function toPlainReply(text: string): string {
-  return text
+  return stripUntrusted(text)
     .replace(/\*\*(.+?)\*\*/g, '$1')
     .replace(/__(.+?)__/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
@@ -247,7 +284,7 @@ export async function runTurn(opts: {
         content:
           `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
           `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
-          (note || '\n\nRéponds maintenant au dernier message du client.').trimStart(),
+          ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart(),
       }];
 
       let finalText = '';

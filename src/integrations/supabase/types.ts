@@ -16070,6 +16070,37 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_shared_mailbox: { Args: { p_id: string }; Returns: undefined }
+      admin_list_shared_mailboxes: {
+        Args: never
+        Returns: {
+          address: string
+          emails_count: number
+          has_password: boolean
+          id: string
+          imap_host: string
+          imap_port: number
+          is_active: boolean
+          label: string | null
+          last_attempt_at: string | null
+          last_error: string | null
+          last_sync_at: string | null
+          pending_count: number | null
+          verified_count: number
+        }[]
+      }
+      admin_save_shared_mailbox: {
+        Args: {
+          p_address: string
+          p_id: string | null
+          p_imap_host: string
+          p_imap_port: number
+          p_is_active: boolean
+          p_label: string | null
+          p_password?: string | null
+        }
+        Returns: string
+      }
       _get_or_create_annonce_conv: {
         Args: { p_annonce_id: string; p_user_id: string }
         Returns: string
