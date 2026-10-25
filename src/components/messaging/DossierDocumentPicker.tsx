@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Camera, FolderUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -18,11 +18,15 @@ import {
 
 interface Props {
   dossier: ClientDossierContext;
-  /** Appelé une fois la pièce enregistrée dans le dossier (pour l'annoncer dans la conversation). */
-  onFiled: (doc: FiledDocument) => Promise<void> | void;
-  /** Appareil photo natif (application mobile) ; sinon l'appareil photo du navigateur. */
-  takePhoto?: () => Promise<File | null>;
-  isNative?: boolean;
+  /** Annonce la pièce dans la conversation ; false si l'annonce a échoué (la pièce reste au dossier). */
+  onFiled: (doc: FiledDocument) => Promise<boolean | void> | boolean | void;
+  /**
+   * Ouvre l'appareil photo ou le choix de fichier. Les champs de fichier vivent dans l'uploader
+   * (toujours monté) : le fichier arrive même si le menu se ferme pendant le choix.
+   */
+  pickFile: (opts: { camera: boolean; accept: string }) => Promise<File | null>;
+  /** Pendant l'envoi, le menu ne doit pas se fermer. */
+  onBusyChange?: (busy: boolean) => void;
   onDone: () => void;
 }
 
@@ -30,52 +34,59 @@ interface Props {
  * Choix de la pièce à ajouter au dossier depuis la messagerie :
  * le fichier est classé au bon endroit dès l'envoi (type, personne concernée).
  */
-export function DossierDocumentPicker({ dossier, onFiled, takePhoto, isNative, onDone }: Props) {
+export function DossierDocumentPicker({ dossier, onFiled, pickFile, onBusyChange, onDone }: Props) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<DossierDocumentOption | null>(null);
   const [candidateId, setCandidateId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusyState] = useState(false);
+  const setBusy = (value: boolean) => { setBusyState(value); onBusyChange?.(value); };
 
   const options = dossierDocumentsFor(dossier.journey);
 
-  const handleFile = async (file: File | null | undefined) => {
-    if (!file || !selected) return;
-    const problem = validateDossierFile(file, selected.type);
+  // Le type et la personne sont figés au moment du choix : un menu refermé entre-temps ne change rien.
+  const handleFile = async (file: File | null | undefined, option: DossierDocumentOption, personId: string | null) => {
+    if (!file) return;
+    const problem = validateDossierFile(file, option.type);
     if (problem) {
       toast({ title: 'Fichier refusé', description: problem, variant: 'destructive' });
       return;
     }
-    setBusy(true);
+    let doc: FiledDocument;
     try {
-      const doc = await fileDocumentToDossier({
-        ctx: dossier,
-        file,
-        type: selected.type,
-        label: selected.label,
-        candidateId,
-      });
-      await onFiled(doc);
-      toast({ title: 'Ajouté à ton dossier', description: `${selected.label}${doc.personLabel ? ` — ${doc.personLabel}` : ''}` });
-      setSelected(null);
-      setCandidateId(null);
-      onDone();
+      doc = await fileDocumentToDossier({ ctx: dossier, file, type: option.type, label: option.label, candidateId: personId });
     } catch (err) {
       const message = err instanceof Error ? err.message : (err as { message?: string })?.message;
       toast({ title: "Le document n'a pas pu être ajouté", description: message || 'Réessaie dans un instant.', variant: 'destructive' });
+      return;
+    }
+    let announced: boolean | void = true;
+    try {
+      announced = await onFiled(doc);
+    } catch {
+      announced = false;
+    }
+    const what = `${option.label}${doc.personLabel ? ` — ${doc.personLabel}` : ''}`;
+    toast(announced === false
+      ? { title: 'Ajouté à ton dossier', description: `${what}. Il n'a pas pu être annoncé dans la conversation.` }
+      : { title: 'Ajouté à ton dossier', description: what });
+    setSelected(null);
+    setCandidateId(null);
+    onDone();
+  };
+
+  const choose = async (camera: boolean) => {
+    if (!selected || busy) return;
+    const option = selected;
+    const personId = candidateId;
+    // Pas d'état « occupé » pendant le choix : si la personne annule, rien ne reste bloqué.
+    const file = await pickFile({ camera, accept: camera ? 'image/*' : option.type === 'autre' ? AUTRE_ACCEPT : DOSSIER_ACCEPT });
+    if (!file) return;
+    setBusy(true);
+    try {
+      await handleFile(file, option, personId);
     } finally {
       setBusy(false);
     }
-  };
-
-  const openCamera = async () => {
-    if (isNative && takePhoto) {
-      const file = await takePhoto();
-      await handleFile(file);
-      return;
-    }
-    cameraInputRef.current?.click();
   };
 
   if (!selected) {
@@ -103,26 +114,8 @@ export function DossierDocumentPicker({ dossier, onFiled, takePhoto, isNative, o
     );
   }
 
-  const accept = selected.type === 'autre' ? AUTRE_ACCEPT : DOSSIER_ACCEPT;
-
   return (
     <div className="flex flex-col gap-2 p-1">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => { void handleFile(e.target.files?.[0]); e.target.value = ''; }}
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => { void handleFile(e.target.files?.[0]); e.target.value = ''; }}
-      />
-
       <div className="flex items-center gap-1">
         <Button type="button" variant="ghost" size="icon" className="h-7 w-7" disabled={busy} onClick={() => setSelected(null)} aria-label="Retour à la liste">
           <ArrowLeft className="h-4 w-4" />
@@ -157,11 +150,11 @@ export function DossierDocumentPicker({ dossier, onFiled, takePhoto, isNative, o
       )}
 
       <div className="flex flex-col gap-1 pt-1">
-        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy} onClick={() => void openCamera()}>
+        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy} onClick={() => void choose(true)}>
           {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
           Prendre une photo
         </Button>
-        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy} onClick={() => fileInputRef.current?.click()}>
+        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy} onClick={() => void choose(false)}>
           <FolderUp className="h-4 w-4 mr-2" />
           Choisir un fichier
         </Button>

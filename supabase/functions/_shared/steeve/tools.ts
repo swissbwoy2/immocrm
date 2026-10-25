@@ -104,10 +104,16 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
 /** Passe la conversation en mode agent et prévient l'agent (ou les admins à défaut). */
 export async function transferToAgent(ctx: ToolContext, reason: string, summary: string): Promise<ToolOutcome> {
   const { db, conversationId, dossier } = ctx;
+  // Déjà transmise (ou reprise par un agent) : pas de seconde notification.
+  const { data: current } = await db.from('conversations').select('handled_by').eq('id', conversationId).single();
+  if (current && current.handled_by !== 'steeve') {
+    return { content: json({ transfere: true, deja_transmise: true }), transferred: true };
+  }
   const { error: convError } = await db
     .from('conversations')
     .update({ handled_by: 'agent', handled_by_user: null, handled_since: ctx.now.toISOString() })
-    .eq('id', conversationId);
+    .eq('id', conversationId)
+    .eq('handled_by', 'steeve');
   if (convError) return { content: `Transfert impossible : ${convError.message}`, isError: true };
 
   const { data: links } = await db.from('conversation_agents').select('agent_id').eq('conversation_id', conversationId);

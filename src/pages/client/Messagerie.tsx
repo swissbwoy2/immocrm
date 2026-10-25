@@ -481,8 +481,8 @@ const Messagerie = () => {
     }
   };
 
-  const handleDocumentFiled = async (doc: FiledDocument) => {
-    if (!user || !selectedConv) return;
+  const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
+    if (!user || !selectedConv) return false;
     const { error } = await postDossierDocumentMessage({
       conversationId: selectedConv,
       senderId: user.id,
@@ -491,9 +491,10 @@ const Messagerie = () => {
       clientMsgId: newClientMessageId(),
     });
     if (error) {
-      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué.
-      toast({ title: 'Document ajouté au dossier', description: "Il n'a pas pu être annoncé dans la conversation." });
+      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué (message unique côté sélecteur).
+      return false;
     }
+    return true;
   };
 
   const handleSendMessage = async (textOverride?: string) => {

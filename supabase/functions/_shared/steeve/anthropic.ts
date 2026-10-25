@@ -70,6 +70,7 @@ export type CallModel = (req: ModelRequest) => Promise<ModelResponse>;
 export function anthropicCaller(apiKey: string): CallModel {
   return async (req) => {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
+      signal: AbortSignal.timeout(45_000),
       method: 'POST',
       headers: {
         'content-type': 'application/json',

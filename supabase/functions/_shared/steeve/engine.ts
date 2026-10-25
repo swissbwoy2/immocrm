@@ -7,6 +7,8 @@ import { STEEVE_SYSTEM_PROMPT } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
 
 export const MAX_MODEL_CALLS = 6;
+/** Au-delà, le passage s'arrête et transmet à l'agent (la fonction edge est coupée vers 150 s). */
+export const TURN_DEADLINE_MS = 100_000;
 const MAX_ATTEMPTS = 2;
 const TRANSCRIPT_SIZE = 30;
 
@@ -103,9 +105,14 @@ async function postReply(db: Db, conversationId: string, runId: string, content:
 }
 
 async function notifyAdminsOnce(db: Db, key: string, marker: string, title: string, message: string) {
-  const { data: current } = await db.from('app_config').select('value').eq('key', key).maybeSingle();
-  if (current?.value === marker) return;
-  await db.from('app_config').upsert({ key, value: marker, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  // Mise à jour conditionnelle : un seul passage gagne, même si plusieurs conversations franchissent le seuil ensemble.
+  const { data: won } = await db
+    .from('app_config')
+    .update({ value: marker, updated_at: new Date().toISOString() })
+    .eq('key', key)
+    .neq('value', marker)
+    .select('key');
+  if (!won || won.length === 0) return;
   const { data: admins } = await db.from('user_roles').select('user_id').eq('role', 'admin');
   for (const a of admins || []) {
     await db.rpc('create_notification', {
@@ -124,9 +131,12 @@ export async function runTurn(opts: {
   runId: string;
   callModel: CallModel | null;
   now?: () => Date;
+  deadlineMs?: number;
 }): Promise<TurnResult> {
   const { db, runId, callModel } = opts;
   const now = opts.now ?? (() => new Date());
+  const startedAt = Date.now();
+  const deadlineMs = opts.deadlineMs ?? TURN_DEADLINE_MS;
 
   const { data: claim } = await db.rpc('steeve_claim_run', { p_run_id: runId });
   if (!claim?.ok) return { status: 'skipped', reason: claim?.reason || 'non_pris' };
@@ -158,8 +168,14 @@ export async function runTurn(opts: {
     return result;
   };
 
-  const { data: run } = await db.from('steeve_runs').select('id, conversation_id, client_id').eq('id', runId).single();
+  const { data: run } = await db
+    .from('steeve_runs')
+    .select('id, conversation_id, client_id, reason, trigger_message_id')
+    .eq('id', runId)
+    .single();
   const conversationId: string = run.conversation_id;
+  // Relance : message arrivé pendant la rédaction du passage précédent, auquel la réponse publiée n'a pas répondu.
+  const isRelance = run.reason === 'relance';
 
   const { data: conv } = await db
     .from('conversations')
@@ -190,7 +206,8 @@ export async function runTurn(opts: {
   const monthCap = num(cfg.steeve_budget_month_usd, 30);
   const alertAt = num(cfg.steeve_alert_month_usd, 20);
   if ((s.month_usd ?? 0) >= alertAt) {
-    const month = now().toISOString().slice(0, 7);
+    // Même mois que steeve_spend (heure de Zurich).
+    const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit' }).format(now());
     await notifyAdminsOnce(db, 'steeve_alert_sent_month', month,
       'Steeve : seuil d’alerte du budget atteint',
       `Dépense du mois : ${Number(s.month_usd).toFixed(2)} USD (alerte à ${alertAt} USD, plafond ${monthCap} USD).`);
@@ -208,7 +225,19 @@ export async function runTurn(opts: {
   try {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const transcript = await loadTranscript(db, conversationId);
-      const last = transcript[transcript.length - 1];
+      let last = transcript[transcript.length - 1];
+      let note = '';
+      if (isRelance && last && last.sender_type === 'assistant') {
+        // Le dernier message de Steeve a été rédigé sans voir le(s) message(s) du client qui le précèdent.
+        const trigger = transcript.find((m: any) => m.id === run.trigger_message_id);
+        const answeredByTeam = trigger && transcript.some((m: any) =>
+          m.created_at > trigger.created_at && (m.sender_type === 'agent' || m.sender_type === 'admin'));
+        if (trigger && !answeredByTeam) {
+          last = trigger;
+          note = `\n\nTon dernier message a été rédigé avant que tu voies le message du client de ${formatZurich(trigger.created_at)}. ` +
+            'Réponds maintenant à ce message-là, sans répéter ce que tu as déjà dit.';
+        }
+      }
       // Quelqu'un a déjà répondu au client (agent ou passage précédent) : rien à ajouter.
       if (!last || last.sender_type !== 'client') return finish({ status: 'skipped', reason: 'deja_repondu' });
 
@@ -218,12 +247,13 @@ export async function runTurn(opts: {
         content:
           `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
           `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
-          'Réponds maintenant au dernier message du client.',
+          (note || '\n\nRéponds maintenant au dernier message du client.').trimStart(),
       }];
 
       let finalText = '';
       let transferred = false;
       for (let i = 0; i < MAX_MODEL_CALLS; i++) {
+        if (Date.now() - startedAt > deadlineMs) throw new Error(`délai dépassé (${Math.round(deadlineMs / 1000)} s)`);
         const resp = await callModel({
           model,
           max_tokens: 800,
@@ -286,7 +316,12 @@ export async function runTurn(opts: {
       }
 
       const replyId = await postReply(db, conversationId, runId, toPlainReply(finalText));
-      return finish({ status: 'done', reason: transferred ? 'transfere_agent' : undefined, replyMessageId: replyId });
+      const done = await finish({ status: 'done', reason: transferred ? 'transfere_agent' : undefined, replyMessageId: replyId });
+      if (!transferred) {
+        // Un message du client arrivé pendant la rédaction a été écarté (« passage_en_cours ») : on le relance.
+        await db.rpc('steeve_requeue_latest', { p_conversation_id: conversationId, p_after: last.created_at });
+      }
+      return done;
     }
     return finish({ status: 'skipped', reason: 'conversation_en_mouvement' });
   } catch (err) {

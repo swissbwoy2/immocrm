@@ -12,7 +12,7 @@ export function useClientDossier(): ClientDossierContext | null {
   const { data } = useQuery({
     queryKey: ['client-dossier-context', user?.id],
     enabled,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000, // une personne ajoutée au dossier apparaît vite dans le choix
     queryFn: () => loadClientDossierContext(user!.id),
   });
   return enabled ? data ?? null : null;

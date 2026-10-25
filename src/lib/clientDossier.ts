@@ -146,24 +146,7 @@ export async function fileDocumentToDossier(params: {
     throw dbError || new Error("Le document n'a pas pu être enregistré");
   }
 
-  if (type !== 'autre') {
-    let request = supabase
-      .from('document_requests')
-      .select('id')
-      .eq('client_id', ctx.clientId)
-      .eq('document_type', type)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: true })
-      .limit(1);
-    request = candidateId ? request.eq('candidate_id', candidateId) : request.is('candidate_id', null);
-    const { data: pending } = await request;
-    if (pending && pending[0]) {
-      await supabase
-        .from('document_requests')
-        .update({ status: 'fulfilled', fulfilled_at: new Date().toISOString() })
-        .eq('id', pending[0].id);
-    }
-  }
+  // La demande de pièce correspondante est close côté serveur (trg_fulfil_document_request_on_upload).
 
   const person = candidateId ? ctx.persons.find((p) => p.id === candidateId) : null;
   return {

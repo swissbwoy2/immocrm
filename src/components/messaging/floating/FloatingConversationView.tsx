@@ -323,8 +323,8 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
     setPendingAttachment(null);
   };
 
-  const handleDocumentFiled = async (doc: FiledDocument) => {
-    if (!userId) return;
+  const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
+    if (!userId) return false;
     const { data: inserted, error } = await postDossierDocumentMessage({
       conversationId,
       senderId: userId,
@@ -333,11 +333,11 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       clientMsgId: newClientMessageId(),
     });
     if (error) {
-      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué.
-      toast({ title: 'Document ajouté au dossier', description: "Il n'a pas pu être annoncé dans la conversation." });
-      return;
+      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué (message unique côté sélecteur).
+      return false;
     }
     if (inserted) setMessages((prev) => mergeMessages(prev, [inserted as MessageRow]));
+    return true;
   };
 
   const handleOpenFullscreen = () => {

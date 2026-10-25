@@ -121,7 +121,7 @@ function docStatusLabel(statut?: string | null): string {
 export async function documentsStatus(db: Db, dossier: Dossier) {
   const { data: docs } = await db
     .from('documents')
-    .select('id, type_document, nom, statut, commentaire_admin, candidate_id, date_upload, created_at')
+    .select('id, type_document, nom, statut, candidate_id, date_upload, created_at')
     .eq('client_id', dossier.clientId)
     .order('created_at', { ascending: false })
     .limit(200);
@@ -175,7 +175,6 @@ export async function documentsStatus(db: Db, dossier: Dossier) {
       type: d.type_document,
       fichier: d.nom,
       etat: docStatusLabel(d.statut),
-      commentaire_equipe: d.commentaire_admin || null,
       personne: d.candidate_id ? dossier.persons.find((p) => p.id === d.candidate_id)?.label ?? 'personne liée' : 'client principal',
       depose_le: (d.date_upload || d.created_at || '').slice(0, 10),
     })),
@@ -200,7 +199,7 @@ export async function offers(db: Db, clientId: string, opts: { status?: string; 
     .from('offres')
     .select('id, titre, adresse, prix, pieces, surface, etage, disponibilite, statut, date_envoi, lien_annonce')
     .eq('client_id', clientId)
-    .neq('statut', 'doublon')
+    .or('statut.is.null,statut.neq.doublon')
     .order('date_envoi', { ascending: false })
     .limit(Math.min(Math.max(opts.limit ?? 8, 1), 15));
   if (opts.status) q = q.eq('statut', opts.status);
@@ -242,7 +241,7 @@ export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passe
     .from('visites')
     .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id')
     .eq('client_id', clientId)
-    .neq('statut', 'annulee')
+    .or('statut.is.null,statut.neq.annulee')
     .limit(10);
   if (scope === 'a_venir') q = q.gte('date_visite', now.toISOString()).order('date_visite', { ascending: true });
   else if (scope === 'passees') q = q.lt('date_visite', now.toISOString()).order('date_visite', { ascending: false });
@@ -366,7 +365,7 @@ export async function overview(db: Db, dossier: Dossier, now: Date) {
   const c = dossier.client;
   const [docs, offs, nextVisits, apps] = await Promise.all([
     documentsStatus(db, dossier),
-    db.from('offres').select('statut').eq('client_id', dossier.clientId).neq('statut', 'doublon'),
+    db.from('offres').select('statut').eq('client_id', dossier.clientId).or('statut.is.null,statut.neq.doublon'),
     visits(db, dossier.clientId, 'a_venir', now),
     applications(db, dossier.clientId),
   ]);
