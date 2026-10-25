@@ -1,32 +1,42 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge';
-import { getInteretState } from '@/lib/offreInteret';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, Users, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog, Layers, Calendar } from 'lucide-react';
+import {
+  CalendarCheck, Clock, CheckCircle, Home, Phone, Mail, KeyRound, Building, User, Users, MessageSquare, FileText,
+  Upload, Loader2, X, UserCog, Layers, Calendar, Navigation, ThumbsUp, ThumbsDown, Minus, RefreshCw,
+} from 'lucide-react';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { DashBadge, DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
+import { CoursierMissionCard } from '@/components/coursier/CoursierMissionCard';
+import { A_RENDRE_JOURS, etapeCoursier, finVisite, lienItineraire, type EtapeCoursier } from '@/components/coursier/coursierModel';
+import { cn } from '@/lib/utils';
+
+const ETAPES: { key: EtapeCoursier; label: string }[] = [
+  { key: 'disponibles', label: 'Disponibles' },
+  { key: 'mes_missions', label: 'Mes missions' },
+  { key: 'a_rendre', label: 'À rendre' },
+  { key: 'terminees', label: 'Terminées' },
+];
+
+const SECTION_TITLE = 'mb-2 flex items-center gap-2 text-sm font-semibold text-foreground';
+const BLOC = 'rounded-xl bg-muted/50 p-3 space-y-1';
 
 export default function CoursierMissions() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +48,12 @@ export default function CoursierMissions() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
+  const [tab, setTab] = useState<EtapeCoursier>(() => {
+    const t = searchParams.get('tab');
+    return (ETAPES.some((e) => e.key === t) ? t : 'disponibles') as EtapeCoursier;
+  });
+  const tabChoisi = useRef(!!searchParams.get('tab'));
+  const lienTraite = useRef(false);
 
   useEffect(() => {
     if (user) loadData();
@@ -92,19 +108,19 @@ export default function CoursierMissions() {
     if (!selectedMission) return;
     setUploadingMedia(true);
     const newMedias = [...feedbackMedias];
-    
+
     for (const file of Array.from(files)) {
       try {
         const filePath = `visites-coursier/${selectedMission.id}/${Date.now()}_${file.name}`;
         const { error } = await supabase.storage
           .from('client-documents')
           .upload(filePath, file);
-        
+
         if (!error) {
           const { data: { publicUrl } } = supabase.storage
             .from('client-documents')
             .getPublicUrl(filePath);
-          
+
           newMedias.push({ url: publicUrl, type: file.type, name: file.name });
         }
       } catch (err) {
@@ -155,242 +171,192 @@ export default function CoursierMissions() {
       _count: new Set(g.items.filter((v: any) => v.client_id).map((v: any) => v.client_id)).size || g.count, _delegues: g.items.filter((v: any) => v.est_deleguee === true).length,
     }));
 
-  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0); const available = toCards(missions.filter(m => m.statut_coursier === 'en_attente')).filter((g: any) => (g._delegues || 0) > 0 && new Date(g.date_visite) >= startOfToday);
-  const myActive = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'accepte')).filter((g: any) => new Date(g.date_visite) >= startOfToday);
-  const myCompleted = toCards(missions.filter(m => m.coursier_id === coursierId && m.statut_coursier === 'termine'));
+  /** Missions regroupées puis rangées par étape (calcul d'affichage, aucune donnée modifiée). */
+  const parEtape = useMemo(() => {
+    const now = Date.now();
+    const m: Record<EtapeCoursier, any[]> = { disponibles: [], mes_missions: [], a_rendre: [], terminees: [] };
+    for (const card of toCards(missions)) {
+      const e = etapeCoursier(card, card._group, coursierId, now);
+      if (e) m[e].push(card);
+    }
+    const t = (x: any) => new Date(x.date_visite).getTime();
+    m.disponibles.sort((a, b) => t(a) - t(b));
+    m.mes_missions.sort((a, b) => t(a) - t(b));
+    m.a_rendre.sort((a, b) => finVisite(a) - finVisite(b));
+    m.terminees.sort((a, b) => t(b) - t(a));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missions, coursierId]);
 
-  const renderMissionCard = (mission: any, type: 'available' | 'active' | 'completed') => (
-    <Card 
-      key={mission.id} 
-      className={`border-border/50 hover:shadow-lg transition-all cursor-pointer ${
-        type === 'active' ? 'border-amber-500/30 bg-amber-500/5' : 
-        type === 'completed' ? 'border-green-500/30 bg-green-500/5' : ''
-      }`}
-      onClick={() => { setSelectedMission(mission); setDetailOpen(true); }}
-    >
-      <CardContent className="pt-6 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <AddressLink address={mission.adresse} className="font-medium text-sm" truncate />
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Badge variant="secondary" className="gap-1">
-              <Users className="h-3 w-3" />{mission._count}
-            </Badge>
-            <Badge className={
-              type === 'available' ? 'bg-primary/10 text-primary border-primary/30' :
-              type === 'active' ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' :
-              'bg-green-500/10 text-green-600 border-green-500/30'
-            }>
-              {type === 'available' ? 'Disponible' : type === 'active' ? 'En cours' : 'Terminée'}
-            </Badge>
-          </div>
-        </div>
+  // Onglet par défaut = ce qui attend une action du coursier.
+  useEffect(() => {
+    if (loading || tabChoisi.current) return;
+    tabChoisi.current = true;
+    if (parEtape.a_rendre.length > 0) setTab('a_rendre');
+    else if (parEtape.mes_missions.length > 0) setTab('mes_missions');
+    else setTab('disponibles');
+  }, [loading, parEtape]);
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge className="bg-blue-600 text-white gap-1"><Users className="h-3 w-3" />{mission._delegues || mission._count} client(s) a visiter (delegue)</Badge>
-          {false && (
-            <span className="text-[11px] text-amber-700">À CONFIRMER — réponse client en attente</span>
-          )}
-        </div>
+  // Lien direct depuis le tableau de bord : ?mission=<id>[&terminer=1]
+  useEffect(() => {
+    if (loading || lienTraite.current) return;
+    const id = searchParams.get('mission');
+    if (!id) return;
+    lienTraite.current = true;
+    const all = [...parEtape.disponibles, ...parEtape.mes_missions, ...parEtape.a_rendre, ...parEtape.terminees];
+    const found = all.find((c) => c.id === id || c._group?.some((v: any) => v.id === id));
+    if (found) {
+      const e = (Object.keys(parEtape) as EtapeCoursier[]).find((k) => parEtape[k].includes(found));
+      if (e) setTab(e);
+      setSelectedMission(found);
+      if (searchParams.get('terminer') === '1' && found.statut_coursier === 'accepte') setCompleteOpen(true);
+      else setDetailOpen(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('mission'); next.delete('terminer');
+    setSearchParams(next, { replace: true });
+  }, [loading, parEtape, searchParams, setSearchParams]);
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          {format(new Date(mission.date_visite), "EEE dd MMM", { locale: fr })}{' '}
-          {mission.date_visite_fin 
-            ? `de ${format(new Date(mission.date_visite), "HH:mm")} à ${format(new Date(mission.date_visite_fin), "HH:mm")}`
-            : `à ${format(new Date(mission.date_visite), "HH:mm")}`
-          }
-        </div>
+  const counts: Record<EtapeCoursier, number> = {
+    disponibles: parEtape.disponibles.length,
+    mes_missions: parEtape.mes_missions.length,
+    a_rendre: parEtape.a_rendre.length,
+    terminees: parEtape.terminees.length,
+  };
 
-        {mission.agents?.profiles && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <UserCog className="h-3 w-3" />
-            Agent: {mission.agents.profiles.prenom} {mission.agents.profiles.nom}
-          </div>
-        )}
+  const openDetail = (m: any) => { setSelectedMission(m); setDetailOpen(true); };
+  const openComplete = (m: any) => { setSelectedMission(m); setCompleteOpen(true); };
 
-        {mission.offres && (
-          <div className="flex gap-2 flex-wrap">
-            {mission.offres.pieces && (
-              <div className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
-                <Home className="h-3 w-3" />{mission.offres.pieces}p
-              </div>
-            )}
-            {mission.offres.surface && (
-              <div className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
-                <Maximize2 className="h-3 w-3" />{mission.offres.surface}m²
-              </div>
-            )}
-            {mission.offres.prix && (
-              <div className="flex items-center gap-1 text-xs bg-muted/50 px-2 py-1 rounded">
-                <Banknote className="h-3 w-3" />{mission.offres.prix.toLocaleString('fr-CH')} CHF
-              </div>
-            )}
-          </div>
-        )}
+  const subtitle = loading
+    ? 'Chargement…'
+    : [
+        counts.a_rendre > 0 ? `${counts.a_rendre} compte${counts.a_rendre > 1 ? 's' : ''}-rendu${counts.a_rendre > 1 ? 's' : ''} à faire` : null,
+        counts.mes_missions > 0 ? `${counts.mes_missions} visite${counts.mes_missions > 1 ? 's' : ''} prévue${counts.mes_missions > 1 ? 's' : ''}` : null,
+        counts.disponibles > 0 ? `${counts.disponibles} mission${counts.disponibles > 1 ? 's' : ''} disponible${counts.disponibles > 1 ? 's' : ''}` : null,
+      ].filter(Boolean).join(' · ') || 'Aucune mission en attente pour le moment.';
 
-        {type === 'available' && (
-          <Button onClick={(e) => { e.stopPropagation(); handleAccept(mission._group); }} className="w-full" size="sm">
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Accepter la mission
-          </Button>
-        )}
+  const EMPTY: Record<EtapeCoursier, { icon: any; title: string; description?: string }> = {
+    disponibles: { icon: CalendarCheck, title: 'Aucune mission disponible pour le moment', description: 'Les nouvelles missions apparaissent ici dès qu’un agent les délègue.' },
+    mes_missions: { icon: Clock, title: 'Aucune mission en cours' },
+    a_rendre: { icon: FileText, title: 'Aucun compte-rendu à faire', description: `Les visites passées non terminées des ${A_RENDRE_JOURS} derniers jours apparaissent ici.` },
+    terminees: { icon: CheckCircle, title: 'Aucune mission terminée' },
+  };
 
-        {type === 'active' && (
-          <div className="mb-2" onClick={(e) => e.stopPropagation()}>
-            <VisitLiveButton visiteId={mission.id} className="w-full" />
-          </div>
-        )}
-
-        {type === 'active' && (
-          <Button 
-            onClick={(e) => { e.stopPropagation(); setSelectedMission(mission); setCompleteOpen(true); }} 
-            className="w-full bg-green-600 hover:bg-green-700" 
-            size="sm"
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Terminer la visite
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  if (loading) {
-    return (
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="animate-pulse space-y-4">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-40 bg-muted rounded-xl" />)}
-        </div>
-      </main>
-    );
-  }
+  const liste = parEtape[tab];
+  const sm = selectedMission;
+  const estAMoi = !!sm && sm.coursier_id === coursierId;
+  const contactTel: string | null = sm?.offres?.concierge_tel || sm?.offres?.locataire_tel || null;
 
   return (
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6 relative">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Mes missions"
+        subtitle={subtitle}
+        action={
+          <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={() => { setLoading(true); loadData(); }} disabled={loading} aria-label="Actualiser">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">Actualiser</span>
+          </Button>
+        }
+      />
+
+      <DashFilterPills
+        label="Étapes des missions"
+        value={tab}
+        onChange={(v) => { tabChoisi.current = true; setTab(v as EtapeCoursier); }}
+        options={ETAPES.map((e) => ({ key: e.key, label: e.label, count: counts[e.key] }))}
+      />
+
+      {loading && missions.length === 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {[...Array(3)].map((_, i) => <div key={i} className="h-56 animate-pulse rounded-2xl bg-muted" />)}
         </div>
-        <PremiumPageHeader
-          icon={CalendarCheck}
-          title="Mes missions"
-          subtitle="Consultez les missions disponibles et gérez vos visites en cours"
-        />
-
-        <Tabs defaultValue="available">
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
-            <TabsTrigger value="available">
-              Disponibles {available.length > 0 && <Badge variant="secondary" className="ml-1">{available.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="active">
-              En cours {myActive.length > 0 && <Badge variant="secondary" className="ml-1">{myActive.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="completed">Terminées</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="available" className="mt-4">
-            {available.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <CalendarCheck className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Aucune mission disponible pour le moment</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {available.map(m => renderMissionCard(m, 'available'))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="active" className="mt-4">
-            {myActive.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <Clock className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Aucune mission en cours</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {myActive.map(m => renderMissionCard(m, 'active'))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed" className="mt-4">
-            {myCompleted.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <CheckCircle className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Aucune mission terminée</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {myCompleted.map(m => renderMissionCard(m, 'completed'))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+      ) : liste.length === 0 ? (
+        <DashEmptyState icon={EMPTY[tab].icon} title={EMPTY[tab].title} description={EMPTY[tab].description} />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {liste.map((m) => (
+            <CoursierMissionCard
+              key={m.id}
+              mission={m}
+              etape={tab}
+              onOpen={openDetail}
+              onAccept={(x) => handleAccept(x._group)}
+              onTerminer={openComplete}
+              live={tab === 'mes_missions' ? <VisitLiveButton visiteId={m.id} className="h-11 w-full rounded-full" /> : undefined}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0">
-          <DialogHeader className="p-6 pb-4">
-            {selectedMission && (
+        <DialogContent className="flex max-h-[90dvh] max-w-lg flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b border-border/60 p-5 pb-4">
+            {sm && (
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-lg font-semibold line-clamp-2">
-                    <AddressLink 
-                      address={selectedMission.adresse}
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="line-clamp-2 text-lg font-semibold">
+                    <AddressLink
+                      address={sm.adresse}
                       showIcon={false}
                       className="text-lg font-semibold"
                     />
                   </DialogTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}{' '}
-                    {selectedMission.date_visite_fin 
-                      ? `de ${format(new Date(selectedMission.date_visite), "HH:mm")} à ${format(new Date(selectedMission.date_visite_fin), "HH:mm")}`
-                      : `à ${format(new Date(selectedMission.date_visite), "HH:mm")}`
+                  <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">
+                    {format(new Date(sm.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}{' '}
+                    {sm.date_visite_fin
+                      ? `de ${format(new Date(sm.date_visite), "HH:mm")} à ${format(new Date(sm.date_visite_fin), "HH:mm")}`
+                      : `à ${format(new Date(sm.date_visite), "HH:mm")}`
                     }
                   </p>
                 </div>
-                <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
-                  <Users className="h-3 w-3 mr-1" />
-                  {selectedMission._count || 1} client{(selectedMission._count || 1) > 1 ? 's' : ''}
-                </Badge>
-
+                <DashBadge tone="muted">
+                  <Users className="mr-1 h-3 w-3" />
+                  {sm._count || 1} client{(sm._count || 1) > 1 ? 's' : ''}
+                </DashBadge>
               </div>
             )}
           </DialogHeader>
 
-          <ScrollArea className="max-h-[calc(85vh-120px)]">
-            {selectedMission && (
-              <div className="px-6 pb-6 space-y-5">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {sm && (
+              <div className="space-y-5 p-5">
+                {/* Accès rapide : itinéraire + appel du contact sur place */}
+                <div className={cn('grid gap-2', contactTel ? 'grid-cols-2' : 'grid-cols-1')}>
+                  <Button asChild variant="outline" className="h-11 rounded-full">
+                    <a href={lienItineraire(sm.adresse)} target="_blank" rel="noopener noreferrer">
+                      <Navigation className="mr-2 h-4 w-4" /> Itinéraire
+                    </a>
+                  </Button>
+                  {contactTel && (
+                    <Button asChild variant="outline" className="h-11 rounded-full">
+                      <a href={`tel:${contactTel}`}><Phone className="mr-2 h-4 w-4" /> Appeler le contact</a>
+                    </Button>
+                  )}
+                </div>
+
                 {/* Créneau de visite */}
-                <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-amber-600" />
+                <div className="rounded-xl border border-border/70 p-4">
+                  <h4 className={SECTION_TITLE}>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     Créneau de visite
                   </h4>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium">
-                        {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}
+                      <p className="text-sm font-medium first-letter:uppercase">
+                        {format(new Date(sm.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}
                       </p>
-                      <p className="text-lg font-bold text-amber-600">
-                        {format(new Date(selectedMission.date_visite), "HH:mm")}
-                        {selectedMission.date_visite_fin && ` → ${format(new Date(selectedMission.date_visite_fin), "HH:mm")}`}
+                      <p className="text-xl font-semibold tabular-nums text-foreground">
+                        {format(new Date(sm.date_visite), "HH:mm")}
+                        {sm.date_visite_fin && ` → ${format(new Date(sm.date_visite_fin), "HH:mm")}`}
                       </p>
                     </div>
-                    {selectedMission.date_visite_fin && (
+                    {sm.date_visite_fin && (
                       <div className="text-right">
                         <span className="text-xs text-muted-foreground">Durée</span>
                         <p className="text-sm font-semibold">
-                          {Math.round((new Date(selectedMission.date_visite_fin).getTime() - new Date(selectedMission.date_visite).getTime()) / 60000)} min
+                          {Math.round((new Date(sm.date_visite_fin).getTime() - new Date(sm.date_visite).getTime()) / 60000)} min
                         </p>
                       </div>
                     )}
@@ -398,55 +364,53 @@ export default function CoursierMissions() {
                 </div>
 
                 {/* Prix */}
-                {selectedMission.offres?.prix && (
-                  <div className="p-4 bg-muted/40 rounded-xl border border-border/70">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        CHF {Number(selectedMission.offres.prix).toLocaleString('fr-CH')}
-                      </div>
-                      <div className="text-sm text-muted-foreground">par mois</div>
+                {sm.offres?.prix && (
+                  <div className="rounded-xl bg-muted/40 p-4 text-center">
+                    <div className="text-2xl font-semibold text-foreground">
+                      CHF {Number(sm.offres.prix).toLocaleString('fr-CH')}
                     </div>
+                    <div className="text-sm text-muted-foreground">par mois</div>
                   </div>
                 )}
 
                 {/* Caractéristiques */}
-                {selectedMission.offres && (
+                {sm.offres && (
                   <div>
-                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Home className="h-4 w-4" />
+                    <h4 className={SECTION_TITLE}>
+                      <Home className="h-4 w-4 text-muted-foreground" />
                       Caractéristiques
                     </h4>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="p-3 bg-muted/50 rounded-lg text-center">
-                        <div className="text-lg font-semibold">{selectedMission.offres.pieces || '-'}</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-xl bg-muted/50 p-3 text-center">
+                        <div className="text-lg font-semibold">{sm.offres.pieces || '-'}</div>
                         <div className="text-xs text-muted-foreground">pièces</div>
                       </div>
-                      <div className="p-3 bg-muted/50 rounded-lg text-center">
-                        <div className="text-lg font-semibold">{selectedMission.offres.surface || '-'}</div>
+                      <div className="rounded-xl bg-muted/50 p-3 text-center">
+                        <div className="text-lg font-semibold">{sm.offres.surface || '-'}</div>
                         <div className="text-xs text-muted-foreground">m²</div>
                       </div>
-                      <div className="p-3 bg-muted/50 rounded-lg text-center">
-                        <div className="text-lg font-semibold">{selectedMission.offres.etage || '-'}</div>
+                      <div className="rounded-xl bg-muted/50 p-3 text-center">
+                        <div className="text-lg font-semibold">{sm.offres.etage || '-'}</div>
                         <div className="text-xs text-muted-foreground">étage</div>
                       </div>
                     </div>
 
                     <div className="mt-3 space-y-1">
-                      {selectedMission.offres.type_bien && (
+                      {sm.offres.type_bien && (
                         <div className="flex items-start gap-3 py-2">
-                          <Building className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
+                          <Building className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
                             <span className="text-xs text-muted-foreground">Type de bien</span>
-                            <p className="text-sm font-medium">{selectedMission.offres.type_bien}</p>
+                            <p className="text-sm font-medium">{sm.offres.type_bien}</p>
                           </div>
                         </div>
                       )}
-                      {selectedMission.offres.disponibilite && (
+                      {sm.offres.disponibilite && (
                         <div className="flex items-start gap-3 py-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                          <div className="flex-1 min-w-0">
+                          <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
                             <span className="text-xs text-muted-foreground">Disponibilité</span>
-                            <p className="text-sm font-medium">{selectedMission.offres.disponibilite}</p>
+                            <p className="text-sm font-medium">{sm.offres.disponibilite}</p>
                           </div>
                         </div>
                       )}
@@ -455,278 +419,256 @@ export default function CoursierMissions() {
                 )}
 
                 {/* Description */}
-                {selectedMission.offres?.description && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-semibold mb-2">Description</h4>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {selectedMission.offres.description}
-                      </p>
-                    </div>
-                  </>
+                {sm.offres?.description && (
+                  <div className="border-t border-border/60 pt-5">
+                    <h4 className={SECTION_TITLE}>Description</h4>
+                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                      {sm.offres.description}
+                    </p>
+                  </div>
                 )}
 
                 {/* Agent responsable */}
-                {selectedMission.agents?.profiles && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <UserCog className="h-4 w-4" />
-                        Agent responsable
-                      </h4>
-                      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-                        <p className="text-sm font-medium">
-                          {selectedMission.agents.profiles.prenom} {selectedMission.agents.profiles.nom}
-                        </p>
-                        {selectedMission.agents.profiles.telephone && (
-                          <a href={`tel:${selectedMission.agents.profiles.telephone}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                            <Phone className="h-3 w-3" />
-                            {selectedMission.agents.profiles.telephone}
-                          </a>
-                        )}
-                        {selectedMission.agents.profiles.email && (
-                          <a href={`mailto:${selectedMission.agents.profiles.email}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                            <Mail className="h-3 w-3" />
-                            {selectedMission.agents.profiles.email}
-                          </a>
-                        )}
-                      </div>
+                {sm.agents?.profiles && (
+                  <div className="border-t border-border/60 pt-5">
+                    <h4 className={SECTION_TITLE}>
+                      <UserCog className="h-4 w-4 text-muted-foreground" />
+                      Agent responsable
+                    </h4>
+                    <div className={BLOC}>
+                      <p className="text-sm font-medium">
+                        {sm.agents.profiles.prenom} {sm.agents.profiles.nom}
+                      </p>
+                      {sm.agents.profiles.telephone && (
+                        <a href={`tel:${sm.agents.profiles.telephone}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          {sm.agents.profiles.telephone}
+                        </a>
+                      )}
+                      {sm.agents.profiles.email && (
+                        <a href={`mailto:${sm.agents.profiles.email}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                          <Mail className="h-3.5 w-3.5" />
+                          {sm.agents.profiles.email}
+                        </a>
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Contact de la visite (concierge ou locataire) */}
-                <Separator />
-                <div>
-                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                <div className="border-t border-border/60 pt-5">
+                  <h4 className={SECTION_TITLE}>
+                    <Phone className="h-4 w-4 text-muted-foreground" />
                     Contact de la visite
                   </h4>
-                  {selectedMission.offres?.concierge_nom ? (
-                    <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                  {sm.offres?.concierge_nom ? (
+                    <div className={BLOC}>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <User className="h-3 w-3" />
                         Concierge
                       </div>
-                      <p className="text-sm font-medium">{selectedMission.offres.concierge_nom}</p>
-                      {selectedMission.offres.concierge_tel && (
-                        <a href={`tel:${selectedMission.offres.concierge_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                          <Phone className="h-3 w-3" />
-                          {selectedMission.offres.concierge_tel}
+                      <p className="text-sm font-medium">{sm.offres.concierge_nom}</p>
+                      {sm.offres.concierge_tel && (
+                        <a href={`tel:${sm.offres.concierge_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          {sm.offres.concierge_tel}
                         </a>
                       )}
                     </div>
-                  ) : selectedMission.offres?.locataire_nom ? (
-                    <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                  ) : sm.offres?.locataire_nom ? (
+                    <div className={BLOC}>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <User className="h-3 w-3" />
                         Locataire actuel
                       </div>
-                      <p className="text-sm font-medium">{selectedMission.offres.locataire_nom}</p>
-                      {selectedMission.offres.locataire_tel && (
-                        <a href={`tel:${selectedMission.offres.locataire_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                          <Phone className="h-3 w-3" />
-                          {selectedMission.offres.locataire_tel}
+                      <p className="text-sm font-medium">{sm.offres.locataire_nom}</p>
+                      {sm.offres.locataire_tel && (
+                        <a href={`tel:${sm.offres.locataire_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          {sm.offres.locataire_tel}
                         </a>
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">Aucun contact spécifique renseigné</p>
+                    <p className="text-sm italic text-muted-foreground">Aucun contact spécifique renseigné</p>
                   )}
                 </div>
 
                 {/* Client */}
-                {selectedMission.clients?.profiles && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Client
-                      </h4>
-                      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-                        <p className="text-sm font-medium">
-                          {selectedMission.clients.profiles.prenom} {selectedMission.clients.profiles.nom}
-                        </p>
-                        {selectedMission.clients.profiles.telephone && (
-                          <a href={`tel:${selectedMission.clients.profiles.telephone}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                            <Phone className="h-3 w-3" />
-                            {selectedMission.clients.profiles.telephone}
-                          </a>
-                        )}
-                        {selectedMission.clients.profiles.email && (
-                          <a href={`mailto:${selectedMission.clients.profiles.email}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                            <Mail className="h-3 w-3" />
-                            {selectedMission.clients.profiles.email}
-                          </a>
-                        )}
-                      </div>
+                {sm.clients?.profiles && (
+                  <div className="border-t border-border/60 pt-5">
+                    <h4 className={SECTION_TITLE}>
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      Client
+                    </h4>
+                    <div className={BLOC}>
+                      <p className="text-sm font-medium">
+                        {sm.clients.profiles.prenom} {sm.clients.profiles.nom}
+                      </p>
+                      {sm.clients.profiles.telephone && (
+                        <a href={`tel:${sm.clients.profiles.telephone}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          {sm.clients.profiles.telephone}
+                        </a>
+                      )}
+                      {sm.clients.profiles.email && (
+                        <a href={`mailto:${sm.clients.profiles.email}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                          <Mail className="h-3.5 w-3.5" />
+                          {sm.clients.profiles.email}
+                        </a>
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Informations pratiques */}
-                {(selectedMission.offres?.code_immeuble || selectedMission.offres?.concierge_nom || selectedMission.offres?.locataire_nom) && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <Layers className="h-4 w-4" />
-                        Informations pratiques
-                      </h4>
-                      <div className="space-y-2">
-                        {selectedMission.offres?.code_immeuble && (
-                          <div className="flex items-start gap-3 py-2">
-                            <KeyRound className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs text-muted-foreground">Code immeuble</span>
-                              <p className="text-sm font-medium font-mono">{selectedMission.offres.code_immeuble}</p>
-                            </div>
+                {(sm.offres?.code_immeuble || sm.offres?.concierge_nom || sm.offres?.locataire_nom) && (
+                  <div className="border-t border-border/60 pt-5">
+                    <h4 className={SECTION_TITLE}>
+                      <Layers className="h-4 w-4 text-muted-foreground" />
+                      Informations pratiques
+                    </h4>
+                    <div className="space-y-2">
+                      {sm.offres?.code_immeuble && (
+                        <div className="flex items-start gap-3 py-2">
+                          <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs text-muted-foreground">Code immeuble</span>
+                            <p className="font-mono text-sm font-medium">{sm.offres.code_immeuble}</p>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {selectedMission.offres?.concierge_nom && (
-                          <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              Concierge
-                            </div>
-                            <p className="text-sm font-medium">{selectedMission.offres.concierge_nom}</p>
-                            {selectedMission.offres.concierge_tel && (
-                              <a href={`tel:${selectedMission.offres.concierge_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                                <Phone className="h-3 w-3" />
-                                {selectedMission.offres.concierge_tel}
-                              </a>
-                            )}
+                      {sm.offres?.concierge_nom && (
+                        <div className={BLOC}>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            Concierge
                           </div>
-                        )}
+                          <p className="text-sm font-medium">{sm.offres.concierge_nom}</p>
+                          {sm.offres.concierge_tel && (
+                            <a href={`tel:${sm.offres.concierge_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                              <Phone className="h-3.5 w-3.5" />
+                              {sm.offres.concierge_tel}
+                            </a>
+                          )}
+                        </div>
+                      )}
 
-                        {selectedMission.offres?.locataire_nom && (
-                          <div className="p-3 bg-muted/50 rounded-lg space-y-1">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              Locataire actuel
-                            </div>
-                            <p className="text-sm font-medium">{selectedMission.offres.locataire_nom}</p>
-                            {selectedMission.offres.locataire_tel && (
-                              <a href={`tel:${selectedMission.offres.locataire_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
-                                <Phone className="h-3 w-3" />
-                                {selectedMission.offres.locataire_tel}
-                              </a>
-                            )}
+                      {sm.offres?.locataire_nom && (
+                        <div className={BLOC}>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            Locataire actuel
                           </div>
-                        )}
-                      </div>
+                          <p className="text-sm font-medium">{sm.offres.locataire_nom}</p>
+                          {sm.offres.locataire_tel && (
+                            <a href={`tel:${sm.offres.locataire_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
+                              <Phone className="h-3.5 w-3.5" />
+                              {sm.offres.locataire_tel}
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Commentaires agent */}
-                {selectedMission.offres?.commentaires && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Commentaires de l'agent
-                      </h4>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap p-3 bg-muted/50 rounded-lg">
-                        {selectedMission.offres.commentaires}
-                      </p>
-                    </div>
-                  </>
+                {sm.offres?.commentaires && (
+                  <div className="border-t border-border/60 pt-5">
+                    <h4 className={SECTION_TITLE}>
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      Commentaires de l'agent
+                    </h4>
+                    <p className="whitespace-pre-wrap rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
+                      {sm.offres.commentaires}
+                    </p>
+                  </div>
                 )}
 
                 {/* Notes de visite */}
-                {selectedMission.notes && (
-                  <>
-                    <Separator />
-                    <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                      <p className="text-sm flex items-start gap-2">
-                        <MessageSquare className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                        <span>{selectedMission.notes}</span>
-                      </p>
-                    </div>
-                  </>
+                {sm.notes && (
+                  <div className="rounded-xl bg-amber-500/10 p-3">
+                    <p className="flex items-start gap-2 text-sm text-foreground">
+                      <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                      <span>{sm.notes}</span>
+                    </p>
+                  </div>
                 )}
 
                 {/* Lien vers l'annonce */}
-                {selectedMission.offres?.lien_annonce && selectedMission.offres.lien_annonce.trim() && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-semibold mb-3">Annonce originale</h4>
-                      <LinkPreviewCard url={selectedMission.offres.lien_annonce} showInline />
-                    </div>
-                  </>
+                {sm.offres?.lien_annonce && sm.offres.lien_annonce.trim() && (
+                  <div className="border-t border-border/60 pt-5">
+                    <h4 className={SECTION_TITLE}>Annonce originale</h4>
+                    <LinkPreviewCard url={sm.offres.lien_annonce} showInline />
+                  </div>
                 )}
 
                 {/* Feedback coursier if completed */}
-                {selectedMission.feedback_coursier && (
-                  <>
-                    <Separator />
-                    <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                      <h4 className="text-sm font-medium mb-1">Mon compte-rendu</h4>
-                      <p className="text-sm text-muted-foreground">{selectedMission.feedback_coursier}</p>
-                    </div>
-                  </>
+                {sm.feedback_coursier && (
+                  <div className="rounded-xl bg-emerald-500/10 p-3">
+                    <h4 className="mb-1 text-sm font-medium text-foreground">Mon compte-rendu</h4>
+                    <p className="text-sm text-muted-foreground">{sm.feedback_coursier}</p>
+                  </div>
                 )}
-
-                {/* Actions */}
-                {selectedMission.statut_coursier === 'en_attente' && (
-                  <Button onClick={() => { handleAccept(selectedMission._group || [selectedMission]); setDetailOpen(false); }} className="w-full">
-
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Accepter la mission
-                  </Button>
-                )}
-                {selectedMission.statut_coursier === 'accepte' && selectedMission.coursier_id === coursierId && (
-                  <Button 
-                    onClick={() => { setDetailOpen(false); setCompleteOpen(true); }} 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Terminer la visite
-                  </Button>
-                )}
-                {selectedMission.coursier_id === coursierId &&
-                  selectedMission.statut_coursier === 'accepte' && (
-                    <VisitLiveButton visiteId={selectedMission.id} size="default" className="w-full" />
-                  )}
-                {selectedMission.coursier_id === coursierId &&
-                  ['accepte', 'termine'].includes(selectedMission.statut_coursier) && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/coursier/visites/${selectedMission.id}/compte-rendu`)}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Compte-rendu détaillé & envoi au client
-                    </Button>
-                  )}
-
               </div>
             )}
-          </ScrollArea>
+          </div>
+
+          {/* Actions — en bas de la fiche, zone du pouce */}
+          {sm && (sm.statut_coursier === 'en_attente' || (estAMoi && ['accepte', 'termine'].includes(sm.statut_coursier))) && (
+            <div className="space-y-2 border-t border-border/60 bg-background p-4">
+              {sm.statut_coursier === 'en_attente' && (
+                <Button onClick={() => { handleAccept(sm._group || [sm]); setDetailOpen(false); }} className="h-12 w-full rounded-full">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Accepter la mission
+                </Button>
+              )}
+              {sm.statut_coursier === 'accepte' && estAMoi && (
+                <Button
+                  onClick={() => { setDetailOpen(false); setCompleteOpen(true); }}
+                  className="h-12 w-full rounded-full"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Terminer la visite
+                </Button>
+              )}
+              {estAMoi && sm.statut_coursier === 'accepte' && (
+                <VisitLiveButton visiteId={sm.id} size="default" variant="outline" className="h-11 w-full rounded-full" />
+              )}
+              {estAMoi && ['accepte', 'termine'].includes(sm.statut_coursier) && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full rounded-full"
+                  onClick={() => navigate(`/coursier/visites/${sm.id}/compte-rendu`)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Compte-rendu détaillé & envoi au client
+                </Button>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
       {/* Complete Dialog */}
       <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90dvh] max-w-lg flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b border-border/60 p-5 pb-4">
             <DialogTitle>Terminer la visite</DialogTitle>
+            {sm && <p className="text-sm text-muted-foreground">{sm.adresse}</p>}
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
             <div className="space-y-2">
-              <Label>Compte-rendu de la visite *</Label>
+              <Label htmlFor="cr-feedback">Compte-rendu de la visite *</Label>
               <Textarea
+                id="cr-feedback"
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Décrivez votre visite : état du bien, impressions, remarques..."
-                rows={5}
+                rows={6}
+                className="text-base md:text-sm"
               />
             </div>
 
@@ -735,32 +677,35 @@ export default function CoursierMissions() {
               <Label>Photos / vidéos (optionnel)</Label>
               <div className="flex flex-wrap gap-2">
                 {feedbackMedias.map((media, i) => (
-                  <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                  <div key={i} className="relative h-20 w-20 overflow-hidden rounded-xl border border-border/70">
                     {media.type?.startsWith('image') ? (
-                      <img src={media.url} alt="" className="w-full h-full object-cover" />
+                      <img src={media.url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <div className="flex h-full w-full items-center justify-center bg-muted">
                         <FileText className="h-6 w-6 text-muted-foreground" />
                       </div>
                     )}
                     <button
+                      type="button"
+                      aria-label="Retirer ce fichier"
                       onClick={() => setFeedbackMedias(prev => prev.filter((_, idx) => idx !== i))}
-                      className="absolute top-0.5 right-0.5 p-0.5 bg-destructive rounded-full text-white"
+                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
-                <label className="w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
+                <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-foreground/40">
                   {uploadingMedia ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    <Upload className="h-5 w-5" />
                   )}
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/*,video/*" 
+                  Ajouter
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,video/*"
                     multiple
                     onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
                   />
@@ -770,44 +715,48 @@ export default function CoursierMissions() {
 
             <div className="space-y-2">
               <Label>Votre recommandation au client *</Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Recommandation">
                 {[
-                  { value: 'recommande', label: '👍 Recommandé', cls: 'border-emerald-500 bg-emerald-500/10 text-emerald-700' },
-                  { value: 'neutre', label: '😐 Neutre', cls: 'border-slate-500 bg-slate-500/10 text-slate-700' },
-                  { value: 'deconseille', label: '👎 Déconseillé', cls: 'border-red-500 bg-red-500/10 text-red-700' },
+                  { value: 'recommande', label: 'Recommandé', icon: ThumbsUp, cls: 'border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+                  { value: 'neutre', label: 'Neutre', icon: Minus, cls: 'border-foreground bg-muted text-foreground' },
+                  { value: 'deconseille', label: 'Déconseillé', icon: ThumbsDown, cls: 'border-destructive bg-destructive/10 text-destructive' },
                 ].map(opt => (
                   <button
                     key={opt.value}
                     type="button"
+                    role="radio"
+                    aria-checked={recommandation === opt.value}
                     onClick={() => setRecommandation(opt.value as any)}
-                    className={`p-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                      recommandation === opt.value ? opt.cls : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/30'
-                    }`}
+                    className={cn(
+                      'flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-xl border p-2 text-sm font-medium transition-colors',
+                      recommandation === opt.value ? opt.cls : 'border-border bg-background text-muted-foreground hover:border-foreground/40',
+                    )}
                   >
+                    <opt.icon className="h-4 w-4" />
                     {opt.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="p-3 bg-green-500/10 rounded-lg flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 p-3">
               <span className="text-sm">Rémunération : au temps travaillé (pointage)</span>
-              <span className="font-bold text-green-600">20 CHF/h</span>
+              <span className="shrink-0 font-semibold text-foreground">20 CHF/h</span>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCompleteOpen(false)}>Annuler</Button>
-            <Button 
-              onClick={handleComplete} 
+          <div className="grid grid-cols-2 gap-2 border-t border-border/60 bg-background p-4 sm:flex sm:justify-end">
+            <Button variant="outline" className="h-12 rounded-full sm:h-11" onClick={() => setCompleteOpen(false)}>Annuler</Button>
+            <Button
+              onClick={handleComplete}
               disabled={submitting || !feedback.trim()}
-              className="bg-green-600 hover:bg-green-700"
+              className="h-12 rounded-full sm:h-11"
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
               Terminer et enregistrer
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
-    </main>
+    </DashPage>
   );
 }

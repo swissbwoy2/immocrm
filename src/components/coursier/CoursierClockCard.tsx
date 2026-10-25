@@ -1,58 +1,62 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, Play, Square, Timer } from 'lucide-react';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import { cn } from '@/lib/utils';
 import { formatChrono, formatDuration, useCoursierTime } from '@/hooks/useCoursierTime';
 
 interface Props {
   time: ReturnType<typeof useCoursierTime>;
 }
 
-/** Carte de pointage global (arrivée / départ) avec chrono en cours. */
+/** Carte de pointage global (arrivée / départ) avec chrono en cours. Bouton pleine largeur sur mobile. */
 export function CoursierClockCard({ time }: Props) {
   const { active, elapsedSeconds, clockIn, clockOut, busy, tarifHoraire, minutesThisMonth, earningsThisMonth } = time;
 
   return (
-    <Card className={active ? 'border-green-500/40 bg-green-500/5' : 'border-border/50'}>
-      <CardContent className="pt-5 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`p-3 rounded-xl ${active ? 'bg-green-500/15' : 'bg-primary/10'}`}>
-              <Timer className={`h-5 w-5 ${active ? 'text-green-600' : 'text-primary'}`} />
-            </div>
-            <div className="min-w-0">
-              {active ? (
-                <>
-                  <p className="text-2xl font-bold tabular-nums text-green-600">{formatChrono(elapsedSeconds)}</p>
-                  <p className="text-xs text-muted-foreground">Session en cours · {tarifHoraire} CHF/h</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold">Pointage</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDuration(minutesThisMonth)} ce mois · {earningsThisMonth.toFixed(0)} CHF · {tarifHoraire} CHF/h
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {active && <Badge className="bg-green-500/15 text-green-600 border-green-500/30">En service</Badge>}
+    <section className={cn(DASH_CARD, 'p-4 md:p-5', active && 'ring-1 ring-emerald-500/40')} aria-label="Pointage">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+            active ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary',
+          )}>
+            <Timer className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
             {active ? (
-              <Button onClick={clockOut} disabled={busy} variant="destructive">
-                {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Square className="h-4 w-4 mr-2" />}
-                Pointer mon départ
-              </Button>
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-2xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{formatChrono(elapsedSeconds)}</p>
+                  <DashBadge tone="success">En service</DashBadge>
+                </div>
+                <p className="text-xs text-muted-foreground">Session en cours · {tarifHoraire} CHF/h</p>
+              </>
             ) : (
-              <Button onClick={clockIn} disabled={busy} className="bg-green-600 hover:bg-green-700">
-                {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                Pointer mon arrivée
-              </Button>
+              <>
+                <p className="text-base font-semibold text-foreground">Pointage</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDuration(minutesThisMonth)} ce mois · {earningsThisMonth.toFixed(0)} CHF · {tarifHoraire} CHF/h
+                </p>
+              </>
             )}
           </div>
         </div>
-      <p className="mt-3 pt-2 border-t border-border/40 text-xs text-muted-foreground">Paie au <strong>temps travaillé</strong> : {tarifHoraire} CHF/heure (pas par visite). Pointez votre <strong>arrivée</strong> au début du service, puis votre <strong>départ</strong> à la fin.</p></CardContent>
-    </Card>
+
+        {active ? (
+          <Button onClick={clockOut} disabled={busy} variant="destructive" className="h-12 w-full rounded-full sm:h-11 sm:w-auto">
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Square className="mr-2 h-4 w-4" />}
+            Pointer mon départ
+          </Button>
+        ) : (
+          <Button onClick={clockIn} disabled={busy} className="h-12 w-full rounded-full sm:h-11 sm:w-auto">
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+            Pointer mon arrivée
+          </Button>
+        )}
+      </div>
+      <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+        Paie au <strong>temps travaillé</strong> : {tarifHoraire} CHF/heure (pas par visite). Pointez votre <strong>arrivée</strong> au début du service, puis votre <strong>départ</strong> à la fin.
+      </p>
+    </section>
   );
 }

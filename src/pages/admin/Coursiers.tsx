@@ -1,21 +1,35 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bike, Users, CheckCircle, Clock, Wallet, UserPlus, Loader2, MapPin, DollarSign, Send, Calendar, Search, TrendingUp, Eye, Phone, Mail, AlertTriangle, ArrowUpDown, Star, Copy } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bike, Users, CheckCircle, Clock, UserPlus, Loader2, Send, Search, Phone, Mail, AlertTriangle, Copy, RefreshCw, X, FileText, Wallet, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
-import { ClientInteretBadge } from '@/components/offres/ClientInteretBadge'; import { computeCoursierTimesheets, fmtZurichTime } from '@/lib/coursierHours';
+import { computeCoursierTimesheets, fmtZurichTime } from '@/lib/coursierHours';
 import { formatDuration } from '@/hooks/useCoursierTime';
+import { DASH_CARD, DashBadge, DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
+import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
+import { AdminCoursierMissionCard } from '@/components/coursier/AdminCoursierMissionCard';
+import { etapeAdmin, finVisite, type EtapeAdmin } from '@/components/coursier/coursierModel';
+import { cn } from '@/lib/utils';
 
+type Onglet = EtapeAdmin | 'coursiers';
+type SortKey = 'urgence' | 'date_asc' | 'date_desc';
+
+const ONGLETS: { key: Onglet; label: string }[] = [
+  { key: 'a_deleguer', label: 'À déléguer' },
+  { key: 'sans_coursier', label: 'Sans coursier' },
+  { key: 'en_cours', label: 'En cours' },
+  { key: 'a_rendre', label: 'Compte-rendu attendu' },
+  { key: 'a_payer', label: 'À payer' },
+  { key: 'terminees', label: 'Terminées' },
+  { key: 'coursiers', label: 'Coursiers' },
+];
 
 export default function AdminCoursiers() {
   const [coursiers, setCoursiers] = useState<any[]>([]);
@@ -32,6 +46,12 @@ export default function AdminCoursiers() {
   const [tarifEdit, setTarifEdit] = useState('');
   const [savingTarif, setSavingTarif] = useState(false);
   const [payingSheet, setPayingSheet] = useState<string | null>(null);
+  const [tab, setTab] = useState<Onglet>('a_deleguer');
+  const [sortKey, setSortKey] = useState<SortKey>('urgence');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(25);
+  const [refreshing, setRefreshing] = useState(false);
+  const tabChoisi = useRef(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -255,378 +275,330 @@ export default function AdminCoursiers() {
     return c ? getCoursierName(c) : 'Coursier';
   };
 
+  /* ---------- Réorganisation de l'affichage (calculs purement visuels) ---------- */
+
+  const coursierById = useMemo(() => new Map(coursiers.map((c) => [c.id, c])), [coursiers]);
+  const contactOf = (coursierId?: string | null) => {
+    const c = coursierId ? coursierById.get(coursierId) : null;
+    return c ? { tel: c.profiles?.telephone || c.telephone || null, email: c.profiles?.email || c.email || null } : undefined;
+  };
+
+  const q = searchQuery.trim().toLowerCase();
+  const missionCorrespond = (g: any) => {
+    if (!q) return true;
+    const m: any = g.representative;
+    const txt = [
+      m.adresse, m.offres?.adresse, m.agents?.profiles?.prenom, m.agents?.profiles?.nom,
+      m.coursier_id ? getMissionCoursierName(m) : '',
+    ].join(' ').toLowerCase();
+    return txt.includes(q);
+  };
+
+  const parEtape = useMemo(() => {
+    const now = Date.now();
+    const r: Record<EtapeAdmin, any[]> = { a_deleguer: filteredEligibleGroups, sans_coursier: [], en_cours: [], a_rendre: [], a_payer: [], terminees: [] };
+    for (const g of missionGroups) {
+      if (!missionCorrespond(g)) continue;
+      r[etapeAdmin(g.representative as any, g.items as any[], now)].push(g);
+    }
+    return r;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missionGroups, filteredEligibleGroups, q, coursiers]);
+
+  const coursiersVisibles = useMemo(() => coursierStats.filter((c) => {
+    if (!q) return true;
+    return `${getCoursierName(c)} ${c.profiles?.email || c.email || ''} ${c.profiles?.telephone || c.telephone || ''}`.toLowerCase().includes(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [coursierStats, q]);
+
+  const counts: Record<Onglet, number> = {
+    a_deleguer: parEtape.a_deleguer.length,
+    sans_coursier: parEtape.sans_coursier.length,
+    en_cours: parEtape.en_cours.length,
+    a_rendre: parEtape.a_rendre.length,
+    a_payer: parEtape.a_payer.length,
+    terminees: parEtape.terminees.length,
+    coursiers: coursiersVisibles.length,
+  };
+
+  // Onglet par défaut = la première file qui attend une action de l'admin.
+  useEffect(() => {
+    if (loading || tabChoisi.current) return;
+    tabChoisi.current = true;
+    const premier = (['a_deleguer', 'sans_coursier', 'a_rendre', 'a_payer', 'en_cours'] as EtapeAdmin[]).find((k) => parEtape[k].length > 0);
+    setTab(premier ?? (missionGroups.length === 0 && eligibleGroups.length === 0 ? 'coursiers' : 'a_deleguer'));
+  }, [loading, parEtape, missionGroups.length, eligibleGroups.length]);
+
+  const sorted = useMemo(() => {
+    if (tab === 'coursiers') return [];
+    const arr = [...parEtape[tab]];
+    const t = (g: any) => new Date(g.representative.date_visite).getTime();
+    if (sortKey === 'date_desc' || (sortKey === 'urgence' && tab === 'terminees')) arr.sort((a, b) => t(b) - t(a));
+    else if (sortKey === 'urgence' && tab === 'a_rendre') arr.sort((a, b) => finVisite(a.representative) - finVisite(b.representative));
+    else arr.sort((a, b) => t(a) - t(b));
+    return arr;
+  }, [parEtape, tab, sortKey]);
+
+  useEffect(() => { setPage(1); }, [searchQuery, tab, sortKey, pageSize]);
+  const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [sorted, page, pageSize]);
+
+  const debutMois = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const debutJour = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const finJour = debutJour + 24 * 3600 * 1000;
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try { await loadData(); } finally { setRefreshing(false); }
+  };
+
+  const openCoursier = (c: any) => {
+    if (!c) return;
+    const stats = coursierStats.find((x) => x.id === c.id) ?? c;
+    setSelectedCoursier(stats);
+    setTarifEdit(String(stats.tarif_horaire ?? 20));
+    setDetailOpen(true);
+  };
+
   if (loading) {
     return (
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="relative animate-pulse space-y-4">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-          {[...Array(3)].map((_, i) => <div key={i} className="h-24 bg-muted rounded-xl" />)}
+      <DashPage>
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-64 rounded-lg bg-muted" />
+          {[...Array(3)].map((_, i) => <div key={i} className="h-28 rounded-2xl bg-muted" />)}
         </div>
-      </main>
+      </DashPage>
     );
   }
 
+  const nbRendre = parEtape.a_rendre.length;
+  const subtitle = [
+    eligibleGroups.length > 0 ? `${eligibleGroups.length} visite${eligibleGroups.length > 1 ? 's' : ''} à déléguer` : null,
+    pendingGroups.length > 0 ? `${pendingGroups.length} sans coursier` : null,
+    nbRendre > 0 ? `${nbRendre} compte${nbRendre > 1 ? 's' : ''}-rendu${nbRendre > 1 ? 's' : ''} attendu${nbRendre > 1 ? 's' : ''}` : null,
+    totalUnpaid > 0 ? `${totalUnpaid.toFixed(0)} CHF à payer` : null,
+  ].filter(Boolean).join(' · ') || `Tout est à jour · ${coursiers.length} coursier${coursiers.length > 1 ? 's' : ''}`;
+
+  const EMPTY: Record<Onglet, { icon: any; title: string; description?: string }> = {
+    a_deleguer: { icon: Send, title: searchQuery ? 'Aucune visite trouvée' : 'Aucune visite éligible à la délégation', description: searchQuery ? undefined : 'Les visites planifiées à venir sans coursier apparaissent ici.' },
+    sans_coursier: { icon: Clock, title: 'Aucune mission en attente de coursier' },
+    en_cours: { icon: Bike, title: 'Aucune mission en cours' },
+    a_rendre: { icon: FileText, title: 'Aucun compte-rendu en attente' },
+    a_payer: { icon: CheckCircle, title: 'Tous les paiements sont à jour' },
+    terminees: { icon: CheckCircle, title: 'Aucune mission terminée et payée' },
+    coursiers: { icon: Users, title: 'Aucun coursier enregistré' },
+  };
+
   return (
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <PremiumPageHeader
-            icon={Bike}
-            title="Gestion des Coursiers"
-            subtitle="Gérez les coursiers, déléguez des visites et suivez les paiements"
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Gestion des Coursiers"
+        subtitle={subtitle}
+        action={
+          <>
+            <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={refresh} disabled={refreshing} aria-label="Actualiser">
+              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <span className="ml-2 hidden sm:inline">Actualiser</span>
+            </Button>
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="h-10 rounded-full">
+              <UserPlus className="h-4 w-4" />
+              <span className="ml-2">Ajouter un coursier</span>
+            </Button>
+          </>
+        }
+      />
+
+      {/* Barre d'outils : recherche pleine largeur sur mobile, tri à côté sur grand écran */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Adresse, client, agent, coursier…"
+            aria-label="Rechercher une mission ou un coursier"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="h-11 rounded-full pl-10 pr-10"
           />
-          <Button onClick={() => setCreateOpen(true)} className="shrink-0">
-            <UserPlus className="mr-2 h-4 w-4" />
-            Ajouter un coursier
-          </Button>
+          {searchQuery && (
+            <button type="button" onClick={() => setSearchQuery('')} aria-label="Effacer la recherche"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
+        {tab !== 'coursiers' && (
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[220px]" aria-label="Trier"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="urgence">Urgent d’abord</SelectItem>
+              <SelectItem value="date_asc">Date de visite (proche → lointaine)</SelectItem>
+              <SelectItem value="date_desc">Date de visite (récente → ancienne)</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[
-            { icon: Users, label: 'Coursiers', value: coursiers.length, color: 'text-primary', bg: 'bg-primary/10' },
-            { icon: Clock, label: 'En attente', value: pendingGroups.length, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-            { icon: Bike, label: 'En cours', value: activeGroups.length, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-            { icon: CheckCircle, label: 'Terminées', value: completedGroups.length, color: 'text-green-600', bg: 'bg-green-500/10' },
-            { icon: Send, label: 'À déléguer', value: eligibleGroups.length, color: 'text-purple-600', bg: 'bg-purple-500/10' },
+      <DashFilterPills
+        label="Étapes des missions coursier"
+        value={tab}
+        onChange={(v) => { tabChoisi.current = true; setTab(v as Onglet); }}
+        options={ONGLETS.map((o) => ({ key: o.key, label: o.label, count: counts[o.key] }))}
+      />
 
-            { icon: AlertTriangle, label: 'À payer', value: `${totalUnpaid.toFixed(0)} CHF`, color: 'text-red-600', bg: 'bg-red-500/10' },
-          ].map((kpi, i) => (
-            <Card key={i} className="border-border/50">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${kpi.bg}`}>
-                    <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold">{kpi.value}</p>
-                    <p className="text-[11px] text-muted-foreground leading-tight">{kpi.label}</p>
+      {/* À payer : solde par agent au-dessus du détail */}
+      {tab === 'a_payer' && agentBalances.length > 0 && (
+        <section className={cn(DASH_CARD, 'p-4 md:p-5')} aria-label="Solde par agent">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><Wallet className="h-4 w-4" /></span>
+              Solde par agent
+            </h2>
+            <DashBadge tone="warning">Total : {totalUnpaid.toFixed(0)} CHF</DashBadge>
+          </div>
+          <ul className="divide-y divide-border/60">
+            {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number; clients: number; groups: any[] }]) => (
+              <li key={agentId} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
+                    {data.name.split(' ').map((n: string) => n[0]).join('')}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{data.name}</p>
+                    <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''} • {data.clients} client{data.clients > 1 ? 's' : ''}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <Tabs defaultValue="deleguer" className="space-y-4">
-          <TabsList className="grid grid-cols-4 w-full max-w-xl">
-            <TabsTrigger value="deleguer">
-              Déléguer {eligibleGroups.length > 0 && <Badge variant="secondary" className="ml-1.5 text-[10px]">{eligibleGroups.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="coursiers">Coursiers</TabsTrigger>
-            <TabsTrigger value="missions">Missions</TabsTrigger>
-            <TabsTrigger value="paiements">
-              Paiements {unpaidGroups.length > 0 && <Badge variant="destructive" className="ml-1.5 text-[10px]">{unpaidGroups.length}</Badge>}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Tab: Déléguer */}
-          <TabsContent value="deleguer" className="space-y-4">
-            {eligibleVisites.length > 0 && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher une visite à déléguer..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            )}
-            {filteredEligibleGroups.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <Send className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    {searchQuery ? 'Aucune visite trouvée' : 'Aucune visite éligible à la délégation'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {filteredEligibleGroups.map((g) => {
-                  const v: any = g.representative;
-                  const nbClients = clientsCountOf(g.items);
-                  const ids = g.items.map((i: any) => i.id);
-                  return (
-                  <Card key={g.key} className="border-border/50 hover:border-primary/20 transition-all">
-                    <CardContent className="py-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                            <MapPin className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{v.adresse || v.offres?.adresse || 'Adresse non renseignée'}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                              <Calendar className="h-3 w-3 shrink-0" />
-                              {format(new Date(v.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
-                              <span className="truncate">• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
-                              <ClientInteretBadge statutOffre={v.offres?.statut} />{g.items.filter((i: any) => i.est_deleguee === true).length > 0 && (<Badge className="bg-blue-600 text-white text-[10px] gap-1"><Bike className="h-3 w-3" />{g.items.filter((i: any) => i.est_deleguee === true).length} délégué(s)</Badge>)}
-                            </div>
-                          </div>
-
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleDelegateGroup(g.key, ids)}
-                          disabled={delegating === g.key}
-                          className="shrink-0"
-                        >
-                          {delegating === g.key ? (
-                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Bike className="mr-1.5 h-3.5 w-3.5" />
-                          )}
-                          Déléguer
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-              </div>
-
-            )}
-          </TabsContent>
-
-          {/* Tab: Coursiers */}
-          <TabsContent value="coursiers" className="space-y-4">
-            {coursierStats.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Aucun coursier enregistré</p>
-                  <Button className="mt-4" onClick={() => setCreateOpen(true)}>
-                    <UserPlus className="mr-2 h-4 w-4" /> Ajouter un coursier
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <span className="text-base font-semibold text-foreground">{data.total.toFixed(0)} CHF</span>
+                  <Button size="sm" variant="outline" onClick={() => handleMarkAllPaidForAgent(agentId)} className="h-11 rounded-full sm:h-9">
+                    <CheckCircle className="mr-1.5 h-4 w-4" />
+                    Tout payer
                   </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {coursierStats.map((c) => (
-                  <Card 
-                    key={c.id} 
-                    className="border-border/50 hover:shadow-lg transition-all cursor-pointer group"
-                    onClick={() => { setSelectedCoursier(c); setTarifEdit(String(c.tarif_horaire ?? 20)); setDetailOpen(true); }}
-                  >
-                    <CardContent className="pt-5 pb-4">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary font-bold text-sm border border-primary/20">
-                            {getCoursierInitials(c)}
-                          </div>
-                          <div>
-                            <p className="font-semibold group-hover:text-primary transition-colors">{getCoursierName(c)}</p>
-                            <p className="text-xs text-muted-foreground">{c.profiles?.email || c.email}</p>
-                          </div>
-                        </div>
-                        <Badge className={c.statut === 'actif' 
-                          ? 'bg-green-500/10 text-green-600 border-green-500/30' 
-                          : 'bg-muted text-muted-foreground'
-                        }>
-                          {c.statut === 'actif' ? 'Actif' : c.statut}
-                        </Badge>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {tab === 'coursiers' ? (
+        coursiersVisibles.length === 0 ? (
+          <DashEmptyState
+            icon={Users}
+            title={searchQuery ? 'Aucun coursier trouvé' : EMPTY.coursiers.title}
+            action={!searchQuery ? (
+              <Button className="h-11 rounded-full" onClick={() => setCreateOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" /> Ajouter un coursier
+              </Button>
+            ) : undefined}
+          />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {coursiersVisibles.map((c) => {
+              const cGroups = missionGroups.filter((g) => (g.representative as any).coursier_id === c.id);
+              const duMois = cGroups.filter((g) => (g.representative as any).statut_coursier === 'termine' && new Date((g.representative as any).date_visite).getTime() >= debutMois).length;
+              const auj = cGroups.filter((g) => {
+                const r: any = g.representative;
+                const t = new Date(r.date_visite).getTime();
+                return r.statut_coursier === 'accepte' && t >= debutJour && t < finJour;
+              }).length;
+              const tel = c.profiles?.telephone || c.telephone;
+              const email = c.profiles?.email || c.email;
+              return (
+                <article key={c.id} className={cn(DASH_CARD, 'flex flex-col gap-4 p-4 md:p-5')}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        {getCoursierInitials(c)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-foreground">{getCoursierName(c)}</p>
+                        <p className="truncate text-xs text-muted-foreground">{email}</p>
                       </div>
-                      
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="text-center p-2 bg-muted/50 rounded-lg">
-                          <p className="text-lg font-bold">{c.completedCount}</p>
-                          <p className="text-[10px] text-muted-foreground">Missions</p>
-                        </div>
-                        <div className="text-center p-2 bg-green-500/5 rounded-lg">
-                          <p className="text-lg font-bold text-green-600">{c.earnings.toFixed(0)}</p>
-                          <p className="text-[10px] text-muted-foreground">CHF gagnés</p>
-                        </div>
-                        <div className="text-center p-2 bg-amber-500/5 rounded-lg">
-                          <p className="text-lg font-bold text-amber-600">{c.activeCount}</p>
-                          <p className="text-[10px] text-muted-foreground">En cours</p>
-                        </div>
-                      </div>
-
-                      {c.unpaid > 0 && (
-                        <div className="mt-3 flex items-center gap-2 p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                          <span className="text-xs text-amber-700 font-medium">{c.unpaid.toFixed(0)} CHF à payer</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Tab: Missions */}
-          <TabsContent value="missions" className="space-y-4">
-            {missionGroups.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <Bike className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Aucune mission déléguée</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {missionGroups.slice(0, 30).map((g) => {
-                  const m: any = g.representative;
-                  const nbClients = clientsCountOf(g.items);
-                  const allPaid = g.items.every((i: any) => i.paye_coursier);
-                  const statusConfig: Record<string, { label: string; class: string }> = {
-                    en_attente: { label: 'En attente', class: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
-                    accepte: { label: 'Acceptée', class: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
-                    termine: { label: 'Terminée', class: 'bg-green-500/10 text-green-600 border-green-500/30' },
-                  };
-                  const status = statusConfig[m.statut_coursier] || { label: m.statut_coursier, class: 'bg-muted text-muted-foreground' };
-                  
-                  return (
-                    <Card key={g.key} className="border-border/50">
-                      <CardContent className="py-3">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className={`p-2 rounded-lg shrink-0 ${
-                              m.statut_coursier === 'termine' ? 'bg-green-500/10' :
-                              m.statut_coursier === 'accepte' ? 'bg-blue-500/10' : 'bg-amber-500/10'
-                            }`}>
-                              {m.statut_coursier === 'termine' ? <CheckCircle className="h-4 w-4 text-green-600" /> :
-                               m.statut_coursier === 'accepte' ? <Bike className="h-4 w-4 text-blue-600" /> :
-                               <Clock className="h-4 w-4 text-amber-600" />}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{m.adresse || m.offres?.adresse || '-'}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                                <span>{format(new Date(m.date_visite), "dd MMM yyyy HH:mm", { locale: fr })}</span>
-                                <span>• {nbClients} client{nbClients > 1 ? 's' : ''}</span>
-                                {m.agents?.profiles?.prenom && (
-                                  <span>• Agent: {m.agents.profiles.prenom}</span>
-                                )}
-                                {m.coursier_id && (
-                                  <span>• Coursier: {getMissionCoursierName(m)}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {m.statut_coursier === 'termine' && !allPaid && (
-                              <Badge className="bg-red-500/10 text-red-600 border-red-500/30 text-[10px]">Impayé</Badge>
-                            )}
-                            {m.statut_coursier === 'termine' && allPaid && (
-                              <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">Payé</Badge>
-                            )}
-                            {m.offres?.lien_annonce && (<a href={m.offres.lien_annonce} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">Voir l'offre</a>)}<Badge className={status.class}>{status.label}</Badge>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-            )}
-          </TabsContent>
-
-          {/* Tab: Paiements */}
-          <TabsContent value="paiements" className="space-y-6">
-            {/* Solde par agent */}
-            {agentBalances.length > 0 && (
-              <Card className="border-amber-500/20">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-amber-600" />
-                    Solde par agent
-                    <Badge variant="outline" className="ml-auto text-amber-600 border-amber-500/30">
-                      Total: {totalUnpaid.toFixed(0)} CHF
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number; clients: number; groups: any[] }]) => (
-                      <div key={agentId} className="flex items-center justify-between p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-700 font-bold text-xs">
-                            {data.name.split(' ').map((n: string) => n[0]).join('')}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{data.name}</p>
-                            <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''} • {data.clients} client{data.clients > 1 ? 's' : ''}</p>
-
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-amber-600 text-lg">{data.total.toFixed(0)} CHF</span>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleMarkAllPaidForAgent(agentId)}
-                            className="border-green-500/30 text-green-600 hover:bg-green-500/10"
-                          >
-                            <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                            Tout payer
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                    </div>
+                    <DashBadge tone={c.statut === 'actif' ? 'success' : 'muted'}>{c.statut === 'actif' ? 'Actif' : c.statut}</DashBadge>
                   </div>
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Missions impayées */}
-            {unpaidGroups.length > 0 ? (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-amber-600" />
-                    Détail des missions impayées ({unpaidGroups.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {unpaidGroups.map((g) => {
-                      const m: any = g.representative;
-                      const nbClients = clientsCountOf(g.items);
-                      const amount = g.items.reduce((s: number, i: any) => s + (i.paye_coursier ? 0 : (i.remuneration_coursier || 0)), 0);
-                      const ids = g.items.filter((i: any) => !i.paye_coursier).map((i: any) => i.id);
-                      return (
-                        <div key={g.key} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{m.adresse}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {getMissionCoursierName(m)} • {format(new Date(m.date_visite), "dd MMM yyyy", { locale: fr })} • {nbClients} client{nbClients > 1 ? 's' : ''}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="font-medium text-amber-600">{amount.toFixed(0)} CHF</span>
-                            <Button size="sm" variant="outline" onClick={() => handleMarkPaidGroup(ids)} className="border-green-500/30 text-green-600 hover:bg-green-500/10">
-                              <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                              Payé
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <p className={cn('text-sm font-medium', auj > 0 ? 'text-foreground' : 'text-muted-foreground')}>
+                    {auj > 0 ? `En mission aujourd'hui (${auj})` : c.activeCount > 0 ? `${c.activeCount} mission${c.activeCount > 1 ? 's' : ''} à venir` : 'Aucune mission prévue'}
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-muted/50 p-2 text-center">
+                      <p className="text-lg font-semibold text-foreground">{duMois}</p>
+                      <p className="text-[11px] text-muted-foreground">Ce mois</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-2 text-center">
+                      <p className="text-lg font-semibold text-foreground">{c.activeCount}</p>
+                      <p className="text-[11px] text-muted-foreground">En cours</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/50 p-2 text-center">
+                      <p className="text-lg font-semibold text-foreground">{c.earnings.toFixed(0)}</p>
+                      <p className="text-[11px] text-muted-foreground">CHF gagnés</p>
+                    </div>
                   </div>
-                </CardContent>
+                  <p className="-mt-2 text-xs text-muted-foreground">{c.completedCount} mission{c.completedCount > 1 ? 's' : ''} terminée{c.completedCount > 1 ? 's' : ''} au total</p>
 
-              </Card>
-            ) : (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <CheckCircle className="h-12 w-12 text-green-500/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground">Tous les paiements sont à jour ✨</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
+                  {c.unpaid > 0 && (
+                    <p className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4 shrink-0" /> {c.unpaid.toFixed(0)} CHF à payer
+                    </p>
+                  )}
+
+                  <div className="mt-auto flex gap-2">
+                    <Button className="h-11 flex-1 rounded-full" variant={c.unpaid > 0 ? 'default' : 'outline'} onClick={() => openCoursier(c)}>
+                      {c.unpaid > 0 ? 'Relevé et paiement' : 'Voir le détail'} <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                    {tel && (
+                      <Button asChild variant="outline" className="h-11 w-11 shrink-0 rounded-full p-0" aria-label={`Appeler ${getCoursierName(c)}`}>
+                        <a href={`tel:${tel}`}><Phone className="h-4 w-4" /></a>
+                      </Button>
+                    )}
+                    {email && (
+                      <Button asChild variant="outline" className="h-11 w-11 shrink-0 rounded-full p-0" aria-label={`Écrire à ${getCoursierName(c)}`}>
+                        <a href={`mailto:${email}`}><Mail className="h-4 w-4" /></a>
+                      </Button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )
+      ) : sorted.length === 0 ? (
+        <DashEmptyState icon={EMPTY[tab].icon} title={searchQuery && tab !== 'a_deleguer' ? 'Aucun résultat pour cette recherche' : EMPTY[tab].title} description={EMPTY[tab].description} />
+      ) : (
+        <div className="space-y-3">
+          {paged.map((g: any) => {
+            const m: any = g.representative;
+            const coursier = m.coursier_id ? coursierById.get(m.coursier_id) : null;
+            return (
+              <AdminCoursierMissionCard
+                key={g.key}
+                etape={tab}
+                rep={m}
+                items={g.items}
+                coursierNom={m.coursier_id ? getMissionCoursierName(m) : 'Coursier'}
+                coursierContact={contactOf(m.coursier_id)}
+                onDelegate={tab === 'a_deleguer' ? () => handleDelegateGroup(g.key, g.items.map((i: any) => i.id)) : undefined}
+                delegating={delegating === g.key}
+                onMarkPaid={tab === 'a_payer' ? () => handleMarkPaidGroup(g.items.filter((i: any) => !i.paye_coursier).map((i: any) => i.id)) : undefined}
+                onOpenCoursier={coursier ? () => openCoursier(coursier) : undefined}
+                onVoirCoursiers={() => { tabChoisi.current = true; setTab('coursiers'); }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {tab !== 'coursiers' && sorted.length > pageSize && (
+        <TablePagination
+          total={sorted.length}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          label="missions"
+        />
+      )}
 
       {/* Create Coursier Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -638,7 +610,7 @@ export default function AdminCoursiers() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Prénom *</Label>
                 <Input
@@ -675,8 +647,8 @@ export default function AdminCoursiers() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuler</Button>
-            <Button onClick={handleCreateCoursier} disabled={creating}>
+            <Button variant="outline" className="h-11 rounded-full" onClick={() => setCreateOpen(false)}>Annuler</Button>
+            <Button className="h-11 rounded-full" onClick={handleCreateCoursier} disabled={creating}>
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
               Inviter le coursier
             </Button>
@@ -686,7 +658,7 @@ export default function AdminCoursiers() {
 
       {/* Coursier Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">
           {selectedCoursier && (() => {
             const sheets: any[] = selectedCoursier.sheets || [];
             const totalMinutes = sheets.reduce((s, d) => s + d.minutes, 0);
@@ -703,11 +675,7 @@ export default function AdminCoursiers() {
                   </div>
                   <div>
                     <span>{getCoursierName(selectedCoursier)}</span>
-                    <Badge className={`ml-2 ${selectedCoursier.statut === 'actif' 
-                      ? 'bg-green-500/10 text-green-600 border-green-500/30' 
-                      : 'bg-muted text-muted-foreground'}`}>
-                      {selectedCoursier.statut}
-                    </Badge>
+                    <span className="ml-2 align-middle"><DashBadge tone={selectedCoursier.statut === 'actif' ? 'success' : 'muted'}>{selectedCoursier.statut}</DashBadge></span>
                   </div>
                 </DialogTitle>
               </DialogHeader>
@@ -715,13 +683,13 @@ export default function AdminCoursiers() {
                 {/* Contact */}
                 <div className="space-y-2">
                   {(selectedCoursier.profiles?.email || selectedCoursier.email) && (
-                    <a href={`mailto:${selectedCoursier.profiles?.email || selectedCoursier.email}`} className="flex items-center gap-2 text-sm text-primary hover:underline">
+                    <a href={`mailto:${selectedCoursier.profiles?.email || selectedCoursier.email}`} className="flex min-h-[36px] items-center gap-2 text-sm text-primary hover:underline">
                       <Mail className="h-4 w-4" />
                       {selectedCoursier.profiles?.email || selectedCoursier.email}
                     </a>
                   )}
                   {(selectedCoursier.profiles?.telephone || selectedCoursier.telephone) && (
-                    <a href={`tel:${selectedCoursier.profiles?.telephone || selectedCoursier.telephone}`} className="flex items-center gap-2 text-sm text-primary hover:underline">
+                    <a href={`tel:${selectedCoursier.profiles?.telephone || selectedCoursier.telephone}`} className="flex min-h-[36px] items-center gap-2 text-sm text-primary hover:underline">
                       <Phone className="h-4 w-4" />
                       {selectedCoursier.profiles?.telephone || selectedCoursier.telephone}
                     </a>
@@ -729,7 +697,7 @@ export default function AdminCoursiers() {
                 </div>
 
                 {/* Infos paiement */}
-                <div className="space-y-2 p-3 rounded-xl border border-border/50 bg-muted/30">
+                <div className="space-y-2 rounded-xl border border-border/70 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs text-muted-foreground">Tarif horaire</span>
                     <span className="text-sm font-semibold">{selectedCoursier.tarif_horaire ?? 20} CHF/h</span>
@@ -742,7 +710,8 @@ export default function AdminCoursiers() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 shrink-0"
+                          className="h-9 w-9 shrink-0 rounded-full"
+                          aria-label="Copier l'IBAN"
                           onClick={() => {
                             navigator.clipboard.writeText(selectedCoursier.iban);
                             toast.success('IBAN copié');
@@ -760,10 +729,10 @@ export default function AdminCoursiers() {
                       step="0.5"
                       value={tarifEdit}
                       onChange={(e) => setTarifEdit(e.target.value)}
-                      className="h-8 w-24 text-sm"
+                      className="h-10 w-24 text-sm"
                       placeholder="20"
                     />
-                    <Button size="sm" variant="outline" onClick={handleSaveTarif} disabled={savingTarif} className="h-8">
+                    <Button size="sm" variant="outline" onClick={handleSaveTarif} disabled={savingTarif} className="h-10 rounded-full">
                       {savingTarif ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
                       Enregistrer le tarif
                     </Button>
@@ -771,33 +740,33 @@ export default function AdminCoursiers() {
                 </div>
 
                 {/* Bandeau totaux */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-3 bg-muted/50 rounded-xl">
-                    <p className="text-lg font-bold">{formatDuration(totalMinutes)}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-xl bg-muted/50 p-3 text-center">
+                    <p className="text-lg font-semibold">{formatDuration(totalMinutes)}</p>
                     <p className="text-xs text-muted-foreground">Total heures</p>
                   </div>
-                  <div className="text-center p-3 bg-green-500/5 rounded-xl">
-                    <p className="text-lg font-bold text-green-600">{totalEarned.toFixed(2)}</p>
+                  <div className="rounded-xl bg-muted/50 p-3 text-center">
+                    <p className="text-lg font-semibold text-foreground">{totalEarned.toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">CHF gagnés</p>
                   </div>
-                  <div className="text-center p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                    <p className="text-lg font-bold text-amber-600">{totalUnpaidAmount.toFixed(2)}</p>
-                    <p className="text-xs text-amber-700">CHF à payer</p>
+                  <div className="rounded-xl bg-amber-500/10 p-3 text-center">
+                    <p className="text-lg font-semibold text-amber-700 dark:text-amber-400">{totalUnpaidAmount.toFixed(2)}</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400">CHF à payer</p>
                   </div>
                 </div>
 
                 {/* Relevé des heures */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-primary" />
+                    <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
                       Relevé des heures
                     </p>
                     {unpaidSheets.length > 0 && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-green-500/30 text-green-600 hover:bg-green-500/10 h-8"
+                        className="h-10 rounded-full"
                         disabled={payingSheet === 'all'}
                         onClick={() => handlePaySheet('all', allUnpaidIds)}
                       >
@@ -811,15 +780,15 @@ export default function AdminCoursiers() {
                   ) : (
                     <div className="space-y-2">
                       {sheets.map((sheet) => (
-                        <div key={sheet.dateKey} className="p-3 rounded-xl border border-border/50 space-y-1.5">
+                        <div key={sheet.dateKey} className="space-y-2 rounded-xl border border-border/70 p-3">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-sm font-medium capitalize">{sheet.label}</p>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-sm font-semibold">{sheet.amount.toFixed(2)} CHF</span>
                               {sheet.allPaid ? (
-                                <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">Payé</Badge>
+                                <DashBadge tone="success">Payé</DashBadge>
                               ) : (
-                                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">Impayé</Badge>
+                                <DashBadge tone="warning">Impayé</DashBadge>
                               )}
                             </div>
                           </div>
@@ -834,11 +803,11 @@ export default function AdminCoursiers() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-green-500/30 text-green-600 hover:bg-green-500/10 h-7 text-xs"
+                              className="h-10 w-full rounded-full sm:w-auto"
                               disabled={payingSheet === sheet.dateKey}
                               onClick={() => handlePaySheet(sheet.dateKey, sheet.visiteIds)}
                             >
-                              {payingSheet === sheet.dateKey ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle className="mr-1 h-3 w-3" />}
+                              {payingSheet === sheet.dateKey ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-1.5 h-4 w-4" />}
                               Payer
                             </Button>
                           )}
@@ -858,6 +827,6 @@ export default function AdminCoursiers() {
           })()}
         </DialogContent>
       </Dialog>
-    </main>
+    </DashPage>
   );
 }
