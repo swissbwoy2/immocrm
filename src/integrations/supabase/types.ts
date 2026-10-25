@@ -16070,6 +16070,88 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_shared_mailbox: { Args: { p_id: string }; Returns: undefined }
+      get_steeve_public_settings: { Args: never; Returns: Json }
+      admin_mailbox_auth_servers: {
+        Args: never
+        Returns: {
+          address: string
+          auth_server: string
+          emails: number
+          favorables: number
+          mailbox_id: string
+          trusted: boolean
+        }[]
+      }
+      admin_set_mailbox_trusted_server: {
+        Args: { p_mailbox_id: string; p_server: string; p_trusted: boolean }
+        Returns: string
+      }
+      admin_set_steeve_settings: { Args: { p_settings: Json }; Returns: Json }
+      admin_steeve_clients: {
+        Args: { p_query?: string | null }
+        Returns: {
+          client_id: string
+          email: string | null
+          email_verifie: boolean
+          has_conversation: boolean
+          in_pilot: boolean
+          nom: string | null
+          prenom: string | null
+          statut: string | null
+        }[]
+      }
+      admin_steeve_journal: {
+        Args: { p_limit?: number }
+        Returns: {
+          calls: number
+          client_id: string | null
+          client_nom: string | null
+          conversation_id: string
+          cost_usd: number
+          created_at: string
+          error: string | null
+          kind: string
+          reason: string | null
+          run_id: string
+          status: string
+        }[]
+      }
+      admin_steeve_overview: { Args: never; Returns: Json }
+      staff_verify_client_email: {
+        Args: { p_client_id: string; p_verified?: boolean }
+        Returns: string | null
+      }
+      admin_list_shared_mailboxes: {
+        Args: never
+        Returns: {
+          address: string
+          emails_count: number
+          has_password: boolean
+          id: string
+          imap_host: string
+          imap_port: number
+          is_active: boolean
+          label: string | null
+          last_attempt_at: string | null
+          last_error: string | null
+          last_sync_at: string | null
+          pending_count: number | null
+          verified_count: number
+        }[]
+      }
+      admin_save_shared_mailbox: {
+        Args: {
+          p_address: string
+          p_id: string | null
+          p_imap_host: string
+          p_imap_port: number
+          p_is_active: boolean
+          p_label: string | null
+          p_password?: string | null
+        }
+        Returns: string
+      }
       _get_or_create_annonce_conv: {
         Args: { p_annonce_id: string; p_user_id: string }
         Returns: string
