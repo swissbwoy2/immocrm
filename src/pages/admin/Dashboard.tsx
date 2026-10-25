@@ -798,7 +798,7 @@ export default function AdminDashboard() {
           </button>
           {showMore && (
             <div className="space-y-4">
-              <div className={`${DASH_CARD} overflow-hidden`}>
+              <div>
                 <AdminStatsSection
                   agents={agents}
                   clients={clients}

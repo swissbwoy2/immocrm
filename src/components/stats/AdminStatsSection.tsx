@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { subDays, isWithinInterval, startOfDay, startOfWeek, startOfMonth, addDays, addWeeks, addMonths, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Home, Wallet, FileText } from 'lucide-react';
+import { Send, CheckCircle, DollarSign, Users, UserCog, Home, Wallet, FileText } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
+import { chfSuisse } from './statsFormat';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
 import { PerformanceChart, MultiSeriesChart } from './PerformanceChart';
@@ -248,189 +249,188 @@ export function AdminStatsSection({
   ], [currentOffres, currentTransactions, currentClients]);
 
   return (
-    <div className="space-y-6">
-      {/* Header with date filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Statistiques globales
-          </h2>
-          <p className="text-sm text-muted-foreground">Vue d'ensemble de l'activité de l'agence</p>
+    <div className="space-y-4 md:space-y-5">
+      {/* En-tête : titre, phrase, période */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Statistiques globales</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">Vue d'ensemble de l'activité de l'agence</p>
         </div>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <DateRangeFilter value={dateRange} onChange={setDateRange} className="w-full sm:w-auto" />
       </div>
 
-      {/* Stats Cards with staggered animations */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Revenus agence"
-            value={`${stats.revenusAgence.toLocaleString()} CHF`}
-            previousValue={stats.previousRevenus}
-            currentValue={stats.revenusAgence}
-            icon={DollarSign}
-            variant="success"
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '25ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Acomptes encaissés"
-            value={`${acomptes.total.toLocaleString()} CHF`}
-            previousValue={acomptes.prevTotal}
-            currentValue={acomptes.total}
-            icon={Wallet}
-            variant="success"
-            description={`${acomptes.count} mandat${acomptes.count > 1 ? 's' : ''}`}
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Comm. agents"
-            value={`${stats.commissionsAgents.toLocaleString()} CHF`}
-            icon={DollarSign}
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Affaires conclues"
-            value={stats.affairesConclues}
-            previousValue={stats.previousAffaires}
-            currentValue={stats.affairesConclues}
-            icon={CheckCircle}
-            variant="success"
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Offres envoyées"
-            value={stats.offresEnvoyeesTotal}
-            previousValue={stats.previousOffresTotal}
-            currentValue={stats.offresEnvoyeesTotal}
-            icon={Send}
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '175ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Biens proposés"
-            value={stats.offresUniques}
-            icon={Home}
-            description="Offres uniques"
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Nouveaux clients"
-            value={stats.nouveauxClients}
-            previousValue={stats.previousNouveauxClients}
-            currentValue={stats.nouveauxClients}
-            icon={Users}
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
-          <StatsCard
-            title="Agents"
-            value={stats.totalAgents}
-            description={`${stats.agentsActifs} actif(s)`}
-            icon={UserCog}
-          />
-        </div>
+      {/* Chiffres clés */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <StatsCard
+          title="Revenus agence"
+          value={chfSuisse(stats.revenusAgence)}
+          previousValue={stats.previousRevenus}
+          currentValue={stats.revenusAgence}
+          icon={DollarSign}
+          variant="success"
+        />
+        <StatsCard
+          title="Acomptes encaissés"
+          value={chfSuisse(acomptes.total)}
+          previousValue={acomptes.prevTotal}
+          currentValue={acomptes.total}
+          icon={Wallet}
+          variant="success"
+          description={`${acomptes.count} mandat${acomptes.count > 1 ? 's' : ''}`}
+        />
+        <StatsCard
+          title="Comm. agents"
+          value={chfSuisse(stats.commissionsAgents)}
+          icon={DollarSign}
+        />
+        <StatsCard
+          title="Affaires conclues"
+          value={stats.affairesConclues}
+          previousValue={stats.previousAffaires}
+          currentValue={stats.affairesConclues}
+          icon={CheckCircle}
+          variant="success"
+        />
+        <StatsCard
+          title="Offres envoyées"
+          value={stats.offresEnvoyeesTotal}
+          previousValue={stats.previousOffresTotal}
+          currentValue={stats.offresEnvoyeesTotal}
+          icon={Send}
+        />
+        <StatsCard
+          title="Biens proposés"
+          value={stats.offresUniques}
+          icon={Home}
+          description="Offres uniques"
+        />
+        <StatsCard
+          title="Nouveaux clients"
+          value={stats.nouveauxClients}
+          previousValue={stats.previousNouveauxClients}
+          currentValue={stats.nouveauxClients}
+          icon={Users}
+        />
+        <StatsCard
+          title="Agents"
+          value={stats.totalAgents}
+          description={`${stats.agentsActifs} actif(s)`}
+          icon={UserCog}
+        />
       </div>
 
       {/* Candidatures / Postulations */}
-      <Card className="animate-fade-in border-primary/20">
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 space-y-0">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            Candidatures / Postulations
-          </CardTitle>
-          <div className="flex gap-1" role="tablist" aria-label="Granularité">
+      <div className={`${DASH_CARD} p-4 md:p-5`}>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <FileText className="h-[18px] w-[18px]" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-semibold text-foreground">Candidatures / Postulations</h3>
+              <p className="text-xs text-muted-foreground">sur la période</p>
+            </div>
+          </div>
+          <div className="flex gap-1.5" role="tablist" aria-label="Granularité">
             {(['day', 'week', 'month'] as const).map((g) => (
               <Button
                 key={g}
                 size="sm"
                 variant={granularity === g ? 'default' : 'outline'}
-                className="h-8 px-3"
+                className="h-9 flex-1 rounded-full px-4 sm:flex-none"
                 onClick={() => setGranularity(g)}
               >
                 {g === 'day' ? 'Jour' : g === 'week' ? 'Semaine' : 'Mois'}
               </Button>
             ))}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              { label: 'Dépôts', value: candStats.depots },
-              { label: 'Signatures', value: candStats.signatures },
-              { label: 'Taux conversion', value: `${candStats.taux.toFixed(1)}%` },
-              { label: 'Clés remises', value: candStats.cles },
-              { label: 'Refus', value: candStats.refus },
-              { label: 'En attente', value: candStats.attente },
-            ].map((k) => (
-              <div key={k.label} className="rounded-lg border border-border/60 p-3">
-                <p className="text-[10px] sm:text-xs uppercase tracking-wide text-muted-foreground">{k.label}</p>
-                <p className="text-xl font-bold mt-1 tabular-nums">{k.value}</p>
-              </div>
-            ))}
-          </div>
-          <div>
-            <p className="text-sm font-medium mb-2">Flux de postulations</p>
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={fluxData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="depots" name="Dépôts" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="signatures" name="Signatures" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Charts with staggered animations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
-          <MultiSeriesChart
-            title="Activité globale"
-            series={activitySeries}
-            dateRange={dateRange}
-          />
         </div>
-        <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
-          <PerformanceChart
-            title="Revenus de l'agence"
-            data={revenusChartData}
-            dateRange={dateRange}
-            color="hsl(142, 76%, 36%)"
-            valueLabel="CHF"
-          />
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            { label: 'Dépôts', value: candStats.depots },
+            { label: 'Signatures', value: candStats.signatures },
+            { label: 'Taux conversion', value: `${candStats.taux.toFixed(1)} %` },
+            { label: 'Clés remises', value: candStats.cles },
+            { label: 'Refus', value: candStats.refus },
+            { label: 'En attente', value: candStats.attente },
+          ].map((k) => (
+            <div key={k.label} className="min-w-0 rounded-xl bg-muted/50 px-3 py-2.5">
+              <p className="truncate text-xs text-muted-foreground">{k.label}</p>
+              <p className="mt-0.5 text-xl font-semibold tabular-nums text-foreground">{k.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 border-t border-border/70 pt-4">
+          <p className="mb-2 text-sm font-semibold text-foreground">Flux de postulations</p>
+          <div className="h-[240px] min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={fluxData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  tickLine={false}
+                  axisLine={false}
+                  minTickGap={8}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  }}
+                  labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} iconType="circle" iconSize={8} />
+                <Bar dataKey="depots" name="Dépôts" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="signatures" name="Signatures" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      {/* Leaderboards with staggered animations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
-          <Leaderboard
-            title="Top agents - Commissions"
-            entries={agentLeaderboard}
-            valueLabel="CHF"
-            maxEntries={5}
-          />
-        </div>
-        <div className="animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'both' }}>
-          <Leaderboard
-            title="Top agents - Offres envoyées"
-            entries={agentOffresLeaderboard}
-            valueLabel="offres"
-            maxEntries={5}
-          />
-        </div>
+      {/* Graphiques : côte à côte sur PC, empilés sur mobile */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
+        <MultiSeriesChart
+          title="Activité globale"
+          series={activitySeries}
+          dateRange={dateRange}
+        />
+        <PerformanceChart
+          title="Revenus de l'agence"
+          data={revenusChartData}
+          dateRange={dateRange}
+          color="hsl(142, 76%, 36%)"
+          valueLabel="CHF"
+        />
+      </div>
+
+      {/* Classements */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
+        <Leaderboard
+          title="Top agents - Commissions"
+          entries={agentLeaderboard}
+          valueLabel="CHF"
+          maxEntries={5}
+        />
+        <Leaderboard
+          title="Top agents - Offres envoyées"
+          entries={agentOffresLeaderboard}
+          valueLabel="offres"
+          maxEntries={5}
+        />
       </div>
     </div>
   );

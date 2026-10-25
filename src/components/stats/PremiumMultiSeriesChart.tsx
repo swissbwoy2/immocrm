@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isSameDay, isSameWeek, isSameMonth, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { DateRange } from './DateRangeFilter';
 import { Activity, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { nombreSuisse } from './statsFormat';
 import { cn } from '@/lib/utils';
 
 interface DataPoint {
@@ -102,147 +103,97 @@ export function PremiumMultiSeriesChart({
   }, [chartData, series]);
 
   const TrendIcon = trend.direction === 'up' ? TrendingUp : trend.direction === 'down' ? TrendingDown : Minus;
-  const trendColor = trend.direction === 'up' ? 'text-emerald-500' : trend.direction === 'down' ? 'text-rose-500' : 'text-muted-foreground';
+  const trendColor = trend.direction === 'up' ? 'text-emerald-700 dark:text-emerald-400' : trend.direction === 'down' ? 'text-destructive' : 'text-muted-foreground';
 
   return (
-    <Card className="group relative overflow-hidden border-primary/10 hover:border-primary/30 transition-all duration-500 hover:shadow-xl hover:-translate-y-1">
-      {/* Glassmorphism background effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/20 animate-pulse"
-            style={{
-              left: `${15 + i * 15}%`,
-              top: `${20 + (i % 3) * 25}%`,
-              animationDelay: `${i * 0.3}s`,
-              animationDuration: `${2 + i * 0.5}s`
-            }}
-          />
-        ))}
+    <div className={`${DASH_CARD} flex h-full flex-col p-4 md:p-5`}>
+      {/* En-tête */}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-foreground">{title}</h3>
+            <p className="text-xs text-muted-foreground">sur la période</p>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-2xl font-semibold leading-none tracking-tight tabular-nums text-foreground">
+            {nombreSuisse(grandTotal)}
+          </p>
+          <p className="mt-1 flex items-center justify-end gap-1.5 text-xs">
+            <span className={cn("font-medium", trendColor)}>
+              <span aria-hidden="true">{trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '–'}</span>
+              {trend.percentage > 0 && <span className="tabular-nums"> {trend.percentage} %</span>}
+            </span>
+            <span className="text-muted-foreground">Total</span>
+          </p>
+        </div>
       </div>
 
-      {/* Glow effect on hover */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
-
-      <CardHeader className="relative pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-              <Icon className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110" />
-            </div>
-            <CardTitle className="text-base font-semibold transition-transform duration-300 group-hover:scale-[1.02] origin-left">
-              {title}
-            </CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={cn("flex items-center gap-1 text-xs font-medium", trendColor)}>
-              <TrendIcon className="h-3 w-3" />
-              {trend.percentage > 0 && <span>{trend.percentage}%</span>}
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                {grandTotal}
-              </p>
-              <p className="text-xs text-muted-foreground">Total</p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="relative">
-        {/* Chart */}
-        <div className="h-[220px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                {series.map((s, i) => (
-                  <linearGradient key={s.key} id={`gradient-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={s.color} stopOpacity={0.9} />
-                    <stop offset="100%" stopColor={s.color} stopOpacity={0.6} />
-                  </linearGradient>
-                ))}
-              </defs>
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                vertical={false}
-                stroke="hsl(var(--muted-foreground) / 0.1)" 
-              />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} 
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                cursor={{ fill: 'hsl(var(--primary) / 0.05)' }}
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  boxShadow: '0 10px 40px -10px hsl(var(--primary) / 0.2)',
-                  backdropFilter: 'blur(8px)',
-                }}
-                itemStyle={{
-                  padding: '2px 0',
-                }}
-              />
-              <Legend 
-                wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
-                iconType="circle"
-                iconSize={8}
-              />
-              {series.map((s, i) => (
-                <Bar
-                  key={s.key}
-                  dataKey={s.key}
-                  name={s.label}
-                  fill={`url(#gradient-${s.key})`}
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Series totals footer */}
-        <div className="mt-4 pt-4 border-t border-border/50">
-          <div className="grid grid-cols-3 gap-3">
-            {seriesTotals.map((s, i) => (
-              <div 
+      {/* Graphique */}
+      <div className="mt-auto h-[220px] min-w-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              vertical={false}
+              stroke="hsl(var(--border))" 
+            />
+            <XAxis 
+              dataKey="name" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              minTickGap={8}
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+            />
+            <Tooltip
+              cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
+              contentStyle={{
+                backgroundColor: 'hsl(var(--popover))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '12px',
+                fontSize: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+              itemStyle={{
+                padding: '2px 0',
+              }}
+            />
+            {series.map((s) => (
+              <Bar
                 key={s.key}
-                className="text-center p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors duration-200"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: s.color }}
-                  />
-                  <p className="text-xs text-muted-foreground truncate">{s.label}</p>
-                </div>
-                <p className="text-lg font-bold" style={{ color: s.color }}>
-                  {s.total}
-                </p>
-              </div>
+                dataKey={s.key}
+                name={s.label}
+                fill={s.color}
+                radius={[4, 4, 0, 0]}
+                maxBarSize={32}
+              />
             ))}
-          </div>
-        </div>
-      </CardContent>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
-      {/* Shine effect */}
-      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
-    </Card>
+      {/* Légende avec totaux par série */}
+      <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border/70 pt-3">
+        {seriesTotals.map((s) => (
+          <div key={s.key} className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+              <p className="truncate text-xs text-muted-foreground">{s.label}</p>
+            </div>
+            <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">{nombreSuisse(s.total)}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
