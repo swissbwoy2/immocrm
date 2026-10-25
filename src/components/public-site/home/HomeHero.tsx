@@ -28,9 +28,9 @@ export function HomeHero() {
 
   const tab = (active: boolean) =>
     cn(
-      'flex h-12 cursor-pointer items-center justify-center gap-2 rounded-[10px] px-3 text-[16px] font-semibold transition-colors duration-150',
+      'relative flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full px-3 text-[16px] font-semibold transition-colors duration-200 active:scale-[0.97]',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2',
-      active ? 'bg-foreground text-background' : 'text-foreground/70 hover:bg-white hover:text-foreground',
+      active ? 'imr-lg-lens text-[var(--home-accent)]' : 'text-foreground/70 hover:text-foreground',
     );
 
   return (
@@ -50,7 +50,7 @@ export function HomeHero() {
               En Suisse romande, choisissez votre projet et avancez avec un expert.
             </p>
 
-            <div className={cn('mt-6 grid max-w-md grid-cols-2 gap-1 rounded-[14px] p-1', SURFACE)} role="group" aria-label="Type de recherche">
+            <div className="imr-lg-segment mt-6 grid max-w-md grid-cols-2 gap-1 rounded-full p-1" role="group" aria-label="Type de recherche">
               <button type="button" onClick={() => setSearchType('location')} aria-pressed={louer} className={tab(louer)}>
                 <Key className="h-5 w-5" aria-hidden="true" />
                 Louer
@@ -135,7 +135,7 @@ export function HomeHero() {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-12 cursor-pointer items-center justify-between gap-3 rounded-lg bg-white px-4 text-[15px] font-semibold text-foreground transition-colors duration-150 hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+                  className="flex h-12 cursor-pointer items-center justify-between gap-3 rounded-full imr-lg-glass px-5 text-[15px] font-semibold text-foreground active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
                 >
                   <span className="flex items-center gap-2">
                     <Icon className="h-4 w-4" aria-hidden="true" />

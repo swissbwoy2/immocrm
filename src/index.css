@@ -1950,3 +1950,34 @@ html.dark[data-imr-sidebar="clair"] {
   .imr-glass-nav { background: rgba(255,255,255,.97); }
   .dark .imr-glass-nav { background: rgba(28,28,30,.97); }
 }
+
+/* Liquid Glass sur le site public : teinte = vert accent du site (--home-accent) */
+.imr-lg-tint.imr-lg-accent {
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,0) 50%),
+    var(--home-accent, hsl(var(--primary)));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    inset 0 -1px 1px rgba(0,0,0,.12),
+    0 1px 2px rgba(31,122,92,.25),
+    0 6px 16px -6px rgba(31,122,92,.5);
+}
+/* Rail de choix segmenté (Louer / Acheter, onglets, vues) */
+.imr-lg-segment {
+  background: linear-gradient(180deg, rgba(118,118,128,.10) 0%, rgba(118,118,128,.14) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.05), inset 0 0 0 .5px rgba(0,0,0,.04);
+}
+.dark .imr-lg-segment { background: rgba(255,255,255,.08); }
+.imr-lg-segment > * { border-radius: 9999px; }
+.imr-lg-segment > [data-state=active] {
+  color: hsl(var(--foreground));
+  background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.75) 100%);
+  box-shadow: 0 0 0 .5px rgba(0,0,0,.06), inset 0 1px 0 #fff, 0 2px 8px -2px rgba(0,0,0,.18);
+}
+.dark .imr-lg-segment > [data-state=active] {
+  background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,.1) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px -2px rgba(0,0,0,.6);
+}

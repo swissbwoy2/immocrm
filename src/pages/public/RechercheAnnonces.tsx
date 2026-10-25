@@ -643,9 +643,9 @@ export default function RechercheAnnonces() {
   const floatChipCls = 'pointer-events-auto shadow-lg tabular-nums'; // taste-skill-ignore
   const segBtn = (active: boolean) =>
     cn(
-      'inline-flex h-7 w-8 items-center justify-center rounded-md transition-colors duration-150 cursor-pointer',
+      'inline-flex h-7 w-9 items-center justify-center rounded-full transition-colors duration-150 cursor-pointer active:scale-[0.94]',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-      active ? 'bg-background text-foreground ring-1 ring-border' : 'text-muted-foreground hover:text-foreground',
+      active ? 'imr-lg-lens text-foreground' : 'text-muted-foreground hover:text-foreground',
     );
 
   return (
@@ -664,7 +664,7 @@ export default function RechercheAnnonces() {
               onValueChange={(v) => patchParams((p) => (v === 'all' ? p.delete('type') : p.set('type', v)))}
               className="shrink-0"
             >
-              <TabsList className="w-full md:w-auto">
+              <TabsList className="imr-lg-segment h-11 w-full rounded-full md:w-auto">
                 <TabsTrigger value="all" className="flex-1 md:flex-none">Tous</TabsTrigger>
                 <TabsTrigger value="location" className="flex-1 md:flex-none">Louer</TabsTrigger>
                 <TabsTrigger value="vente" className="flex-1 md:flex-none">Acheter</TabsTrigger>
@@ -790,7 +790,7 @@ export default function RechercheAnnonces() {
               value={sortBy}
               onValueChange={(v) => patchParams((p) => (v === 'date' ? p.delete('tri') : p.set('tri', v)))}
             >
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="imr-lg-glass h-9 w-[160px] rounded-full border-0">
                 <SelectValue placeholder="Trier par" />
               </SelectTrigger>
               <SelectContent>
@@ -803,7 +803,7 @@ export default function RechercheAnnonces() {
               </SelectContent>
             </Select>
 
-            <div className="inline-flex h-9 items-center gap-0.5 rounded-lg bg-secondary p-1" role="group" aria-label="Affichage">
+            <div className="imr-lg-segment inline-flex h-9 items-center gap-0.5 rounded-full p-1" role="group" aria-label="Affichage">
               <button type="button" className={segBtn(viewMode === 'list')} aria-label="Vue liste"
                 aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}>
                 <List className="h-4 w-4" />
