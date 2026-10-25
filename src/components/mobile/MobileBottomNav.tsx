@@ -1,8 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, Calendar, Home, Mailbox, Menu, LifeBuoy, Bell, FileText, FileCheck, Inbox, Banknote, Bot } from 'lucide-react';
+import { Calendar, Home, Mailbox, LifeBuoy, Bell, FileText, FileCheck, Inbox, Banknote, Bot, Settings, HardHat, User, Clipboard, UserPlus, Handshake, Wallet, Building2, Users, CalendarCheck, MapPin } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useClientParcours } from '@/hooks/useClientParcours';
-import { useSidebar } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
 export interface BottomNavItem {
@@ -14,13 +13,11 @@ export interface BottomNavItem {
 }
 
 /**
- * La barre « bulle » flottante : chercheur de logement et acheteur (4 onglets),
- * admin et agent (5 onglets : même barre que le client).
+ * Tous les rôles ont désormais la même barre « bulle » flottante en verre liquide
+ * (4 onglets ; 5 pour l'admin et l'agent). Rôle sans onglets : pas de barre.
  */
 export function isClientGlassNav(role: string | null, parcours?: string | null): boolean {
-  if (role === 'admin' || role === 'agent') return true;
-  if (role !== 'client') return false;
-  return !['relouer', 'renovation', 'vente'].includes(parcours ?? '');
+  return getBottomNavItems(role, parcours).length > 0;
 }
 
 export function getBottomNavItems(role: string | null, parcours?: string | null): BottomNavItem[] {
@@ -36,12 +33,29 @@ export function getBottomNavItems(role: string | null, parcours?: string | null)
         { name: 'Agenda', icon: Calendar, path: '/client/calendrier', badgeKey: 'agenda' },
       ];
     }
-    if (parcours === 'relouer' || parcours === 'renovation' || parcours === 'vente') {
+    // Parcours propriétaire (relouer, rénovation, vente) : messagerie et menu complet dans l'en-tête.
+    if (parcours === 'relouer') {
       return [
-        { name: 'Accueil', icon: LayoutDashboard, path: '/client' },
-        { name: 'Messages', icon: MessageSquare, path: '/client/messagerie' },
+        { name: 'Accueil', icon: Home, path: '/client' },
         { name: 'Alertes', icon: Bell, path: '/client/notifications' },
         { name: 'Support', icon: LifeBuoy, path: '/support' },
+        { name: 'Réglages', icon: Settings, path: '/client/parametres' },
+      ];
+    }
+    if (parcours === 'renovation') {
+      return [
+        { name: 'Accueil', icon: Home, path: '/client' },
+        { name: 'Projets', icon: HardHat, path: '/client/renovation' },
+        { name: 'Dossier', icon: User, path: '/client/dossier' },
+        { name: 'Documents', icon: FileText, path: '/client/documents' },
+      ];
+    }
+    if (parcours === 'vente') {
+      return [
+        { name: 'Accueil', icon: Home, path: '/client' },
+        { name: 'Dossier', icon: User, path: '/client/dossier' },
+        { name: 'Documents', icon: FileText, path: '/client/documents' },
+        { name: 'Alertes', icon: Bell, path: '/client/notifications' },
       ];
     }
   }
@@ -68,13 +82,36 @@ export function getBottomNavItems(role: string | null, parcours?: string | null)
         { name: 'Candidatures', icon: FileCheck, path: '/client/mes-candidatures', badgeKey: null },
         { name: 'Agenda', icon: Calendar, path: '/client/calendrier', badgeKey: 'agenda' },
       ];
+    // Candidat : messages dans l'en-tête.
     case 'candidat':
       return [
-        { name: 'Accueil', icon: LayoutDashboard, path: '/candidat' },
-        { name: 'Candidatures', icon: FileText, path: '/candidat/candidatures' },
-        { name: 'Messages', icon: MessageSquare, path: '/candidat/messages' },
+        { name: 'Accueil', icon: Home, path: '/candidat' },
+        { name: 'Candidatures', icon: FileCheck, path: '/candidat/candidatures' },
+        { name: 'Demande', icon: Clipboard, path: '/candidat/demande' },
         { name: 'Agenda', icon: Calendar, path: '/candidat/agenda' },
-        { name: 'Support', icon: LifeBuoy, path: '/candidat/support' },
+      ];
+    // Apporteur d'affaires : notifications dans l'en-tête.
+    case 'apporteur':
+      return [
+        { name: 'Accueil', icon: Home, path: '/apporteur' },
+        { name: 'Soumettre', icon: UserPlus, path: '/apporteur/soumettre-client' },
+        { name: 'Referrals', icon: Handshake, path: '/apporteur/mes-referrals' },
+        { name: 'Gains', icon: Wallet, path: '/apporteur/commissions' },
+      ];
+    // Propriétaire : messagerie dans l'en-tête.
+    case 'proprietaire':
+      return [
+        { name: 'Accueil', icon: Home, path: '/proprietaire' },
+        { name: 'Mes biens', icon: Building2, path: '/proprietaire/immeubles' },
+        { name: 'Locataires', icon: Users, path: '/proprietaire/locataires' },
+        { name: 'Agenda', icon: Calendar, path: '/proprietaire/calendrier' },
+      ];
+    case 'coursier':
+      return [
+        { name: 'Accueil', icon: Home, path: '/coursier' },
+        { name: 'Missions', icon: CalendarCheck, path: '/coursier/missions' },
+        { name: 'Carte', icon: MapPin, path: '/coursier/carte' },
+        { name: 'Agenda', icon: Calendar, path: '/coursier/calendrier' },
       ];
     default:
       return [];
@@ -84,7 +121,6 @@ export function getBottomNavItems(role: string | null, parcours?: string | null)
 export function MobileBottomNav({ role, badges }: { role: string | null; badges?: { offres?: number; agenda?: number } }) {
   const parcours = useClientParcours(role === 'client');
   const items = getBottomNavItems(role, parcours);
-  const { setOpenMobile } = useSidebar();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
@@ -94,9 +130,8 @@ export function MobileBottomNav({ role, badges }: { role: string | null; badges?
   const isActive = (path: string) =>
     path.split('/').length === 2 ? pathname === path : pathname.startsWith(path);
 
-  // Client chercheur : bulle flottante translucide (verre dépoli), 4 onglets.
-  if (isClientGlassNav(role, parcours)) {
-    return (
+  // Bulle flottante en verre liquide (tous les rôles).
+  return (
       <nav
         className={cn('pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center lg:hidden', items.length > 4 ? 'px-2.5' : 'px-4')}
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)' }}
@@ -114,7 +149,7 @@ export function MobileBottomNav({ role, badges }: { role: string | null; badges?
                 className={cn(
                   'relative flex h-[54px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-full font-medium tracking-tight transition-colors duration-200 active:scale-[0.96]',
                   items.length > 4 ? 'text-[10px] tracking-[-0.02em]' : 'text-[11px]',
-                  active ? 'text-primary' : 'text-neutral-500 dark:text-neutral-400',
+                  active ? 'text-primary dark:text-emerald-300' : 'text-neutral-600 dark:text-neutral-300',
                 )}
                 aria-current={active ? 'page' : undefined}
                 aria-label={count > 0 ? `${item.name} (${count})` : item.name}
@@ -122,7 +157,7 @@ export function MobileBottomNav({ role, badges }: { role: string | null; badges?
                 {active && (
                   <motion.span
                     layoutId="imr-client-tab-pill"
-                    className="absolute inset-0 rounded-full bg-primary/[0.12]"
+                    className="imr-lg-lens absolute inset-0 rounded-full"
                     transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 40 }}
                     aria-hidden
                   />
@@ -141,44 +176,5 @@ export function MobileBottomNav({ role, badges }: { role: string | null; badges?
           })}
         </div>
       </nav>
-    );
-  }
-
-  return (
-    <nav
-      className="shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      aria-label="Navigation principale"
-    >
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${items.length + 1}, minmax(0, 1fr))` }}>
-        {items.map((item) => {
-          const active = isActive(item.path);
-          return (
-            <button
-              key={item.path}
-              type="button"
-              onClick={() => navigate(item.path)}
-              className={cn(
-                'flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10px] font-medium transition-colors active:scale-95',
-                active ? 'text-primary' : 'text-muted-foreground',
-              )}
-              aria-current={active ? 'page' : undefined}
-            >
-              <item.icon className={cn('h-5 w-5', active && 'stroke-[2.5]')} />
-              <span className="max-w-full truncate">{item.name}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setOpenMobile(true)}
-          className="flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors active:scale-95"
-          aria-label="Ouvrir le menu complet"
-        >
-          <Menu className="h-5 w-5" />
-          <span>Plus</span>
-        </button>
-      </div>
-    </nav>
   );
 }

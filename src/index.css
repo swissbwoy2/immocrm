@@ -1840,3 +1840,113 @@ html.dark[data-imr-sidebar="clair"] {
   .imr-glass-nav { background: rgba(255, 255, 255, 0.97); }
   .dark .imr-glass-nav { background: rgba(28, 28, 30, 0.97); }
 }
+
+/* ───────────── Liquid Glass (style Apple iOS 26) ─────────────
+   Verre clair qui laisse passer le contenu, reflet spéculaire en haut,
+   liseré lumineux, ombre douce. Boutons en capsule, barre du bas flottante. */
+@layer components {
+  .imr-lg-tint,
+  .imr-lg-glass {
+    position: relative;
+    isolation: isolate;
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    backdrop-filter: blur(14px) saturate(180%);
+    transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, background-color .18s ease, filter .18s ease;
+  }
+  /* Bouton principal : verre teinté vert Immo-Rama */
+  .imr-lg-tint {
+    color: hsl(var(--primary-foreground));
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 48%),
+      hsl(var(--lg-tint, var(--primary)) / .9);
+    border: 1px solid rgba(255,255,255,.32);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.55),
+      inset 0 -1px 1px rgba(0,0,0,.10),
+      0 1px 2px hsl(var(--lg-tint, var(--primary)) / .25),
+      0 6px 16px -6px hsl(var(--lg-tint, var(--primary)) / .42);
+  }
+  .imr-lg-tint:hover { filter: brightness(1.05) saturate(1.05); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -1px 1px rgba(0,0,0,.1), 0 2px 4px hsl(var(--lg-tint, var(--primary)) / .25), 0 10px 24px -8px hsl(var(--lg-tint, var(--primary)) / .6); }
+  .imr-lg-tint:active { filter: brightness(.96); }
+  .imr-lg-danger { --lg-tint: var(--destructive); color: hsl(var(--destructive-foreground)); }
+  .imr-lg-success { --lg-tint: 142 72% 32%; color: #fff; }
+  .imr-lg-warning { --lg-tint: 38 92% 50%; color: #fff; }
+
+  /* Bouton secondaire : verre clair */
+  .imr-lg-glass {
+    color: hsl(var(--foreground));
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.75) 0%, rgba(255,255,255,.45) 100%);
+    border: 1px solid rgba(255,255,255,.7);
+    box-shadow:
+      0 0 0 .5px rgba(0,0,0,.08),
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 0 -1px 1px rgba(0,0,0,.04),
+      0 4px 14px -6px rgba(0,0,0,.18);
+  }
+  .imr-lg-glass:hover { background: linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.6) 100%); }
+  .imr-lg-glass:active { background: rgba(255,255,255,.55); }
+  .dark .imr-lg-glass {
+    background: linear-gradient(180deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.06) 100%);
+    border-color: rgba(255,255,255,.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 14px -6px rgba(0,0,0,.6);
+  }
+  .dark .imr-lg-glass:hover { background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,.1) 100%); }
+  .dark .imr-lg-tint { border-color: rgba(255,255,255,.18); }
+
+  /* Bouton discret : verre qui n'apparaît qu'au survol / à l'appui */
+  .imr-lg-plain { transition: background-color .18s ease, transform .18s cubic-bezier(.2,.8,.2,1); }
+  .imr-lg-plain:hover { background: hsl(var(--foreground) / .06); }
+  .imr-lg-plain:active { background: hsl(var(--foreground) / .1); }
+
+  /* Lentille de l'onglet actif (barre du bas, pastilles de filtre) */
+  .imr-lg-lens {
+    background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.7) 100%);
+    box-shadow:
+      0 0 0 .5px rgba(0,0,0,.06),
+      inset 0 1px 0 rgba(255,255,255,1),
+      inset 0 -1px 2px hsl(var(--primary) / .12),
+      0 2px 10px -2px hsl(var(--primary) / .28);
+  }
+  .dark .imr-lg-lens {
+    background: linear-gradient(180deg, hsl(var(--primary) / .38) 0%, hsl(var(--primary) / .22) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 10px -2px rgba(0,0,0,.6);
+  }
+}
+
+/* Barre du bas : verre liquide plus transparent, liseré spéculaire */
+.imr-glass-nav {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255,255,255,.62) 0%, rgba(255,255,255,.48) 100%);
+  -webkit-backdrop-filter: blur(22px) saturate(200%) brightness(1.04);
+  backdrop-filter: blur(22px) saturate(200%) brightness(1.04);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.08),
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.35),
+    0 10px 30px -6px rgba(0,0,0,.20),
+    0 2px 6px rgba(0,0,0,.06);
+}
+.imr-glass-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,.55), rgba(255,255,255,0) 60%);
+}
+.dark .imr-glass-nav {
+  background: linear-gradient(180deg, rgba(44,44,46,.62) 0%, rgba(28,28,30,.55) 100%);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 10px 30px -6px rgba(0,0,0,.6);
+}
+.dark .imr-glass-nav::before { background: radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,.12), rgba(255,255,255,0) 60%); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .imr-glass-nav, .imr-lg-glass { background: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .imr-glass-nav { background: rgba(255,255,255,.97); }
+  .dark .imr-glass-nav { background: rgba(28,28,30,.97); }
+}
