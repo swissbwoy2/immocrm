@@ -16071,6 +16071,7 @@ export type Database = {
     }
     Functions: {
       admin_delete_shared_mailbox: { Args: { p_id: string }; Returns: undefined }
+      get_steeve_public_settings: { Args: never; Returns: Json }
       admin_list_shared_mailboxes: {
         Args: never
         Returns: {

@@ -8,6 +8,7 @@ import { ScrollProgressBar } from './animations/ScrollProgressBar';
 import { useStoryDialogOpen } from './showcase/storyDialogState';
 
 const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
+const SteevePublicChat = lazy(() => import('./SteevePublicChat').then(m => ({ default: m.SteevePublicChat })));
 
 function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyCta?: ReactNode }) {
   useWhatsAppTracking();
@@ -80,6 +81,13 @@ function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyC
         <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
       </div>
 
+
+      {/* Steeve : assistant des visiteurs (affiché seulement s'il est activé) */}
+      {!storyDialogOpen && (
+        <Suspense fallback={null}>
+          <SteevePublicChat />
+        </Suspense>
+      )}
 
       {/* Cookie Consent */}
       <Suspense fallback={null}>
