@@ -7,6 +7,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Limites mémoire : nombre de messages relus par passage et taille max lue par message (pièces jointes ignorées au-delà).
 const MAX_EMAILS_PER_SYNC = 40;
 const MAX_BODY_BYTES = 150000;
+// Nouveaux e-mails lus en entier par passage : après un arrêt, le retard est rattrapé sur plusieurs
+// passages au lieu de tout relire d'un coup et de dépasser les ressources (erreur 546).
+const MAX_NEW_EMAILS_PER_RUN = 10;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -144,10 +147,10 @@ class SimpleImapClient {
   // Lecture complète des seuls messages demandés (numéros de séquence), du plus récent au plus ancien.
   async fetchEmailsBySeqs(seqs: number[], imapUser: string): Promise<ParsedEmail[]> {
     const emails: ParsedEmail[] = [];
-    const ordered = [...new Set(seqs)].filter(n => n >= 1).sort((a, b) => b - a).slice(0, MAX_EMAILS_PER_SYNC);
+    const ordered = [...new Set(seqs)].filter(n => n >= 1).sort((a, b) => b - a).slice(0, MAX_NEW_EMAILS_PER_RUN);
 
     // Petits lots + corps tronqué : évite le dépassement de mémoire du serveur (erreur 546 WORKER_RESOURCE_LIMIT)
-    const batchSize = 10;
+    const batchSize = 5;
     for (let i = 0; i < ordered.length; i += batchSize) {
       const batch = ordered.slice(i, i + batchSize);
       console.log(`[IMAP] Fetching ${batch.join(',')}...`);

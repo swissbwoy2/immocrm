@@ -2,7 +2,9 @@ import { useState, useRef } from "react";
 import { useNativeCamera } from "@/hooks/useNativeCamera";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Image, Video, FileText, Mic, X, Loader2 } from "lucide-react";
+import { Image, Video, FileText, Mic, X, Loader2, Paperclip } from "lucide-react";
+import { DossierDocumentPicker } from "@/components/messaging/DossierDocumentPicker";
+import type { ClientDossierContext, FiledDocument } from "@/lib/clientDossier";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVideoConverter, ConversionResult } from "@/hooks/useVideoConverter";
@@ -27,6 +29,12 @@ interface MessageAttachmentUploaderProps {
   conversationId: string;
   /** Optionnel : rend l'aperçu contrôlé par le parent (vidé automatiquement après envoi). */
   value?: AttachmentData | null;
+  /**
+   * Client : le menu propose les pièces du dossier ; chaque fichier est classé dans le dossier dès l'envoi
+   * puis annoncé dans la conversation par onDocumentFiled. Sans ces deux props, menu habituel.
+   */
+  dossier?: ClientDossierContext | null;
+  onDocumentFiled?: (doc: FiledDocument) => Promise<void> | void;
 }
 
 const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
@@ -36,8 +44,10 @@ const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'documen
   return 'document'; // Par défaut pour PDF, DOC, XLSX, etc.
 };
 
-export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, value }: MessageAttachmentUploaderProps) => {
+export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, value, dossier, onDocumentFiled }: MessageAttachmentUploaderProps) => {
   const [uploading, setUploading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const dossierMode = !!dossier && !!onDocumentFiled;
   const [recording, setRecording] = useState(false);
   const [internalPreview, setInternalPreview] = useState<AttachmentData | null>(null);
   const isControlled = value !== undefined;
@@ -338,6 +348,34 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, v
         <Button variant="ghost" size="sm" onClick={stopRecording} className="text-red-500">
           <Mic className="h-4 w-4 animate-pulse" />
         </Button>
+      ) : dossierMode ? (
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" title="Ajouter un document" aria-label="Ajouter un document">
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-2" align="start">
+            <DossierDocumentPicker
+              dossier={dossier!}
+              onFiled={onDocumentFiled!}
+              takePhoto={takePhoto}
+              isNative={isNative}
+              onDone={() => setMenuOpen(false)}
+            />
+            <div className="border-t border-border/60 mt-2 pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start w-full"
+                onClick={() => { setMenuOpen(false); void startRecording(); }}
+              >
+                <Mic className="h-4 w-4 mr-2" />
+                Message vocal
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       ) : (
         <Popover>
           <PopoverTrigger asChild>

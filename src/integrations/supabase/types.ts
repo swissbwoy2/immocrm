@@ -16408,7 +16408,9 @@ export type Database = {
           type_bien: string
         }[]
       }
-      get_steeve_settings: { Args: never; Returns: Json }
+      get_steeve_settings:
+        | { Args: never; Returns: Json }
+        | { Args: { p_conversation_id: string }; Returns: Json }
       google_create_candidat_account: { Args: never; Returns: undefined }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }

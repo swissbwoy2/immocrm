@@ -53,6 +53,9 @@ import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJ
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClientDossier } from "@/hooks/useClientDossier";
+import { postDossierDocumentMessage, type FiledDocument } from "@/lib/clientDossier";
+import { newClientMessageId } from "@/lib/steeve";
 import { consumeVisitCoin } from "@/hooks/useUserCredits";
 
 const removeAccents = (str: string) => {
@@ -62,6 +65,8 @@ const removeAccents = (str: string) => {
 const Messagerie = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  // Trombone : pièces du dossier classées dès l'envoi (location ou achat).
+  const dossier = useClientDossier();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -473,6 +478,21 @@ const Messagerie = () => {
       console.error('Error loading messages:', error);
     } finally {
       setIsLoadingMessages(false);
+    }
+  };
+
+  const handleDocumentFiled = async (doc: FiledDocument) => {
+    if (!user || !selectedConv) return;
+    const { error } = await postDossierDocumentMessage({
+      conversationId: selectedConv,
+      senderId: user.id,
+      senderType: 'client',
+      doc,
+      clientMsgId: newClientMessageId(),
+    });
+    if (error) {
+      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué.
+      toast({ title: 'Document ajouté au dossier', description: "Il n'a pas pu être annoncé dans la conversation." });
     }
   };
 
@@ -1928,6 +1948,8 @@ const Messagerie = () => {
               conversationId={selectedConv}
               value={pendingAttachment}
               onAttachmentReady={setPendingAttachment}
+              dossier={dossier}
+              onDocumentFiled={handleDocumentFiled}
             />
           }
         />

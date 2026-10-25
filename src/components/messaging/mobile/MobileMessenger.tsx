@@ -5,6 +5,7 @@ import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
 import { ConversationCallControls } from "@/components/calls/ConversationCallControls";
+import { SteeveHandoffBar } from "@/components/messaging/SteeveHandoffBar";
 
 interface MobileMessengerProps {
   conversationsList: ReactNode;
@@ -91,6 +92,9 @@ export function MobileMessenger({
         </div>
         <ConversationCallControls conversationId={selectedConversation} variant="onColor" />
       </div>
+
+      {/* Qui répond : Steeve ou un humain (invisible tant que Steeve n'est pas activé) */}
+      <SteeveHandoffBar conversationId={selectedConversation} className="bg-background" />
 
       {/* Existing chat view (messages + offre cards + video + composer + dialogs) */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
