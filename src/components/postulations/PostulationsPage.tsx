@@ -4,61 +4,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { Loader2, RefreshCw, ExternalLink, CheckCircle2, Mailbox, Trash2 } from 'lucide-react';
-import { DASH_CARD, DashPage, DashPageHeader, DashFilterPills, DashBadge, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Loader2, RefreshCw, Mailbox, Search, X } from 'lucide-react';
+import { DashPage, DashPageHeader, DashFilterPills, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { DossiersPreparesPanel } from './DossiersPreparesPanel';
 import { toast } from 'sonner';
+import { PostulationCard, DossierSeulCard } from './PostulationCard';
+import {
+  attente, choisirDossier, nomClient, prochaineAction,
+  type ClientInfo, type Dossier, type Etape, type JobInfo, type Row,
+} from './postulationsModel';
 
-type PostulationTab = 'a_faire' | 'deposees';
-
-type ClientInfo = { prenom?: string | null; nom?: string | null; email?: string | null };
-
-type Row = {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  date_envoi?: string | null;
-  postulation_demandee_at?: string | null;
-  adresse: string | null;
-  prix: number | null;
-  pieces: number | null;
-  statut: string | null;
-  lien_annonce: string | null;
-  client_id: string;
-  agent_id?: string | null;
-  demande_at?: string | null;
-  _client?: ClientInfo;
-  _job?: JobInfo;
-};
-
-type JobInfo = {
-  id: string;
-  status: string;
-  priority: string | null;
-  created_at: string;
-  ai_result: { missing_items?: string[]; concise_staff_summary?: string } | null;
-};
-
-type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted';
-const JOB_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
-  queued: { label: 'En file', tone: 'muted' },
-  processing: { label: 'Analyse…', tone: 'neutral' },
-  ready: { label: 'Prêt', tone: 'success' },
-  blocked: { label: 'Bloqué', tone: 'warning' },
-  failed: { label: 'Erreur', tone: 'danger' },
-  completed: { label: 'Terminé', tone: 'success' },
-};
-const PRIORITY_LABEL: Record<string, string> = { low: 'Basse', normal: 'Normale', high: 'Haute', urgent: 'Urgente' };
-
-type SortKey = 'recent' | 'oldest' | 'client_az';
+type SortKey = 'urgence' | 'recent' | 'oldest' | 'client_az';
 type PeriodKey = 'all' | '7d' | '30d';
 
 interface Props {
@@ -66,17 +23,48 @@ interface Props {
   title?: string;
 }
 
+/** Dossiers préparés des 30 derniers jours ; pour un agent, seulement ceux de ses clients. */
+async function chargerDossiers(allowedClientIds: string[] | null): Promise<Dossier[]> {
+  const depuis = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const { data, error } = await (supabase as any)
+    .from('postulations_preparees')
+    .select('*')
+    .gte('created_at', depuis)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) return []; // table absente ou droits insuffisants : rien à afficher
+  const list = (data ?? []) as Dossier[];
+  if (!allowedClientIds) return list;
+  const autorises = new Set(allowedClientIds);
+  return list.filter((d) => d.client_id && autorises.has(d.client_id));
+}
+
+const ETAPES: { key: Etape; label: string }[] = [
+  { key: 'a_traiter', label: 'À traiter' },
+  { key: 'en_cours', label: 'En préparation' },
+  { key: 'deposees', label: 'Déposées' },
+  { key: 'historique', label: 'Dossiers envoyés / refusés' },
+];
+
+/**
+ * Postulations — une seule file de travail, rangée par étape :
+ * À traiter (une action du staff est attendue) → En préparation (la routine travaille) → Déposées.
+ * Chaque demande réunit la demande du client, la préparation automatique et le dossier préparé,
+ * avec UNE prochaine action. Cartes empilées sur mobile, trois colonnes sur grand écran.
+ */
 export function PostulationsPage({ scope, title }: Props) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
+  const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [loading, setLoading] = useState(false);
   const [clientQ, setClientQ] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<PageSize>(50);
+  const [pageSize, setPageSize] = useState<PageSize>(25);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [tab, setTab] = useState<PostulationTab>('a_faire');
-  const [sortKey, setSortKey] = useState<SortKey>('recent');
+  const [busyDossier, setBusyDossier] = useState<string | null>(null);
+  const [tab, setTab] = useState<Etape>('a_traiter');
+  const [sortKey, setSortKey] = useState<SortKey>('urgence');
   const [period, setPeriod] = useState<PeriodKey>('all');
 
   async function load() {
@@ -88,7 +76,7 @@ export function PostulationsPage({ scope, title }: Props) {
       if (scope === 'agent') {
         const { data: agentData } = await supabase
           .from('agents').select('id').eq('user_id', user.id).maybeSingle();
-        if (!agentData) { setRows([]); return; }
+        if (!agentData) { setRows([]); setDossiers([]); return; }
         const [{ data: own }, { data: co }] = await Promise.all([
           supabase.from('clients').select('id').eq('agent_id', agentData.id),
           supabase.from('client_agents').select('client_id').eq('agent_id', agentData.id),
@@ -97,7 +85,7 @@ export function PostulationsPage({ scope, title }: Props) {
           ...(own ?? []).map((c: any) => c.id),
           ...(co ?? []).map((c: any) => c.client_id),
         ]));
-        if (allowedClientIds.length === 0) { setRows([]); return; }
+        if (allowedClientIds.length === 0) { setRows([]); setDossiers([]); return; }
       }
 
       const { data, error } = await fetchAllPaginated<Row>(() => {
@@ -114,7 +102,7 @@ export function PostulationsPage({ scope, title }: Props) {
       const offres = (data ?? []) as Row[];
 
       const clientIds = Array.from(new Set(offres.map((o) => o.client_id).filter(Boolean)));
-      if (clientIds.length === 0) { setRows([]); return; }
+      if (clientIds.length === 0) { setRows([]); setDossiers(await chargerDossiers(allowedClientIds)); return; }
 
       const { data: clients } = await supabase
         .from('clients').select('id, user_id').in('id', clientIds);
@@ -138,9 +126,19 @@ export function PostulationsPage({ scope, title }: Props) {
         for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j as unknown as JobInfo);
       }
 
+      // Dossiers préparés (routine Postulation + Surveillance) des 30 derniers jours, rattachés à leur offre.
+      const dossiersCharges = await chargerDossiers(allowedClientIds);
+      const parOffre = new Map<string, Dossier[]>();
+      for (const d of dossiersCharges) {
+        if (!d.offre_id) continue;
+        parOffre.set(d.offre_id, [...(parOffre.get(d.offre_id) ?? []), d]);
+      }
+
+      setDossiers(dossiersCharges);
       setRows(offres.map((o) => ({
         ...o,
         _job: jobByOffre.get(o.id),
+        _dossier: choisirDossier(parOffre.get(o.id) ?? []),
         demande_at: o.postulation_demandee_at ?? o.created_at ?? null,
         _client: profileByUser.get(clientToUser.get(o.client_id) ?? '') ?? {},
       })));
@@ -151,43 +149,78 @@ export function PostulationsPage({ scope, title }: Props) {
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id, scope]);
 
-  const counts = useMemo(() => ({
-    a_faire: rows.filter((r) => r.statut === 'souhaite_postuler').length,
-    deposees: rows.filter((r) => r.statut === 'candidature_deposee').length,
-  }), [rows]);
-
-  const filtered = useMemo(() => rows.filter((r) => {
-    const targetStatut = tab === 'a_faire' ? 'souhaite_postuler' : 'candidature_deposee';
-    if (r.statut !== targetStatut) return false;
+  // Recherche et période s'appliquent à toutes les étapes : les compteurs suivent.
+  const correspond = (texte: string, date?: string | null) => {
     if (period !== 'all') {
-      if (!r.demande_at) return false;
-      const d = new Date(r.demande_at).getTime();
-      const cutoff = Date.now() - (period === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000;
-      if (d < cutoff) return false;
+      if (!date) return false;
+      const cutoff = Date.now() - (period === '7d' ? 7 : 30) * 24 * 3600 * 1000;
+      if (new Date(date).getTime() < cutoff) return false;
     }
-    if (!clientQ) return true;
-    const q = clientQ.toLowerCase();
-    const name = `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`.toLowerCase();
-    return name.includes(q);
-  }), [rows, clientQ, tab, period]);
+    return !clientQ || texte.toLowerCase().includes(clientQ.toLowerCase());
+  };
+
+  const rowsVisibles = useMemo(() => rows.filter((r) => correspond(
+    `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`,
+    r.demande_at,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  )), [rows, clientQ, period]);
+
+  // Dossiers sans demande en attente dans la liste (offre déjà traitée ou non liée).
+  const offresListees = useMemo(() => new Set(rows.map((r) => r.id)), [rows]);
+  const dossiersVisibles = useMemo(() => dossiers.filter((d) => correspond(
+    `${d.client_nom ?? ''} ${d.adresse_bien ?? ''} ${d.objet ?? ''} ${d.regie_nom ?? ''} ${d.destinataire_email ?? ''}`,
+    d.created_at,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  )), [dossiers, clientQ, period]);
+  const orphelins = useMemo(() => dossiersVisibles.filter((d) => !d.offre_id || !offresListees.has(d.offre_id)), [dossiersVisibles, offresListees]);
+  const orphelinsATraiter = orphelins.filter((d) => d.statut === 'a_valider' || d.statut === 'erreur');
+  const orphelinsEnCours = orphelins.filter((d) => d.statut === 'prepare' || d.statut === 'valide');
+  const historique = dossiersVisibles.filter((d) => d.statut === 'envoye' || d.statut === 'refuse');
+
+  const parEtape = useMemo(() => {
+    const m: Record<Etape, Row[]> = { a_traiter: [], en_cours: [], deposees: [], historique: [] };
+    for (const r of rowsVisibles) m[prochaineAction(r).etape].push(r);
+    return m;
+  }, [rowsVisibles]);
+
+  const counts: Record<Etape, number> = {
+    a_traiter: parEtape.a_traiter.length + orphelinsATraiter.length,
+    en_cours: parEtape.en_cours.length + orphelinsEnCours.length,
+    deposees: parEtape.deposees.length,
+    historique: historique.length,
+  };
+  const enRetard = rows.filter((r) => attente(r).enRetard).length;
 
   const sorted = useMemo(() => {
-    const arr = [...filtered];
+    const arr = [...parEtape[tab]];
     const t = (r: Row) => new Date(r.demande_at || r.created_at || 0).getTime();
     if (sortKey === 'client_az') {
-      arr.sort((a, b) => {
-        const na = `${a._client?.nom ?? ''} ${a._client?.prenom ?? ''}`.trim().toLowerCase();
-        const nb = `${b._client?.nom ?? ''} ${b._client?.prenom ?? ''}`.trim().toLowerCase();
-        return na.localeCompare(nb, 'fr');
-      });
+      arr.sort((a, b) => nomClient(a._client).localeCompare(nomClient(b._client), 'fr'));
+    } else if (sortKey === 'urgence') {
+      // Décisions sur un dossier d'abord, puis les plus anciennes demandes.
+      arr.sort((a, b) => Number(!!prochaineAction(b).decision) - Number(!!prochaineAction(a).decision) || t(a) - t(b));
     } else {
       arr.sort((a, b) => (sortKey === 'recent' ? t(b) - t(a) : t(a) - t(b)));
     }
     return arr;
-  }, [filtered, sortKey]);
+  }, [parEtape, tab, sortKey]);
 
   useEffect(() => { setPage(1); }, [clientQ, pageSize, tab, sortKey, period]);
   const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [sorted, page, pageSize]);
+
+  const decider = async (d: Dossier, statut: 'valide' | 'refuse') => {
+    setBusyDossier(d.id);
+    const patch: Record<string, unknown> = { statut, updated_at: new Date().toISOString() };
+    if (statut === 'valide') { patch.valide_par = user?.id ?? null; patch.valide_le = new Date().toISOString(); }
+    const { error } = await (supabase as any).from('postulations_preparees').update(patch).eq('id', d.id);
+    setBusyDossier(null);
+    if (error) { toast.error('Impossible d’enregistrer la décision'); return; }
+    toast.success(statut === 'valide' ? 'Validé : la routine l’enverra au prochain passage' : 'Dossier refusé');
+    // Mise à jour locale immédiate (la carte change d'étape sans recharger la page).
+    const maj = (x: Dossier) => (x.id === d.id ? { ...x, ...patch } as Dossier : x);
+    setDossiers((prev) => prev.map(maj));
+    setRows((prev) => prev.map((r) => (r._dossier?.id === d.id ? { ...r, _dossier: maj(r._dossier) } : r)));
+  };
 
   const markCandidatureDeposee = async (row: Row) => {
     setSavingId(row.id);
@@ -242,187 +275,135 @@ export function PostulationsPage({ scope, title }: Props) {
     }
   };
 
+  const listeVide = tab === 'historique'
+    ? historique.length === 0
+    : paged.length === 0 && (tab === 'a_traiter' ? orphelinsATraiter.length === 0 : tab === 'en_cours' ? orphelinsEnCours.length === 0 : true);
+
+  const carte = (r: Row) => (
+    <PostulationCard
+      key={r.id}
+      r={r}
+      scope={scope}
+      saving={savingId === r.id}
+      deleting={deletingId === r.id}
+      busyDossier={!!r._dossier && busyDossier === r._dossier.id}
+      onDeposer={markCandidatureDeposee}
+      onSupprimer={deleteOffre}
+      onDecider={decider}
+    />
+  );
+
   return (
-    <DashPage className="space-y-6">
+    <DashPage className="space-y-5">
       <DashPageHeader
-        title={title || 'Postulations à faire'}
-        subtitle="Offres pour lesquelles le client a demandé à déposer sa candidature."
+        title={title || 'Postulations'}
+        subtitle={
+          loading && rows.length === 0
+            ? 'Chargement…'
+            : counts.a_traiter === 0
+              ? 'Tout est à jour : aucune action en attente.'
+              : `${counts.a_traiter} demande${counts.a_traiter > 1 ? 's' : ''} à traiter${enRetard > 0 ? ` · ${enRetard} en attente depuis plus de 24 h` : ''}`
+        }
         action={
-          <Button variant="outline" size="sm" className="rounded-full" onClick={load} disabled={loading} aria-label="Actualiser">
+          <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={load} disabled={loading} aria-label="Actualiser">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">Actualiser</span>
           </Button>
         }
       />
 
-      <DossiersPreparesPanel />
+      {/* Barre d'outils : recherche plein écran sur mobile, tri et période à côté sur grand écran */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={clientQ}
+            onChange={(e) => setClientQ(e.target.value)}
+            placeholder="Client, e-mail, adresse, régie…"
+            aria-label="Rechercher une postulation"
+            className="h-11 rounded-full pl-10 pr-10"
+          />
+          {clientQ && (
+            <button type="button" onClick={() => setClientQ('')} aria-label="Effacer la recherche"
+              className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:flex md:w-auto">
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[190px]" aria-label="Trier"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="urgence">Urgent d’abord</SelectItem>
+              <SelectItem value="recent">Plus récentes</SelectItem>
+              <SelectItem value="oldest">Plus anciennes</SelectItem>
+              <SelectItem value="client_az">Par client (A–Z)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[170px]" aria-label="Période"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les dates</SelectItem>
+              <SelectItem value="7d">7 derniers jours</SelectItem>
+              <SelectItem value="30d">30 derniers jours</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      <div>
       <DashFilterPills
-        label="Onglets postulations"
+        label="Étapes des postulations"
         value={tab}
-        onChange={(v) => setTab(v as PostulationTab)}
-        options={[
-          { key: 'a_faire', label: 'À faire', count: counts.a_faire },
-          { key: 'deposees', label: 'Déposées', count: counts.deposees },
-        ]}
+        onChange={(v) => setTab(v as Etape)}
+        options={ETAPES.map((e) => ({ key: e.key, label: e.label, count: counts[e.key] }))}
       />
 
-      <div className={`${DASH_CARD} grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:grid-cols-4 md:p-5`}>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Recherche (client, email, adresse)</label>
-            <Input value={clientQ} onChange={(e) => setClientQ(e.target.value)} placeholder="Rechercher…" className="rounded-full" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Trier par</label>
-            <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-              <SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Plus récentes</SelectItem>
-                <SelectItem value="oldest">Plus anciennes</SelectItem>
-                <SelectItem value="client_az">Par client (A–Z)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Période</label>
-            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="rounded-full"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes</SelectItem>
-                <SelectItem value="7d">7 derniers jours</SelectItem>
-                <SelectItem value="30d">30 derniers jours</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="sm:col-span-2 md:col-span-4">
-            <DashBadge tone={tab === 'a_faire' ? 'warning' : 'success'}>
-              {filtered.length} {tab === 'a_faire' ? 'à traiter' : 'déposée(s)'}
-            </DashBadge>
-          </div>
-      </div>
-      </div>
-
-      {paged.length === 0 ? (
-        <DashEmptyState icon={Mailbox} title={tab === 'a_faire' ? 'Aucune postulation en attente.' : 'Aucune candidature déposée.'} />
+      {loading && rows.length === 0 && dossiers.length === 0 ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : listeVide ? (
+        <DashEmptyState
+          icon={Mailbox}
+          title={
+            clientQ || period !== 'all' ? 'Aucun résultat pour ces filtres'
+              : tab === 'a_traiter' ? 'Rien à traiter pour le moment'
+              : tab === 'en_cours' ? 'Aucune préparation en cours'
+              : tab === 'deposees' ? 'Aucune candidature déposée'
+              : 'Aucun dossier envoyé ou refusé ces 30 derniers jours'
+          }
+          description={tab === 'a_traiter' && !clientQ ? 'Les demandes de postulation des clients arrivent ici dès qu’une action de votre part est nécessaire.' : undefined}
+        />
+      ) : tab === 'historique' ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {historique.map((d) => <DossierSeulCard key={d.id} d={d} scope={scope} busy={busyDossier === d.id} onDecider={decider} />)}
+        </div>
       ) : (
-        <div className={`${DASH_CARD} overflow-hidden`}>
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent [&>th]:text-xs [&>th]:font-medium [&>th]:text-muted-foreground">
-                <TableHead>Demandé le</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Adresse</TableHead>
-                <TableHead>Prix (CHF/mois CC)</TableHead>
-                <TableHead>Pcs</TableHead>
-                <TableHead>Annonce</TableHead>
-                <TableHead>Préparation</TableHead>
-                <TableHead className="text-right">{tab === 'a_faire' ? 'Action' : 'Statut'}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="[&>tr]:border-border/70 [&>tr:hover]:bg-muted/50">
-              {paged.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="whitespace-nowrap text-xs">
-                    {r.demande_at ? format(new Date(r.demande_at), 'dd MMM HH:mm', { locale: fr }) : '—'}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <div className="font-medium">{r._client?.prenom ?? ''} {r._client?.nom ?? ''}</div>
-                    <div className="text-xs text-muted-foreground">{r._client?.email ?? ''}</div>
-                  </TableCell>
-                  <TableCell className="text-sm">{r.adresse ?? '—'}</TableCell>
-                  <TableCell className="text-sm whitespace-nowrap">{r.prix ? `${Number(r.prix).toLocaleString('fr-CH')} CHF` : '—'}</TableCell>
-                  <TableCell className="text-sm">{r.pieces ?? '—'}</TableCell>
-                  <TableCell>
-                    {r.lien_annonce ? (
-                      <a href={r.lien_annonce} target="_blank" rel="noreferrer"
-                         className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
-                        <ExternalLink className="h-3.5 w-3.5" /> Voir l'annonce
-                      </a>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell className="text-xs min-w-[180px]">
-                    {r._job ? (
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <DashBadge tone={JOB_STATUS[r._job.status]?.tone ?? 'neutral'}>
-                            {JOB_STATUS[r._job.status]?.label ?? r._job.status}
-                          </DashBadge>
-                          {r._job.priority && (
-                            <DashBadge tone="neutral">Priorité {PRIORITY_LABEL[r._job.priority] ?? r._job.priority}</DashBadge>
-                          )}
-                        </div>
-                        <div className="text-muted-foreground">
-                          Demande : {format(new Date(r._job.created_at), 'dd MMM HH:mm', { locale: fr })}
-                        </div>
-                        {(r._job.ai_result?.missing_items?.length ?? 0) > 0 && (
-                          <ul className="list-disc pl-4 text-amber-700 dark:text-amber-400">
-                            {r._job.ai_result!.missing_items!.slice(0, 6).map((m) => <li key={m}>{m}</li>)}
-                          </ul>
-                        )}
-                        {r._job.ai_result?.concise_staff_summary && (
-                          <p className="text-muted-foreground">{r._job.ai_result.concise_staff_summary}</p>
-                        )}
-                      </div>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="inline-flex items-center gap-2">
-                      {r.statut === 'candidature_deposee' ? (
-                        <DashBadge tone="success">
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Déposée
-                        </DashBadge>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="rounded-full"
-                          disabled={savingId === r.id}
-                          onClick={() => markCandidatureDeposee(r)}
-                        >
-                          {savingId === r.id ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                          )}
-                          Candidature déposée
-                        </Button>
-                      )}
-                      {scope === 'admin' && (
-                        <ConfirmDialog
-                          trigger={
-                            <Button variant="destructive" size="sm" className="rounded-full" disabled={deletingId === r.id}>
-                              {deletingId === r.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </Button>
-                          }
-                          title="Supprimer l'offre"
-                          description="Supprimer définitivement cette offre ? Cette action est irréversible et retire aussi la candidature/visite liée."
-                          confirmText="Supprimer"
-                          cancelText="Annuler"
-                          variant="destructive"
-                          onConfirm={() => deleteOffre(r)}
-                        />
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          </div>
+        <div className="space-y-3">
+          {paged.map(carte)}
+
+          {/* Dossiers préparés dont l'offre n'est plus en attente dans la liste */}
+          {(tab === 'a_traiter' ? orphelinsATraiter : tab === 'en_cours' ? orphelinsEnCours : []).length > 0 && (
+            <section className="space-y-3 pt-2" aria-label="Autres dossiers préparés">
+              <h2 className="px-0.5 text-sm font-semibold text-muted-foreground">Autres dossiers préparés</h2>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {(tab === 'a_traiter' ? orphelinsATraiter : orphelinsEnCours).map((d) => (
+                  <DossierSeulCard key={d.id} d={d} scope={scope} busy={busyDossier === d.id} onDecider={decider} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
-      <TablePagination
-        total={filtered.length}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-      />
+      {tab !== 'historique' && sorted.length > pageSize && (
+        <TablePagination
+          total={sorted.length}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          label="demandes"
+        />
+      )}
     </DashPage>
   );
 }
