@@ -1,698 +1,631 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Heart } from 'lucide-react';
-import { PullToRefresh } from '@/components/ui/pull-to-refresh';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { calculateDaysElapsed } from '@/utils/calculations';
-import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import {
+  AlertTriangle, ArrowDownRight, ArrowUpRight, BadgeCheck, Banknote, BarChart3, Briefcase, Calendar, CheckCircle2,
+  ChevronDown, ClipboardList, Clock, FileSignature, FileText, Heart, LifeBuoy, MessageSquare, Receipt, RotateCcw,
+  Send, Settings2, ShieldCheck, Undo2, UserCog, UserPlus, Users, Wallet,
+} from 'lucide-react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { toast } from 'sonner';
+import { mandatElapsedFor } from '@/utils/mandatDates';
+import { isClientActif } from '@/lib/activeClients';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
+import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
+import {
+  DASH_CARD, DashBadge, DashFilterPills, DashSection, DashSectionLink, LinkRow, StatTile, TodoCard,
+} from '@/components/client/dashboard/DashPrimitives';
 import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
-import { PremiumKPICard } from '@/components/premium';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
-import { PremiumPageShellV2, PremiumPageHeaderV2 } from '@/components/dashboard/v2';
-import { DashboardBanner } from '@/components/common/DashboardBanner';
-import { isClientActif } from '@/lib/activeClients';
+import { ChargesAgenceDialog } from '@/components/admin/dashboard/ChargesAgenceDialog';
+import {
+  ACTIVATION_PAYEE, PERIODS, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
+  type ChargeRow, type FinanceInput, type PeriodKey,
+} from '@/lib/adminFinance';
 
-const adminMenu = [
-  { name: 'Tableau de bord', icon: Users, path: '/admin' },
-  { name: 'Agents', icon: UserCog, path: '/admin/agents' },
-  { name: 'Clients', icon: Users, path: '/admin/clients' },
-  { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
-  { name: 'Assignations', icon: AlertTriangle, path: '/admin/assignations' },
-];
+type Row = Record<string, any>;
+
+const VISITE_A_VENIR = ['planifiee', 'confirmee', 'proposee'];
+const REACTIONS = ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation'];
+const CANDIDATURE_A_FINALISER = ['acceptee', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe'];
+
+/** Ligne d'un compte de résultat : libellé, détail, montant. */
+function MoneyLine({ label, sub, value, tone = 'neutral', onClick }: {
+  label: string; sub?: string; value: number; tone?: 'plus' | 'minus' | 'neutral'; onClick?: () => void;
+}) {
+  const sign = tone === 'minus' && value > 0 ? '− ' : '';
+  const content = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-foreground">{label}</span>
+        {sub && <span className="block truncate text-xs text-muted-foreground">{sub}</span>}
+      </span>
+      <span className={`shrink-0 text-sm font-semibold tabular-nums ${tone === 'minus' ? 'text-foreground/80' : 'text-foreground'}`}>
+        {sign}{formatCHF(value)}
+      </span>
+    </>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-3 rounded-lg px-1 py-2 text-left hover:bg-muted/60">{content}</button>
+  ) : (
+    <div className="flex items-center gap-3 px-1 py-2">{content}</div>
+  );
+}
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const { counts } = useNotifications();
 
-  const [agents, setAgents] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [offres, setOffres] = useState<any[]>([]);
-  const [registreCommissions, setRegistreCommissions] = useState<any[]>([]);
-  const [clientAgents, setClientAgents] = useState<any[]>([]);
-  const [reactionsCount, setReactionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [mandatesStats, setMandatesStats] = useState<any[]>([]);
-  const [candidaturesStats, setCandidaturesStats] = useState<any[]>([]);
-  // user_id des dossiers ayant des crédits de mandat > 0 (null = requête indisponible)
+  const [period, setPeriod] = useState<PeriodKey>('mois');
+  const [chargesOpen, setChargesOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+
+  const [prenom, setPrenom] = useState<string>('');
+  const [agents, setAgents] = useState<Row[]>([]);
+  const [clients, setClients] = useState<Row[]>([]);
+  const [clientAgents, setClientAgents] = useState<Row[]>([]);
+  const [transactions, setTransactions] = useState<Row[]>([]);
+  const [offres, setOffres] = useState<Row[]>([]);
+  const [visites, setVisites] = useState<Row[]>([]);
+  const [candidatures, setCandidatures] = useState<Row[]>([]);
+  const [mandates, setMandates] = useState<Row[]>([]);
+  const [demandes, setDemandes] = useState<Row[]>([]);
+  const [registre, setRegistre] = useState<Row[]>([]);
+  const [achats, setAchats] = useState<Row[]>([]);
+  const [fiches, setFiches] = useState<Row[]>([]);
+  const [charges, setCharges] = useState<ChargeRow[]>([]);
+  const [chargesAvailable, setChargesAvailable] = useState(true);
   const [usersAvecCredits, setUsersAvecCredits] = useState<Set<string> | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const [m, c] = await Promise.all([
-        supabase.from('mandates').select('id, acompte_montant, created_at').limit(15000),
-        supabase
-          .from('candidatures')
-          .select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at')
-          .limit(15000),
-      ]);
-      if (!m.error) setMandatesStats(m.data || []);
-      if (!c.error) setCandidaturesStats(c.data || []);
-    })();
+  const loadCharges = useCallback(async () => {
+    const { data, error } = await (supabase as any)
+      .from('charges_agence')
+      .select('id, libelle, categorie, montant, recurrence, date_debut, date_fin, notes')
+      .order('date_debut', { ascending: false })
+      .limit(5000);
+    if (error) {
+      setChargesAvailable(false);
+      setCharges([]);
+    } else {
+      setChargesAvailable(true);
+      setCharges((data || []) as ChargeRow[]);
+    }
   }, []);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const safe = <T,>(r: { data: T | null; error: unknown }, fallback: T): T => (r.error ? fallback : (r.data ?? fallback));
 
-      // Load agents (tous les agents)
-      const { data: agentsData, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, user_id, statut');
-
-      if (agentsError) throw agentsError;
-
-      // Load profiles separately (inclure actif)
-      const userIds = agentsData?.map(a => a.user_id) || [];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, nom, prenom, actif')
-        .in('id', userIds);
-
-      if (profilesError) throw profilesError;
-
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
-      
-      const transformedAgents = agentsData?.map(agent => {
-        const profile = profilesMap.get(agent.user_id);
-        return {
-          id: agent.id,
-          user_id: agent.user_id,
-          actif: profile?.actif ?? false,
-          prenom: profile?.prenom || '',
-          nom: profile?.nom || '',
-        };
-      }) || [];
-      
-      setAgents(transformedAgents);
-
-      // === PARALLEL: Load clients, client_agents, transactions, offres simultaneously ===
-      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresResult, reactionsResult, registreResult, creditsResult] = await Promise.all([
-        // Clients with reduced columns
+      const [
+        meRes, agentsRes, clientsRes, caRes, trRes, offresRes, visitesRes, candRes, mandRes, demRes, regRes, achatRes, fichesRes, creditsRes,
+      ] = await Promise.all([
+        user?.id ? supabase.from('profiles').select('prenom').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null, error: null }),
+        supabase.from('agents').select('id, user_id, statut'),
         supabase
           .from('clients')
-          .select('id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, pieces, region_recherche, commission_split, mandat_date_signature, mandate_pause_days, mandate_paused_at, mandate_official_end_date, refund_status, cancellation_requested_at'),
-        // Client agents
-        supabase
-          .from('client_agents')
-          .select('client_id, agent_id, commission_split, is_primary'),
-        // Transactions: count-only for stats
-        supabase
-          .from('transactions')
-          .select('*', { count: 'exact', head: false }),
-        // Transactions: recent 50 for UI display
-        supabase
-          .from('transactions')
-          .select('*')
-          .order('date_transaction', { ascending: false })
-          .limit(200),
-        // Offres: rows needed for period filtering in stats (date_envoi / created_at)
-        supabase
-          .from('offres')
-          .select('id, date_envoi, created_at, agent_id')
-          .limit(15000),
-        // Offres with client reactions (count only)
-        supabase
-          .from('offres')
-          .select('id', { count: 'exact', head: true })
-          .in('statut', ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation']),
-        // Registre des commissions: source de vérité pour revenus/affaires conclues
+          .select('id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, commission_split, mandat_date_signature, mandate_pause_days, mandate_paused_at, mandate_official_end_date, refund_status, refund_requested_at, refund_processed_at, cancellation_requested_at')
+          .limit(20000),
+        supabase.from('client_agents').select('client_id, agent_id, commission_split, is_primary').limit(20000),
+        supabase.from('transactions').select('*').limit(20000),
+        supabase.from('offres').select('id, date_envoi, created_at, agent_id, statut').limit(30000),
+        supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id').limit(30000),
+        supabase.from('candidatures').select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at').limit(20000),
+        supabase.from('mandates').select('id, acompte_montant, created_at').limit(20000),
+        supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom').limit(20000),
         supabase
           .from('registre_commissions')
-          .select('id, date_conclusion, commission_agence, commission_agent, honoraire_total, agent_id, agent_prenom, agent_nom')
-          .limit(15000),
-        // Crédits de mandat: alimente uniquement le KPI « Clients actifs »
+          .select('id, date_conclusion, honoraire_total, commission_agent, commission_agence, montant_acompte, statut_paiement, type_affaire, agent_id, agent_prenom, agent_nom')
+          .limit(20000),
+        supabase.from('purchase_projects').select('id, date_paiement_acompte, montant_acompte').not('date_paiement_acompte', 'is', null).limit(5000),
         supabase
-          .from('user_credits')
-          .select('user_id, coins_mandat')
-          .limit(15000),
+          .from('fiches_salaire')
+          .select('annee, mois, statut, mode_remuneration, cout_total_employeur, salaire_net, montant_commissions, employes(mode_remuneration)')
+          .limit(20000),
+        supabase.from('user_credits').select('user_id, coins_mandat').limit(20000),
       ]);
 
-      if (clientsResult.error) throw clientsResult.error;
-      if (clientAgentsResult.error) throw clientAgentsResult.error;
-      if (transactionsCountResult.error) throw transactionsCountResult.error;
+      setPrenom((meRes as any)?.data?.prenom || '');
 
-      // Process clients
-      const clientsData = clientsResult.data || [];
-      const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
-      
-      const [clientProfilesResult, demandesResult] = await Promise.all([
-        clientUserIds.length > 0
-          ? supabase.from('profiles').select('id, nom, prenom').in('id', clientUserIds)
-          : Promise.resolve({ data: [], error: null }),
-        (() => {
-          const demandeIds = clientsData.map(c => c.demande_mandat_id).filter(Boolean) as string[];
-          return demandeIds.length > 0
-            ? supabase.from('demandes_mandat').select('id, prenom, nom').in('id', demandeIds)
-            : Promise.resolve({ data: [], error: null });
-        })(),
+      const agentsData = safe(agentsRes as any, [] as Row[]);
+      const agentUserIds = agentsData.map((a) => a.user_id).filter(Boolean);
+      const clientsData = safe(clientsRes as any, [] as Row[]);
+      const clientUserIds = clientsData.map((c) => c.user_id).filter(Boolean);
+      const [agentProfiles, clientProfiles] = await Promise.all([
+        agentUserIds.length ? supabase.from('profiles').select('id, nom, prenom, actif').in('id', agentUserIds) : Promise.resolve({ data: [], error: null }),
+        clientUserIds.length ? supabase.from('profiles').select('id, nom, prenom').in('id', clientUserIds) : Promise.resolve({ data: [], error: null }),
       ]);
-
-      const clientProfilesMap = new Map((clientProfilesResult.data || []).map(p => [p.id, p]));
-      const demandesMap = new Map((demandesResult.data || []).map(d => [d.id, d]));
-
-      const transformedClients = clientsData.map(client => {
-        const profile = clientProfilesMap.get(client.user_id);
-        const demande = client.demande_mandat_id ? demandesMap.get(client.demande_mandat_id) : undefined;
-        return {
-          ...client,
-          prenom: profile?.prenom || demande?.prenom || '',
-          nom: profile?.nom || demande?.nom || '',
-          dateInscription: client.date_ajout || client.created_at,
-          agentId: client.agent_id,
-          budgetMax: client.budget_max || 0,
-          notificationJ60Envoyee: false,
-        };
-      });
-
-      setClients(transformedClients);
-      setClientAgents(clientAgentsResult.data || []);
-
-      // Ensemble des user_id ayant des crédits de mandat > 0 (jamais bloquant pour le reste du tableau de bord)
-      if (creditsResult.error) {
-        setUsersAvecCredits(null);
-      } else {
-        setUsersAvecCredits(
-          new Set(
-            (creditsResult.data || [])
-              .filter((r: any) => Number(r.coins_mandat ?? 0) > 0 && r.user_id)
-              .map((r: any) => r.user_id as string)
-          )
-        );
-      }
-
-      // Use all transactions data (the non-head query returns actual rows)
-      const transactionsData = transactionsCountResult.data || [];
-      const transformedTransactions = transactionsData.map(t => ({
-        ...t,
-        dateConclusion: t.date_transaction,
-        partAgence: t.part_agence,
-        commissionTotale: t.commission_totale,
+      const apMap = new Map(((agentProfiles as any).data || []).map((p: Row) => [p.id, p]));
+      setAgents(agentsData.map((a) => {
+        const p: Row = (apMap.get(a.user_id) as Row) || {};
+        return { id: a.id, user_id: a.user_id, actif: p.actif ?? false, prenom: p.prenom || '', nom: p.nom || '' };
       }));
-      setTransactions(transformedTransactions);
 
-      // Offres réelles (avec dates) pour les statistiques par période
-      setOffres(offresResult.data || []);
-      setRegistreCommissions(registreResult.data || []);
-      setReactionsCount(reactionsResult.count || 0);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      const demandesData = safe(demRes as any, [] as Row[]);
+      const demMap = new Map(demandesData.map((d) => [d.id, d]));
+      const cpMap = new Map(((clientProfiles as any).data || []).map((p: Row) => [p.id, p]));
+      setClients(clientsData.map((c) => {
+        const p: Row = (cpMap.get(c.user_id) as Row) || {};
+        const d: Row = (c.demande_mandat_id ? demMap.get(c.demande_mandat_id) : undefined) || {};
+        return {
+          ...c,
+          prenom: p.prenom || d.prenom || '',
+          nom: p.nom || d.nom || '',
+          agentId: c.agent_id,
+          budgetMax: c.budget_max || 0,
+          montantActivation: Number(d.montant_acompte) || 300,
+        };
+      }));
+      setDemandes(demandesData);
+      setClientAgents(safe(caRes as any, [] as Row[]));
+      setTransactions(safe(trRes as any, [] as Row[]).map((t) => ({ ...t, dateConclusion: t.date_transaction, partAgence: t.part_agence, commissionTotale: t.commission_totale })));
+      setOffres(safe(offresRes as any, [] as Row[]));
+      setVisites(safe(visitesRes as any, [] as Row[]));
+      setCandidatures(safe(candRes as any, [] as Row[]));
+      setMandates(safe(mandRes as any, [] as Row[]));
+      setRegistre(safe(regRes as any, [] as Row[]));
+      setAchats(safe(achatRes as any, [] as Row[]));
+      setFiches(safe(fichesRes as any, [] as Row[]).map((f) => ({ ...f, mode_remuneration: f.mode_remuneration || f.employes?.mode_remuneration || null })));
+      setUsersAvecCredits(
+        (creditsRes as any).error
+          ? null
+          : new Set(((creditsRes as any).data || []).filter((r: Row) => Number(r.coins_mandat ?? 0) > 0 && r.user_id).map((r: Row) => r.user_id as string)),
+      );
+      await loadCharges();
+    } catch (e) {
+      console.error('[AdminDashboard]', e);
+      toast.error('Erreur de chargement du tableau de bord');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id, loadCharges]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const toggleAgentStatus = async (agentUserId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ actif: !currentStatus })
-        .eq('id', agentUserId);
-
-      if (error) throw error;
-
-      // Mettre à jour l'état local
-      setAgents(prev => prev.map(agent => 
-        agent.user_id === agentUserId 
-          ? { ...agent, actif: !currentStatus }
-          : agent
-      ));
-
-      toast.success(`Agent ${!currentStatus ? 'activé' : 'désactivé'} avec succès`);
-    } catch (error) {
-      console.error('Error toggling agent status:', error);
-      toast.error('Erreur lors du changement de statut');
-    }
+  const toggleAgentStatus = async (agentUserId: string, current: boolean) => {
+    const { error } = await supabase.from('profiles').update({ actif: !current }).eq('id', agentUserId);
+    if (error) { toast.error('Erreur lors du changement de statut'); return; }
+    setAgents((prev) => prev.map((a) => (a.user_id === agentUserId ? { ...a, actif: !current } : a)));
+    toast.success(`Agent ${!current ? 'activé' : 'désactivé'}`);
   };
+
+  /* ---------- Finances ---------- */
+  const financeInput: FinanceInput = useMemo(() => ({
+    registre: registre as any,
+    activations: demandes as any,
+    acomptesAchat: achats as any,
+    refunds: clients
+      .filter((c) => c.refund_status === 'processed' || c.refund_status === 'pending')
+      .map((c) => ({ refund_status: c.refund_status, refund_processed_at: c.refund_processed_at, refund_requested_at: c.refund_requested_at, montant: c.montantActivation })),
+    fiches: fiches as any,
+    charges,
+  }), [registre, demandes, achats, clients, fiches, charges]);
+
+  const p = useMemo(() => periodRange(period), [period]);
+  const fin = useMemo(() => computeFinance(financeInput, p), [financeInput, p]);
+
+  const months = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 12 }, (_, i) => {
+      const r = monthRange(now.getFullYear(), now.getMonth() - 11 + i);
+      const f = computeFinance(financeInput, r);
+      return { label: r.label, recettes: f.recettes, depenses: f.depenses, benefice: f.benefice };
+    });
+  }, [financeInput]);
+  const maxMonth = Math.max(1, ...months.map((m) => Math.max(m.recettes, m.depenses)));
+
+  /* ---------- Activité ---------- */
+  const actifs = useMemo(() => clients.filter((c) => isClientActif(c as any, usersAvecCredits)), [clients, usersAvecCredits]);
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 86400000);
+  const ago30 = new Date(now.getTime() - 30 * 86400000);
+
+  const activite = useMemo(() => ({
+    mandatsSignes: clients.filter((c) => inPeriod(c.mandat_date_signature, p)).length,
+    offresEnvoyees: offres.filter((o) => inPeriod(o.date_envoi || o.created_at, p)).length,
+    visitesEffectuees: visites.filter((v) => v.statut === 'effectuee' && inPeriod(v.date_visite, p)).length,
+    candidaturesDeposees: candidatures.filter((c) => inPeriod(c.date_depot || c.created_at, p)).length,
+    bauxSignes: candidatures.filter((c) => inPeriod(c.signature_effectuee_at, p)).length,
+  }), [clients, offres, visites, candidatures, p]);
+
+  const funnel = [
+    { label: 'Offres envoyées', value: activite.offresEnvoyees },
+    { label: 'Visites effectuées', value: activite.visitesEffectuees },
+    { label: 'Candidatures déposées', value: activite.candidaturesDeposees },
+    { label: 'Baux signés', value: activite.bauxSignes },
+    { label: 'Affaires conclues', value: fin.affaires },
+  ];
+  const funnelMax = Math.max(1, ...funnel.map((f) => f.value));
+
+  /* ---------- À traiter ---------- */
+  const todo = useMemo(() => {
+    const refundsPending = clients.filter((c) => c.refund_status === 'pending');
+    const cancellations = clients.filter((c) => c.cancellation_requested_at && c.statut === 'actif' && c.refund_status !== 'processed');
+    const activationsAttente = demandes.filter((d) => ['en_attente', 'facture_envoyee'].includes(d.statut));
+    const aPostuler = offres.filter((o) => o.statut === 'souhaite_postuler');
+    const reactions = offres.filter((o) => REACTIONS.includes(o.statut));
+    const visitesSansRetour = visites.filter((v) => {
+      const d = v.date_visite ? new Date(v.date_visite) : null;
+      return v.statut === 'effectuee' && !v.client_decision && d && d >= ago30;
+    });
+    const visitesAVenir = visites.filter((v) => {
+      const d = v.date_visite ? new Date(v.date_visite) : null;
+      return VISITE_A_VENIR.includes(v.statut) && d && d >= now && d <= in7;
+    });
+    const candEnAttente = candidatures.filter((c) => c.statut === 'en_attente');
+    const candAFinaliser = candidatures.filter((c) => CANDIDATURE_A_FINALISER.includes(c.statut) && !c.cles_remises);
+    const sansAgent = actifs.filter((c) => !c.agentId);
+    const critiques = actifs.filter((c) => { const d = mandatElapsedFor(c as any); return d >= 60 && d < 90; });
+    const expires = clients.filter((c) => c.statut === 'actif' && mandatElapsedFor(c as any) >= 90);
+    const aEncaisser = registre.filter((r) => (r.statut_paiement ?? '') !== 'paye');
+    return {
+      refundsPending, refundsPendingMontant: refundsPending.reduce((s, c) => s + (c.montantActivation || 0), 0),
+      cancellations, activationsAttente, aPostuler, reactions, visitesSansRetour, visitesAVenir,
+      candEnAttente, candAFinaliser, sansAgent, critiques, expires, aEncaisser,
+      aEncaisserMontant: aEncaisser.reduce((s, r) => s + Math.max(0, Number(r.honoraire_total || 0) - Number(r.montant_acompte || 0)), 0),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clients, demandes, offres, visites, candidatures, actifs, registre]);
+
+  /* ---------- Équipe ---------- */
+  const team = useMemo(() => agents.map((a) => {
+    const mesClients = actifs.filter((c) => c.agentId === a.id);
+    const crit = mesClients.filter((c) => { const d = mandatElapsedFor(c as any); return d >= 60 && d < 90; }).length;
+    const reg = registre.filter((r) => r.agent_id === a.id && inPeriod(r.date_conclusion, p));
+    return {
+      id: a.id as string,
+      user_id: a.user_id as string,
+      prenom: (a.prenom || '') as string,
+      nom: (a.nom || '') as string,
+      actif: !!a.actif,
+      clients: mesClients.length,
+      critiques: crit,
+      affaires: reg.length,
+      commission: reg.reduce((s, r) => s + Number(r.commission_agent || 0), 0),
+      offres: offres.filter((o) => o.agent_id === a.id && inPeriod(o.date_envoi || o.created_at, p)).length,
+    };
+  }).sort((x, y) => Number(y.actif) - Number(x.actif) || y.clients - x.clients), [agents, actifs, registre, offres, p]);
+
+  /* ---------- Projection (section existante conservée) ---------- */
+  const agencyProjections = actifs.map((client) => {
+    const ca = clientAgents.find((x) => x.client_id === client.id && x.is_primary);
+    const split = ca?.commission_split || client.commission_split || 45;
+    const budget = client.budgetMax || 0;
+    const agent = agents.find((a) => a.id === client.agentId);
+    return {
+      clientId: client.id,
+      clientName: `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client',
+      agentName: agent ? `${agent.prenom} ${agent.nom}` : 'Non assigné',
+      budgetMax: budget,
+      commissionSplit: split,
+      partAgence: Math.round(budget * ((100 - split) / 100)),
+    };
+  });
+  const totalCommissionAgence = agencyProjections.reduce((s, x) => s + x.partAgence, 0);
 
   if (loading) {
     return (
-      <PremiumPageShellV2>
-        <div className="p-4 md:p-8" role="status" aria-label="Chargement du tableau de bord">
-          <div className="h-7 w-48 rounded bg-muted/60" />
-          <div className="mt-6 h-24 max-w-xl rounded bg-muted/40" />
+      <PremiumPageShellV2 className="mx-auto w-full max-w-6xl">
+        <div className="space-y-4" role="status" aria-label="Chargement du tableau de bord">
+          <div className="h-36 rounded-2xl bg-muted/60" />
+          <div className="grid gap-3 md:grid-cols-2"><div className="h-28 rounded-2xl bg-muted/40" /><div className="h-28 rounded-2xl bg-muted/40" /></div>
+          <div className="h-64 rounded-2xl bg-muted/40" />
         </div>
       </PremiumPageShellV2>
     );
   }
 
-  const actifs = clients.filter(c => isClientActif(c, usersAvecCredits));
-  const clientsActifs = actifs.length;
-  const totalAgents = agents.length;
-  const agentsActifs = agents.filter(a => a.actif).length;
-  const totalOffresEnvoyees = offres.length;
-  const transactionsEnCours = transactions.filter(t => t.statut === 'en_cours').length;
-  const transactionsConcluesMois = transactions.filter(t => {
-    if (t.statut !== 'conclue' || !t.date_transaction) return false;
-    const conclusionDate = new Date(t.date_transaction);
-    const now = new Date();
-    return conclusionDate.getMonth() === now.getMonth() && conclusionDate.getFullYear() === now.getFullYear();
-  }).length;
-  
-  // Clients critiques = 30 jours ou moins restants avant expiration (60-89 jours écoulés)
-  const clientsCritiques = clients.filter(c => {
-    if (c.statut !== 'actif') return false;
-    const days = mandatElapsedFor(c as any);
-    return days >= 60 && days < 90;
-  });
-  
-  // Clients expirés = mandat dépassé (90+ jours)
-  const clientsExpires = clients.filter(c => {
-    if (c.statut !== 'actif') return false;
-    return mandatElapsedFor(c as any) >= 90;
-  });
-  
-  const revenusAgenceMois = transactions
-    .filter(t => {
-      if (t.statut !== 'conclue' || !t.date_transaction) return false;
-      const conclusionDate = new Date(t.date_transaction);
-      const now = new Date();
-      return conclusionDate.getMonth() === now.getMonth() && conclusionDate.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, t) => sum + (t.part_agence || 0), 0);
+  const todoCards: { key: string; show: boolean; node: ReactElement }[] = [
+    {
+      key: 'refunds', show: todo.refundsPending.length > 0,
+      node: <TodoCard icon={Undo2} title={`${todo.refundsPending.length} demande${todo.refundsPending.length > 1 ? 's' : ''} de remboursement`} description={`${formatCHF(todo.refundsPendingMontant)} à rembourser dans les 30 jours après l'échéance.`} action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/mandats')}>Traiter</Button>} />,
+    },
+    {
+      key: 'cancel', show: todo.cancellations.length > 0,
+      node: <TodoCard icon={RotateCcw} title={`${todo.cancellations.length} demande${todo.cancellations.length > 1 ? 's' : ''} d'annulation`} description="Mandats dont le client a demandé la fin : vérifier le délai et la règle de remboursement." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/mandats')}>Voir</Button>} />,
+    },
+    {
+      key: 'activations', show: todo.activationsAttente.length > 0,
+      node: <TodoCard icon={Banknote} tone="primary" title={`${todo.activationsAttente.length} activation${todo.activationsAttente.length > 1 ? 's' : ''} à encaisser`} description="Mandats signés en attente de paiement (facture envoyée ou à envoyer)." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/demandes-activation')}>Ouvrir</Button>} />,
+    },
+    {
+      key: 'postuler', show: todo.aPostuler.length > 0,
+      node: <TodoCard icon={Send} tone="primary" title={`${todo.aPostuler.length} postulation${todo.aPostuler.length > 1 ? 's' : ''} à déposer`} description="Des clients veulent postuler : préparer et envoyer le dossier à la gérance." action={<Button size="sm" className="rounded-full" onClick={() => navigate('/admin/postulations')}>Postuler</Button>} />,
+    },
+    {
+      key: 'retours', show: todo.visitesSansRetour.length > 0,
+      node: <TodoCard icon={MessageSquare} title={`${todo.visitesSansRetour.length} visite${todo.visitesSansRetour.length > 1 ? 's' : ''} sans retour client`} description="Visites effectuées ces 30 derniers jours sans décision du client : relancer pour savoir s'il postule." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/visites')}>Relancer</Button>} />,
+    },
+    {
+      key: 'reactions', show: todo.reactions.length > 0,
+      node: <TodoCard icon={Heart} tone="primary" title={`${todo.reactions.length} offre${todo.reactions.length > 1 ? 's' : ''} avec intérêt client`} description="Le client est intéressé : organiser la visite ou la candidature." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/offres-envoyees')}>Voir</Button>} />,
+    },
+    {
+      key: 'candidatures', show: todo.candEnAttente.length + todo.candAFinaliser.length > 0,
+      node: <TodoCard icon={FileSignature} tone="primary" title={`${todo.candEnAttente.length} candidature${todo.candEnAttente.length > 1 ? 's' : ''} en attente · ${todo.candAFinaliser.length} à finaliser`} description="Réponses des gérances, bail, signature, état des lieux et remise des clés." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/candidatures')}>Suivre</Button>} />,
+    },
+    {
+      key: 'mandats', show: todo.critiques.length + todo.expires.length > 0,
+      node: <TodoCard icon={Clock} title={`${todo.critiques.length} mandat${todo.critiques.length > 1 ? 's' : ''} à ≤ 30 jours · ${todo.expires.length} échu${todo.expires.length > 1 ? 's' : ''}`} description="Selon la date de signature ou de renouvellement : prévenir le client et préparer la reconduction." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/mandats')}>Mandats</Button>} />,
+    },
+    {
+      key: 'sansAgent', show: todo.sansAgent.length > 0,
+      node: <TodoCard icon={UserPlus} title={`${todo.sansAgent.length} client${todo.sansAgent.length > 1 ? 's' : ''} actif${todo.sansAgent.length > 1 ? 's' : ''} sans agent`} description="Assigner un agent pour démarrer le suivi." action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/assignations')}>Assigner</Button>} />,
+    },
+    {
+      key: 'encaisser', show: todo.aEncaisser.length > 0,
+      node: <TodoCard icon={Receipt} title={`${formatCHF(todo.aEncaisserMontant)} de commissions à encaisser`} description={`${todo.aEncaisser.length} affaire${todo.aEncaisser.length > 1 ? 's' : ''} conclue${todo.aEncaisser.length > 1 ? 's' : ''} non marquée${todo.aEncaisser.length > 1 ? 's' : ''} « payée » dans le registre.`} action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/admin/registre-commissions')}>Registre</Button>} />,
+    },
+  ];
+  const visibleTodos = todoCards.filter((t) => t.show);
 
-  const clientsSansAgent = clients.filter(c => !c.agentId).length;
-
-  // Calcul de la projection financière de l'agence
-  const clientsActifsPourProjection = actifs;
-
-  const agencyProjections = clientsActifsPourProjection.map(client => {
-    // Chercher le split dans client_agents, sinon utiliser celui du client, sinon 45% par défaut
-    const clientAgent = clientAgents.find(ca => ca.client_id === client.id && ca.is_primary);
-    const splitAgent = clientAgent?.commission_split || client.commission_split || 45;
-    const budgetMax = client.budgetMax || 0;
-    const partAgence = Math.round(budgetMax * ((100 - splitAgent) / 100));
-    
-    // Trouver le nom de l'agent
-    const agent = agents.find(a => a.id === client.agentId);
-    const agentName = agent ? `${agent.prenom} ${agent.nom}` : 'Non assigné';
-    
-    // Nom du client depuis le profil (on utilise les données disponibles)
-    const clientName = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client';
-    
-    return {
-      clientId: client.id,
-      clientName,
-      agentName,
-      budgetMax,
-      commissionSplit: splitAgent,
-      partAgence,
-    };
-  });
-
-  const totalCommissionAgence = agencyProjections.reduce((sum, p) => sum + p.partAgence, 0);
+  const chargesCat = Object.entries(fin.chargesParCategorie).sort((a, b) => b[1] - a[1]);
+  const beneficePositif = fin.benefice >= 0;
 
   return (
-    <PullToRefresh onRefresh={loadData} className="flex-1 overflow-y-auto">
-      <PremiumPageShellV2>
-        <DashboardBanner />
-        <PremiumPageHeaderV2
-          title="Tableau de bord"
-          subtitle="Vue d'ensemble de l'activité de l'agence"
-          breadcrumbs={[{ label: 'Administration' }, { label: 'Tableau de bord' }]}
-          actions={
-            counts.new_message > 0 ? (
-              <Button
-                variant="outline"
-                onClick={() => navigate('/admin/messagerie')}
-                className="glass-morphism border-primary/20 transition-colors duration-200"
-              >
-                <Bell className="w-4 h-4 mr-2" />
-                Messages
-                <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
-              </Button>
-            ) : undefined
-          }
-        />
+    <PullToRefresh onRefresh={loadData} className="relative flex-1 overflow-y-auto">
+      <PremiumPageShellV2 className="relative z-10 mx-auto w-full max-w-6xl">
+        {/* Bannière : tout en haut */}
+        <DashboardBanner wrapperClassName="mb-0" />
 
-        {/* KPIs avec composants Premium */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 items-stretch">
-          <PremiumKPICard 
-            title="Clients actifs" 
-            value={clientsActifs} 
-            icon={Users}
-            onClick={() => navigate('/admin/clients')}
-            delay={0}
+        {/* 1. Accueil */}
+        <SectionErrorBoundary sectionName="AdminHeader">
+          <PremiumDashboardHeader
+            userName={prenom}
+            headingBadge="Administration"
+            badgeIcon={ShieldCheck}
+            subtitle="Pilotage de l'agence : ce qui demande une action, puis les vrais chiffres."
+            messageCount={counts.new_message}
+            onMessagesClick={() => navigate('/admin/messagerie')}
           />
-          <PremiumKPICard 
-            title="Agents" 
-            value={totalAgents}
-            subtitle={`${agentsActifs} actif(s)`}
-            icon={UserCog}
-            onClick={() => navigate('/admin/agents')}
-            delay={50}
-          />
-          <PremiumKPICard 
-            title="Offres" 
-            value={totalOffresEnvoyees} 
-            icon={Send}
-            onClick={() => navigate('/admin/offres-envoyees')}
-            delay={100}
-          />
-          <PremiumKPICard 
-            title="Affaires conclues" 
-            value={transactions.filter(t => t.statut === 'conclue').length} 
-            icon={CheckCircle} 
-            variant="success"
-            subtitle={`${transactionsConcluesMois} ce mois`}
-            onClick={() => navigate('/admin/transactions')}
-            delay={150}
-          />
-          <PremiumKPICard 
-            title="Critiques" 
-            value={clientsCritiques.length} 
-            icon={Clock} 
-            variant={clientsCritiques.length > 0 ? 'warning' : 'default'}
-            subtitle="≤30j restants"
-            onClick={() => navigate('/admin/mandats')}
-            delay={200}
-          />
-          <PremiumKPICard 
-            title="Expirés" 
-            value={clientsExpires.length} 
-            icon={AlertTriangle} 
-            variant={clientsExpires.length > 0 ? 'danger' : 'default'}
-            subtitle=">90 jours"
-            onClick={() => navigate('/admin/mandats')}
-            delay={250}
-          />
-          <PremiumKPICard 
-            title="Revenus agence" 
-            value={revenusAgenceMois} 
-            icon={DollarSign} 
-            variant="success"
-            subtitle="CHF ce mois"
-            onClick={() => navigate('/admin/transactions')}
-            delay={300}
-          />
-          <PremiumKPICard 
-            title="Commission totale" 
-            value={transactions.filter(t => t.statut === 'conclue').reduce((sum, t) => sum + (t.part_agence || 0), 0)} 
-            icon={DollarSign} 
-            subtitle="CHF total"
-            onClick={() => navigate('/admin/transactions')}
-            delay={350}
-          />
-          <PremiumKPICard 
-            title="Réactions clients" 
-            value={reactionsCount} 
-            icon={Heart} 
-            variant={reactionsCount > 0 ? 'danger' : 'default'}
-            subtitle="en attente"
-            onClick={() => navigate('/admin/offres-envoyees')}
-            delay={400}
-          />
-        </div>
+        </SectionErrorBoundary>
 
-        {/* Section Statistiques détaillées avec glassmorphism */}
-        <div className="animate-fade-in motion-reduce:animate-none" style={{ animationDelay: '400ms' }}>
-          <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
-            <CardContent className="relative p-0">
-              <AdminStatsSection
-                agents={agents}
-                clients={clients}
-                transactions={transactions}
-                offres={offres}
-                registreCommissions={registreCommissions}
-                mandates={mandatesStats}
-                candidatures={candidaturesStats}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Statistiques de recommandation */}
-        <div className="animate-fade-in motion-reduce:animate-none" style={{ animationDelay: '450ms' }}>
-          <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-50" />
-            <CardContent className="relative p-0">
-              <RecommendationStats />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Projection financière agence */}
-        <div className="animate-fade-in motion-reduce:animate-none" style={{ animationDelay: '475ms' }}>
-          <AgencyProjectionSection 
-            projections={agencyProjections}
-            totalCommissionAgence={totalCommissionAgence}
-          />
-        </div>
-
-        {/* Répartition des agents avec effets modernes */}
-        <Card className="animate-fade-in motion-reduce:animate-none group relative overflow-hidden hover:shadow-xl transition-all duration-500" style={{ animationDelay: '500ms' }}>
-            {/* Effet shine au hover */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+        {/* 2. À traiter maintenant */}
+        <DashSection title="À traiter maintenant" action={<span className="text-sm text-muted-foreground">{visibleTodos.length} point{visibleTodos.length > 1 ? 's' : ''}</span>}>
+          {visibleTodos.length === 0 ? (
+            <TodoCard icon={CheckCircle2} tone="primary" title="Tout est à jour" description="Aucune demande en attente pour le moment." />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {visibleTodos.map((t) => <div key={t.key}>{t.node}</div>)}
             </div>
-            
-            <CardHeader className="relative">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base md:text-lg flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 group-hover:scale-110 transition-transform duration-300">
-                    <Users className="w-4 h-4 text-primary" />
+          )}
+        </DashSection>
+
+        {/* 3. Résultat */}
+        <DashSection
+          title="Résultat de l'agence"
+          action={<DashSectionLink label="Charges" onClick={() => setChargesOpen(true)} />}
+        >
+          <DashFilterPills options={PERIODS.map((x) => ({ key: x.key, label: x.label }))} value={period} onChange={(k) => setPeriod(k as PeriodKey)} label="Période" />
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            {/* Bénéfice */}
+            <div className={`${DASH_CARD} flex flex-col justify-between p-5 lg:col-span-1`}>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Bénéfice réel · {p.label.toLowerCase()}</p>
+                <p className={`mt-1 text-[34px] font-semibold leading-tight tracking-tight tabular-nums ${beneficePositif ? 'text-foreground' : 'text-destructive'}`}>
+                  {beneficePositif ? '' : '− '}{formatCHF(Math.abs(fin.benefice))}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {fin.marge !== null && <DashBadge tone={beneficePositif ? 'success' : 'danger'}>Marge {fin.marge} %</DashBadge>}
+                  <DashBadge tone="muted">{fin.affaires} affaire{fin.affaires > 1 ? 's' : ''}</DashBadge>
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-emerald-500/10 p-3">
+                  <p className="flex items-center gap-1 text-xs font-medium text-emerald-700"><ArrowUpRight className="h-3.5 w-3.5" /> Recettes</p>
+                  <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">{formatCHF(fin.recettes)}</p>
+                </div>
+                <div className="rounded-xl bg-muted p-3">
+                  <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><ArrowDownRight className="h-3.5 w-3.5" /> Dépenses</p>
+                  <p className="mt-0.5 text-base font-semibold tabular-nums text-foreground">{formatCHF(fin.depenses)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recettes */}
+            <div className={`${DASH_CARD} p-4 md:p-5`}>
+              <h3 className="mb-1 text-base font-semibold text-foreground">Recettes</h3>
+              <div className="divide-y divide-border/60">
+                <MoneyLine label="Commissions" sub={`${fin.affairesLocation} location · ${fin.affairesAchat} achat/vente${fin.commissionsAEncaisser > 0 ? ` · ${formatCHF(fin.commissionsAEncaisser)} à encaisser` : ''}`} value={fin.commissions} tone="plus" onClick={() => navigate('/admin/registre-commissions')} />
+                <MoneyLine label="Activations de mandat" sub={`${fin.activationsCount} encaissée${fin.activationsCount > 1 ? 's' : ''}`} value={fin.activations} tone="plus" onClick={() => navigate('/admin/demandes-activation')} />
+                <MoneyLine label="Acomptes achat" value={fin.acomptesAchat} tone="plus" />
+              </div>
+            </div>
+
+            {/* Dépenses */}
+            <div className={`${DASH_CARD} p-4 md:p-5`}>
+              <h3 className="mb-1 text-base font-semibold text-foreground">Dépenses</h3>
+              <div className="divide-y divide-border/60">
+                <MoneyLine label="Remboursements versés" sub={`${fin.remboursementsCount} client${fin.remboursementsCount > 1 ? 's' : ''}`} value={fin.remboursements} tone="minus" onClick={() => navigate('/admin/mandats')} />
+                <MoneyLine label="Salaires (coût employeur)" sub="Fiches de salaire validées ou payées" value={fin.salaires} tone="minus" onClick={() => navigate('/admin/salaires')} />
+                <MoneyLine label="Commissions agents" sub="Hors commissions déjà sur fiche de salaire" value={fin.commissionsAgents} tone="minus" onClick={() => navigate('/admin/salaires-agents')} />
+                <MoneyLine label="Charges de l'agence" sub={chargesAvailable ? (chargesCat[0] ? `dont ${chargeCategoryLabel(chargesCat[0][0]).toLowerCase()} ${formatCHF(chargesCat[0][1])}` : 'Aucune charge saisie') : 'À activer'} value={fin.charges} tone="minus" onClick={() => setChargesOpen(true)} />
+              </div>
+            </div>
+          </div>
+
+          {/* 12 mois */}
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-foreground">12 derniers mois</h3>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-primary" /> Recettes</span>
+                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-foreground/25" /> Dépenses</span>
+              </div>
+            </div>
+            <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-[560px] items-end gap-2">
+                {months.map((m, i) => (
+                  <div key={i} className="flex flex-1 flex-col items-center gap-1.5" title={`${m.label} · recettes ${formatCHF(m.recettes)} · dépenses ${formatCHF(m.depenses)} · bénéfice ${formatCHF(m.benefice)}`}>
+                    <div className="flex h-32 w-full items-end justify-center gap-0.5">
+                      <div className="w-1/2 max-w-[14px] rounded-t bg-primary" style={{ height: `${Math.max(2, (m.recettes / maxMonth) * 100)}%` }} />
+                      <div className="w-1/2 max-w-[14px] rounded-t bg-foreground/25" style={{ height: `${Math.max(2, (m.depenses / maxMonth) * 100)}%` }} />
+                    </div>
+                    <span className={`text-[11px] font-semibold tabular-nums ${m.benefice < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                      {Math.abs(m.benefice) >= 1000 ? `${m.benefice < 0 ? '−' : ''}${Math.round(Math.abs(m.benefice) / 1000)}k` : Math.round(m.benefice)}
+                    </span>
+                    <span className="text-[11px] capitalize text-muted-foreground">{m.label}</span>
                   </div>
-                  Répartition des clients
-                </CardTitle>
-                <Badge variant="outline" className="text-xs glass-morphism">
-                  Critique = ≤30 jours restants
-                </Badge>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent className="relative">
-              {/* Vue tableau sur desktop avec effets de survol */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full min-w-[700px]">
-                  <thead>
-                    <tr className="border-b bg-gradient-to-r from-muted/30 to-muted/10">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Agent</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Statut</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Clients</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Critiques (≤30j)</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Commission pot.</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agents.map(agent => {
-                      const agentClients = actifs.filter(c => c.agentId === agent.id);
-                      // Critique = 60-89 jours écoulés (30 jours ou moins restants)
-                      const critiquesClients = agentClients.filter(c => {
-                        const days = mandatElapsedFor(c as any);
-                        return days >= 60 && days < 90;
-                      });
-                      const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Le chiffre sous chaque mois est le bénéfice réel (recettes − dépenses).</p>
+          </div>
+        </DashSection>
 
-                      return (
-                        <tr key={agent.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4 text-sm">
-                            <button 
-                              onClick={() => navigate(`/admin/agents/${agent.id}`)}
-                              className="hover:underline text-left"
-                            >
-                              {agent.prenom} {agent.nom}
-                            </button>
-                          </td>
-                          <td className="py-3 px-4 text-sm">
-                            <Badge variant={agent.actif ? 'default' : 'secondary'}>
-                              {agent.actif ? 'Actif' : 'Inactif'}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-sm">{agentClients.length}</td>
-                          <td className="py-3 px-4 text-sm">
-                            {critiquesClients.length > 0 ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-warning font-medium">{critiquesClients.length}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 px-2 text-xs text-warning"
-                                  onClick={() => navigate('/admin/mandats')}
-                                >
-                                  Voir
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-success">0</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-sm">{commissionPot.toLocaleString()} CHF</td>
-                          <td className="py-3 px-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={agent.actif}
-                                onCheckedChange={() => toggleAgentStatus(agent.user_id, agent.actif)}
-                              />
-                              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/assignations')}>
-                                Redistribuer
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Vue cartes pour mobile/tablette */}
-              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {agents.map(agent => {
-                  const agentClients = actifs.filter(c => c.agentId === agent.id);
-                  // Critique = 60-89 jours écoulés (30 jours ou moins restants)
-                  const critiquesClients = agentClients.filter(c => {
-                    const days = mandatElapsedFor(c as any);
-                    return days >= 60 && days < 90;
-                  });
-                  const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
+        {/* 4. Activité */}
+        <DashSection title={`Activité · ${p.label.toLowerCase()}`}>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
+            <StatTile icon={Users} label="Clients actifs" value={`${actifs.length} en recherche`} count={0} onClick={() => navigate('/admin/clients')} />
+            <StatTile icon={FileText} label="Mandats signés" value={`${activite.mandatsSignes}`} count={0} onClick={() => navigate('/admin/mandats')} />
+            <StatTile icon={Send} label="Offres envoyées" value={`${activite.offresEnvoyees}`} count={0} onClick={() => navigate('/admin/offres-envoyees')} />
+            <StatTile icon={Calendar} label="Visites" value={`${activite.visitesEffectuees} effectuée${activite.visitesEffectuees > 1 ? 's' : ''}`} count={todo.visitesAVenir.length} onClick={() => navigate('/admin/calendrier')} />
+            <StatTile icon={ClipboardList} label="Candidatures" value={`${activite.candidaturesDeposees} déposée${activite.candidaturesDeposees > 1 ? 's' : ''}`} count={todo.candEnAttente.length} onClick={() => navigate('/admin/candidatures')} />
+            <StatTile icon={BadgeCheck} label="Affaires conclues" value={`${fin.affaires}`} count={0} onClick={() => navigate('/admin/registre-commissions')} />
+          </div>
 
-                  return (
-                    <div 
-                      key={agent.id} 
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <button 
-                          onClick={() => navigate(`/admin/agents/${agent.id}`)}
-                          className="font-medium hover:underline text-left text-sm"
-                        >
-                          {agent.prenom} {agent.nom}
-                        </button>
-                        <Badge variant={agent.actif ? 'default' : 'secondary'} className="text-xs">
-                          {agent.actif ? 'Actif' : 'Inactif'}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs mb-3">
-                        <div>
-                          <p className="text-muted-foreground">Clients</p>
-                          <p className="font-semibold">{agentClients.length}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Critiques (≤30j)</p>
-                          {critiquesClients.length > 0 ? (
-                            <button 
-                              onClick={() => navigate('/admin/mandats')}
-                              className="font-semibold text-warning hover:underline"
-                            >
-                              {critiquesClients.length}
-                            </button>
-                          ) : (
-                            <p className="text-success">0</p>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Commission</p>
-                          <p className="font-semibold">{commissionPot.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t">
-                        <div className="flex items-center gap-2">
-                          <Power className="w-3 h-3 text-muted-foreground" />
-                          <Switch
-                            checked={agent.actif}
-                            onCheckedChange={() => toggleAgentStatus(agent.user_id, agent.actif)}
-                          />
-                        </div>
-                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => navigate('/admin/assignations')}>
-                          Redistribuer
-                        </Button>
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <h3 className="mb-3 text-base font-semibold text-foreground">De l'offre à l'affaire conclue</h3>
+            <div className="space-y-2.5">
+              {funnel.map((f, i) => {
+                const prev = i > 0 ? funnel[i - 1].value : 0;
+                const taux = i > 0 && prev > 0 ? Math.round((f.value / prev) * 100) : null;
+                return (
+                  <div key={f.label} className="flex items-center gap-3">
+                    <span className="w-36 shrink-0 truncate text-sm text-foreground sm:w-44">{f.label}</span>
+                    <div className="h-7 flex-1 overflow-hidden rounded-lg bg-muted">
+                      <div className="flex h-full items-center rounded-lg bg-primary/80 px-2 text-xs font-semibold text-primary-foreground" style={{ width: `${Math.max(6, (f.value / funnelMax) * 100)}%` }}>
+                        {f.value}
                       </div>
                     </div>
-                  );
-                })}
+                    <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">{taux !== null ? `${taux} %` : ''}</span>
+                  </div>
+                );
+              })}
             </div>
-          </CardContent>
-        </Card>
+            <p className="mt-3 text-xs text-muted-foreground">Le pourcentage compare chaque étape à la précédente, sur la période choisie.</p>
+          </div>
+        </DashSection>
 
-        {/* Alertes avec design moderne */}
-        <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-500">
-          <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          
-          <CardHeader className="relative">
-            <CardTitle className="text-base md:text-lg flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-warning/20 to-warning/10 group-hover:scale-110 transition-transform duration-300">
-                <AlertTriangle className="w-4 h-4 text-warning" />
-              </div>
-              Alertes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative space-y-3 md:space-y-4">
-            {clientsSansAgent > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20 hover:shadow-lg hover:shadow-warning/10 transition-all duration-300 animate-fade-in">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-warning/20 animate-pulse-soft">
-                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour démarrer le suivi</p>
-                  </div>
+        {/* 5. Équipe */}
+        <DashSection title="Équipe" action={<DashSectionLink label="Agents" onClick={() => navigate('/admin/agents')} />}>
+          <div className={`${DASH_CARD} hidden overflow-hidden lg:block`}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/70 text-left text-xs text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">Agent</th>
+                  <th className="px-4 py-3 font-medium">Clients actifs</th>
+                  <th className="px-4 py-3 font-medium">Mandats ≤ 30 j</th>
+                  <th className="px-4 py-3 font-medium">Offres ({p.label.toLowerCase()})</th>
+                  <th className="px-4 py-3 font-medium">Affaires</th>
+                  <th className="px-4 py-3 font-medium">Commission agent</th>
+                  <th className="px-4 py-3 font-medium">Actif</th>
+                </tr>
+              </thead>
+              <tbody>
+                {team.map((a) => (
+                  <tr key={a.id} className="border-b border-border/50 last:border-0 hover:bg-muted/40">
+                    <td className="px-4 py-3">
+                      <button type="button" onClick={() => navigate(`/admin/agents/${a.id}`)} className="font-semibold text-foreground hover:underline">{a.prenom} {a.nom}</button>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">{a.clients}</td>
+                    <td className="px-4 py-3 tabular-nums">{a.critiques > 0 ? <DashBadge tone="warning">{a.critiques}</DashBadge> : <span className="text-muted-foreground">0</span>}</td>
+                    <td className="px-4 py-3 tabular-nums">{a.offres}</td>
+                    <td className="px-4 py-3 tabular-nums">{a.affaires}</td>
+                    <td className="px-4 py-3 tabular-nums">{formatCHF(a.commission)}</td>
+                    <td className="px-4 py-3"><Switch checked={a.actif} onCheckedChange={() => toggleAgentStatus(a.user_id, a.actif)} aria-label={`Activer ${a.prenom}`} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
+            {team.map((a) => (
+              <div key={a.id} className={`${DASH_CARD} p-4`}>
+                <div className="flex items-center justify-between gap-2">
+                  <button type="button" onClick={() => navigate(`/admin/agents/${a.id}`)} className="truncate text-left font-semibold text-foreground">{a.prenom} {a.nom}</button>
+                  <Switch checked={a.actif} onCheckedChange={() => toggleAgentStatus(a.user_id, a.actif)} aria-label={`Activer ${a.prenom}`} />
                 </div>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto hover:scale-105 transition-transform" onClick={() => navigate('/admin/assignations')}>
-                  Assigner
-                </Button>
+                <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+                  {[['Clients', a.clients], ['≤ 30 j', a.critiques], ['Offres', a.offres], ['Affaires', a.affaires]].map(([l, v]) => (
+                    <div key={l as string} className="rounded-lg bg-muted/60 py-2">
+                      <p className="text-base font-semibold tabular-nums text-foreground">{v as number}</p>
+                      <p className="text-[11px] text-muted-foreground">{l as string}</p>
+                    </div>
+                  ))}
+                </div>
+                {a.commission > 0 && <p className="mt-2 text-xs text-muted-foreground">Commission agent : {formatCHF(a.commission)}</p>}
               </div>
-            )}
+            ))}
+          </div>
+        </DashSection>
 
-            {clientsCritiques.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20 hover:shadow-lg hover:shadow-warning/10 transition-all duration-300 animate-fade-in" style={{ animationDelay: '50ms' }}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-warning/20 animate-pulse-soft">
-                    <Clock className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm md:text-base">{clientsCritiques.length} mandat(s) critique(s)</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">30 jours ou moins avant expiration</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto hover:scale-105 transition-transform" onClick={() => navigate('/admin/mandats')}>
-                  Voir les mandats
-                </Button>
-              </div>
-            )}
+        {/* 6. Accès rapides */}
+        <DashSection title="Accès rapides">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            <LinkRow icon={Users} label="Clients" sub={`${actifs.length} actifs · ${clients.length} au total`} onClick={() => navigate('/admin/clients')} />
+            <LinkRow icon={FileText} label="Mandats" sub="Échéances, reconductions, remboursements" onClick={() => navigate('/admin/mandats')} />
+            <LinkRow icon={Send} label="Postulations" sub={`${todo.aPostuler.length} à déposer`} onClick={() => navigate('/admin/postulations')} />
+            <LinkRow icon={ClipboardList} label="Candidatures" sub={`${todo.candEnAttente.length} en attente · ${todo.candAFinaliser.length} à finaliser`} onClick={() => navigate('/admin/candidatures')} />
+            <LinkRow icon={Calendar} label="Visites et calendrier" sub={`${todo.visitesAVenir.length} dans les 7 jours`} onClick={() => navigate('/admin/calendrier')} />
+            <LinkRow icon={LifeBuoy} label="Support" sub="Demandes d'aide des utilisateurs" onClick={() => navigate('/admin/support')} />
+            <LinkRow icon={Wallet} label="Registre des commissions" sub={`${registre.length} affaires enregistrées`} onClick={() => navigate('/admin/registre-commissions')} />
+            <LinkRow icon={Briefcase} label="Salaires" sub="Fiches de salaire et coût employeur" onClick={() => navigate('/admin/salaires')} />
+            <LinkRow icon={Settings2} label="Charges de l'agence" sub={chargesAvailable ? `${charges.length} ligne${charges.length > 1 ? 's' : ''}` : 'À activer'} onClick={() => setChargesOpen(true)} />
+            <LinkRow icon={UserCog} label="Assignations" sub={`${todo.sansAgent.length} client${todo.sansAgent.length > 1 ? 's' : ''} sans agent`} onClick={() => navigate('/admin/assignations')} />
+          </div>
+        </DashSection>
 
-            {clientsExpires.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-destructive/10 rounded-lg border border-destructive/20 hover:shadow-lg hover:shadow-destructive/10 transition-all duration-300 animate-fade-in" style={{ animationDelay: '100ms' }}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-destructive/20 animate-pulse-soft">
-                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-destructive flex-shrink-0" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm md:text-base">{clientsExpires.length} mandat(s) expiré(s)</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">Plus de 90 jours - renouvellement requis</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto text-destructive hover:text-destructive hover:scale-105 transition-transform" onClick={() => navigate('/admin/mandats')}>
-                  Gérer
-                </Button>
+        {/* 7. Statistiques détaillées (sections existantes conservées) */}
+        <section className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowMore((v) => !v)}
+            className={`${DASH_CARD} flex w-full items-center gap-3 p-4 text-left`}
+            aria-expanded={showMore}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted"><BarChart3 className="h-[18px] w-[18px]" /></span>
+            <span className="flex-1">
+              <span className="block text-sm font-semibold text-foreground">Statistiques détaillées</span>
+              <span className="block text-xs text-muted-foreground">Comparaisons par période, recommandations, commissions potentielles</span>
+            </span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+          </button>
+          {showMore && (
+            <div className="space-y-4">
+              <div className={`${DASH_CARD} overflow-hidden`}>
+                <AdminStatsSection
+                  agents={agents}
+                  clients={clients}
+                  transactions={transactions}
+                  offres={offres}
+                  registreCommissions={registre}
+                  mandates={mandates}
+                  candidatures={candidatures}
+                />
               </div>
-            )}
+              <div className={`${DASH_CARD} overflow-hidden`}><RecommendationStats /></div>
+              <AgencyProjectionSection projections={agencyProjections} totalCommissionAgence={totalCommissionAgence} />
+            </div>
+          )}
+        </section>
 
-            {clientsSansAgent === 0 && clientsCritiques.length === 0 && clientsExpires.length === 0 && (
-              <div className="flex items-center gap-3 p-3 md:p-4 bg-success/10 rounded-lg border border-success/20 animate-fade-in">
-                <div className="p-2 rounded-full bg-success/20">
-                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-success flex-shrink-0" />
-                </div>
-                <p className="text-sm text-muted-foreground">Aucune alerte - tout est en ordre</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {!chargesAvailable && (
+          <TodoCard icon={AlertTriangle} tone="muted" title="Charges de l'agence à activer" description="Le bénéfice ne compte pas encore le loyer, la publicité ni les autres frais : collez le fichier SQL « charges_agence » dans l'éditeur SQL de Lovable Cloud." />
+        )}
       </PremiumPageShellV2>
+
+      <ChargesAgenceDialog open={chargesOpen} onOpenChange={setChargesOpen} charges={charges} available={chargesAvailable} onChanged={loadCharges} />
     </PullToRefresh>
   );
 }
