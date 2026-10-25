@@ -9,6 +9,7 @@ import { formatCHF, MOIS_LABELS } from '@/lib/swissPayroll';
 import logoLogisorama from '@/assets/logisorama-logo.png';
 import { useFileDownload } from '@/hooks/useFileDownload';
 import { toast } from 'sonner';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface Props {
   open: boolean;
@@ -258,7 +259,7 @@ export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Pro
         </DialogHeader>
         <div className="flex-1 min-h-[600px]">
           {pdfUrl ? (
-            <iframe src={pdfUrl} className="w-full h-[600px] rounded-lg border" />
+            <PdfPreview src={pdfUrl} className="w-full h-[600px] rounded-lg border" title="Fiche de salaire" />
           ) : (
             <div className="flex items-center justify-center h-[600px] text-muted-foreground">
               Génération du PDF...

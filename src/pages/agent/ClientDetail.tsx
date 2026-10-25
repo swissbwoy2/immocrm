@@ -57,6 +57,7 @@ import {
   ReletterCriteriaCard,
   ReletterDossiersTransmisCard,
 } from '@/components/admin/ReletterDetailSections';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface Client {
   id: string;
@@ -2313,10 +2314,10 @@ export default function ClientDetail() {
                 className="w-full h-auto"
               />
             ) : selectedDocument?.type.includes('pdf') ? (
-              <embed
+              <PdfPreview
                 src={previewUrl}
-                type="application/pdf"
                 className="w-full h-[70vh]"
+                title={selectedDocument?.nom}
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">

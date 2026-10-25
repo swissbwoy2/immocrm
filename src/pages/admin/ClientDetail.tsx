@@ -150,6 +150,7 @@ import { PurchaseClientDetailPremium } from '@/components/admin/purchase/Purchas
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 // Configuration des statuts de visite à venir (badges colorés)
 const VISITE_A_VENIR_STATUT_CONFIG: Record<string, { label: string; className: string }> = {
@@ -3744,11 +3745,11 @@ export default function ClientDetail() {
           </DialogHeader>
           <div className="h-[80vh]">
             {previewDocument?.type?.includes('pdf') ? (
-              <object
-                data={previewUrl}
-                type="application/pdf"
+              <PdfPreview
+                src={previewUrl}
                 className="w-full h-full rounded-xl"
-              >
+                fallback={(
+
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
                   <Button onClick={() => handleDownloadDocument(previewDocument)} className="group">
@@ -3756,7 +3757,8 @@ export default function ClientDetail() {
                     Télécharger le PDF
                   </Button>
                 </div>
-              </object>
+                )}
+              />
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start">
                 <img 

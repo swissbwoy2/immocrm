@@ -12,6 +12,7 @@ import "./index.css";
 installAuthStorageGuard();
 // App native : reprise de la session Google au retour du navigateur système.
 void import("./lib/googleAuth").then((m) => m.installNativeAuthListener());
+void import("./lib/nativeFiles").then((m) => m.installNativeFileHandling());
 
 // Déverrouille l'audio au premier geste utilisateur : indispensable pour que la
 // sonnerie d'appel entrant puisse démarrer plus tard (autoplay policy).

@@ -36,6 +36,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
 import { isPurchaseBuyer } from '@/lib/journey';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface DocumentRequest {
   id: string;
@@ -1063,11 +1064,11 @@ export default function Documents() {
           </DialogHeader>
           <div className="h-[80vh] overflow-hidden rounded-xl border border-border/70 bg-muted/40">
             {previewDocument?.type?.includes('pdf') ? (
-              <object
-                data={previewUrl}
-                type="application/pdf"
+              <PdfPreview
+                src={previewUrl}
                 className="w-full h-full"
-              >
+                fallback={(
+
                 <div className="flex h-full flex-col items-center justify-center px-4 text-center text-muted-foreground">
                   <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <FileText className="h-7 w-7" />
@@ -1078,7 +1079,8 @@ export default function Documents() {
                     Télécharger le PDF
                   </Button>
                 </div>
-              </object>
+                )}
+              />
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start p-4">
                 <img
