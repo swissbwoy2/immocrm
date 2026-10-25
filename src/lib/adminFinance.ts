@@ -72,11 +72,15 @@ export interface RegistreRow {
   statut_paiement: string | null;
   type_affaire: string | null;
   agent_id: string | null;
+  client_prenom?: string | null;
+  client_nom?: string | null;
+  client_email?: string | null;
+  agent_prenom?: string | null;
 }
-export interface ActivationRow { date_paiement: string | null; montant_acompte: number | null; statut: string | null; created_at?: string | null; type_recherche?: string | null }
-export interface AcompteAchatRow { date_paiement_acompte: string | null; montant_acompte: number | null }
-export interface RefundRow { refund_status: string | null; refund_processed_at: string | null; refund_requested_at: string | null; montant: number }
-export interface FicheRow { annee: number; mois: number; statut: string | null; mode_remuneration: string | null; cout_total_employeur: number | null; salaire_net: number | null; montant_commissions: number | null }
+export interface ActivationRow { date_paiement: string | null; montant_acompte: number | null; statut: string | null; created_at?: string | null; type_recherche?: string | null; prenom?: string | null; nom?: string | null; email?: string | null }
+export interface AcompteAchatRow { date_paiement_acompte: string | null; montant_acompte: number | null; label?: string | null }
+export interface RefundRow { refund_status: string | null; refund_processed_at: string | null; refund_requested_at: string | null; montant: number; label?: string | null }
+export interface FicheRow { annee: number; mois: number; statut: string | null; mode_remuneration: string | null; cout_total_employeur: number | null; salaire_net: number | null; montant_commissions: number | null; label?: string | null }
 export interface ChargeRow { id: string; libelle: string; categorie: string; montant: number; recurrence: 'ponctuelle' | 'mensuelle' | 'annuelle'; date_debut: string; date_fin: string | null; notes?: string | null }
 
 export interface FinanceInput {
@@ -89,6 +93,14 @@ export interface FinanceInput {
 }
 
 export const ACTIVATION_PAYEE = ['paye', 'active'];
+
+/** Comptes de test internes (adresse de l'agence ou nom contenant « test ») : jamais comptés dans les chiffres. */
+export function isTestAccount(...parts: (string | null | undefined)[]): boolean {
+  return parts.some((p) => {
+    const v = String(p ?? '').toLowerCase();
+    return /@(immo-rama|logisorama)\.ch$/.test(v.trim()) || /\btest\b/.test(v);
+  });
+}
 
 /** Montant d'une charge imputable à la période (mensuelle : par mois couvert ; annuelle : 1/12 par mois). */
 export function chargeForPeriod(c: ChargeRow, p: Period): number {
@@ -114,6 +126,10 @@ export function chargeForPeriod(c: ChargeRow, p: Period): number {
 
 const ficheInPeriod = (f: FicheRow, p: Period) => inPeriod(new Date(f.annee, f.mois - 1, 1).toISOString(), p);
 
+/** Une ligne de justificatif : d'où vient un montant. */
+export interface DetailRow { date: string | null; label: string; montant: number; note?: string }
+export type DetailKey = 'commissions' | 'activations' | 'acomptesAchat' | 'remboursements' | 'salaires' | 'commissionsAgents' | 'charges';
+
 export interface FinanceResult {
   commissions: number;          // commissions facturées, hors acompte déjà encaissé
   commissionsBrutes: number;    // honoraires totaux
@@ -126,6 +142,7 @@ export interface FinanceResult {
   remboursementsCount: number;
   salaires: number;
   commissionsAgents: number;    // hors fiches de salaire (évite le double comptage)
+  commissionsSurFiches: number;
   charges: number;
   chargesParCategorie: Record<string, number>;
   depenses: number;
@@ -134,41 +151,44 @@ export interface FinanceResult {
   affaires: number;
   affairesLocation: number;
   affairesAchat: number;
+  details: Record<DetailKey, DetailRow[]>;
 }
 
+const fullName = (...p: (string | null | undefined)[]) => p.filter(Boolean).join(' ').trim() || '—';
+
 export function computeFinance(d: FinanceInput, p: Period): FinanceResult {
-  const reg = d.registre.filter((r) => inPeriod(r.date_conclusion, p));
+  const reg = d.registre.filter((r) => inPeriod(r.date_conclusion, p) && !isTestAccount(r.client_prenom, r.client_nom, r.client_email));
+  const net = (r: RegistreRow) => Math.max(0, num(r.honoraire_total) - num(r.montant_acompte));
   const commissionsBrutes = reg.reduce((s, r) => s + num(r.honoraire_total), 0);
-  const commissions = reg.reduce((s, r) => s + Math.max(0, num(r.honoraire_total) - num(r.montant_acompte)), 0);
-  const commissionsAEncaisser = reg
-    .filter((r) => (r.statut_paiement ?? '') !== 'paye')
-    .reduce((s, r) => s + Math.max(0, num(r.honoraire_total) - num(r.montant_acompte)), 0);
+  const commissions = reg.reduce((s, r) => s + net(r), 0);
+  const commissionsAEncaisser = reg.filter((r) => (r.statut_paiement ?? '') !== 'paye').reduce((s, r) => s + net(r), 0);
 
-  const acts = d.activations.filter((a) => ACTIVATION_PAYEE.includes(a.statut ?? '') && inPeriod(a.date_paiement, p));
-  const activations = acts.reduce((s, a) => s + (num(a.montant_acompte) || 300), 0);
+  const acts = d.activations.filter((a) => ACTIVATION_PAYEE.includes(a.statut ?? '') && inPeriod(a.date_paiement, p) && !isTestAccount(a.prenom, a.nom, a.email));
+  const actAmount = (a: ActivationRow) => num(a.montant_acompte) || 300;
+  const activations = acts.reduce((s, a) => s + actAmount(a), 0);
 
-  const acomptesAchat = d.acomptesAchat
-    .filter((a) => inPeriod(a.date_paiement_acompte, p))
-    .reduce((s, a) => s + (num(a.montant_acompte) || 2500), 0);
+  const achats = d.acomptesAchat.filter((a) => inPeriod(a.date_paiement_acompte, p) && !isTestAccount(a.label));
+  const achatAmount = (a: AcompteAchatRow) => num(a.montant_acompte) || 2500;
+  const acomptesAchat = achats.reduce((s, a) => s + achatAmount(a), 0);
 
-  const refs = d.refunds.filter((r) => r.refund_status === 'processed' && inPeriod(r.refund_processed_at, p));
+  const refs = d.refunds.filter((r) => r.refund_status === 'processed' && inPeriod(r.refund_processed_at, p) && !isTestAccount(r.label));
   const remboursements = refs.reduce((s, r) => s + num(r.montant), 0);
 
   const fiches = d.fiches.filter((f) => (f.statut ?? 'brouillon') !== 'brouillon' && ficheInPeriod(f, p));
-  const salaires = fiches.reduce(
-    (s, f) => s + (f.mode_remuneration === 'independant' ? num(f.salaire_net) : num(f.cout_total_employeur)),
-    0,
-  );
+  const ficheCost = (f: FicheRow) => (f.mode_remuneration === 'independant' ? num(f.salaire_net) : num(f.cout_total_employeur));
+  const salaires = fiches.reduce((s, f) => s + ficheCost(f), 0);
   const commissionsSurFiches = fiches.reduce((s, f) => s + num(f.montant_commissions), 0);
   const commissionsAgents = Math.max(0, reg.reduce((s, r) => s + num(r.commission_agent), 0) - commissionsSurFiches);
 
   const chargesParCategorie: Record<string, number> = {};
+  const chargeRows: DetailRow[] = [];
   let charges = 0;
   for (const c of d.charges) {
     const v = chargeForPeriod(c, p);
     if (v > 0) {
       charges += v;
       chargesParCategorie[c.categorie] = (chargesParCategorie[c.categorie] ?? 0) + v;
+      chargeRows.push({ date: c.date_debut, label: c.libelle, montant: v, note: c.recurrence === 'ponctuelle' ? 'une fois' : c.recurrence === 'annuelle' ? '1/12 par mois' : 'par mois' });
     }
   }
 
@@ -177,17 +197,32 @@ export function computeFinance(d: FinanceInput, p: Period): FinanceResult {
   const benefice = recettes - depenses;
 
   const isAchat = (t: string | null) => /achat|vente/i.test(t ?? '');
+  const byDate = (a: DetailRow, b: DetailRow) => String(b.date ?? '').localeCompare(String(a.date ?? ''));
   return {
     commissions, commissionsBrutes, commissionsAEncaisser,
     activations, activationsCount: acts.length, acomptesAchat,
     recettes,
     remboursements, remboursementsCount: refs.length,
-    salaires, commissionsAgents, charges, chargesParCategorie,
+    salaires, commissionsAgents, commissionsSurFiches, charges, chargesParCategorie,
     depenses, benefice,
     marge: recettes > 0 ? Math.round((benefice / recettes) * 100) : null,
     affaires: reg.length,
     affairesAchat: reg.filter((r) => isAchat(r.type_affaire)).length,
     affairesLocation: reg.filter((r) => !isAchat(r.type_affaire)).length,
+    details: {
+      commissions: reg.map((r) => ({
+        date: r.date_conclusion, label: fullName(r.client_prenom, r.client_nom), montant: net(r),
+        note: [r.type_affaire, num(r.montant_acompte) ? `acompte ${formatCHF(num(r.montant_acompte))} déduit` : '', (r.statut_paiement ?? '') === 'paye' ? 'payée' : 'à encaisser'].filter(Boolean).join(' · '),
+      })).sort(byDate),
+      activations: acts.map((a) => ({ date: a.date_paiement, label: fullName(a.prenom, a.nom), montant: actAmount(a), note: a.type_recherche ?? undefined })).sort(byDate),
+      acomptesAchat: achats.map((a) => ({ date: a.date_paiement_acompte, label: a.label || 'Projet d\'achat', montant: achatAmount(a) })).sort(byDate),
+      remboursements: refs.map((r) => ({ date: r.refund_processed_at, label: r.label || 'Client', montant: num(r.montant) })).sort(byDate),
+      salaires: fiches.map((f) => ({ date: `${f.annee}-${String(f.mois).padStart(2, '0')}-01`, label: f.label || 'Fiche de salaire', montant: ficheCost(f), note: f.mode_remuneration === 'independant' ? 'indépendant (net)' : 'coût employeur' })),
+      commissionsAgents: reg.filter((r) => num(r.commission_agent) > 0).map((r) => ({
+        date: r.date_conclusion, label: `${r.agent_prenom || 'Agent'} — ${fullName(r.client_prenom, r.client_nom)}`, montant: num(r.commission_agent),
+      })).sort(byDate),
+      charges: chargeRows,
+    },
   };
 }
 
