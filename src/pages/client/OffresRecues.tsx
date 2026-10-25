@@ -379,7 +379,8 @@ const OffresRecues = () => {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
   const navigate = useNavigate();
-  const isAchat = useClientParcours() === 'achat';
+  const parcoursClient = useClientParcours();
+  const isAchat = parcoursClient === 'achat';
   const [searchParams, setSearchParams] = useSearchParams();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -412,6 +413,8 @@ const OffresRecues = () => {
   const [selectedExistingIdentite, setSelectedExistingIdentite] = useState<string | null>(null);
 
   useEffect(() => {
+    // On attend de connaître le parcours : un acheteur ne doit jamais voir (même un instant) ses biens à vendre ici.
+    if (parcoursClient === null) return;
     loadOffres();
     loadClientData();
     loadVisites();
@@ -419,7 +422,7 @@ const OffresRecues = () => {
     loadExistingDocuments();
     loadCandidatures();
     markTypeAsRead('new_offer');
-  }, [user?.id, isAchat]);
+  }, [user?.id, isAchat, parcoursClient === null]);
 
   // Auto-open offer details from query param (?offre= ou ?offreId= depuis les notifications)
   useEffect(() => {

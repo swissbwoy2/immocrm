@@ -19,8 +19,9 @@ export function ClientParcoursRedirect() {
 
   useEffect(() => {
     if (!isClient || parcours !== 'achat') return;
-    // Client qui loue aussi : « Offres reçues » reste accessible pour ses annonces de location.
-    if (location.pathname.startsWith('/client/offres-recues') && new URLSearchParams(location.search).get('location') === '1') return;
+    // Client qui loue aussi : les écrans location (offres, candidatures, vidéos, visites) restent accessibles
+    // quand on y arrive depuis son espace location (paramètre « location=1 »).
+    if (new URLSearchParams(location.search).get('location') === '1') return;
     const cible = remapClientPathForParcours(location.pathname, 'achat');
     if (cible !== location.pathname) {
       navigate(`${cible}${location.search}${location.hash}`, { replace: true });

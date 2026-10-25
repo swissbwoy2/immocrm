@@ -85,7 +85,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
     ]);
     // Seulement les biens à vendre (un client peut aussi louer : ses locations ont leur propre espace).
     setOffres((o || []).filter((x: any) => estPrixDAchat(x.prix)));
-    setVisites(v || []);
+    setVisites(((v as any[]) || []).filter((x: any) => estPrixDAchat(x.offres?.prix)));
     if (user?.id) {
       const { data: docs } = await supabase.from('documents').select('id, type_document').eq('user_id', user.id);
       setUserDocuments(docs || []);

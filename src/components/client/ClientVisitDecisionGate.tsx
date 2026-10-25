@@ -65,7 +65,8 @@ export function ClientVisitDecisionGate() {
       .gte('date_visite', GATE_SINCE)
       .order('date_visite', { ascending: true });
     // Acheteur : le compte-rendu envoyé par le conseiller (visite_comptes_rendus) compte comme compte-rendu disponible.
-    // (seulement pour les biens à vendre : une visite de location garde le comportement location)
+    // (seulement pour les biens à vendre : une visite de location garde le comportement location ;
+    //  fusionnerComptesRendusAchat conserve l'ordre du tableau, d'où l'appariement par index)
     const brutes = (data as any[]) || [];
     const source = (await loadClientParcours(user.id)) === 'achat'
       ? (await fusionnerComptesRendusAchat(client.id, brutes)).map((v: any, i: number) => (estPrixDAchat(v.offres?.prix) ? v : brutes[i]))
