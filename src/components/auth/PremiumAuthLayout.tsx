@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ShieldCheck, Crown, AlertCircle } from 'lucide-react';
@@ -37,7 +38,7 @@ export function AuthInput({
         {label}
         {props.required && <span className="text-destructive ml-0.5">*</span>}
       </label>
-      <div className="relative group input-focus-glow rounded-xl">
+      <div className="relative group rounded-2xl">
         {icon && (
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors duration-200 pointer-events-none">
             {icon}
@@ -45,13 +46,11 @@ export function AuthInput({
         )}
         <input
           {...props}
+          aria-invalid={error ? true : undefined}
           className={[
-            'w-full h-12 rounded-xl border bg-background text-foreground text-sm',
-            'placeholder:text-muted-foreground/50 px-4 transition-all duration-200',
-            'focus:outline-none focus:ring-2',
-            error
-              ? 'border-destructive/60 focus:ring-destructive/20 focus:border-destructive'
-              : 'border-border/60 focus:ring-primary/20 focus:border-primary/60',
+            'imr-lg-field w-full h-12 rounded-2xl text-foreground text-[15px]',
+            'placeholder:text-muted-foreground/60 px-4',
+            'focus:outline-none',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             icon ? 'pl-10' : '',
             rightAction ? 'pr-12' : '',
@@ -115,23 +114,13 @@ export function AuthSubmitButton({
         type={type}
         onClick={onClick}
         disabled={isDisabled}
-        whileHover={isDisabled ? {} : { scale: 1.02, y: -1 }}
-        whileTap={isDisabled ? {} : { scale: 0.98 }}
+        whileTap={isDisabled ? {} : { scale: 0.97 }}
         className={[
-          'group relative w-full flex items-center justify-center gap-2 h-12 px-6',
-          'rounded-xl font-semibold text-sm overflow-hidden transition-all duration-300',
-          isDisabled
-            ? 'bg-primary/30 text-primary-foreground/50 cursor-not-allowed'
-            : 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/35 cursor-pointer',
+          'imr-lg-tint group relative w-full flex items-center justify-center gap-2 h-12 px-6',
+          'rounded-full font-semibold text-[15px] overflow-hidden',
+          isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
         ].join(' ')}
       >
-        {!isDisabled && (
-          <motion.span
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12 pointer-events-none"
-            animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
-          />
-        )}
         <span className="relative z-10 flex items-center gap-2">
           {loading ? (
             <>
@@ -175,8 +164,17 @@ export function PremiumAuthLayout({
   badge,
   children,
 }: PremiumAuthLayoutProps) {
+  // Pages de connexion : vert de la marque (boutons, champs, fenêtres), quel que soit le rôle.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-imr-auth', '');
+    return () => root.removeAttribute('data-imr-auth');
+  }, []);
+
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4 py-8">
+    <div
+      className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 pb-8 pt-20 sm:py-8"
+    >
       {/* Hero background */}
       <div className="absolute inset-0">
         <img
@@ -185,7 +183,7 @@ export function PremiumAuthLayout({
           className="w-full h-full object-cover"
           loading="eager"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-black/55" />
       </div>
 
       {/* Back button */}
@@ -198,7 +196,7 @@ export function PremiumAuthLayout({
         >
           <Link
             to={backTo}
-            className="flex items-center gap-2 backdrop-blur-xl bg-white/10 hover:bg-white/20 border border-white/20 rounded-full px-4 py-2 text-white transition-all duration-200 text-sm font-medium"
+            className="imr-lg-glass flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-foreground active:scale-[0.96]"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Retour</span>
@@ -213,7 +211,7 @@ export function PremiumAuthLayout({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <div className="bg-background/96 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl shadow-2xl p-6 md:p-8 login-card-float">
+        <div className="imr-lg-auth-card rounded-[32px] p-6 md:p-8">
 
           {/* Card header */}
           <div className="flex flex-col items-center gap-3 mb-6">
@@ -259,14 +257,14 @@ export function PremiumAuthLayout({
             </motion.div>
 
             {/* Gold hairline divider */}
-            <div className="w-full h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-black/10 to-transparent dark:via-white/15" />
           </div>
 
           {/* Slot content */}
           {children}
 
           {/* Trust footer */}
-          <div className="mt-6 pt-4 border-t border-border/40">
+          <div className="mt-6 pt-4 border-t border-black/[0.07] dark:border-white/10">
             <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 text-green-500 flex-shrink-0" />
@@ -277,7 +275,7 @@ export function PremiumAuthLayout({
               <span className="text-border hidden sm:inline">·</span>
               <span>RGPD</span>
             </div>
-            <p className="text-center text-[11px] text-muted-foreground/50 mt-1.5">
+            <p className="text-center text-[11px] text-muted-foreground/70 mt-1.5">
               © Immo-Rama.ch — Tous droits réservés
             </p>
           </div>
