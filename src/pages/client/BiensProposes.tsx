@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { loadClientParcours } from '@/hooks/useClientParcours';
 import { noteSuiviClient } from '@/lib/offreNote';
 import {
-  ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, creneauxProposes, formatPrixAchat,
+  ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, chargerVisitesAchat, creneauxProposes, estPrixDAchat, formatPrixAchat,
   confirmerVisiteFaiteAchat, deleguerVisiteAchat, demanderVisiteAchat, marquerInteretAchat,
   refuserBienAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat,
 } from '@/lib/achatOffreActions';
@@ -37,9 +37,14 @@ export default function BiensProposes() {
 
   const [loading, setLoading] = useState(true);
   const [offres, setOffres] = useState<any[]>([]);
+  // Client à projets multiples : ses annonces de location restent dans « Offres reçues ».
+  const [locations, setLocations] = useState<any[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   // Biens pour lesquels une demande de visite a déjà été transmise au conseiller.
   const [demandes, setDemandes] = useState<Set<string>>(new Set());
+  // Dossier d'achat : négociation liée à chaque bien, étape notaire du projet.
+  const [negociations, setNegociations] = useState<Map<string, any>>(new Map());
+  const [notaire, setNotaire] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
   // Le filtre suit l'URL (liens du tableau de bord, du menu, ancienne page « Biens sélectionnés »).
   const filtreUrl = searchParams.get('filtre') as Filtre | null;
@@ -78,12 +83,25 @@ export default function BiensProposes() {
         .select(`*, agent:agents!offres_agent_id_fkey(id, user_id, profile:profiles!agents_user_id_fkey(prenom, nom))`)
         .eq('client_id', client.id)
         .order('date_envoi', { ascending: false }),
-      supabase.from('visites').select('*').eq('client_id', client.id),
+      chargerVisitesAchat(client.id).then((data) => ({ data })),
     ]);
-    setOffres(offresData || []);
+    const toutes = (offresData as any[]) || [];
+    setOffres(toutes.filter((o) => estPrixDAchat(o.prix)));
+    setLocations(toutes.filter((o) => !estPrixDAchat(o.prix)));
     setVisites(visitesData || []);
 
     const ids = (offresData || []).map((o: any) => o.id);
+    const { data: projet } = await supabase.from('purchase_projects').select('id').eq('client_id', client.id).limit(1).maybeSingle();
+    if (projet?.id) {
+      const [{ data: negos }, { data: not }] = await Promise.all([
+        (supabase.from as any)('purchase_negotiations').select('*').eq('project_id', projet.id),
+        supabase.from('purchase_notary_steps').select('*').eq('project_id', projet.id).maybeSingle(),
+      ]);
+      const m = new Map<string, any>();
+      ((negos as any[]) || []).forEach((n) => { if (n.offre_id) m.set(n.offre_id, n); });
+      setNegociations(m);
+      setNotaire(not || null);
+    }
     if (ids.length > 0) {
       const { data: msgs } = await supabase
         .from('messages')
@@ -108,14 +126,19 @@ export default function BiensProposes() {
   // Lien direct ?offre=<id> ou ?offreId=<id> (notifications, tableau de bord) → ouvre la fiche.
   useEffect(() => {
     const id = searchParams.get('offreId') || searchParams.get('offre');
-    if (!id || offres.length === 0) return;
+    if (!id || (offres.length === 0 && locations.length === 0)) return;
+    // Annonce de location d'un client qui loue aussi : elle s'ouvre dans « Offres reçues ».
+    if (locations.some((o) => o.id === id)) {
+      navigate(`/client/offres-recues?location=1&offre=${id}`, { replace: true });
+      return;
+    }
     const found = offres.find((o) => o.id === id);
     if (found) setDetail(found);
     const next = new URLSearchParams(searchParams);
     next.delete('offreId');
     next.delete('offre');
     setSearchParams(next, { replace: true });
-  }, [searchParams, offres, setSearchParams]);
+  }, [searchParams, offres, locations, setSearchParams, navigate]);
 
   // Garder la fiche ouverte à jour après une action.
   useEffect(() => {
@@ -206,6 +229,22 @@ export default function BiensProposes() {
                 : `${offres.length} bien${offres.length > 1 ? 's' : ''} sélectionné${offres.length > 1 ? 's' : ''} pour vous`}
           </p>
         </header>
+
+        {locations.length > 0 && (
+          <button
+            type="button"
+            onClick={() => navigate('/client/offres-recues?location=1')}
+            className="mb-5 flex w-full items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card p-4 text-left transition-colors hover:border-foreground/50"
+          >
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Votre recherche de location</span>
+              <span className="block text-sm text-muted-foreground">
+                {locations.length} offre{locations.length > 1 ? 's' : ''} de location dans « Offres reçues »
+              </span>
+            </span>
+            <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        )}
 
         {offres.length === 0 ? (
           <div className="rounded-2xl border border-border/70 bg-card px-6 py-12 text-center">
@@ -307,7 +346,7 @@ export default function BiensProposes() {
                         </button>
 
                         <div className="mt-4 flex-1 border-t border-border/70 pt-4">
-                          <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={handlers} busy={busy} compact demandeEnvoyee={demandes.has(offre.id)} />
+                          <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={handlers} busy={busy} compact demandeEnvoyee={demandes.has(offre.id)} negociation={negociations.get(offre.id) ?? null} notaire={notaire} />
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -345,6 +384,8 @@ export default function BiensProposes() {
         handlers={handlers}
         busy={busy}
         demandeEnvoyee={!!detail && demandes.has(detail.id)}
+        negociation={detail ? negociations.get(detail.id) ?? null : null}
+        notaire={notaire}
       />
 
       <AchatVisiteDialog

@@ -12,7 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { useClientParcours } from '@/hooks/useClientParcours';
-import { renoncerApresVisiteAchat, souhaiteFaireOffreAchat } from '@/lib/achatOffreActions';
+import { estPrixDAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat } from '@/lib/achatOffreActions';
 
 const EventManagerCalendar = lazy(() => import('@/components/calendar/EventManagerCalendar').then(m => ({ default: m.EventManagerCalendar })));
 const ClientEventDetailDialog = lazy(() => import('@/components/calendar/ClientEventDetailDialog').then(m => ({ default: m.ClientEventDetailDialog })));
@@ -172,7 +172,7 @@ export default function ClientCalendrier() {
 
   const accepterOffre = async (visite: any) => {
     if (parcoursClient === null) return; // parcours pas encore connu : on n'agit pas au hasard
-    if (isAchat) {
+    if (isAchat && estPrixDAchat(visite.offres?.prix)) {
       try {
         await souhaiteFaireOffreAchat(user!.id, { ...(visite.offres || {}), id: visite.offre_id }, { visites: [visite] });
         toast({ title: "Souhait d'offre transmis", description: "Votre conseiller vous recontacte pour préparer l'offre d'achat." });
@@ -246,7 +246,7 @@ export default function ClientCalendrier() {
 
   const refuserOffre = async (visite: any) => {
     if (parcoursClient === null) return;
-    if (isAchat) {
+    if (isAchat && estPrixDAchat(visite.offres?.prix)) {
       try {
         await renoncerApresVisiteAchat(user!.id, { ...(visite.offres || {}), id: visite.offre_id }, [visite]);
         toast({ title: 'Choix enregistré', description: 'Votre conseiller en est informé.' });

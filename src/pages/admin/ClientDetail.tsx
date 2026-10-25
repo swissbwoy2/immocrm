@@ -1,3 +1,4 @@
+import { libelleStatutBancaire } from '@/lib/purchaseFinancing';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw, Wallet, Ban, ExternalLink } from 'lucide-react';
@@ -1442,11 +1443,7 @@ export default function ClientDetail() {
                           {purchaseHook.project?.statut === 'actif' ? 'Mandat actif' : 'Projet achat'}
                         </Badge>
                         <Badge variant="outline" className="bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30 backdrop-blur-sm">
-                          Banque : {(() => {
-                            const s = purchaseHook.financing?.statut_bancaire;
-                            const map: Record<string, string> = { a_evaluer: 'à évaluer', en_cours: 'en analyse', validation_orale: 'prévalidé', valide: 'validé', refuse: 'refusé', bloque: 'bloqué' };
-                            return map[s as string] || 'à évaluer';
-                          })()}
+                          Banque : {libelleStatutBancaire(purchaseHook.financing?.statut_bancaire)}
                         </Badge>
                       </>
                     ) : (

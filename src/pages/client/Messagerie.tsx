@@ -48,6 +48,7 @@ import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
 import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
 import { useClientParcours } from "@/hooks/useClientParcours";
+import { estPrixDAchat } from "@/lib/achatOffreActions";
 import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJob";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
@@ -1392,7 +1393,7 @@ const Messagerie = () => {
     // Parcours pas encore connu : aucune action, pour ne jamais proposer « Postuler » à un acheteur.
     if (parcoursClient === null) return null;
 
-    if (isAchat || isBuyer) {
+    if ((isAchat || isBuyer) && estPrixDAchat(offre.prix)) {
       return (
         <div className="mt-3">
           <Button size="sm" className="w-full" onClick={() => navigate(`/client/biens-proposes?offre=${offre.id}`)}>

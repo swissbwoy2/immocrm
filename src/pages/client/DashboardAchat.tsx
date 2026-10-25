@@ -10,7 +10,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { parseZones, formatZones } from '@/lib/buyerProfile';
 import { isVisiteReelle } from '@/lib/visitDecision';
-import { ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, formatPrixAchat } from '@/lib/achatOffreActions';
+import { ACHAT_A_REPONDRE, ACHAT_EN_COURS, ACHAT_STATUT_COURT, chargerVisitesAchat, estPrixDAchat, formatPrixAchat } from '@/lib/achatOffreActions';
 
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { PremiumDashboardHeader } from '@/components/premium/PremiumDashboardHeader';
@@ -81,10 +81,11 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
     if (!project?.client_id) return;
     const [{ data: o }, { data: v }] = await Promise.all([
       supabase.from('offres').select('*').eq('client_id', project.client_id).order('date_envoi', { ascending: false }),
-      supabase.from('visites').select('*, offres(*)').eq('client_id', project.client_id),
+      chargerVisitesAchat(project.client_id, '*, offres(*)').then((data) => ({ data })),
     ]);
-    setOffres(o || []);
-    setVisites(v || []);
+    // Seulement les biens à vendre (un client peut aussi louer : ses locations ont leur propre espace).
+    setOffres((o || []).filter((x: any) => estPrixDAchat(x.prix)));
+    setVisites(((v as any[]) || []).filter((x: any) => estPrixDAchat(x.offres?.prix)));
     if (user?.id) {
       const { data: docs } = await supabase.from('documents').select('id, type_document').eq('user_id', user.id);
       setUserDocuments(docs || []);
@@ -154,7 +155,13 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
   const derniersBiens = offres.filter((o) => o.statut !== 'refusee').slice(0, 6);
   const criteres = parseZones(clientRow?.region_recherche);
   const totalDocs = ACHAT_REQUIRED_DOCUMENTS.length;
-  const aFaire = !agent || stats.aRepondre > 0 || stats.apresVisite > 0 || stats.docsComplets < totalDocs || !computed || joursRestants <= 30;
+  // Projet finalisé (clés remises) ou arrêté : plus de compte à rebours ni de tâches de recherche.
+  const finalise = ['reussi', 'cloture'].includes(project.statut);
+  const arrete = project.statut === 'annule';
+  const enPause = project.statut === 'en_pause';
+  const enCoursDeRecherche = !finalise && !arrete;
+  const offreAcceptee = negotiations.some((n: any) => n.statut === 'acceptee');
+  const aFaire = enCoursDeRecherche && (!agent || stats.aRepondre > 0 || stats.apresVisite > 0 || stats.docsComplets < totalDocs || !computed || joursRestants <= 30 || enPause);
 
   return (
     <>
@@ -177,9 +184,39 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
 
           <DashboardAdBanner />
 
+          {/* Fin du parcours */}
+          {finalise && (
+            <TodoCard
+              icon={CheckCircle2}
+              tone="primary"
+              title="Félicitations, votre achat est finalisé !"
+              description={notary?.date_remise_cles
+                ? `Clés remises le ${new Date(notary.date_remise_cles).toLocaleDateString('fr-CH')}. Toute l'équipe Immo-Rama vous souhaite beaucoup de bonheur dans votre nouveau bien.`
+                : "Toute l'équipe Immo-Rama vous souhaite beaucoup de bonheur dans votre nouveau bien."}
+            />
+          )}
+          {arrete && (
+            <TodoCard
+              icon={AlertTriangle}
+              tone="muted"
+              title="Votre accompagnement achat est arrêté"
+              description="Pour toute question ou pour reprendre votre projet, écrivez à votre conseiller."
+              action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/client/messagerie')}>Écrire à mon conseiller</Button>}
+            />
+          )}
+
           {/* 2. À faire */}
           {aFaire && (
             <div className="space-y-3">
+              {enPause && (
+                <TodoCard
+                  icon={AlertTriangle}
+                  tone="muted"
+                  title="Votre accompagnement achat est en pause"
+                  description="Votre conseiller reste à votre disposition pour le reprendre."
+                  action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/client/messagerie')}>Contacter mon conseiller</Button>}
+                />
+              )}
               {stats.aRepondre > 0 && (
                 <TodoCard
                   icon={Home}
@@ -222,7 +259,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
                   action={<Button size="sm" variant="outline" className="rounded-full" onClick={() => navigate('/client/documents')}>Ajouter mes documents</Button>}
                 />
               )}
-              {joursRestants <= 30 && (
+              {joursRestants <= 30 && !enPause && !offreAcceptee && (
                 <TodoCard
                   icon={AlertTriangle}
                   title={joursRestants > 0 ? `Votre mandat d'achat se termine dans ${joursRestants} jour${joursRestants > 1 ? 's' : ''}` : "Votre mandat d'achat est arrivé à échéance"}
@@ -307,7 +344,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
               <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
             </SectionErrorBoundary>
             <div className="flex flex-wrap justify-end gap-2">
-              <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
+              <FinancingEditorDialog financing={financing} onSave={updateFinancing} mode="client" />
             </div>
           </DashSection>
 
@@ -348,7 +385,15 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
           <DashSection title="Mon mandat et mon conseiller">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <SectionErrorBoundary sectionName="AchatProgression">
-                <AchatProgressionBar dateDebut={debut} dureeJours={dureeJours} stepsDone={stepsDone} />
+                {finalise || arrete ? (
+                  <div className={`${DASH_CARD} p-5`}>
+                    <p className="text-sm text-muted-foreground">Mandat d'achat</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">{finalise ? 'Mission accomplie' : 'Arrêté'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{stepsDone}/{steps.length} étapes franchies</p>
+                  </div>
+                ) : (
+                  <AchatProgressionBar dateDebut={debut} dureeJours={dureeJours} stepsDone={stepsDone} />
+                )}
               </SectionErrorBoundary>
               {agent ? (
                 <PremiumAgentCard agent={agent as any} onMessage={() => navigate('/client/messagerie')} />
@@ -374,7 +419,7 @@ export default function DashboardAchat({ profile }: DashboardAchatProps) {
                 {properties.length > 0 && <AchatPropertiesList properties={properties} />}
                 <AchatVisitReportsList reports={visitReports} properties={properties} />
                 <AchatNegotiationCard negotiations={negotiations} />
-                {notary && <AchatNotarySection notary={notary} />}
+                {(notary || offreAcceptee) && <AchatNotarySection notary={notary} />}
               </div>
               <div>
                 <AchatStepsTimeline steps={steps} />

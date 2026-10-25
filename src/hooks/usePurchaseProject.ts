@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+/** Fait remonter l'erreur de la base au lieu d'afficher « enregistré » à tort. */
+function verifier<T extends { error: any }>(res: T): T {
+  if (res?.error) throw new Error(res.error.message || "L'enregistrement a échoué");
+  return res;
+}
 import { annualToMonthly } from '@/lib/buyerProfile';
 
 import {
@@ -250,16 +256,16 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
     if (safePatch.duree_progression_jours !== undefined) {
       safePatch.duree_progression_jours = Math.max(180, Number(safePatch.duree_progression_jours) || 0);
     }
-    await supabase.from('purchase_projects').update(safePatch).eq('id', project.id);
+    verifier(await supabase.from('purchase_projects').update(safePatch).eq('id', project.id));
     await reload();
   }, [project, reload]);
 
   const updateFinancing = useCallback(async (patch: Record<string, any>) => {
     if (!project) return;
     if (financing?.id) {
-      await supabase.from('purchase_financing_profiles').update(patch as any).eq('id', financing.id);
+      verifier(await supabase.from('purchase_financing_profiles').update(patch as any).eq('id', financing.id));
     } else {
-      await supabase.from('purchase_financing_profiles').insert({ project_id: project.id, ...patch } as any);
+      verifier(await supabase.from('purchase_financing_profiles').insert({ project_id: project.id, ...patch } as any));
     }
     // Source de vérité unique acheteur : le revenu ANNUEL. On miroite systématiquement
     // clients.revenus_mensuels = annuel / 12 pour qu'aucune vue n'affiche une valeur divergente.
@@ -267,7 +273,7 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
       await supabase
         .from('clients')
         .update({ revenus_mensuels: annualToMonthly(patch.revenu_annuel_retenu) } as any)
-        .eq('id', project.client_id);
+        .eq('id', project.client_id); // miroir indicatif : l'échec éventuel ne bloque pas l'enregistrement
     }
     await reload();
   }, [project, financing, reload]);
@@ -276,62 +282,62 @@ export function usePurchaseProject(opts: { userId?: string | null; clientId?: st
   const upsertProperty = useCallback(async (row: any) => {
     if (!project) return;
     const payload = { ...row, project_id: project.id };
-    if (row.id) await supabase.from('purchase_selected_properties').update(payload).eq('id', row.id);
-    else await supabase.from('purchase_selected_properties').insert(payload);
+    if (row.id) verifier(await supabase.from('purchase_selected_properties').update(payload).eq('id', row.id));
+    else verifier(await supabase.from('purchase_selected_properties').insert(payload));
     await reload();
   }, [project, reload]);
 
   const deleteProperty = useCallback(async (id: string) => {
-    await supabase.from('purchase_selected_properties').delete().eq('id', id);
+    verifier(await supabase.from('purchase_selected_properties').delete().eq('id', id));
     await reload();
   }, [reload]);
 
   const upsertVisitReport = useCallback(async (row: any) => {
     if (!project) return;
     const payload = { ...row, project_id: project.id };
-    if (row.id) await supabase.from('purchase_visit_reports').update(payload).eq('id', row.id);
-    else await supabase.from('purchase_visit_reports').insert(payload);
+    if (row.id) verifier(await supabase.from('purchase_visit_reports').update(payload).eq('id', row.id));
+    else verifier(await supabase.from('purchase_visit_reports').insert(payload));
     await reload();
   }, [project, reload]);
 
   const deleteVisitReport = useCallback(async (id: string) => {
-    await supabase.from('purchase_visit_reports').delete().eq('id', id);
+    verifier(await supabase.from('purchase_visit_reports').delete().eq('id', id));
     await reload();
   }, [reload]);
 
   const upsertNegotiation = useCallback(async (row: any) => {
     if (!project) return;
     const payload = { ...row, project_id: project.id };
-    if (row.id) await supabase.from('purchase_negotiations').update(payload).eq('id', row.id);
-    else await supabase.from('purchase_negotiations').insert(payload);
+    if (row.id) verifier(await supabase.from('purchase_negotiations').update(payload).eq('id', row.id));
+    else verifier(await supabase.from('purchase_negotiations').insert(payload));
     await reload();
   }, [project, reload]);
 
   const deleteNegotiation = useCallback(async (id: string) => {
-    await supabase.from('purchase_negotiations').delete().eq('id', id);
+    verifier(await supabase.from('purchase_negotiations').delete().eq('id', id));
     await reload();
   }, [reload]);
 
   const upsertNotary = useCallback(async (row: any) => {
     if (!project) return;
     const payload = { ...row, project_id: project.id };
-    if (notary?.id) await supabase.from('purchase_notary_steps').update(payload).eq('id', notary.id);
-    else await supabase.from('purchase_notary_steps').insert(payload);
+    if (notary?.id) verifier(await supabase.from('purchase_notary_steps').update(payload).eq('id', notary.id));
+    else verifier(await supabase.from('purchase_notary_steps').insert(payload));
     await reload();
   }, [project, notary, reload]);
 
   const updateStep = useCallback(async (id: string, patch: any) => {
-    await supabase.from('purchase_project_steps').update(patch).eq('id', id);
+    verifier(await supabase.from('purchase_project_steps').update(patch).eq('id', id));
     await reload();
   }, [reload]);
 
   // 🆕 Activation explicite par l'admin : passe le projet en "actif" et démarre la progression (mandat 6 mois).
   const activateProject = useCallback(async () => {
     if (!project) return;
-    await supabase.from('purchase_projects').update({
+    verifier(await supabase.from('purchase_projects').update({
       statut: 'actif',
       date_debut_progression: new Date().toISOString().slice(0, 10),
-    }).eq('id', project.id);
+    }).eq('id', project.id));
     await reload();
   }, [project, reload]);
 

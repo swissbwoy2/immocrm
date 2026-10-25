@@ -57,7 +57,10 @@ export function AchatNegotiationCard({ negotiations }: AchatNegotiationCardProps
                     </>
                   )}
                 </div>
-                {n.notes && <div className="text-xs text-muted-foreground mt-2">{n.notes}</div>}
+                {n.statut === 'acceptee' && n.date_acceptation && (
+                  <div className="text-xs font-medium text-emerald-700 mt-2">Acceptée le {new Date(n.date_acceptation).toLocaleDateString('fr-CH')}</div>
+                )}
+                {n.notes && <div className="text-xs text-muted-foreground mt-2 whitespace-pre-line">{n.notes}</div>}
               </div>
             );
           })}

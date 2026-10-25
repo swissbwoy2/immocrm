@@ -7,9 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 import { formatSwissDateTime } from '@/lib/dateUtils';
-import { useClientParcours } from '@/hooks/useClientParcours';
+import { useClientParcours, loadClientParcours } from '@/hooks/useClientParcours';
 import {
-  confirmerVisiteFaiteAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat, visiteNonFaiteAchat,
+  confirmerVisiteFaiteAchat, estPrixDAchat, fusionnerComptesRendusAchat, renoncerApresVisiteAchat, souhaiteFaireOffreAchat, visiteNonFaiteAchat,
 } from '@/lib/achatOffreActions';
 
 const GATE_SINCE = '2026-09-04T00:00:00+02:00';
@@ -64,7 +64,14 @@ export function ClientVisitDecisionGate() {
       .is('client_decision', null)
       .gte('date_visite', GATE_SINCE)
       .order('date_visite', { ascending: true });
-    const rows = (data || []).filter((v: any) => {
+    // Acheteur : le compte-rendu envoyé par le conseiller (visite_comptes_rendus) compte comme compte-rendu disponible.
+    // (seulement pour les biens à vendre : une visite de location garde le comportement location ;
+    //  fusionnerComptesRendusAchat conserve l'ordre du tableau, d'où l'appariement par index)
+    const brutes = (data as any[]) || [];
+    const source = (await loadClientParcours(user.id)) === 'achat'
+      ? (await fusionnerComptesRendusAchat(client.id, brutes)).map((v: any, i: number) => (estPrixDAchat(v.offres?.prix) ? v : brutes[i]))
+      : brutes;
+    const rows = source.filter((v: any) => {
       if (v.statut === 'annulee') return false;
       if (['refusee', 'candidature_deposee', 'souhaite_postuler', 'acceptee', 'offre_envisagee'].includes(v.offres?.statut)) return false;
       const cr = crReady(v);
@@ -84,6 +91,8 @@ export function ClientVisitDecisionGate() {
   }, [load]);
 
   const current = pending[0];
+  // Décidé par bien : un client peut louer ET acheter ; une visite de location garde la question location.
+  const achatPourCetteVisite = isAchat && !!current && estPrixDAchat(current.offres?.prix);
   const hasCr = current ? crReady(current) : false;
   const videoUrl = current ? firstSharedVideo(current) : null;
 
@@ -231,7 +240,7 @@ export function ClientVisitDecisionGate() {
           <DialogTitle>{hasCr ? 'Compte-rendu de visite disponible' : 'Avez-vous effectué la visite ?'}</DialogTitle>
           <DialogDescription>
             {hasCr
-              ? (isAchat
+              ? (achatPourCetteVisite
                 ? 'Votre conseiller a visité le bien pour vous. Consultez le compte-rendu puis indiquez la suite.'
                 : 'La visite a été réalisée par notre équipe. Consultez le compte-rendu puis indiquez votre décision pour continuer.')
               : 'Merci de répondre pour continuer. Cette étape est obligatoire.'}
@@ -264,7 +273,7 @@ export function ClientVisitDecisionGate() {
           </div>
         )}
 
-        {isAchat ? (
+        {achatPourCetteVisite ? (
           <div className="flex flex-col gap-2">
             <Button className="bg-emerald-600 text-white hover:bg-emerald-700" disabled={!!saving} onClick={achatOffre}>
               {saving === 'oui' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Banknote className="mr-2 h-4 w-4" />}

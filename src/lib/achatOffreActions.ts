@@ -275,6 +275,13 @@ export async function souhaiteFaireOffreAchat(
       .eq('id', visite.id);
   }
   await majStatutOffre(offre.id, 'offre_envisagee');
+  // La base ouvre la négociation dans le dossier d'achat du conseiller ; on y reporte le montant et le message.
+  const { error: rpcError } = await (supabase.rpc as any)('achat_enregistrer_souhait_offre', {
+    p_offre_id: offre.id,
+    p_montant: opts.montant && opts.montant > 0 ? Math.round(opts.montant) : null,
+    p_commentaire: (opts.commentaire || '').trim() || null,
+  });
+  if (rpcError) console.warn('[achatOffreActions] négociation non complétée', rpcError);
   const montant = opts.montant && opts.montant > 0 ? `CHF ${Math.round(opts.montant).toLocaleString('fr-CH')}` : null;
   const commentaire = (opts.commentaire || '').trim();
   await notifierAgent(
@@ -318,4 +325,75 @@ export async function visiteNonFaiteAchat(userId: string, offre: any, visiteId: 
       `📅 **Visite non effectuée (achat)**\n\n${ligneBien(offre)}\n\nLe client n'a pas pu visiter. Merci de lui proposer une nouvelle date.`,
     );
   }
+}
+
+const APPRECIATION: Record<string, string> = {
+  tres_positif: 'Très positive', positif: 'Positive', neutre: 'Neutre', negatif: 'Négative', tres_negatif: 'Très négative',
+};
+
+/**
+ * Visites d'un acheteur, enrichies du compte-rendu ENVOYÉ au client (table visite_comptes_rendus,
+ * remplie par le formulaire de compte-rendu des agents) : compte_rendu, compte_rendu_at et médias
+ * sont reportés sur la visite, pour que fiches, question après visite et étapes en tiennent compte.
+ */
+export async function chargerVisitesAchat(clientId: string, select = '*'): Promise<any[]> {
+  const { data: visites } = await supabase.from('visites').select(select).eq('client_id', clientId);
+  return fusionnerComptesRendusAchat(clientId, (visites as any[]) || []);
+}
+
+/** Reporte sur des visites déjà chargées le compte-rendu envoyé au client (voir chargerVisitesAchat). */
+export async function fusionnerComptesRendusAchat(clientId: string, visites: any[]): Promise<any[]> {
+  const [{ data: crs }] = await Promise.all([
+    supabase
+      .from('visite_comptes_rendus')
+      .select('visite_id, offre_id, appreciation_globale, etat_general, points_forts, points_faibles, commentaire_libre, prochaines_etapes, medias, envoye_au_client_at, ascenseur, balcon, parking, cuisine_description')
+      .eq('client_id', clientId)
+      .not('envoye_au_client_at', 'is', null),
+  ]);
+  const parVisite = new Map<string, any>();
+  (crs || []).forEach((cr: any) => { if (cr.visite_id) parVisite.set(cr.visite_id, cr); });
+  const ouiNon = (b: any) => (b === true ? 'Oui' : b === false ? 'Non' : null);
+  return visites.map((v: any) => {
+    const cr = parVisite.get(v.id);
+    if (!cr) return v;
+    const liste = (x: any) => (Array.isArray(x) ? x.filter(Boolean).join(', ') : x || null);
+    const compteRendu = {
+      ...(v.compte_rendu && typeof v.compte_rendu === 'object' ? v.compte_rendu : {}),
+      appreciation: APPRECIATION[cr.appreciation_globale] ?? cr.appreciation_globale ?? undefined,
+      etat_general: cr.etat_general || undefined,
+      avantages: liste(cr.points_forts) || undefined,
+      inconvenients: liste(cr.points_faibles) || undefined,
+      ascenseur: ouiNon(cr.ascenseur) || undefined,
+      autres_infos: [cr.commentaire_libre, cr.cuisine_description, cr.prochaines_etapes].filter(Boolean).join('\n') || undefined,
+    };
+    const medias = [
+      ...(Array.isArray(v.medias) ? v.medias : []),
+      ...(Array.isArray(cr.medias) ? cr.medias : []),
+    ];
+    return {
+      ...v,
+      compte_rendu: compteRendu,
+      compte_rendu_at: v.compte_rendu_at || cr.envoye_au_client_at,
+      medias,
+    };
+  });
+}
+
+/** Côté personnel : ce client est-il acheteur ? (règle unique côté base : client_est_acheteur). */
+export async function estClientAcheteur(clientId?: string | null): Promise<boolean> {
+  if (!clientId) return false;
+  const { data, error } = await (supabase.rpc as any)('client_est_acheteur', { p_client_id: clientId });
+  if (error) {
+    // Repli si la fonction n'est pas disponible : même règle, lue directement.
+    const { data: c } = await supabase.from('clients').select('type_recherche, journey_type').eq('id', clientId).maybeSingle();
+    return ['acheter', 'achat', 'purchase', 'purchase_search'].includes(String(c?.type_recherche || '').toLowerCase())
+      || String(c?.journey_type || '').toLowerCase() === 'purchase_search';
+  }
+  return data === true;
+}
+
+/** Prix de vente (≥ 50'000 CHF) et non loyer mensuel : distingue un bien à l'achat d'une location. */
+export const SEUIL_PRIX_ACHAT = 50000;
+export function estPrixDAchat(prix: unknown): boolean {
+  return Number(prix) >= SEUIL_PRIX_ACHAT;
 }

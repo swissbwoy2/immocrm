@@ -1,3 +1,4 @@
+import { estPrixDAchat } from '@/lib/achatOffreActions';
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -284,13 +285,21 @@ export default function AdminOffresEnvoyees() {
   useEffect(() => {
     const offreId = searchParams.get('offreId');
     if (!offreId || offres.length === 0) return;
+    const ouvrir = (target: any) => {
+      setSelectedOffre(target);
+      setDetailDialogOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('offreId');
+      setSearchParams(next, { replace: true });
+    };
     const target = offres.find((o) => o.id === offreId);
-    if (!target) return;
-    setSelectedOffre(target);
-    setDetailDialogOpen(true);
-    const next = new URLSearchParams(searchParams);
-    next.delete('offreId');
-    setSearchParams(next, { replace: true });
+    if (target) { ouvrir(target); return; }
+    // Offre hors des offres chargées (liste tronquée) : on la charge directement.
+    let alive = true;
+    supabase.from('offres').select('*').eq('id', offreId).maybeSingle().then(({ data }) => {
+      if (alive && data) ouvrir(data);
+    });
+    return () => { alive = false; };
   }, [offres, searchParams, setSearchParams]);
 
   useEffect(() => {
@@ -899,7 +908,7 @@ export default function AdminOffresEnvoyees() {
 
                       <div className="flex flex-wrap items-center gap-4 text-sm">
                         <span className="font-bold text-primary text-base">
-                          CHF {offre.prix.toLocaleString()}/mois
+                          CHF {offre.prix.toLocaleString()}{estPrixDAchat(offre.prix) ? ' · prix de vente' : '/mois'}
                         </span>
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <User className="w-4 h-4" />
@@ -1239,7 +1248,7 @@ export default function AdminOffresEnvoyees() {
           )}
 
           <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
-            {selectedOffre && !['candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu', 'refusee'].includes(selectedOffre.statut || '') && (
+            {selectedOffre && !estPrixDAchat(selectedOffre.prix) && !['candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu', 'refusee'].includes(selectedOffre.statut || '') && (
               <Button
                 variant="outline"
                 onClick={handleMarkCandidatureDeposee}
@@ -1304,7 +1313,7 @@ export default function AdminOffresEnvoyees() {
             <div className="space-y-4">
               <div className="p-3 bg-muted rounded-lg">
                 <p className="font-medium">{selectedOffre.titre || selectedOffre.adresse}</p>
-                <p className="text-sm text-muted-foreground">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
+                <p className="text-sm text-muted-foreground">CHF {selectedOffre.prix.toLocaleString()}{estPrixDAchat(selectedOffre.prix) ? ' · prix de vente' : '/mois'}</p>
               </div>
 
               <div className="space-y-2">

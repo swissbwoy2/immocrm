@@ -179,8 +179,30 @@ export interface AchatActionsHandlers {
 }
 
 /** Bloc « prochaine étape » : une seule action claire par bien (identique carte et fiche). */
+const chf = (v: any) => (Number(v) > 0 ? `CHF ${Math.round(Number(v)).toLocaleString('fr-CH')}` : null);
+const dateCH = (v: any) => (v ? new Date(v).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : null);
+
+/** Suite après l'acceptation : notaire, acte authentique, remise des clés. */
+function SuiteNotaire({ notaire }: { notaire?: any | null }) {
+  if (notaire?.statut === 'cles_remises') {
+    return <p className="text-sm text-muted-foreground">Clés remises{notaire.date_remise_cles ? ` le ${dateCH(notaire.date_remise_cles)}` : ''}. Félicitations, vous êtes chez vous !</p>;
+  }
+  if (notaire?.statut === 'signe' || (notaire?.date_signature && new Date(notaire.date_signature) <= new Date())) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Acte authentique signé{notaire.date_signature ? ` le ${dateCH(notaire.date_signature)}` : ''}.
+        {notaire.date_remise_cles ? ` Remise des clés prévue le ${dateCH(notaire.date_remise_cles)}.` : ' La date de remise des clés vous sera communiquée.'}
+      </p>
+    );
+  }
+  if (notaire?.date_rdv) {
+    return <p className="text-sm text-muted-foreground">Rendez-vous chez le notaire le {formatVisite(notaire.date_rdv)}{notaire.notaire_nom ? ` (${notaire.notaire_nom})` : ''}.</p>;
+  }
+  return <p className="text-sm text-muted-foreground">Votre conseiller organise le rendez-vous chez le notaire et vous en communique la date.</p>;
+}
+
 export function AchatProchaineEtape({
-  offre, visitesDuBien, handlers, busy, compact, demandeEnvoyee = false,
+  offre, visitesDuBien, handlers, busy, compact, demandeEnvoyee = false, negociation = null, notaire = null,
 }: {
   offre: any;
   visitesDuBien: any[];
@@ -188,6 +210,10 @@ export function AchatProchaineEtape({
   busy?: boolean;
   compact?: boolean;
   demandeEnvoyee?: boolean;
+  /** Négociation liée à ce bien dans le dossier d'achat (purchase_negotiations.offre_id). */
+  negociation?: any | null;
+  /** Étape notaire du dossier d'achat (affichée une fois l'offre acceptée). */
+  notaire?: any | null;
 }) {
   const etape = etapeAchat(offre, visitesDuBien, demandeEnvoyee);
   const prochaine = prochaineVisite(visitesDuBien);
@@ -283,15 +309,60 @@ export function AchatProchaineEtape({
   }
 
   if (etape === 'offre') {
+    const n = negociation;
+    if (n?.statut === 'acceptee') {
+      return (
+        <>
+          <p className="text-sm font-semibold text-foreground">Votre offre d'achat est acceptée 🎉</p>
+          <div className="mt-1"><SuiteNotaire notaire={notaire} /></div>
+        </>
+      );
+    }
+    if (n?.statut === 'envoyee') {
+      return (
+        <>
+          <p className="text-sm font-semibold text-foreground">Offre transmise au vendeur</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {chf(n.montant_offre) ? `Montant proposé : ${chf(n.montant_offre)}. ` : ''}Votre conseiller vous informe dès la réponse.
+          </p>
+        </>
+      );
+    }
+    if (n?.statut === 'contre_offre') {
+      return (
+        <>
+          <p className="text-sm font-semibold text-foreground">Le vendeur a fait une contre-offre</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {chf(n.contre_offre) ? `Contre-offre : ${chf(n.contre_offre)}. ` : ''}Votre conseiller vous appelle pour en discuter.
+          </p>
+        </>
+      );
+    }
+    if (n?.statut === 'refusee') {
+      return (
+        <>
+          <p className="text-sm font-semibold text-foreground">Offre non retenue par le vendeur</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">Votre conseiller poursuit la recherche et vous propose d'autres biens.</p>
+        </>
+      );
+    }
     return (
-      <p className="text-sm text-muted-foreground">
-        Votre souhait d'offre d'achat est transmis. Votre conseiller vous recontacte pour la préparer et négocier.
-      </p>
+      <>
+        <p className="text-sm font-semibold text-foreground">Offre d'achat en préparation</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {chf(n?.montant_offre) ? `Montant envisagé : ${chf(n.montant_offre)}. ` : ''}Votre conseiller vous recontacte pour la préparer et négocier.
+        </p>
+      </>
     );
   }
 
   if (etape === 'acceptee') {
-    return <p className="text-sm font-medium text-foreground">Bonne nouvelle : votre offre d'achat est acceptée.</p>;
+    return (
+      <>
+        <p className="text-sm font-semibold text-foreground">Votre offre d'achat est acceptée 🎉</p>
+        <div className="mt-1"><SuiteNotaire notaire={notaire} /></div>
+      </>
+    );
   }
 
   return (

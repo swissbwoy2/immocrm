@@ -71,7 +71,7 @@ export default function FinancementAchat() {
             <h1 className="text-[26px] font-semibold tracking-tight text-foreground md:text-[28px]">Mon financement</h1>
             <p className="mt-1 text-[15px] text-muted-foreground">Capacité d'achat, fonds propres, statut bancaire et co-acquéreurs.</p>
           </div>
-          <FinancingEditorDialog financing={financing} onSave={updateFinancing} />
+          <FinancingEditorDialog financing={financing} onSave={updateFinancing} mode="client" />
         </header>
 
         <AchatFinancingCard computed={computed} settings={settings} statutBancaire={financing?.statut_bancaire} />
