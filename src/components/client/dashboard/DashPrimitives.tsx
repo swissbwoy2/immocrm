@@ -112,7 +112,7 @@ export function DashFilterPills<K extends string>({ options, value, onChange, la
   label?: string;
 }) {
   return (
-    <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label={label}>
+    <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-3 pt-1 md:-mx-1 md:px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label={label}>
       {options.map((o) => {
         const active = o.key === value;
         return (
@@ -122,13 +122,13 @@ export function DashFilterPills<K extends string>({ options, value, onChange, la
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.key)}
-            className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors duration-150 ${
-              active ? 'border-foreground bg-foreground text-background' : 'border-border bg-background text-foreground hover:border-foreground/60'
+            className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-sm font-medium active:scale-[0.96] ${
+              active ? 'imr-lg-tint' : 'imr-lg-glass'
             }`}
           >
             {o.label}
             {typeof o.count === 'number' && (
-              <span className={`text-xs ${active ? 'text-background/70' : 'text-muted-foreground'}`}>{o.count}</span>
+              <span className={`text-xs ${active ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>{o.count}</span>
             )}
           </button>
         );

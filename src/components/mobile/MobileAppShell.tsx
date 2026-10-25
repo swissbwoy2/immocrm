@@ -24,9 +24,13 @@ export function MobileAppShell({ children }: { children: ReactNode }) {
   const isStaff = userRole === 'admin' || userRole === 'agent';
   const parcours = useClientParcours(isClient);
   const glassNav = isClientGlassNav(userRole, parcours);
-  // Compteurs non lus (table notifications de l'utilisateur) : client, et admin/agent pour l'icône Messagerie.
-  const unread = useClientUnread(isClient || isStaff ? user?.id ?? null : null);
-  const messagerieHref = isClient ? '/client/messagerie' : isStaff ? `/${userRole}/messagerie` : null;
+  // Compteurs non lus (table notifications de l'utilisateur) pour l'icône Messagerie et la barre du bas.
+  const unread = useClientUnread(user?.id ?? null);
+  const messagerieHref = isClient ? '/client/messagerie'
+    : isStaff ? `/${userRole}/messagerie`
+    : userRole === 'proprietaire' ? '/proprietaire/messagerie'
+    : userRole === 'candidat' ? '/candidat/messages'
+    : null;
 
   // Coquille native uniquement : verrouille le scroll du document (html/body)
   // pour que seule la zone scrollable interne bouge. N'impacte pas le web public.

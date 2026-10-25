@@ -466,7 +466,7 @@ export default function Messagerie() {
 
   return (
     <MessengerSplitLayout
-      className="h-[calc(100dvh-3.5rem)] lg:h-[100dvh]"
+      className={`h-[calc(100dvh-3.5rem)] lg:h-[100dvh] [.imr-mobile-shell_&]:h-full`}
       conversationsList={conversationsList}
       chatView={chatView}
       chatHeader={chatHeader}
