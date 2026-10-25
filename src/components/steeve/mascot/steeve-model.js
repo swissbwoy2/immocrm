@@ -45,8 +45,10 @@ export function createSteeveModel() {
     clearcoat: 1, clearcoatRoughness: 0.12,
     specularColor: '#ffffff',
   });
-  const silver = material('Steeve / silver terminal details', {
-    color: '#a8afb3', roughness: 0.27, metalness: 0.8,
+  // Traits du visage (« cheveux » en haut, « barbe » en bas, et les + des coins) : anthracite comme les yeux,
+  // pour rester lisibles à la taille du widget (l'argent du kit disparaissait sur la coque blanche).
+  const silver = material('Steeve / anthracite terminal strokes (hair and beard)', {
+    color: '#2a2f33', roughness: 0.32, metalness: 0.35,
     clearcoat: 0.6, clearcoatRoughness: 0.15,
   });
   const jacket = material('Steeve / tailored ivory jacket', {
@@ -172,19 +174,20 @@ export function createSteeveModel() {
   }
 
   function terminalMark(name, shape, x, y) {
-    const geometry = extrude(shape, 0.010, 0.0025);
+    const geometry = extrude(shape, 0.014, 0.004);
     const vertices = geometry.attributes.position;
     for (let index = 0; index < vertices.count; index += 1) {
       const z = headFrontZ(vertices.getX(index) + x, vertices.getY(index) + y);
-      vertices.setZ(index, vertices.getZ(index) + z + 0.007);
+      vertices.setZ(index, vertices.getZ(index) + z + 0.012);
     }
     geometry.computeVertexNormals();
     geometry.computeBoundingSphere();
     mesh(name, geometry, silver, head, [x, y, 0]);
   }
 
-  const outer = 0.055;
-  const inner = 0.010;
+  // Traits épaissis (×1,7) pour la lecture à 78–170 px ; mêmes positions que la version validée.
+  const outer = 0.068;
+  const inner = 0.017;
   const plus = polygon([
     [-inner, -outer], [inner, -outer], [inner, -inner], [outer, -inner],
     [outer, inner], [inner, inner], [inner, outer], [-inner, outer],
@@ -195,7 +198,7 @@ export function createSteeveModel() {
   }
   for (const y of [-0.51, 0.51]) {
     for (let index = -3; index <= 3; index += 1) {
-      terminalMark(`terminal-dash-${y}-${index}`, roundedRectangle(0.087, 0.019, 0.007), index * 0.145, y);
+      terminalMark(`terminal-dash-${y}-${index}`, roundedRectangle(0.098, 0.034, 0.012), index * 0.145, y);
     }
   }
 

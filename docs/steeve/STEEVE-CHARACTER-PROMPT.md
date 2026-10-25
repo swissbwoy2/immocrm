@@ -22,7 +22,7 @@ Il ne déclenche aucun service de génération. Le modèle validé est en code d
 | Élément | Valeur |
 |---|---|
 | Tête (coque) | demi-axes 0,80 × 0,72 × 0,43 ; profil « coussin » (exposant 0,60) ; centre à y = 2,86 |
-| Signes de terminal | 4 « + » aux coins (±0,60 ; ±0,51) et 2 lignes de 7 tirets (pas 0,145) en haut et en bas, collés à la coque |
+| Traits du visage (signes de terminal) | 4 « + » aux coins (±0,60 ; ±0,51) et 2 lignes de 7 tirets (pas 0,145) : en haut les « cheveux », en bas la « barbe ». Tirets 0,098 × 0,034, « + » de 0,136 et 0,034 d'épaisseur, collés à la coque |
 | Visage | groupe détaché, 0,56 devant le centre de la tête (dos des pièces à 0,06–0,10 de la coque) |
 | Yeux | volumes arrondis 0,13 × 0,265 × 0,10, à x = ±0,285, y = +0,14 |
 | Bouche | à y = −0,205 : trait neutre 0,215 × 0,037 ; sourire (tube) ; trois points (réflexion) ; « o » (curiosité) |
@@ -36,7 +36,7 @@ Il ne déclenche aucun service de génération. Le modèle validé est en code d
 |---|---|---|
 | Coque de tête | `#f6f8fa` | verre dépoli nacré : transmission 0,52, rugosité 0,17, vernis 1 |
 | Visage, bouton | `#24282b` | anthracite satiné, légèrement métallique |
-| Signes de terminal | `#a8afb3` | argent |
+| Traits du visage (cheveux, barbe, +) | `#2a2f33` | anthracite, comme les yeux, pour rester lisibles à la taille du widget |
 | Veste, manches | `#e9eae6` | ivoire, très légère translucidité |
 | Revers, poche | `#d9ddda` | satin |
 | Chemise, col, manchettes, pochette | `#ffffff` | coton mat |
@@ -60,7 +60,8 @@ en haut à gauche et contre-jour à droite. Fond toujours transparent.
 ## Règles de cohérence
 
 1. Pas de violet, de rose ni de nouvelle couleur de marque. Le personnage reste blanc, ivoire et anthracite.
-2. Le visage reste en volumes détachés devant la coque. Jamais une texture ni un dessin plat.
+2. Le visage reste en volumes détachés devant la coque. Jamais une texture ni un dessin plat. Les traits
+   « cheveux » et « barbe » restent visibles à toutes les tailles.
 3. Le costume reste complet (veste, revers, chemise, col, cravate, bouton, poche, pantalon, chaussures).
    Il ne se déforme pas pendant les gestes.
 4. Aucun logo, texte publicitaire ni nouveau personnage ajouté au modèle.
