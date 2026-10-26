@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, RotateCcw, Send, Sparkles } from 'lucide-react';
+import { Loader2, Send, Sparkles } from 'lucide-react';
 import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSteeveAdminThread } from '@/hooks/useSteeveAdminThread';
 import { cn } from '@/lib/utils';
 
-type Msg = { role: 'user' | 'assistant'; content: string; tools?: string[] };
-
-const STORAGE_PREFIX = 'logisorama.steeve-copilote.';
 const SUGGESTIONS = [
   'Quoi de neuf aujourd’hui ?',
   'Quelles activations dois-je encaisser ?',
@@ -27,46 +23,27 @@ const TOOL_LABEL: Record<string, string> = {
 };
 
 /**
- * Steeve, copilote de l'admin (lecture seule) : il répond à partir des synthèses de la base
- * (chiffres clés, activations, blocages, agents, fiche client) et propose des actions, sans rien modifier.
- * Le fil reste dans l'onglet (sessionStorage, par compte) et disparaît à sa fermeture.
+ * Steeve, copilote de l'admin : il répond à partir des synthèses de la base (chiffres clés, activations,
+ * blocages, agents, fiche client) et agit avec ses outils. C'est la même conversation que la bulle et la
+ * conversation « Steeve » de la messagerie (une seule, en base, qui suit partout).
  */
 export function SteeveCopilotCard() {
-  const { user } = useAuth();
-  const key = user ? `${STORAGE_PREFIX}${user.id}` : null;
-  const [messages, setMessages] = useState<Msg[]>(() => {
-    if (!key) return [];
-    try { return JSON.parse(sessionStorage.getItem(key) || '[]'); } catch { return []; }
-  });
+  const thread = useSteeveAdminThread(true);
+  const { messages, busy: sending } = thread;
+  const asked = messages.some((m) => m.role === 'user');
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (key) {
-      try { sessionStorage.setItem(key, JSON.stringify(messages.slice(-30))); } catch { /* stockage indisponible */ }
-    }
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, key]);
+  }, [messages.length, sending, thread.error]);
 
   const send = async (text: string) => {
     const content = text.trim().slice(0, 2000);
     if (!content || sending) return;
-    const next: Msg[] = [...messages, { role: 'user', content }];
-    setMessages(next);
     setDraft('');
-    setSending(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('steeve-admin', {
-        body: { messages: next.slice(-12).map(({ role, content: c }) => ({ role, content: c })) },
-      });
-      if (error || !data?.reply) throw error ?? new Error('réponse vide');
-      setMessages((prev) => [...prev, { role: 'assistant', content: String(data.reply), tools: Array.isArray(data.tools) ? data.tools : [] }]);
-    } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: "Je n'arrive pas à répondre pour le moment. Vérifie que la fonction steeve-admin est déployée et que la clé de l'API Anthropic est configurée." }]);
-    } finally {
-      setSending(false);
-    }
+    const ok = await thread.send(content);
+    if (!ok) setDraft(content);
   };
 
   return (
@@ -78,14 +55,9 @@ export function SteeveCopilotCard() {
         <div className="min-w-0 flex-1 pt-0.5">
           <h2 id="steeve-copilote-title" className="text-base font-semibold leading-snug text-foreground md:text-[17px]">Copilote</h2>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Demande à Steeve l'état de l'activité. Il lit les chiffres et les dossiers, propose des priorités, et ne lance une tâche (demande de QR, relance, envoi de dossier) que si tu le lui demandes.
+            Demande à Steeve l'état de l'activité. C'est la même conversation que la bulle et la messagerie : il y pose aussi ses demandes à valider, tu réponds ici ou là-bas.
           </p>
         </div>
-        {messages.length > 0 && (
-          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => setMessages([])} aria-label="Nouvelle conversation" title="Nouvelle conversation">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-        )}
       </header>
 
       <div
@@ -94,8 +66,22 @@ export function SteeveCopilotCard() {
         aria-live="polite"
         aria-label="Conversation avec le copilote"
       >
-        {messages.length === 0 && !sending && (
-          <div className="flex h-full flex-col justify-end gap-3">
+        {thread.loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Chargement de la conversation…</div>
+        )}
+        {messages.map((m) => (
+          <div key={m.id} className={cn('flex flex-col', m.role === 'user' ? 'items-end' : 'items-start')}>
+            <div className={cn('max-w-[88%] whitespace-pre-wrap break-words rounded-[20px] px-3.5 py-2.5 text-[15px] leading-relaxed sm:max-w-[80%]',
+              m.role === 'user' ? 'imr-lg-tint rounded-br-md text-primary-foreground' : 'imr-lg-glass rounded-bl-md text-foreground')}>
+              {m.content}
+            </div>
+            {m.role === 'assistant' && m.tools && m.tools.length > 0 && (
+              <p className="mt-1 px-1 text-[13px] text-muted-foreground">Sources : {m.tools.map((t) => TOOL_LABEL[t] || t).join(', ')}</p>
+            )}
+          </div>
+        ))}
+        {!asked && !sending && !thread.loading && (
+          <div className="flex flex-col gap-3 pt-1">
             <p className="text-sm text-muted-foreground">Suggestions :</p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTIONS.map((s) => (
@@ -106,19 +92,11 @@ export function SteeveCopilotCard() {
             </div>
           </div>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={cn('flex flex-col', m.role === 'user' ? 'items-end' : 'items-start')}>
-            <div className={cn('max-w-[88%] whitespace-pre-wrap break-words rounded-[20px] px-3.5 py-2.5 text-[15px] leading-relaxed sm:max-w-[80%]',
-              m.role === 'user' ? 'imr-lg-tint rounded-br-md text-primary-foreground' : 'imr-lg-glass rounded-bl-md text-foreground')}>
-              {m.content}
-            </div>
-            {m.role === 'assistant' && m.tools && m.tools.length > 0 && (
-              <p className="mt-1 px-1 text-[13px] text-muted-foreground">Sources : {m.tools.map((t) => TOOL_LABEL[t] || t).join(', ')}</p>
-            )}
-          </div>
-        ))}
         {sending && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Steeve consulte les données…</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Steeve s’en occupe…</div>
+        )}
+        {thread.error && !sending && (
+          <div role="alert" className="imr-lg-glass max-w-[88%] rounded-[20px] rounded-bl-md px-3.5 py-2.5 text-[15px] text-muted-foreground">{thread.error}</div>
         )}
       </div>
 
@@ -136,7 +114,7 @@ export function SteeveCopilotCard() {
           aria-label="Question pour le copilote"
           className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-border/70 bg-background px-4 py-2.5 text-base outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
         />
-        <Button type="submit" size="icon" className="h-11 w-11 shrink-0" disabled={sending || !draft.trim()} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
+        <Button type="submit" size="icon" className="h-11 w-11 shrink-0" disabled={sending || !draft.trim() || !thread.conversationId} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
       </form>
     </section>
   );

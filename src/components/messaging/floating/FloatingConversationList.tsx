@@ -46,6 +46,8 @@ export function FloatingConversationList({ onSelect }: Props) {
       let convQuery = supabase
         .from('conversations')
         .select('id, agent_id, client_id, conversation_type, last_message_at')
+        // La conversation « Steeve » de l'admin s'ouvre par Steeve (en tête du panneau), pas dans cette liste.
+        .or('conversation_type.is.null,conversation_type.neq.steeve-admin')
         .order('last_message_at', { ascending: false })
         .range(from, to);
 

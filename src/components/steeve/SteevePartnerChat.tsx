@@ -7,11 +7,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { SteeveLauncher, type SteeveCue } from '@/components/steeve/SteeveLauncher';
+import { useSteeveAdminThread } from '@/hooks/useSteeveAdminThread';
 
 export type PartnerRole = 'proprietaire' | 'annonceur' | 'apporteur';
 /** « admin » : copilote de l'administrateur (fonction steeve-admin), les autres : steeve-partner. */
 export type SteeveSpace = PartnerRole | 'admin';
-type Msg = { role: 'user' | 'assistant'; content: string };
+type Msg = { id?: string; role: 'user' | 'assistant'; content: string };
 
 const STORAGE_PREFIX = 'logisorama.steeve-partenaire.';
 const SUGGESTIONS: Record<SteeveSpace, string[]> = {
@@ -28,8 +29,9 @@ const INTRO: Record<SteeveSpace, string> = {
 };
 
 /**
- * Conversation avec Steeve pour un partenaire (propriétaire, annonceur, apporteur). Le fil reste dans l'onglet
- * (sessionStorage, par compte) ; le serveur vérifie le rôle et ne lit que les données de la personne connectée.
+ * Conversation avec Steeve. Admin : la conversation unique « Steeve » de la messagerie (en base, la même partout).
+ * Partenaire (propriétaire, annonceur, apporteur) : le fil reste dans l'onglet (sessionStorage, par compte) ;
+ * le serveur vérifie le rôle et ne lit que les données de la personne connectée.
  */
 export function SteevePartnerPanel({ role, onBusy }: { role: SteeveSpace; onBusy?: (b: boolean) => void }) {
   const { user } = useAuth();
@@ -43,6 +45,14 @@ export function SteevePartnerPanel({ role, onBusy }: { role: SteeveSpace; onBusy
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const thread = useSteeveAdminThread(admin);
+  const shown: Msg[] = admin ? thread.messages : messages;
+  const busy = admin ? thread.busy : sending;
+  const asked = shown.some((m) => m.role === 'user');
+
+  useEffect(() => {
+    if (admin) onBusy?.(thread.busy);
+  }, [admin, thread.busy, onBusy]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -54,22 +64,28 @@ export function SteevePartnerPanel({ role, onBusy }: { role: SteeveSpace; onBusy
   }, [user?.id]);
 
   useEffect(() => {
-    if (key) { try { sessionStorage.setItem(key, JSON.stringify(messages.slice(-30))); } catch { /* stockage indisponible */ } }
+    if (key && !admin) { try { sessionStorage.setItem(key, JSON.stringify(messages.slice(-30))); } catch { /* stockage indisponible */ } }
+  }, [messages, key, admin]);
+  useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, key]);
+  }, [shown.length, busy, thread.error]);
 
   const send = async (text: string) => {
     const content = text.trim().slice(0, 2000);
-    if (!content || sending) return;
+    if (!content || busy) return;
+    if (admin) {
+      setDraft('');
+      const ok = await thread.send(content);
+      if (!ok) setDraft(content);
+      return;
+    }
     const next: Msg[] = [...messages, { role: 'user', content }];
     setMessages(next);
     setDraft('');
     setSending(true);
     onBusy?.(true);
     try {
-      const { data, error } = admin
-        ? await supabase.functions.invoke('steeve-admin', { body: { messages: next.slice(-12) } })
-        : await supabase.functions.invoke('steeve-partner', { body: { role, messages: next.slice(-12) } });
+      const { data, error } = await supabase.functions.invoke('steeve-partner', { body: { role, messages: next.slice(-12) } });
       if (error || !data?.reply) throw error ?? new Error('réponse vide');
       setMessages((prev) => [...prev, { role: 'assistant', content: String(data.reply) }]);
     } catch {
@@ -83,26 +99,30 @@ export function SteevePartnerPanel({ role, onBusy }: { role: SteeveSpace; onBusy
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={listRef} data-imr-chat-scroll className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm" aria-live="polite">
-        <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 leading-relaxed">
-          {admin ? 'Salut' : 'Bonjour'}{prenom ? ` ${prenom}` : ''}, {INTRO[role]}
-        </div>
-        {messages.length === 0 && (
+        {(!admin || (!thread.loading && shown.length === 0)) && (
+          <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 leading-relaxed">
+            {admin ? 'Salut' : 'Bonjour'}{prenom ? ` ${prenom}` : ''}, {INTRO[role]}
+          </div>
+        )}
+        {admin && thread.loading && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Chargement de notre conversation…</div>}
+        {!asked && !(admin && thread.loading) && (
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS[role].map((s) => (
               <button key={s} type="button" onClick={() => void send(s)} className="min-h-[36px] rounded-full border border-primary/40 bg-background px-3 py-1 text-xs hover:bg-primary/10">{s}</button>
             ))}
           </div>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+        {shown.map((m, i) => (
+          <div key={m.id ?? i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
             <div className={cn('max-w-[90%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 leading-relaxed',
               m.role === 'user' ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-muted')}>{m.content}</div>
           </div>
         ))}
-        {sending && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Steeve regarde vos données…</div>}
+        {busy && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> {admin ? 'Steeve s’en occupe…' : 'Steeve regarde vos données…'}</div>}
+        {admin && thread.error && !busy && <div role="alert" className="max-w-[90%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 leading-relaxed text-muted-foreground">{thread.error}</div>}
       </div>
       <form className="flex items-end gap-2 border-t border-border/70 p-3" onSubmit={(e) => { e.preventDefault(); void send(draft); }}>
-        {messages.length > 0 && (
+        {!admin && messages.length > 0 && (
           <Button type="button" variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => setMessages([])} aria-label="Nouvelle conversation" title="Nouvelle conversation">
             <RotateCcw className="h-4 w-4" />
           </Button>
@@ -117,7 +137,7 @@ export function SteevePartnerPanel({ role, onBusy }: { role: SteeveSpace; onBusy
           aria-label="Question pour Steeve"
           className="max-h-28 min-h-[40px] flex-1 resize-none rounded-xl border bg-background px-3 py-2 text-base outline-none focus:border-primary sm:text-sm"
         />
-        <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={sending || !draft.trim()} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
+        <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={busy || !draft.trim() || (admin && !thread.conversationId)} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
       </form>
     </div>
   );
