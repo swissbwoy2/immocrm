@@ -18815,6 +18815,10 @@ export type Database = {
         Returns: Json
       }
       steeve_client_servi: { Args: { p_client_id: string }; Returns: boolean }
+      steeve_compte_rendu_client: {
+        Args: { p_client_id: string; p_now?: string }
+        Returns: string
+      }
       steeve_demande_recherche_offres: {
         Args: { p_client_id: string; p_note?: string; p_source: string }
         Returns: Json
@@ -18831,11 +18835,17 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: boolean
       }
+      steeve_envoyer_point_clients: {
+        Args: { p_cle: string; p_client_id?: string; p_dry_run?: boolean }
+        Returns: Json
+      }
       steeve_executant_autorise: { Args: never; Returns: boolean }
       steeve_flag_offre: {
         Args: { p_note: string; p_offre_id: string }
         Returns: undefined
       }
+      steeve_fmt_chf: { Args: { p: number }; Returns: string }
+      steeve_fmt_pieces: { Args: { p: number }; Returns: string }
       steeve_formulaire_recu: {
         Args: { p_canal: string; p_client_id: string; p_offre_id: string }
         Returns: Json
@@ -18876,6 +18886,10 @@ export type Database = {
           p_text: string
           p_user: string
         }
+        Returns: string
+      }
+      steeve_presentation_client: {
+        Args: { p_client_id: string }
         Returns: string
       }
       steeve_proprio_apercu: { Args: never; Returns: Json }
