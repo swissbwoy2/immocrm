@@ -100,8 +100,9 @@ export function stripUntrusted(text: string): string {
 
 function stripContacts(text: string, allowed: RegExp): string {
   return text
-    // Adresses e-mail (le personnel et les tiers ne sont jamais cités).
-    .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi, '[adresse retirée]')
+    // Adresses e-mail (le personnel et les tiers ne sont jamais cités) ; seules les boîtes générales de l'agence restent.
+    .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi,
+      (m) => (/^(?:info|visites|relocation|support)@(?:immo-rama|logisorama)\.ch$/i.test(m) ? m : '[adresse retirée]'))
     // Liens explicites (http, https, www), quel que soit le domaine : seuls les sites de l'agence restent.
     .replace(/\b(?:https?:\/\/|www\.)[^\s<>"]+/gi, (match) => {
       const url = match.replace(/[.,;:!?)\]]+$/, '');

@@ -1,4 +1,5 @@
-// Steeve, lot 5 : lecture des réponses des régies et annonceurs (visites@ et relocation@).
+// Steeve, lot 5 : lecture des réponses des régies et annonceurs (visites@, relocation@ et, dans info@ — compte
+// Flatfox de l'agence —, les messages des annonceurs Flatfox, confirmations de visite et e-mails des régies connues).
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON des fonctions de la base et de l’API, validées champ par champ */
 // Chaque e-mail relevé (mailbox_emails) est classé par Claude dans une liste fermée, rattaché à son bien et à
 // son client, puis traité selon la routine de surveillance (partie A) :
@@ -51,7 +52,7 @@ const CLASSIFY_TOOL = {
   },
 };
 
-const SYSTEM = `Tu classes les e-mails reçus par l'agence immobilière Immo-rama.ch (Suisse) dans ses boîtes visites@ et relocation@ : réponses de régies, de gérances, de bailleurs privés et notifications de portails (Flatfox, immobilier.ch, Homegate) au sujet de demandes de visite et de candidatures pour ses clients.
+const SYSTEM = `Tu classes les e-mails reçus par l'agence immobilière Immo-rama.ch (Suisse) dans ses boîtes visites@, relocation@ et info@ (compte Flatfox de l'agence) : réponses de régies, de gérances, de bailleurs privés et notifications de portails (Flatfox, immobilier.ch, Homegate) au sujet de demandes de visite et de candidatures pour ses clients.
 Catégories :
 - visite_fixee : une date ET une heure de visite précises sont proposées ou confirmées (ex. Flatfox « Confirmé: Visite … @ date heure »). Une liste de plusieurs créneaux au choix n'est PAS une visite fixée (question_regie).
 - visite_annulee : une visite prévue est annulée (« Annulé: … »).
@@ -94,6 +95,23 @@ export function zurichToUtc(local: string): Date | null {
 
 const domainOf = (e: string) => e.toLowerCase().split('@')[1] ?? '';
 const portalSender = (e: string) => /@(flatfox\.ch|immobilier\.ch|homegate\.ch|immoscout24\.ch)$/i.test(e) || /(^|\.)flatfox\.ch$/i.test(domainOf(e));
+
+/**
+ * E-mail relevé dans info@ par la boîte de l'application (pas d'en-têtes d'authentification) : accepté comme sûr
+ * seulement s'il vient du relais Flatfox et que son objet nomme l'adresse de chaque bien visé (« Nouveau message -
+ * <adresse> ») ou la référence de l'annonce (« Confirmé: Visite … (93301.02.0033) »). Acceptation et bail restent vérifiés par l'équipe.
+ */
+export function portalTrusted(mail: any, cls: any, targets: any[]): boolean {
+  if (mail.source !== 'app' || !/(^|\.)flatfox\.ch$/i.test(domainOf(String(mail.from_email ?? '')))) return false;
+  if (['candidature_acceptee', 'bail_envoye'].includes(cls.categorie) || !targets.length) return false;
+  const subject = normalize(String(mail.subject ?? ''));
+  return targets.every((o) => {
+    const sk = streetKey(o.adresse);
+    if (sk && subject.includes(sk)) return true;
+    // « Confirmé: Visite Appartement 2 pièces (93301.02.0033) @ … » : la référence de l'annonce suffit.
+    return (o.references ?? []).some((r: string) => { const n = normalize(r); return n.length >= 6 && subject.includes(n); });
+  });
+}
 
 /** Offres concernées par l'e-mail : même rue et numéro (ou même référence / lien), filtrées par client si nommé. */
 export function matchOffres(mail: any, cls: any, offres: any[]) {
@@ -174,11 +192,11 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
     const needsClient = ['candidature_acceptee', 'candidature_refusee', 'pieces_demandees', 'bail_envoye', 'lien_demande_location', 'qr_en_piece_jointe'].includes(cls.categorie);
     const targets = needsClient ? byClient : trusted;
     const resume = String(cls.resume ?? '').slice(0, 200);
-    const sure = cls.confiance === 'haute' && m.auth_verified === true;
+    const sure = cls.confiance === 'haute' && (m.auth_verified === true || portalTrusted(m, cls, targets));
 
     // Rattachement impossible ou expéditeur non authentifié : l'équipe vérifie.
     if (!targets.length || (needsClient && targets.length > 1) || !sure) {
-      const motif = !targets.length ? 'E-mail non rattaché à une offre' : targets.length > 1 && needsClient ? 'Plusieurs clients possibles' : !m.auth_verified ? 'Expéditeur non authentifié' : 'Lecture incertaine';
+      const motif = !targets.length ? 'E-mail non rattaché à une offre' : targets.length > 1 && needsClient ? 'Plusieurs clients possibles' : cls.confiance !== 'haute' ? 'Lecture incertaine' : m.source === 'app' ? 'Relevé dans info@ sans authentification (à vérifier)' : 'Expéditeur non authentifié';
       await journal(db, { ...base, offre_id: targets[0]?.offre_id ?? null, client_id: targets.length === 1 ? targets[0].client_id : null, statut: blank ? 'a_blanc' : 'a_valider', motif: `${motif} : ${resume}` }, key);
       if (!blank) await alert(db, `steeve-mail-${m.id}`, 'Réponse à vérifier', `${motif}. ${m.from_email} — « ${base.objet} » : ${resume}`, '/admin/steeve', ['visite_annulee', 'candidature_acceptee', 'bail_envoye', 'pieces_demandees', 'question_regie'].includes(cls.categorie) ? 'urgent' : 'normal');
       continue;
