@@ -4,6 +4,7 @@ import { renderCorporateEmail, emailButton, emailNotice, emailParagraph, escapeE
 import { formatDateFR } from '../_shared/date-fr.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { canSendNotificationEmail } from '../_shared/notificationEmailOptOut.ts';
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +32,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  // Réservé aux appels internes (cron, base, équipe) : aucun appel anonyme ni client.
+  const refus = await denyIfNotInternal(req, corsHeaders, "send-document-update-reminders");
+  if (refus) return refus;
 
   try {
     const supabase = createClient(
