@@ -36,7 +36,7 @@ export default function ConnexionAnnonceur() {
         .maybeSingle();
 
       if (annonceur?.statut === 'suspendu') {
-        await withAuthStorageRemoval(() => supabase.auth.signOut());
+        await withAuthStorageRemoval(() => supabase.auth.signOut({ scope: 'local' }));
         throw new Error('Votre compte a été suspendu. Contactez le support.');
       }
 
