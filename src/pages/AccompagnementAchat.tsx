@@ -58,7 +58,7 @@ export default function AccompagnementAchat() {
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-8">Le parcours en 6 grandes étapes</h2>
         <div className="space-y-4">
           {[
-            { n: 1, title: 'Activation', text: 'Vous payez l\'acompte CHF 2\'499 et signez votre mandat d\'accompagnement. Rendez-vous de cadrage avec votre conseiller.' },
+            { n: 1, title: 'Activation', text: 'Vous payez l\'acompte CHF 2\'500 et signez votre mandat d\'accompagnement. Rendez-vous de cadrage avec votre conseiller.' },
             { n: 2, title: 'Financement', text: 'Documents transmis, capacité d\'achat calculée, dossier envoyé à notre partenaire bancaire. Validation reçue en 24-48 h.' },
             { n: 3, title: 'Recherche', text: 'Critères définis, biens sélectionnés et analysés par notre équipe en fonction de votre budget validé.' },
             { n: 4, title: 'Visites & contre-visites', text: 'Notre courtier visite à votre place, vous remet un rapport, et vous accompagne en contre-visite sur les biens retenus.' },

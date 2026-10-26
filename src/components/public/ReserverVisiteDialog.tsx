@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
+import { CalendarCheck, CheckCircle2, Loader2, BellRing, UserRound } from 'lucide-react';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
-import { toast } from 'sonner';
-import { CalendarCheck, CheckCircle2, Loader2, BellRing, UserRound, LogIn } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Choice, Field, PrimaryButton, SecondaryButton, SheetDialog } from '@/components/funnel-ui/FunnelKit';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -96,8 +91,8 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
     if (connecte && accountOnly && !done) setAccountOnly(false);
   }, [connecte, accountOnly, done]);
 
-  const seConnecter = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const seConnecter = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const email = identifiants.email.trim().toLowerCase();
     if (!EMAIL_RE.test(email) || !identifiants.password) return toast.error('Saisissez votre e-mail et votre mot de passe');
     setConnexionEnCours(true);
@@ -223,145 +218,133 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
     }
   };
 
-  const formulaireReservation = (
-    <form onSubmit={submit} className="space-y-4">
-      {!accountOnly && <div className="space-y-2">
-        <Label>Choisissez un créneau *</Label>
-        <div className="grid gap-2">
-          {creneaux.map((c) => (
-            <button
-              type="button"
-              key={c.id}
-              disabled={c.full}
-              onClick={() => !c.full && setCreneauId(c.id)}
-              className={cn(
-                'flex min-h-[44px] items-center justify-between gap-2 rounded-lg border px-4 py-2 text-left text-sm transition-colors',
-                c.full ? 'cursor-not-allowed border-border opacity-50' :
-                creneauId === c.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-muted',
-              )}
-            >
-              <span className="capitalize">{formatCreneau(c.date_heure)}</span>
-              {c.full && (
-                <span className="text-xs font-medium text-destructive">Complet</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>}
-      {demandeInfos && (
-        <>
-          {connecte && (
-            <p className="text-sm text-muted-foreground">Il manque {champsManquants.length > 1 ? 'quelques informations' : 'une information'} à votre profil pour réserver.</p>
-          )}
-          {(!connecte || champsManquants.includes('prenom') || champsManquants.includes('nom')) && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {(!connecte || champsManquants.includes('prenom')) && <div className="space-y-1"><Label htmlFor="rv-prenom">Prénom *</Label><Input id="rv-prenom" maxLength={80} value={form.prenom} onChange={(e) => setForm({ ...form, prenom: e.target.value })} /></div>}
-              {(!connecte || champsManquants.includes('nom')) && <div className="space-y-1"><Label htmlFor="rv-nom">Nom *</Label><Input id="rv-nom" maxLength={80} value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} /></div>}
-            </div>
-          )}
-          {(!connecte || champsManquants.includes('email')) && <div className="space-y-1"><Label htmlFor="rv-email">E-mail *</Label><Input id="rv-email" type="email" maxLength={255} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>}
-          {(!connecte || champsManquants.includes('telephone')) && <div className="space-y-1"><Label htmlFor="rv-tel">Téléphone *</Label><Input id="rv-tel" type="tel" maxLength={30} placeholder="+41 XX XXX XX XX" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></div>}
-        </>
-      )}
-      {connecte ? (
-        <p className="text-xs text-muted-foreground">Vous réservez avec votre compte{form.email ? ` (${form.email})` : ''}.</p>
-      ) : (
-        <p className="text-xs text-muted-foreground">Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail. Déjà un compte ?{' '}
-          <button type="button" className="text-primary hover:underline" onClick={() => setOnglet('connexion')}>Connectez-vous</button></p>
-      )}
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={() => close(false)}>Annuler</Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarCheck className="mr-2 h-4 w-4" />}{accountOnly && !connecte ? 'Créer mon compte' : 'Réserver'}
-        </Button>
-      </div>
-    </form>
-  );
-
-  const formulaireConnexion = (
-    <form onSubmit={seConnecter} className="space-y-4">
-      {messageConnexion && (
-        <p className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">{messageConnexion}</p>
-      )}
-      <div className="space-y-1"><Label htmlFor="rv-login-email">E-mail *</Label><Input id="rv-login-email" type="email" autoComplete="email" maxLength={255} value={identifiants.email} onChange={(e) => setIdentifiants({ ...identifiants, email: e.target.value })} /></div>
-      <div className="space-y-1">
-        <div className="flex items-center justify-between"><Label htmlFor="rv-login-password">Mot de passe *</Label><ForgotPasswordLink defaultEmail={identifiants.email.trim()} /></div>
-        <Input id="rv-login-password" type="password" autoComplete="current-password" value={identifiants.password} onChange={(e) => setIdentifiants({ ...identifiants, password: e.target.value })} />
-      </div>
-      <Button type="submit" className="w-full" disabled={connexionEnCours}>
-        {connexionEnCours ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}Se connecter
-      </Button>
-      <GoogleSignInButton next={`${window.location.pathname}${window.location.search}`} />
-      <p className="text-xs text-muted-foreground">Une fois connecté, {accountOnly ? 'vous pourrez être averti des prochaines dates.' : 'vous choisissez votre créneau sans rien ressaisir.'}</p>
-    </form>
-  );
-
   if (showTropTard) {
     return (
-      <Dialog open={open} onOpenChange={close}>
-        <DialogContent className="sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle>Trop tard !</DialogTitle>
-            <DialogDescription>
-              {connecte
-                ? 'Tu viens de louper le dernier créneau disponible ! Enregistre cette annonce pour être prévenu dès qu’une nouvelle date s’ouvre.'
-                : 'Tu viens de louper le dernier créneau disponible ! Connecte-toi pour recevoir les prochaines dates disponibles avant tout le monde !'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => close(false)}>Annuler</Button>
+      <SheetDialog
+        open={open}
+        onOpenChange={close}
+        icon={<BellRing className="h-5 w-5" strokeWidth={1.8} />}
+        title="Trop tard !"
+        description={connecte
+          ? 'Tu viens de louper le dernier créneau disponible ! Enregistre cette annonce pour être prévenu dès qu’une nouvelle date s’ouvre.'
+          : 'Tu viens de louper le dernier créneau disponible ! Connecte-toi pour recevoir les prochaines dates disponibles avant tout le monde !'}
+        footer={
+          <>
+            <SecondaryButton onClick={() => close(false)}>Annuler</SecondaryButton>
             {connecte ? (
-              <Button disabled={alerting} onClick={etreAverti}>
-                {alerting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellRing className="mr-2 h-4 w-4" />}
-                Être averti si un créneau se libère
-              </Button>
+              <PrimaryButton loading={alerting} onClick={etreAverti}>Être averti si un créneau se libère</PrimaryButton>
             ) : (
-              <Button onClick={() => { setAccountOnly(true); setOnglet('connexion'); }}>Créer mon compte / Se connecter</Button>
+              <PrimaryButton onClick={() => { setAccountOnly(true); setOnglet('connexion'); }}>Créer mon compte / Se connecter</PrimaryButton>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      />
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><CalendarCheck className="h-5 w-5 text-primary" />{accountOnly ? 'Créer mon compte / Se connecter' : 'Réserver une visite'}</DialogTitle>
-          <DialogDescription>{annonce.titre}</DialogDescription>
-        </DialogHeader>
+  const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const showForm = !done && !isLoading && !(creneaux.length === 0 && !accountOnly);
+  const enConnexion = !connecte && onglet === 'connexion';
 
-        {done ? (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <CheckCircle2 className="h-12 w-12 text-primary" />
-            <p className="text-lg font-semibold text-foreground">{accountOnly ? 'Votre demande est enregistrée' : 'Votre visite est réservée'}</p>
-            <p className="text-sm text-muted-foreground">{connecte ? 'Vous la retrouverez dans votre espace ; la confirmation vous a aussi été envoyée par e-mail.' : accountOnly ? 'Vos identifiants vous ont été envoyés par e-mail.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.'}</p>
-            {connecte ? (
-              <Button className="mt-2" onClick={allerAMonEspace}><UserRound className="mr-2 h-4 w-4" />Aller à mon espace</Button>
-            ) : accountOnly ? (
-              <Button className="mt-2" onClick={() => { setDone(false); setIdentifiants({ email: form.email.trim().toLowerCase(), password: '' }); setOnglet('connexion'); }}>Se connecter</Button>
-            ) : (
-              <Button className="mt-2" onClick={() => close(false)}>Fermer</Button>
-            )}
-          </div>
-        ) : isLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : creneaux.length === 0 && !accountOnly ? (
-          <p className="py-6 text-sm text-muted-foreground">Aucun créneau de visite disponible pour le moment.</p>
+  return (
+    <SheetDialog
+      open={open}
+      onOpenChange={close}
+      wide
+      icon={done ? <CheckCircle2 className="h-5 w-5" strokeWidth={1.8} /> : <CalendarCheck className="h-5 w-5" strokeWidth={1.8} />}
+      title={done ? (accountOnly ? 'Votre demande est enregistrée' : 'Votre visite est réservée') : accountOnly ? 'Créer mon compte / Se connecter' : 'Réserver une visite'}
+      description={done
+        ? (connecte ? 'Vous la retrouverez dans votre espace ; la confirmation vous a aussi été envoyée par e-mail.' : accountOnly ? 'Si votre compte vient d’être créé, vos identifiants vous ont été envoyés par e-mail. Sinon, connectez-vous avec votre compte existant.' : 'Vérifiez votre e-mail pour vos identifiants et la confirmation.')
+        : annonce.titre}
+      footer={done ? (
+        connecte ? (
+          <PrimaryButton full onClick={allerAMonEspace}><UserRound className="h-4 w-4" />Aller à mon espace</PrimaryButton>
+        ) : accountOnly ? (
+          <PrimaryButton full onClick={() => { setDone(false); setIdentifiants({ email: form.email.trim().toLowerCase(), password: '' }); setOnglet('connexion'); }}>Se connecter</PrimaryButton>
         ) : (
-          connecte ? formulaireReservation : (
-            <Tabs value={onglet} onValueChange={(v) => setOnglet(v as 'connexion' | 'nouveau')} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="connexion">J'ai déjà un compte</TabsTrigger>
-                <TabsTrigger value="nouveau">Créer mon compte</TabsTrigger>
-              </TabsList>
-              <TabsContent value="connexion" className="mt-0">{formulaireConnexion}</TabsContent>
-              <TabsContent value="nouveau" className="mt-0">{formulaireReservation}</TabsContent>
-            </Tabs>
-          )
-        )}
-      </DialogContent>
-    </Dialog>
+          <PrimaryButton full onClick={() => close(false)}>Fermer</PrimaryButton>
+        )
+      ) : showForm ? (
+        <>
+          <SecondaryButton onClick={() => close(false)}>Annuler</SecondaryButton>
+          {enConnexion ? (
+            <PrimaryButton loading={connexionEnCours} onClick={() => seConnecter()}>Se connecter</PrimaryButton>
+          ) : (
+            <PrimaryButton loading={submitting} onClick={() => submit({ preventDefault() {} } as React.FormEvent)}>
+              {accountOnly && !connecte ? 'Créer mon compte' : 'Réserver'}
+            </PrimaryButton>
+          )}
+        </>
+      ) : undefined}
+    >
+      {done ? null : isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[#222222]" /></div>
+      ) : creneaux.length === 0 && !accountOnly ? (
+        <p className="py-4 text-[15px] text-[#3f3f3f]">Aucun créneau de visite disponible pour le moment.</p>
+      ) : (
+        <div className="grid gap-4">
+          {!connecte && (
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-[#f2f2f2] p-1" role="tablist" aria-label="Compte">
+              {([['connexion', "J'ai déjà un compte"], ['nouveau', 'Créer mon compte']] as const).map(([k, l]) => (
+                <button key={k} type="button" role="tab" aria-selected={onglet === k} onClick={() => setOnglet(k)}
+                  className={`min-h-11 rounded-full px-3 text-[14px] font-semibold transition-colors ${onglet === k ? 'bg-white text-[#222222] shadow-sm' : 'text-[#6a6a6a]'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          {enConnexion ? (
+            <form onSubmit={seConnecter} noValidate className="grid gap-3">
+              {messageConnexion && (
+                <p className="rounded-lg bg-[#f7f7f7] px-3 py-2 text-[14px] text-[#222222]">{messageConnexion}</p>
+              )}
+              <Field id="rv-login-email" label="E-mail" type="email" inputMode="email" maxLength={255} value={identifiants.email} onChange={(v) => setIdentifiants((i) => ({ ...i, email: v }))} autoComplete="email" />
+              <Field id="rv-login-password" label="Mot de passe" type="password" value={identifiants.password} onChange={(v) => setIdentifiants((i) => ({ ...i, password: v }))} autoComplete="current-password" />
+              <div className="flex justify-end"><ForgotPasswordLink defaultEmail={identifiants.email.trim()} /></div>
+              <GoogleSignInButton next={`${window.location.pathname}${window.location.search}`} />
+              <p className="text-[13px] leading-[1.4] text-[#6a6a6a]">Une fois connecté, {accountOnly ? 'vous pourrez être averti des prochaines dates.' : 'vous choisissez votre créneau sans rien ressaisir.'}</p>
+              <button type="submit" className="sr-only">Se connecter</button>
+            </form>
+          ) : (
+        <form onSubmit={submit} noValidate className="grid gap-4">
+          {!accountOnly && (
+            <div>
+              <p className="mb-3 text-[14px] font-semibold text-[#222222]">Choisissez un créneau</p>
+              <div className="grid gap-3">
+                {creneaux.map((c, i) => (
+                  <Choice key={c.id} index={i} disabled={c.full} selected={creneauId === c.id}
+                    onClick={() => !c.full && setCreneauId(c.id)}
+                    label={formatCreneau(c.date_heure).replace(/^./, (m) => m.toUpperCase())}
+                    hint={c.full ? 'Complet' : c.restantes != null ? `${c.restantes} place${c.restantes > 1 ? 's' : ''} restante${c.restantes > 1 ? 's' : ''}` : undefined} />
+                ))}
+              </div>
+            </div>
+          )}
+          {demandeInfos && (
+            <div className="grid gap-3">
+              {connecte && (
+                <p className="text-[15px] text-[#3f3f3f]">Il manque {champsManquants.length > 1 ? 'quelques informations' : 'une information'} à votre profil pour réserver.</p>
+              )}
+              {(!connecte || champsManquants.includes('prenom') || champsManquants.includes('nom')) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {(!connecte || champsManquants.includes('prenom')) && <Field id="rv-prenom" label="Prénom" maxLength={80} value={form.prenom} onChange={set('prenom')} autoComplete="given-name" />}
+                  {(!connecte || champsManquants.includes('nom')) && <Field id="rv-nom" label="Nom" maxLength={80} value={form.nom} onChange={set('nom')} autoComplete="family-name" />}
+                </div>
+              )}
+              {(!connecte || champsManquants.includes('email')) && <Field id="rv-email" label="E-mail" type="email" inputMode="email" maxLength={255} value={form.email} onChange={set('email')} autoComplete="email" />}
+              {(!connecte || champsManquants.includes('telephone')) && <Field id="rv-tel" label="Téléphone" type="tel" inputMode="tel" maxLength={30} value={form.telephone} onChange={set('telephone')} autoComplete="tel" placeholder="+41 …" />}
+            </div>
+          )}
+          <p className="text-[13px] leading-[1.4] text-[#6a6a6a]">
+            {connecte
+              ? `Vous réservez avec votre compte${form.email ? ` (${form.email})` : ''}.`
+              : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}
+          </p>
+          <button type="submit" className="sr-only">Réserver</button>
+        </form>
+          )}
+        </div>
+      )}
+    </SheetDialog>
   );
 }
