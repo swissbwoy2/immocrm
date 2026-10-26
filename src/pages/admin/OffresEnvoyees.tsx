@@ -251,6 +251,12 @@ function OfferTimeline({ currentStatut }: { currentStatut: string | null }) {
   );
 }
 
+
+/** Adresse sans accents ni ponctuation, en minuscules, pour comparer « Av. de France 71 » et « avenue de france 71 ». */
+const normalizeAddress = (v: string | null | undefined) =>
+  (v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const addressWords = (v: string) => normalizeAddress(v).split(' ').filter(w => w.length >= 2 || /^\d+$/.test(w));
+
 export default function AdminOffresEnvoyees() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
@@ -267,6 +273,10 @@ export default function AdminOffresEnvoyees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
+  // Filtre par adresse : cherché dans TOUTES les offres en base (pas seulement celles déjà chargées).
+  const [addressFilter, setAddressFilter] = useState("");
+  const [addressResults, setAddressResults] = useState<Offre[] | null>(null);
+  const [addressLoading, setAddressLoading] = useState(false);
   
   // Dialog state
   const [selectedOffre, setSelectedOffre] = useState<Offre | null>(null);
@@ -384,6 +394,56 @@ export default function AdminOffresEnvoyees() {
       setLoading(false);
     }
   };
+
+  // Recherche par adresse côté base, avec un court délai pendant la frappe.
+  useEffect(() => {
+    const words = addressWords(addressFilter);
+    if (!words.length) {
+      setAddressResults(null);
+      setAddressLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAddressLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        let query = supabase.from('offres').select('*');
+        // Lettres accentuables remplacées par « _ » : « geneve » trouve aussi « Genève » ; le tri exact se fait ensuite.
+        for (const w of words) query = query.ilike('adresse', `%${w.replace(/[\\%_]/g, '').replace(/[aeiouyc]/g, '_')}%`);
+        const { data, error } = await query.order('date_envoi', { ascending: false }).limit(1000);
+        if (error) throw error;
+        if (cancelled) return;
+        const rows = (data || []) as Offre[];
+        setAddressResults(rows);
+        const missing = rows.map(o => o.id).filter(id => !visitesMap.has(id));
+        if (missing.length) {
+          const { data: vis } = await supabase
+            .from('visites')
+            .select('id, offre_id, date_visite, statut, notes, feedback_agent')
+            .in('offre_id', missing.slice(0, 500))
+            .order('date_visite', { ascending: true });
+          if (!cancelled && vis?.length) {
+            setVisitesMap(prev => {
+              const next = new Map(prev);
+              vis.forEach((v: any) => {
+                const list = next.get(v.offre_id) || [];
+                if (!list.some(x => x.id === v.id)) next.set(v.offre_id, [...list, v]);
+              });
+              return next;
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Erreur recherche par adresse:', e);
+        if (!cancelled) toast.error('Recherche par adresse impossible');
+      } finally {
+        if (!cancelled) setAddressLoading(false);
+      }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(timer); };
+    // visitesMap volontairement absent : on ne relance pas la recherche quand les visites arrivent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressFilter]);
 
   const loadAllOffres = async () => {
     setLoadingMore(true);
@@ -657,7 +717,9 @@ export default function AdminOffresEnvoyees() {
   };
 
   // Filtrage
-  const filteredOffres = offres.filter(offre => {
+  const addressTerms = addressWords(addressFilter);
+  const filteredOffres = (addressResults ?? offres).filter(offre => {
+    const matchesAddress = !addressTerms.length || addressTerms.every(w => normalizeAddress(offre.adresse).includes(w));
     const matchesSearch = 
       offre.adresse.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (offre.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
@@ -667,7 +729,7 @@ export default function AdminOffresEnvoyees() {
     const matchesStatus = statusFilter === "all" || offre.statut === statusFilter;
     const matchesAgent = agentFilter === "all" || offre.agent_id === agentFilter;
     
-    return matchesSearch && matchesStatus && matchesAgent;
+    return matchesAddress && matchesSearch && matchesStatus && matchesAgent;
   });
 
   // Regroupement : 1 offre logique = même agent + même adresse + même prix + même jour d'envoi
@@ -795,7 +857,20 @@ export default function AdminOffresEnvoyees() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Adresse (ex. Av. de France 71)"
+                  value={addressFilter}
+                  onChange={(e) => setAddressFilter(e.target.value)}
+                  className="bg-background/50 pl-9 pr-9"
+                  aria-label="Filtrer par adresse"
+                />
+                {addressLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
               <Input
                 placeholder="Rechercher (adresse, client, agent...)"
                 value={searchTerm}
@@ -834,6 +909,12 @@ export default function AdminOffresEnvoyees() {
                 </SelectContent>
               </Select>
             </div>
+            {addressResults && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {addressResults.length >= 1000 ? 'Plus de 1000' : addressResults.length} offre{addressResults.length > 1 ? 's' : ''} en base pour « {addressFilter.trim()} »
+                {addressResults.length >= 1000 ? ' : précisez l’adresse.' : ' (toutes dates confondues).'}
+              </p>
+            )}
           </CardContent>
         </Card>
 
