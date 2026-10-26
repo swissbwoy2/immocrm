@@ -54,6 +54,16 @@ serve(async (req) => {
       throw new Error('Invalid authentication token');
     }
 
+    // Réservé à l'équipe (et à l'agent IA) : personne d'autre ne peut joindre des documents clients à un e-mail.
+    const { data: rolesAppelant } = await supabase.from('user_roles').select('role').eq('user_id', user.id);
+    const rolesAutorises = ['admin', 'agent', 'coursier', 'closeur', 'automation_operator', 'agent_ia'];
+    if (!(rolesAppelant ?? []).some((r: { role: string }) => rolesAutorises.includes(r.role))) {
+      return new Response(JSON.stringify({ error: 'Accès refusé' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Get user's email configuration
     const { data: emailConfig, error: configError } = await supabase
       .from('email_configurations')
