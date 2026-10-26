@@ -20,7 +20,7 @@ serve(async (req) => {
   // Réservé à l'équipe (pages admin « Factures AbaNinja » et « Demandes d'activation ») : sans ce contrôle,
   // n'importe qui pouvait faire envoyer une facture à n'importe quelle adresse.
   const caller = await verifyInternalCaller(req);
-  if (!caller.ok || !['service', 'secret', 'staff'].includes(caller.kind)) {
+  if (!caller.ok || !(caller.kind === 'service' || caller.kind === 'secret' || (caller.kind === 'staff' && (caller.roles ?? []).includes('admin')))) {
     return new Response(JSON.stringify({ success: false, error: 'Accès refusé' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 403,

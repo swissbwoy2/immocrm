@@ -326,6 +326,13 @@ async function handleVisite(deps: Required<OperatorDeps>, mode: Mode, taskId: st
   const now = deps.now();
   const { data: t } = await db.from('steeve_actions').select('id, offre_id, client_id, source, idempotency_key, note').eq('id', taskId).single();
   const { data: o } = await db.from('offres').select('id, adresse, lien_annonce, statut').eq('id', t.offre_id).single();
+  // Visite déjà enregistrée pour ce bien (fixée entre-temps, par e-mail, chat ou admin) : aucune demande en plus.
+  const { data: dejaVisite } = await db.from('visites').select('id').eq('offre_id', t.offre_id).eq('client_id', t.client_id)
+    .not('statut', 'in', '(annulee,refusee)').limit(1);
+  if (dejaVisite?.length && !String(t.note ?? '').startsWith('Visite déléguée')) {
+    await db.from('steeve_actions').update({ statut: 'fait', note: 'Visite déjà enregistrée pour ce bien : aucune demande envoyée.', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', taskId);
+    return;
+  }
   const { data: ref } = await db.from('contacts_annonceurs').select('reference').eq('offre_id', t.offre_id).not('reference', 'is', null).limit(1);
   const { data: emails } = await db.rpc('steeve_emails_regie', { p_offre_id: t.offre_id });
   const { subject, text } = visiteEmail({ adresse: o.adresse, reference: ref?.[0]?.reference ?? null, disponibilites: t.source === 'client' ? t.note : null });

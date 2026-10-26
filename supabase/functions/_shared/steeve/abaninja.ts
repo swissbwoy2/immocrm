@@ -71,6 +71,13 @@ const num = (v: any): number | null => {
 };
 const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
+/** Brouillon, annulée, extournée ou modèle : jamais renvoyée ni montrée comme due. */
+export function factureEmise(inv: any): boolean {
+  if (inv?.isTemplate || inv?.is_template) return false;
+  const st = String(inv?.status ?? '').toLowerCase();
+  return !/(draft|brouillon|entwurf|cancel|annul|storn|void|delete)/.test(st);
+}
+
 export function toFacture(inv: any): Facture {
   const total = num(inv?.documentTotal ?? inv?.total);
   const open = num(inv?.openAmount ?? inv?.open_amount);
@@ -89,19 +96,22 @@ export function toFacture(inv: any): Facture {
   };
 }
 
-/** Factures du client : par l'adresse e-mail de son compte, son nom exact, ou une facture déjà liée à son dossier. */
-export function facturesDuClient(invoices: any[], ident: { emails: string[]; nom: string | null; factures_connues: string[] }): Facture[] {
+/**
+ * Factures du client : par l'adresse e-mail de son compte ou une facture déjà liée à son dossier. Le nom seul n'est
+ * accepté que pour l'admin (parNom), jamais pour un client : un homonyme ne doit jamais voir la facture d'un autre.
+ */
+export function facturesDuClient(invoices: any[], ident: { emails: string[]; nom: string | null; factures_connues: string[] }, opts: { parNom?: boolean } = {}): Facture[] {
   const emails = new Set((ident.emails ?? []).map((e) => e.toLowerCase()));
   const known = new Set(ident.factures_connues ?? []);
   const nom = norm(ident.nom);
   return invoices
     .filter((inv) => {
-      if (inv?.isTemplate || inv?.is_template) return false;
+      if (!factureEmise(inv)) return false;
       const f = toFacture(inv);
       if (known.has(f.uuid)) return true;
       if (f.destinataire_email && emails.has(f.destinataire_email)) return true;
       const rn = norm(inv?.receiver?.name);
-      return nom.length >= 5 && rn === nom;
+      return opts.parNom === true && nom.length >= 5 && rn === nom;
     })
     .map(toFacture)
     .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))

@@ -61,7 +61,7 @@ BEGIN
    ORDER BY date_visite DESC LIMIT 1;
   IF FOUND THEN
     IF v.statut = 'effectuee' THEN
-      RETURN jsonb_build_object('ok', true, 'deja', true, 'bien', o.adresse, 'visite_id', v.id,
+      RETURN jsonb_build_object('ok', true, 'deja', true, 'bien', o.adresse, 'visite_id', v.id, 'postulation_possible', public.visite_permet_postuler(v.id),
                                 'le', to_char(v.date_visite AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'));
     END IF;
     UPDATE public.visites
@@ -170,6 +170,7 @@ BEGIN
    WHERE offre_id = p_offre_id AND client_id = o.client_id AND coalesce(statut, '') NOT IN ('annulee', 'refusee')
      AND (p_date IS NULL OR abs(extract(epoch FROM date_visite - p_date)) < 3600)
      AND (p_statut <> 'effectuee' OR date_visite <= now())
+     AND (p_statut = 'effectuee' OR p_date IS NOT NULL OR date_visite > now())
    ORDER BY CASE WHEN p_statut = 'effectuee' THEN -extract(epoch FROM date_visite) ELSE extract(epoch FROM date_visite) END
    LIMIT 1;
   IF NOT FOUND THEN
@@ -287,6 +288,12 @@ BEGIN
   IF NOT FOUND THEN
     RETURN jsonb_build_object('ok', false, 'motif', 'offre introuvable');
   END IF;
+  -- Une réponse n'est retenue que si l'agence a contacté l'annonceur de cette offre (réponse à notre demande).
+  IF p_source = 'reponse' AND NOT EXISTS (SELECT 1 FROM public.contacts_annonceurs ca WHERE ca.offre_id = p_offre_id)
+     AND NOT EXISTS (SELECT 1 FROM public.steeve_actions sa WHERE sa.offre_id = p_offre_id AND sa.kind IN ('demande_visite', 'demande_qr', 'relance_annonceur')
+                       AND sa.statut IN ('fait', 'en_attente_regie', 'en_attente_formulaire')) THEN
+    RETURN jsonb_build_object('ok', false, 'motif', 'aucune demande envoyée à cet annonceur : réponse non retenue');
+  END IF;
   v_ligne := concat_ws(' — ', v_nom, v_email, v_tel);
   IF position(coalesce(v_email, v_tel) IN coalesce(o.contact_annonceur, '')) = 0 THEN
     UPDATE public.offres SET contact_annonceur = left(concat_ws(E'\n', nullif(o.contact_annonceur, ''), v_ligne || ' (' || p_source || ')'), 1000), updated_at = now()
@@ -300,7 +307,9 @@ BEGIN
       SET nom = coalesce(EXCLUDED.nom, steeve_carnet_annonceurs.nom),
           email = coalesce(EXCLUDED.email, steeve_carnet_annonceurs.email),
           telephone = coalesce(EXCLUDED.telephone, steeve_carnet_annonceurs.telephone),
-          source = EXCLUDED.source, verifie = true, maj_par = EXCLUDED.maj_par, updated_at = now();
+          source = EXCLUDED.source, verifie = true, maj_par = EXCLUDED.maj_par, updated_at = now()
+      -- Un contact donné par l'admin n'est jamais remplacé automatiquement.
+      WHERE steeve_carnet_annonceurs.source <> 'admin' OR EXCLUDED.source = 'admin';
   END IF;
   -- Demandes bloquées faute d'adresse (cette offre, et les offres de la même agence) : reprises par Steeve.
   IF v_email IS NOT NULL THEN
@@ -308,13 +317,25 @@ BEGIN
        SET statut = 'a_faire', motif = NULL, verrou_par = NULL, verrou_jeton = NULL, verrou_jusqu = NULL, updated_at = now(), derniere_activite = now(),
            etapes = public.steeve_tache_evt(a.etapes, jsonb_build_object('le', now(), 'evt', 'relancee', 'source', 'contact_' || p_source))
      WHERE a.kind IN ('demande_visite', 'demande_qr') AND a.statut = 'bloque' AND a.responsable = 'steeve'
-       AND (a.motif ILIKE 'Aucune adresse%' OR a.motif ILIKE 'Plusieurs régies possibles%')
-       AND (a.offre_id = p_offre_id OR (v_cle IS NOT NULL AND a.offre_id IN (SELECT id FROM public.offres WHERE public.steeve_annonceur_cle(lien_annonce) = v_cle)));
+       AND (a.motif ILIKE 'Aucune adresse vérifiée de l''annonceur%' OR a.motif ILIKE 'Aucune adresse e-mail vérifiée%')
+       AND (a.offre_id = p_offre_id OR (v_cle IS NOT NULL AND a.offre_id IN (SELECT id FROM public.offres WHERE public.steeve_annonceur_cle(lien_annonce) = v_cle)))
+       -- Jamais une seconde demande : annonce Flatfox (chat), visite déjà fixée ou annonceur déjà contacté.
+       AND NOT EXISTS (SELECT 1 FROM public.offres ox WHERE ox.id = a.offre_id AND ox.lien_annonce ILIKE '%flatfox.ch%')
+       AND NOT (a.kind = 'demande_visite' AND EXISTS (SELECT 1 FROM public.visites v WHERE v.offre_id = a.offre_id AND v.client_id = a.client_id
+                                                        AND coalesce(v.statut, '') NOT IN ('annulee', 'refusee')))
+       AND NOT (a.kind = 'demande_visite' AND EXISTS (SELECT 1 FROM public.contacts_annonceurs ca WHERE ca.offre_id = a.offre_id AND ca.envoye_le > now() - interval '30 days'));
     GET DIAGNOSTICS v_reprises = ROW_COUNT;
     UPDATE public.steeve_actions
        SET statut = 'fait', preuve = left('contact relevé (' || p_source || ') : ' || v_ligne, 1000), executed_at = now(), updated_at = now(),
            verrou_par = NULL, verrou_jeton = NULL, verrou_jusqu = NULL
      WHERE kind = 'recherche_contact' AND statut IN ('a_faire', 'bloque', 'en_cours') AND offre_id = p_offre_id
+       AND (verrou_jusqu IS NULL OR verrou_jusqu <= now() OR p_source <> 'admin');
+  END IF;
+  IF v_email IS NULL THEN
+    -- Téléphone seulement : la recherche s'arrête, l'admin appelle (liste « à appeler »).
+    UPDATE public.steeve_actions
+       SET statut = 'bloque', motif = left('À appeler : ' || v_ligne, 500), updated_at = now(), verrou_par = NULL, verrou_jeton = NULL, verrou_jusqu = NULL
+     WHERE kind = 'recherche_contact' AND statut IN ('a_faire', 'en_cours') AND offre_id = p_offre_id
        AND (verrou_jusqu IS NULL OR verrou_jusqu <= now() OR p_source <> 'admin');
   END IF;
   RETURN jsonb_build_object('ok', true, 'agence', v_cle, 'contact', v_ligne, 'demandes_reprises', v_reprises);
@@ -400,9 +421,9 @@ BEGIN
                            AND f.kind IN ('demande_visite', 'demande_qr') AND f.statut NOT IN ('bloque', 'bloque_acces', 'echec', 'annule'))
        ORDER BY a.offre_id, a.created_at DESC
     )
-    SELECT jsonb_build_object('total', (SELECT count(*) FROM b), 'liste', coalesce(jsonb_agg(x ORDER BY x.depuis), '[]'::jsonb))
+    SELECT jsonb_build_object('total', (SELECT count(*) FROM b), 'liste', coalesce(jsonb_agg(x ORDER BY x._t), '[]'::jsonb))
       FROM (
-        SELECT b.offre_id, o.adresse AS bien, o.lien_annonce AS annonce, o.prix,
+        SELECT b.created_at AS _t, b.offre_id, o.adresse AS bien, o.lien_annonce AS annonce, o.prix,
                concat_ws(' ', p.prenom, p.nom) AS client, b.client_id,
                CASE b.kind WHEN 'demande_qr' THEN 'demander le QR / formulaire de demande de location' ELSE 'demander une date de visite' END AS a_demander,
                coalesce(k.nom, (regexp_match(o.lien_annonce, '/([a-z0-9-]+)-[0-9]+/[^/]+$', 'i'))[1]) AS agence,
@@ -438,7 +459,9 @@ BEGIN
   IF NOT FOUND OR t.offre_id IS NULL THEN
     RETURN jsonb_build_object('ok', false);
   END IF;
-  IF EXISTS (SELECT 1 FROM public.contacts_annonceurs WHERE offre_id = t.offre_id) THEN
+  IF EXISTS (SELECT 1 FROM public.contacts_annonceurs WHERE offre_id = t.offre_id)
+     OR EXISTS (SELECT 1 FROM public.steeve_actions sa WHERE sa.offre_id = t.offre_id AND sa.kind IN ('demande_visite', 'demande_qr')
+                  AND sa.statut IN ('fait', 'en_attente_regie', 'en_attente_formulaire', 'a_faire', 'en_cours')) THEN
     RETURN jsonb_build_object('ok', false, 'contact_existant', true);
   END IF;
   -- Annonce Flatfox : demande par le chat (routine Chrome) ; sinon e-mail de Steeve, ou recherche du contact si aucune adresse.
@@ -590,6 +613,8 @@ AS $$
 DECLARE
   r record;
   v_rue text;
+  v_nom text;
+  v_regie text[];
   o record;
 BEGIN
   SELECT sa.preuve, sa.executed_at, sa.mailbox, sa.destinataire INTO r FROM public.steeve_actions sa
@@ -607,9 +632,12 @@ BEGIN
                               'detail', left(r.preuve_envoi, 200));
   END IF;
   -- E-mail réellement parti d'une boîte de l'agence (dossier « Envoyés ») vers une adresse externe, qui nomme le bien.
+  -- Seulement vers la régie / l'annonceur connu de l'offre, et nommant ce client (un autre client du même immeuble ne compte pas).
   SELECT adresse INTO o FROM public.offres WHERE id = p_offre_id;
   v_rue := lower(trim(split_part(coalesce(o.adresse, ''), ',', 1)));
-  IF length(v_rue) >= 6 THEN
+  SELECT lower(nullif(trim(p.nom), '')) INTO v_nom FROM public.clients c JOIN public.profiles p ON p.id = c.user_id WHERE c.id = p_client_id;
+  SELECT array_agg(DISTINCT split_part(e, '@', 2)) INTO v_regie FROM unnest(public.steeve_emails_regie(p_offre_id)) e;
+  IF length(v_rue) >= 6 AND length(coalesce(v_nom, '')) >= 3 AND coalesce(array_length(v_regie, 1), 0) > 0 THEN
     SELECT m.sent_at, s.address AS boite, m.subject, m.to_list INTO r
       FROM public.mail_messages m
       JOIN public.shared_mailboxes s ON s.id = m.mailbox_id
@@ -619,7 +647,8 @@ BEGIN
        AND (lower(coalesce(m.subject, '')) LIKE '%' || v_rue || '%' OR lower(left(coalesce(m.body_text, ''), 4000)) LIKE '%' || v_rue || '%')
        AND (lower(coalesce(m.subject, '')) ~ '(candidature|dossier|demande de location|postulation|bewerbung)'
             OR coalesce(m.has_attachments, false))
-       AND m.to_list::text !~* '@(immo-rama|logisorama)\.ch'
+       AND (lower(coalesce(m.subject, '')) LIKE '%' || v_nom || '%' OR lower(left(coalesce(m.body_text, ''), 4000)) LIKE '%' || v_nom || '%')
+       AND EXISTS (SELECT 1 FROM unnest(v_regie) d WHERE lower(m.to_list::text) LIKE '%@' || d || '%')
      ORDER BY m.sent_at DESC NULLS LAST LIMIT 1;
     IF FOUND THEN
       RETURN jsonb_build_object('prouve', true, 'type', 'email_envoye', 'le', to_char(r.sent_at AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY HH24:MI'),
@@ -629,14 +658,15 @@ BEGIN
   RETURN jsonb_build_object('prouve', false,
     'declare_depose', EXISTS (SELECT 1 FROM public.offres WHERE id = p_offre_id AND statut IN ('candidature_deposee', 'acceptee'))
                       OR EXISTS (SELECT 1 FROM public.candidatures ca WHERE ca.offre_id = p_offre_id AND ca.client_id = p_client_id
-                                   AND ca.statut IN ('acceptee', 'bail_conclu', 'signature_effectuee', 'cles_remises', 'refusee')));
+                                   AND ca.statut NOT IN ('en_attente', 'demande_postulation')));
 END;
 $$;
 REVOKE ALL ON FUNCTION public.steeve_preuve_envoi(uuid, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.steeve_preuve_envoi(uuid, uuid) TO service_role;
 
 -- « Déjà envoyé » : preuve d'envoi, décision de la régie, ou dépôt déclaré par l'équipe sur l'offre.
--- Une candidature « en attente » (statut par défaut, posé aussi par d'anciens parcours) ne suffit plus.
+-- Une candidature « en attente » (statut par défaut, posé aussi par d'anciens parcours) ne suffit plus ; tout statut
+-- au-delà (réponse, bail, signature…) compte comme envoyé.
 CREATE OR REPLACE FUNCTION public.steeve_dossier_deja_envoye(p_offre_id uuid, p_client_id uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -645,7 +675,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT EXISTS (SELECT 1 FROM public.candidatures ca WHERE ca.offre_id = p_offre_id AND ca.client_id = p_client_id
-                   AND ca.statut IN ('acceptee', 'bail_conclu', 'signature_effectuee', 'cles_remises', 'refusee'))
+                   AND ca.statut NOT IN ('en_attente', 'demande_postulation'))
       OR EXISTS (SELECT 1 FROM public.offres o WHERE o.id = p_offre_id AND o.client_id = p_client_id
                    AND o.statut IN ('candidature_deposee', 'acceptee'))
       OR EXISTS (SELECT 1 FROM public.postulations_preparees pp WHERE pp.offre_id = p_offre_id AND pp.client_id = p_client_id AND pp.statut = 'envoye')
@@ -704,7 +734,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'motif', 'Un envoi est prouvé : rien n''est remis en circuit.', 'preuve', v_preuve);
   END IF;
   IF EXISTS (SELECT 1 FROM public.candidatures ca WHERE ca.offre_id = o.id AND ca.client_id = o.client_id
-               AND ca.statut IN ('acceptee', 'bail_conclu', 'signature_effectuee', 'cles_remises', 'refusee')) THEN
+               AND ca.statut NOT IN ('en_attente', 'demande_postulation')) THEN
     RETURN jsonb_build_object('ok', false, 'motif', 'La régie a déjà répondu à cette candidature : rien n''est remis en circuit.');
   END IF;
   UPDATE public.offres SET statut = 'souhaite_postuler', updated_at = now(), postulation_demandee_at = coalesce(postulation_demandee_at, now())

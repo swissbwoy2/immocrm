@@ -207,7 +207,9 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
 
     // Réponse authentifiée d'une régie (pas un relais de portail ni une messagerie personnelle) : son adresse rejoint
     // le carnet des annonceurs, pour les prochaines demandes à la même agence.
-    if (m.auth_verified === true && !portalSender(m.from_email) && !WEBMAIL.test(domainOf(String(m.from_email ?? '')))) {
+    if (m.auth_verified === true && !portalSender(m.from_email) && !WEBMAIL.test(domainOf(String(m.from_email ?? '')))
+        && !/^(no-?reply|ne-?pas-?repondre|donotreply|notification|mailer-daemon)/i.test(String(m.from_email ?? ''))
+        && ['visite_fixee', 'lien_demande_location', 'qr_en_piece_jointe', 'inscription_visite', 'pieces_demandees'].includes(cls.categorie)) {
       for (const offreId of [...new Set(targets.map((t: any) => t.offre_id))].slice(0, 3)) {
         await db.rpc('steeve_contact_annonceur_enregistrer', { p_offre_id: offreId, p_email: m.from_email, p_telephone: null, p_nom: m.from_name ?? null, p_source: 'reponse' });
       }
@@ -224,7 +226,7 @@ async function processAttachedMails(deps: { db: any; callModel: CallModel | null
   const { db, callModel } = deps;
   if (!callModel) return;
   const now = deps.now();
-  const { data: rows } = await db.from('steeve_actions').select('id, idempotency_key, offre_id, objet')
+  const { data: rows } = await db.from('steeve_actions').select('id, idempotency_key, offre_id, objet, controles')
     .eq('kind', 'lecture_mail').eq('statut', 'a_faire').eq('controles->>rattache', 'admin').order('updated_at').limit(3);
   for (const row of rows ?? []) {
     if (deps.deadline && Date.now() > deps.deadline) break;
@@ -237,17 +239,33 @@ async function processAttachedMails(deps: { db: any; callModel: CallModel | null
       await db.from('steeve_actions').update({ statut: 'echec', motif: 'E-mail ou offre introuvable pour le rattachement.', updated_at: now.toISOString() }).eq('id', row.id);
       continue;
     }
+    const controles = row.controles ?? {};
     let cls: any;
     try {
       const r = await classifyMail(callModel, m);
       cls = r.result;
       rep.cout_usd += r.cost;
     } catch (err) {
+      // Lecture impossible : trois essais au plus, puis l'admin reprend la main (jamais de relecture payée en boucle).
+      const essais = Number(controles.essais ?? 0) + 1;
+      await db.from('steeve_actions').update({ controles: { ...controles, essais }, updated_at: now.toISOString(),
+        ...(essais >= 3 ? { statut: 'a_valider', motif: `Rattaché par l'admin mais illisible pour Steeve : à traiter à la main.` } : {}) }).eq('id', row.id);
       rep.erreurs.push(`rattachement ${mailId} : ${(err as Error).message}`);
       continue;
     }
     if (!cls || cls.categorie === 'sans_rapport') {
       await db.from('steeve_actions').update({ statut: 'fait', note: 'Rattaché par l’admin ; sans action à faire.', updated_at: now.toISOString() }).eq('id', row.id);
+      continue;
+    }
+    // L'admin a validé le rattachement de l'e-mail tel qu'il l'a vu : une relecture différente n'est pas appliquée,
+    // et une acceptation ou un bail n'est jamais annoncé au client depuis ce chemin (e-mail non authentifié).
+    const vue = String(controles.categorie ?? '');
+    if ((vue && vue !== cls.categorie) || (['candidature_acceptee', 'bail_envoye'].includes(cls.categorie) && m.auth_verified !== true)) {
+      const motif = vue && vue !== cls.categorie
+        ? `Rattaché par l'admin, mais la relecture diffère (${vue} → ${cls.categorie}) : à traiter à la main.`
+        : `Rattaché par l'admin : ${cls.categorie === 'bail_envoye' ? 'bail' : 'acceptation'} annoncé(e) par un e-mail non authentifié, à confirmer par l'équipe.`;
+      await db.from('steeve_actions').update({ statut: 'a_valider', motif: motif.slice(0, 500), controles: { ...controles, rattache: 'admin_bloque' }, updated_at: now.toISOString() }).eq('id', row.id);
+      await alert(db, `steeve-rattache-${row.id}`, 'E-mail rattaché à confirmer', `${motif} « ${String(m.subject ?? '').slice(0, 120)} »`, '/admin/steeve', 'urgent');
       continue;
     }
     rep.mails = (rep.mails ?? 0) + 1;

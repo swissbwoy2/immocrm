@@ -630,6 +630,9 @@ async function clientInvoice(ctx: ToolContext, action: 'etat' | 'renvoyer'): Pro
   if (action === 'etat') return { content: json({ factures: visible, activation }) };
 
   const ouverte = factures.find((f) => !f.payee && (f.ouvert_chf ?? 0) > 0);
+  if (!ouverte && factures.some((f) => f.ouvert_chf === null)) {
+    return { content: json({ renvoyee: false, motif: "Le montant restant dû n'est pas lisible dans la comptabilité : l'équipe vérifie et lui renvoie la facture.", factures: visible }) };
+  }
   if (!ouverte) {
     if (!factures.length) {
       const created = await insertProposal(ctx, 'facture', "Facture d'activation à émettre",
