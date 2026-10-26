@@ -1,19 +1,20 @@
 import { estPrixDAchat } from '@/lib/achatOffreActions';
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { DashBadge } from "@/components/client/dashboard/DashPrimitives";
+import { DashBadge, DashPage, DashPageHeader, DashEmptyState, DASH_CARD } from "@/components/client/dashboard/DashPrimitives";
 import { DETAIL_DIALOG, DetailHeader, DetailBody, KeyFacts, DetailSection, DetailRow, DetailText, DetailContact, DetailActions, chfDetail, dateTimeCH } from "@/components/details/DetailPrimitives";
 import { Label } from "@/components/ui/label";
 import { 
   Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward, Clock, 
-  CheckCircle, XCircle, Star, FileText, Key, Sparkles
+  CheckCircle, XCircle, Star, FileText, Key, Sparkles, Pencil, CalendarPlus
 } from "lucide-react";
+import { EditOffreDialog } from "@/components/EditOffreDialog";
+import { zurichDateTimeToIso } from "@/lib/dateZurich";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
@@ -21,7 +22,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { groupOffresByEnvoi } from "@/utils/visitesCalculator";
@@ -292,6 +292,13 @@ export default function AdminOffresEnvoyees() {
   // Visites state
   const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
 
+  // Modifier l'offre / ajouter une visite depuis le détail
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [newVisiteDate, setNewVisiteDate] = useState('');
+  const [newVisiteHeure, setNewVisiteHeure] = useState('');
+  const [newVisiteFin, setNewVisiteFin] = useState('');
+  const [addingVisite, setAddingVisite] = useState(false);
+
   const INITIAL_LIMIT = 10000;
 
   // Deep link: /admin/offres-envoyees?offreId=<id>
@@ -501,8 +508,77 @@ export default function AdminOffresEnvoyees() {
   };
 
   const handleOpenOffreDetail = (offre: Offre) => {
+    resetNewVisite();
     setSelectedOffre(offre);
     setDetailDialogOpen(true);
+  };
+
+  /** Recharge les visites d'une seule offre (après ajout ou modification). */
+  const refreshVisitesOffre = async (offreId: string) => {
+    const { data } = await supabase
+      .from('visites')
+      .select('id, offre_id, date_visite, statut, notes, feedback_agent')
+      .eq('offre_id', offreId)
+      .order('date_visite', { ascending: true });
+    setVisitesMap(prev => {
+      const next = new Map(prev);
+      next.set(offreId, (data || []) as Visite[]);
+      return next;
+    });
+  };
+
+  const resetNewVisite = () => { setNewVisiteDate(''); setNewVisiteHeure(''); setNewVisiteFin(''); };
+
+  /** Ajoute une date de visite (heure suisse) à l'offre affichée, pour son client. */
+  const handleAddVisite = async () => {
+    if (!selectedOffre) return;
+    const debut = zurichDateTimeToIso(newVisiteDate, newVisiteHeure);
+    if (!debut) { toast.error('Indiquez la date et l\'heure de la visite'); return; }
+    if (!selectedOffre.client_id) { toast.error('Cette offre n\'a pas de client'); return; }
+    const fin = newVisiteFin ? zurichDateTimeToIso(newVisiteDate, newVisiteFin) : null;
+    if (fin && new Date(fin).getTime() <= new Date(debut).getTime()) { toast.error('L\'heure de fin doit être après le début'); return; }
+    setAddingVisite(true);
+    try {
+      // Pas de doublon : même offre, même client, même créneau.
+      const { data: existing } = await supabase
+        .from('visites')
+        .select('id')
+        .eq('offre_id', selectedOffre.id)
+        .eq('client_id', selectedOffre.client_id)
+        .eq('date_visite', debut)
+        .limit(1);
+      if (existing && existing.length > 0) { toast.info('Cette visite existe déjà'); return; }
+
+      const agentId = selectedOffre.agent_id || clientsById.get(selectedOffre.client_id)?.agent_id || null;
+      const { error } = await supabase.from('visites').insert({
+        offre_id: selectedOffre.id,
+        client_id: selectedOffre.client_id,
+        agent_id: agentId,
+        adresse: selectedOffre.adresse,
+        date_visite: debut,
+        date_visite_fin: fin,
+        statut: 'planifiee',
+        source: 'manuel',
+      } as any);
+      if (error) throw error;
+
+      // L'offre passe en « Visite planifiée » seulement si elle n'est pas déjà plus avancée.
+      if (['envoyee', 'vue', 'interesse', 'souhaite_postuler', null, ''].includes(selectedOffre.statut as any)) {
+        const { error: upErr } = await supabase.from('offres').update({ statut: 'visite_planifiee' }).eq('id', selectedOffre.id);
+        if (!upErr) {
+          setSelectedOffre(prev => prev ? { ...prev, statut: 'visite_planifiee' } : prev);
+          setOffres(prev => prev.map(o => o.id === selectedOffre.id ? { ...o, statut: 'visite_planifiee' } : o));
+        }
+      }
+      await refreshVisitesOffre(selectedOffre.id);
+      resetNewVisite();
+      toast.success('Visite ajoutée');
+    } catch (e: any) {
+      console.error('[OffresEnvoyees] ajout visite', e);
+      toast.error(e?.message || 'Impossible d\'ajouter la visite');
+    } finally {
+      setAddingVisite(false);
+    }
   };
 
   const handleOpenTransferDialog = (offre: Offre, e?: React.MouseEvent) => {
@@ -766,29 +842,17 @@ export default function AdminOffresEnvoyees() {
   }
 
   return (
-    <div className="flex-1 overflow-auto relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="p-4 md:p-8">
-        {/* Header premium */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <Send className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Offres envoyées</h1>
-              <p className="text-muted-foreground text-sm">Suivi de toutes les offres envoyées par les agents</p>
-            </div>
-          </div>
-        </div>
+    <>
+    <DashPage className="space-y-6">
+        <DashPageHeader
+          title="Offres envoyées"
+          subtitle="Suivi de toutes les offres envoyées par les agents"
+        />
 
         {/* Bandeau pagination */}
         {!loadedAll && totalCount > offres.length && (
-          <Card className="mb-6 border-primary/20 bg-primary/5">
-            <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
+          <div className={`${DASH_CARD} p-4`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
                 Affichage des <span className="font-semibold text-foreground">{offres.length}</span> offres les plus récentes
                 sur <span className="font-semibold text-foreground">{totalCount}</span> au total — chargement rapide ⚡
@@ -796,75 +860,52 @@ export default function AdminOffresEnvoyees() {
               <Button
                 size="sm"
                 variant="outline"
+                className="rounded-full"
                 onClick={loadAllOffres}
                 disabled={loadingMore}
               >
                 {loadingMore ? 'Chargement…' : `Charger toutes les ${totalCount} offres`}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Stats Premium KPI */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8">
-          <PremiumKPICard
-            title="Total"
-            value={totalOffres}
-            icon={Send}
-            variant="default"
-            delay={0}
-          />
-          <PremiumKPICard
-            title="En attente"
-            value={offresEnvoyees}
-            icon={Eye}
-            variant="default"
-            subtitle="Envoyées & vues"
-            delay={50}
-          />
-          <PremiumKPICard
-            title="Intéressés"
-            value={offresInteresse}
-            icon={Star}
-            variant="warning"
-            subtitle="Visites en cours"
-            delay={100}
-          />
-          <PremiumKPICard
-            title="Candidatures"
-            value={candidatures}
-            icon={FileText}
-            variant="default"
-            subtitle="Dossiers déposés"
-            delay={150}
-          />
-          <PremiumKPICard
-            title="Acceptées"
-            value={offresAcceptees}
-            icon={Key}
-            variant="success"
-            subtitle="🎉 Réussies"
-            delay={200}
-          />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {[
+            { label: 'Total', sub: 'Offres envoyées', value: totalOffres, icon: Send, tone: 'bg-primary/10 text-primary' },
+            { label: 'En attente', sub: 'Envoyées & vues', value: offresEnvoyees, icon: Eye, tone: 'bg-primary/10 text-primary' },
+            { label: 'Intéressés', sub: 'Visites en cours', value: offresInteresse, icon: Star, tone: 'bg-amber-500/10 text-amber-600' },
+            { label: 'Candidatures', sub: 'Dossiers déposés', value: candidatures, icon: FileText, tone: 'bg-primary/10 text-primary' },
+            { label: 'Acceptées', sub: 'Réussies', value: offresAcceptees, icon: Key, tone: 'bg-emerald-500/10 text-emerald-600' },
+          ].map(({ label, sub, value, icon: Icon, tone }) => (
+            <div key={label} className={`${DASH_CARD} flex min-h-[104px] flex-col justify-between p-3 sm:p-4`}>
+              <span className={`flex h-9 w-9 items-center justify-center rounded-full ${tone}`}>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="mt-2 block">
+                <span className="block text-2xl font-semibold tracking-tight text-foreground tabular-nums">{value}</span>
+                <span className="block truncate text-xs font-medium text-foreground">{label}</span>
+                <span className="block truncate text-xs text-muted-foreground">{sub}</span>
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* Filtres Premium */}
-        <Card className="mb-6 overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="w-5 h-5 text-primary" />
+        <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Filter className="h-4 w-4 text-primary" />
               Filtres
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   placeholder="Adresse (ex. Av. de France 71)"
                   value={addressFilter}
                   onChange={(e) => setAddressFilter(e.target.value)}
-                  className="bg-background/50 pl-9 pr-9"
+                  className="rounded-full pl-9 pr-9"
                   aria-label="Filtrer par adresse"
                 />
                 {addressLoading && (
@@ -875,10 +916,10 @@ export default function AdminOffresEnvoyees() {
                 placeholder="Rechercher (adresse, client, agent...)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-background/50"
+                className="rounded-full"
               />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-background/50">
+                <SelectTrigger className="rounded-full">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
                 <SelectContent>
@@ -896,7 +937,7 @@ export default function AdminOffresEnvoyees() {
                 </SelectContent>
               </Select>
               <Select value={agentFilter} onValueChange={setAgentFilter}>
-                <SelectTrigger className="bg-background/50">
+                <SelectTrigger className="rounded-full">
                   <SelectValue placeholder="Agent" />
                 </SelectTrigger>
                 <SelectContent>
@@ -915,21 +956,16 @@ export default function AdminOffresEnvoyees() {
                 {addressResults.length >= 1000 ? ' : précisez l’adresse.' : ' (toutes dates confondues).'}
               </p>
             )}
-          </CardContent>
-        </Card>
+        </div>
 
         {/* Liste des offres Premium */}
         <div className="grid gap-4">
           {filteredOffres.length === 0 ? (
-            <Card className="p-12 border-dashed">
-              <div className="text-center text-muted-foreground">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                  <Send className="w-8 h-8 opacity-50" />
-                </div>
-                <p className="font-medium">Aucune offre trouvée</p>
-                <p className="text-sm mt-1">Modifiez vos filtres ou attendez que les agents envoient des offres</p>
-              </div>
-            </Card>
+            <DashEmptyState
+              icon={Send}
+              title="Aucune offre trouvée"
+              description="Modifiez vos filtres ou attendez que les agents envoient des offres"
+            />
           ) : (
             groupedFilteredOffres.map((group, index) => {
               const offre = group.representative;
@@ -937,22 +973,13 @@ export default function AdminOffresEnvoyees() {
               const statusConfig = STATUS_CONFIG[offre.statut || 'envoyee'] || STATUS_CONFIG.envoyee;
 
               return (
-                <Card
+                <div
                   key={group.key}
-                  className={cn(
-                    "group relative overflow-hidden transition-all duration-300",
-                    "hover:shadow-lg",
-                    "border-l-4",
-                    statusConfig.borderColor
-                  )}
-                  style={{ animationDelay: `${index * 30}ms` }}
+                  className={cn(DASH_CARD, "group relative overflow-hidden")}
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  </div>
 
                   <div
-                    className="relative p-4 md:p-6 cursor-pointer"
+                    className="relative p-4 md:p-5 cursor-pointer rounded-[22px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => handleOpenOffreDetail(offre)}
                     role="button"
                     tabIndex={0}
@@ -961,15 +988,14 @@ export default function AdminOffresEnvoyees() {
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
+                          <h3 className="text-base md:text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                             {offre.titre || offre.adresse}
                           </h3>
                           {getStatusBadge(offre.statut)}
                           {isMulti && (
-                            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
-                              <Users className="w-3 h-3" />
-                              {group.count} clients
-                            </Badge>
+                            <DashBadge tone="primary">
+                              <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" />{group.count} clients</span>
+                            </DashBadge>
                           )}
                         </div>
                         <OfferTimeline currentStatut={offre.statut} />
@@ -1012,12 +1038,12 @@ export default function AdminOffresEnvoyees() {
                         )}
                       </div>
 
-                      <div className="flex gap-2 pt-2 border-t border-border/50 flex-wrap">
+                      <div className="flex gap-2 pt-3 border-t border-border/50 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={(e) => handleOpenTransferDialog(offre, e)}
-                          className="relative z-10 hover:bg-primary/5"
+                          className="relative z-10 rounded-full"
                         >
                           <Forward className="w-4 h-4 mr-1.5" />
                           Envoyer à un client
@@ -1030,7 +1056,7 @@ export default function AdminOffresEnvoyees() {
                               e.stopPropagation();
                               navigate(`/admin/clients/${offre.client_id}`);
                             }}
-                            className="relative z-10 hover:bg-primary/5"
+                            className="relative z-10 rounded-full"
                           >
                             <Eye className="w-4 h-4 mr-1.5" />
                             Voir client
@@ -1045,19 +1071,19 @@ export default function AdminOffresEnvoyees() {
                     <Collapsible>
                       <CollapsibleTrigger
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full px-4 md:px-6 py-2 flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 border-t border-border/50 transition-colors"
+                        className="w-full min-h-11 px-4 md:px-5 py-2 flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 border-t border-border/50 transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" />
                         Voir les {group.count} destinataires & leurs statuts
                       </CollapsibleTrigger>
                       <CollapsibleContent>
-                        <div className="px-4 md:px-6 pb-4 pt-2 space-y-2 bg-muted/30">
+                        <div className="px-4 md:px-5 pb-4 pt-2 space-y-2">
                           {group.items.map((item) => {
                             const itemStatus = STATUS_CONFIG[item.statut || 'envoyee'] || STATUS_CONFIG.envoyee;
                             return (
                               <div
                                 key={item.id}
-                                className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background border border-border/50 hover:border-primary/30 transition-colors"
+                                className="imr-lg-glass flex items-center justify-between gap-3 p-2.5 rounded-2xl"
                               >
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                   <User className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -1097,12 +1123,12 @@ export default function AdminOffresEnvoyees() {
                       </CollapsibleContent>
                     </Collapsible>
                   )}
-                </Card>
+                </div>
               );
             })
           )}
         </div>
-      </div>
+    </DashPage>
 
       {/* Dialog détail offre */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
@@ -1228,6 +1254,36 @@ export default function AdminOffresEnvoyees() {
                         })}
                       </div>
                     )}
+
+                    {/* Ajouter une date de visite */}
+                    {selectedOffre.client_id && (
+                      <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                          <CalendarPlus className="h-4 w-4 text-primary" /> Ajouter une date de visite
+                        </p>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                          <div className="space-y-1">
+                            <Label htmlFor="nv-date" className="text-xs text-muted-foreground">Date</Label>
+                            <Input id="nv-date" type="date" value={newVisiteDate} onChange={(e) => setNewVisiteDate(e.target.value)} className="rounded-full" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 sm:contents">
+                            <div className="space-y-1">
+                              <Label htmlFor="nv-heure" className="text-xs text-muted-foreground">Heure</Label>
+                              <Input id="nv-heure" type="time" value={newVisiteHeure} onChange={(e) => setNewVisiteHeure(e.target.value)} className="rounded-full" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor="nv-fin" className="text-xs text-muted-foreground">Fin (facultatif)</Label>
+                              <Input id="nv-fin" type="time" value={newVisiteFin} onChange={(e) => setNewVisiteFin(e.target.value)} className="rounded-full" />
+                            </div>
+                          </div>
+                          <Button onClick={handleAddVisite} disabled={addingVisite || !newVisiteDate || !newVisiteHeure} className="h-10 rounded-full">
+                            {addingVisite ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CalendarPlus className="mr-2 h-4 w-4" />}
+                            Ajouter
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Heure suisse · visite planifiée pour {getClientName(selectedOffre.client_id)}.</p>
+                      </div>
+                    )}
                   </DetailSection>
                 );
               })()}
@@ -1241,6 +1297,12 @@ export default function AdminOffresEnvoyees() {
           )}
 
           <DetailActions>
+            {selectedOffre && (
+              <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Modifier l'offre
+              </Button>
+            )}
             {selectedOffre && !estPrixDAchat(selectedOffre.prix) && !['candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu', 'refusee'].includes(selectedOffre.statut || '') && (
               <Button
                 variant="outline"
@@ -1291,6 +1353,20 @@ export default function AdminOffresEnvoyees() {
           </DetailActions>
         </DialogContent>
       </Dialog>
+
+      {/* Modifier l'offre (et ses dates de visite) */}
+      {selectedOffre && (
+        <EditOffreDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          offre={selectedOffre}
+          onSuccess={(updated) => {
+            setSelectedOffre(prev => prev ? { ...prev, ...updated } : prev);
+            setOffres(prev => prev.map(o => o.id === updated.id ? { ...o, ...updated } : o));
+            refreshVisitesOffre(updated.id);
+          }}
+        />
+      )}
 
       {/* Dialog transfert offre à un client */}
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
@@ -1360,6 +1436,6 @@ export default function AdminOffresEnvoyees() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
