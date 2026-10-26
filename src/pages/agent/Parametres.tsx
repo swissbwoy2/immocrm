@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Camera, Save, Mail, Phone, User, Settings, Bell, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { notifBannersEnabled, setNotifBannersEnabled } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
@@ -24,6 +25,7 @@ export default function AgentParametres() {
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
   const [notificationsEmail, setNotificationsEmail] = useState(true);
+  const [bannersOn, setBannersOn] = useState(() => notifBannersEnabled());
   const [emailConfigOpen, setEmailConfigOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -279,6 +281,23 @@ export default function AgentParametres() {
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
+            <div className="min-w-0 space-y-0.5">
+              <Label htmlFor="notifications-bannieres">Notifications dans l'application</Label>
+              <p className="text-sm text-muted-foreground">
+                Bannière en direct à chaque nouvelle notification (sur cet appareil). La cloche reste toujours à jour.
+              </p>
+            </div>
+            <Switch
+              id="notifications-bannieres"
+              checked={bannersOn}
+              onCheckedChange={(checked) => {
+                setBannersOn(checked);
+                setNotifBannersEnabled(checked);
+                toast.success(checked ? 'Bannières de notification activées' : 'Bannières de notification désactivées');
+              }}
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
             <div className="min-w-0 space-y-0.5">
               <Label htmlFor="notifications-email">Notifications par email</Label>
               <p className="text-sm text-muted-foreground">
