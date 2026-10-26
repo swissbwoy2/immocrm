@@ -17485,6 +17485,16 @@ export type Database = {
       admin_copilot_agents: { Args: never; Returns: Json }
       admin_copilot_blocages: { Args: { p_days?: number }; Returns: Json }
       admin_copilot_client: { Args: { p_query: string }; Returns: Json }
+      admin_copilot_emails: {
+        Args: {
+          p_boite?: string
+          p_inclure_envoyes?: boolean
+          p_jours?: number
+          p_limite?: number
+          p_recherche?: string
+        }
+        Returns: Json
+      }
       admin_copilot_kpi: { Args: never; Returns: Json }
       admin_copilot_offres: {
         Args: {
