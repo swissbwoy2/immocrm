@@ -5,7 +5,7 @@ import { AddressLink } from '@/components/AddressLink';
 import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
 import {
-  TON_TEXTE, delaiVisite, heureLabel, jourLabel, lienItineraire, prochaineActionCoursier, retardCompteRendu,
+  STATUT_ETAPE, TON_TEXTE, delaiVisite, formatChf, heureLabel, jourLabel, lienItineraire, prochaineActionCoursier, retardCompteRendu,
   type EtapeCoursier,
 } from './coursierModel';
 
@@ -41,41 +41,44 @@ export function CoursierMissionCard({ mission: m, etape, onOpen, onAccept, onTer
   const next = prochaineActionCoursier(etape, m);
   const delai = delaiVisite(m.date_visite);
   const retard = etape === 'a_rendre' ? retardCompteRendu(m) : null;
+  const statut = STATUT_ETAPE[etape];
   const stop = (fn?: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn?.(); };
+  const urgent = delai.tone === 'danger' || delai.tone === 'warning';
+  /** Visite déjà commencée : l'action principale devient « Terminer la visite ». */
+  const enCours = etape === 'mes_missions' && delai.passee && !!onTerminer;
+
+  const itineraire = (cls: string, variant: 'default' | 'outline') => (
+    <Button asChild variant={variant} className={cls}>
+      <a href={lienItineraire(m.adresse)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+        <Navigation className="mr-2 h-4 w-4" /> Itinéraire
+      </a>
+    </Button>
+  );
 
   return (
     <article
-      className={cn(DASH_CARD, 'flex flex-col gap-3 p-4 md:p-5', onOpen && 'cursor-pointer', retard?.enRetard && 'ring-1 ring-amber-500/40')}
+      className={cn(DASH_CARD, 'flex min-w-0 flex-col gap-3 p-4 md:p-5', onOpen && 'cursor-pointer', retard?.enRetard && 'ring-1 ring-amber-500/40')}
       onClick={onOpen ? () => onOpen(m) : undefined}
     >
+      {/* Statut + délai */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <DashBadge tone={etape === 'a_rendre' && retard?.enRetard ? 'danger' : statut.tone}>{statut.label}</DashBadge>
+        {etape === 'a_rendre' && retard ? (
+          <DashBadge tone={retard.enRetard ? 'warning' : 'muted'}><Clock className="mr-1 h-3 w-3" />Visite terminée {retard.label}</DashBadge>
+        ) : etape !== 'terminees' ? (
+          <DashBadge tone={urgent ? 'warning' : 'muted'}><Clock className="mr-1 h-3 w-3" />{delai.label}</DashBadge>
+        ) : null}
+      </div>
+
       {/* Quand */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-end justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{jourLabel(m.date_visite)}</p>
-          <p className="text-xl font-semibold tabular-nums text-foreground">{heureLabel(m)}</p>
+          <p className="text-sm font-medium text-muted-foreground first-letter:uppercase">{jourLabel(m.date_visite)}</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{heureLabel(m)}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {etape === 'terminees' ? (
-            <DashBadge tone="success">Terminée</DashBadge>
-          ) : etape === 'a_rendre' && retard ? (
-            <span className={cn(
-              'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
-              retard.enRetard ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-muted text-muted-foreground',
-            )}>
-              <Clock className="h-3 w-3" /> Visite terminée {retard.label}
-            </span>
-          ) : (
-            <span className={cn(
-              'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
-              delai.tone === 'danger' || delai.tone === 'warning' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-muted text-muted-foreground',
-            )}>
-              <Clock className="h-3 w-3" /> {delai.label}
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" /> {m._count} client{m._count > 1 ? 's' : ''}
-          </span>
-        </div>
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
+          <Users className="h-4 w-4" /> {m._count} client{m._count > 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Où */}
@@ -83,17 +86,22 @@ export function CoursierMissionCard({ mission: m, etape, onOpen, onAccept, onTer
         <AddressLink address={m.adresse} className="text-[15px] font-semibold" truncate />
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      {/* Le bien */}
+      <div className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         {etape === 'disponibles' && (
-          <DashBadge tone="primary"><Users className="mr-1 h-3 w-3" />{m._delegues || m._count} client(s) à visiter (délégué)</DashBadge>
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">
+            <Users className="h-3.5 w-3.5" />{m._delegues || m._count} client{(m._delegues || m._count) > 1 ? 's' : ''} à visiter
+          </span>
         )}
-        {m.offres?.pieces && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1"><Home className="h-3 w-3" />{m.offres.pieces}p</span>}
-        {m.offres?.surface && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1"><Maximize2 className="h-3 w-3" />{m.offres.surface}m²</span>}
-        {m.offres?.prix && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1"><Banknote className="h-3 w-3" />{Number(m.offres.prix).toLocaleString('fr-CH')} CHF</span>}
-        {m.agents?.profiles && (
-          <span className="inline-flex items-center gap-1"><UserCog className="h-3 w-3" />Agent : {m.agents.profiles.prenom} {m.agents.profiles.nom}</span>
-        )}
+        {m.offres?.pieces && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1"><Home className="h-3.5 w-3.5" />{m.offres.pieces} p.</span>}
+        {m.offres?.surface && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1"><Maximize2 className="h-3.5 w-3.5" />{m.offres.surface} m²</span>}
+        {m.offres?.prix && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1"><Banknote className="h-3.5 w-3.5" />{formatChf(m.offres.prix)} / mois</span>}
       </div>
+      {m.agents?.profiles && (
+        <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+          <UserCog className="h-4 w-4 shrink-0" /><span className="truncate">Agent : {m.agents.profiles.prenom} {m.agents.profiles.nom}</span>
+        </p>
+      )}
 
       {/* Prochaine action */}
       <p className={cn('flex items-start gap-1.5 text-sm font-semibold', TON_TEXTE[next.tone])}>
@@ -103,43 +111,52 @@ export function CoursierMissionCard({ mission: m, etape, onOpen, onAccept, onTer
         {next.texte}
       </p>
 
-      {/* Actions — en bas de carte, zone du pouce */}
+      {/* Actions — une action principale, en bas de carte (zone du pouce) */}
       <div className="mt-auto space-y-2 pt-1">
         {etape === 'disponibles' && onAccept && (
-          <Button onClick={stop(() => onAccept(m))} className="h-12 w-full rounded-full">
+          <Button onClick={stop(() => onAccept(m))} className="h-12 w-full">
             <CheckCircle className="mr-2 h-4 w-4" /> {acceptLabel}
           </Button>
         )}
 
         {etape === 'mes_missions' && (
           <>
-            {live && <div onClick={(e) => e.stopPropagation()}>{live}</div>}
-            <div className={cn('grid gap-2', onTerminer ? 'grid-cols-2' : 'grid-cols-1')}>
-              <Button asChild variant="outline" className="h-12 rounded-full">
-                <a href={lienItineraire(m.adresse)} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <Navigation className="mr-2 h-4 w-4" /> Itinéraire
-                </a>
+            {enCours ? (
+              <Button onClick={stop(() => onTerminer?.(m))} className="h-12 w-full">
+                <FileText className="mr-2 h-4 w-4" /> Terminer la visite
               </Button>
-              {onTerminer && (
-                <Button onClick={stop(() => onTerminer(m))} className="h-12 rounded-full">
-                  <CheckCircle className="mr-2 h-4 w-4" /> Terminer la visite
-                </Button>
-              )}
-            </div>
+            ) : itineraire('h-12 w-full', 'default')}
+            {live && <div onClick={(e) => e.stopPropagation()}>{live}</div>}
           </>
         )}
 
         {etape === 'a_rendre' && onTerminer && (
-          <Button onClick={stop(() => onTerminer(m))} className="h-12 w-full rounded-full">
-            <FileText className="mr-2 h-4 w-4" /> Terminer la visite
+          <Button onClick={stop(() => onTerminer(m))} className="h-12 w-full">
+            <FileText className="mr-2 h-4 w-4" /> Rédiger le compte rendu
           </Button>
         )}
 
-        {onOpen && (
-          <Button variant="ghost" onClick={stop(() => onOpen(m))} className="h-11 w-full rounded-full text-sm">
-            Détails et contacts <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
-        )}
+        {/* Actions secondaires : côte à côte quand il y en a deux */}
+        {(() => {
+          const sec: React.ReactNode[] = [];
+          if (etape === 'mes_missions' && onTerminer && !enCours) {
+            sec.push(
+              <Button key="terminer" variant="outline" onClick={stop(() => onTerminer(m))} className="h-11 w-full px-3">
+                <CheckCircle className="mr-1.5 h-4 w-4" /> Terminer
+              </Button>,
+            );
+          }
+          if (etape === 'mes_missions' && enCours) sec.push(<span key="itin" className="contents">{itineraire('h-11 w-full px-3', 'outline')}</span>);
+          if (onOpen) {
+            sec.push(
+              <Button key="details" variant="ghost" onClick={stop(() => onOpen(m))} className="h-11 w-full px-3 text-sm">
+                Détails et contacts <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>,
+            );
+          }
+          if (sec.length === 0) return null;
+          return <div className={cn('grid gap-2', sec.length > 1 ? 'grid-cols-2' : 'grid-cols-1')}>{sec}</div>;
+        })()}
       </div>
     </article>
   );

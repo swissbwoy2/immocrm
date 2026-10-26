@@ -79,11 +79,15 @@ export default function CoursierCalendrier() {
 
   if (loading) {
     return (
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="animate-pulse space-y-4">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-40 bg-muted rounded-xl" />)}
+      <DashPage>
+        <div className="animate-pulse space-y-4" role="status" aria-label="Chargement de l'agenda">
+          <div className="h-8 w-56 rounded-lg bg-muted" />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="h-96 rounded-[22px] bg-muted lg:col-span-2" />
+            <div className="h-96 rounded-[22px] bg-muted" />
+          </div>
         </div>
-      </main>
+      </DashPage>
     );
   }
 
@@ -96,8 +100,8 @@ export default function CoursierCalendrier() {
     <DashPage>
       <div className="space-y-6">
         <DashPageHeader
-          title="Calendrier des missions"
-          subtitle="Vos visites regroupées — compte-rendu et envoi au client depuis la fiche"
+          title="Agenda des missions"
+          subtitle={`${groups.length} visite${groups.length > 1 ? 's' : ''} acceptée${groups.length > 1 ? 's' : ''} ou terminée${groups.length > 1 ? 's' : ''} · touchez une visite pour le compte rendu`}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 min-w-0 w-full">
@@ -114,7 +118,7 @@ export default function CoursierCalendrier() {
             />
           </div>
 
-          <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px]">
+          <div className="lg:col-span-1 min-w-0 h-[440px] md:h-[600px]">
             <PremiumDayEvents
               date={selectedDate}
               events={[]}

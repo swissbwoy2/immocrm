@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
 import { History, Wallet, Clock, TrendingUp, Timer, ChevronDown } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
 import { CoursierClockCard } from '@/components/coursier/CoursierClockCard';
-import { cleMois, libelleMois } from '@/components/coursier/coursierModel';
+import { cleMois, formatChf, libelleMois } from '@/components/coursier/coursierModel';
+import { formatZurichDay, formatZurichTime } from '@/lib/dateZurich';
 import { DASH_CARD, DashEmptyState, DashPage, DashPageHeader, DashSection } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
 
@@ -38,38 +37,44 @@ export default function CoursierHistorique() {
   }
 
   const kpis = [
-    { icon: Timer, label: 'Temps ce mois', value: formatDuration(minutesThisMonth) },
-    { icon: Wallet, label: 'Gains ce mois', value: `${earningsThisMonth.toFixed(0)} CHF` },
     { icon: Clock, label: 'Temps total', value: formatDuration(minutesTotal) },
-    { icon: TrendingUp, label: 'Gains totaux', value: `${earningsTotal.toFixed(0)} CHF` },
+    { icon: TrendingUp, label: 'Gains totaux', value: formatChf(earningsTotal, 2) },
   ];
+  const moisCourant = libelleMois(cleMois(new Date().toISOString()));
 
   return (
     <DashPage className="space-y-6">
       <DashPageHeader
-        title="Historique & Gains"
-        subtitle={`Temps de travail pointé et gains (${tarifHoraire} CHF/heure) · ${earningsThisMonth.toFixed(0)} CHF ce mois`}
+        title="Historique & gains"
+        subtitle={`Temps de travail pointé, payé ${formatChf(tarifHoraire)} par heure`}
       />
+
+      {/* Total du mois, mis en avant */}
+      <section className={cn(DASH_CARD, 'grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end md:p-6')} aria-label="Gains du mois">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Wallet className="h-4 w-4 text-primary" /> Gains du mois · <span className="capitalize">{moisCourant}</span>
+          </p>
+          <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-foreground md:text-5xl">{formatChf(earningsThisMonth, 2)}</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Timer className="h-4 w-4" /> {formatDuration(minutesThisMonth)} pointées ce mois
+          </p>
+        </div>
+        <dl className="grid grid-cols-2 gap-4 border-t border-border/60 pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+          {kpis.map((k) => (
+            <div key={k.label} className="min-w-0">
+              <dt className="flex items-center gap-1.5 text-sm text-muted-foreground"><k.icon className="h-4 w-4 shrink-0" />{k.label}</dt>
+              <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">{k.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <CoursierClockCard time={time} />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {kpis.map((k) => (
-          <div key={k.label} className={cn(DASH_CARD, 'flex min-h-[96px] flex-col justify-between p-3 sm:p-4')}>
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <k.icon className="h-[18px] w-[18px]" />
-            </span>
-            <span className="mt-2 block">
-              <span className="block truncate text-lg font-semibold text-foreground">{k.value}</span>
-              <span className="block truncate text-xs text-muted-foreground">{k.label}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-
       <DashSection title="Gains par mois">
         {mois.length === 0 ? (
-          <DashEmptyState icon={History} title="Aucune session de travail enregistrée pour le moment" />
+          <DashEmptyState icon={History} title="Aucune session de travail enregistrée" description="Pointez votre arrivée au début du service : vos sessions et vos gains apparaîtront ici." />
         ) : (
           <div className="space-y-3">
             {mois.map((m, idx) => {
@@ -85,11 +90,11 @@ export default function CoursierHistorique() {
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block text-base font-semibold capitalize text-foreground">{libelleMois(m.cle)}</span>
-                      <span className="block text-xs text-muted-foreground">
+                      <span className="block text-sm text-muted-foreground">
                         {m.entries.length} session{m.entries.length > 1 ? 's' : ''} · {formatDuration(m.minutes)}
                       </span>
                     </span>
-                    <span className="shrink-0 text-base font-semibold text-emerald-700 dark:text-emerald-400">{montantMois.toFixed(2)} CHF</span>
+                    <span className="shrink-0 text-base font-semibold tabular-nums text-foreground">{formatChf(montantMois, 2)}</span>
                     <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', ouvert && 'rotate-180')} />
                   </button>
                   {ouvert && (
@@ -98,18 +103,18 @@ export default function CoursierHistorique() {
                         const minutes = entry.duration_minutes || 0;
                         const montant = (minutes / 60) * tarifHoraire;
                         return (
-                          <li key={entry.id} className="flex items-center justify-between gap-3 px-4 py-3 md:px-5">
+                          <li key={entry.id} className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3 md:px-5">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium capitalize text-foreground">
-                                {format(new Date(entry.started_at), 'EEEE d MMM yyyy', { locale: fr })}
+                              <p className="truncate text-sm font-medium text-foreground">
+                                {formatZurichDay(entry.started_at)}
                               </p>
-                              <p className="text-xs tabular-nums text-muted-foreground">
-                                {format(new Date(entry.started_at), 'HH:mm')}
-                                {entry.ended_at && ` → ${format(new Date(entry.ended_at), 'HH:mm')}`}
+                              <p className="text-sm tabular-nums text-muted-foreground">
+                                {formatZurichTime(entry.started_at)}
+                                {entry.ended_at && ` → ${formatZurichTime(entry.ended_at)}`}
                                 {' · '}{formatDuration(minutes)}
                               </p>
                             </div>
-                            <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{montant.toFixed(2)} CHF</span>
+                            <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatChf(montant, 2)}</span>
                           </li>
                         );
                       })}

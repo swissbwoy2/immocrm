@@ -3,6 +3,7 @@ import { Loader2, Play, Square, Timer } from 'lucide-react';
 import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
 import { formatChrono, formatDuration, useCoursierTime } from '@/hooks/useCoursierTime';
+import { formatChf } from './coursierModel';
 
 interface Props {
   time: ReturnType<typeof useCoursierTime>;
@@ -29,13 +30,13 @@ export function CoursierClockCard({ time }: Props) {
                   <p className="text-2xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{formatChrono(elapsedSeconds)}</p>
                   <DashBadge tone="success">En service</DashBadge>
                 </div>
-                <p className="text-xs text-muted-foreground">Session en cours · {tarifHoraire} CHF/h</p>
+                <p className="text-sm text-muted-foreground">Session en cours · {formatChf(tarifHoraire)}/h</p>
               </>
             ) : (
               <>
                 <p className="text-base font-semibold text-foreground">Pointage</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatDuration(minutesThisMonth)} ce mois · {earningsThisMonth.toFixed(0)} CHF · {tarifHoraire} CHF/h
+                <p className="text-sm text-muted-foreground">
+                  {formatDuration(minutesThisMonth)} ce mois · {formatChf(earningsThisMonth, 2)} · {formatChf(tarifHoraire)}/h
                 </p>
               </>
             )}
@@ -43,19 +44,19 @@ export function CoursierClockCard({ time }: Props) {
         </div>
 
         {active ? (
-          <Button onClick={clockOut} disabled={busy} variant="destructive" className="h-12 w-full rounded-full sm:h-11 sm:w-auto">
+          <Button onClick={clockOut} disabled={busy} variant="destructive" className="h-12 w-full sm:h-11 sm:w-auto">
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Square className="mr-2 h-4 w-4" />}
             Pointer mon départ
           </Button>
         ) : (
-          <Button onClick={clockIn} disabled={busy} className="h-12 w-full rounded-full sm:h-11 sm:w-auto">
+          <Button onClick={clockIn} disabled={busy} className="h-12 w-full sm:h-11 sm:w-auto">
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
             Pointer mon arrivée
           </Button>
         )}
       </div>
-      <p className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-        Paie au <strong>temps travaillé</strong> : {tarifHoraire} CHF/heure (pas par visite). Pointez votre <strong>arrivée</strong> au début du service, puis votre <strong>départ</strong> à la fin.
+      <p className="mt-3 border-t border-border/60 pt-3 text-sm text-muted-foreground">
+        Paie au <strong>temps travaillé</strong> : {formatChf(tarifHoraire)} par heure (pas par visite). Pointez votre <strong>arrivée</strong> au début du service, puis votre <strong>départ</strong> à la fin.
       </p>
     </section>
   );

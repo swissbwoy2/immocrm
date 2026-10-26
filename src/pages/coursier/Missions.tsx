@@ -253,7 +253,7 @@ export default function CoursierMissions() {
         title="Mes missions"
         subtitle={subtitle}
         action={
-          <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={() => { setLoading(true); loadData(); }} disabled={loading} aria-label="Actualiser">
+          <Button variant="outline" className="h-11" onClick={() => { setLoading(true); loadData(); }} disabled={loading} aria-label="Actualiser">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             <span className="ml-2 hidden sm:inline">Actualiser</span>
           </Button>
@@ -283,7 +283,7 @@ export default function CoursierMissions() {
               onOpen={openDetail}
               onAccept={(x) => handleAccept(x._group)}
               onTerminer={openComplete}
-              live={tab === 'mes_missions' ? <VisitLiveButton visiteId={m.id} className="h-11 w-full rounded-full" /> : undefined}
+              live={tab === 'mes_missions' ? <VisitLiveButton visiteId={m.id} className="h-11 w-full" /> : undefined}
             />
           ))}
         </div>
@@ -518,8 +518,8 @@ export default function CoursierMissions() {
 
             {/* Media upload */}
             <div className="space-y-2">
-              <Label>Photos / vidéos (optionnel)</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label>Photos et vidéos (optionnel)</Label>
+              <div className={cn('flex flex-wrap gap-2', feedbackMedias.length === 0 && 'hidden')}>
                 {feedbackMedias.map((media, i) => (
                   <div key={i} className="relative h-20 w-20 overflow-hidden rounded-2xl bg-muted">
                     {media.type?.startsWith('image') ? (
@@ -539,13 +539,14 @@ export default function CoursierMissions() {
                     </button>
                   </div>
                 ))}
-                <label className="flex h-20 min-w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border px-2 text-sm text-muted-foreground transition-colors hover:border-foreground/40">
+              </div>
+              <label className="imr-lg-glass flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-medium text-foreground">
                   {uploadingMedia ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Upload className="h-5 w-5" />
+                    <Upload className="h-4 w-4" />
                   )}
-                  Photo / vidéo
+                  {uploadingMedia ? 'Envoi en cours…' : 'Ajouter photo / vidéo'}
                   <input
                     type="file"
                     className="hidden"
@@ -554,7 +555,6 @@ export default function CoursierMissions() {
                     onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
                   />
                 </label>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -585,15 +585,15 @@ export default function CoursierMissions() {
 
             <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 p-3">
               <span className="text-sm">Rémunération : au temps travaillé (pointage)</span>
-              <span className="shrink-0 font-semibold text-foreground">20 CHF/h</span>
+              <span className="shrink-0 font-semibold text-foreground">CHF 20/h</span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 border-t border-border/60 bg-background p-4 sm:flex sm:justify-end">
-            <Button variant="outline" className="h-12 rounded-full sm:h-11" onClick={() => setCompleteOpen(false)}>Annuler</Button>
+          <div className="grid grid-cols-2 gap-2 border-t border-border/60 bg-background px-4 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] sm:flex sm:justify-end">
+            <Button variant="outline" className="h-12 sm:h-11" onClick={() => setCompleteOpen(false)}>Annuler</Button>
             <Button
               onClick={handleComplete}
               disabled={submitting || !feedback.trim()}
-              className="h-12 rounded-full sm:h-11"
+              className="h-12 sm:h-11"
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
               Terminer et enregistrer

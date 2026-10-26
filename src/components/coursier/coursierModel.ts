@@ -206,3 +206,23 @@ export function libelleMois(cle: string): string {
   const [y, mo] = cle.split('-').map(Number);
   return format(new Date(y, mo - 1, 1), 'MMMM yyyy', { locale: fr });
 }
+
+/**
+ * Montant suisse : « CHF 25 », « CHF 1'250.50 ».
+ * `decimals: 'auto'` (défaut) n'affiche les centimes que s'il y en a ; `2` les affiche toujours.
+ */
+export function formatChf(v: number | string | null | undefined, decimals: 0 | 2 | 'auto' = 'auto'): string {
+  const n = Number(v) || 0;
+  const dec = decimals === 'auto' ? (Math.round(Math.abs(n) * 100) % 100 === 0 ? 0 : 2) : decimals;
+  const [i, f] = Math.abs(n).toFixed(dec).split('.');
+  const entier = i.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return `CHF ${n < 0 ? '-' : ''}${entier}${f ? `.${f}` : ''}`;
+}
+
+/** Statut affiché d'une mission (pastille) selon son étape. */
+export const STATUT_ETAPE: Record<EtapeCoursier, { label: string; tone: Ton }> = {
+  disponibles: { label: 'Disponible', tone: 'primary' },
+  mes_missions: { label: 'Acceptée', tone: 'success' },
+  a_rendre: { label: 'Compte rendu à faire', tone: 'warning' },
+  terminees: { label: 'Terminée', tone: 'success' },
+};

@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ListChecks } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { VisitesMapView } from '@/components/maps/VisitesMapView';
@@ -16,6 +19,7 @@ type Filtre = 'all' | 'available' | 'mine';
 
 export default function CoursierCarte() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [coursierId, setCoursierId] = useState<string | null>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +68,11 @@ export default function CoursierCarte() {
       <DashPageHeader
         title="Carte des missions"
         subtitle={loading ? 'Chargement…' : `${count('mine')} visite${count('mine') > 1 ? 's' : ''} à venir · ${count('available')} disponible${count('available') > 1 ? 's' : ''}`}
+        action={
+          <Button variant="outline" className="h-11" onClick={() => navigate('/coursier/missions')}>
+            <ListChecks className="mr-2 h-4 w-4" /> Liste
+          </Button>
+        }
       />
 
       <DashFilterPills
