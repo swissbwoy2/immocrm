@@ -32,6 +32,8 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
 # Règles
 - Chaque chiffre, nom ou date vient d'un outil appelé pendant cette conversation. N'invente jamais. Si un outil ne renvoie pas l'information, dis-le.
 - Appelle les outils dont tu as besoin (plusieurs si utile) avant de répondre. Pour une question générale (« comment ça va ? », « quoi de neuf ? »), commence par kpi puis blocages.
+- Tu as le détail : offres (liste par client, statut ou étape du « Suivi des offres », avec dates et prochaine action), postulations (demandes en cours, file, blocages, envois) et visites (date, adresse, mode, coursier). Ne réponds jamais « ouvre la fiche dans l'application » ou « je n'ai que le total » : appelle l'outil de détail. « Suivi des offres » = offres avec suivi_auto ; « demande mon attention » = etape a_gerer, puis attente_annonceur en retard ; « faut-il fixer des visites » = offres etape a_gerer et attente_annonceur.
+- Une liste : une ligne par élément (client — adresse — date — ce qu'il faut faire), au plus 10, puis le total s'il y en a plus.
 - Réponse en français, tutoiement, directe et structurée : quelques lignes ou une courte liste avec des tirets, les priorités d'abord. Pas de tableau, pas de titre, pas de gras.
 - Montants en CHF, dates au format suisse (JJ.MM.AAAA). Les dépenses de Steeve sont en USD.
 - Les données sont internes : ne les reformule pas pour un client, ne donne aucune coordonnée (tu n'en reçois pas).
@@ -64,6 +66,49 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
     name: 'client',
     description: "Situation d'un client cherché par son nom (5 au plus) : statut, agent, mandat, critères, offres, visites, candidatures, documents, derniers échanges, remboursement.",
     input_schema: { type: 'object', properties: { nom: { type: 'string', description: 'Nom ou prénom, au moins deux lettres.' } }, required: ['nom'] },
+  },
+  {
+    name: 'offres',
+    description: "Liste détaillée des offres (une ligne par offre) : client, adresse, prix, pièces, statut, date d'envoi, intérêt signalé, postulation demandée, visite, et l'étape + la prochaine action du « Suivi des offres » (a_gerer : action du staff, ex. appeler l'annonceur pour fixer la visite ; attente_annonceur : demande de visite envoyée ; visite ; sans_reponse : client à relancer ; cloturees). Triées par urgence (à gérer et en retard d'abord). Sans client : tous les clients actifs. « Suivi des offres » de l'application = suivi_auto true. Pour « quelles offres demandent mon attention » : etape a_gerer (et attente_annonceur en retard). Pour « la dernière offre d'un client » : client + limite 1 sans étape ; attention, l'ordre est par urgence, donc compare les dates envoyee_le.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client: { type: 'string', description: 'Nom ou prénom du client (facultatif).' },
+        client_id: { type: 'string' },
+        statut: { type: 'string', enum: ['', 'envoyee', 'interesse', 'souhaite_postuler', 'visite_planifiee', 'visite_confirmee', 'visite_effectuee', 'candidature_deposee', 'acceptee', 'refusee'], description: 'Statut de l’offre (« intéressée » = interesse).' },
+        etape: { type: 'string', enum: ['', 'a_gerer', 'attente_annonceur', 'visite', 'sans_reponse', 'cloturees'] },
+        jours: { type: 'number', description: 'Offres envoyées depuis N jours (30 par défaut, 365 au plus).' },
+        limite: { type: 'number', description: 'Nombre d’offres rendues (15 par défaut, 40 au plus) ; le total est toujours donné.' },
+        suivi_auto: { type: 'boolean', description: 'Seulement les offres automatiques (page « Suivi des offres »).' },
+      },
+    },
+  },
+  {
+    name: 'postulations',
+    description: "Demandes de postulation, les plus récentes d'abord : client, bien, date de la demande, état (a_traiter, en_file, bloquee, prete, envoyee), file de préparation (pièces manquantes, résumé du contrôle, essais, dernière erreur, prochain essai), dossier préparé et envoi, candidature ; plus l'état global de la file. Ensuite, pour agir sur une demande : etat_dossier puis reprendre_dossier.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client: { type: 'string' },
+        client_id: { type: 'string' },
+        etat: { type: 'string', enum: ['', 'a_traiter', 'en_file', 'bloquee', 'prete', 'envoyee'] },
+        limite: { type: 'number', description: '10 par défaut, 40 au plus.' },
+      },
+    },
+  },
+  {
+    name: 'visites',
+    description: "Visites détaillées : client, adresse, date et heure, statut, mode (le client visite ou déléguée à un coursier/agent), coursier, confirmation du client, décision, compte rendu reçu. Période a_venir (défaut), passees ou toutes, sur N jours. Les visites encore à fixer se trouvent avec l'outil offres (etape a_gerer ou attente_annonceur).",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client: { type: 'string' },
+        client_id: { type: 'string' },
+        periode: { type: 'string', enum: ['a_venir', 'passees', 'toutes'] },
+        jours: { type: 'number', description: '14 par défaut, 90 au plus.' },
+        limite: { type: 'number', description: '20 par défaut, 50 au plus.' },
+      },
+    },
   },
   {
     name: 'journal_steeve',
@@ -188,6 +233,29 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: {
   else if (name === 'etat_dossier') {
     call = ['staff_steeve_dossier_etat', { p_client: String(input?.client ?? '').slice(0, 80), p_bien: String(input?.bien ?? '').slice(0, 120) }];
   }
+  else if (name === 'offres') {
+    const statut = String(input?.statut ?? '');
+    const etape = String(input?.etape ?? '');
+    call = ['admin_copilot_offres', {
+      p_client: input?.client ? String(input.client).slice(0, 60) : null, p_client_id: uuid(input?.client_id),
+      p_statut: /^[a-z_]{0,30}$/.test(statut) && statut ? statut : null,
+      p_etape: ['a_gerer', 'attente_annonceur', 'visite', 'sans_reponse', 'cloturees'].includes(etape) ? etape : null,
+      p_jours: num(input?.jours, 1, 365, 30), p_limite: num(input?.limite, 1, 40, 15), p_suivi_auto: input?.suivi_auto === true,
+    }];
+  } else if (name === 'postulations') {
+    const etat = String(input?.etat ?? '');
+    call = ['admin_copilot_postulations', {
+      p_client: input?.client ? String(input.client).slice(0, 60) : null, p_client_id: uuid(input?.client_id),
+      p_etat: ['a_traiter', 'en_file', 'bloquee', 'prete', 'envoyee'].includes(etat) ? etat : null, p_limite: num(input?.limite, 1, 40, 10),
+    }];
+  } else if (name === 'visites') {
+    const periode = String(input?.periode ?? '');
+    call = ['admin_copilot_visites', {
+      p_client: input?.client ? String(input.client).slice(0, 60) : null, p_client_id: uuid(input?.client_id),
+      p_periode: ['a_venir', 'passees', 'toutes'].includes(periode) ? periode : 'a_venir',
+      p_jours: num(input?.jours, 1, 90, 14), p_limite: num(input?.limite, 1, 50, 20),
+    }];
+  }
   else if (name === 'kpi') call = ['admin_copilot_kpi', {}];
   else if (name === 'activations') call = ['admin_copilot_activations', { p_limit: num(input?.limite, 1, 30, 15) }];
   else if (name === 'blocages') call = ['admin_copilot_blocages', { p_days: num(input?.jours, 1, 60, 7) }];
@@ -294,7 +362,7 @@ export async function handleAdminChat(opts: {
   try {
     let text = '';
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-      const resp = await callModel({ model, max_tokens: 900, system, tools: [WEB_SEARCH_TOOL, ...ADMIN_TOOLS], messages });
+      const resp = await callModel({ model, max_tokens: 1400, system, tools: [WEB_SEARCH_TOOL, ...ADMIN_TOOLS], messages });
       for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] += resp.usage[k] ?? 0;
       cost += costOf(model, resp.usage);
       text = textOf(resp.content);
