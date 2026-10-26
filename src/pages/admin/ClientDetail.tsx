@@ -920,13 +920,14 @@ export default function ClientDetail() {
         return;
       }
       
-      // Vérifier si une conversation existe déjà
+      // Une seule conversation par client : on ouvre la sienne si elle existe
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', client.id)
-        .eq('agent_id', agentIdToUse)
         .eq('conversation_type', 'client-agent')
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
       
       if (existingConv) {
