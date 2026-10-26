@@ -28,10 +28,12 @@ export default function Login() {
   // Redirection post-connexion (ex. page de consentement OAuth) : uniquement un chemin relatif same-origin
   const rawNext = searchParams.get('next');
   const nextPath = rawNext && /^\/(?!\/)/.test(rawNext) ? rawNext : null;
+  // L'espace annonceur n'est pas sous /annonceur (route publique de profil) mais /espace-annonceur.
+  const espaceDuRole = (role: string) => (role === 'annonceur' ? '/espace-annonceur' : `/${role}`);
 
   useEffect(() => {
     if (user && userRole) {
-      navigate(nextPath ?? `/${userRole}`);
+      navigate(nextPath ?? espaceDuRole(userRole));
     }
   }, [user, userRole, navigate, nextPath]);
 
@@ -55,7 +57,7 @@ export default function Login() {
       if (!role) throw new Error('Aucun rôle attribué');
 
       toast({ title: 'Connexion réussie', description: 'Bienvenue !' });
-      navigate(nextPath ?? `/${role}`);
+      navigate(nextPath ?? espaceDuRole(role));
     } catch (error: any) {
       toast({ title: 'Erreur de connexion', description: error.message || 'Email ou mot de passe incorrect', variant: 'destructive' });
     } finally {
@@ -182,6 +184,13 @@ export default function Login() {
             className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-1 cursor-pointer underline-offset-4 hover:underline"
           >
             Vous n'avez pas reçu votre invitation ?
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/connexion-annonceur')}
+            className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-1 cursor-pointer underline-offset-4 hover:underline"
+          >
+            Vous êtes annonceur ? Connexion annonceur
           </button>
         </motion.div>
 
