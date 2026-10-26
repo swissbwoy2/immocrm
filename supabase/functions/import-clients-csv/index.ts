@@ -125,6 +125,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
+    // Seuls les champs du formulaire d'import sont écrits dans la fiche client (aucun champ protégé).
+    const CHAMPS_CLIENT_IMPORT = new Set([
+      'date_naissance', 'nationalite', 'type_permis', 'adresse', 'etat_civil', 'situation_familiale',
+      'gerance_actuelle', 'contact_gerance', 'loyer_actuel', 'depuis_le', 'pieces_actuel', 'motif_changement',
+      'profession', 'employeur', 'date_engagement', 'revenus_mensuels', 'charges_mensuelles',
+      'charges_extraordinaires', 'montant_charges_extra', 'poursuites', 'curatelle', 'budget_max', 'pieces',
+      'region_recherche', 'type_bien', 'type_contrat', 'souhaits_particuliers', 'nombre_occupants',
+      'utilisation_logement', 'animaux', 'instrument_musique', 'vehicules', 'numero_plaques',
+      'decouverte_agence', 'date_ajout',
+    ]);
+    const champsClientImport = (valeurs: Record<string, unknown> | undefined) =>
+      Object.fromEntries(Object.entries(valeurs ?? {}).filter(([cle]) => CHAMPS_CLIENT_IMPORT.has(cle)));
+
     // ---- AuthN + AuthZ: caller must be authenticated AND have admin role
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -304,7 +317,7 @@ serve(async (req) => {
             .from('clients')
             .update({
               agent_id: agentId,
-              ...clientData.client
+              ...champsClientImport(clientData.client)
             })
             .eq('user_id', userId);
 
@@ -352,7 +365,7 @@ serve(async (req) => {
             .insert({
               user_id: userId,
               agent_id: agentId,
-              ...clientData.client
+              ...champsClientImport(clientData.client)
             });
 
           if (clientError) {
