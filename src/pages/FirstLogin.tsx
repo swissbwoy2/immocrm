@@ -112,7 +112,7 @@ export default function FirstLogin() {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
       toast({ title: 'Succès', description: 'Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.' });
-      await withAuthStorageRemoval(() => supabase.auth.signOut());
+      await withAuthStorageRemoval(() => supabase.auth.signOut({ scope: 'local' }));
       navigate('/login');
     } catch (error: any) {
       const msg = (error?.message || '').toLowerCase();
