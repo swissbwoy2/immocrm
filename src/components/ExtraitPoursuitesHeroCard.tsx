@@ -3,8 +3,7 @@ import { AlertTriangle, ShieldCheck, Clock, FileWarning, ArrowRight } from 'luci
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, differenceInDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { differenceInDays } from 'date-fns';
 import { ExtractPoursuitesUploadDialog } from '@/components/ExtractPoursuitesUploadDialog';
 import { cn } from '@/lib/utils';
 import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
@@ -67,89 +66,101 @@ export function ExtraitPoursuitesHeroCard({ showWhenValid = false, className }: 
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-foreground">Extrait de poursuites valide</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Émis le {format(new Date(dateEmission!), 'd MMM yyyy', { locale: fr })} · expire dans {daysUntilExpiry} jours
+            Émis le {new Date(dateEmission!).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', day: 'numeric', month: 'long', year: 'numeric' })} · encore {daysUntilExpiry} jours
           </p>
         </div>
       </div>
     );
   }
 
+  const dateFr = (iso: string, long = true) => new Date(iso).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', day: 'numeric', month: long ? 'long' : 'short', year: 'numeric' });
+  const expiredSince = Math.max(0, ageDays - 90);
+
   const variants = {
     missing: {
-      iconCls: 'bg-amber-500/10 text-amber-600',
+      tone: 'warning' as const,
       Icon: FileWarning,
-      title: 'Renseignez votre extrait de poursuites',
-      subtitle: "Indiquez la date d'émission de votre extrait — l'IA peut la détecter automatiquement à partir du PDF.",
+      title: 'Ajoutez votre extrait des poursuites',
+      subtitle: "Pièce obligatoire de votre dossier. Déposez le PDF : la date d'émission est détectée automatiquement.",
       ctaLabel: 'Téléverser mon extrait',
       ctaVariant: 'default' as const,
-      badge: 'Action requise',
-      badgeTone: 'warning' as const,
+      badge: 'À fournir',
     },
     warning: {
-      iconCls: 'bg-amber-500/10 text-amber-600',
+      tone: 'warning' as const,
       Icon: Clock,
       title: `Votre extrait expire dans ${daysUntilExpiry} jour${(daysUntilExpiry ?? 0) > 1 ? 's' : ''}`,
-      subtitle: `Émis le ${format(new Date(dateEmission!), 'd MMMM yyyy', { locale: fr })} (${ageDays}j). Certaines régies n'acceptent que les extraits de moins de 2 mois — anticipez !`,
-      ctaLabel: 'Mettre à jour maintenant',
+      subtitle: "Certaines régies n'acceptent que les extraits de moins de 2 mois : renouvelez-le maintenant.",
+      ctaLabel: 'Renouveler mon extrait',
       ctaVariant: 'default' as const,
       badge: 'À renouveler',
-      badgeTone: 'warning' as const,
     },
     expired: {
-      iconCls: 'bg-destructive/10 text-destructive',
+      tone: 'danger' as const,
       Icon: AlertTriangle,
-      title: 'Votre extrait de poursuites est expiré',
-      subtitle: `Émis le ${format(new Date(dateEmission!), 'd MMMM yyyy', { locale: fr })} (${ageDays}j). Votre dossier n'est plus complet — vos candidatures peuvent être refusées.`,
+      title: 'Votre extrait des poursuites est expiré',
+      subtitle: 'Votre dossier est incomplet : les régies peuvent refuser vos candidatures tant qu’il n’est pas renouvelé.',
       ctaLabel: 'Téléverser un nouvel extrait',
       ctaVariant: 'destructive' as const,
-      badge: 'URGENT',
-      badgeTone: 'danger' as const,
+      badge: 'Urgent',
     },
     valid: {
-      iconCls: 'bg-emerald-500/10 text-emerald-600',
+      tone: 'success' as const,
       Icon: ShieldCheck,
-      title: 'Extrait de poursuites valide',
-      subtitle: dateEmission
-        ? `Émis le ${format(new Date(dateEmission), 'd MMMM yyyy', { locale: fr })} — expire dans ${daysUntilExpiry} jours.`
-        : '',
+      title: 'Extrait des poursuites valide',
+      subtitle: '',
       ctaLabel: 'Mettre à jour',
       ctaVariant: 'outline' as const,
       badge: 'À jour',
-      badgeTone: 'success' as const,
     },
   };
 
   const v = variants[status];
   const Icon = v.Icon;
+  const iconCls = v.tone === 'danger' ? 'bg-destructive/10 text-destructive' : v.tone === 'warning' ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-600';
+  const barCls = v.tone === 'danger' ? 'bg-destructive' : v.tone === 'warning' ? 'bg-amber-500' : 'bg-emerald-500';
+  const used = dateEmission ? Math.min(100, Math.round((ageDays / 90) * 100)) : 0;
 
   return (
     <>
       <div className={cn(DASH_CARD, 'p-4 md:p-5', className)}>
         <div className="flex items-start gap-3">
-          <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', v.iconCls)}>
+          <span className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full', iconCls)}>
             <Icon className="h-5 w-5" />
           </span>
-
           <div className="min-w-0 flex-1">
-            <div className="mb-1.5 flex flex-wrap items-center gap-2">
-              <DashBadge tone={v.badgeTone}>{v.badge}</DashBadge>
-              {status === 'missing' && <DashBadge tone="muted">Détection IA</DashBadge>}
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[17px] font-semibold leading-tight text-foreground">{v.title}</p>
+              <span className="shrink-0"><DashBadge tone={v.tone}>{v.badge}</DashBadge></span>
             </div>
-            <p className="font-semibold text-foreground">{v.title}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{v.subtitle}</p>
-            <div className="mt-3">
-              <Button
-                size="sm"
-                variant={v.ctaVariant}
-                onClick={() => setDialogOpen(true)}
-                className="gap-2 rounded-full"
-              >
-                {v.ctaLabel}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
+            {v.subtitle && <p className="mt-1 text-sm leading-snug text-muted-foreground">{v.subtitle}</p>}
           </div>
         </div>
+
+        {/* Validité : 3 mois à partir de la date d'émission */}
+        {dateEmission && (
+          <div className="imr-lg-glass mt-4 rounded-[20px] p-3.5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-muted-foreground">Émis le <span className="font-semibold text-foreground">{dateFr(dateEmission)}</span></span>
+              <span className={cn('shrink-0 font-semibold tabular-nums', v.tone === 'danger' ? 'text-destructive' : v.tone === 'warning' ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400')}>
+                {status === 'expired' ? `Expiré depuis ${expiredSince} j` : `${daysUntilExpiry} j restants`}
+              </span>
+            </div>
+            <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10" aria-hidden>
+              <div className={cn('h-full rounded-full', barCls)} style={{ width: `${used}%` }} />
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">Valable 3 mois · conseillé : moins de 2 mois</p>
+          </div>
+        )}
+
+        <Button
+          variant={v.ctaVariant}
+          onClick={() => setDialogOpen(true)}
+          className="mt-4 h-12 w-full gap-2 sm:w-auto"
+        >
+          {v.ctaLabel}
+          <ArrowRight className="h-4 w-4" />
+        </Button>
       </div>
 
       <ExtractPoursuitesUploadDialog
