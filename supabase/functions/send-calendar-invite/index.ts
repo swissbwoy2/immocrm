@@ -3,6 +3,7 @@ const sendTrackedEmail = trackedResendFetch("send-calendar-invite");
 import { renderCorporateEmail, emailDetails, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
 import { formatDateFR, formatTimeFR, toZurichISODate } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,6 +106,16 @@ function generateICS(event: {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+  // Appels internes, équipe et utilisateurs connectés. Un appel anonyme (page publique de prise de RDV)
+  // ne peut envoyer l'invitation qu'à l'agence.
+  const appelant = await verifyInternalCaller(req);
+  if (!appelant.ok && !appelant.userId) {
+    const corps = await req.clone().json().catch(() => ({}));
+    const destinataire = String((corps as any)?.recipient_email ?? '').trim().toLowerCase();
+    if (destinataire !== 'info@immo-rama.ch') {
+      return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
   }
 
   try {
