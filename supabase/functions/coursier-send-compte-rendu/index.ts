@@ -79,7 +79,9 @@ Deno.serve(async (req) => {
       .select("id, client_id, agent_id, offre_id")
       .not("id", "is", null)
       .eq("adresse", visite.adresse)
-      .eq("date_visite", visite.date_visite);
+      .eq("date_visite", visite.date_visite)
+      // Jamais les visites confiées à un autre coursier.
+      .or("coursier_id.is.null,coursier_id.eq." + coursier.id);
 
     const targets = new Map<string, any>();
     for (const v of group ?? [visite]) {
