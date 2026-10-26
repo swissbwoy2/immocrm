@@ -42,6 +42,13 @@ serve(async (req) => {
 
     let targets: string[] = [];
     if (typeof to === "string" && to) {
+      // Le destinataire doit lui-même faire partie de la conversation.
+      const roleCible = await resolveRole(svc, to);
+      const cibleMembre = await canAccessConversation(svc, to, roleCible, conversationId);
+      if (!cibleMembre) {
+        console.error("livekit-signal: destinataire hors conversation", { userId: user.id, conversationId });
+        return json({ error: "Destinataire hors conversation" }, 403);
+      }
       targets = [to];
     } else {
       const { data: conv } = await svc
