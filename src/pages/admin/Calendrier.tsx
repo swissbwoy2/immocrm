@@ -552,7 +552,7 @@ export default function AdminCalendrier() {
   };
 
   return (
-    <DashPage className="space-y-4 md:space-y-6">
+    <DashPage className="space-y-4 md:space-y-6 xl:!max-w-[1500px]">
       {/* Header */}
       <DashPageHeader
         title="Calendrier"
@@ -665,9 +665,9 @@ export default function AdminCalendrier() {
       )}
 
       {/* Main content - responsive grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[230px_minmax(0,1fr)_minmax(340px,380px)] gap-4 md:gap-6 min-w-0 w-full">
         {/* Filters sidebar - desktop only */}
-        <div className="hidden lg:block lg:col-span-1 min-w-0">
+        <div className="hidden lg:block lg:row-span-2 xl:row-span-1 min-w-0">
           <PremiumEventFilters
             agents={agents}
             clients={clients}
@@ -683,7 +683,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden">
+        <div className="min-w-0 overflow-hidden">
           <Suspense fallback={<div className="h-72 rounded-2xl bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={filteredEvents}
@@ -701,7 +701,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px]">
+        <div className="min-w-0 h-[480px] md:h-[600px] lg:col-start-2 xl:col-start-auto xl:h-[680px] xl:sticky xl:top-4">
           <PremiumDayEvents
             date={selectedDate}
             events={selectedDayEvents}

@@ -139,7 +139,7 @@ export function PremiumDayEvents({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 min-h-0 p-4 [&>[data-radix-scroll-area-viewport]>div]:!block">
         {allItems.length === 0 ? (
           <div className="text-center py-12">
             <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -274,7 +274,7 @@ export function PremiumDayEvents({
                           <div className="p-2 rounded-xl border border-border/70 text-center">
                             <Building className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                             <p className="text-xs text-muted-foreground">Prix</p>
-                            <p className="font-semibold text-sm text-foreground">{firstVisite.offres.prix} CHF</p>
+                            <p className="font-semibold text-sm text-foreground whitespace-nowrap">{Number(firstVisite.offres.prix).toLocaleString('fr-CH')} CHF</p>
                           </div>
                         </div>
                       )}
