@@ -195,13 +195,13 @@ const Messagerie = () => {
 
       const convIds = convs.map(c => c.id);
 
-      // Count unread messages from agent
+      // Messages non lus reçus (agent, admin, Steeve…)
       const { data } = await supabase
         .from('messages')
         .select('conversation_id')
         .eq('masque_messagerie', false)
         .eq('read', false)
-        .eq('sender_type', 'agent')
+        .neq('sender_type', 'client')
         .in('conversation_id', convIds);
 
       if (data) {
@@ -471,12 +471,19 @@ const Messagerie = () => {
         setVisitesMap(visitesMapping);
       }
 
-      // Mark messages as read
+      // Mark messages as read (en base puis dans les compteurs affichés)
       await supabase
         .from('messages')
         .update({ read: true })
         .eq('conversation_id', convId)
-        .eq('sender_type', 'agent');
+        .neq('sender_type', 'client')
+        .eq('read', false);
+      setUnreadCountsMap((prev) => {
+        if (!prev.has(convId)) return prev;
+        const next = new Map(prev);
+        next.delete(convId);
+        return next;
+      });
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
