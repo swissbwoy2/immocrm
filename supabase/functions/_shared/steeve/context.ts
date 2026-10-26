@@ -181,7 +181,7 @@ export async function documentsStatus(db: Db, dossier: Dossier) {
   };
 }
 
-const OFFER_STATUS_LABEL: Record<string, string> = {
+export const OFFER_STATUS_LABEL: Record<string, string> = {
   envoyee: 'envoyée, en attente de ta réponse',
   vue: 'vue',
   interesse: 'tu es intéressé(e)',
