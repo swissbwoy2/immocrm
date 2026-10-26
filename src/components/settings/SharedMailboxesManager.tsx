@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -152,48 +151,50 @@ export function SharedMailboxesManager() {
   const passwordState = (m: Mailbox) => (m.has_password ? 'Mot de passe enregistré' : 'Mot de passe manquant');
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Inbox className="w-5 h-5" />
-          Boîtes e-mail lues par Steeve
-        </CardTitle>
-        <CardDescription>
-          Steeve n'y retrouve que les échanges directs avec un client (e-mails qu'il a envoyés ou dont il est destinataire,
-          expéditeur authentifié), en extraits masqués, et seulement si son adresse est de confiance. Relève toutes les 5 minutes.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <section aria-labelledby="steeve-boites-title" className={`${DASH_CARD} min-w-0 p-4 md:p-6`}>
+      <header className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Inbox className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h2 id="steeve-boites-title" className="text-base font-semibold leading-snug text-foreground md:text-[17px]">Boîtes e-mail lues par Steeve</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Steeve n'y retrouve que les échanges directs avec un client (e-mails qu'il a envoyés ou dont il est destinataire,
+            expéditeur authentifié), en extraits masqués, et seulement si son adresse est de confiance. Relève toutes les 5 minutes.
+          </p>
+        </div>
+      </header>
+
+      <div className="mt-4 space-y-3 md:mt-5">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Chargement…
           </div>
         ) : mailboxes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucune boîte configurée.</p>
+          <p className="rounded-2xl border border-border/60 bg-background/50 p-4 text-sm text-muted-foreground dark:bg-white/[0.03]">Aucune boîte configurée.</p>
         ) : (
-          <ul className="divide-y divide-border rounded-md border">
+          <ul className="divide-y divide-border/60 rounded-2xl border border-border/60 bg-background/50 dark:bg-white/[0.03]">
             {mailboxes.map((m) => (
-              <li key={m.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-start sm:justify-between">
+              <li key={m.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium break-all">{m.address}</span>
+                    <span className="break-all font-medium text-foreground">{m.address}</span>
                     {m.label && <span className="text-sm text-muted-foreground">· {m.label}</span>}
-                    <Badge variant={m.is_active ? 'default' : 'secondary'}>{m.is_active ? 'Active' : 'Inactive'}</Badge>
+                    <DashBadge tone={m.is_active ? 'success' : 'muted'}>{m.is_active ? 'Active' : 'Inactive'}</DashBadge>
+                    {!m.has_password && <DashBadge tone="danger">{passwordState(m)}</DashBadge>}
                   </div>
-                  <p className={`text-xs ${!m.has_password ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {passwordState(m)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
+                  {m.has_password && <p className="text-sm text-muted-foreground">{passwordState(m)}</p>}
+                  <p className="text-sm text-muted-foreground">
                     Dernière relève : {formatDate(m.last_sync_at)} · {m.emails_count} e-mail(s) relevé(s), dont {m.verified_count} d'expéditeur authentifié
                     {m.pending_count ? ` · ${m.pending_count} en attente` : ''}
                   </p>
-                  {m.last_error && <p className="text-xs text-destructive">{m.last_error}</p>}
+                  {m.last_error && <p className="break-words text-sm text-destructive">{m.last_error}</p>}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <Button variant="outline" size="sm" onClick={() => edit(m)}>
+                  <Button variant="outline" className="min-h-11 flex-1 sm:flex-none" onClick={() => edit(m)}>
                     <Pencil className="h-4 w-4 mr-1" /> Modifier
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setToDelete(m)} aria-label={`Supprimer ${m.address}`}>
+                  <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setToDelete(m)} aria-label={`Supprimer ${m.address}`}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -201,13 +202,13 @@ export function SharedMailboxesManager() {
             ))}
           </ul>
         )}
-        <Button variant="outline" onClick={() => setForm({ ...EMPTY_FORM })}>
+        <Button variant="outline" className="min-h-11 w-full sm:w-auto" onClick={() => setForm({ ...EMPTY_FORM })}>
           <Plus className="h-4 w-4 mr-1" /> Ajouter une boîte
         </Button>
-      </CardContent>
+      </div>
 
       <Dialog open={!!form} onOpenChange={(open) => { if (!open && !saving) setForm(null); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{form?.id ? 'Modifier la boîte' : 'Ajouter une boîte'}</DialogTitle>
             <DialogDescription>
@@ -216,43 +217,43 @@ export function SharedMailboxesManager() {
             </DialogDescription>
           </DialogHeader>
           {form && (
-            <div className="space-y-3">
-              <div className="space-y-1">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
                 <Label htmlFor="mb-address">Adresse e-mail</Label>
-                <Input id="mb-address" type="email" autoComplete="off" placeholder="visites@immo-rama.ch"
+                <Input id="mb-address" type="email" autoComplete="off" placeholder="visites@immo-rama.ch" className="h-11 rounded-xl"
                   value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label htmlFor="mb-label">Libellé</Label>
-                <Input id="mb-label" placeholder="Visites" value={form.label}
+                <Input id="mb-label" placeholder="Visites" value={form.label} className="h-11 rounded-xl"
                   onChange={(e) => setForm({ ...form, label: e.target.value })} />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-2 space-y-1">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 space-y-1.5">
                   <Label htmlFor="mb-host">Serveur IMAP</Label>
-                  <Input id="mb-host" value={form.imapHost} onChange={(e) => setForm({ ...form, imapHost: e.target.value })} />
+                  <Input id="mb-host" className="h-11 rounded-xl" value={form.imapHost} onChange={(e) => setForm({ ...form, imapHost: e.target.value })} />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <Label htmlFor="mb-port">Port</Label>
-                  <Input id="mb-port" inputMode="numeric" value={form.imapPort}
+                  <Input id="mb-port" inputMode="numeric" className="h-11 rounded-xl" value={form.imapPort}
                     onChange={(e) => setForm({ ...form, imapPort: e.target.value.replace(/\D/g, '') })} />
                 </div>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label htmlFor="mb-password">Mot de passe</Label>
-                <Input id="mb-password" type="password" autoComplete="new-password"
+                <Input id="mb-password" type="password" autoComplete="new-password" className="h-11 rounded-xl"
                   placeholder={form.id ? 'Laisser vide pour garder le mot de passe actuel' : ''}
                   value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="mb-active">Relève active</Label>
+              <div className="flex min-h-[56px] items-center justify-between gap-4 rounded-2xl border border-border/60 px-4">
+                <Label htmlFor="mb-active" className="text-[15px] font-medium">Relève active</Label>
                 <Switch id="mb-active" checked={form.isActive} onCheckedChange={(checked) => setForm({ ...form, isActive: checked })} />
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" disabled={saving} onClick={() => setForm(null)}>Annuler</Button>
-            <Button disabled={saving} onClick={() => void save()}>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" className="min-h-11" disabled={saving} onClick={() => setForm(null)}>Annuler</Button>
+            <Button className="min-h-11" disabled={saving} onClick={() => void save()}>
               {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Enregistrer
             </Button>
           </DialogFooter>
@@ -273,6 +274,6 @@ export function SharedMailboxesManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </section>
   );
 }

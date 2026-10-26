@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldCheck } from 'lucide-react';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -47,43 +47,48 @@ export function SteeveAuthServersCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Authentification des e-mails</CardTitle>
-        <CardDescription>
-          Serveurs qui ont vérifié l'expéditeur des e-mails reçus. Déclarez de confiance uniquement celui de votre
-          hébergeur de messagerie (Infomaniak) : un e-mail n'est alors pris en compte que si l'expéditeur a été authentifié.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <section aria-labelledby="steeve-auth-title" className={`${DASH_CARD} min-w-0 p-4 md:p-6`}>
+      <header className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h2 id="steeve-auth-title" className="text-base font-semibold leading-snug text-foreground md:text-[17px]">Authentification des e-mails</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Serveurs qui ont vérifié l'expéditeur des e-mails reçus. Déclarez de confiance uniquement celui de votre
+            hébergeur de messagerie (Infomaniak) : un e-mail n'est alors pris en compte que si l'expéditeur a été authentifié.
+          </p>
+        </div>
+      </header>
+      <div className="mt-4 md:mt-5">
         {rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aucun e-mail relevé pour l'instant.</p>
+          <p className="rounded-2xl border border-border/60 bg-background/50 p-4 text-sm text-muted-foreground dark:bg-white/[0.03]">Aucun e-mail relevé pour l'instant.</p>
         ) : (
-          <ul className="divide-y rounded-md border text-sm">
+          <ul className="divide-y divide-border/60 rounded-2xl border border-border/60 bg-background/50 text-sm dark:bg-white/[0.03]">
             {rows.map((r) => (
-              <li key={`${r.mailbox_id}:${r.auth_server}`} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <li key={`${r.mailbox_id}:${r.auth_server}`} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="min-w-0">
-                  <p className="break-all font-medium">{r.auth_server}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="break-all font-medium text-foreground">{r.auth_server}</p>
+                    {r.trusted && <DashBadge tone="success">De confiance</DashBadge>}
+                  </div>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
                     {r.address} · {r.emails} e-mail(s), dont {r.favorables} avec expéditeur authentifié
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {r.trusted && <Badge>De confiance</Badge>}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={busy === `${r.mailbox_id}:${r.auth_server}`}
-                    onClick={() => void toggle(r)}
-                  >
-                    {r.trusted ? 'Retirer la confiance' : 'Faire confiance'}
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className="min-h-11 w-full shrink-0 sm:w-auto"
+                  disabled={busy === `${r.mailbox_id}:${r.auth_server}`}
+                  onClick={() => void toggle(r)}
+                >
+                  {r.trusted ? 'Retirer la confiance' : 'Faire confiance'}
+                </Button>
               </li>
             ))}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
