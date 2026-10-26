@@ -4,7 +4,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "../_shared/tracked-resend.ts";
 import { canSendNotificationEmail } from "../_shared/notificationEmailOptOut.ts";
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,8 +122,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const _deny = await denyIfNotInternal(req, corsHeaders, 'send-notification-email', { allowAnyAuthenticated: true });
-  if (_deny) return _deny;
+  // Équipe et appels internes : tous les envois. Autre utilisateur connecté (client…) : seulement prévenir
+  // un membre de l'équipe, en mode simple (pas de notification_id, pas d'adresse ni de contenu libres).
+  const appelant = await verifyInternalCaller(req);
+  if (!appelant.ok) {
+    const refuser = (status: number) =>
+      new Response(JSON.stringify({ error: "Non autorisé" }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    if (!appelant.userId) return refuser(401);
+    // deno-lint-ignore no-explicit-any
+    const corps: any = await req.clone().json().catch(() => ({}));
+    const cible = typeof corps?.user_id === "string" ? corps.user_id : "";
+    if (!cible || corps?.notification_id || corps?.to || corps?.html || corps?.track || corps?.cta_url) {
+      return refuser(403);
+    }
+    const svcAcces = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: rolesCible } = await svcAcces.from("user_roles").select("role").eq("user_id", cible);
+    const equipe = ["admin", "agent", "coursier", "closeur"];
+    if (!(rolesCible ?? []).some((r: { role: string }) => equipe.includes(r.role))) return refuser(403);
+  }
 
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
