@@ -42,8 +42,12 @@ function destination(n: Notification, role: NotificationRole): string | null {
  * Filtres Toutes / Non lues / À traiter, filtre par thème et recherche ; les compteurs suivent.
  */
 export function NotificationsPage({ role }: { role: NotificationRole }) {
+  // Historique : 200 notifications au départ, « Afficher plus » ajoute 200 (les non lues sont toujours toutes là).
+  const baseLimit = CHARGEMENT[role].limit;
+  const [limit, setLimit] = useState<number | null>(baseLimit === null ? null : Math.max(200, baseLimit ?? 200));
   const { notifications, counts, loading, recordClick, markAsRead, markAllAsRead, deleteNotification, refresh } =
-    useNotifications(CHARGEMENT[role]);
+    useNotifications({ ...CHARGEMENT[role], limit });
+  const canLoadMore = limit !== null && notifications.length >= limit;
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filtre>('all');
   const [theme, setTheme] = useState<'all' | Theme>('all');
@@ -224,6 +228,13 @@ export function NotificationsPage({ role }: { role: NotificationRole }) {
               <div className="space-y-3">{parJour[g.key].map(carte)}</div>
             </section>
           ))}
+          {canLoadMore && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" className="rounded-full" onClick={() => setLimit((l) => (l === null ? null : l + 200))}>
+                Afficher les notifications plus anciennes
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </DashPage>
