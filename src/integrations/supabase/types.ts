@@ -13236,6 +13236,7 @@ export type Database = {
       }
       remboursements: {
         Row: {
+          acompte_id: string | null
           client_id: string | null
           client_nom: string
           created_at: string
@@ -13249,6 +13250,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          acompte_id?: string | null
           client_id?: string | null
           client_nom: string
           created_at?: string
@@ -13262,6 +13264,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          acompte_id?: string | null
           client_id?: string | null
           client_nom?: string
           created_at?: string
