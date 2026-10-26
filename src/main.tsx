@@ -119,7 +119,17 @@ const handleStaleChunk = (msg: string) => {
     sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
   } catch { return; }
   console.warn('[App] Stale lazy chunk detected, reloading…', { url: window.location.href, msg });
-  window.location.reload();
+  // Recharger seul resservait l'ancienne page depuis le service worker : on le retire avec ses caches d'abord.
+  const reload = () => window.location.reload();
+  const tasks: Promise<unknown>[] = [];
+  try {
+    if (navigator.serviceWorker?.getRegistrations) {
+      tasks.push(navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister()))));
+    }
+    if ('caches' in window) tasks.push(caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))));
+  } catch { /* rechargement simple */ }
+  Promise.all(tasks).then(reload, reload);
+  setTimeout(reload, 3000);
 };
 
 // vite:preloadError : un preload de chunk périmé après un déploiement → reload throttlé.
@@ -135,6 +145,8 @@ void restoreNativeSessionBackup().finally(() => {
       <App />
     </ErrorBoundary>
   );
+  // Signal lu par le garde de démarrage d'index.html (page blanche après une publication).
+  (window as any).__APP_BOOTED = true;
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const splash = document.getElementById("boot-splash");
     if (!splash) return;
