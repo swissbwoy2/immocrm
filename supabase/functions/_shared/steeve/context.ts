@@ -391,12 +391,17 @@ export function depositAmount(dossier: Dossier): number | null {
 /** Résumé compact remis à Steeve à chaque passage (le détail passe par les outils). */
 export async function overview(db: Db, dossier: Dossier, now: Date) {
   const c = dossier.client;
-  const [docs, offs, nextVisits, apps] = await Promise.all([
+  const [docs, offs, nextVisits, apps, devices] = await Promise.all([
     documentsStatus(db, dossier),
     db.from('offres').select('statut').eq('client_id', dossier.clientId).or('statut.is.null,statut.neq.doublon'),
     visits(db, dossier.clientId, 'a_venir', now),
     applications(db, dossier.clientId),
+    // Application mobile installée = un appareil iOS ou Android inscrit aux notifications.
+    dossier.userId
+      ? Promise.resolve(db.from('device_tokens').select('platform').eq('user_id', dossier.userId).limit(5)).catch(() => ({ data: null }))
+      : Promise.resolve({ data: [] }),
   ]);
+  const plateformes = Array.isArray((devices as any)?.data) ? [...new Set(((devices as any).data as any[]).map((d) => String(d.platform ?? '')).filter((p) => /ios|android/i.test(p)))] : null;
   const offerCounts: Record<string, number> = {};
   for (const o of offs.data || []) {
     const label = OFFER_STATUS_LABEL[o.statut] || o.statut;
@@ -423,5 +428,6 @@ export async function overview(db: Db, dossier: Dossier, now: Date) {
     prochaines_visites: nextVisits.slice(0, 3),
     candidatures: apps.candidatures.slice(0, 5),
     preparation_des_dossiers: apps.preparation_des_dossiers.slice(0, 5),
+    application_mobile: plateformes === null ? { installee: 'inconnu' } : { installee: plateformes.length > 0, plateformes },
   };
 }

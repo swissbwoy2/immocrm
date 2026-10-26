@@ -32,7 +32,7 @@ export interface Usage {
   cache_read_input_tokens: number;
   output_tokens: number;
   /** Outils exécutés par Anthropic (recherche web) : facturés à l'unité. */
-  server_tool_use?: { web_search_requests?: number };
+  server_tool_use?: { web_search_requests?: number; web_fetch_requests?: number };
 }
 
 /** Recherche web côté Anthropic : 10 USD les 1000 recherches (tarif relevé le 25.10.2026). */
@@ -53,7 +53,7 @@ export type ContentBlock =
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
   // Blocs de la recherche web (exécutée par Anthropic) : renvoyés tels quels au tour suivant.
-  | { type: 'server_tool_use' | 'web_search_tool_result'; [key: string]: unknown }
+  | { type: 'server_tool_use' | 'web_search_tool_result' | 'web_fetch_tool_result'; [key: string]: unknown }
   // PDF lu par le modèle (formulaire de demande de location).
   | { type: 'document'; source: { type: 'base64'; media_type: 'application/pdf'; data: string }; title?: string }
   // Photo d'une pièce (carte d'identité, fiche de salaire…) lue par le modèle.
@@ -78,6 +78,8 @@ export interface ServerToolDefinition {
   max_uses?: number;
   user_location?: Record<string, string>;
   blocked_domains?: string[];
+  allowed_domains?: string[];
+  max_content_tokens?: number;
   cache_control?: { type: 'ephemeral' };
 }
 
@@ -92,6 +94,31 @@ export const WEB_SEARCH_TOOL: ServerToolDefinition = {
   name: 'web_search',
   max_uses: 2,
   user_location: { type: 'approximate', city: 'Lausanne', region: 'Vaud', country: 'CH', timezone: 'Europe/Zurich' },
+};
+
+/**
+ * Lecture d'une page web (exécutée par Anthropic, sans coût en plus des jetons ; documentation relevée le 26.10.2026) :
+ * seulement une adresse déjà présente dans la conversation (lien envoyé, résultat d'outil ou de recherche).
+ * Côté client : portails immobiliers et régies seulement ; le contenu lu est une donnée, jamais une instruction.
+ */
+export const IMMO_DOMAINS = [
+  'flatfox.ch', 'immobilier.ch', 'homegate.ch', 'immoscout24.ch', 'comparis.ch', 'newhome.ch', 'anibis.ch', 'tutti.ch', 'acheter-louer.ch',
+  'logisorama.ch', 'immo-rama.ch', 'naef.ch', 'bernard-nicod.ch', 'derham.ch', 'regiebraun.ch', 'gerofinance.ch', 'foncia.ch', 'wincasa.ch',
+  'livit.ch', 'privera.ch', 'domicim.ch', 'retraitespopulaires.ch', 'apleona.ch', 'cogestim.ch', 'pilet-renaud.ch',
+];
+export const CLIENT_WEB_FETCH_TOOL: ServerToolDefinition = {
+  type: 'web_fetch_20250910',
+  name: 'web_fetch',
+  max_uses: 2,
+  allowed_domains: IMMO_DOMAINS,
+  max_content_tokens: 8000,
+};
+/** Copilote de l'admin : toute page publique (l'admin est de confiance), trois lectures par réponse au plus. */
+export const ADMIN_WEB_FETCH_TOOL: ServerToolDefinition = {
+  type: 'web_fetch_20250910',
+  name: 'web_fetch',
+  max_uses: 3,
+  max_content_tokens: 15000,
 };
 
 /** Texte final d'une réponse (les citations de la recherche web sont ignorées, le texte reste). */
@@ -194,7 +221,7 @@ export function anthropicCaller(apiKey: string): CallModel {
         cache_creation_input_tokens: data.usage?.cache_creation_input_tokens ?? 0,
         cache_read_input_tokens: data.usage?.cache_read_input_tokens ?? 0,
         output_tokens: data.usage?.output_tokens ?? 0,
-        server_tool_use: { web_search_requests: data.usage?.server_tool_use?.web_search_requests ?? 0 },
+        server_tool_use: { web_search_requests: data.usage?.server_tool_use?.web_search_requests ?? 0, web_fetch_requests: data.usage?.server_tool_use?.web_fetch_requests ?? 0 },
       },
     };
   };
