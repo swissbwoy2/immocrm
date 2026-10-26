@@ -3,8 +3,10 @@ import { createSteeveModel, srgb } from './steeve-model.js';
 import fallbackUrl from './steeve-fallback.webp?url';
 
 // Composant <steeve-mascot> de Logisorama.
-// Personnage : pack « steeve-3d-logisorama-v1 » (tête blanche, yeux noirs verticaux, « − », « + », costume ivoire),
-// adapté à Three.js 0.133 (la version du projet : une seule version de Three.js dans l'application).
+// Personnage : Steeve V2 (pack « Steeve-personnage-seul-Claude 3 » : tête blanche bombée, yeux et bouche en relief,
+// costume ivoire tissé, manches continues articulées), adapté à Three.js 0.133 (une seule version dans l'application).
+// Même squelette que le personnage précédent (noms, pivots, axes, pose de repos) : les animations s'y raccordent
+// sans modification.
 // Comportement : contrat du kit précédent (états, priorités, attente autonome, bulle, accessibilité), enrichi
 // d'une vingtaine de gestes expressifs. Tout est calculé dans le navigateur : aucun appel réseau, aucune IA.
 
@@ -25,6 +27,16 @@ const EXPRESSION = {
 const IDLE_AT = [8000, 18000, 28000, 42000];
 const IDLE_POOL = ['curious', 'stretch', 'wink', 'shrug', 'nod'];
 const IDLE_DURATION = { curious: 2400, stretch: 3000, wink: 1400, shrug: 1900, nod: 1400 };
+// Vivacité : messagerie fermée et Steeve visible, il bouge de lui-même (danse, saut, fête…) toutes les 6 à 11 s,
+// même quand la souris bouge (le suivi du curseur continue entre les gestes). Pondération : danse et saut d'abord.
+const AMBIENT_POOL = [
+  ['dance', 4], ['jump', 4], ['celebrate', 2], ['spin', 2], ['clap', 1], ['greeting', 1],
+  ['wink', 1], ['nod', 1], ['laugh', 1], ['curious', 1], ['stretch', 1], ['shrug', 1],
+];
+const AMBIENT_FIRST = 4000;
+const AMBIENT_GAP = [6000, 11000];
+// Respiration (repos, écoute, sommeil) : image calculée au plus toutes les 33 ms (42 ms sur mobile).
+const BREATH_FRAME_MS = () => (innerWidth <= 600 ? 42 : 33);
 const PARTS = ['root', 'body', 'head', 'armLeft', 'armRight', 'forearmLeft', 'forearmRight', 'handLeft', 'handRight', 'legLeft', 'legRight'];
 const FALLBACK = fallbackUrl;
 const clamp = (v, lo = -1, hi = 1) => Math.max(lo, Math.min(hi, v));
@@ -108,6 +120,9 @@ export class SteeveMascot extends HTMLElement {
     this._scrollUntil = 0;
     this._scrollDirection = 0;
     this._scrollPositions = new WeakMap();
+    this._ambient = null;
+    this._ambientDeadline = 0;
+    this._lastRender = 0;
   }
 
   connectedCallback() {
@@ -148,6 +163,7 @@ export class SteeveMascot extends HTMLElement {
     this._init3D();
     this._sync();
     this._scheduleBlink();
+    this._scheduleAmbient(AMBIENT_FIRST);
     if (!this._greeted && this.getAttribute('mode') !== 'preview' && this.getAttribute('greeting') !== 'off') {
       this._greeted = true;
       this._later(() => {
@@ -166,6 +182,9 @@ export class SteeveMascot extends HTMLElement {
     this._timers.forEach(clearTimeout);
     this._timers.clear();
     this._blinkTimer = this._idleTimer = this._autoTimer = this._scrollTimer = this._manualTimer = null;
+    this._ambientTimer = this._ambientEndTimer = null;
+    this._ambient = null;
+    this._ambientDeadline = 0;
     this._manual = null;
     this._deadline = 0;
     this._auto = null;
@@ -218,6 +237,40 @@ export class SteeveMascot extends HTMLElement {
     this._autoDeadline = this._scrollUntil = 0;
     this._cancelTimer('_autoTimer');
     this._cancelTimer('_scrollTimer');
+    this._ambient = null;
+    this._ambientDeadline = 0;
+    this._cancelTimer('_ambientEndTimer');
+  }
+
+  /** Planifie le prochain geste spontané (une seule minuterie à la fois). */
+  _scheduleAmbient(delay) {
+    if (this._ambientTimer || !this.isConnected) return;
+    const wait = delay ?? AMBIENT_GAP[0] + Math.random() * (AMBIENT_GAP[1] - AMBIENT_GAP[0]);
+    this._ambientTimer = this._later(() => {
+      this._ambientTimer = null;
+      if (!this._onScreen) return; // reprise par _visibility
+      const now = performance.now();
+      if (this._autonomous && !this._manual && !this._auto && !this._ambient && !(this._scrollUntil > now) && this._state === 'idle') {
+        const pool = AMBIENT_POOL.filter(([name]) => name !== this._lastAmbient);
+        let pick = Math.random() * pool.reduce((sum, [, weight]) => sum + weight, 0);
+        const gesture = (pool.find(([, weight]) => (pick -= weight) < 0) ?? pool[0])[0];
+        const duration = STEEVE_GESTURES[gesture];
+        this._ambient = this._lastAmbient = gesture;
+        this._ambientDeadline = now + duration;
+        this._chooseState();
+        this._request();
+        this._cancelTimer('_ambientEndTimer');
+        this._ambientEndTimer = this._later(() => {
+          this._ambientEndTimer = null;
+          if (this._ambient !== gesture) return;
+          this._ambient = null;
+          this._ambientDeadline = 0;
+          this._chooseState();
+          this._request();
+        }, duration + 20);
+      }
+      this._scheduleAmbient();
+    }, wait);
   }
 
   _init3D() {
@@ -455,7 +508,8 @@ export class SteeveMascot extends HTMLElement {
     const now = performance.now();
     if (this._deadline && now >= this._deadline) { this._manual = null; this._deadline = 0; }
     if (this._autoDeadline && now >= this._autoDeadline) { this._auto = null; this._autoDeadline = 0; }
-    const automatic = this._moves && this._decorates ? (this._scrollUntil > now ? 'scroll' : this._auto) : null;
+    if (this._ambientDeadline && now >= this._ambientDeadline) { this._ambient = null; this._ambientDeadline = 0; }
+    const automatic = this._moves && this._decorates ? (this._scrollUntil > now ? 'scroll' : this._auto || this._ambient) : null;
     // Priorité : saisie > attente réelle > geste demandé > messagerie ouverte > défilement / autonomie > repos.
     const state = this.hasAttribute('quiet') ? 'listening'
       : this.hasAttribute('busy') ? 'thinking'
@@ -512,6 +566,7 @@ export class SteeveMascot extends HTMLElement {
       this._raf = 0;
       this._cancelTimer('_blinkTimer');
       this._cancelTimer('_idleTimer');
+      this._cancelTimer('_ambientTimer');
       this._cancelAutomatic();
     } else {
       this._lastActivity = performance.now();
@@ -522,6 +577,7 @@ export class SteeveMascot extends HTMLElement {
       this._request();
       this._scheduleBlink();
       this._armIdle();
+      this._scheduleAmbient(4000);
     }
   }
 
@@ -546,16 +602,16 @@ export class SteeveMascot extends HTMLElement {
   // Décrit une pose sans toucher au modèle ; chaque canal est ensuite amorti vers elle.
   _buildPose(time) {
     const R = this._rest;
-    const pose = { rootY: 0, faceX: 0, faceY: 0, eyes: 1, eyesWide: 1, x: 0, y: 0, active: false };
+    const pose = { rootY: 0, faceX: 0, faceY: 0, eyes: 1, eyesWide: 1, x: 0, y: 0, active: false, breathing: false };
     for (const name of PARTS) pose[name] = [...R[name]];
     if (!this._moves) return pose;
     const add = (name, axis, value) => { pose[name][axis] += value; };
     let x = this._tracks ? this._gaze.x : 0;
     let y = this._tracks ? this._gaze.y : 0;
     const t = Math.max(0, (time - (this._started ?? time)) / 1000);
-    const deadline = this._manual ? this._deadline : this._autoDeadline;
-    const w = ease(t / 0.3) * (deadline ? ease((deadline - time) / 450) : 1);
     const s = this._state;
+    const deadline = this._manual ? this._deadline : s === this._ambient && !this._auto ? this._ambientDeadline : this._autoDeadline;
+    const w = ease(t / 0.3) * (deadline ? ease((deadline - time) / 450) : 1);
     const X = 0, Y = 1, Z = 2;
     switch (s) {
       case 'greeting': // coucou : bras levé, avant-bras qui salue
@@ -715,6 +771,27 @@ export class SteeveMascot extends HTMLElement {
         add('body', X, 0.03);
         x = y = 0;
         break;
+    }
+    if (s === 'idle' || s === 'listening' || s === 'sleep') {
+      // Respiration et léger balancement : Steeve n'est jamais figé, même sans geste.
+      const tb = time / 1000, slow = s === 'sleep' ? 0.55 : 1;
+      const breath = Math.sin(tb * 2.1 * slow);
+      pose.rootY += breath * 0.012;
+      add('body', X, breath * 0.01);
+      add('armLeft', Z, -(breath * 0.025 + 0.01));
+      add('armRight', Z, breath * 0.025 + 0.01);
+      add('forearmLeft', X, -Math.max(0, breath) * 0.04);
+      add('forearmRight', X, -Math.max(0, breath) * 0.04);
+      if (s !== 'sleep') {
+        const sway = Math.sin(tb * 0.9);
+        add('body', Z, sway * 0.018);
+        add('head', Z, Math.sin(tb * 0.9 + 0.6) * 0.022);
+        add('legLeft', Z, sway * 0.012);
+        add('legRight', Z, sway * 0.012);
+      }
+      pose.breathing = true;
+    }
+    switch (s) {
       case 'scroll': {
         const amount = this._scrollUntil > time ? ease((this._scrollUntil - time) / 800) : 0;
         const direction = this._scrollDirection || 0.6;
@@ -747,6 +824,9 @@ export class SteeveMascot extends HTMLElement {
   _frame(time) {
     this._raf = 0;
     if (!this._renderer || !this._model || this._contextLost || !this._onScreen) return;
+    // Respiration seule : cadence réduite (pas de calcul ni de rendu à chaque image de l'écran).
+    if (this._breathOnly && time - this._lastRender < BREATH_FRAME_MS()) { this._request(); return; }
+    this._lastRender = time;
     this._chooseState();
     const dt = Math.max(1, Math.min(64, this._lastFrame == null ? 16 : time - this._lastFrame));
     this._lastFrame = time;
@@ -783,7 +863,9 @@ export class SteeveMascot extends HTMLElement {
     this.dataset.gazeY = pose.y.toFixed(2);
     this._renderer.render(this._scene, this._camera);
     const movingGaze = Math.abs(this._target.x - this._gaze.x) + Math.abs(this._target.y - this._gaze.y) > 0.0005;
-    if (pose.active || unsettled || movingGaze) this._request();
+    // Le petit balancement garde des écarts infimes : seul compte ici l'état (geste, regard), pas la respiration.
+    this._breathOnly = pose.breathing && !pose.active && !movingGaze;
+    if (pose.active || unsettled || movingGaze || pose.breathing) this._request();
   }
 }
 
