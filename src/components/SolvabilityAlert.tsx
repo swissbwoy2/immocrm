@@ -145,197 +145,176 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
       );
     }
 
+    // Montants au format suisse « CHF 2'400 ».
+    const chf = (n: number) => `CHF ${Math.round(n || 0).toLocaleString('de-CH').replace(/[’\u2019]/g, "'")}`;
+    const usage = budgetPossible > 0 ? Math.round((budgetDemande / budgetPossible) * 100) : budgetDemande > 0 ? 999 : 0;
+    const marge = budgetPossible - budgetDemande;
+    const usageTone = usage <= 100 ? 'ok' : usage <= 110 ? 'warn' : 'ko';
+    const usageBar = usageTone === 'ok' ? 'bg-emerald-500' : usageTone === 'warn' ? 'bg-amber-500' : 'bg-destructive';
+    const usageTxt = usageTone === 'ok' ? 'text-emerald-700 dark:text-emerald-400' : usageTone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-destructive';
+    const autresRevenus = Math.max(0, (totalRevenus || 0) - (clientRevenus || 0));
+    const verdict = budgetDemande <= 0
+      ? 'Indiquez votre budget pour vérifier votre solvabilité.'
+      : marge >= 0
+        ? `Votre budget de ${chf(budgetDemande)} est couvert${marge > 0 ? ` · marge de ${chf(marge)}` : ''}.`
+        : `Votre budget dépasse votre capacité de ${chf(-marge)} par mois.`;
+
     return (
       <div className={cn(DASH_CARD, 'p-4 md:p-5', className)}>
-        {/* Header */}
-        <div className="mb-4 flex items-start gap-3">
+        {/* En-tête : verdict en une phrase */}
+        <div className="flex items-start gap-3">
           <span className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
             isSolvable ? 'bg-emerald-500/10 text-emerald-600' : 'bg-destructive/10 text-destructive'
           )}>
             {isSolvable ? <CheckCircle className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-foreground">
-              {isSolvable ? 'Dossier solvable' : 'Dossier non solvable'}
-            </h3>
-            {solvabilitySource === 'garant' && (
-              <p className="mt-0.5 text-xs text-muted-foreground">Via garant</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="text-[17px] font-semibold leading-tight text-foreground">
+                {isSolvable ? 'Dossier solvable' : 'Dossier non solvable'}
+              </h3>
+              {isSolvable
+                ? (hasValidGarant || solvabilitySource === 'garant') && <DashBadge tone="success">Via garant</DashBadge>
+                : criticalProblems.length > 0 && <DashBadge tone="danger">{criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}</DashBadge>}
+            </div>
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">{verdict}</p>
+          </div>
+        </div>
+
+        {/* Chiffre clé : loyer maximum vs budget */}
+        <div className="imr-lg-glass mt-4 rounded-[20px] p-4">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">Loyer maximum conseillé</p>
+              <p className={cn('mt-0.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums', isSolvable ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground')}>
+                {chf(budgetPossible)}<span className="ml-1 text-sm font-medium text-muted-foreground">/mois</span>
+              </p>
+            </div>
+            {budgetDemande > 0 && (
+              <div className="shrink-0 text-right">
+                <p className="text-xs font-medium text-muted-foreground">Votre budget</p>
+                <p className="mt-0.5 text-lg font-semibold leading-none tabular-nums text-foreground">{chf(budgetDemande)}</p>
+              </div>
             )}
           </div>
-          {isSolvable ? (
-            hasValidGarant && <DashBadge tone="success">Garant valide</DashBadge>
-          ) : (
-            <DashBadge tone="danger">
-              {criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}
-            </DashBadge>
+          {budgetDemande > 0 && (
+            <>
+              <div className="relative mt-4 h-2.5 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(usage, 100)} aria-label="Part de votre capacité utilisée par votre budget">
+                <div className={cn('h-full rounded-full transition-all duration-700', usageBar)} style={{ width: `${Math.min(usage, 100)}%` }} />
+              </div>
+              <p className={cn('mt-2 text-xs font-medium', usageTxt)}>
+                {usage <= 100 ? `Votre budget utilise ${usage} % de votre capacité` : `Votre budget représente ${usage > 300 ? 'plus de 300' : usage} % de votre capacité`}
+              </p>
+            </>
           )}
         </div>
 
-        {/* Résumé financier */}
-        <div className="mb-4 grid grid-cols-2 gap-2.5">
-          {([
-            { icon: Wallet, label: 'Revenus client', value: clientRevenus, cls: 'text-foreground' },
-            { icon: TrendingUp, label: 'Revenus totaux', value: totalRevenus, cls: 'text-foreground' },
-            { icon: Target, label: 'Budget demandé', value: budgetDemande, cls: 'text-foreground' },
-            { icon: Calculator, label: `Budget possible${solvabilitySource === 'garant' ? ' (garant)' : ''}`, value: budgetPossible, cls: possibleCls },
-          ] as const).map(({ icon: Icon, label, value, cls }) => (
-            <div key={label} className="imr-lg-glass rounded-2xl p-3">
-              <div className="mb-1 flex items-center gap-1.5">
-                <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <p className="truncate text-xs text-muted-foreground">{label}</p>
-              </div>
-              <p className={cn('text-base font-semibold', cls)}>{value.toLocaleString()} CHF</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Barre de solvabilité */}
-        {budgetDemande > 0 && (
-          <div className="mb-4">
-            <div className="mb-1.5 flex justify-between text-sm">
-              <span className="text-muted-foreground">Capacité de solvabilité</span>
-              <span className={cn('font-semibold', pctCls)}>{solvabilityPercentage}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
-              <div className={cn('h-full rounded-full transition-all duration-500', barCls)} style={{ width: `${solvabilityPercentage}%` }} />
-            </div>
+        {/* Revenus pris en compte */}
+        <dl className="mt-3 divide-y divide-black/[0.06] dark:divide-white/10">
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="flex items-center gap-2 text-sm text-muted-foreground"><TrendingUp className="h-4 w-4 shrink-0" />Revenus pris en compte</dt>
+            <dd className="text-sm font-semibold tabular-nums text-foreground">{chf(totalRevenus)}<span className="font-normal text-muted-foreground"> /mois</span></dd>
           </div>
-        )}
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="flex items-center gap-2 text-sm text-muted-foreground"><Wallet className="h-4 w-4 shrink-0" />Vos revenus</dt>
+            <dd className="text-sm font-semibold tabular-nums text-foreground">{chf(clientRevenus)}</dd>
+          </div>
+          {autresRevenus > 0 && (
+            <div className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="flex items-center gap-2 text-sm text-muted-foreground"><Shield className="h-4 w-4 shrink-0" />Garant / colocataires</dt>
+              <dd className="text-sm font-semibold tabular-nums text-foreground">{chf(autresRevenus)}</dd>
+            </div>
+          )}
+        </dl>
 
         {/* Statut du permis client */}
         {!clientHasStableStatus && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl bg-amber-500/10 p-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-              <FileWarning className="h-4 w-4" />
-            </span>
+          <div className="mt-3 flex items-start gap-3 rounded-2xl bg-amber-500/10 p-3">
+            <FileWarning className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">Permis non stable détecté</p>
-              <p className="text-xs text-muted-foreground">
-                Un garant avec permis B/C ou nationalité suisse est nécessaire
-              </p>
+              <p className="text-sm text-muted-foreground">Un garant avec permis B/C ou nationalité suisse est nécessaire.</p>
             </div>
           </div>
         )}
 
-        {/* Info garant valide */}
+        {/* Garant valide */}
         {hasValidGarant && garantInfo && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl bg-emerald-500/10 p-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-              <Shield className="h-4 w-4" />
-            </span>
+          <div className="mt-3 flex items-start gap-3 rounded-2xl bg-emerald-500/10 p-3">
+            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-foreground">Garant valide: {garantInfo.nom}</p>
-              <p className="text-xs text-muted-foreground">
-                Revenus: {garantInfo.revenus.toLocaleString()} CHF → Max {garantInfo.maxLoyer.toLocaleString()} CHF/mois
-                {garantInfo.permis && ` • Permis ${garantInfo.permis}`}
+              <p className="text-sm font-semibold text-foreground">Garant valide : {garantInfo.nom}</p>
+              <p className="text-sm text-muted-foreground">
+                Revenus {chf(garantInfo.revenus)} → loyer max {chf(garantInfo.maxLoyer)}/mois{garantInfo.permis && ` · permis ${garantInfo.permis}`}
               </p>
             </div>
-            <DashBadge tone="success">Permis stable</DashBadge>
           </div>
         )}
 
-        {/* Problèmes détectés */}
+        {/* Ce qu'il faut faire */}
         {problems.length > 0 && (
-          <div className="mb-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <p className="text-sm font-semibold text-foreground">
-                Problèmes à résoudre ({problems.length})
-              </p>
-            </div>
-
-            {criticalProblems.length > 0 && (
-              <div className="space-y-2">
-                <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-destructive">
-                  <span className="h-2 w-2 rounded-full bg-destructive" />
-                  Problèmes bloquants
-                </p>
-                {criticalProblems.map((problem, index) => (
-                  <div key={index} className="rounded-xl border border-destructive/20 p-3">
-                    <div className="flex items-start gap-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-xs font-semibold text-destructive">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-foreground">{problem.message}</p>
-                        <p className="mt-1.5 flex items-start gap-2 text-sm text-muted-foreground">
-                          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          <span><strong className="text-foreground">Solution:</strong> {problem.solution}</span>
-                        </p>
-                      </div>
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-semibold text-foreground">À faire pour débloquer ({problems.length})</p>
+            {[...criticalProblems, ...warningProblems].map((problem, index) => {
+              const critical = problem.type === 'critical';
+              return (
+                <div key={index} className={cn('rounded-2xl p-3', critical ? 'bg-destructive/[0.07]' : 'bg-amber-500/10')}>
+                  <div className="flex items-start gap-3">
+                    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold', critical ? 'bg-destructive text-destructive-foreground' : 'bg-amber-500 text-white')}>
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground">{problem.message}</p>
+                      <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
+                        <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <span>{problem.solution}</span>
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {warningProblems.length > 0 && (
-              <div className="space-y-2">
-                <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-amber-600">
-                  <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  Alertes
-                </p>
-                {warningProblems.map((problem, index) => (
-                  <div key={index} className="rounded-xl border border-amber-500/30 p-3">
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                      <div className="min-w-0 flex-1">
-                        <p className="mb-1 text-sm font-medium text-foreground">{problem.message}</p>
-                        <p className="text-xs text-muted-foreground">{problem.solution}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Candidats exclus */}
         {excludedCandidates.length > 0 && (
-          <div className="mb-4 rounded-xl border border-amber-500/30 p-3">
-            <div className="mb-2 flex items-center gap-2">
+          <div className="mt-4 rounded-2xl bg-amber-500/10 p-3">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
               <Ban className="h-4 w-4 text-amber-600" />
-              <p className="text-sm font-semibold text-foreground">
-                Candidats non comptabilisés ({excludedCandidates.length})
-              </p>
-            </div>
-            <div className="space-y-2">
+              Revenus non comptabilisés ({excludedCandidates.length})
+            </p>
+            <div className="space-y-1.5">
               {excludedCandidates.map((candidate, index) => (
-                <div key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/40 p-2.5 text-xs">
-                  <span className="font-medium text-foreground">
-                    {candidate.name} ({CANDIDATE_TYPE_LABELS[candidate.type] || candidate.type})
-                  </span>
+                <div key={index} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="font-medium text-foreground">{candidate.name} · {CANDIDATE_TYPE_LABELS[candidate.type] || candidate.type}</span>
                   <DashBadge tone="warning">{candidate.reason}</DashBadge>
                 </div>
               ))}
             </div>
-            <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-              <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-              <span><strong className="text-foreground">Pour comptabiliser ces revenus:</strong> Ces candidats doivent avoir un permis B, C ou être de nationalité suisse</span>
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">Pour les compter : permis B, C ou nationalité suisse.</p>
           </div>
         )}
 
-        {/* Bouton ajouter candidat */}
         {!isSolvable && onAddCandidate && (
-          <Button onClick={onAddCandidate} className="mb-4 w-full rounded-full sm:w-auto">
+          <Button onClick={onAddCandidate} className="mt-4 w-full sm:w-auto">
             <UserPlus className="mr-2 h-4 w-4" />
-            Ajouter un candidat au dossier
+            Ajouter un garant ou un colocataire
           </Button>
         )}
 
-        {/* Info sur le calcul */}
-        <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground">
-          <div className="flex items-start gap-2">
-            <Calculator className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <p>
-              <strong className="text-foreground">Règle de calcul:</strong> Budget possible = Revenus totaux ÷ 3. 
-              Les revenus ne sont comptabilisés que pour les personnes sans poursuites ni actes de défaut de bien, avec permis B, C ou nationalité suisse.
-            </p>
-          </div>
-        </div>
+        {/* Règle de calcul (repliée) */}
+        <details className="group mt-3 rounded-2xl text-sm">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-muted-foreground [&::-webkit-details-marker]:hidden">
+            <Calculator className="h-4 w-4 shrink-0 text-primary" />
+            <span className="flex-1">Comment est-ce calculé ?</span>
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+          </summary>
+          <p className="pb-1 pl-6 text-muted-foreground">
+            Loyer maximum = revenus pris en compte ÷ 3. Seuls les revenus des personnes sans poursuites ni actes de défaut de biens, avec permis B, C ou nationalité suisse, sont comptés.
+          </p>
+        </details>
       </div>
     );
   }

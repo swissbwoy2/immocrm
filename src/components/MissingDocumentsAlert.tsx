@@ -104,90 +104,58 @@ export function MissingDocumentsAlert({
     );
   }
 
+  const have = REQUIRED_DOCUMENTS.length - missingRequired.length;
+  const ring = 2 * Math.PI * 23.5;
+  const Item = ({ label }: { label: string }) => (
+    <li className="flex min-h-11 items-center gap-3 py-1.5">
+      <span className="h-5 w-5 shrink-0 rounded-full border-2 border-dashed border-amber-500/70" aria-hidden />
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{label}</span>
+    </li>
+  );
+
   return (
     <div className={`${DASH_CARD} p-4 md:p-5`}>
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
-          <AlertTriangle className="h-5 w-5" />
+      <div className="flex items-center gap-3.5">
+        {/* Anneau : pièces fournies */}
+        <span className="relative inline-flex h-[52px] w-[52px] shrink-0 items-center justify-center">
+          <svg width="52" height="52" className="-rotate-90" aria-hidden>
+            <circle cx="26" cy="26" r="23.5" fill="none" strokeWidth="5" className="stroke-black/[0.07] dark:stroke-white/10" />
+            <circle cx="26" cy="26" r="23.5" fill="none" strokeWidth="5" strokeLinecap="round" className="stroke-amber-500"
+              strokeDasharray={ring} strokeDashoffset={ring * (1 - completionPercentage / 100)} />
+          </svg>
+          <span className="absolute text-[13px] font-semibold tabular-nums text-foreground">{have}/{REQUIRED_DOCUMENTS.length}</span>
         </span>
         <div className="min-w-0 flex-1">
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-semibold text-foreground">Documents manquants</p>
-            <DashBadge tone="warning">
-              {missingRequired.length} restant{missingRequired.length > 1 ? 's' : ''}
-            </DashBadge>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[17px] font-semibold leading-tight text-foreground">Documents manquants</p>
+            <span className="shrink-0"><DashBadge tone="warning">{missingRequired.length} à ajouter</DashBadge></span>
           </div>
-
-          {/* Progression du dossier */}
-          <div className="mt-3">
-            <div className="mb-1.5 flex justify-between text-sm">
-              <span className="text-muted-foreground">Progression du dossier</span>
-              <span className="font-semibold text-foreground">{completionPercentage}%</span>
-            </div>
-            <Progress 
-              value={completionPercentage} 
-              className="h-1.5 bg-muted"
-              indicatorClassName="bg-amber-500"
-            />
-            <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-              <span>{REQUIRED_DOCUMENTS.length - missingRequired.length} / {REQUIRED_DOCUMENTS.length} documents</span>
-              <span>{missingRequired.length > 0 ? `${missingRequired.length} à ajouter` : 'Complet !'}</span>
-            </div>
-          </div>
-
-          {/* Documents requis manquants */}
-          {missingRequired.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Pour compléter votre dossier, veuillez ajouter :
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {missingRequired.map((doc) => (
-                  <span
-                    key={doc.key}
-                    className="inline-flex items-center rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground"
-                  >
-                    {doc.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Documents post-signature manquants */}
-          {shouldShowPostSignature && missingPostSignature.length > 0 && (
-            <div className="mt-4 space-y-2 border-t border-border/70 pt-4">
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <KeyRound className="h-4 w-4 text-primary" />
-                Avant la remise des clés, ajoutez :
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {missingPostSignature.map((doc) => (
-                  <span
-                    key={doc.key}
-                    className="inline-flex items-center rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium text-foreground"
-                  >
-                    {doc.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* CTA */}
-          <div className="mt-4">
-            <Button 
-              size="sm"
-              className="rounded-full"
-              onClick={() => navigate('/client/documents')}
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Ajouter des documents
-            </Button>
-          </div>
+          <p className="mt-1 text-sm leading-snug text-muted-foreground">Complétez votre dossier pour que vos candidatures partent sans attendre.</p>
         </div>
       </div>
+
+      {missingRequired.length > 0 && (
+        <ul className="imr-lg-glass mt-4 divide-y divide-black/[0.06] rounded-[20px] px-3.5 dark:divide-white/10">
+          {missingRequired.map((doc) => <Item key={doc.key} label={doc.label} />)}
+        </ul>
+      )}
+
+      {shouldShowPostSignature && missingPostSignature.length > 0 && (
+        <div className="mt-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <KeyRound className="h-4 w-4 text-primary" />
+            Avant la remise des clés
+          </p>
+          <ul className="imr-lg-glass mt-2 divide-y divide-black/[0.06] rounded-[20px] px-3.5 dark:divide-white/10">
+            {missingPostSignature.map((doc) => <Item key={doc.key} label={doc.label} />)}
+          </ul>
+        </div>
+      )}
+
+      <Button className="mt-4 h-12 w-full gap-2 sm:w-auto" onClick={() => navigate('/client/documents')}>
+        <FileText className="h-4 w-4" />
+        Ajouter mes documents
+      </Button>
     </div>
   );
 }
