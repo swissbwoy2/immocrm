@@ -57,7 +57,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'propose_action',
-    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve) : note_agent (information utile pour l'agent, la conversation reste avec Steeve), changement_criteres (le client demande de modifier ses critères, zones, budget…), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
+    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve) : note_agent (demande ou information pour l'agent : visite à organiser ou replanifier, réponse à une offre, question pour une régie… ; la conversation reste avec Steeve), changement_criteres (le client demande de modifier ses critères, zones, budget…), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
     input_schema: {
       type: 'object',
       properties: {
@@ -84,7 +84,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'transfer_to_agent',
-    description: "Transmet la conversation à l'agent du client (Steeve arrête alors de répondre ici). À utiliser pour toute action que Steeve ne peut pas faire, une demande de contact humain, un client mécontent ou une question sans réponse dans le dossier.",
+    description: "Rend toute la conversation à l'agent du client (Steeve arrête alors de répondre ici). Seulement si le client demande explicitement une personne, est mécontent ou en désaccord, en cas d'urgence, ou pour un sujet sensible (signature, bail, dossier retenu, paiement contesté, remboursement, litige, poursuites, résiliation). Pour une simple action que Steeve ne peut pas faire (visite à organiser, réponse à une offre…), utiliser propose_action de type note_agent : la conversation reste avec Steeve.",
     input_schema: {
       type: 'object',
       properties: {
