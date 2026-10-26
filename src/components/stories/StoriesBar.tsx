@@ -22,45 +22,61 @@ interface Props {
   showVisites?: boolean;
 }
 
-/** Round anonymized bubble for an upcoming public visit (no client data). */
+const BUBBLE = 64;
+
+/** « Lun. 14:30 » / « Auj. 14:30 » / « Dem. 9:00 » (heure suisse). */
+function quandVisite(iso?: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const tz = { timeZone: "Europe/Zurich" } as const;
+  const jour = (x: Date) => x.toLocaleDateString("fr-CA", tz);
+  const now = new Date();
+  const demain = new Date(now.getTime() + 86400000);
+  const heure = d.toLocaleTimeString("fr-CH", { ...tz, hour: "2-digit", minute: "2-digit" });
+  if (jour(d) === jour(now)) return `Auj. ${heure}`;
+  if (jour(d) === jour(demain)) return `Dem. ${heure}`;
+  const j = d.toLocaleDateString("fr-CH", { ...tz, weekday: "short", day: "numeric" }).replace(".", "");
+  return `${j.charAt(0).toUpperCase()}${j.slice(1)}`;
+}
+
+/** Bulle d'une visite publique à venir (anonymisée, sans donnée client). */
 function VisitBubble({ item, onClick }: { item: ShowcaseItem; onClick: () => void }) {
   const { canViewInternalListing } = useSourcedListingAccess();
   const img = usePreviewImage(item, canViewInternalListing);
+  const [broken, setBroken] = useState(false);
   const ville = villeFromAdresse(item.adresse);
+  const quand = quandVisite(item.date_visite);
 
   return (
-    <div className="flex flex-col items-center gap-1 shrink-0 w-16">
-      <button type="button" onClick={onClick} className="rounded-full">
-        <span
-          className="block rounded-full p-[2.5px]"
-          style={{
-            background: "linear-gradient(135deg, hsl(158 55% 38%), hsl(200 70% 45%))",
-            width: 60,
-            height: 60,
-          }}
-        >
-          <span className="block bg-background rounded-full p-[2px] w-full h-full">
-            <span className="w-full h-full rounded-full overflow-hidden bg-muted flex items-center justify-center">
-              {img ? (
-                <img src={img} alt={item.titre || "Bien"} loading="lazy" className="w-full h-full object-cover" />
-              ) : canViewInternalListing ? (
-                <Home className="h-5 w-5 text-muted-foreground" />
+    <button
+      type="button"
+      onClick={onClick}
+      className="imr-story-btn flex w-[72px] shrink-0 flex-col items-center gap-1.5 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={`Visite à venir${ville ? ` à ${ville}` : ""}${quand ? `, ${quand}` : ""}`}
+    >
+      <span className="relative">
+        <span className="imr-story-ring block" style={{ width: BUBBLE, height: BUBBLE }}>
+          <span className="imr-story-inner">
+            <span className="imr-story-media">
+              {img && !broken ? (
+                <img src={img} alt="" loading="lazy" onError={() => setBroken(true)} className="h-full w-full object-cover" />
+              ) : canViewInternalListing || broken ? (
+                <Home className="h-5 w-5 text-primary/70" />
               ) : (
                 <ExternalListingPlaceholder className="rounded-full" />
               )}
             </span>
           </span>
         </span>
-      </button>
-      <button
-        type="button"
-        onClick={onClick}
-        className="text-[11px] font-medium truncate w-full text-center"
-        style={{ color: "hsl(200 35% 18%)" }}
-      >
-        {ville || "Visite"}
-      </button>
-    </div>
+        {quand && (
+          <span className="imr-lg-glass absolute -bottom-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-1.5 py-[1px] text-[10px] font-semibold leading-4 text-foreground">
+            {quand}
+          </span>
+        )}
+      </span>
+      <span className="mt-0.5 w-full truncate text-center text-[11.5px] font-medium text-foreground/85">{ville || "Visite"}</span>
+    </button>
   );
 }
 
@@ -85,68 +101,56 @@ export function StoriesBar({ className, showVisites = true }: Props) {
 
 
   return (
-    <div
-      className={"border-b border-border/50 " + (className || "")}
-      style={{ background: "linear-gradient(180deg, hsl(160 30% 94% / 0.5), transparent)" }}
-    >
-      <div className="flex gap-3 overflow-x-auto no-scrollbar px-3 py-3">
-        {canPublish && (
-          <button
-            type="button"
-            onClick={() => setCreatorOpen(true)}
-            className="flex flex-col items-center gap-1 shrink-0 w-16 group"
-          >
-            <div className="relative">
-              <div
-                className="w-[60px] h-[60px] rounded-full flex items-center justify-center border-2 border-dashed"
-                style={{ borderColor: "hsl(158 55% 38%)", background: "hsl(160 30% 94%)" }}
-              >
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white"
-                  style={{ background: "hsl(158 55% 38%)" }}
-                >
-                  <Plus className="h-5 w-5" />
+    <div className={"px-3 pb-1 pt-3 " + (className || "")}>
+      <div className="imr-lg-card overflow-hidden rounded-[26px]">
+        <div className="flex snap-x items-end gap-2.5 overflow-x-auto overscroll-x-contain px-3 pb-3 pt-3 no-scrollbar">
+          {canPublish && (
+            <button
+              type="button"
+              onClick={() => setCreatorOpen(true)}
+              className="imr-story-btn flex w-[72px] shrink-0 snap-start flex-col items-center gap-1.5 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Publier une story"
+            >
+              <span className="relative">
+                <span className="imr-lg-glass flex items-center justify-center rounded-full" style={{ width: BUBBLE, height: BUBBLE }}>
+                  <span className="imr-lg-tint flex h-10 w-10 items-center justify-center rounded-full">
+                    <Plus className="h-5 w-5" strokeWidth={2.5} />
+                  </span>
+                </span>
+              </span>
+              <span className="mt-0.5 w-full truncate text-center text-[11.5px] font-medium text-foreground/85">Votre story</span>
+            </button>
+          )}
+
+          {groups.map((g, idx) => (
+            <button
+              key={g.author.user_id}
+              type="button"
+              onClick={() => setViewerOpen(idx)}
+              className="imr-story-btn flex w-[72px] shrink-0 snap-start flex-col items-center gap-1.5 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Story de ${g.author.name}`}
+            >
+              <StoryAvatar name={g.author.name} avatarUrl={g.author.avatar_url} viewed={g.allViewed} size={BUBBLE} />
+              <span className="mt-0.5 w-full truncate text-center text-[11.5px] font-medium text-foreground/85">{g.author.name.split(" ")[0]}</span>
+            </button>
+          ))}
+
+          {showVisites && visites.length > 0 && (
+            <div className="flex shrink-0 snap-start items-stretch gap-2.5">
+              {(canPublish || groups.length > 0) && <span className="my-2 w-px shrink-0 bg-black/[0.08] dark:bg-white/10" aria-hidden />}
+              <div className="flex flex-col gap-2">
+                <span className="imr-lg-glass w-fit rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-primary">
+                  Visites à venir · {visites.length}
+                </span>
+                <div className="flex gap-2.5">
+                  {visites.map((v) => (
+                    <VisitBubble key={v.id} item={v} onClick={() => setSelectedVisit(v)} />
+                  ))}
                 </div>
               </div>
             </div>
-            <span className="text-[11px] font-medium truncate w-full text-center" style={{ color: "hsl(200 35% 18%)" }}>
-              Votre story
-            </span>
-          </button>
-        )}
-
-        {groups.map((g, idx) => (
-          <button
-            key={g.author.user_id}
-            type="button"
-            onClick={() => setViewerOpen(idx)}
-            className="flex flex-col items-center gap-1 shrink-0 w-16"
-          >
-            <StoryAvatar name={g.author.name} avatarUrl={g.author.avatar_url} viewed={g.allViewed} />
-            <span className="text-[11px] font-medium truncate w-full text-center" style={{ color: "hsl(200 35% 18%)" }}>
-              {g.author.name.split(" ")[0]}
-            </span>
-          </button>
-        ))}
-
-        {showVisites && visites.length > 0 && (
-          <>
-            <div className="shrink-0 self-stretch w-px bg-border/70 mx-1" />
-            <div className="flex flex-col gap-1 shrink-0">
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wide px-1"
-                style={{ color: "hsl(158 55% 32%)" }}
-              >
-                Visites à venir
-              </span>
-              <div className="flex gap-3">
-                {visites.map((v) => (
-                  <VisitBubble key={v.id} item={v} onClick={() => setSelectedVisit(v)} />
-                ))}
-              </div>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       <ShowcaseVisitDialog item={selectedVisit} onOpenChange={(o) => !o && setSelectedVisit(null)} />

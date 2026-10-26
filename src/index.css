@@ -2154,3 +2154,39 @@ html[data-imr-auth] {
   --primary-foreground: 0 0% 100%;
   --ring: 160 59% 30%;
 }
+
+/* ───────────── Liquid Glass : bandeau des stories ───────────── */
+.imr-story-ring {
+  position: relative;
+  border-radius: 9999px;
+  padding: 2.5px;
+  background: conic-gradient(from 210deg, hsl(var(--primary)), hsl(158 60% 52%), hsl(var(--primary) / .55), hsl(var(--primary)));
+  box-shadow: 0 6px 16px -8px hsl(var(--primary) / .55);
+  transition: transform .18s cubic-bezier(.2,.8,.2,1);
+}
+.imr-story-ring[data-viewed=true] {
+  background: linear-gradient(180deg, rgba(0,0,0,.14), rgba(0,0,0,.08));
+  box-shadow: none;
+}
+.imr-story-ring > .imr-story-inner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  padding: 2px;
+  background: rgba(255,255,255,.95);
+}
+.dark .imr-story-ring > .imr-story-inner { background: hsl(var(--background)); }
+.imr-story-ring .imr-story-media {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(240,243,240,.8));
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 .5px rgba(0,0,0,.06);
+}
+.dark .imr-story-ring .imr-story-media { background: rgba(255,255,255,.08); box-shadow: none; }
+.imr-story-btn:active .imr-story-ring { transform: scale(.94); }
