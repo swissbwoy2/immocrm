@@ -10367,6 +10367,36 @@ export type Database = {
           },
         ]
       }
+      notifications_ecartees: {
+        Row: {
+          client_id: string | null
+          client_statut: string | null
+          created_at: string
+          id: string
+          title: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_statut?: string | null
+          created_at?: string
+          id?: string
+          title?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_statut?: string | null
+          created_at?: string
+          id?: string
+          title?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       offres: {
         Row: {
           action_notified_at: string | null
@@ -18456,6 +18486,10 @@ export type Database = {
       newsletter_sync_visits: { Args: never; Returns: Json }
       newsletter_verify_dispatch: {
         Args: { p_token: string }
+        Returns: boolean
+      }
+      notification_est_relance_client: {
+        Args: { p_type: string }
         Returns: boolean
       }
       notify_annonce_slot_available: {
