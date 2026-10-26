@@ -1,5 +1,7 @@
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { ExternalLink, Home, Phone, StickyNote } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitSection, VisitStatusBadge, formatCHF } from '@/components/visites/VisitDetailParts';
@@ -12,7 +14,7 @@ import {
 } from '@/components/public-site/showcase/useShowcase';
 import { StoryPhotoLink } from '@/components/public-site/showcase/StoryPhotoLink';
 
-interface VisiteRow {
+export interface VisiteRow {
   id: string;
   date_visite: string;
   statut: string;
@@ -140,31 +142,55 @@ interface Props {
   visites: VisiteRow[];
 }
 
-/** Bande horizontale statique des visites à venir du client connecté. */
-export function MesVisitesAVenirBand({ visites }: Props) {
+/** Visites à venir (planifiées ou confirmées), de la plus proche à la plus lointaine. */
+export function upcomingVisites(visites: VisiteRow[] | null | undefined): VisiteRow[] {
+  const now = Date.now();
+  return (visites || [])
+    .filter(
+      (v) =>
+        ['planifiee', 'confirmee'].includes(v.statut) &&
+        v.date_visite &&
+        new Date(v.date_visite).getTime() >= now,
+    )
+    .sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime());
+}
+
+/** Visites à venir du client connecté (les siennes uniquement). */
+export function useMesVisitesAVenir(enabled: boolean): VisiteRow[] {
+  const { user } = useAuth();
+  const [visites, setVisites] = useState<VisiteRow[]>([]);
+
+  useEffect(() => {
+    if (!enabled || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data: cli } = await supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle();
+      if (!cli?.id) return;
+      const { data } = await supabase
+        .from('visites')
+        .select('*, offres(*)')
+        .eq('client_id', cli.id)
+        .in('statut', ['planifiee', 'confirmee'])
+        .gte('date_visite', new Date().toISOString())
+        .order('date_visite', { ascending: true })
+        .limit(50);
+      if (!cancelled) setVisites(upcomingVisites((data || []) as VisiteRow[]));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, user?.id]);
+
+  return visites;
+}
+
+/** Bulles des visites du client + fiche détaillée au clic (sans cadre). */
+export function MesVisitesBubbles({ visites }: Props) {
   const [selected, setSelected] = useState<VisiteRow | null>(null);
-
-  const upcoming = useMemo(() => {
-    const now = Date.now();
-    return (visites || [])
-      .filter(
-        (v) =>
-          ['planifiee', 'confirmee'].includes(v.statut) &&
-          v.date_visite &&
-          new Date(v.date_visite).getTime() >= now,
-      )
-      .sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime());
-  }, [visites]);
-
-  if (upcoming.length === 0) return null;
-
   return (
-    <section className="imr-lg-card mb-6 rounded-[22px] p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
-        Visites à venir
-      </h2>
+    <>
       <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-        {upcoming.map((v) => (
+        {visites.map((v) => (
           <VisiteBubble key={v.id} visite={v} onClick={() => setSelected(v)} />
         ))}
       </div>
@@ -174,6 +200,22 @@ export function MesVisitesAVenirBand({ visites }: Props) {
           {selected ? <VisiteDetail visite={selected} /> : <DialogTitle className="sr-only">Ma visite</DialogTitle>}
         </DialogContent>
       </Dialog>
+    </>
+  );
+}
+
+/** Bande horizontale statique des visites à venir du client connecté. */
+export function MesVisitesAVenirBand({ visites }: Props) {
+  const upcoming = useMemo(() => upcomingVisites(visites), [visites]);
+
+  if (upcoming.length === 0) return null;
+
+  return (
+    <section className="imr-lg-card mb-6 rounded-[22px] p-4">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-primary">
+        Visites à venir
+      </h2>
+      <MesVisitesBubbles visites={upcoming} />
     </section>
   );
 }
