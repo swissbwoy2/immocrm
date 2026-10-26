@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -420,6 +421,28 @@ function extractStoragePath(url: string): string {
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Équipe et appels internes : tous les mandats. Client connecté : uniquement son propre mandat (client_id).
+  {
+    const appelant = await verifyInternalCaller(req);
+    if (!appelant.ok) {
+      const refuser = (status: number) =>
+        new Response(JSON.stringify({ error: "Non autorisé" }), {
+          status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      if (!appelant.userId) return refuser(401);
+      // deno-lint-ignore no-explicit-any
+      const corps: any = await req.clone().json().catch(() => ({}));
+      let autorise = false;
+      if (typeof corps?.client_id === "string" && !corps?.demande_id) {
+        const svcAcces = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+        const { data: cli } = await svcAcces.from("clients").select("user_id").eq("id", corps.client_id).maybeSingle();
+        autorise = !!cli?.user_id && cli.user_id === appelant.userId;
+      }
+      if (!autorise) return refuser(403);
+    }
   }
 
   try {
