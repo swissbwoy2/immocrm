@@ -3,6 +3,7 @@ import { ClipboardList, FileText, Play, ImageIcon } from 'lucide-react';
 import { AddressLink } from '@/components/AddressLink';
 import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { formatZurichDay, formatZurichTimeRange, isDateOnly } from '@/lib/dateZurich';
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 /**
  * Briques communes du « détail de visite » (tous rôles : admin, agent, client,
@@ -61,8 +62,10 @@ export function formatVisitDate(iso?: string | null, endIso?: string | null) {
  * `TitleAs` permet de passer `DialogTitle` / `SheetTitle` pour l'accessibilité.
  */
 export function VisitHero({
-  date, endDate, kicker, badges, address, photoUrl, title, TitleAs = 'h2', children,
+  date, endDate, kicker, badges, address, photoUrl, title, TitleAs = 'h2', children, showMap = true,
 }: {
+  /** Carte Google de l'adresse (affichée par défaut quand une adresse est connue). */
+  showMap?: boolean;
   date?: string | null;
   endDate?: string | null;
   kicker?: string;
@@ -96,9 +99,14 @@ export function VisitHero({
       {address && (
         <AddressLink address={address} className="text-[15px] font-medium leading-snug text-foreground" iconClassName="h-4 w-4 text-primary" showExternalIcon />
       )}
-      {photoUrl && (
-        <div className="overflow-hidden rounded-[20px] bg-muted">
-          <img src={photoUrl} alt="" className="h-40 w-full object-cover sm:h-52" loading="lazy" onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
+      {(photoUrl || (showMap && address)) && (
+        <div className={`grid gap-3 ${photoUrl && showMap && address ? 'sm:grid-cols-2' : ''}`}>
+          {photoUrl && (
+            <div className="overflow-hidden rounded-[20px] bg-muted">
+              <img src={photoUrl} alt="" className="h-44 w-full object-cover sm:h-52" loading="lazy" onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
+            </div>
+          )}
+          {showMap && address && <AdresseMap address={address} height="compact" />}
         </div>
       )}
       {children}

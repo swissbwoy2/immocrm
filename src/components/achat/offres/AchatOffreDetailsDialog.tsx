@@ -11,6 +11,7 @@ import { AddressLink } from '@/components/AddressLink';
 import { noteSuiviClient } from '@/lib/offreNote';
 import { ACHAT_A_REPONDRE, ACHAT_STATUT_COURT, formatPrixAchat } from '@/lib/achatOffreActions';
 import { AchatOffrePhoto, AchatProchaineEtape, formatVisite, type AchatActionsHandlers } from './AchatOffreParts';
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 function libelleVisite(v: any) {
   const statut = v.statut === 'effectuee' ? 'Visite effectuée'
@@ -207,26 +208,8 @@ export function AchatOffreDetailsDialog({
           )}
 
           {offre.adresse && (
-            <DetailSection title="Emplacement" icon={MapPin} className="overflow-hidden">
-              <div className="-mx-4 -mb-4 sm:-mx-5 sm:-mb-5">
-                <iframe
-                  title={`Carte ${offre.adresse}`}
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(offre.adresse)}&output=embed`}
-                  width="100%"
-                  height="220"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  style={{ border: 0, display: 'block' }}
-                />
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(offre.adresse)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex min-h-[48px] items-center justify-center gap-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
-                >
-                  <MapPin className="h-4 w-4" /> Ouvrir dans Google Maps
-                </a>
-              </div>
+            <DetailSection title="Emplacement" icon={MapPin}>
+              <AdresseMap address={offre.adresse} />
             </DetailSection>
           )}
 

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck, Trash2, AlertTriangle, Users, Pencil, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 type OffreRow = {
   id: string;
@@ -331,6 +332,7 @@ export function GererOffreDialog({
               <div className="col-span-2 space-y-1.5">
                 <Label>Adresse</Label>
                 <Input value={adresse} onChange={e => setAdresse(e.target.value)} />
+                <AdresseMap address={offre?.adresse} height="compact" className="mt-2" />
               </div>
               <div className="space-y-1.5">
                 <Label>Prix (CHF, CC)</Label>

@@ -24,6 +24,7 @@ import { ChanceIndicator } from "@/components/ChanceIndicator";
 import { CandidatureWorkflowInteractive } from "@/components/CandidatureWorkflowInteractive";
 import { calculateChances } from "@/utils/chanceCalculator";
 import { AddressLink } from "@/components/AddressLink";
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 function formatDateVisite(d: string) {
   try {
@@ -170,6 +171,7 @@ export function PremiumOffreDetailsDialog({
               offre.disponibilite ? { label: 'Disponible dès', value: offre.disponibilite, icon: CalendarCheck } : null,
             ]}
           />
+          <AdresseMap address={offre.adresse} />
 
           {/* Prochaine étape (les boutons sont dans la barre d'actions) */}
           {prochaineEtape && (

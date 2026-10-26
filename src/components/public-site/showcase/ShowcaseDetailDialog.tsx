@@ -20,6 +20,7 @@ import { StoryPhotoLink } from './StoryPhotoLink';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
 import { useSourcedListingAccess } from '@/hooks/useSourcedListingAccess';
 import { useImmoRamaCandidacyDialog } from '@/hooks/useImmoRamaCandidacyDialog';
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 
 interface Props {
@@ -137,6 +138,7 @@ function ShowcaseDetailContent({ item, onDeposer, reloc }: { item: ShowcaseItem;
             item.etage ? { label: 'Étage', value: item.etage, icon: Layers } : null,
           ]}
         />
+        <AdresseMap address={item.adresse} />
 
         {item.date_visite && (
           <DetailNotice icon={CalendarClock} tone="primary">

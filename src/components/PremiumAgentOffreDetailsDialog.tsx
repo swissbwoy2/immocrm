@@ -53,6 +53,7 @@ import {
 import { cn } from '@/lib/utils';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 interface PremiumAgentOffreDetailsDialogProps {
   open: boolean;
@@ -216,6 +217,7 @@ export function PremiumAgentOffreDetailsDialog({
               { label: 'Étage', value: offre.etage || '-', icon: Layers },
             ]}
           />
+          <AdresseMap address={offre.adresse} />
 
           {/* Progression */}
           {offre.statut !== 'refusee' && (
