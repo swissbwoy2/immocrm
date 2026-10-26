@@ -256,12 +256,25 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
             await alert(db, `steeve-retrait-${m.id}`, 'Annonce retirée', `${o.adresse} : ${resume}`, link, 'normal');
             break;
           case 'candidature_acceptee':
-          case 'bail_envoye':
+          case 'bail_envoye': {
+            // Retour au client dès la réponse de la régie ; l'équipe garde la suite (bail, garantie, signature).
+            const bail = cls.categorie === 'bail_envoye';
+            const { data: r } = await db.rpc('steeve_apply_acceptation', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_bail: bail });
+            notes.push(`${o.adresse} : ${r?.ok ? (bail ? 'bail reçu' : 'candidature acceptée') : r?.motif}`);
+            if (r?.ok && !r.deja) {
+              await tellClient(db, o.client_id, `${bail ? 'bail' : 'acceptee'}:${r.candidature_id}`, bail
+                ? `Bonjour ${prenom}, la régie a envoyé le bail pour ${o.adresse}. Votre agent vous contacte pour fixer le rendez-vous de signature. L'équipe Immo-rama.ch`
+                : `Bonjour ${prenom}, excellente nouvelle : la régie a retenu votre candidature pour ${o.adresse} ! Votre agent vous contacte pour la suite (bail, garantie de loyer). L'équipe Immo-rama.ch`, now);
+            }
+            await alert(db, `steeve-${bail ? 'bail' : 'acceptee'}-${m.id}-${o.offre_id}`, bail ? 'Bail reçu de la régie' : 'Dossier retenu par la régie',
+              `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${bail ? 'bail reçu : à récupérer et faire signer.' : 'lancer la garantie FirstCaution et suivre le bail.'} ${r?.ok ? 'Le client est prévenu.' : `À vérifier : ${r?.motif}.`} (« ${base.objet} », ${m.mailbox})`, link, 'urgent');
+            break;
+          }
           case 'question_regie':
           default: {
-            // Réservé à l'équipe : dossier retenu, bail, questions des régies.
+            // Réservé à l'équipe : questions des régies (Steeve n'y répond pas).
             await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: null });
-            const title = cls.categorie === 'candidature_acceptee' ? 'Dossier retenu par la régie' : cls.categorie === 'bail_envoye' ? 'Bail envoyé par la régie' : 'Réponse d’une régie à traiter';
+            const title = 'Réponse d’une régie à traiter';
             notes.push(`${o.adresse} : ${title.toLowerCase()} (équipe)`);
             await alert(db, `steeve-equipe-${m.id}-${o.offre_id}`, title, `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} (« ${base.objet} », ${m.mailbox}). Steeve n'a rien répondu ni changé.`, link, 'urgent');
           }

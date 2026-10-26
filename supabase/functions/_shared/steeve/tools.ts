@@ -122,6 +122,11 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'chercher_offres',
+    description: "Lance TOUT DE SUITE une recherche d'offres de location pour ce client, avec ses critères enregistrés et le mode d'emploi des routines d'offres (zone, plafond de loyer, pièces, exigences écrites prouvées, aucun doublon, 6 offres par jour au maximum). Les offres conformes arrivent dans sa messagerie et dans « Offres reçues » en quelques minutes, et tu lui écris le résultat. À utiliser quand il demande des offres, un logement, « envoie-moi … » ; après modifier_criteres la recherche part déjà toute seule. Si sa demande contient de NOUVEAUX critères, appelle d'abord modifier_criteres. Ne promets jamais un nombre d'offres.",
+    input_schema: { type: 'object', properties: { precision: { type: 'string', description: 'Ce que le client a demandé, en quelques mots.' } } },
+  },
+  {
     name: 'transfer_to_agent',
     description: "Rend toute la conversation à l'agent du client (Steeve arrête alors de répondre ici). Seulement si le client demande explicitement une personne, est mécontent ou en désaccord, en cas d'urgence, ou pour un sujet sensible (signature, bail, dossier retenu, paiement contesté, remboursement, litige, poursuites, résiliation). Pour une simple action que Steeve ne peut pas faire (visite à organiser, réponse à une offre…), utiliser propose_action de type note_agent : la conversation reste avec Steeve.",
     input_schema: {
@@ -193,6 +198,8 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return await clientVisitRequest(ctx, String(input?.bien ?? ''), input?.precision ? String(input.precision).slice(0, 300) : null);
     case 'modifier_criteres':
       return await clientCriteria(ctx, input ?? {});
+    case 'chercher_offres':
+      return await clientOfferSearch(ctx, String(input?.precision ?? '').slice(0, 200));
     case 'transfer_to_agent':
       return await transferToAgent(ctx, String(input?.reason || '').slice(0, 200), String(input?.summary || '').slice(0, 1500));
     case 'propose_action':
@@ -427,5 +434,20 @@ async function clientCriteria(ctx: ToolContext, input: Record<string, any>): Pro
   if (error) return { content: "Les critères n'ont pas pu être modifiés.", isError: true };
   if (!data?.ok) return { content: json({ modifie: false, motif: data?.motif }) };
   await notifyTeam(ctx, 'Critères modifiés (via Steeve)', Object.keys(changes).map((k) => `${k} : ${data.avant?.[k] ?? '—'} → ${data.apres?.[k] ?? '—'}`).join(' ; '));
-  return { content: json({ modifie: true, avant: data.avant, apres: data.apres, suite: 'Son agent est prévenu ; les prochaines offres suivront ces critères.' }) };
+  // Nouveaux critères de recherche : Steeve cherche aussitôt des offres qui y correspondent.
+  const searchFields = ['budget_max', 'pieces', 'region_recherche', 'type_bien'].some((k) => k in changes);
+  const search = searchFields ? await ctx.db.rpc('steeve_demande_recherche_offres', { p_client_id: ctx.dossier.clientId, p_source: 'client', p_note: 'Après modification des critères' }) : null;
+  return { content: json({ modifie: true, avant: data.avant, apres: data.apres,
+    recherche_lancee: Boolean(search?.data?.ok),
+    suite: search?.data?.ok
+      ? 'Son agent est prévenu. Une recherche d’offres avec ces critères est lancée : les offres conformes arrivent dans sa messagerie dans quelques minutes, et tu lui écris le résultat.'
+      : 'Son agent est prévenu ; les prochaines offres suivront ces critères.' }) };
+}
+
+/** Recherche d'offres immédiate pour CE client (exécutée par Steeve opérateur, réveillé tout de suite). */
+async function clientOfferSearch(ctx: ToolContext, precision: string): Promise<ToolOutcome> {
+  const { data, error } = await ctx.db.rpc('steeve_demande_recherche_offres', { p_client_id: ctx.dossier.clientId, p_source: 'client', p_note: precision || 'Demande du client à Steeve' });
+  if (error || !data?.ok) return { content: "La recherche n'a pas pu être lancée.", isError: true };
+  return { content: json({ recherche_lancee: true, deja_en_cours: Boolean(data.existante),
+    suite: "Recherche en cours avec ses critères enregistrés : les offres conformes arrivent dans sa messagerie et dans « Offres reçues » dans quelques minutes, et Steeve lui écrit le résultat. Ne promets aucun nombre." }) };
 }

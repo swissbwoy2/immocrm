@@ -16,6 +16,7 @@ import PostalMime from 'npm:postal-mime@2.4.4';
 import { costOf, type CallModel } from './anthropic.ts';
 import { buildTextEmail, isEmail, latin1, messageId, prepareDraftForSend, SmtpUncertainError } from './mail.ts';
 import { processInbox } from './inbox.ts';
+import { searchAndSendOffers } from './offers.ts';
 
 export type Mode = 'off' | 'a_blanc' | 'autonome';
 export const BOX_VISITES = 'visites@immo-rama.ch';
@@ -66,6 +67,7 @@ export interface OperatorReport {
   mails?: number;
   visites?: number;
   pieces?: number;
+  offres?: number;
   verifies?: number;
   tache?: any;
   erreurs: string[];
@@ -862,6 +864,58 @@ async function learn(db: any, now: Date): Promise<number> {
   return added;
 }
 
+// ---------- recherche d'offres (lot 8) ----------
+
+/**
+ * Steeve cherche et envoie des offres à un client (mode d'emploi des routines d'offres, voir offers.ts).
+ * Demandée par un humain (client, agent, admin) : faite tout de suite, même en mode à blanc (elle ne touche que
+ * l'espace du client). Automatique : suit le mode (à blanc = rien n'est envoyé, le résultat est journalisé).
+ */
+async function handleRechercheOffres(deps: Required<OperatorDeps>, mode: Mode, taskId: string, rep: OperatorReport) {
+  const { db } = deps;
+  const now = deps.now();
+  const { data: t } = await db.from('steeve_actions').select('id, client_id, source').eq('id', taskId).single();
+  const done = { verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString(), executed_at: now.toISOString() };
+  if (!t?.client_id) {
+    await db.from('steeve_actions').update({ ...done, statut: 'bloque', motif: 'Client absent de la tâche.' }).eq('id', taskId);
+    return;
+  }
+  const human = ['client', 'agent', 'admin'].includes(String(t.source));
+  if (!human && !inClientHours(now)) {
+    await db.from('steeve_actions').update({ ...done, executed_at: null, statut: 'a_faire', note: 'Recherche automatique : offres envoyées entre 8 h et 20 h.' }).eq('id', taskId);
+    return;
+  }
+  const dryRun = !human && mode !== 'autonome';
+  const r = await searchAndSendOffers({ db, callModel: deps.callModel, now: deps.now }, t.client_id, { max: 3, dryRun });
+  rep.cout_usd += r.cout_usd;
+  rep.offres = (rep.offres ?? 0) + (dryRun ? 0 : r.envoyees.length);
+  const resume = r.envoyees.length
+    ? `${r.envoyees.length} offre(s) ${dryRun ? 'qui seraient parties' : 'envoyées'} : ${r.envoyees.map((o) => `${o.adresse} (${o.prix} CHF, ${o.pieces} p., score ${o.score}${o.visite ? `, visite ${o.visite}` : ''})`).join(' ; ')}`
+    : (r.motif ?? 'Aucune offre envoyée.');
+  await db.from('steeve_actions').update({
+    ...done,
+    statut: !r.ok ? 'bloque' : dryRun ? 'a_blanc' : 'fait',
+    motif: r.ok ? null : r.motif,
+    preuve: !dryRun && r.envoyees.length ? `${r.envoyees.length} offre(s) dans les offres reçues du client` : null,
+    note: resume.slice(0, 1000),
+    controles: { lues: r.lues, ecartees: r.ecartees, en_reserve: r.en_reserve, restant_jour: r.restant_jour, envoyees: r.envoyees, cout_usd: Number(r.cout_usd.toFixed(4)) },
+  }).eq('id', taskId);
+
+  // Le client a demandé : Steeve lui dit le résultat réel dans sa conversation.
+  if (t.source === 'client' && !dryRun) {
+    const text = r.envoyees.length
+      ? `J'ai trouvé ${r.envoyees.length === 1 ? 'une offre qui correspond' : `${r.envoyees.length} offres qui correspondent`} à tes critères : ${r.envoyees.length === 1 ? 'elle est' : 'elles sont'} dans ta messagerie et dans « Offres reçues ». Dis-moi ${r.envoyees.length === 1 ? 'si elle t\'intéresse' : 'lesquelles t\'intéressent'} et je demande une visite.` +
+        (r.en_reserve ? ` J'en ai d'autres en réserve : je te les envoie au fil de la journée (6 offres par jour au maximum).` : '')
+      : r.ok
+        ? `J'ai regardé les annonces disponibles maintenant : ${r.restant_jour <= 0 ? 'tu as déjà reçu tes 6 offres du jour, la suite arrive demain.' : 'aucune n\'est assez sûre pour tes critères (je préfère ne rien t\'envoyer plutôt qu\'une annonce qui ne correspond pas).'} Les recherches continuent plusieurs fois par jour et tu reçois les nouvelles offres dès qu'elles passent nos contrôles.`
+        : `Je n'ai pas pu lancer la recherche : ${r.motif}`;
+    const { data: conv } = await db.from('conversations').select('id').eq('client_id', String(t.client_id)).eq('conversation_type', 'client-agent').order('last_message_at', { ascending: false }).limit(1);
+    if (conv?.[0]?.id) {
+      await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: text, payload: { steeve_operateur: true, steeve_cle: `recherche:${taskId}` } });
+    }
+  }
+}
+
 // ---------- passage ----------
 
 /** Exécute une tâche du registre, réservée avec un jeton (jamais deux exécutants sur la même tâche). */
@@ -885,6 +939,8 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
     await handleVisite(deps, mode, t.id, rep);
   } else if (t.kind === 'demande_piece') {
     await handlePiece(deps, mode, t.id, rep);
+  } else if (t.kind === 'recherche_offres') {
+    await handleRechercheOffres(deps, mode, t.id, rep);
   } else {
     await db.from('steeve_actions').update({ statut: 'a_faire', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', t.id);
   }
@@ -895,7 +951,9 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
   }
 }
 
-const TASK_KINDS = ['demande_qr', 'relance_annonceur', 'envoi_dossier', 'demande_visite', 'demande_piece'];
+const TASK_KINDS = ['demande_qr', 'relance_annonceur', 'envoi_dossier', 'demande_visite', 'demande_piece', 'recherche_offres'];
+/** Tâches sans effet hors de l'application (messages au client) : pas limitées aux heures d'envoi aux régies. */
+const INTERNAL_KINDS = ['demande_piece', 'recherche_offres'];
 
 export async function runOperator(input: OperatorDeps): Promise<OperatorReport> {
   const deps = { now: () => new Date(), taskId: null, ...input } as Required<OperatorDeps>;
@@ -911,7 +969,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
   if (deps.taskId) {
     const { data: t } = await db.from('steeve_actions').select('id, kind, offre_id, client_id, responsable, statut').eq('id', deps.taskId).maybeSingle();
     if (t && t.responsable === 'steeve' && TASK_KINDS.includes(t.kind) && t.statut === 'a_faire') {
-      const external = t.kind !== 'demande_piece';
+      const external = !INTERNAL_KINDS.includes(t.kind);
       if (!external || rep.heures_envoi) {
         try { await runTask(deps, rep.mode, t, await loadLessons(db).catch(() => [] as string[]), rep); } catch (err) { rep.erreurs.push(`tâche : ${(err as Error).message}`); }
       } else {
@@ -944,6 +1002,15 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
   await step('verifications', async () => { await verifyUnknown(deps, rep); });
 
   const lessons = await loadLessons(db).catch(() => [] as string[]);
+
+  if (!rep.heures_envoi) {
+    // Hors des heures d'envoi aux régies : seules les tâches internes demandées par un humain (offres, pièces).
+    await step('taches', async () => {
+      const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
+        .neq('source', 'auto').in('kind', INTERNAL_KINDS).order('created_at').limit(8);
+      for (const t of tasks ?? []) await runTask(deps, rep.mode, t, lessons, rep);
+    });
+  }
 
   if (rep.heures_envoi) {
     // 5. Tâches du registre confiées à Steeve (équipe, client, reprises), en premier.
@@ -986,7 +1053,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       etapes: steps,
       contacts: rep.qr + rep.relances + rep.dossiers_envoyes + (rep.visites ?? 0),
       erreurs: rep.erreurs.map((e) => ({ erreur: e.slice(0, 300) })),
-      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
+      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
     }).eq('id', run.id);
   }
   return rep;
