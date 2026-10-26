@@ -3,7 +3,7 @@
 // (état réel, puis exécution de ce qui reste, avec les contrôles de Steeve opérateur et le journal).
 // deno-lint-ignore-file no-explicit-any
 import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type ToolDefinition } from './anthropic.ts';
-import { selfErrorReply, toPlainReply } from './engine.ts';
+import { forbiddenReply, selfErrorReply, toPlainReply, withoutSelfError } from './engine.ts';
 import { zurichToUtc } from './dates.ts';
 import { facturesDuClient, type AbaNinjaPort } from './abaninja.ts';
 
@@ -499,6 +499,9 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: A
   else if (name === 'ecrire_a') {
     const ids = { p_client_id: uuid(input?.client_id), p_user_id: uuid(input?.user_id), p_conversation_id: uuid(input?.conversation_id) };
     if (!ids.p_client_id && !ids.p_user_id && !ids.p_conversation_id) return { content: 'Destinataire manquant : client_id, conversation_id ou user_id (outil personnes).', isError: true };
+    // Mêmes règles absolues que les réponses de Steeve au client (aveu d'erreur, e-mails du client, paiement freiné).
+    const refus = forbiddenReply(String(input?.message ?? ''));
+    if (refus) return { content: `Message non envoyé : ${refus} Réécris-le.`, isError: true };
     call = ['steeve_admin_ecrire', { p_message: String(input?.message ?? '').slice(0, 2000), ...ids }];
   } else if (name === 'decider_demande') {
     if (!uuid(input?.proposal_id)) return { content: 'proposal_id invalide (voir la réf. de la demande).', isError: true };
@@ -683,6 +686,8 @@ export async function handleAdminChat(opts: {
           text = '';
           continue;
         }
+        // Toujours fautive après la réécriture : les phrases d'aveu d'erreur sont retirées, jamais publiées.
+        if (interdit) text = withoutSelfError(text);
         break;
       }
       messages.push({ role: 'assistant', content: resp.content });

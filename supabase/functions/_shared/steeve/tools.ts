@@ -609,6 +609,7 @@ async function clientAvailability(ctx: ToolContext, bien: string, dispo: string)
   const { data, error } = await ctx.db.rpc('steeve_client_disponibilites', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_texte: dispo });
   if (error) return { content: "Les disponibilités n'ont pas pu être enregistrées.", isError: true };
   if (!data?.ok) return { content: json({ transmises: false, motif: data?.motif }) };
+  if (data.par_equipe) return { content: json({ transmises: true, bien: m.adresse, suite: "Disponibilités notées : l'équipe les transmet à l'annonceur sur son portail. Ce n'est pas encore un rendez-vous : la visite est fixée quand l'annonceur répond, et le client est prévenu ici." }) };
   return { content: json({ transmises: true, bien: m.adresse, suite: "Disponibilités transmises à l'annonceur (envoi entre 7 h et 20 h). Ce n'est pas encore un rendez-vous : la visite est fixée quand l'annonceur répond, et le client est prévenu ici." }) };
 }
 

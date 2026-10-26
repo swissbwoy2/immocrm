@@ -381,7 +381,9 @@ async function handleReponse(deps: Required<OperatorDeps>, mode: Mode, taskId: s
   const free = { verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() };
   const stop = async (statut: string, motif: string) => {
     await db.from('steeve_actions').update({ ...free, statut, motif: motif.slice(0, 500) }).eq('id', taskId);
+    // Toute réponse non envoyée est signalée : le client a pu être prévenu que la visite était confirmée à l'annonceur.
     if (statut === 'a_valider') await alertAdmins(db, `steeve-reponse-${taskId}`, 'Réponse de visite à valider', `${t.objet ?? 'Réponse'} → ${t.destinataire ?? '?'} : ${motif} Dis à Steeve « envoie la réponse » pour qu'il l'envoie.`, '/admin/steeve');
+    else if (statut === 'bloque' || statut === 'bloque_acces') await alertAdmins(db, `steeve-reponse-${taskId}`, 'Réponse de visite non envoyée', `${t.objet ?? 'Réponse'} → ${t.destinataire ?? '?'} : ${motif} À envoyer par l'équipe.`, '/admin/steeve');
   };
   const to = String(t.destinataire ?? '').toLowerCase().trim();
   if (!isEmail(to) || /(no-?reply|ne-?pas-?repondre|donotreply)/i.test(to)) return stop('bloque', 'Destinataire invalide pour une réponse.');
@@ -396,8 +398,13 @@ async function handleReponse(deps: Required<OperatorDeps>, mode: Mode, taskId: s
   if (!valideAdmin) {
     if (!callModel) return stop('a_valider', 'Relecture impossible (clé API absente).');
     const { data: o } = t.offre_id ? await db.from('offres').select('adresse').eq('id', t.offre_id).maybeSingle() : { data: null };
-    const rel = await relireMail(callModel, { objet: t.objet, texte: t.corps, bien: o?.adresse ?? String(t.controles?.reference ?? ''), client: t.kind === 'reponse_prospect' ? 'prospect (personne intéressée par une annonce de l’agence)' : 'client de l’agence (non nommé)', destinataires: [to],
+    let rel: Awaited<ReturnType<typeof relireMail>>;
+    try {
+      rel = await relireMail(callModel, { objet: t.objet, texte: t.corps, bien: o?.adresse ?? String(t.controles?.reference ?? ''), client: t.kind === 'reponse_prospect' ? 'prospect (personne intéressée par une annonce de l’agence)' : 'client de l’agence (non nommé)', destinataires: [to],
       but: t.kind === 'reponse_prospect' ? 'répondre à une demande de visite pour une annonce de l’agence avec les créneaux publiés' : 'répondre à l’annonceur au sujet de la visite (confirmation du créneau ou disponibilités du client)' });
+    } catch (err) {
+      return stop('a_valider', `Relecture impossible (${(err as Error).message.slice(0, 120)}).`);
+    }
     rep.cout_usd += rel.cost;
     if (!rel.ok || !rel.pret || rel.retirees.length) return stop('a_valider', `Relecture : ${rel.problemes.join(' ; ') || 'doute sur le texte'}.`);
   }

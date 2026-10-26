@@ -96,6 +96,13 @@ export function selfErrorReply(text: string): string | null {
   return null;
 }
 
+/** Retire les phrases d'aveu d'erreur (dernier recours après une réécriture refusée). */
+export function withoutSelfError(text: string): string {
+  const kept = text.split(/(?<=[.!?…])\s+|\n+/).filter((p) => p.trim() && !selfErrorReply(p));
+  const out = kept.join(' ').replace(/\s{2,}/g, ' ').trim();
+  return out || "J'ai vérifié les données : redemande-moi le point exact et je te réponds avec le détail.";
+}
+
 /**
  * Règles absolues vérifiées sur chaque réponse avant publication : Steeve ne parle jamais des e-mails personnels du
  * client (il n'y a pas accès) et ne décourage jamais un paiement. Rend la raison, ou null si la réponse est conforme.
