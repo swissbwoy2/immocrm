@@ -4,7 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Keyboard, Loader2, RefreshCw, Mailbox, Search, Users, X } from 'lucide-react';
+import { Keyboard, Loader2, MapPin, RefreshCw, Mailbox, Search, Users, X } from 'lucide-react';
+import { addressWords, matchesAddress } from '@/lib/addressFilter';
 import { DashPage, DashPageHeader, DashFilterPills, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
@@ -58,6 +59,9 @@ export function PostulationsPage({ scope, title }: Props) {
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [loading, setLoading] = useState(false);
   const [clientQ, setClientQ] = useState('');
+  // Filtre par adresse (sans accents, mots dans n'importe quel ordre).
+  const [adresseQ, setAdresseQ] = useState('');
+  const adresseMots = useMemo(() => addressWords(adresseQ), [adresseQ]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSize>(25);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -187,11 +191,11 @@ export function PostulationsPage({ scope, title }: Props) {
   const agentOk = (r: Row) => scope !== 'admin' || agentFilter === 'all'
     || (agentFilter === 'none' ? !r.agent_id : r.agent_id === agentFilter);
 
-  const rowsVisibles = useMemo(() => rows.filter((r) => agentOk(r) && correspond(
+  const rowsVisibles = useMemo(() => rows.filter((r) => agentOk(r) && matchesAddress(r.adresse, adresseMots) && correspond(
     `${r._client?.prenom ?? ''} ${r._client?.nom ?? ''} ${r._client?.email ?? ''} ${r.adresse ?? ''}`,
     r.demande_at,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  )), [rows, clientQ, period, agentFilter, scope]);
+  )), [rows, clientQ, period, agentFilter, scope, adresseMots]);
 
   // Agents présents dans les demandes chargées (options du filtre admin).
   const agentsPresents = useMemo(() => {
@@ -213,11 +217,11 @@ export function PostulationsPage({ scope, title }: Props) {
 
   // Dossiers sans demande en attente dans la liste (offre déjà traitée ou non liée).
   const offresListees = useMemo(() => new Set(rows.map((r) => r.id)), [rows]);
-  const dossiersVisibles = useMemo(() => dossiers.filter((d) => (!dossierAgentOk || dossierAgentOk(d)) && correspond(
+  const dossiersVisibles = useMemo(() => dossiers.filter((d) => (!dossierAgentOk || dossierAgentOk(d)) && matchesAddress(d.adresse_bien, adresseMots) && correspond(
     `${d.client_nom ?? ''} ${d.adresse_bien ?? ''} ${d.objet ?? ''} ${d.regie_nom ?? ''} ${d.destinataire_email ?? ''}`,
     d.created_at,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  )), [dossiers, clientQ, period, dossierAgentOk]);
+  )), [dossiers, clientQ, period, dossierAgentOk, adresseMots]);
   const orphelins = useMemo(() => dossiersVisibles.filter((d) => !d.offre_id || !offresListees.has(d.offre_id)), [dossiersVisibles, offresListees]);
   const orphelinsATraiter = orphelins.filter((d) => d.statut === 'a_valider' || d.statut === 'erreur');
   const orphelinsEnCours = orphelins.filter((d) => d.statut === 'prepare' || d.statut === 'valide');
@@ -258,7 +262,7 @@ export function PostulationsPage({ scope, title }: Props) {
     return grouper ? grouperParClient(arr).flatMap((g) => g.rows) : arr;
   }, [parEtape, tab, sortKey, grouper]);
 
-  useEffect(() => { setPage(1); }, [clientQ, pageSize, tab, sortKey, period, agentFilter, grouper]);
+  useEffect(() => { setPage(1); }, [clientQ, adresseQ, pageSize, tab, sortKey, period, agentFilter, grouper]);
   const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [sorted, page, pageSize]);
   const groupes = useMemo(() => grouperParClient(paged), [paged]);
 
@@ -451,6 +455,22 @@ export function PostulationsPage({ scope, title }: Props) {
             </button>
           )}
         </div>
+        <div className="relative min-w-0 md:w-[260px]">
+          <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={adresseQ}
+            onChange={(e) => setAdresseQ(e.target.value)}
+            placeholder="Adresse du bien…"
+            aria-label="Filtrer par adresse"
+            className="h-11 rounded-full pl-10 pr-10"
+          />
+          {adresseQ && (
+            <button type="button" onClick={() => setAdresseQ('')} aria-label="Effacer l'adresse"
+              className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         <div className={`grid gap-2 md:flex md:w-auto ${scope === 'admin' ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`}>
           <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
             <SelectTrigger className="h-11 rounded-full md:w-[190px]" aria-label="Trier"><SelectValue /></SelectTrigger>
@@ -507,7 +527,7 @@ export function PostulationsPage({ scope, title }: Props) {
         <DashEmptyState
           icon={Mailbox}
           title={
-            clientQ || period !== 'all' ? 'Aucun résultat pour ces filtres'
+            clientQ || adresseQ || period !== 'all' ? 'Aucun résultat pour ces filtres'
               : tab === 'a_traiter' ? 'Rien à traiter pour le moment'
               : tab === 'en_cours' ? 'Aucune préparation en cours'
               : tab === 'deposees' ? 'Aucune candidature déposée'
