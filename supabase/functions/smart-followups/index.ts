@@ -3,6 +3,7 @@ const sendTrackedEmail = trackedResendFetch("smart-followups");
 import { renderCorporateEmail, emailButton, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Réservé aux appels internes (cron, base, équipe) : aucun appel anonyme ni client.
+  const refus = await denyIfNotInternal(req, corsHeaders, "smart-followups");
+  if (refus) return refus;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
