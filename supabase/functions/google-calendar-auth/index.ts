@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { signerEtat, retourAutorise } from "../_shared/oauth-state.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
 
     // Get callback context from request body
     const body = await req.json().catch(() => ({}));
-    const appUrl = body.app_url || 'https://immocrm.lovable.app';
+    const appUrl = retourAutorise(body.app_url) ? body.app_url : 'https://immocrm.lovable.app';
     const rawAppPath = typeof body.app_path === 'string' ? body.app_path : '/admin/parametres';
     const appPath = rawAppPath.startsWith('/') ? rawAppPath : '/admin/parametres';
 
@@ -57,7 +58,8 @@ Deno.serve(async (req) => {
       'https://www.googleapis.com/auth/calendar.events',
     ].join(' ');
 
-    const state = btoa(JSON.stringify({ userId, appUrl, appPath }));
+    // State signé (15 min) : le retour Google ne peut viser que l'utilisateur connecté ici.
+    const state = await signerEtat({ userId, appUrl, appPath });
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
