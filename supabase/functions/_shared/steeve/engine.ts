@@ -130,7 +130,8 @@ export function forbiddenReply(text: string): string | null {
  * (protection contre une consigne glissée dans un e-mail ou un document).
  */
 export function stripUntrusted(text: string): string {
-  const allowed = /^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i;
+  // Sites de l'agence, et les deux pages de l'application Logisorama dans les stores (proposées par Steeve).
+  const allowed = /^(?:(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)|apps\.apple\.com\/app\/id6756940233$|play\.google\.com\/store\/apps\/details\?id=ch\.logisorama\.app$)/i;
   // Les dates (05.10.2026, 2026-10-05) et heures ne sont pas des numéros de téléphone : mises de côté pendant le filtre.
   const kept: string[] = [];
   const keep = (m: string) => `\u0001${kept.push(m) - 1}\u0001`;

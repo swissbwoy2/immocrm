@@ -4,7 +4,7 @@
 // deno-lint-ignore-file no-explicit-any
 import type { ToolDefinition } from './anthropic.ts';
 import { zurichToUtc } from './dates.ts';
-import { applications, documentsStatus, mandate, offers, visits, type Db, type Dossier } from './context.ts';
+import { applications, documentsStatus, mandate, offers, OFFER_STATUS_LABEL, visits, type Db, type Dossier } from './context.ts';
 import { facturesDuClient, type AbaNinjaPort } from './abaninja.ts';
 
 export const STEEVE_TOOLS: ToolDefinition[] = [
@@ -25,6 +25,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
           description: 'Filtre facultatif sur le statut.',
         },
         limit: { type: 'integer', minimum: 1, maximum: 15 },
+        recherche: { type: 'string', description: "Adresse (même incomplète ou écrite autrement : « Avenue de Recordon 10 », « recordon 10 »), lien ou numéro d'annonce : cherche dans TOUTES ses offres, même anciennes. À utiliser dès que le client cite un bien." },
       },
       additionalProperties: false,
     },
@@ -267,6 +268,13 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
     case 'get_documents':
       return { content: json(await documentsStatus(db, dossier)) };
     case 'get_offers': {
+      if (typeof input?.recherche === 'string' && input.recherche.trim().length >= 2) {
+        const { data, error } = await db.rpc('steeve_client_offres_match', { p_client_id: dossier.clientId, p_ref: input.recherche.slice(0, 120) });
+        if (error) return { content: 'Offres indisponibles pour le moment.', isError: true };
+        const list = (data ?? []).map((o: any) => ({ id: o.offre_id, adresse: o.adresse, loyer_ou_prix_chf: o.prix, pieces: o.pieces, surface_m2: o.surface, disponibilite: o.disponibilite,
+          statut: OFFER_STATUS_LABEL[o.statut] || o.statut, envoyee_le: o.envoyee_le, annonce: o.lien_annonce }));
+        return { content: json({ recherche: input.recherche, trouvees: list.length, offres: list }) };
+      }
       const limit = Number.isInteger(input?.limit) ? input.limit : undefined;
       const status = typeof input?.status === 'string' ? input.status : undefined;
       return { content: json(await offers(db, dossier.clientId, { status, limit })) };
@@ -470,14 +478,37 @@ export async function requestPostulation(db: Db, clientId: string, bien: string)
 // ---------- actions demandées par le client (exécutées pour CE client uniquement, côté serveur) ----------
 
 /** Une seule offre du client doit correspondre au texte ; sinon la liste pour demander laquelle. */
-async function matchOffer(ctx: ToolContext, bien: string): Promise<{ id: string; adresse: string } | ToolOutcome> {
+/**
+ * Offre du client désignée par une adresse, un lien ou un numéro (toutes ses offres, toutes dates, adresse écrite
+ * librement). Plusieurs offres : pour une action de visite, celle qui a la visite (au créneau donné, sinon la seule
+ * visite à venir) ; le même bien publié deux fois (même adresse et même loyer) : la plus avancée ; sinon le client précise.
+ */
+async function matchOffer(ctx: ToolContext, bien: string, opt: { visite?: boolean; when?: Date | null } = {}): Promise<{ id: string; adresse: string } | ToolOutcome> {
   if (bien.trim().length < 2) return { content: 'Précise le bien (adresse).', isError: true };
   const { data, error } = await ctx.db.rpc('steeve_client_offres_match', { p_client_id: ctx.dossier.clientId, p_ref: bien.slice(0, 120) });
   if (error) return { content: 'Offres indisponibles pour le moment.', isError: true };
   const list: any[] = data ?? [];
-  if (!list.length) return { content: "Aucune offre de ce client ne correspond : demande-lui de préciser l'adresse.", isError: true };
-  if (list.length > 1) return { content: `Plusieurs offres correspondent (${list.map((o) => o.adresse).join(' ; ')}) : demande au client laquelle, sans rien faire.`, isError: true };
-  return { id: list[0].offre_id, adresse: list[0].adresse };
+  if (!list.length) return { content: "Aucune offre de ce client ne correspond, même parmi ses offres anciennes : demande-lui l'adresse exacte ou le lien de l'annonce.", isError: true };
+  if (list.length === 1) return { id: list[0].offre_id, adresse: list[0].adresse };
+  const pick = (id: string) => { const o = list.find((x) => x.offre_id === id); return { id: o.offre_id, adresse: o.adresse }; };
+  if (opt.visite) {
+    const ids = list.map((o) => o.offre_id);
+    const { data: vis } = await ctx.db.from('visites').select('offre_id, date_visite, statut').eq('client_id', ctx.dossier.clientId).in('offre_id', ids);
+    const live = (vis ?? []).filter((v: any) => !['annulee', 'refusee'].includes(String(v.statut ?? '')) && ids.includes(v.offre_id));
+    const near = opt.when
+      ? live.filter((v: any) => Math.abs(new Date(v.date_visite).getTime() - opt.when!.getTime()) <= 90 * 60_000)
+      : live.filter((v: any) => new Date(v.date_visite).getTime() > ctx.now.getTime());
+    const uniq: string[] = [...new Set<string>(near.map((v: any) => String(v.offre_id)))];
+    if (uniq.length === 1) return pick(uniq[0]);
+  }
+  // Même bien reçu deux fois (même rue et numéro, même loyer) : l'offre la plus avancée.
+  const key = (o: any) => `${String(o.adresse ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^(quartier|secteur)\s+/, '').replace(/[^a-z0-9]+/g, ' ').trim()}|${o.prix ?? ''}`;
+  if (new Set(list.map(key)).size === 1) {
+    const rank = ['acceptee', 'candidature_deposee', 'souhaite_postuler', 'visite_effectuee', 'visite_planifiee', 'interesse', 'vue', 'envoyee', 'refusee'];
+    const best = [...list].sort((a, b) => rank.indexOf(String(a.statut)) - rank.indexOf(String(b.statut)))[0];
+    return pick(best.offre_id);
+  }
+  return { content: `Plusieurs offres correspondent : ${list.map((o) => `${o.adresse} (${o.prix ?? '?'} CHF, ${o.pieces ?? '?'} p., ${o.statut}, reçue le ${o.envoyee_le ?? '?'})`).join(' ; ')}. Demande au client laquelle (loyer, pièces ou date), puis agis dès sa réponse.`, isError: true };
 }
 
 /** Information de l'agent (ou des admins) sans lui rendre la conversation. */
@@ -539,7 +570,7 @@ async function clientDelegateVisit(ctx: ToolContext, bien: string, date: string,
     when = zurichToUtc(date.slice(0, 16));
     if (!when) return { content: "Date illisible : donne-la au format AAAA-MM-JJTHH:MM (heure suisse), ou laisse-la vide si aucun créneau n'est fixé.", isError: true };
   }
-  const m = await matchOffer(ctx, bien);
+  const m = await matchOffer(ctx, bien, { visite: true, when });
   if ('content' in m) return m;
   const { data, error } = await ctx.db.rpc('steeve_client_deleguer_visite', {
     p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_date: when ? when.toISOString() : null, p_note: precision,
@@ -570,7 +601,7 @@ async function clientConfirmVisit(ctx: ToolContext, bien: string, date: string):
     when = zurichToUtc(date.slice(0, 16));
     if (!when) return { content: 'Date illisible : AAAA-MM-JJTHH:MM (heure suisse).', isError: true };
   }
-  const m = await matchOffer(ctx, bien);
+  const m = await matchOffer(ctx, bien, { visite: true, when });
   if ('content' in m) return m;
   const { data, error } = await ctx.db.rpc('steeve_client_confirmer_visite', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_date: when ? when.toISOString() : null });
   if (error) return { content: "La confirmation n'a pas pu être enregistrée.", isError: true };
@@ -585,7 +616,7 @@ async function clientVisitDone(ctx: ToolContext, bien: string, date: string): Pr
     when = zurichToUtc(date.slice(0, 16));
     if (!when) return { content: 'Date illisible : AAAA-MM-JJTHH:MM (heure suisse).', isError: true };
   }
-  const m = await matchOffer(ctx, bien);
+  const m = await matchOffer(ctx, bien, { visite: true, when });
   if ('content' in m) return m;
   const { data, error } = await ctx.db.rpc('steeve_client_visite_effectuee', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_date: when ? when.toISOString() : null });
   if (error) {
